@@ -17,6 +17,9 @@ describe("agent ↔ skill association flow", () => {
       "fetch",
       vi.fn(async (url: string, init?: RequestInit) => {
         const u = String(url);
+        if (u.includes("/api/providers")) {
+          return { ok: true, status: 200, json: () => Promise.resolve({ configs: [] }) };
+        }
         if (init?.method === "POST" && u.includes("/api/skills")) {
           skillCreated = true;
           return {

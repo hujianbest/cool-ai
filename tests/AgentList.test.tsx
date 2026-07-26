@@ -89,4 +89,28 @@ describe("AgentList states", () => {
     expect(await screen.findByText("PM")).toBeInTheDocument();
     expect(screen.getByText("需求整理")).toBeInTheDocument();
   });
+
+  it("shows provider name + model on card; 未配置 when no provider", async () => {
+    vi.stubGlobal(
+      "fetch",
+      mockOk({
+        agents: [
+          { id: 1, name: "PM", providerConfigId: 5, model: "glm-4-plus", skills: [] },
+          { id: 2, name: "PM2", providerConfigId: null, model: "", skills: [] },
+        ],
+      })
+    );
+    render(
+      <AgentList
+        providerConfigs={[
+          { id: 5, name: "P", baseUrl: "", createdAt: new Date(), agentCount: 1 },
+        ]}
+      />
+    );
+
+    expect(await screen.findByText("PM")).toBeInTheDocument();
+    expect(screen.getByText("P")).toBeInTheDocument();
+    expect(screen.getByText("glm-4-plus")).toBeInTheDocument();
+    expect(screen.getByText(/未配置 provider/)).toBeInTheDocument();
+  });
 });

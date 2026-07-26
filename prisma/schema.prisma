@@ -8,13 +8,14 @@ datasource db {
 }
 
 model Agent {
-  id           Int      @id @default(autoincrement())
-  name         String
-  systemPrompt String   @default("")
-  tools        String   @default("[]")
-  provider     String   @default("zhipuai-coding-plan")
-  skills       String   @default("[]")
-  createdAt    DateTime @default(now())
+  id               Int      @id @default(autoincrement())
+  name             String
+  systemPrompt     String   @default("")
+  tools            String   @default("[]")
+  providerConfigId Int?
+  model            String   @default("")
+  skills           String   @default("[]")
+  createdAt        DateTime @default(now())
 }
 
 model Skill {
@@ -24,4 +25,12 @@ model Skill {
   content     String   @default("")
   category    String   @default("")
   createdAt   DateTime @default(now())
+}
+
+model ProviderConfig {
+  id        Int      @id @default(autoincrement())
+  name      String
+  baseUrl   String
+  apiKey    String   @default("")
+  createdAt DateTime @default(now())
 }

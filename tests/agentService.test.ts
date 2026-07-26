@@ -70,7 +70,6 @@ describe("agentService.createAgent", () => {
         name: "PM",
         systemPrompt: "产品经理",
         tools: ["shell", "file.read"],
-        provider: "zhipuai-coding-plan",
         skills: [s.id],
       },
       db
@@ -87,6 +86,24 @@ describe("agentService.createAgent", () => {
 
   it("throws when a referenced skill id does not exist", async () => {
     await expect(createAgent({ name: "PM", skills: [9999] }, db)).rejects.toThrow();
+  });
+
+  it("throws when providerConfigId does not exist", async () => {
+    await expect(
+      createAgent({ name: "PM", providerConfigId: 9999 }, db)
+    ).rejects.toThrow();
+  });
+
+  it("accepts a valid providerConfigId + model", async () => {
+    const p = await db.providerConfig.create({
+      data: { name: "P", baseUrl: "https://x/v4" },
+    });
+    const agent = await createAgent(
+      { name: "PM", providerConfigId: p.id, model: "glm-4-plus" },
+      db
+    );
+    expect(agent.providerConfigId).toBe(p.id);
+    expect(agent.model).toBe("glm-4-plus");
   });
 
   it("throws when name is missing/empty/whitespace", async () => {

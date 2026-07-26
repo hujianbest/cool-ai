@@ -21,3 +21,7 @@ agent 替用户做的默认选择。遇到欠定点的标准动作: 提出带默
 - A-14 2026-07-26 [生效] Skill 实体最小形态(第一版):name + description + content(markdown 正文)+ 可选 category;对标 Hermes SKILL.md 的精简版。frontmatter 的 version/platforms/conditional-activation 等高级字段推迟。 — 默认理由: 覆盖"被管理+可关联+可加载"的最小集;progressive disclosure(索引只取 name+description)留 S-3 执行时落地
 - A-15 2026-07-26 [生效] agent 与 skill 的关联用"skill id 数组"存于 Agent.skills(JSON 列,沿用 S-2 PD-2 取舍),不引入关系表 — 默认理由: 与现有 tools/skills 存储一致,迁移成本最低;未来需按 skill 反查 agent 再升关系表
 - A-16 2026-07-26 [生效] skill CRUD 第一版只做 create + list + view;edit/delete 推迟至后续切片 — 默认理由: YAGNI,S-2.5 演示判据只需"创建/查看 skill + 关联";edit/delete 在真正需要在线编辑时再加
+- A-17 2026-07-26 [生效] ProviderConfig 实体最小形态:name + baseUrl + apiKey(+ createdAt);apiKey 存本地 SQLite dev.db(gitignored),单用户本地 MVP 可接受 — 默认理由: 覆盖"用户自填接入 + 复用";未来引入加密/外部密钥管理(生产化时)
+- A-18 2026-07-26 [生效] 模型选择:服务端用 ProviderConfig 的 key 查询 `{baseUrl}/models`(OpenAI 兼容),返回模型 id 列表供前端选;agent 存 providerConfigId + model(字符串) — 默认理由: key 不下发浏览器(服务端代理查询),复用 OpenAI 兼容 /models 约定
+- A-19 2026-07-26 [生效] ProviderConfig CRUD 第一版只做 create + list(+ 删除可选);edit 推迟,同 A-16 取舍 — 默认理由: YAGNI;先支持"建配置 + 复用选已有"
+- A-20 2026-07-26 [生效] AgentForm 的 provider 字段由静态下拉(PROVIDERS)改为"选已有 ProviderConfig";model 字段为"选定 provider 后查询其模型列表再选" — 默认理由: 对齐 D-15;移除 PROVIDERS 常量(FR 级迁移,适配既有测试)

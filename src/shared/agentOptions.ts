@@ -1,7 +1,3 @@
-export const PROVIDERS = [
-  { id: "zhipuai-coding-plan", label: "GLM (zhipuai-coding-plan)" },
-] as const;
-
 export const TOOLS = [
   { id: "file.read", label: "文件读取" },
   { id: "file.write", label: "文件写入" },

@@ -1,0 +1,77 @@
+# hf-gate-run
+# label: t3-red
+# command: npm test
+# started: 2026-07-26T15:20:38+00:00
+
+> cool-ai@0.0.1 test
+> vitest run
+
+
+[1m[46m RUN [49m[22m [36mv3.2.7 [39m[90mE:/Code/cool-ai[39m
+
+ [32m✓[39m tests/setupDocs.test.ts [2m([22m[2m2 tests[22m[2m)[22m[32m 4[2mms[22m[39m
+ [32m✓[39m tests/baseline.test.ts [2m([22m[2m1 test[22m[2m)[22m[32m 3[2mms[22m[39m
+ [32m✓[39m tests/agentsApi.test.ts [2m([22m[2m9 tests[22m[2m)[22m[32m 23[2mms[22m[39m
+ [32m✓[39m tests/providersApi.test.ts [2m([22m[2m6 tests[22m[2m)[22m[32m 15[2mms[22m[39m
+ [32m✓[39m tests/skillsApi.test.ts [2m([22m[2m5 tests[22m[2m)[22m[32m 16[2mms[22m[39m
+ [32m✓[39m tests/providerService.test.ts [2m([22m[2m5 tests[22m[2m)[22m[33m 1755[2mms[22m[39m
+ [32m✓[39m tests/skillService.test.ts [2m([22m[2m7 tests[22m[2m)[22m[33m 1774[2mms[22m[39m
+ [31m❯[39m tests/agentService.test.ts [2m([22m[2m9 tests[22m[2m | [22m[31m1 failed[39m[2m)[22m[33m 1807[2mms[22m[39m
+   [32m✓[39m agentService.getAgents[2m > [22mreturns agents persisted in db (with parsed tool/skill arrays)[32m 21[2mms[22m[39m
+   [32m✓[39m agentService.getAgents[2m > [22mreturns empty array when no agents[32m 6[2mms[22m[39m
+   [32m✓[39m agentService.getAgents[2m > [22mthrows when db read fails[32m 3[2mms[22m[39m
+   [32m✓[39m agentService.createAgent[2m > [22mcreates an agent, stores skill ids, returns DTO with skill id array[32m 15[2mms[22m[39m
+   [32m✓[39m agentService.createAgent[2m > [22mthrows when a referenced skill id does not exist[32m 7[2mms[22m[39m
+[31m   [31m×[31m agentService.createAgent[2m > [22mthrows when providerConfigId does not exist[39m[32m 19[2mms[22m[39m
+[31m     → promise resolved "{ id: 13, name: 'PM', …(6) }" instead of rejecting[39m
+   [32m✓[39m agentService.createAgent[2m > [22maccepts a valid providerConfigId + model[32m 11[2mms[22m[39m
+   [32m✓[39m agentService.createAgent[2m > [22mthrows when name is missing/empty/whitespace[32m 5[2mms[22m[39m
+   [32m✓[39m agentService.createAgent[2m > [22mtrims surrounding whitespace from name[32m 6[2mms[22m[39m
+ [32m✓[39m tests/layout.test.tsx [2m([22m[2m1 test[22m[2m)[22m[32m 153[2mms[22m[39m
+ [32m✓[39m tests/SkillForm.test.tsx [2m([22m[2m3 tests[22m[2m)[22m[33m 373[2mms[22m[39m
+ [32m✓[39m tests/SkillList.test.tsx [2m([22m[2m4 tests[22m[2m)[22m[32m 196[2mms[22m[39m
+ [32m✓[39m tests/AgentList.test.tsx [2m([22m[2m6 tests[22m[2m)[22m[32m 279[2mms[22m[39m
+ [32m✓[39m tests/createFlow.test.tsx [2m([22m[2m1 test[22m[2m)[22m[33m 363[2mms[22m[39m
+   [33m[2m✓[22m[39m create flow (page wiring)[2m > [22mcreating an agent refreshes the list via version bump [33m 362[2mms[22m[39m
+ [32m✓[39m tests/agentSkillLink.test.tsx [2m([22m[2m1 test[22m[2m)[22m[33m 523[2mms[22m[39m
+   [33m[2m✓[22m[39m agent ↔ skill association flow[2m > [22mcreate skill, link it to a new agent, card shows the skill name [33m 522[2mms[22m[39m
+ [32m✓[39m tests/AgentForm.test.tsx [2m([22m[2m4 tests[22m[2m)[22m[33m 548[2mms[22m[39m
+
+[31m⎯⎯⎯⎯⎯⎯⎯[39m[1m[41m Failed Tests 1 [49m[22m[31m⎯⎯⎯⎯⎯⎯⎯[39m
+
+[41m[1m FAIL [22m[49m tests/agentService.test.ts[2m > [22magentService.createAgent[2m > [22mthrows when providerConfigId does not exist
+[31m[1mAssertionError[22m: promise resolved "{ id: 13, name: 'PM', …(6) }" instead of rejecting[39m
+
+[32m- Expected[39m
+[31m+ Received[39m
+
+[32m- Error {[39m
+[32m-   "message": "rejected promise",[39m
+[31m+ {[39m
+[31m+   "createdAt": 2026-07-26T15:20:42.094Z,[39m
+[31m+   "id": 13,[39m
+[31m+   "model": "",[39m
+[31m+   "name": "PM",[39m
+[31m+   "providerConfigId": 9999,[39m
+[31m+   "skills": [],[39m
+[31m+   "systemPrompt": "",[39m
+[31m+   "tools": [],[39m
+[2m  }[22m
+
+[36m [2m❯[22m tests/agentService.test.ts:[2m95:5[22m[39m
+    [90m 93| [39m    [35mawait[39m [34mexpect[39m(
+    [90m 94| [39m      [34mcreateAgent[39m({ name[33m:[39m [32m"PM"[39m[33m,[39m providerConfigId[33m:[39m [34m9999[39m }[33m,[39m db)
+    [90m 95| [39m    )[33m.[39mrejects[33m.[39m[34mtoThrow[39m()[33m;[39m
+    [90m   | [39m    [31m^[39m
+    [90m 96| [39m  })[33m;[39m
+    [90m 97| [39m
+
+[31m[2m⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[1/1]⎯[22m[39m
+
+
+[2m Test Files [22m [1m[31m1 failed[39m[22m[2m | [22m[1m[32m14 passed[39m[22m[90m (15)[39m
+[2m      Tests [22m [1m[31m1 failed[39m[22m[2m | [22m[1m[32m63 passed[39m[22m[90m (64)[39m
+[2m   Start at [22m 23:20:39
+[2m   Duration [22m 4.01s[2m (transform 666ms, setup 0ms, collect 4.62s, tests 7.83s, environment 13.66s, prepare 3.67s)[22m
+
+# exit: 1

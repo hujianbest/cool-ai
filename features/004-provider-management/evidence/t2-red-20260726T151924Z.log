@@ -1,0 +1,52 @@
+# hf-gate-run
+# label: t2-red
+# command: npm test
+# started: 2026-07-26T15:19:24+00:00
+
+> cool-ai@0.0.1 test
+> vitest run
+
+
+[1m[46m RUN [49m[22m [36mv3.2.7 [39m[90mE:/Code/cool-ai[39m
+
+ [32m✓[39m tests/baseline.test.ts [2m([22m[2m1 test[22m[2m)[22m[32m 3[2mms[22m[39m
+ [32m✓[39m tests/setupDocs.test.ts [2m([22m[2m2 tests[22m[2m)[22m[32m 4[2mms[22m[39m
+ [32m✓[39m tests/agentsApi.test.ts [2m([22m[2m9 tests[22m[2m)[22m[32m 19[2mms[22m[39m
+ [32m✓[39m tests/skillsApi.test.ts [2m([22m[2m5 tests[22m[2m)[22m[32m 15[2mms[22m[39m
+ [32m✓[39m tests/agentService.test.ts [2m([22m[2m7 tests[22m[2m)[22m[33m 1620[2mms[22m[39m
+ [32m✓[39m tests/providerService.test.ts [2m([22m[2m5 tests[22m[2m)[22m[33m 1658[2mms[22m[39m
+ [32m✓[39m tests/skillService.test.ts [2m([22m[2m7 tests[22m[2m)[22m[33m 1697[2mms[22m[39m
+ [32m✓[39m tests/layout.test.tsx [2m([22m[2m1 test[22m[2m)[22m[32m 146[2mms[22m[39m
+ [32m✓[39m tests/AgentList.test.tsx [2m([22m[2m6 tests[22m[2m)[22m[32m 261[2mms[22m[39m
+ [32m✓[39m tests/SkillList.test.tsx [2m([22m[2m4 tests[22m[2m)[22m[32m 176[2mms[22m[39m
+ [32m✓[39m tests/createFlow.test.tsx [2m([22m[2m1 test[22m[2m)[22m[33m 368[2mms[22m[39m
+   [33m[2m✓[22m[39m create flow (page wiring)[2m > [22mcreating an agent refreshes the list via version bump [33m 367[2mms[22m[39m
+ [32m✓[39m tests/SkillForm.test.tsx [2m([22m[2m3 tests[22m[2m)[22m[33m 395[2mms[22m[39m
+ [32m✓[39m tests/AgentForm.test.tsx [2m([22m[2m4 tests[22m[2m)[22m[33m 542[2mms[22m[39m
+ [32m✓[39m tests/agentSkillLink.test.tsx [2m([22m[2m1 test[22m[2m)[22m[33m 519[2mms[22m[39m
+   [33m[2m✓[22m[39m agent ↔ skill association flow[2m > [22mcreate skill, link it to a new agent, card shows the skill name [33m 518[2mms[22m[39m
+
+[31m⎯⎯⎯⎯⎯⎯[39m[1m[41m Failed Suites 1 [49m[22m[31m⎯⎯⎯⎯⎯⎯⎯[39m
+
+[41m[1m FAIL [22m[49m tests/providersApi.test.ts[2m [ tests/providersApi.test.ts ][22m
+[31m[1mError[22m: Cannot find module '../app/api/providers/route' imported from 'E:/Code/cool-ai/tests/providersApi.test.ts'[39m
+[36m [2m❯[22m tests/providersApi.test.ts:[2m10:1[22m[39m
+    [90m  8| [39m}))[33m;[39m
+    [90m  9| [39m
+    [90m 10| [39m[35mimport[39m { [33mGET[39m [35mas[39m listGET[33m,[39m [33mPOST[39m } [35mfrom[39m [32m"../app/api/providers/route"[39m[33m;[39m
+    [90m   | [39m[31m^[39m
+    [90m 11| [39mimport { GET as modelsGET } from "../app/api/providers/[id]/models/rou…
+    [90m 12| [39m[35mimport[39m {
+
+[31m[1mCaused by: Error[22m: Failed to load url ../app/api/providers/route (resolved id: ../app/api/providers/route) in E:/Code/cool-ai/tests/providersApi.test.ts. Does the file exist?[39m
+[90m [2m❯[22m loadAndTransform node_modules/vite/dist/node/chunks/config.js:[2m22739:33[22m[39m
+
+[31m[2m⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[1/1]⎯[22m[39m
+
+
+[2m Test Files [22m [1m[31m1 failed[39m[22m[2m | [22m[1m[32m14 passed[39m[22m[90m (15)[39m
+[2m      Tests [22m [1m[32m56 passed[39m[22m[90m (56)[39m
+[2m   Start at [22m 23:19:24
+[2m   Duration [22m 4.00s[2m (transform 556ms, setup 0ms, collect 4.19s, tests 7.42s, environment 13.98s, prepare 7.78s)[22m
+
+# exit: 1

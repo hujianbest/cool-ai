@@ -1,0 +1,33 @@
+# hf-gate-run
+# label: baseline
+# command: npm test
+# started: 2026-07-26T15:09:27+00:00
+
+> cool-ai@0.0.1 test
+> vitest run
+
+
+[1m[46m RUN [49m[22m [36mv3.2.7 [39m[90mE:/Code/cool-ai[39m
+
+ [32m✓[39m tests/setupDocs.test.ts [2m([22m[2m2 tests[22m[2m)[22m[32m 8[2mms[22m[39m
+ [32m✓[39m tests/baseline.test.ts [2m([22m[2m1 test[22m[2m)[22m[32m 4[2mms[22m[39m
+ [32m✓[39m tests/agentsApi.test.ts [2m([22m[2m9 tests[22m[2m)[22m[32m 20[2mms[22m[39m
+ [32m✓[39m tests/skillsApi.test.ts [2m([22m[2m5 tests[22m[2m)[22m[32m 14[2mms[22m[39m
+ [32m✓[39m tests/agentService.test.ts [2m([22m[2m7 tests[22m[2m)[22m[33m 2018[2mms[22m[39m
+ [32m✓[39m tests/skillService.test.ts [2m([22m[2m7 tests[22m[2m)[22m[33m 2052[2mms[22m[39m
+ [32m✓[39m tests/SkillList.test.tsx [2m([22m[2m4 tests[22m[2m)[22m[32m 204[2mms[22m[39m
+ [32m✓[39m tests/layout.test.tsx [2m([22m[2m1 test[22m[2m)[22m[32m 172[2mms[22m[39m
+ [32m✓[39m tests/AgentList.test.tsx [2m([22m[2m6 tests[22m[2m)[22m[33m 315[2mms[22m[39m
+ [32m✓[39m tests/createFlow.test.tsx [2m([22m[2m1 test[22m[2m)[22m[33m 346[2mms[22m[39m
+   [33m[2m✓[22m[39m create flow (page wiring)[2m > [22mcreating an agent refreshes the list via version bump [33m 345[2mms[22m[39m
+ [32m✓[39m tests/SkillForm.test.tsx [2m([22m[2m3 tests[22m[2m)[22m[33m 388[2mms[22m[39m
+ [32m✓[39m tests/AgentForm.test.tsx [2m([22m[2m4 tests[22m[2m)[22m[33m 588[2mms[22m[39m
+ [32m✓[39m tests/agentSkillLink.test.tsx [2m([22m[2m1 test[22m[2m)[22m[33m 536[2mms[22m[39m
+   [33m[2m✓[22m[39m agent ↔ skill association flow[2m > [22mcreate skill, link it to a new agent, card shows the skill name [33m 535[2mms[22m[39m
+
+[2m Test Files [22m [1m[32m13 passed[39m[22m[90m (13)[39m
+[2m      Tests [22m [1m[32m51 passed[39m[22m[90m (51)[39m
+[2m   Start at [22m 23:09:28
+[2m   Duration [22m 4.09s[2m (transform 534ms, setup 0ms, collect 4.39s, tests 6.66s, environment 15.64s, prepare 3.99s)[22m
+
+# exit: 0

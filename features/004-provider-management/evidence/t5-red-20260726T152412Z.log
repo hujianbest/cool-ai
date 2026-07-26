@@ -1,0 +1,201 @@
+# hf-gate-run
+# label: t5-red
+# command: npm test
+# started: 2026-07-26T15:24:12+00:00
+
+> cool-ai@0.0.1 test
+> vitest run
+
+
+[1m[46m RUN [49m[22m [36mv3.2.7 [39m[90mE:/Code/cool-ai[39m
+
+ [32m✓[39m tests/baseline.test.ts [2m([22m[2m1 test[22m[2m)[22m[32m 2[2mms[22m[39m
+ [32m✓[39m tests/setupDocs.test.ts [2m([22m[2m2 tests[22m[2m)[22m[32m 5[2mms[22m[39m
+ [32m✓[39m tests/agentsApi.test.ts [2m([22m[2m10 tests[22m[2m)[22m[32m 27[2mms[22m[39m
+ [32m✓[39m tests/skillsApi.test.ts [2m([22m[2m5 tests[22m[2m)[22m[32m 17[2mms[22m[39m
+ [32m✓[39m tests/providersApi.test.ts [2m([22m[2m6 tests[22m[2m)[22m[32m 23[2mms[22m[39m
+ [32m✓[39m tests/providerService.test.ts [2m([22m[2m5 tests[22m[2m)[22m[33m 1848[2mms[22m[39m
+ [32m✓[39m tests/agentService.test.ts [2m([22m[2m9 tests[22m[2m)[22m[33m 1885[2mms[22m[39m
+ [32m✓[39m tests/skillService.test.ts [2m([22m[2m7 tests[22m[2m)[22m[33m 1902[2mms[22m[39m
+ [32m✓[39m tests/SkillList.test.tsx [2m([22m[2m4 tests[22m[2m)[22m[32m 198[2mms[22m[39m
+ [32m✓[39m tests/ProviderList.test.tsx [2m([22m[2m4 tests[22m[2m)[22m[32m 236[2mms[22m[39m
+ [32m✓[39m tests/layout.test.tsx [2m([22m[2m1 test[22m[2m)[22m[32m 192[2mms[22m[39m
+ [32m✓[39m tests/SkillForm.test.tsx [2m([22m[2m3 tests[22m[2m)[22m[33m 359[2mms[22m[39m
+ [31m❯[39m tests/AgentList.test.tsx [2m([22m[2m7 tests[22m[2m | [22m[31m1 failed[39m[2m)[22m[33m 334[2mms[22m[39m
+   [32m✓[39m AgentList states[2m > [22mshows loading before fetch resolves[32m 41[2mms[22m[39m
+   [32m✓[39m AgentList states[2m > [22mrenders agents on success[32m 22[2mms[22m[39m
+   [32m✓[39m AgentList states[2m > [22mshows empty state when no agents[32m 15[2mms[22m[39m
+   [32m✓[39m AgentList states[2m > [22mshows error state with retry button on fetch failure[32m 145[2mms[22m[39m
+   [32m✓[39m AgentList states[2m > [22mreloads on retry click[32m 72[2mms[22m[39m
+   [32m✓[39m AgentList states[2m > [22mshows associated skill names resolved via skills prop[32m 16[2mms[22m[39m
+[31m   [31m×[31m AgentList states[2m > [22mshows provider name + model on card; 未配置 when no provider[39m[32m 21[2mms[22m[39m
+[31m     → Unable to find an element with the text: P. This could be because the text is broken up by multiple elements. In this case, you can provide a function for your text matcher to make your matcher more flexible.
+
+Ignored nodes: comments, script, style
+[36m<body>[31m
+  [36m<div>[31m
+    [36m<div[31m
+      [33mclass[31m=[32m"grid grid-cols-1 gap-3 sm:grid-cols-2"[31m
+      [33mrole[31m=[32m"list"[31m
+    [36m>[31m
+      [36m<article[31m
+        [33mclass[31m=[32m"rounded-token border border-line bg-surface p-4 shadow-token"[31m
+        [33mrole[31m=[32m"listitem"[31m
+      [36m>[31m
+        [36m<div[31m
+          [33mclass[31m=[32m"flex items-center gap-2"[31m
+        [36m>[31m
+          [36m<span[31m
+            [33maria-hidden[31m=[32m"true"[31m
+            [33mclass[31m=[32m"inline-block h-2 w-2 rounded-full bg-accent"[31m
+          [36m/>[31m
+          [36m<span[31m
+            [33mclass[31m=[32m"font-medium"[31m
+          [36m>[31m
+            [0mPM[0m
+          [36m</span>[31m
+        [36m</div>[31m
+      [36m</article>[31m
+      [36m<article[31m
+        [33mclass[31m=[32m"rounded-token border border-line bg-surface p-4 shadow-token"[31m
+        [33mrole[31m=[32m"listitem"[31m
+      [36m>[31m
+        [36m<div[31m
+          [33mclass[31m=[32m"flex items-center gap-2"[31m
+        [36m>[31m
+          [36m<span[31m
+            [33maria-hidden[31m=[32m"true"[31m
+            [33mclass[31m=[32m"inline-block h-2 w-2 rounded-full bg-accent"[31m
+          [36m/>[31m
+          [36m<span[31m
+            [33mclass[31m=[32m"font-medium"[31m
+          [36m>[31m
+            [0mPM2[0m
+          [36m</span>[31m
+        [36m</div>[31m
+      [36m</article>[31m
+    [36m</div>[31m
+  [36m</div>[31m
+[36m</body>[31m[39m
+ [32m✓[39m tests/createFlow.test.tsx [2m([22m[2m1 test[22m[2m)[22m[33m 343[2mms[22m[39m
+   [33m[2m✓[22m[39m create flow (page wiring)[2m > [22mcreating an agent refreshes the list via version bump [33m 342[2mms[22m[39m
+ [32m✓[39m tests/agentSkillLink.test.tsx [2m([22m[2m1 test[22m[2m)[22m[33m 551[2mms[22m[39m
+   [33m[2m✓[22m[39m agent ↔ skill association flow[2m > [22mcreate skill, link it to a new agent, card shows the skill name [33m 550[2mms[22m[39m
+ [31m❯[39m tests/AgentForm.test.tsx [2m([22m[2m5 tests[22m[2m | [22m[31m1 failed[39m[2m)[22m[33m 701[2mms[22m[39m
+   [32m✓[39m AgentForm[2m > [22mrenders labeled inputs[32m 178[2mms[22m[39m
+   [32m✓[39m AgentForm[2m > [22mblocks submit and shows error when name empty (no fetch)[32m 85[2mms[22m[39m
+   [32m✓[39m AgentForm[2m > [22msubmits and calls onCreated on success[32m 164[2mms[22m[39m
+   [32m✓[39m AgentForm[2m > [22mstores selected skill id in the submit body[32m 203[2mms[22m[39m
+[31m   [31m×[31m AgentForm[2m > [22mqueries models after selecting provider and stores providerConfigId + model[39m[32m 69[2mms[22m[39m
+[31m     → Value "glm-4-plus" not found in options
+
+Ignored nodes: comments, script, style
+[36m<input[31m
+  [33mclass[31m=[32m"mt-1 w-full rounded-token border border-line bg-surface px-3 py-2"[31m
+  [33mid[31m=[32m"agent-model"[31m
+  [33mplaceholder[31m=[32m"如 glm-4-plus"[31m
+  [33mvalue[31m=[32m""[31m
+[36m/>[31m[39m
+ [32m✓[39m tests/ProviderForm.test.tsx [2m([22m[2m3 tests[22m[2m)[22m[33m 602[2mms[22m[39m
+   [33m[2m✓[22m[39m ProviderForm[2m > [22msubmits and calls onCreated on success [33m 363[2mms[22m[39m
+
+[31m⎯⎯⎯⎯⎯⎯⎯[39m[1m[41m Failed Tests 2 [49m[22m[31m⎯⎯⎯⎯⎯⎯⎯[39m
+
+[41m[1m FAIL [22m[49m tests/AgentForm.test.tsx[2m > [22mAgentForm[2m > [22mqueries models after selecting provider and stores providerConfigId + model
+[31m[1mTestingLibraryElementError[22m: Value "glm-4-plus" not found in options
+
+Ignored nodes: comments, script, style
+[36m<input[31m
+  [33mclass[31m=[32m"mt-1 w-full rounded-token border border-line bg-surface px-3 py-2"[31m
+  [33mid[31m=[32m"agent-model"[31m
+  [33mplaceholder[31m=[32m"如 glm-4-plus"[31m
+  [33mvalue[31m=[32m""[31m
+[36m/>[31m[39m
+[90m [2m❯[22m Object.getElementError node_modules/@testing-library/dom/dist/config.js:[2m37:19[22m[39m
+[90m [2m❯[22m node_modules/@testing-library/user-event/dist/esm/utility/selectOptions.js:[2m37:35[22m[39m
+[90m [2m❯[22m Object.selectOptionsBase node_modules/@testing-library/user-event/dist/esm/utility/selectOptions.js:[2m29:38[22m[39m
+[90m [2m❯[22m Object.selectOptions node_modules/@testing-library/user-event/dist/esm/utility/selectOptions.js:[2m16:30[22m[39m
+[90m [2m❯[22m node_modules/@testing-library/user-event/dist/esm/setup/setup.js:[2m83:35[22m[39m
+[90m [2m❯[22m Object.asyncWrapper node_modules/@testing-library/react/dist/pure.js:[2m87:28[22m[39m
+[90m [2m❯[22m wrapAsync node_modules/@testing-library/user-event/dist/esm/setup/wrapAsync.js:[2m6:24[22m[39m
+[90m [2m❯[22m Object.method [as selectOptions] node_modules/@testing-library/user-event/dist/esm/setup/setup.js:[2m83:16[22m[39m
+[36m [2m❯[22m tests/AgentForm.test.tsx:[2m110:16[22m[39m
+    [90m108| [39m    await user.selectOptions(screen.getByLabelText("provider 配置"), "5"…
+    [90m109| [39m    [35mconst[39m modelSelect [33m=[39m [35mawait[39m screen[33m.[39m[34mfindByLabelText[39m([32m"模型"[39m)[33m;[39m
+    [90m110| [39m    [35mawait[39m user[33m.[39m[34mselectOptions[39m(modelSelect[33m,[39m [32m"glm-4-plus"[39m)[33m;[39m
+    [90m   | [39m               [31m^[39m
+    [90m111| [39m    [35mawait[39m user[33m.[39m[34mtype[39m(screen[33m.[39m[34mgetByLabelText[39m([32m"名字"[39m)[33m,[39m [32m"PM"[39m)[33m;[39m
+    [90m112| [39m    [35mawait[39m user[33m.[39m[34mclick[39m(screen[33m.[39m[34mgetByRole[39m([32m"button"[39m[33m,[39m { name[33m:[39m [36m/创建 Agent/[39m }))[33m;[39m
+
+[31m[2m⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[1/2]⎯[22m[39m
+
+[41m[1m FAIL [22m[49m tests/AgentList.test.tsx[2m > [22mAgentList states[2m > [22mshows provider name + model on card; 未配置 when no provider
+[31m[1mTestingLibraryElementError[22m: Unable to find an element with the text: P. This could be because the text is broken up by multiple elements. In this case, you can provide a function for your text matcher to make your matcher more flexible.
+
+Ignored nodes: comments, script, style
+[36m<body>[31m
+  [36m<div>[31m
+    [36m<div[31m
+      [33mclass[31m=[32m"grid grid-cols-1 gap-3 sm:grid-cols-2"[31m
+      [33mrole[31m=[32m"list"[31m
+    [36m>[31m
+      [36m<article[31m
+        [33mclass[31m=[32m"rounded-token border border-line bg-surface p-4 shadow-token"[31m
+        [33mrole[31m=[32m"listitem"[31m
+      [36m>[31m
+        [36m<div[31m
+          [33mclass[31m=[32m"flex items-center gap-2"[31m
+        [36m>[31m
+          [36m<span[31m
+            [33maria-hidden[31m=[32m"true"[31m
+            [33mclass[31m=[32m"inline-block h-2 w-2 rounded-full bg-accent"[31m
+          [36m/>[31m
+          [36m<span[31m
+            [33mclass[31m=[32m"font-medium"[31m
+          [36m>[31m
+            [0mPM[0m
+          [36m</span>[31m
+        [36m</div>[31m
+      [36m</article>[31m
+      [36m<article[31m
+        [33mclass[31m=[32m"rounded-token border border-line bg-surface p-4 shadow-token"[31m
+        [33mrole[31m=[32m"listitem"[31m
+      [36m>[31m
+        [36m<div[31m
+          [33mclass[31m=[32m"flex items-center gap-2"[31m
+        [36m>[31m
+          [36m<span[31m
+            [33maria-hidden[31m=[32m"true"[31m
+            [33mclass[31m=[32m"inline-block h-2 w-2 rounded-full bg-accent"[31m
+          [36m/>[31m
+          [36m<span[31m
+            [33mclass[31m=[32m"font-medium"[31m
+          [36m>[31m
+            [0mPM2[0m
+          [36m</span>[31m
+        [36m</div>[31m
+      [36m</article>[31m
+    [36m</div>[31m
+  [36m</div>[31m
+[36m</body>[31m[39m
+[90m [2m❯[22m Object.getElementError node_modules/@testing-library/dom/dist/config.js:[2m37:19[22m[39m
+[90m [2m❯[22m node_modules/@testing-library/dom/dist/query-helpers.js:[2m76:38[22m[39m
+[90m [2m❯[22m node_modules/@testing-library/dom/dist/query-helpers.js:[2m52:17[22m[39m
+[90m [2m❯[22m node_modules/@testing-library/dom/dist/query-helpers.js:[2m95:19[22m[39m
+[36m [2m❯[22m tests/AgentList.test.tsx:[2m112:19[22m[39m
+    [90m110| [39m
+    [90m111| [39m    [34mexpect[39m([35mawait[39m screen[33m.[39m[34mfindByText[39m([32m"PM"[39m))[33m.[39m[34mtoBeInTheDocument[39m()[33m;[39m
+    [90m112| [39m    [34mexpect[39m(screen[33m.[39m[34mgetByText[39m([32m"P"[39m))[33m.[39m[34mtoBeInTheDocument[39m()[33m;[39m
+    [90m   | [39m                  [31m^[39m
+    [90m113| [39m    [34mexpect[39m(screen[33m.[39m[34mgetByText[39m([32m"glm-4-plus"[39m))[33m.[39m[34mtoBeInTheDocument[39m()[33m;[39m
+    [90m114| [39m    [34mexpect[39m(screen[33m.[39m[34mgetByText[39m([36m/未配置 provider/[39m))[33m.[39m[34mtoBeInTheDocument[39m()[33m;[39m
+
+[31m[2m⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[2/2]⎯[22m[39m
+
+
+[2m Test Files [22m [1m[31m2 failed[39m[22m[2m | [22m[1m[32m15 passed[39m[22m[90m (17)[39m
+[2m      Tests [22m [1m[31m2 failed[39m[22m[2m | [22m[1m[32m72 passed[39m[22m[90m (74)[39m
+[2m   Start at [22m 23:24:13
+[2m   Duration [22m 4.47s[2m (transform 932ms, setup 0ms, collect 6.01s, tests 9.22s, environment 20.76s, prepare 9.00s)[22m
+
+# exit: 1

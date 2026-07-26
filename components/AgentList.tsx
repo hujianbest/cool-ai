@@ -2,16 +2,19 @@
 
 import { useCallback, useEffect, useState } from "react";
 import type { SkillIndexDTO } from "../src/server/skillService";
+import type { ProviderConfigDTO } from "../src/server/providerService";
 
-type Agent = { id: number; name: string; skills: number[] };
+type Agent = { id: number; name: string; skills: number[]; providerConfigId: number | null; model: string };
 type Status = "loading" | "success" | "empty" | "error";
 
 export function AgentList({
   version = 0,
   skills = [],
+  providerConfigs = [],
 }: {
   version?: number;
   skills?: SkillIndexDTO[];
+  providerConfigs?: ProviderConfigDTO[];
 }) {
   const [status, setStatus] = useState<Status>("loading");
   const [agents, setAgents] = useState<Agent[]>([]);
@@ -23,10 +26,12 @@ export function AgentList({
         if (!res.ok) throw new Error(`HTTP ${res.status}`);
         const data = await res.json();
         const list: Agent[] = (data.agents ?? []).map(
-          (a: { id: number; name: string; skills?: number[] }) => ({
+          (a: { id: number; name: string; skills?: number[]; providerConfigId?: number | null; model?: string }) => ({
             id: a.id,
             name: a.name,
             skills: Array.isArray(a.skills) ? a.skills : [],
+            providerConfigId: a.providerConfigId ?? null,
+            model: a.model ?? "",
           })
         );
         setAgents(list);
@@ -62,6 +67,8 @@ export function AgentList({
 
   const skillName = (id: number) =>
     skills.find((s) => s.id === id)?.name ?? String(id);
+  const providerName = (id: number | null) =>
+    id == null ? "未配置 provider" : providerConfigs.find((p) => p.id === id)?.name ?? `provider #${id}`;
 
   return (
     <div role="list" className="grid grid-cols-1 gap-3 sm:grid-cols-2">
@@ -78,6 +85,15 @@ export function AgentList({
             />
             <span className="font-medium">{a.name}</span>
           </div>
+          <p className="mt-1 text-xs text-muted">
+            <span>{providerName(a.providerConfigId)}</span>
+            {a.model && (
+              <>
+                <span> · </span>
+                <span>{a.model}</span>
+              </>
+            )}
+          </p>
           {a.skills.length > 0 && (
             <p className="mt-1 text-xs text-muted">
               <span className="mr-1">skills:</span>

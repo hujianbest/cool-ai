@@ -13,7 +13,8 @@ export type AgentDTO = {
   name: string;
   systemPrompt: string;
   tools: string[];
-  provider: string;
+  providerConfigId: number | null;
+  model: string;
   skills: number[];
   createdAt: Date;
 };
@@ -23,7 +24,8 @@ type AgentRow = {
   name: string;
   systemPrompt: string;
   tools: string;
-  provider: string;
+  providerConfigId: number | null;
+  model: string;
   skills: string;
   createdAt: Date;
 };
@@ -56,7 +58,8 @@ function toDTO(a: AgentRow): AgentDTO {
     name: a.name,
     systemPrompt: a.systemPrompt,
     tools: parseList(a.tools),
-    provider: a.provider,
+    providerConfigId: a.providerConfigId,
+    model: a.model,
     skills: parseIdList(a.skills),
     createdAt: a.createdAt,
   };
@@ -73,7 +76,8 @@ export type CreateAgentInput = {
   name?: string;
   systemPrompt?: string;
   tools?: string[];
-  provider?: string;
+  providerConfigId?: number | null;
+  model?: string;
   skills?: number[];
 };
 
@@ -95,13 +99,22 @@ export async function createAgent(
     }
   }
 
+  if (input.providerConfigId != null) {
+    const found = await client.providerConfig.findUnique({
+      where: { id: input.providerConfigId },
+      select: { id: true },
+    });
+    if (!found) throw new ValidationError("unknown provider config");
+  }
+
   const row = await client.agent.create({
     data: {
       name,
       systemPrompt: input.systemPrompt ?? "",
       tools: JSON.stringify(input.tools ?? []),
       skills: JSON.stringify(skillIds),
-      provider: input.provider ?? "zhipuai-coding-plan",
+      providerConfigId: input.providerConfigId ?? null,
+      model: input.model ?? "",
     },
   });
   return toDTO(row);

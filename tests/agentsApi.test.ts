@@ -18,7 +18,8 @@ function agent(id: number, name: string) {
     name,
     systemPrompt: "",
     tools: ["shell"],
-    provider: "zhipuai-coding-plan",
+    providerConfigId: 1,
+    model: "glm-4-plus",
     skills: [1],
     createdAt: new Date(),
   };
@@ -127,6 +128,20 @@ describe("POST /api/agents", () => {
     const req = new Request("http://localhost/api/agents", {
       method: "POST",
       body: JSON.stringify({ name: "PM", skills: [9999] }),
+    });
+    const res = await POST(req);
+
+    expect(res.status).toBe(400);
+  });
+
+  it("returns 400 when providerConfigId is unknown", async () => {
+    mockedCreateAgent.mockRejectedValue(
+      new ValidationError("unknown provider config")
+    );
+
+    const req = new Request("http://localhost/api/agents", {
+      method: "POST",
+      body: JSON.stringify({ name: "PM", providerConfigId: 9999 }),
     });
     const res = await POST(req);
 

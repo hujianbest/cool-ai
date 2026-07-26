@@ -1,8 +1,9 @@
 "use client";
 
-import { useState } from "react";
-import { PROVIDERS, TOOLS } from "../src/shared/agentOptions";
+import { useEffect, useState } from "react";
+import { TOOLS } from "../src/shared/agentOptions";
 import type { SkillIndexDTO } from "../src/server/skillService";
+import type { ProviderConfigDTO } from "../src/server/providerService";
 
 type Status = "idle" | "submitting" | "error";
 
@@ -10,20 +11,56 @@ function toggle(list: number[], id: number): number[] {
   return list.includes(id) ? list.filter((x) => x !== id) : [...list, id];
 }
 
+function toggleStr(list: string[], id: string): string[] {
+  return list.includes(id) ? list.filter((x) => x !== id) : [...list, id];
+}
+
 export function AgentForm({
   onCreated,
   skills = [],
+  providerConfigs = [],
 }: {
   onCreated: () => void;
   skills?: SkillIndexDTO[];
+  providerConfigs?: ProviderConfigDTO[];
 }) {
   const [name, setName] = useState("");
   const [systemPrompt, setSystemPrompt] = useState("");
   const [tools, setTools] = useState<string[]>([]);
-  const [provider, setProvider] = useState<string>(PROVIDERS[0].id);
+  const [providerConfigId, setProviderConfigId] = useState<number | null>(null);
+  const [model, setModel] = useState("");
+  const [models, setModels] = useState<string[]>([]);
+  const [modelsLoading, setModelsLoading] = useState(false);
   const [selectedSkills, setSelectedSkills] = useState<number[]>([]);
   const [status, setStatus] = useState<Status>("idle");
   const [nameError, setNameError] = useState(false);
+
+  useEffect(() => {
+    if (providerConfigId == null) {
+      setModels([]);
+      setModel("");
+      return;
+    }
+    let cancelled = false;
+    setModelsLoading(true);
+    setModels([]);
+    setModel("");
+    fetch(`/api/providers/${providerConfigId}/models`)
+      .then(async (res) => {
+        if (!res.ok) throw new Error(String(res.status));
+        const data = await res.json();
+        if (!cancelled) setModels(Array.isArray(data.models) ? data.models : []);
+      })
+      .catch(() => {
+        if (!cancelled) setModels([]);
+      })
+      .finally(() => {
+        if (!cancelled) setModelsLoading(false);
+      });
+    return () => {
+      cancelled = true;
+    };
+  }, [providerConfigId]);
 
   async function onSubmit(e: React.FormEvent) {
     e.preventDefault();
@@ -41,7 +78,8 @@ export function AgentForm({
           name: name.trim(),
           systemPrompt,
           tools,
-          provider,
+          providerConfigId,
+          model: model.trim(),
           skills: selectedSkills,
         }),
       });
@@ -49,6 +87,8 @@ export function AgentForm({
       setName("");
       setSystemPrompt("");
       setTools([]);
+      setProviderConfigId(null);
+      setModel("");
       setSelectedSkills([]);
       setStatus("idle");
       onCreated();
@@ -96,16 +136,9 @@ export function AgentForm({
 
       <div>
         <span className="block text-sm text-muted">可用工具</span>
-        <div
-          role="group"
-          aria-label="可用工具"
-          className="mt-1 flex flex-wrap gap-3"
-        >
+        <div role="group" aria-label="可用工具" className="mt-1 flex flex-wrap gap-3">
           {TOOLS.map((t) => (
-            <label
-              key={t.id}
-              className="inline-flex items-center gap-1 text-sm"
-            >
+            <label key={t.id} className="inline-flex items-center gap-1 text-sm">
               <input
                 type="checkbox"
                 checked={tools.includes(t.id)}
@@ -117,42 +150,62 @@ export function AgentForm({
         </div>
       </div>
 
-      <div>
-        <label
-          htmlFor="agent-provider"
-          className="block text-sm text-muted"
-        >
-          模型供应商
-        </label>
-        <select
-          id="agent-provider"
-          value={provider}
-          onChange={(e) => setProvider(e.target.value)}
-          className="mt-1 w-full rounded-token border border-line bg-surface px-3 py-2"
-        >
-          {PROVIDERS.map((p) => (
-            <option key={p.id} value={p.id}>
-              {p.label}
+      <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
+        <div>
+          <label htmlFor="agent-provider" className="block text-sm text-muted">
+            provider 配置
+          </label>
+          <select
+            id="agent-provider"
+            value={providerConfigId ?? ""}
+            onChange={(e) =>
+              setProviderConfigId(e.target.value ? Number(e.target.value) : null)
+            }
+            className="mt-1 w-full rounded-token border border-line bg-surface px-3 py-2"
+          >
+            <option value="">(未配置)</option>
+            {providerConfigs.map((p) => (
+              <option key={p.id} value={p.id}>
+                {p.name}
+              </option>
+            ))}
+          </select>
+        </div>
+        <div>
+          <label htmlFor="agent-model" className="block text-sm text-muted">
+            模型
+          </label>
+          <select
+            id="agent-model"
+            value={model}
+            onChange={(e) => setModel(e.target.value)}
+            disabled={providerConfigId == null || modelsLoading}
+            className="mt-1 w-full rounded-token border border-line bg-surface px-3 py-2 disabled:opacity-60"
+          >
+            <option value="">
+              {providerConfigId == null
+                ? "先选 provider"
+                : modelsLoading
+                ? "加载中…"
+                : "(选择模型)"}
             </option>
-          ))}
-        </select>
+            {models.map((m) => (
+              <option key={m} value={m}>
+                {m}
+              </option>
+            ))}
+          </select>
+        </div>
       </div>
 
       <div>
         <span className="block text-sm text-muted">skills</span>
-        <div
-          role="group"
-          aria-label="skills"
-          className="mt-1 flex flex-wrap gap-3"
-        >
+        <div role="group" aria-label="skills" className="mt-1 flex flex-wrap gap-3">
           {skills.length === 0 && (
             <span className="text-sm text-muted">暂无可用 skill(先创建)</span>
           )}
           {skills.map((s) => (
-            <label
-              key={s.id}
-              className="inline-flex items-center gap-1 text-sm"
-            >
+            <label key={s.id} className="inline-flex items-center gap-1 text-sm">
               <input
                 type="checkbox"
                 checked={selectedSkills.includes(s.id)}
@@ -179,8 +232,4 @@ export function AgentForm({
       </button>
     </form>
   );
-}
-
-function toggleStr(list: string[], id: string): string[] {
-  return list.includes(id) ? list.filter((x) => x !== id) : [...list, id];
 }
