@@ -1,0 +1,7 @@
+# hf-gate-run
+# label: t1-smoke
+# command: node scripts/probe-dev.mjs
+# started: 2026-07-25T17:59:19+00:00
+home OK: status 200, contains 'COOL AI'
+api OK: agents = [{"id":1,"name":"骨架 Agent","role":"占位角色"}]
+# exit: 0

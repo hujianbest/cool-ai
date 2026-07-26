@@ -1,0 +1,69 @@
+# hf-gate-run
+# label: t2-red
+# command: npm test
+# started: 2026-07-25T18:06:06+00:00
+
+> cool-ai@0.0.1 test
+> vitest run
+
+
+[1m[46m RUN [49m[22m [36mv3.2.7 [39m[90mE:/Code/cool-ai[39m
+
+ [32m✓[39m tests/baseline.test.ts [2m([22m[2m1 test[22m[2m)[22m[32m 2[2mms[22m[39m
+ [32m✓[39m tests/AgentList.test.tsx [2m([22m[2m1 test[22m[2m)[22m[32m 31[2mms[22m[39m
+ [31m❯[39m tests/agentService.test.ts [2m([22m[2m3 tests[22m[2m | [22m[31m2 failed[39m[2m)[22m[33m 1128[2mms[22m[39m
+[31m   [31m×[31m agentService.getAgents[2m > [22mreturns agents persisted in db[39m[32m 15[2mms[22m[39m
+[31m     → expected [] to have a length of 1 but got +0[39m
+   [32m✓[39m agentService.getAgents[2m > [22mreturns empty array when no agents[32m 4[2mms[22m[39m
+[31m   [31m×[31m agentService.getAgents[2m > [22mthrows when db read fails[39m[32m 2[2mms[22m[39m
+[31m     → promise resolved "[]" instead of rejecting[39m
+
+[31m⎯⎯⎯⎯⎯⎯⎯[39m[1m[41m Failed Tests 2 [49m[22m[31m⎯⎯⎯⎯⎯⎯⎯[39m
+
+[41m[1m FAIL [22m[49m tests/agentService.test.ts[2m > [22magentService.getAgents[2m > [22mreturns agents persisted in db
+[31m[1mAssertionError[22m: expected [] to have a length of 1 but got +0[39m
+
+[32m- Expected[39m
+[31m+ Received[39m
+
+[32m- 1[39m
+[31m+ 0[39m
+
+[36m [2m❯[22m tests/agentService.test.ts:[2m35:20[22m[39m
+    [90m 33| [39m    [35mconst[39m agents [33m=[39m [35mawait[39m [34mgetAgents[39m(db)[33m;[39m
+    [90m 34| [39m
+    [90m 35| [39m    [34mexpect[39m(agents)[33m.[39m[34mtoHaveLength[39m([34m1[39m)[33m;[39m
+    [90m   | [39m                   [31m^[39m
+    [90m 36| [39m    [34mexpect[39m(agents[[34m0[39m][33m.[39mname)[33m.[39m[34mtoBe[39m([32m"骨架 Agent"[39m)[33m;[39m
+    [90m 37| [39m  })[33m;[39m
+
+[31m[2m⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[1/2]⎯[22m[39m
+
+[41m[1m FAIL [22m[49m tests/agentService.test.ts[2m > [22magentService.getAgents[2m > [22mthrows when db read fails
+[31m[1mAssertionError[22m: promise resolved "[]" instead of rejecting[39m
+
+[32m- Expected:[39m 
+Error {
+  "message": "rejected promise",
+}
+
+[31m+ Received:[39m 
+[]
+
+[36m [2m❯[22m tests/agentService.test.ts:[2m54:36[22m[39m
+    [90m 52| [39m    } [35mas[39m unknown [35mas[39m [33mPrismaClient[39m[33m;[39m
+    [90m 53| [39m
+    [90m 54| [39m    [35mawait[39m [34mexpect[39m([34mgetAgents[39m(failing))[33m.[39mrejects[33m.[39m[34mtoThrow[39m([32m"db down"[39m)[33m;[39m
+    [90m   | [39m                                   [31m^[39m
+    [90m 55| [39m  })[33m;[39m
+    [90m 56| [39m})[33m;[39m
+
+[31m[2m⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[2/2]⎯[22m[39m
+
+
+[2m Test Files [22m [1m[31m1 failed[39m[22m[2m | [22m[1m[32m2 passed[39m[22m[90m (3)[39m
+[2m      Tests [22m [1m[31m2 failed[39m[22m[2m | [22m[1m[32m3 passed[39m[22m[90m (5)[39m
+[2m   Start at [22m 02:06:07
+[2m   Duration [22m 3.11s[2m (transform 77ms, setup 579ms, collect 177ms, tests 1.16s, environment 3.31s, prepare 461ms)[22m
+
+# exit: 1

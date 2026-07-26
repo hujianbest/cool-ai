@@ -1,0 +1,19 @@
+# hf-gate-run
+# label: baseline
+# command: npm test
+# started: 2026-07-25T17:29:48+00:00
+
+> cool-ai@0.0.1 test
+> vitest run
+
+
+[1m[46m RUN [49m[22m [36mv3.2.7 [39m[90mE:/Code/cool-ai[39m
+
+ [32m✓[39m tests/baseline.test.ts [2m([22m[2m1 test[22m[2m)[22m[32m 2[2mms[22m[39m
+
+[2m Test Files [22m [1m[32m1 passed[39m[22m[90m (1)[39m
+[2m      Tests [22m [1m[32m1 passed[39m[22m[90m (1)[39m
+[2m   Start at [22m 01:29:49
+[2m   Duration [22m 576ms[2m (transform 28ms, setup 0ms, collect 23ms, tests 2ms, environment 0ms, prepare 139ms)[22m
+
+# exit: 0
