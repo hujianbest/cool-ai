@@ -11,6 +11,7 @@ const config: Config = {
         muted: "var(--muted)",
         line: "var(--line)",
         accent: "var(--accent)",
+        "accent-strong": "var(--accent-strong)",
       },
       borderRadius: {
         token: "var(--radius)",

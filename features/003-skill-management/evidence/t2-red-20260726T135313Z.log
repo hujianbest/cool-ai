@@ -1,0 +1,45 @@
+# hf-gate-run
+# label: t2-red
+# command: npm test
+# started: 2026-07-26T13:53:13+00:00
+
+> cool-ai@0.0.1 test
+> vitest run
+
+
+[1m[46m RUN [49m[22m [36mv3.2.7 [39m[90mE:/Code/cool-ai[39m
+
+ [32m✓[39m tests/setupDocs.test.ts [2m([22m[2m2 tests[22m[2m)[22m[32m 3[2mms[22m[39m
+ [32m✓[39m tests/baseline.test.ts [2m([22m[2m1 test[22m[2m)[22m[32m 2[2mms[22m[39m
+ [32m✓[39m tests/agentsApi.test.ts [2m([22m[2m8 tests[22m[2m)[22m[32m 18[2mms[22m[39m
+ [32m✓[39m tests/skillService.test.ts [2m([22m[2m7 tests[22m[2m)[22m[33m 1322[2mms[22m[39m
+ [32m✓[39m tests/agentService.test.ts [2m([22m[2m6 tests[22m[2m)[22m[33m 1355[2mms[22m[39m
+ [32m✓[39m tests/layout.test.tsx [2m([22m[2m1 test[22m[2m)[22m[32m 109[2mms[22m[39m
+ [32m✓[39m tests/AgentList.test.tsx [2m([22m[2m5 tests[22m[2m)[22m[32m 215[2mms[22m[39m
+ [32m✓[39m tests/createFlow.test.tsx [2m([22m[2m1 test[22m[2m)[22m[32m 239[2mms[22m[39m
+ [32m✓[39m tests/AgentForm.test.tsx [2m([22m[2m3 tests[22m[2m)[22m[33m 359[2mms[22m[39m
+
+[31m⎯⎯⎯⎯⎯⎯[39m[1m[41m Failed Suites 1 [49m[22m[31m⎯⎯⎯⎯⎯⎯⎯[39m
+
+[41m[1m FAIL [22m[49m tests/skillsApi.test.ts[2m [ tests/skillsApi.test.ts ][22m
+[31m[1mError[22m: Cannot find module '../app/api/skills/route' imported from 'E:/Code/cool-ai/tests/skillsApi.test.ts'[39m
+[36m [2m❯[22m tests/skillsApi.test.ts:[2m10:1[22m[39m
+    [90m  8| [39m}))[33m;[39m
+    [90m  9| [39m
+    [90m 10| [39m[35mimport[39m { [33mGET[39m [35mas[39m listGET[33m,[39m [33mPOST[39m } [35mfrom[39m [32m"../app/api/skills/route"[39m[33m;[39m
+    [90m   | [39m[31m^[39m
+    [90m 11| [39m[35mimport[39m { [33mGET[39m [35mas[39m idGET } [35mfrom[39m [32m"../app/api/skills/[id]/route"[39m[33m;[39m
+    [90m 12| [39m[35mimport[39m {
+
+[31m[1mCaused by: Error[22m: Failed to load url ../app/api/skills/route (resolved id: ../app/api/skills/route) in E:/Code/cool-ai/tests/skillsApi.test.ts. Does the file exist?[39m
+[90m [2m❯[22m loadAndTransform node_modules/vite/dist/node/chunks/config.js:[2m22739:33[22m[39m
+
+[31m[2m⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[1/1]⎯[22m[39m
+
+
+[2m Test Files [22m [1m[31m1 failed[39m[22m[2m | [22m[1m[32m9 passed[39m[22m[90m (10)[39m
+[2m      Tests [22m [1m[32m34 passed[39m[22m[90m (34)[39m
+[2m   Start at [22m 21:53:14
+[2m   Duration [22m 2.90s[2m (transform 291ms, setup 0ms, collect 1.95s, tests 3.62s, environment 5.43s, prepare 4.39s)[22m
+
+# exit: 1

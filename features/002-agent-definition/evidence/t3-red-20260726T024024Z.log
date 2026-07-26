@@ -1,0 +1,100 @@
+# hf-gate-run
+# label: t3-red
+# command: npm test
+# started: 2026-07-26T02:40:24+00:00
+
+> cool-ai@0.0.1 test
+> vitest run
+
+
+[1m[46m RUN [49m[22m [36mv3.2.7 [39m[90mE:/Code/cool-ai[39m
+
+ [32m✓[39m tests/setupDocs.test.ts [2m([22m[2m2 tests[22m[2m)[22m[32m 3[2mms[22m[39m
+ [32m✓[39m tests/baseline.test.ts [2m([22m[2m1 test[22m[2m)[22m[32m 3[2mms[22m[39m
+ [31m❯[39m tests/agentsApi.test.ts [2m([22m[2m8 tests[22m[2m | [22m[31m5 failed[39m[2m)[22m[32m 15[2mms[22m[39m
+   [32m✓[39m GET /api/agents[2m > [22mcalls service and returns 200 with agents[32m 6[2mms[22m[39m
+   [32m✓[39m GET /api/agents[2m > [22mreturns 200 with empty array when no agents[32m 1[2mms[22m[39m
+   [32m✓[39m GET /api/agents[2m > [22mreturns 500 without leaking stack when service throws[32m 1[2mms[22m[39m
+[31m   [31m×[31m POST /api/agents[2m > [22mcreates and returns 201 with agent (tools as array)[39m[32m 3[2mms[22m[39m
+[31m     → POST is not a function[39m
+[31m   [31m×[31m POST /api/agents[2m > [22mreturns 400 when name empty[39m[32m 1[2mms[22m[39m
+[31m     → POST is not a function[39m
+[31m   [31m×[31m POST /api/agents[2m > [22mreturns 400 when name missing[39m[32m 0[2mms[22m[39m
+[31m     → POST is not a function[39m
+[31m   [31m×[31m POST /api/agents[2m > [22mreturns 400 on invalid JSON body[39m[32m 0[2mms[22m[39m
+[31m     → POST is not a function[39m
+[31m   [31m×[31m POST /api/agents[2m > [22mreturns 500 without leaking stack on non-validation error[39m[32m 0[2mms[22m[39m
+[31m     → POST is not a function[39m
+ [32m✓[39m tests/agentService.test.ts [2m([22m[2m6 tests[22m[2m)[22m[33m 1127[2mms[22m[39m
+ [32m✓[39m tests/layout.test.tsx [2m([22m[2m1 test[22m[2m)[22m[32m 99[2mms[22m[39m
+ [32m✓[39m tests/AgentList.test.tsx [2m([22m[2m5 tests[22m[2m)[22m[32m 207[2mms[22m[39m
+
+[31m⎯⎯⎯⎯⎯⎯⎯[39m[1m[41m Failed Tests 5 [49m[22m[31m⎯⎯⎯⎯⎯⎯⎯[39m
+
+[41m[1m FAIL [22m[49m tests/agentsApi.test.ts[2m > [22mPOST /api/agents[2m > [22mcreates and returns 201 with agent (tools as array)
+[31m[1mTypeError[22m: POST is not a function[39m
+[36m [2m❯[22m tests/agentsApi.test.ts:[2m77:23[22m[39m
+    [90m 75| [39m      body: JSON.stringify({ name: "PM", tools: ["shell"], skills: ["r…
+    [90m 76| [39m    })[33m;[39m
+    [90m 77| [39m    [35mconst[39m res [33m=[39m [35mawait[39m [33mPOST[39m(req)[33m;[39m
+    [90m   | [39m                      [31m^[39m
+    [90m 78| [39m
+    [90m 79| [39m    [34mexpect[39m(mockedCreateAgent)[33m.[39m[34mtoHaveBeenCalledWith[39m(
+
+[31m[2m⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[1/5]⎯[22m[39m
+
+[41m[1m FAIL [22m[49m tests/agentsApi.test.ts[2m > [22mPOST /api/agents[2m > [22mreturns 400 when name empty
+[31m[1mTypeError[22m: POST is not a function[39m
+[36m [2m❯[22m tests/agentsApi.test.ts:[2m95:23[22m[39m
+    [90m 93| [39m      body[33m:[39m [33mJSON[39m[33m.[39m[34mstringify[39m({ name[33m:[39m [32m""[39m })[33m,[39m
+    [90m 94| [39m    })[33m;[39m
+    [90m 95| [39m    [35mconst[39m res [33m=[39m [35mawait[39m [33mPOST[39m(req)[33m;[39m
+    [90m   | [39m                      [31m^[39m
+    [90m 96| [39m
+    [90m 97| [39m    [34mexpect[39m(res[33m.[39mstatus)[33m.[39m[34mtoBe[39m([34m400[39m)[33m;[39m
+
+[31m[2m⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[2/5]⎯[22m[39m
+
+[41m[1m FAIL [22m[49m tests/agentsApi.test.ts[2m > [22mPOST /api/agents[2m > [22mreturns 400 when name missing
+[31m[1mTypeError[22m: POST is not a function[39m
+[36m [2m❯[22m tests/agentsApi.test.ts:[2m108:23[22m[39m
+    [90m106| [39m      body[33m:[39m [33mJSON[39m[33m.[39m[34mstringify[39m({})[33m,[39m
+    [90m107| [39m    })[33m;[39m
+    [90m108| [39m    [35mconst[39m res [33m=[39m [35mawait[39m [33mPOST[39m(req)[33m;[39m
+    [90m   | [39m                      [31m^[39m
+    [90m109| [39m
+    [90m110| [39m    [34mexpect[39m(res[33m.[39mstatus)[33m.[39m[34mtoBe[39m([34m400[39m)[33m;[39m
+
+[31m[2m⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[3/5]⎯[22m[39m
+
+[41m[1m FAIL [22m[49m tests/agentsApi.test.ts[2m > [22mPOST /api/agents[2m > [22mreturns 400 on invalid JSON body
+[31m[1mTypeError[22m: POST is not a function[39m
+[36m [2m❯[22m tests/agentsApi.test.ts:[2m118:23[22m[39m
+    [90m116| [39m      body[33m:[39m [32m"{not json"[39m[33m,[39m
+    [90m117| [39m    })[33m;[39m
+    [90m118| [39m    [35mconst[39m res [33m=[39m [35mawait[39m [33mPOST[39m(req)[33m;[39m
+    [90m   | [39m                      [31m^[39m
+    [90m119| [39m
+    [90m120| [39m    [34mexpect[39m(res[33m.[39mstatus)[33m.[39m[34mtoBe[39m([34m400[39m)[33m;[39m
+
+[31m[2m⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[4/5]⎯[22m[39m
+
+[41m[1m FAIL [22m[49m tests/agentsApi.test.ts[2m > [22mPOST /api/agents[2m > [22mreturns 500 without leaking stack on non-validation error
+[31m[1mTypeError[22m: POST is not a function[39m
+[36m [2m❯[22m tests/agentsApi.test.ts:[2m131:23[22m[39m
+    [90m129| [39m      body[33m:[39m [33mJSON[39m[33m.[39m[34mstringify[39m({ name[33m:[39m [32m"PM"[39m })[33m,[39m
+    [90m130| [39m    })[33m;[39m
+    [90m131| [39m    [35mconst[39m res [33m=[39m [35mawait[39m [33mPOST[39m(req)[33m;[39m
+    [90m   | [39m                      [31m^[39m
+    [90m132| [39m
+    [90m133| [39m    [34mexpect[39m(res[33m.[39mstatus)[33m.[39m[34mtoBe[39m([34m500[39m)[33m;[39m
+
+[31m[2m⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[5/5]⎯[22m[39m
+
+
+[2m Test Files [22m [1m[31m1 failed[39m[22m[2m | [22m[1m[32m5 passed[39m[22m[90m (6)[39m
+[2m      Tests [22m [1m[31m5 failed[39m[22m[2m | [22m[1m[32m18 passed[39m[22m[90m (23)[39m
+[2m   Start at [22m 10:40:25
+[2m   Duration [22m 2.48s[2m (transform 209ms, setup 0ms, collect 976ms, tests 1.45s, environment 2.16s, prepare 2.83s)[22m
+
+# exit: 1

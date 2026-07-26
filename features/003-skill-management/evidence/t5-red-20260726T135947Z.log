@@ -1,0 +1,771 @@
+# hf-gate-run
+# label: t5-red
+# command: npm test
+# started: 2026-07-26T13:59:47+00:00
+
+> cool-ai@0.0.1 test
+> vitest run
+
+
+[1m[46m RUN [49m[22m [36mv3.2.7 [39m[90mE:/Code/cool-ai[39m
+
+ [32m✓[39m tests/baseline.test.ts [2m([22m[2m1 test[22m[2m)[22m[32m 3[2mms[22m[39m
+ [32m✓[39m tests/setupDocs.test.ts [2m([22m[2m2 tests[22m[2m)[22m[32m 4[2mms[22m[39m
+ [32m✓[39m tests/skillsApi.test.ts [2m([22m[2m5 tests[22m[2m)[22m[32m 18[2mms[22m[39m
+ [32m✓[39m tests/agentsApi.test.ts [2m([22m[2m9 tests[22m[2m)[22m[32m 27[2mms[22m[39m
+ [32m✓[39m tests/skillService.test.ts [2m([22m[2m7 tests[22m[2m)[22m[33m 1545[2mms[22m[39m
+ [32m✓[39m tests/agentService.test.ts [2m([22m[2m7 tests[22m[2m)[22m[33m 1570[2mms[22m[39m
+ [32m✓[39m tests/layout.test.tsx [2m([22m[2m1 test[22m[2m)[22m[32m 148[2mms[22m[39m
+ [32m✓[39m tests/SkillList.test.tsx [2m([22m[2m4 tests[22m[2m)[22m[32m 207[2mms[22m[39m
+ [32m✓[39m tests/AgentForm.test.tsx [2m([22m[2m3 tests[22m[2m)[22m[33m 403[2mms[22m[39m
+ [31m❯[39m tests/AgentList.test.tsx [2m([22m[2m6 tests[22m[2m | [22m[31m1 failed[39m[2m)[22m[32m 282[2mms[22m[39m
+   [32m✓[39m AgentList states[2m > [22mshows loading before fetch resolves[32m 36[2mms[22m[39m
+   [32m✓[39m AgentList states[2m > [22mrenders agents on success[32m 15[2mms[22m[39m
+   [32m✓[39m AgentList states[2m > [22mshows empty state when no agents[32m 21[2mms[22m[39m
+   [32m✓[39m AgentList states[2m > [22mshows error state with retry button on fetch failure[32m 123[2mms[22m[39m
+   [32m✓[39m AgentList states[2m > [22mreloads on retry click[32m 63[2mms[22m[39m
+[31m   [31m×[31m AgentList states[2m > [22mshows associated skill names resolved via skills prop[39m[32m 22[2mms[22m[39m
+[31m     → Unable to find an element with the text: 需求整理. This could be because the text is broken up by multiple elements. In this case, you can provide a function for your text matcher to make your matcher more flexible.
+
+Ignored nodes: comments, script, style
+[36m<body>[31m
+  [36m<div>[31m
+    [36m<div[31m
+      [33mclass[31m=[32m"grid grid-cols-1 gap-3 sm:grid-cols-2"[31m
+      [33mrole[31m=[32m"list"[31m
+    [36m>[31m
+      [36m<article[31m
+        [33mclass[31m=[32m"rounded-token border border-line bg-surface p-4 shadow-token"[31m
+        [33mrole[31m=[32m"listitem"[31m
+      [36m>[31m
+        [36m<div[31m
+          [33mclass[31m=[32m"flex items-center gap-2"[31m
+        [36m>[31m
+          [36m<span[31m
+            [33maria-hidden[31m=[32m"true"[31m
+            [33mclass[31m=[32m"inline-block h-2 w-2 rounded-full bg-accent"[31m
+          [36m/>[31m
+          [36m<span[31m
+            [33mclass[31m=[32m"font-medium"[31m
+          [36m>[31m
+            [0mPM[0m
+          [36m</span>[31m
+        [36m</div>[31m
+      [36m</article>[31m
+    [36m</div>[31m
+  [36m</div>[31m
+[36m</body>[31m[39m
+ [32m✓[39m tests/SkillForm.test.tsx [2m([22m[2m3 tests[22m[2m)[22m[33m 307[2mms[22m[39m
+ [32m✓[39m tests/createFlow.test.tsx [2m([22m[2m1 test[22m[2m)[22m[33m 359[2mms[22m[39m
+   [33m[2m✓[22m[39m create flow (page wiring)[2m > [22mcreating an agent refreshes the list via version bump [33m 357[2mms[22m[39m
+ [31m❯[39m tests/agentSkillLink.test.tsx [2m([22m[2m1 test[22m[2m | [22m[31m1 failed[39m[2m)[22m[33m 530[2mms[22m[39m
+[31m   [31m×[31m agent ↔ skill association flow[2m > [22mcreate skill, link it to a new agent, card shows the skill name[39m[33m 529[2mms[22m[39m
+[31m     → Found multiple elements with the text: 需求整理
+
+Here are the matching elements:
+
+Ignored nodes: comments, script, style
+[36m<span[31m
+  [33mclass[31m=[32m"font-medium"[31m
+[36m>[31m
+  [0m需求整理[0m
+[36m</span>[31m
+
+Ignored nodes: comments, script, style
+[36m<label[31m
+  [33mclass[31m=[32m"inline-flex items-center gap-1 text-sm"[31m
+[36m>[31m
+  [36m<input[31m
+    [33mtype[31m=[32m"checkbox"[31m
+  [36m/>[31m
+  [0m需求整理[0m
+[36m</label>[31m
+
+(If this is intentional, then use the `*AllBy*` variant of the query (like `queryAllByText`, `getAllByText`, or `findAllByText`)).
+
+Ignored nodes: comments, script, style
+[36m<body>[31m
+  [36m<div>[31m
+    [36m<div[31m
+      [33mclass[31m=[32m"mx-auto flex min-h-screen max-w-6xl flex-col gap-6 p-4 sm:flex-row sm:p-6"[31m
+    [36m>[31m
+      [36m<aside[31m
+        [33mclass[31m=[32m"w-full shrink-0 rounded-token border border-line bg-surface-subtle p-4 sm:w-64"[31m
+      [36m>[31m
+        [36m<h1[31m
+          [33mclass[31m=[32m"text-xl font-semibold"[31m
+        [36m>[31m
+          [0mCOOL AI[0m
+        [36m</h1>[31m
+        [36m<p[31m
+          [33mclass[31m=[32m"mt-1 text-sm text-muted"[31m
+        [36m>[31m
+          [0m多 agent 协作平台[0m
+        [36m</p>[31m
+      [36m</aside>[31m
+      [36m<main[31m
+        [33mclass[31m=[32m"flex-1 space-y-6"[31m
+      [36m>[31m
+        [36m<section[31m
+          [33mclass[31m=[32m"rounded-token border border-line bg-surface p-4"[31m
+        [36m>[31m
+          [36m<h2[31m
+            [33mclass[31m=[32m"mb-3 text-lg font-medium"[31m
+          [36m>[31m
+            [0m创建 Skill[0m
+          [36m</h2>[31m
+          [36m<form[31m
+            [33maria-label[31m=[32m"创建 skill"[31m
+            [33mclass[31m=[32m"space-y-4 rounded-token border border-line bg-surface-subtle p-4"[31m
+          [36m>[31m
+            [36m<div>[31m
+              [36m<label[31m
+                [33mclass[31m=[32m"block text-sm text-muted"[31m
+                [33mfor[31m=[32m"skill-name"[31m
+              [36m>[31m
+                [0m名字[0m
+              [36m</label>[31m
+              [36m<input[31m
+                [33maria-invalid[31m=[32m"false"[31m
+                [33mclass[31m=[32m"mt-1 w-full rounded-token border border-line bg-surface px-3 py-2"[31m
+                [33mid[31m=[32m"skill-name"[31m
+                [33mvalue[31m=[32m""[31m
+              [36m/>[31m
+            [36m</div>[31m
+            [36m<div>[31m
+              [36m<label[31m
+                [33mclass[31m=[32m"block text-sm text-muted"[31m
+                [33mfor[31m=[32m"skill-desc"[31m
+              [36m>[31m
+                [0m描述[0m
+              [36m</label>[31m
+              [36m<input[31m
+                [33mclass[31m=[32m"mt-1 w-full rounded-token border border-line bg-surface px-3 py-2"[31m
+                [33mid[31m=[32m"skill-desc"[31m
+                [33mvalue[31m=[32m""[31m
+              [36m/>[31m
+            [36m</div>[31m
+            [36m<div>[31m
+              [36m<label[31m
+                [33mclass[31m=[32m"block text-sm text-muted"[31m
+                [33mfor[31m=[32m"skill-content"[31m
+              [36m>[31m
+                [0m内容[0m
+              [36m</label>[31m
+              [36m<textarea[31m
+                [33mclass[31m=[32m"mt-1 w-full rounded-token border border-line bg-surface px-3 py-2"[31m
+                [33mid[31m=[32m"skill-content"[31m
+                [33mrows[31m=[32m"4"[31m
+              [36m/>[31m
+            [36m</div>[31m
+            [36m<div>[31m
+              [36m<label[31m
+                [33mclass[31m=[32m"block text-sm text-muted"[31m
+                [33mfor[31m=[32m"skill-cat"[31m
+              [36m>[31m
+                [0m分类[0m
+              [36m</label>[31m
+              [36m<input[31m
+                [33mclass[31m=[32m"mt-1 w-full rounded-token border border-line bg-surface px-3 py-2"[31m
+                [33mid[31m=[32m"skill-cat"[31m
+                [33mvalue[31m=[32m""[31m
+              [36m/>[31m
+            [36m</div>[31m
+            [36m<button[31m
+              [33mclass[31m=[32m"inline-flex min-h-[44px] items-center rounded-token bg-accent-strong px-4 text-surface focus:outline-none focus-visible:ring-2 focus-visible:ring-accent disabled:opacity-60"[31m
+              [33mtype[31m=[32m"submit"[31m
+            [36m>[31m
+              [0m创建 skill[0m
+            [36m</button>[31m
+          [36m</form>[31m
+          [36m<h3[31m
+            [33mclass[31m=[32m"mb-3 mt-4 text-base font-medium"[31m
+          [36m>[31m
+            [0mSkill 列表[0m
+          [36m</h3>[31m
+          [36m<div[31m
+            [33mclass[31m=[32m"grid grid-cols-1 gap-3 sm:grid-cols-2"[31m
+            [33mrole[31m=[32m"list"[31m
+          [36m>[31m
+            [36m<article[31m
+              [33mclass[31m=[32m"rounded-token border border-line bg-surface p-4 shadow-token"[31m
+              [33mrole[31m=[32m"listitem"[31m
+            [36m>[31m
+              [36m<div[31m
+                [33mclass[31m=[32m"flex items-center gap-2"[31m
+              [36m>[31m
+                [36m<span[31m
+                  [33maria-hidden[31m=[32m"true"[31m
+                  [33mclass[31m=[32m"inline-block h-2 w-2 rounded-full bg-accent"[31m
+                [36m/>[31m
+                [36m<span[31m
+                  [33mclass[31m=[32m"font-medium"[31m
+                [36m>[31m
+                  [0m需求整理[0m
+                [36m</span>[31m
+              [36m</div>[31m
+              [36m<p[31m
+                [33mclass[31m=[32m"mt-1 text-xs text-muted"[31m
+              [36m>[31m
+                [0m被 [0m
+                [0m1[0m
+                [0m 个 agent 关联[0m
+              [36m</p>[31m
+            [36m</article>[31m
+          [36m</div>[31m
+        [36m</section>[31m
+        [36m<section[31m
+          [33mclass[31m=[32m"rounded-token border border-line bg-surface p-4"[31m
+        [36m>[31m
+          [36m<h2[31m
+            [33mclass[31m=[32m"mb-3 text-lg font-medium"[31m
+          [36m>[31m
+            [0m创建 Agent[0m
+          [36m</h2>[31m
+          [36m<form[31m
+            [33maria-label[31m=[32m"创建 Agent"[31m
+            [33mclass[31m=[32m"space-y-4 rounded-token border border-line bg-surface-subtle p-4"[31m
+          [36m>[31m
+            [36m<div>[31m
+              [36m<label[31m
+                [33mclass[31m=[32m"block text-sm text-muted"[31m
+                [33mfor[31m=[32m"agent-name"[31m
+              [36m>[31m
+                [0m名字[0m
+              [36m</label>[31m
+              [36m<input[31m
+                [33maria-invalid[31m=[32m"false"[31m
+                [33mclass[31m=[32m"mt-1 w-full rounded-token border border-line bg-surface px-3 py-2"[31m
+                [33mid[31m=[32m"agent-name"[31m
+                [33mvalue[31m=[32m""[31m
+              [36m/>[31m
+            [36m</div>[31m
+            [36m<div>[31m
+              [36m<label[31m
+                [33mclass[31m=[32m"block text-sm text-muted"[31m
+                [33mfor[31m=[32m"agent-prompt"[31m
+              [36m>[31m
+                [0m角色描述[0m
+              [36m</label>[31m
+              [36m<textarea[31m
+                [33mclass[31m=[32m"mt-1 w-full rounded-token border border-line bg-surface px-3 py-2"[31m
+                [33mid[31m=[32m"agent-prompt"[31m
+                [33mrows[31m=[32m"3"[31m
+              [36m/>[31m
+            [36m</div>[31m
+            [36m<div>[31m
+              [36m<span[31m
+                [33mclass[31m=[32m"block text-sm text-muted"[31m
+              [36m>[31m
+                [0m可用工具[0m
+              [36m</span>[31m
+              [36m<div[31m
+                [33maria-label[31m=[32m"可用工具"[31m
+                [33mclass[31m=[32m"mt-1 flex flex-wrap gap-3"[31m
+                [33mrole[31m=[32m"group"[31m
+              [36m>[31m
+                [36m<label[31m
+                  [33mclass[31m=[32m"inline-flex items-center gap-1 text-sm"[31m
+                [36m>[31m
+                  [36m<input[31m
+                    [33mtype[31m=[32m"checkbox"[31m
+                  [36m/>[31m
+                  [0m文件读取[0m
+                [36m</label>[31m
+                [36m<label[31m
+                  [33mclass[31m=[32m"inline-flex items-center gap-1 text-sm"[31m
+                [36m>[31m
+                  [36m<input[31m
+                    [33mtype[31m=[32m"checkbox"[31m
+                  [36m/>[31m
+                  [0m文件写入[0m
+                [36m</label>[31m
+                [36m<label[31m
+                  [33mclass[31m=[32m"inline-flex items-center gap-1 text-sm"[31m
+                [36m>[31m
+                  [36m<input[31m
+                    [33mtype[31m=[32m"checkbox"[31m
+                  [36m/>[31m
+                  [0mShell 执行[0m
+                [36m</label>[31m
+                [36m<label[31m
+                  [33mclass[31m=[32m"inline-flex items-center gap-1 text-sm"[31m
+                [36m>[31m
+                  [36m<input[31m
+                    [33mtype[31m=[32m"checkbox"[31m
+                  [36m/>[31m
+                  [0m网络搜索[0m
+                [36m</label>[31m
+              [36m</div>[31m
+            [36m</div>[31m
+            [36m<div>[31m
+              [36m<label[31m
+                [33mclass[31m=[32m"block text-sm text-muted"[31m
+                [33mfor[31m=[32m"agent-provider"[31m
+              [36m>[31m
+                [0m模型供应商[0m
+              [36m</label>[31m
+              [36m<select[31m
+                [33mclass[31m=[32m"mt-1 w-full rounded-token border border-line bg-surface px-3 py-2"[31m
+                [33mid[31m=[32m"agent-provider"[31m
+              [36m>[31m
+                [36m<option[31m
+                  [33mvalue[31m=[32m"zhipuai-coding-plan"[31m
+                [36m>[31m
+                  [0mGLM (zhipuai-coding-plan)[0m
+                [36m</option>[31m
+              [36m</select>[31m
+            [36m</div>[31m
+            [36m<div>[31m
+              [36m<span[31m
+                [33mclass[31m=[32m"block text-sm text-muted"[31m
+              [36m>[31m
+                [0mskills[0m
+              [36m</span>[31m
+              [36m<div[31m
+                [33maria-label[31m=[32m"skills"[31m
+                [33mclass[31m=[32m"mt-1 flex flex-wrap gap-3"[31m
+                [33mrole[31m=[32m"group"[31m
+              [36m>[31m
+                [36m<label[31m
+                  [33mclass[31m=[32m"inline-flex items-center gap-1 text-sm"[31m
+                [36m>[31m
+                  [36m<input[31m
+                    [33mtype[31m=[32m"checkbox"[31m
+                  [36m/>[31m
+                  [0m需求整理[0m
+                [36m</label>[31m
+              [36m</div>[31m
+            [36m</div>[31m
+            [36m<button[31m
+              [33mclass[31m=[32m"inline-flex min-h-[44px] items-center rounded-token bg-accent-strong px-4 text-surface focus:outline-none focus-visible:ring-2 focus-visible:ring-accent disabled:opacity-60"[31m
+              [33mtype[31m=[32m"submit"[31m
+            [36m>[31m
+              [0m创建 Agent[0m
+            [36m</button>[31m
+          [36m</form>[31m
+        [36m</section>[31m
+        [36m<section>[31m
+          [36m<h2[31m
+            [33mclass[31m=[32m"mb-3 text-lg font-medium"[31m
+          [36m>[31m
+            [0mAgent[0m
+          [36m</h2>[31m
+          [36m<div[31m
+            [33mclass[31m=[32m"grid grid-cols-1 gap-3 sm:grid-cols-2"[31m
+            [33mrole[31m=[32m"list"[31m
+          [36m>[31m
+            [36m<article[31m
+              [33mclass[31m=[32m"rounded-token border border-line bg-surface p-4 shadow-token"[31m
+              [33mrole[31m=[32m"listitem"[31m
+            [36m>[31m
+              [36m<div[31m
+                [33mclass[31m=[32m"flex items-center gap-2"[31m
+              [36m>[31m
+                [36m<span[31m
+                  [33maria-hidden[31m=[32m"true"[31m
+                  [33mclass[31m=[32m"inline-block h-2 w-2 rounded-full bg-accent"[31m
+                [36m/>[31m
+                [36m<span[31m
+                  [33mclass[31m=[32m"font-medium"[31m
+                [36m>[31m
+                  [0mPM[0m
+                [36m</span>[31m
+              [36m</div>[31m
+            [36m</article>[31m
+          [36m</div>[31m
+        [36m</section>[31m
+      [36m</main>[31m
+    [36m</div>[31m
+  [36m</div>[31m
+[36m</body>[31m[39m
+
+[31m⎯⎯⎯⎯⎯⎯⎯[39m[1m[41m Failed Tests 2 [49m[22m[31m⎯⎯⎯⎯⎯⎯⎯[39m
+
+[41m[1m FAIL [22m[49m tests/AgentList.test.tsx[2m > [22mAgentList states[2m > [22mshows associated skill names resolved via skills prop
+[31m[1mTestingLibraryElementError[22m: Unable to find an element with the text: 需求整理. This could be because the text is broken up by multiple elements. In this case, you can provide a function for your text matcher to make your matcher more flexible.
+
+Ignored nodes: comments, script, style
+[36m<body>[31m
+  [36m<div>[31m
+    [36m<div[31m
+      [33mclass[31m=[32m"grid grid-cols-1 gap-3 sm:grid-cols-2"[31m
+      [33mrole[31m=[32m"list"[31m
+    [36m>[31m
+      [36m<article[31m
+        [33mclass[31m=[32m"rounded-token border border-line bg-surface p-4 shadow-token"[31m
+        [33mrole[31m=[32m"listitem"[31m
+      [36m>[31m
+        [36m<div[31m
+          [33mclass[31m=[32m"flex items-center gap-2"[31m
+        [36m>[31m
+          [36m<span[31m
+            [33maria-hidden[31m=[32m"true"[31m
+            [33mclass[31m=[32m"inline-block h-2 w-2 rounded-full bg-accent"[31m
+          [36m/>[31m
+          [36m<span[31m
+            [33mclass[31m=[32m"font-medium"[31m
+          [36m>[31m
+            [0mPM[0m
+          [36m</span>[31m
+        [36m</div>[31m
+      [36m</article>[31m
+    [36m</div>[31m
+  [36m</div>[31m
+[36m</body>[31m[39m
+[90m [2m❯[22m Object.getElementError node_modules/@testing-library/dom/dist/config.js:[2m37:19[22m[39m
+[90m [2m❯[22m node_modules/@testing-library/dom/dist/query-helpers.js:[2m76:38[22m[39m
+[90m [2m❯[22m node_modules/@testing-library/dom/dist/query-helpers.js:[2m52:17[22m[39m
+[90m [2m❯[22m node_modules/@testing-library/dom/dist/query-helpers.js:[2m95:19[22m[39m
+[36m [2m❯[22m tests/AgentList.test.tsx:[2m90:19[22m[39m
+    [90m 88| [39m
+    [90m 89| [39m    [34mexpect[39m([35mawait[39m screen[33m.[39m[34mfindByText[39m([32m"PM"[39m))[33m.[39m[34mtoBeInTheDocument[39m()[33m;[39m
+    [90m 90| [39m    [34mexpect[39m(screen[33m.[39m[34mgetByText[39m([32m"需求整理"[39m))[33m.[39m[34mtoBeInTheDocument[39m()[33m;[39m
+    [90m   | [39m                  [31m^[39m
+    [90m 91| [39m  })[33m;[39m
+    [90m 92| [39m})[33m;[39m
+
+[31m[2m⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[1/2]⎯[22m[39m
+
+[41m[1m FAIL [22m[49m tests/agentSkillLink.test.tsx[2m > [22magent ↔ skill association flow[2m > [22mcreate skill, link it to a new agent, card shows the skill name
+[31m[1mTestingLibraryElementError[22m[39m: Found multiple elements with the text: 需求整理
+
+Here are the matching elements:
+
+Ignored nodes: comments, script, style
+[36m<span[39m
+  [33mclass[39m=[32m"font-medium"[39m
+[36m>[39m
+  [0m需求整理[0m
+[36m</span>[39m
+
+Ignored nodes: comments, script, style
+[36m<label[39m
+  [33mclass[39m=[32m"inline-flex items-center gap-1 text-sm"[39m
+[36m>[39m
+  [36m<input[39m
+    [33mtype[39m=[32m"checkbox"[39m
+  [36m/>[39m
+  [0m需求整理[0m
+[36m</label>[39m
+
+(If this is intentional, then use the `*AllBy*` variant of the query (like `queryAllByText`, `getAllByText`, or `findAllByText`)).
+
+Ignored nodes: comments, script, style
+[36m<body>[39m
+  [36m<div>[39m
+    [36m<div[39m
+      [33mclass[39m=[32m"mx-auto flex min-h-screen max-w-6xl flex-col gap-6 p-4 sm:flex-row sm:p-6"[39m
+    [36m>[39m
+      [36m<aside[39m
+        [33mclass[39m=[32m"w-full shrink-0 rounded-token border border-line bg-surface-subtle p-4 sm:w-64"[39m
+      [36m>[39m
+        [36m<h1[39m
+          [33mclass[39m=[32m"text-xl font-semibold"[39m
+        [36m>[39m
+          [0mCOOL AI[0m
+        [36m</h1>[39m
+        [36m<p[39m
+          [33mclass[39m=[32m"mt-1 text-sm text-muted"[39m
+        [36m>[39m
+          [0m多 agent 协作平台[0m
+        [36m</p>[39m
+      [36m</aside>[39m
+      [36m<main[39m
+        [33mclass[39m=[32m"flex-1 space-y-6"[39m
+      [36m>[39m
+        [36m<section[39m
+          [33mclass[39m=[32m"rounded-token border border-line bg-surface p-4"[39m
+        [36m>[39m
+          [36m<h2[39m
+            [33mclass[39m=[32m"mb-3 text-lg font-medium"[39m
+          [36m>[39m
+            [0m创建 Skill[0m
+          [36m</h2>[39m
+          [36m<form[39m
+            [33maria-label[39m=[32m"创建 skill"[39m
+            [33mclass[39m=[32m"space-y-4 rounded-token border border-line bg-surface-subtle p-4"[39m
+          [36m>[39m
+            [36m<div>[39m
+              [36m<label[39m
+                [33mclass[39m=[32m"block text-sm text-muted"[39m
+                [33mfor[39m=[32m"skill-name"[39m
+              [36m>[39m
+                [0m名字[0m
+              [36m</label>[39m
+              [36m<input[39m
+                [33maria-invalid[39m=[32m"false"[39m
+                [33mclass[39m=[32m"mt-1 w-full rounded-token border border-line bg-surface px-3 py-2"[39m
+                [33mid[39m=[32m"skill-name"[39m
+                [33mvalue[39m=[32m""[39m
+              [36m/>[39m
+            [36m</div>[39m
+            [36m<div>[39m
+              [36m<label[39m
+                [33mclass[39m=[32m"block text-sm text-muted"[39m
+                [33mfor[39m=[32m"skill-desc"[39m
+              [36m>[39m
+                [0m描述[0m
+              [36m</label>[39m
+              [36m<input[39m
+                [33mclass[39m=[32m"mt-1 w-full rounded-token border border-line bg-surface px-3 py-2"[39m
+                [33mid[39m=[32m"skill-desc"[39m
+                [33mvalue[39m=[32m""[39m
+              [36m/>[39m
+            [36m</div>[39m
+            [36m<div>[39m
+              [36m<label[39m
+                [33mclass[39m=[32m"block text-sm text-muted"[39m
+                [33mfor[39m=[32m"skill-content"[39m
+              [36m>[39m
+                [0m内容[0m
+              [36m</label>[39m
+              [36m<textarea[39m
+                [33mclass[39m=[32m"mt-1 w-full rounded-token border border-line bg-surface px-3 py-2"[39m
+                [33mid[39m=[32m"skill-content"[39m
+                [33mrows[39m=[32m"4"[39m
+              [36m/>[39m
+            [36m</div>[39m
+            [36m<div>[39m
+              [36m<label[39m
+                [33mclass[39m=[32m"block text-sm text-muted"[39m
+                [33mfor[39m=[32m"skill-cat"[39m
+              [36m>[39m
+                [0m分类[0m
+              [36m</label>[39m
+              [36m<input[39m
+                [33mclass[39m=[32m"mt-1 w-full rounded-token border border-line bg-surface px-3 py-2"[39m
+                [33mid[39m=[32m"skill-cat"[39m
+                [33mvalue[39m=[32m""[39m
+              [36m/>[39m
+            [36m</div>[39m
+            [36m<button[39m
+              [33mclass[39m=[32m"inline-flex min-h-[44px] items-center rounded-token bg-accent-strong px-4 text-surface focus:outline-none focus-visible:ring-2 focus-visible:ring-accent disabled:opacity-60"[39m
+              [33mtype[39m=[32m"submit"[39m
+            [36m>[39m
+              [0m创建 skill[0m
+            [36m</button>[39m
+          [36m</form>[39m
+          [36m<h3[39m
+            [33mclass[39m=[32m"mb-3 mt-4 text-base font-medium"[39m
+          [36m>[39m
+            [0mSkill 列表[0m
+          [36m</h3>[39m
+          [36m<div[39m
+            [33mclass[39m=[32m"grid grid-cols-1 gap-3 sm:grid-cols-2"[39m
+            [33mrole[39m=[32m"list"[39m
+          [36m>[39m
+            [36m<article[39m
+              [33mclass[39m=[32m"rounded-token border border-line bg-surface p-4 shadow-token"[39m
+              [33mrole[39m=[32m"listitem"[39m
+            [36m>[39m
+              [36m<div[39m
+                [33mclass[39m=[32m"flex items-center gap-2"[39m
+              [36m>[39m
+                [36m<span[39m
+                  [33maria-hidden[39m=[32m"true"[39m
+                  [33mclass[39m=[32m"inline-block h-2 w-2 rounded-full bg-accent"[39m
+                [36m/>[39m
+                [36m<span[39m
+                  [33mclass[39m=[32m"font-medium"[39m
+                [36m>[39m
+                  [0m需求整理[0m
+                [36m</span>[39m
+              [36m</div>[39m
+              [36m<p[39m
+                [33mclass[39m=[32m"mt-1 text-xs text-muted"[39m
+              [36m>[39m
+                [0m被 [0m
+                [0m1[0m
+                [0m 个 agent 关联[0m
+              [36m</p>[39m
+            [36m</article>[39m
+          [36m</div>[39m
+        [36m</section>[39m
+        [36m<section[39m
+          [33mclass[39m=[32m"rounded-token border border-line bg-surface p-4"[39m
+        [36m>[39m
+          [36m<h2[39m
+            [33mclass[39m=[32m"mb-3 text-lg font-medium"[39m
+          [36m>[39m
+            [0m创建 Agent[0m
+          [36m</h2>[39m
+          [36m<form[39m
+            [33maria-label[39m=[32m"创建 Agent"[39m
+            [33mclass[39m=[32m"space-y-4 rounded-token border border-line bg-surface-subtle p-4"[39m
+          [36m>[39m
+            [36m<div>[39m
+              [36m<label[39m
+                [33mclass[39m=[32m"block text-sm text-muted"[39m
+                [33mfor[39m=[32m"agent-name"[39m
+              [36m>[39m
+                [0m名字[0m
+              [36m</label>[39m
+              [36m<input[39m
+                [33maria-invalid[39m=[32m"false"[39m
+                [33mclass[39m=[32m"mt-1 w-full rounded-token border border-line bg-surface px-3 py-2"[39m
+                [33mid[39m=[32m"agent-name"[39m
+                [33mvalue[39m=[32m""[39m
+              [36m/>[39m
+            [36m</div>[39m
+            [36m<div>[39m
+              [36m<label[39m
+                [33mclass[39m=[32m"block text-sm text-muted"[39m
+                [33mfor[39m=[32m"agent-prompt"[39m
+              [36m>[39m
+                [0m角色描述[0m
+              [36m</label>[39m
+              [36m<textarea[39m
+                [33mclass[39m=[32m"mt-1 w-full rounded-token border border-line bg-surface px-3 py-2"[39m
+                [33mid[39m=[32m"agent-prompt"[39m
+                [33mrows[39m=[32m"3"[39m
+              [36m/>[39m
+            [36m</div>[39m
+            [36m<div>[39m
+              [36m<span[39m
+                [33mclass[39m=[32m"block text-sm text-muted"[39m
+              [36m>[39m
+                [0m可用工具[0m
+              [36m</span>[39m
+              [36m<div[39m
+                [33maria-label[39m=[32m"可用工具"[39m
+                [33mclass[39m=[32m"mt-1 flex flex-wrap gap-3"[39m
+                [33mrole[39m=[32m"group"[39m
+              [36m>[39m
+                [36m<label[39m
+                  [33mclass[39m=[32m"inline-flex items-center gap-1 text-sm"[39m
+                [36m>[39m
+                  [36m<input[39m
+                    [33mtype[39m=[32m"checkbox"[39m
+                  [36m/>[39m
+                  [0m文件读取[0m
+                [36m</label>[39m
+                [36m<label[39m
+                  [33mclass[39m=[32m"inline-flex items-center gap-1 text-sm"[39m
+                [36m>[39m
+                  [36m<input[39m
+                    [33mtype[39m=[32m"checkbox"[39m
+                  [36m/>[39m
+                  [0m文件写入[0m
+                [36m</label>[39m
+                [36m<label[39m
+                  [33mclass[39m=[32m"inline-flex items-center gap-1 text-sm"[39m
+                [36m>[39m
+                  [36m<input[39m
+                    [33mtype[39m=[32m"checkbox"[39m
+                  [36m/>[39m
+                  [0mShell 执行[0m
+                [36m</label>[39m
+                [36m<label[39m
+                  [33mclass[39m=[32m"inline-flex items-center gap-1 text-sm"[39m
+                [36m>[39m
+                  [36m<input[39m
+                    [33mtype[39m=[32m"checkbox"[39m
+                  [36m/>[39m
+                  [0m网络搜索[0m
+                [36m</label>[39m
+              [36m</div>[39m
+            [36m</div>[39m
+            [36m<div>[39m
+              [36m<label[39m
+                [33mclass[39m=[32m"block text-sm text-muted"[39m
+                [33mfor[39m=[32m"agent-provider"[39m
+              [36m>[39m
+                [0m模型供应商[0m
+              [36m</label>[39m
+              [36m<select[39m
+                [33mclass[39m=[32m"mt-1 w-full rounded-token border border-line bg-surface px-3 py-2"[39m
+                [33mid[39m=[32m"agent-provider"[39m
+              [36m>[39m
+                [36m<option[39m
+                  [33mvalue[39m=[32m"zhipuai-coding-plan"[39m
+                [36m>[39m
+                  [0mGLM (zhipuai-coding-plan)[0m
+                [36m</option>[39m
+              [36m</select>[39m
+            [36m</div>[39m
+            [36m<div>[39m
+              [36m<span[39m
+                [33mclass[39m=[32m"block text-sm text-muted"[39m
+              [36m>[39m
+                [0mskills[0m
+              [36m</span>[39m
+              [36m<div[39m
+                [33maria-label[39m=[32m"skills"[39m
+                [33mclass[39m=[32m"mt-1 flex flex-wrap gap-3"[39m
+                [33mrole[39m=[32m"group"[39m
+              [36m>[39m
+                [36m<label[39m
+                  [33mclass[39m=[32m"inline-flex items-center gap-1 text-sm"[39m
+                [36m>[39m
+                  [36m<input[39m
+                    [33mtype[39m=[32m"checkbox"[39m
+                  [36m/>[39m
+                  [0m需求整理[0m
+                [36m</label>[39m
+              [36m</div>[39m
+            [36m</div>[39m
+            [36m<button[39m
+              [33mclass[39m=[32m"inline-flex min-h-[44px] items-center rounded-token bg-accent-strong px-4 text-surface focus:outline-none focus-visible:ring-2 focus-visible:ring-accent disabled:opacity-60"[39m
+              [33mtype[39m=[32m"submit"[39m
+            [36m>[39m
+              [0m创建 Agent[0m
+            [36m</button>[39m
+          [36m</form>[39m
+        [36m</section>[39m
+        [36m<section>[39m
+          [36m<h2[39m
+            [33mclass[39m=[32m"mb-3 text-lg font-medium"[39m
+          [36m>[39m
+            [0mAgent[0m
+          [36m</h2>[39m
+          [36m<div[39m
+            [33mclass[39m=[32m"grid grid-cols-1 gap-3 sm:grid-cols-2"[39m
+            [33mrole[39m=[32m"list"[39m
+          [36m>[39m
+            [36m<article[39m
+              [33mclass[39m=[32m"rounded-token border border-line bg-surface p-4 shadow-token"[39m
+              [33mrole[39m=[32m"listitem"[39m
+            [36m>[39m
+              [36m<div[39m
+                [33mclass[39m=[32m"flex items-center gap-2"[39m
+              [36m>[39m
+                [36m<span[39m
+                  [33maria-hidden[39m=[32m"true"[39m
+                  [33mclass[39m=[32m"inline-block h-2 w-2 rounded-full bg-accent"[39m
+                [36m/>[39m
+                [36m<span[39m
+                  [33mclass[39m=[32m"font-medium"[39m
+                [36m>[39m
+                  [0mPM[0m
+                [36m</span>[39m
+              [36m</div>[39m
+            [36m</article>[39m
+          [36m</div>[39m
+        [36m</section>[39m
+      [36m</main>[39m
+    [36m</div>[39m
+  [36m</div>[39m
+[36m</body>[39m
+[90m [2m❯[22m Object.getElementError node_modules/@testing-library/dom/dist/config.js:[2m37:19[22m[39m
+[90m [2m❯[22m getElementError node_modules/@testing-library/dom/dist/query-helpers.js:[2m20:35[22m[39m
+[90m [2m❯[22m getMultipleElementsFoundError node_modules/@testing-library/dom/dist/query-helpers.js:[2m23:10[22m[39m
+[90m [2m❯[22m node_modules/@testing-library/dom/dist/query-helpers.js:[2m55:13[22m[39m
+[90m [2m❯[22m node_modules/@testing-library/dom/dist/query-helpers.js:[2m95:19[22m[39m
+[36m [2m❯[22m tests/agentSkillLink.test.tsx:[2m72:19[22m[39m
+    [90m 70| [39m
+    [90m 71| [39m    [34mexpect[39m([35mawait[39m screen[33m.[39m[34mfindByText[39m([32m"PM"[39m))[33m.[39m[34mtoBeInTheDocument[39m()[33m;[39m
+    [90m 72| [39m    [34mexpect[39m(screen[33m.[39m[34mgetByText[39m([32m"需求整理"[39m))[33m.[39m[34mtoBeInTheDocument[39m()[33m;[39m
+    [90m   | [39m                  [31m^[39m
+    [90m 73| [39m  })[33m;[39m
+    [90m 74| [39m})[33m;[39m
+
+[31m[2m⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[2/2]⎯[22m[39m
+
+
+[2m Test Files [22m [1m[31m2 failed[39m[22m[2m | [22m[1m[32m11 passed[39m[22m[90m (13)[39m
+[2m      Tests [22m [1m[31m2 failed[39m[22m[2m | [22m[1m[32m48 passed[39m[22m[90m (50)[39m
+[2m   Start at [22m 21:59:48
+[2m   Duration [22m 3.51s[2m (transform 496ms, setup 0ms, collect 4.06s, tests 5.40s, environment 12.63s, prepare 3.53s)[22m
+
+# exit: 1

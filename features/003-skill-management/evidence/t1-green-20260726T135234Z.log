@@ -1,0 +1,27 @@
+# hf-gate-run
+# label: t1-green
+# command: npm test
+# started: 2026-07-26T13:52:34+00:00
+
+> cool-ai@0.0.1 test
+> vitest run
+
+
+[1m[46m RUN [49m[22m [36mv3.2.7 [39m[90mE:/Code/cool-ai[39m
+
+ [32m✓[39m tests/baseline.test.ts [2m([22m[2m1 test[22m[2m)[22m[32m 3[2mms[22m[39m
+ [32m✓[39m tests/setupDocs.test.ts [2m([22m[2m2 tests[22m[2m)[22m[32m 4[2mms[22m[39m
+ [32m✓[39m tests/agentsApi.test.ts [2m([22m[2m8 tests[22m[2m)[22m[32m 15[2mms[22m[39m
+ [32m✓[39m tests/skillService.test.ts [2m([22m[2m7 tests[22m[2m)[22m[33m 1420[2mms[22m[39m
+ [32m✓[39m tests/agentService.test.ts [2m([22m[2m6 tests[22m[2m)[22m[33m 1456[2mms[22m[39m
+ [32m✓[39m tests/layout.test.tsx [2m([22m[2m1 test[22m[2m)[22m[32m 106[2mms[22m[39m
+ [32m✓[39m tests/AgentList.test.tsx [2m([22m[2m5 tests[22m[2m)[22m[32m 217[2mms[22m[39m
+ [32m✓[39m tests/createFlow.test.tsx [2m([22m[2m1 test[22m[2m)[22m[32m 230[2mms[22m[39m
+ [32m✓[39m tests/AgentForm.test.tsx [2m([22m[2m3 tests[22m[2m)[22m[33m 339[2mms[22m[39m
+
+[2m Test Files [22m [1m[32m9 passed[39m[22m[90m (9)[39m
+[2m      Tests [22m [1m[32m34 passed[39m[22m[90m (34)[39m
+[2m   Start at [22m 21:52:35
+[2m   Duration [22m 2.95s[2m (transform 251ms, setup 0ms, collect 1.82s, tests 3.79s, environment 5.80s, prepare 3.89s)[22m
+
+# exit: 0

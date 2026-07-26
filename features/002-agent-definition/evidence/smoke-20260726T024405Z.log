@@ -1,0 +1,6 @@
+# hf-gate-run
+# label: smoke
+# command: node scripts/smoke-s2.mjs
+# started: 2026-07-26T02:44:05+00:00
+smoke OK: POST 201 (tools/skills arrays), list contains agent, browser renders form + agent
+# exit: 0

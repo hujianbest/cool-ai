@@ -27,7 +27,7 @@ describe("AgentList states", () => {
     vi.stubGlobal(
       "fetch",
       mockOk({
-        agents: [{ id: 1, name: "骨架 Agent", role: "占位角色" }],
+        agents: [{ id: 1, name: "骨架 Agent" }],
       })
     );
     render(<AgentList />);
@@ -61,7 +61,7 @@ describe("AgentList states", () => {
           ok: true,
           json: () =>
             Promise.resolve({
-              agents: [{ id: 1, name: "骨架 Agent", role: "占位角色" }],
+              agents: [{ id: 1, name: "骨架 Agent" }],
             }),
         });
       })
@@ -70,5 +70,23 @@ describe("AgentList states", () => {
     await screen.findByText(/加载失败/);
     await user.click(screen.getByRole("button", { name: "重试" }));
     expect(await screen.findByText("骨架 Agent")).toBeInTheDocument();
+  });
+
+  it("shows associated skill names resolved via skills prop", async () => {
+    vi.stubGlobal(
+      "fetch",
+      mockOk({ agents: [{ id: 1, name: "PM", skills: [5] }] })
+    );
+    render(
+      <AgentList
+        version={0}
+        skills={[
+          { id: 5, name: "需求整理", description: "", category: "", agentCount: 1 },
+        ]}
+      />
+    );
+
+    expect(await screen.findByText("PM")).toBeInTheDocument();
+    expect(screen.getByText("需求整理")).toBeInTheDocument();
   });
 });

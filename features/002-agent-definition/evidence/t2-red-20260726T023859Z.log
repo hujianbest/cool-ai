@@ -1,0 +1,72 @@
+# hf-gate-run
+# label: t2-red
+# command: npm test
+# started: 2026-07-26T02:38:59+00:00
+
+> cool-ai@0.0.1 test
+> vitest run
+
+
+[1m[46m RUN [49m[22m [36mv3.2.7 [39m[90mE:/Code/cool-ai[39m
+
+ [32m✓[39m tests/baseline.test.ts [2m([22m[2m1 test[22m[2m)[22m[32m 4[2mms[22m[39m
+ [32m✓[39m tests/setupDocs.test.ts [2m([22m[2m2 tests[22m[2m)[22m[32m 8[2mms[22m[39m
+ [32m✓[39m tests/agentsApi.test.ts [2m([22m[2m3 tests[22m[2m)[22m[32m 21[2mms[22m[39m
+ [31m❯[39m tests/agentService.test.ts [2m([22m[2m6 tests[22m[2m | [22m[31m3 failed[39m[2m)[22m[33m 1695[2mms[22m[39m
+   [32m✓[39m agentService.getAgents[2m > [22mreturns agents persisted in db (with parsed tool/skill arrays)[32m 14[2mms[22m[39m
+   [32m✓[39m agentService.getAgents[2m > [22mreturns empty array when no agents[32m 4[2mms[22m[39m
+   [32m✓[39m agentService.getAgents[2m > [22mthrows when db read fails[32m 1[2mms[22m[39m
+[31m   [31m×[31m agentService.createAgent[2m > [22mcreates an agent and returns DTO with parsed arrays[39m[32m 4[2mms[22m[39m
+[31m     → (0 , createAgent) is not a function[39m
+[31m   [31m×[31m agentService.createAgent[2m > [22mthrows when name is missing/empty/whitespace[39m[32m 1[2mms[22m[39m
+[31m     → (0 , createAgent) is not a function[39m
+[31m   [31m×[31m agentService.createAgent[2m > [22mtrims surrounding whitespace from name[39m[32m 1[2mms[22m[39m
+[31m     → (0 , createAgent) is not a function[39m
+ [32m✓[39m tests/layout.test.tsx [2m([22m[2m1 test[22m[2m)[22m[32m 118[2mms[22m[39m
+ [32m✓[39m tests/AgentList.test.tsx [2m([22m[2m5 tests[22m[2m)[22m[32m 212[2mms[22m[39m
+
+[31m⎯⎯⎯⎯⎯⎯⎯[39m[1m[41m Failed Tests 3 [49m[22m[31m⎯⎯⎯⎯⎯⎯⎯[39m
+
+[41m[1m FAIL [22m[49m tests/agentService.test.ts[2m > [22magentService.createAgent[2m > [22mcreates an agent and returns DTO with parsed arrays
+[31m[1mTypeError[22m: (0 , createAgent) is not a function[39m
+[36m [2m❯[22m tests/agentService.test.ts:[2m67:25[22m[39m
+    [90m 65| [39m[34mdescribe[39m([32m"agentService.createAgent"[39m[33m,[39m () [33m=>[39m {
+    [90m 66| [39m  it("creates an agent and returns DTO with parsed arrays", async () =…
+    [90m 67| [39m    [35mconst[39m agent [33m=[39m [35mawait[39m [34mcreateAgent[39m(
+    [90m   | [39m                        [31m^[39m
+    [90m 68| [39m      {
+    [90m 69| [39m        name[33m:[39m [32m"PM"[39m[33m,[39m
+
+[31m[2m⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[1/3]⎯[22m[39m
+
+[41m[1m FAIL [22m[49m tests/agentService.test.ts[2m > [22magentService.createAgent[2m > [22mthrows when name is missing/empty/whitespace
+[31m[1mTypeError[22m: (0 , createAgent) is not a function[39m
+[36m [2m❯[22m tests/agentService.test.ts:[2m89:18[22m[39m
+    [90m 87| [39m
+    [90m 88| [39m  [34mit[39m([32m"throws when name is missing/empty/whitespace"[39m[33m,[39m [35masync[39m () [33m=>[39m {
+    [90m 89| [39m    [35mawait[39m [34mexpect[39m([34mcreateAgent[39m({ name[33m:[39m [32m""[39m }[33m,[39m db))[33m.[39mrejects[33m.[39m[34mtoThrow[39m()[33m;[39m
+    [90m   | [39m                 [31m^[39m
+    [90m 90| [39m    [35mawait[39m [34mexpect[39m([34mcreateAgent[39m({ name[33m:[39m [32m"   "[39m }[33m,[39m db))[33m.[39mrejects[33m.[39m[34mtoThrow[39m()[33m;[39m
+    [90m 91| [39m    [35mawait[39m [34mexpect[39m(
+
+[31m[2m⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[2/3]⎯[22m[39m
+
+[41m[1m FAIL [22m[49m tests/agentService.test.ts[2m > [22magentService.createAgent[2m > [22mtrims surrounding whitespace from name
+[31m[1mTypeError[22m: (0 , createAgent) is not a function[39m
+[36m [2m❯[22m tests/agentService.test.ts:[2m97:25[22m[39m
+    [90m 95| [39m
+    [90m 96| [39m  [34mit[39m([32m"trims surrounding whitespace from name"[39m[33m,[39m [35masync[39m () [33m=>[39m {
+    [90m 97| [39m    [35mconst[39m agent [33m=[39m [35mawait[39m [34mcreateAgent[39m({ name[33m:[39m [32m"  架构师  "[39m }[33m,[39m db)[33m;[39m
+    [90m   | [39m                        [31m^[39m
+    [90m 98| [39m    [34mexpect[39m(agent[33m.[39mname)[33m.[39m[34mtoBe[39m([32m"架构师"[39m)[33m;[39m
+    [90m 99| [39m  })[33m;[39m
+
+[31m[2m⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[3/3]⎯[22m[39m
+
+
+[2m Test Files [22m [1m[31m1 failed[39m[22m[2m | [22m[1m[32m5 passed[39m[22m[90m (6)[39m
+[2m      Tests [22m [1m[31m3 failed[39m[22m[2m | [22m[1m[32m15 passed[39m[22m[90m (18)[39m
+[2m   Start at [22m 10:39:00
+[2m   Duration [22m 3.36s[2m (transform 284ms, setup 0ms, collect 1.19s, tests 2.06s, environment 3.26s, prepare 947ms)[22m
+
+# exit: 1

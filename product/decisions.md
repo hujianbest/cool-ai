@@ -16,3 +16,4 @@
 - D-11 2026-07-26 agent 自进化: 长期方向,第一版不做,架构预留扩展点 — 依据: 用户确认(A-9 迁入)
 - D-12 2026-07-26 Prisma 版本: 采用 Prisma 6.x(非 7.x) — 依据: Prisma 7 有破坏性配置变更(datasource url 移出 schema、需 prisma.config.ts + driver adapter),骨架求稳选 6.x;未来可评估升 v7(ship 迁入)
 - D-13 2026-07-26 品牌主色: 森绿 #16a34a(accent token) — 依据: 用户在 S-1 demo 验收确认
+- D-14 2026-07-26 skills 为被管理的一等实体:Skill 表(name/description/content/category),平台具备 skill 管理(CRUD),agent.skills 存 skill id 引用(关联已有 skill,非静态勾选池) — 依据: 用户反馈 + Hermes Skills System / agentskills.io 标准研究;S-2 静态勾选池在 S-2.5 被替换

@@ -1,0 +1,89 @@
+# hf-gate-run
+# label: t3-red
+# command: npm test
+# started: 2026-07-26T13:54:33+00:00
+
+> cool-ai@0.0.1 test
+> vitest run
+
+
+[1m[46m RUN [49m[22m [36mv3.2.7 [39m[90mE:/Code/cool-ai[39m
+
+ [32m✓[39m tests/setupDocs.test.ts [2m([22m[2m2 tests[22m[2m)[22m[32m 3[2mms[22m[39m
+ [32m✓[39m tests/baseline.test.ts [2m([22m[2m1 test[22m[2m)[22m[32m 3[2mms[22m[39m
+ [32m✓[39m tests/agentsApi.test.ts [2m([22m[2m8 tests[22m[2m)[22m[32m 18[2mms[22m[39m
+ [32m✓[39m tests/skillsApi.test.ts [2m([22m[2m5 tests[22m[2m)[22m[32m 12[2mms[22m[39m
+ [31m❯[39m tests/agentService.test.ts [2m([22m[2m7 tests[22m[2m | [22m[31m2 failed[39m[2m)[22m[33m 1304[2mms[22m[39m
+   [32m✓[39m agentService.getAgents[2m > [22mreturns agents persisted in db (with parsed tool/skill arrays)[32m 13[2mms[22m[39m
+   [32m✓[39m agentService.getAgents[2m > [22mreturns empty array when no agents[32m 3[2mms[22m[39m
+   [32m✓[39m agentService.getAgents[2m > [22mthrows when db read fails[32m 1[2mms[22m[39m
+[31m   [31m×[31m agentService.createAgent[2m > [22mcreates an agent, stores skill ids, returns DTO with skill id array[39m[32m 13[2mms[22m[39m
+[31m     → expected [] to deeply equal [ 16 ][39m
+[31m   [31m×[31m agentService.createAgent[2m > [22mthrows when a referenced skill id does not exist[39m[32m 10[2mms[22m[39m
+[31m     → promise resolved "{ id: 51, name: 'PM', …(5) }" instead of rejecting[39m
+   [32m✓[39m agentService.createAgent[2m > [22mthrows when name is missing/empty/whitespace[32m 3[2mms[22m[39m
+   [32m✓[39m agentService.createAgent[2m > [22mtrims surrounding whitespace from name[32m 3[2mms[22m[39m
+ [32m✓[39m tests/skillService.test.ts [2m([22m[2m7 tests[22m[2m)[22m[33m 1322[2mms[22m[39m
+ [32m✓[39m tests/layout.test.tsx [2m([22m[2m1 test[22m[2m)[22m[32m 108[2mms[22m[39m
+ [32m✓[39m tests/AgentList.test.tsx [2m([22m[2m5 tests[22m[2m)[22m[32m 221[2mms[22m[39m
+ [32m✓[39m tests/createFlow.test.tsx [2m([22m[2m1 test[22m[2m)[22m[32m 268[2mms[22m[39m
+ [32m✓[39m tests/AgentForm.test.tsx [2m([22m[2m3 tests[22m[2m)[22m[33m 339[2mms[22m[39m
+
+[31m⎯⎯⎯⎯⎯⎯⎯[39m[1m[41m Failed Tests 2 [49m[22m[31m⎯⎯⎯⎯⎯⎯⎯[39m
+
+[41m[1m FAIL [22m[49m tests/agentService.test.ts[2m > [22magentService.createAgent[2m > [22mcreates an agent, stores skill ids, returns DTO with skill id array
+[31m[1mAssertionError[22m: expected [] to deeply equal [ 16 ][39m
+
+[32m- Expected[39m
+[31m+ Received[39m
+
+[32m- [[39m
+[32m-   16,[39m
+[32m- ][39m
+[31m+ [][39m
+
+[36m [2m❯[22m tests/agentService.test.ts:[2m82:26[22m[39m
+    [90m 80| [39m    [34mexpect[39m(agent[33m.[39mname)[33m.[39m[34mtoBe[39m([32m"PM"[39m)[33m;[39m
+    [90m 81| [39m    [34mexpect[39m(agent[33m.[39mtools)[33m.[39m[34mtoEqual[39m([[32m"shell"[39m[33m,[39m [32m"file.read"[39m])[33m;[39m
+    [90m 82| [39m    [34mexpect[39m(agent[33m.[39mskills)[33m.[39m[34mtoEqual[39m([s[33m.[39mid])[33m;[39m
+    [90m   | [39m                         [31m^[39m
+    [90m 83| [39m
+    [90m 84| [39m    [35mconst[39m row [33m=[39m [35mawait[39m db[33m.[39magent[33m.[39m[34mfindUnique[39m({ where[33m:[39m { id[33m:[39m agent[33m.[39mid } })[33m;[39m
+
+[31m[2m⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[1/2]⎯[22m[39m
+
+[41m[1m FAIL [22m[49m tests/agentService.test.ts[2m > [22magentService.createAgent[2m > [22mthrows when a referenced skill id does not exist
+[31m[1mAssertionError[22m: promise resolved "{ id: 51, name: 'PM', …(5) }" instead of rejecting[39m
+
+[32m- Expected[39m
+[31m+ Received[39m
+
+[32m- Error {[39m
+[32m-   "message": "rejected promise",[39m
+[31m+ {[39m
+[31m+   "createdAt": 2026-07-26T13:54:36.821Z,[39m
+[31m+   "id": 51,[39m
+[31m+   "name": "PM",[39m
+[31m+   "provider": "zhipuai-coding-plan",[39m
+[31m+   "skills": [],[39m
+[31m+   "systemPrompt": "",[39m
+[31m+   "tools": [],[39m
+[2m  }[22m
+
+[36m [2m❯[22m tests/agentService.test.ts:[2m89:65[22m[39m
+    [90m 87| [39m
+    [90m 88| [39m  [34mit[39m([32m"throws when a referenced skill id does not exist"[39m[33m,[39m [35masync[39m () [33m=>[39m {
+    [90m 89| [39m    await expect(createAgent({ name: "PM", skills: [9999] }, db)).reje…
+    [90m   | [39m                                                                [31m^[39m
+    [90m 90| [39m  })[33m;[39m
+    [90m 91| [39m
+
+[31m[2m⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[2/2]⎯[22m[39m
+
+
+[2m Test Files [22m [1m[31m1 failed[39m[22m[2m | [22m[1m[32m9 passed[39m[22m[90m (10)[39m
+[2m      Tests [22m [1m[31m2 failed[39m[22m[2m | [22m[1m[32m38 passed[39m[22m[90m (40)[39m
+[2m   Start at [22m 21:54:34
+[2m   Duration [22m 2.62s[2m (transform 335ms, setup 0ms, collect 2.02s, tests 3.60s, environment 5.35s, prepare 2.01s)[22m
+
+# exit: 1

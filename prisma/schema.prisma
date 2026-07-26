@@ -8,8 +8,20 @@ datasource db {
 }
 
 model Agent {
-  id        Int      @id @default(autoincrement())
-  name      String
-  role      String
-  createdAt DateTime @default(now())
+  id           Int      @id @default(autoincrement())
+  name         String
+  systemPrompt String   @default("")
+  tools        String   @default("[]")
+  provider     String   @default("zhipuai-coding-plan")
+  skills       String   @default("[]")
+  createdAt    DateTime @default(now())
+}
+
+model Skill {
+  id          Int      @id @default(autoincrement())
+  name        String
+  description String   @default("")
+  content     String   @default("")
+  category    String   @default("")
+  createdAt   DateTime @default(now())
 }

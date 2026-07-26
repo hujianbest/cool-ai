@@ -1,11 +1,18 @@
 "use client";
 
 import { useCallback, useEffect, useState } from "react";
+import type { SkillIndexDTO } from "../src/server/skillService";
 
-type Agent = { id: number; name: string; role: string };
+type Agent = { id: number; name: string; skills: number[] };
 type Status = "loading" | "success" | "empty" | "error";
 
-export function AgentList() {
+export function AgentList({
+  version = 0,
+  skills = [],
+}: {
+  version?: number;
+  skills?: SkillIndexDTO[];
+}) {
   const [status, setStatus] = useState<Status>("loading");
   const [agents, setAgents] = useState<Agent[]>([]);
 
@@ -15,7 +22,13 @@ export function AgentList() {
       .then(async (res) => {
         if (!res.ok) throw new Error(`HTTP ${res.status}`);
         const data = await res.json();
-        const list: Agent[] = data.agents ?? [];
+        const list: Agent[] = (data.agents ?? []).map(
+          (a: { id: number; name: string; skills?: number[] }) => ({
+            id: a.id,
+            name: a.name,
+            skills: Array.isArray(a.skills) ? a.skills : [],
+          })
+        );
         setAgents(list);
         setStatus(list.length === 0 ? "empty" : "success");
       })
@@ -24,13 +37,13 @@ export function AgentList() {
 
   useEffect(() => {
     load();
-  }, [load]);
+  }, [load, version]);
 
   if (status === "loading") {
     return <p className="text-muted">加载中…</p>;
   }
   if (status === "empty") {
-    return <p className="text-muted">暂无 Agent(后续可在侧栏创建)</p>;
+    return <p className="text-muted">暂无 Agent(后续可在上方创建)</p>;
   }
   if (status === "error") {
     return (
@@ -47,6 +60,9 @@ export function AgentList() {
     );
   }
 
+  const skillName = (id: number) =>
+    skills.find((s) => s.id === id)?.name ?? String(id);
+
   return (
     <div role="list" className="grid grid-cols-1 gap-3 sm:grid-cols-2">
       {agents.map((a) => (
@@ -62,7 +78,16 @@ export function AgentList() {
             />
             <span className="font-medium">{a.name}</span>
           </div>
-          <p className="mt-1 text-sm text-muted">{a.role}</p>
+          {a.skills.length > 0 && (
+            <p className="mt-1 text-xs text-muted">
+              <span className="mr-1">skills:</span>
+              {a.skills.map((id) => (
+                <span key={id} className="mr-1">
+                  {skillName(id)}
+                </span>
+              ))}
+            </p>
+          )}
         </article>
       ))}
     </div>
