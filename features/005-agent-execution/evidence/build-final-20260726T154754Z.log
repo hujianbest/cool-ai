@@ -1,0 +1,38 @@
+# hf-gate-run
+# label: build-final
+# command: npm run build
+# started: 2026-07-26T15:47:54+00:00
+
+> cool-ai@0.0.1 build
+> next build
+
+▲ Next.js 16.2.11 (Turbopack)
+- Environments: .env
+
+  Creating an optimized production build ...
+✓ Compiled successfully in 1740ms
+  Running TypeScript ...
+  Finished TypeScript in 2.5s ...
+  Collecting page data using 10 workers ...
+  Generating static pages using 10 workers (0/6) ...
+  Generating static pages using 10 workers (1/6) 
+  Generating static pages using 10 workers (2/6) 
+  Generating static pages using 10 workers (4/6) 
+✓ Generating static pages using 10 workers (6/6) in 481ms
+  Finalizing page optimization ...
+
+Route (app)
+┌ ○ /
+├ ○ /_not-found
+├ ƒ /api/agents
+├ ƒ /api/agents/[id]/run
+├ ƒ /api/providers
+├ ƒ /api/providers/[id]/models
+├ ƒ /api/skills
+└ ƒ /api/skills/[id]
+
+
+○  (Static)   prerendered as static content
+ƒ  (Dynamic)  server-rendered on demand
+
+# exit: 0

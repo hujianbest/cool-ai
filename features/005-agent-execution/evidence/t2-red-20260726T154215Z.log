@@ -1,0 +1,57 @@
+# hf-gate-run
+# label: t2-red
+# command: npm test
+# started: 2026-07-26T15:42:15+00:00
+
+> cool-ai@0.0.1 test
+> vitest run
+
+
+[1m[46m RUN [49m[22m [36mv3.2.7 [39m[90mE:/Code/cool-ai[39m
+
+ [32m✓[39m tests/baseline.test.ts [2m([22m[2m1 test[22m[2m)[22m[32m 3[2mms[22m[39m
+ [32m✓[39m tests/setupDocs.test.ts [2m([22m[2m2 tests[22m[2m)[22m[32m 7[2mms[22m[39m
+ [32m✓[39m tests/agentsApi.test.ts [2m([22m[2m10 tests[22m[2m)[22m[32m 25[2mms[22m[39m
+ [32m✓[39m tests/providersApi.test.ts [2m([22m[2m6 tests[22m[2m)[22m[32m 21[2mms[22m[39m
+ [32m✓[39m tests/skillsApi.test.ts [2m([22m[2m5 tests[22m[2m)[22m[32m 20[2mms[22m[39m
+ [32m✓[39m tests/providerService.test.ts [2m([22m[2m5 tests[22m[2m)[22m[33m 2101[2mms[22m[39m
+ [32m✓[39m tests/agentService.test.ts [2m([22m[2m9 tests[22m[2m)[22m[33m 2100[2mms[22m[39m
+ [32m✓[39m tests/skillService.test.ts [2m([22m[2m7 tests[22m[2m)[22m[33m 2126[2mms[22m[39m
+ [32m✓[39m tests/agentRunner.test.ts [2m([22m[2m5 tests[22m[2m)[22m[33m 2169[2mms[22m[39m
+ [32m✓[39m tests/layout.test.tsx [2m([22m[2m1 test[22m[2m)[22m[32m 171[2mms[22m[39m
+ [32m✓[39m tests/SkillList.test.tsx [2m([22m[2m4 tests[22m[2m)[22m[32m 211[2mms[22m[39m
+ [32m✓[39m tests/createFlow.test.tsx [2m([22m[2m1 test[22m[2m)[22m[33m 384[2mms[22m[39m
+   [33m[2m✓[22m[39m create flow (page wiring)[2m > [22mcreating an agent refreshes the list via version bump [33m 382[2mms[22m[39m
+ [32m✓[39m tests/ProviderList.test.tsx [2m([22m[2m4 tests[22m[2m)[22m[32m 223[2mms[22m[39m
+ [32m✓[39m tests/AgentList.test.tsx [2m([22m[2m7 tests[22m[2m)[22m[33m 313[2mms[22m[39m
+ [32m✓[39m tests/SkillForm.test.tsx [2m([22m[2m3 tests[22m[2m)[22m[33m 420[2mms[22m[39m
+ [32m✓[39m tests/ProviderForm.test.tsx [2m([22m[2m3 tests[22m[2m)[22m[33m 569[2mms[22m[39m
+   [33m[2m✓[22m[39m ProviderForm[2m > [22msubmits and calls onCreated on success [33m 347[2mms[22m[39m
+ [32m✓[39m tests/agentSkillLink.test.tsx [2m([22m[2m1 test[22m[2m)[22m[33m 586[2mms[22m[39m
+   [33m[2m✓[22m[39m agent ↔ skill association flow[2m > [22mcreate skill, link it to a new agent, card shows the skill name [33m 585[2mms[22m[39m
+ [32m✓[39m tests/AgentForm.test.tsx [2m([22m[2m5 tests[22m[2m)[22m[33m 964[2mms[22m[39m
+
+[31m⎯⎯⎯⎯⎯⎯[39m[1m[41m Failed Suites 1 [49m[22m[31m⎯⎯⎯⎯⎯⎯⎯[39m
+
+[41m[1m FAIL [22m[49m tests/runsApi.test.ts[2m [ tests/runsApi.test.ts ][22m
+[31m[1mError[22m: Cannot find module '../app/api/agents/[id]/run/route' imported from 'E:/Code/cool-ai/tests/runsApi.test.ts'[39m
+[36m [2m❯[22m tests/runsApi.test.ts:[2m12:1[22m[39m
+    [90m 10| [39m}))[33m;[39m
+    [90m 11| [39m
+    [90m 12| [39m[35mimport[39m { [33mPOST[39m } [35mfrom[39m [32m"../app/api/agents/[id]/run/route"[39m[33m;[39m
+    [90m   | [39m[31m^[39m
+    [90m 13| [39mimport { runAgent, NotFoundError, UpstreamError } from "../src/server/…
+    [90m 14| [39m[35mimport[39m { [33mValidationError[39m } [35mfrom[39m [32m"../src/server/agentService"[39m[33m;[39m
+
+[31m[1mCaused by: Error[22m: Failed to load url ../app/api/agents/[id]/run/route (resolved id: ../app/api/agents/[id]/run/route) in E:/Code/cool-ai/tests/runsApi.test.ts. Does the file exist?[39m
+[90m [2m❯[22m loadAndTransform node_modules/vite/dist/node/chunks/config.js:[2m22739:33[22m[39m
+
+[31m[2m⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[1/1]⎯[22m[39m
+
+
+[2m Test Files [22m [1m[31m1 failed[39m[22m[2m | [22m[1m[32m18 passed[39m[22m[90m (19)[39m
+[2m      Tests [22m [1m[32m79 passed[39m[22m[90m (79)[39m
+[2m   Start at [22m 23:42:16
+[2m   Duration [22m 4.79s[2m (transform 813ms, setup 0ms, collect 7.35s, tests 12.41s, environment 21.78s, prepare 10.39s)[22m
+
+# exit: 1

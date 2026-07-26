@@ -7,6 +7,7 @@ import { SkillForm } from "../components/SkillForm";
 import { SkillList } from "../components/SkillList";
 import { ProviderForm } from "../components/ProviderForm";
 import { ProviderList } from "../components/ProviderList";
+import { AgentRun } from "../components/AgentRun";
 import type { SkillIndexDTO } from "../src/server/skillService";
 import type { ProviderConfigDTO } from "../src/server/providerService";
 
@@ -99,6 +100,10 @@ export default function Home() {
             skills={skills}
             providerConfigs={providers}
           />
+        </section>
+        <section className="rounded-token border border-line bg-surface p-4">
+          <h2 className="mb-3 text-lg font-medium">运行 Agent</h2>
+          <AgentRun />
         </section>
       </main>
     </div>

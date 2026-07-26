@@ -8,7 +8,8 @@
 - [x] S-2 Agent 定义与管理 — 演示判据: 用户能在 UI 上创建一个 agent(填五要素:名/角色描述/工具/供应商/skill)并保存,列表可见
 - [x] S-2.5 skill 管理 + agent 关联 — 演示判据: 用户能创建/查看 skill;创建 agent 时从"已有 skill 列表"中关联(替换静态勾选);保存后 agent 携带关联的 skill 引用,skill 列表与 agent 详情可见关联关系
 - [x] S-2.7 provider/model 配置管理 + agent 关联 — 演示判据: 用户能创建 provider 配置(名/baseUrl/apiKey);创建 agent 时选已有 provider 配置、查询其可用模型并选定;保存后 agent 携带 providerConfigId + model;配置列表与 agent 详情可见
-- [ ] S-3 单 agent 执行回路 — 演示判据: 用户能给一个 agent 发任务,agent 用其 provider 配置 + key 调用 LLM(zhipuai-coding-plan)+ 工具完成并在 UI 上看到产出与执行轨迹
+- [x] S-3 单 agent 单轮执行 — 演示判据: 用户给一个 agent 发任务,后端用其 provider 配置(key)+ model 调 OpenAI 兼容 chat/completions(注入关联 skill 内容到 system prompt),返回回答 + 执行轨迹,UI 可见
+- [ ] S-3b 单 agent 工具循环(agentic loop) — 演示判据: agent 带 function-calling 工具循环(调 LLM → 工具调用 → 执行 file/shell/web 工具 → 回填 → 重复至最终回答或上限),轨迹完整可见
 - [ ] S-4 项目组与 owner — 演示判据: 用户能创建项目组、拉入多个 agent、作为 owner 在群组消息流里派发任务
 - [ ] S-5 多角色自主接力协作 — 演示判据: owner 派任务后 PM 产出需求→自主决定交给架构师→架构师产出方案,消息流可见各角色交接,owner 可介入
 - [ ] S-6 角色模板与开箱体验 — 演示判据: 内置 PM/架构师/开发/QA 四个模板,新建项目组一键拉入即可跑通一个端到端小需求

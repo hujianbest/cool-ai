@@ -1,0 +1,41 @@
+# hf-gate-run
+# label: suite
+# command: npm test
+# started: 2026-07-26T15:48:08+00:00
+
+> cool-ai@0.0.1 test
+> vitest run
+
+
+[1m[46m RUN [49m[22m [36mv3.2.7 [39m[90mE:/Code/cool-ai[39m
+
+ [32m✓[39m tests/baseline.test.ts [2m([22m[2m1 test[22m[2m)[22m[32m 3[2mms[22m[39m
+ [32m✓[39m tests/setupDocs.test.ts [2m([22m[2m2 tests[22m[2m)[22m[32m 5[2mms[22m[39m
+ [32m✓[39m tests/agentsApi.test.ts [2m([22m[2m10 tests[22m[2m)[22m[32m 24[2mms[22m[39m
+ [32m✓[39m tests/runsApi.test.ts [2m([22m[2m4 tests[22m[2m)[22m[32m 14[2mms[22m[39m
+ [32m✓[39m tests/providersApi.test.ts [2m([22m[2m6 tests[22m[2m)[22m[32m 17[2mms[22m[39m
+ [32m✓[39m tests/skillsApi.test.ts [2m([22m[2m5 tests[22m[2m)[22m[32m 17[2mms[22m[39m
+ [32m✓[39m tests/skillService.test.ts [2m([22m[2m7 tests[22m[2m)[22m[33m 2030[2mms[22m[39m
+ [32m✓[39m tests/providerService.test.ts [2m([22m[2m5 tests[22m[2m)[22m[33m 2047[2mms[22m[39m
+ [32m✓[39m tests/agentService.test.ts [2m([22m[2m9 tests[22m[2m)[22m[33m 2073[2mms[22m[39m
+ [32m✓[39m tests/agentRunner.test.ts [2m([22m[2m5 tests[22m[2m)[22m[33m 2059[2mms[22m[39m
+ [32m✓[39m tests/layout.test.tsx [2m([22m[2m1 test[22m[2m)[22m[32m 176[2mms[22m[39m
+ [32m✓[39m tests/ProviderList.test.tsx [2m([22m[2m4 tests[22m[2m)[22m[32m 219[2mms[22m[39m
+ [32m✓[39m tests/createFlow.test.tsx [2m([22m[2m1 test[22m[2m)[22m[33m 387[2mms[22m[39m
+   [33m[2m✓[22m[39m create flow (page wiring)[2m > [22mcreating an agent refreshes the list via version bump [33m 386[2mms[22m[39m
+ [32m✓[39m tests/AgentRun.test.tsx [2m([22m[2m3 tests[22m[2m)[22m[33m 479[2mms[22m[39m
+ [32m✓[39m tests/SkillList.test.tsx [2m([22m[2m4 tests[22m[2m)[22m[32m 231[2mms[22m[39m
+ [32m✓[39m tests/AgentList.test.tsx [2m([22m[2m7 tests[22m[2m)[22m[33m 318[2mms[22m[39m
+ [32m✓[39m tests/SkillForm.test.tsx [2m([22m[2m3 tests[22m[2m)[22m[33m 408[2mms[22m[39m
+ [32m✓[39m tests/agentSkillLink.test.tsx [2m([22m[2m1 test[22m[2m)[22m[33m 596[2mms[22m[39m
+   [33m[2m✓[22m[39m agent ↔ skill association flow[2m > [22mcreate skill, link it to a new agent, card shows the skill name [33m 595[2mms[22m[39m
+ [32m✓[39m tests/ProviderForm.test.tsx [2m([22m[2m3 tests[22m[2m)[22m[33m 636[2mms[22m[39m
+   [33m[2m✓[22m[39m ProviderForm[2m > [22msubmits and calls onCreated on success [33m 359[2mms[22m[39m
+ [32m✓[39m tests/AgentForm.test.tsx [2m([22m[2m5 tests[22m[2m)[22m[33m 952[2mms[22m[39m
+
+[2m Test Files [22m [1m[32m20 passed[39m[22m[90m (20)[39m
+[2m      Tests [22m [1m[32m86 passed[39m[22m[90m (86)[39m
+[2m   Start at [22m 23:48:09
+[2m   Duration [22m 5.18s[2m (transform 846ms, setup 0ms, collect 7.73s, tests 12.69s, environment 26.20s, prepare 10.70s)[22m
+
+# exit: 0
