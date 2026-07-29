@@ -1,6 +1,0 @@
-# hf-gate-run
-# label: smoke
-# command: node scripts/smoke-s3.mjs
-# started: 2026-07-26T15:49:13+00:00
-smoke OK: run 200, output+trace(3), upstream Bearer forwarded, no apiKey leak
-# exit: 0

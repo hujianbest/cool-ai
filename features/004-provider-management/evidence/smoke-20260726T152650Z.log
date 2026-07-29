@@ -1,6 +1,0 @@
-# hf-gate-run
-# label: smoke
-# command: node scripts/smoke-s27.mjs
-# started: 2026-07-26T15:26:50+00:00
-smoke OK: provider created (no apiKey leak), agent linked, agentCount=1, browser renders provider+agent+model (no key)
-# exit: 0

@@ -1,6 +1,0 @@
-# hf-gate-run
-# label: smoke
-# command: node scripts/render-check.mjs
-# started: 2026-07-25T18:13:17+00:00
-render-check OK: real-browser DOM (after JS) contains '骨架 Agent' + <aside>/<main> landmarks
-# exit: 0
