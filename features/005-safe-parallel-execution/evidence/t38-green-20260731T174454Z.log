@@ -1,0 +1,18 @@
+# hf-gate-run
+# label: t38-green
+# command: npm.cmd test -- tests/windows-native-merge-lifecycle.test.ts
+# started: 2026-07-31T17:44:54+00:00
+
+> collaboration-cockpit@0.1.0 test
+> vitest run tests/windows-native-merge-lifecycle.test.ts
+
+
+ RUN  v4.1.10 D:/cool-ai
+
+
+ Test Files  1 passed (1)
+      Tests  20 passed (20)
+   Start at  01:44:55
+   Duration  3.17s (transform 142ms, setup 434ms, import 56ms, tests 502ms, environment 1.89s)
+
+# exit: 0

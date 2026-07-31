@@ -224,6 +224,47 @@ prompt 顺序固定为：平台工具契约；当前 Agent 冻结的私有 role/
 - 方案 B: 持久 merge journal + 每路径 old/post manifest + conditional replace/rollback/roll-forward。无检测到的外部writer时恢复全旧或全新；一旦identity/hash不匹配，不覆盖当前内容并转manual recovery。
 - 选择: B，符合A-59。每项目只允许一个未解决journal并以`BEGIN IMMEDIATE`取得应用内commit lock；该锁不约束外部程序，因此设计不再宣称无条件原子。每个canonical path的冻结old/post manifest都含规范path、expected exists、ordinary-file identity、byte hash和整体manifest hash。
 
+merge native 层必须把“准备 owned 文件”与“journal 后条件应用/恢复”拆开，不跨事务或进程持有原始 HANDLE。journal 只持久化可重开的 descriptor：
+
+```ts
+type VerifiedOwnedFileRef = {
+  rootKind:"journal"|"canonical";
+  relativePath:string[];
+  ownerId:string;
+  parentIdentity:string;
+  fileIdentity:string;
+  sha256:string;
+  size:number;
+};
+type ExpectedCanonicalFile = {
+  rootKind:"canonical";
+  relativePath:string[];
+  exists:boolean;
+  parentIdentity:string;
+  fileIdentity:string|null;
+  sha256:string|null;
+  size:number|null;
+};
+type NativeMutationResult<T> =
+  | {kind:"succeeded";value:T}
+  | {kind:"condition-mismatch";observed:{exists:boolean;parentIdentity:string;
+      fileIdentity:string|null;sha256:string|null;size:number|null}}
+  | {kind:"mutation-uncertain";phase:string};
+```
+
+固定生命周期 API：
+
+- `prepareOwnedFile(rootKind,root,parentSegments,name,ownerId,bytes): NativeMutationResult<VerifiedOwnedFileRef>`: verified parent 下 relative exclusive create，完整 write+file/directory flush，返回 descriptor 前关闭全部 HANDLE。
+- `reopenOwnedFile(roots,ref): NativeMutationResult<VerifiedOwnedFileRef>`: 从 `rootKind` 对应 verified root/parent handle-relative 重开并同时核对 owner、parent/file identity、hash、size、finalPath。
+- `prepareCanonicalTempFromOwned(roots,sourceRef,targetParentSegments,tempName,ownerId): NativeMutationResult<VerifiedOwnedFileRef>`: 重开 journal owned source，在 canonical verified parent 创建同目录 temp并复制/flush，返回 `rootKind=canonical` descriptor；不改变目标。
+- `conditionalReplacePrepared(roots,expectedTarget,preparedCanonicalTemp): NativeMutationResult<ExpectedCanonicalFile>`: `expectedTarget.relativePath` 唯一定位目标；rename 前重检 target/parent 与 temp，relative replace 后重开核对 post identity/hash/size 并 flush directory；post identity 必须等于 temp identity。
+- `conditionalDelete(roots,expectedTarget): NativeMutationResult<{deleted:true}>`: 仅 parent+file identity+hash+size 全匹配时删除。
+- `conditionalCleanupOwned(roots,ref): NativeMutationResult<{deleted:true}>`: 仅 owner+parent/file identity+hash+size 全匹配时删除；同字节不同 identity 保留为 `condition-mismatch`。
+
+每个 API 内部唯一持有并关闭 HANDLE；write/flush/rename/delete/identity/finalPath/close 任一 native 不确定按 D-2 native failure matrix 返回 `mutation-uncertain`，不得按普通 I/O 自动覆盖/回滚。
+
+modified apply=`old target + canonical temp(durable-new)`；modified rollback=`post target + canonical temp(backup)`；modified roll-forward=`old target + canonical temp(durable-new)`；added apply=`nonexistent target + canonical temp(durable-new)`；added rollback=`conditionalDelete(post target)`；所有 backup/durable-new/temp 收尾均用 `conditionalCleanupOwned`。
+
 协议:
 
 1. `merge_apply` action acquire事务重检execution/staged/context/policy/validation/approval/conflict，创建journal=`prepared`、old/post manifests及ordered file rows，receipt保持pending；app-owned backup/new/temp都命名含actionId并记录identity/hash。
@@ -835,23 +876,29 @@ CREATE TABLE execution_merge_files(
   position INTEGER NOT NULL CHECK(position>=0),
   path TEXT NOT NULL CHECK(length(CAST(path AS BLOB)) BETWEEN 1 AND 4096),
   path_key TEXT NOT NULL CHECK(length(CAST(path_key AS BLOB)) BETWEEN 1 AND 4096),
-  old_exists INTEGER NOT NULL CHECK(old_exists IN (0,1)),
-  old_identity TEXT,
-  old_hash TEXT CHECK(old_hash IS NULL OR (length(old_hash)=64 AND old_hash NOT GLOB '*[^0-9a-f]*')),
-  post_identity TEXT NOT NULL,
-  new_hash TEXT NOT NULL CHECK(length(new_hash)=64 AND new_hash NOT GLOB '*[^0-9a-f]*'),
-  backup_path TEXT CHECK(backup_path IS NULL OR length(CAST(backup_path AS BLOB)) BETWEEN 1 AND 32767),
-  durable_new_path TEXT NOT NULL CHECK(length(CAST(durable_new_path AS BLOB)) BETWEEN 1 AND 32767),
-  owned_backup_identity TEXT,
-  owned_backup_hash TEXT CHECK(owned_backup_hash IS NULL OR (length(owned_backup_hash)=64 AND owned_backup_hash NOT GLOB '*[^0-9a-f]*')),
-  owned_new_identity TEXT NOT NULL,
-  status TEXT NOT NULL CHECK(status IN ('pending','applied','rolled_back','rolled_forward','verified')),
+  old_target_ref_json TEXT NOT NULL CHECK(json_valid(old_target_ref_json)
+    AND length(CAST(old_target_ref_json AS BLOB))<=16384),
+  post_target_ref_json TEXT CHECK(post_target_ref_json IS NULL OR
+    (json_valid(post_target_ref_json) AND length(CAST(post_target_ref_json AS BLOB))<=16384)),
+  backup_ref_json TEXT CHECK(backup_ref_json IS NULL OR
+    (json_valid(backup_ref_json) AND length(CAST(backup_ref_json AS BLOB))<=16384)),
+  durable_new_ref_json TEXT NOT NULL CHECK(json_valid(durable_new_ref_json)
+    AND length(CAST(durable_new_ref_json AS BLOB))<=16384),
+  canonical_temp_locator_json TEXT NOT NULL CHECK(json_valid(canonical_temp_locator_json)
+    AND length(CAST(canonical_temp_locator_json AS BLOB))<=8192),
+  canonical_temp_ref_json TEXT CHECK(canonical_temp_ref_json IS NULL OR
+    (json_valid(canonical_temp_ref_json) AND length(CAST(canonical_temp_ref_json AS BLOB))<=16384)),
+  status TEXT NOT NULL CHECK(status IN
+    ('pending','temp_ready','applied','rolled_back','rolled_forward','verified')),
   PRIMARY KEY(journal_id,position),
   UNIQUE(journal_id,path_key),
-  CHECK((old_exists=0 AND old_identity IS NULL AND old_hash IS NULL)
-     OR (old_exists=1 AND old_identity IS NOT NULL AND length(old_hash)=64)),
-  CHECK(length(new_hash)=64 AND length(owned_new_identity)>0)
+  CHECK((status='pending' AND canonical_temp_ref_json IS NULL AND post_target_ref_json IS NULL)
+     OR (status<>'pending' AND canonical_temp_ref_json IS NOT NULL AND post_target_ref_json IS NOT NULL))
 );
+
+`old_target_ref_json` / `post_target_ref_json` 写 strict `ExpectedCanonicalFile`；`backup_ref_json` / `durable_new_ref_json` / `canonical_temp_ref_json` 写 strict `VerifiedOwnedFileRef`；`canonical_temp_locator_json` 只含 `{rootKind:"canonical",relativePath,ownerId}`。所有 relativePath 为 validated NFC segments，ownerId 固定 merge action id。modified 在 journal 创建前于 journal root 准备 backup+durable-new，added 只有 durable-new；随后一次事务创建 journal/file rows并持久化 refs 与 deterministic canonical temp locator。
+
+apply 时先 `prepareCanonicalTempFromOwned`；成功后在目标仍未改变时用独立事务写 `canonical_temp_ref_json`、由该 ref identity/hash/size 生成 `post_target_ref_json` 并置 `temp_ready`，再执行 conditional replace。进程若在 temp 创建后、ref 事务前退出，目标仍为 old；该未登记 temp 不因名字猜测 ownership，恢复完成 rollback 后把 locator 计入 uncleaned orphan。进程在 ref 已持久化后退出，recovery 只凭 DB refs + `journal_root` + canonical root 即可 reopen 并 rollback/roll-forward。`post_target_ref` 的 file identity 来自 canonical temp，relative rename 后必须保持同一 identity。
 
 CREATE TABLE work_item_execution_results(
   id TEXT PRIMARY KEY,
@@ -1282,9 +1329,10 @@ manual recovery警示明确“检测到平台外写入；平台已停止自动�
 - [x] T-35 实现 Windows handle-relative temp/write/flush/rename/delete (覆盖: FR-5, FR-8, FR-9, NFR-1, NFR-2, NFR-3) — 判据: `npm test -- tests/windows-native-write-adapter.test.ts`先红后绿；verified parent 下 exclusive temp、short-write loop、file/directory flush、relative atomic replace/delete、pre/post identity/hash 与 conditional cleanup 通过；每个 native fault/race 只改预期对象，外部/secret bytes 覆盖0
 - [x] T-36 将 verified adapter 接入 sandbox snapshot (覆盖: FR-4, FR-5, FR-8, FR-10, FR-11, NFR-1, NFR-2, NFR-4) — 判据: `npm test -- tests/sandbox-preflight.test.ts tests/sandbox-snapshot.test.ts`先红后绿；删除 snapshot 的 path-level `lstat/realpath/open` 和 `O_NOFOLLOW ?? 0` fallback，复制、manifest、race、100k/2GiB、cleanup 全部只经 verified handle，native failure 按矩阵收口
 - [x] T-37 将 verified adapter 接入 file list/read/write/stage (覆盖: FR-3, FR-4, FR-5, FR-7, FR-8, FR-11, NFR-1, NFR-2, NFR-3, NFR-4) — 判据: `npm test -- tests/execution-list-tool.test.ts tests/execution-read-tool.test.ts tests/execution-write-tool.test.ts tests/execution-staging.test.ts`先红后绿；删除 Node path fallback，四类 action 复用同一 handle chain，race/identity/finalPath/native failure 的精确 action/execution/receipt 状态通过
-- [ ] T-38 将 verified adapter 接入 merge/recovery/manual resolution (覆盖: FR-8, FR-9, FR-11, NFR-1, NFR-2, NFR-4) — 判据: `npm test -- tests/merge-journal-prepare.test.ts tests/merge-recovery.test.ts tests/merge-fault-injection.test.ts tests/merge-external-writer.test.ts`先红后绿；首次 canonical 写前 capability failure 零 journal/零写，journal 后任一 native 不确定进入 manual barrier，conditional apply/rollback/roll-forward/cleanup 全经 handle，external bytes 覆盖0、任务结果提交0
-- [ ] T-39 接通生产默认 sandbox executor 与 start receipt 收口 (覆盖: FR-1, FR-2, FR-4, FR-5, FR-8, FR-10, FR-11, NFR-1, NFR-2, NFR-4) — 判据: `npm test -- tests/execution-sandbox-orchestrator.test.ts`先红后绿；不调用 `setSandboxExecutorForTests`，公开 start route 对真实临时 SQLite/canonical/execution root 返回201，verified snapshot 文件存在且 canonical 零修改，attempt=`ready`、sandbox action=`succeeded`、start receipt=`completed`、manifest一致；逐项覆盖 D-2 fault/concurrency oracle，断言四项成功事实全有或全无、snapshot执行次数、精确状态/HTTP/清理结果与 canonical hash
-- [ ] T-40 收口只经公开行为的真实 browser smoke harness (覆盖: FR-1, FR-2, FR-3, FR-8, FR-9, FR-11, FR-14, NFR-1, NFR-4, NFR-5) — 判据: `npm test -- tests/execution-browser-smoke.test.ts`先红后绿；smoke 不拦截 start/advance/stage/merge/recovery 路由、不直接写业务 SQLite 或复制 canonical 文件来合成状态，双 execution 从 start 经真实 provider、工具/验证、stage 到至少一次 merge 只走产品公开 API；stale/conflict/manual recovery 由公开行为或专用故障注入触发；provider 健康探针不计入 execution 并发断言
-- [ ] T-41 运行S-5 desktop+narrow smoke/demo，仅验证前序已实现行为 (覆盖: FR-1..FR-14, NFR-1..NFR-5) — 判据: 本任务不得新增或修改product code/test行为；README、`npm test`、`npm run build`、`npm run smoke:execution`通过，并留真实provider双Agent不相交合入、重复/边界/standing+one-shot、stale/conflict/manual recovery及desktop/narrow证据
+- [x] T-38 实现 Windows merge-owned file 跨 journal 生命周期原语 (覆盖: FR-8, FR-9, NFR-1, NFR-2, NFR-4) — 判据: `npm test -- tests/windows-native-merge-lifecycle.test.ts`先红后绿；prepare 后全部 HANDLE 已关闭且新 adapter/进程可按 descriptor 重开，identity/hash/size/finalPath/parent identity/owner 全匹配；old→post、post→old、added rollback、conditional cleanup 通过；replace/delete/same-bytes-new-identity/reparse race 与每个 native fault 均 external bytes 覆盖0、成功 handle close恰一次
+- [ ] T-39 将 verified adapter 接入 merge/recovery/manual resolution (覆盖: FR-8, FR-9, FR-11, NFR-1, NFR-2, NFR-4) — 判据: `npm test -- tests/merge-journal-prepare.test.ts tests/merge-recovery.test.ts tests/merge-fault-injection.test.ts tests/merge-external-writer.test.ts`先红后绿；首次 canonical 写前 capability failure 零 journal/零写，journal 后任一 native 不确定进入 manual barrier，conditional apply/rollback/roll-forward/cleanup 全经 handle，external bytes 覆盖0、任务结果提交0
+- [ ] T-40 接通生产默认 sandbox executor 与 start receipt 收口 (覆盖: FR-1, FR-2, FR-4, FR-5, FR-8, FR-10, FR-11, NFR-1, NFR-2, NFR-4) — 判据: `npm test -- tests/execution-sandbox-orchestrator.test.ts`先红后绿；不调用 `setSandboxExecutorForTests`，公开 start route 对真实临时 SQLite/canonical/execution root 返回201，verified snapshot 文件存在且 canonical 零修改，attempt=`ready`、sandbox action=`succeeded`、start receipt=`completed`、manifest一致；逐项覆盖 D-2 fault/concurrency oracle，断言四项成功事实全有或全无、snapshot执行次数、精确状态/HTTP/清理结果与 canonical hash
+- [ ] T-41 收口只经公开行为的真实 browser smoke harness (覆盖: FR-1, FR-2, FR-3, FR-8, FR-9, FR-11, FR-14, NFR-1, NFR-4, NFR-5) — 判据: `npm test -- tests/execution-browser-smoke.test.ts`先红后绿；smoke 不拦截 start/advance/stage/merge/recovery 路由、不直接写业务 SQLite 或复制 canonical 文件来合成状态，双 execution 从 start 经真实 provider、工具/验证、stage 到至少一次 merge 只走产品公开 API；stale/conflict/manual recovery 由公开行为或专用故障注入触发；provider 健康探针不计入 execution 并发断言
+- [ ] T-42 运行S-5 desktop+narrow smoke/demo，仅验证前序已实现行为 (覆盖: FR-1..FR-14, NFR-1..NFR-5) — 判据: 本任务不得新增或修改product code/test行为；README、`npm test`、`npm run build`、`npm run smoke:execution`通过，并留真实provider双Agent不相交合入、重复/边界/standing+one-shot、stale/conflict/manual recovery及desktop/narrow证据
 
-任务覆盖索引：FR-1→T-2/3/17/20/27/28/31/39–41；FR-2→T-1/2/5/16/22–26/28/30–31/39–41；FR-3→T-8–10/12/14–19/28/31–32/37/40–41；FR-4→T-6–10/16/31/33–34/36–37/39/41；FR-5→T-6/7/10/16/31/34–37/39/41；FR-6→T-11–13/16/19/25/27/29/31/41；FR-7→T-19/20/26/29/31/37/41；FR-8→T-7/11/15/18–23/29/31/33–41；FR-9→T-19–23/25/29/30–31/33/35/38/40–41；FR-10→T-1/5/6/8–14/17/19/24/26/28/31–32/36/39/41；FR-11→T-1/2/4/5/7/8/10/13/14/16/18/21–26/31/36–41；FR-12→T-4/5/18/20/23–25/28/30–31/41；FR-13→T-1/4/5/9/11–15/18/22–26/29/31/41；FR-14→T-2/11/27–30/40–41。NFR-1→T-1–3/5/7/10/16–24/28/30–41；NFR-2→T-6–17/19/21/26/29/31/33–39/41；NFR-3→T-6/8–15/25/27/29/30–35/37/41；NFR-4→T-1/2/4/5/7–9/11–18/20–26/31/36–41；NFR-5→T-2/27–30/40–41。
+任务覆盖索引：FR-1→T-2/3/17/20/27/28/31/40–42；FR-2→T-1/2/5/16/22–26/28/30–31/40–42；FR-3→T-8–10/12/14–19/28/31–32/37/41–42；FR-4→T-6–10/16/31/33–34/36–37/40/42；FR-5→T-6/7/10/16/31/34–37/40/42；FR-6→T-11–13/16/19/25/27/29/31/42；FR-7→T-19/20/26/29/31/37/42；FR-8→T-7/11/15/18–23/29/31/33–42；FR-9→T-19–23/25/29/30–31/33/35/38–39/41–42；FR-10→T-1/5/6/8–14/17/19/24/26/28/31–32/36/40/42；FR-11→T-1/2/4/5/7/8/10/13/14/16/18/21–26/31/36–37/39–42；FR-12→T-4/5/18/20/23–25/28/30–31/42；FR-13→T-1/4/5/9/11–15/18/22–26/29/31/42；FR-14→T-2/11/27–30/41–42。NFR-1→T-1–3/5/7/10/16–24/28/30–42；NFR-2→T-6–17/19/21/26/29/31/33–40/42；NFR-3→T-6/8–15/25/27/29/30–35/37/42；NFR-4→T-1/2/4/5/7–9/11–18/20–26/31/36–42；NFR-5→T-2/27–30/41–42。

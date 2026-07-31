@@ -54,6 +54,59 @@ export type WindowsNativeWriteAdapterOptions = {
   };
 };
 
+export type VerifiedOwnedFileRef = {
+  rootKind: "journal" | "canonical";
+  relativePath: string[];
+  ownerId: string;
+  parentIdentity: string;
+  fileIdentity: string;
+  finalPath: string;
+  sha256: string;
+  size: number;
+};
+
+export type ExpectedCanonicalFile = {
+  rootKind: "canonical";
+  relativePath: string[];
+  exists: boolean;
+  parentIdentity: string;
+  fileIdentity: string | null;
+  sha256: string | null;
+  size: number | null;
+};
+
+export type NativeMutationResult<T> =
+  | { kind: "succeeded"; value: T }
+  | { kind: "condition-mismatch"; observed: ExpectedCanonicalFile }
+  | { kind: "mutation-uncertain"; phase: string };
+
+export type WindowsNativeMergeLifecycleStep =
+  | "open-root"
+  | "open-parent"
+  | "open-file"
+  | "identity"
+  | "final-path"
+  | "read"
+  | "create"
+  | "write"
+  | "flush-file"
+  | "rename"
+  | "delete"
+  | "flush-directory"
+  | "close";
+
+export type WindowsNativeMergeLifecycleOptions = {
+  hooks?: {
+    beforeMutation?: (
+      operation: "replace" | "delete" | "cleanup",
+      name: string,
+    ) => void;
+    beforeNativeStep?: (step: WindowsNativeMergeLifecycleStep, name: string) => void;
+    onClose?: (name: string, handle: unknown) => void;
+    onWriteBytes?: (bytes: Uint8Array) => void;
+  };
+};
+
 export class WindowsNativeWriteFailure extends WindowsNativeError {
   constructor(
     public readonly mutationState:
@@ -845,4 +898,520 @@ export function createWindowsNativeWriteAdapter(
   }
 
   return { deleteVerifiedFile, writeVerifiedFile };
+}
+
+class NativeConditionMismatch extends Error {
+  constructor(readonly observed: ExpectedCanonicalFile) {
+    super("The native mutation condition did not match.");
+  }
+}
+
+function identityKey(identity: NativeIdentity): string {
+  return `${identity.volumeSerialNumber}:${identity.fileId}`;
+}
+
+function validSegments(segments: string[]): boolean {
+  return segments.length > 0 && segments.every((segment) => {
+    try {
+      validateRelativeName(segment);
+      return true;
+    } catch {
+      return false;
+    }
+  });
+}
+
+export function createWindowsNativeMergeLifecycleAdapter(
+  options: WindowsNativeMergeLifecycleOptions = {},
+) {
+  const functions = guarded("The fixed Windows merge lifecycle symbols are unavailable.", loadFunctions);
+  const hooks = options.hooks ?? {};
+  let phase = "initialize";
+
+  function step(value: WindowsNativeMergeLifecycleStep, name: string): void {
+    phase = value;
+    guarded(`The ${value} merge lifecycle fault hook failed.`, () =>
+      hooks.beforeNativeStep?.(value, name));
+  }
+
+  function closeOne(handle: NativeHandle): void {
+    if (handle.closed) return;
+    phase = "close";
+    handle.closed = true;
+    let hookFailure: unknown;
+    try {
+      hooks.beforeNativeStep?.("close", handle.name);
+    } catch (error) {
+      hookFailure = error;
+    }
+    const closed = functions.closeHandle(handle.native);
+    guarded("The merge close-observation hook failed.", () =>
+      hooks.onClose?.(handle.name, handle.native));
+    if (!closed) fail("The native merge handle close failed.");
+    if (hookFailure !== undefined) fail("The close merge lifecycle fault hook failed.", hookFailure);
+  }
+
+  function closeAll(handles: NativeHandle[], previous?: unknown): void {
+    let failure = previous;
+    for (const handle of [...handles].reverse()) {
+      if (handle.closed) continue;
+      try {
+        closeOne(handle);
+      } catch (error) {
+        if (failure === undefined || failure instanceof NativeConditionMismatch) {
+          failure = error;
+        }
+      }
+    }
+    if (failure !== undefined) throw failure;
+  }
+
+  function openParentPath(
+    root: string,
+    segments: string[],
+    owned: NativeHandle[],
+    name: string,
+  ): NativeHandle {
+    step("open-root", name);
+    step("identity", name);
+    step("final-path", name);
+    let parent = createRootHandle(functions, root);
+    owned.push(parent);
+    for (const segment of segments) {
+      step("open-parent", segment);
+      const child = createRelativeHandle(functions, parent, segment, "directory");
+      if (!child) fail("The merge parent is missing.");
+      owned.push(child);
+      step("identity", segment);
+      step("final-path", segment);
+      assertStable(functions, parent);
+      parent = child;
+    }
+    return parent;
+  }
+
+  function readFileBytes(handle: NativeHandle): Buffer {
+    step("read", handle.name);
+    return readAll(functions, handle);
+  }
+
+  function descriptor(
+    rootKind: "journal" | "canonical",
+    relativePath: string[],
+    ownerId: string,
+    parent: NativeHandle,
+    file: NativeHandle,
+    bytes: Uint8Array,
+  ): VerifiedOwnedFileRef {
+    step("identity", file.name);
+    const fileIdentity = identityOf(functions, file);
+    const parentIdentity = identityOf(functions, parent);
+    step("final-path", file.name);
+    const finalPath = finalPathOf(functions, file);
+    if (
+      !sameIdentity(file.identityAtOpen, fileIdentity)
+      || !sameIdentity(parent.identityAtOpen, parentIdentity)
+      || finalPath.toLocaleLowerCase("en-US")
+        !== file.finalPathAtOpen.toLocaleLowerCase("en-US")
+    ) {
+      fail("The owned merge descriptor changed while it was produced.");
+    }
+    return {
+      rootKind,
+      relativePath: [...relativePath],
+      ownerId,
+      parentIdentity: identityKey(parentIdentity),
+      fileIdentity: identityKey(fileIdentity),
+      finalPath,
+      sha256: digest(bytes),
+      size: bytes.byteLength,
+    };
+  }
+
+  function rootFor(
+    roots: { journal: string; canonical: string },
+    kind: "journal" | "canonical",
+  ): string {
+    return kind === "journal" ? roots.journal : roots.canonical;
+  }
+
+  function observed(
+    parent: NativeHandle,
+    relativePath: string[],
+    owned: NativeHandle[],
+  ): ExpectedCanonicalFile {
+    const name = relativePath.at(-1)!;
+    step("open-file", name);
+    const file = createRelativeHandle(functions, parent, name, "file", true);
+    const parentIdentity = identityKey(identityOf(functions, parent));
+    if (!file) {
+      return {
+        rootKind: "canonical",
+        relativePath: [...relativePath],
+        exists: false,
+        parentIdentity,
+        fileIdentity: null,
+        sha256: null,
+        size: null,
+      };
+    }
+    owned.push(file);
+    const bytes = readFileBytes(file);
+    return {
+      rootKind: "canonical",
+      relativePath: [...relativePath],
+      exists: true,
+      parentIdentity,
+      fileIdentity: identityKey(identityOf(functions, file)),
+      sha256: digest(bytes),
+      size: bytes.byteLength,
+    };
+  }
+
+  function sameExpected(
+    left: ExpectedCanonicalFile,
+    right: ExpectedCanonicalFile,
+  ): boolean {
+    return left.exists === right.exists
+      && left.parentIdentity === right.parentIdentity
+      && left.fileIdentity === right.fileIdentity
+      && left.sha256 === right.sha256
+      && left.size === right.size;
+  }
+
+  function mismatch(value: ExpectedCanonicalFile): never {
+    throw new NativeConditionMismatch(value);
+  }
+
+  function execute<T>(operation: () => T): NativeMutationResult<T> {
+    phase = "validate";
+    try {
+      return { kind: "succeeded", value: operation() };
+    } catch (error) {
+      if (error instanceof NativeConditionMismatch) {
+        return { kind: "condition-mismatch", observed: error.observed };
+      }
+      return { kind: "mutation-uncertain", phase };
+    }
+  }
+
+  function validateRef(ref: VerifiedOwnedFileRef): void {
+    if (
+      !validSegments(ref.relativePath)
+      || !ref.ownerId
+      || !ref.relativePath.at(-1)!.includes(ref.ownerId)
+      || !/^[0-9a-f]+:[0-9a-f]{32}$/.test(ref.parentIdentity)
+      || !/^[0-9a-f]+:[0-9a-f]{32}$/.test(ref.fileIdentity)
+      || !/^[0-9a-f]{64}$/.test(ref.sha256)
+      || !Number.isSafeInteger(ref.size)
+      || ref.size < 0
+      || !isAbsolute(ref.finalPath)
+    ) fail("The owned merge descriptor is invalid.");
+  }
+
+  function reopen(
+    roots: { journal: string; canonical: string },
+    ref: VerifiedOwnedFileRef,
+    owned: NativeHandle[],
+  ): { bytes: Buffer; file: NativeHandle; parent: NativeHandle } {
+    validateRef(ref);
+    const name = ref.relativePath.at(-1)!;
+    const parent = openParentPath(
+      rootFor(roots, ref.rootKind),
+      ref.relativePath.slice(0, -1),
+      owned,
+      name,
+    );
+    step("open-file", name);
+    const file = createRelativeHandle(functions, parent, name, "file", true);
+    if (!file) {
+      return mismatch({
+        rootKind: "canonical",
+        relativePath: [...ref.relativePath],
+        exists: false,
+        parentIdentity: identityKey(identityOf(functions, parent)),
+        fileIdentity: null,
+        sha256: null,
+        size: null,
+      });
+    }
+    owned.push(file);
+    const bytes = readFileBytes(file);
+    const current = descriptor(
+      ref.rootKind,
+      ref.relativePath,
+      ref.ownerId,
+      parent,
+      file,
+      bytes,
+    );
+    if (
+      current.ownerId !== ref.ownerId
+      || current.parentIdentity !== ref.parentIdentity
+      || current.fileIdentity !== ref.fileIdentity
+      || current.finalPath.toLocaleLowerCase("en-US")
+        !== ref.finalPath.toLocaleLowerCase("en-US")
+      || current.sha256 !== ref.sha256
+      || current.size !== ref.size
+    ) {
+      return mismatch({
+        rootKind: "canonical",
+        relativePath: [...ref.relativePath],
+        exists: true,
+        parentIdentity: current.parentIdentity,
+        fileIdentity: current.fileIdentity,
+        sha256: current.sha256,
+        size: current.size,
+      });
+    }
+    return { bytes, file, parent };
+  }
+
+  function prepareOwnedFile(
+    rootKind: "journal" | "canonical",
+    root: string,
+    parentSegments: string[],
+    name: string,
+    ownerId: string,
+    bytes: Uint8Array,
+  ): NativeMutationResult<VerifiedOwnedFileRef> {
+    return execute(() => {
+      validateRelativeName(name);
+      if (
+        !validSegments([...parentSegments, name])
+        || !ownerId
+        || !name.includes(ownerId)
+        || bytes.byteLength > MAXIMUM_FILE_BYTES
+      ) fail("The owned merge prepare request is invalid.");
+      const owned: NativeHandle[] = [];
+      try {
+        const parent = openParentPath(root, parentSegments, owned, name);
+        step("create", name);
+        const file = createRelativeHandle(functions, parent, name, "temp");
+        if (!file) fail("The exclusive owned merge file was not created.");
+        owned.push(file);
+        let offset = 0;
+        while (offset < bytes.byteLength) {
+          step("write", name);
+          const requested = Math.min(MAXIMUM_TRANSFER, bytes.byteLength - offset);
+          const chunk = bytes.subarray(offset, offset + requested);
+          const transferred = [0];
+          if (!functions.writeFile(file.native, chunk, requested, transferred, null)) {
+            fail("WriteFile returned an uncertain owned merge result.");
+          }
+          if (transferred[0] <= 0 || transferred[0] > requested) {
+            fail("WriteFile returned an invalid owned merge transfer.");
+          }
+          guarded("The merge write-observation hook failed.", () =>
+            hooks.onWriteBytes?.(chunk.subarray(0, transferred[0])));
+          offset += transferred[0];
+        }
+        step("flush-file", name);
+        if (!functions.flushFileBuffers(file.native)) {
+          fail("The owned merge file flush was uncertain.");
+        }
+        const result = descriptor(
+          rootKind,
+          [...parentSegments, name],
+          ownerId,
+          parent,
+          file,
+          bytes,
+        );
+        step("flush-directory", name);
+        if (!functions.flushFileBuffers(parent.native)) {
+          fail("The owned merge parent flush was uncertain.");
+        }
+        closeAll(owned);
+        return result;
+      } catch (error) {
+        closeAll(owned, error);
+        throw error;
+      }
+    });
+  }
+
+  function reopenOwnedFile(
+    roots: { journal: string; canonical: string },
+    ref: VerifiedOwnedFileRef,
+  ): NativeMutationResult<VerifiedOwnedFileRef> {
+    return execute(() => {
+      const owned: NativeHandle[] = [];
+      try {
+        const current = reopen(roots, ref, owned);
+        const result = descriptor(
+          ref.rootKind,
+          ref.relativePath,
+          ref.ownerId,
+          current.parent,
+          current.file,
+          current.bytes,
+        );
+        closeAll(owned);
+        return result;
+      } catch (error) {
+        closeAll(owned, error);
+        throw error;
+      }
+    });
+  }
+
+  function prepareCanonicalTempFromOwned(
+    roots: { journal: string; canonical: string },
+    sourceRef: VerifiedOwnedFileRef,
+    targetParentSegments: string[],
+    tempName: string,
+    ownerId: string,
+  ): NativeMutationResult<VerifiedOwnedFileRef> {
+    const source = reopenOwnedFile(roots, sourceRef);
+    if (source.kind !== "succeeded") return source;
+    const owned: NativeHandle[] = [];
+    const bytesResult = execute(() => {
+      try {
+        return reopen(roots, sourceRef, owned).bytes;
+      } finally {
+        closeAll(owned);
+      }
+    });
+    if (bytesResult.kind !== "succeeded") return bytesResult;
+    return prepareOwnedFile(
+      "canonical",
+      roots.canonical,
+      targetParentSegments,
+      tempName,
+      ownerId,
+      bytesResult.value,
+    );
+  }
+
+  function conditionalReplacePrepared(
+    roots: { journal: string; canonical: string },
+    expectedTarget: ExpectedCanonicalFile,
+    preparedCanonicalTemp: VerifiedOwnedFileRef,
+  ): NativeMutationResult<ExpectedCanonicalFile> {
+    return execute(() => {
+      if (
+        expectedTarget.rootKind !== "canonical"
+        || preparedCanonicalTemp.rootKind !== "canonical"
+        || !validSegments(expectedTarget.relativePath)
+        || expectedTarget.relativePath.slice(0, -1).join("\0")
+          !== preparedCanonicalTemp.relativePath.slice(0, -1).join("\0")
+      ) fail("The conditional replace request is invalid.");
+      const owned: NativeHandle[] = [];
+      const targetName = expectedTarget.relativePath.at(-1)!;
+      try {
+        const parent = openParentPath(
+          roots.canonical,
+          expectedTarget.relativePath.slice(0, -1),
+          owned,
+          targetName,
+        );
+        const before = observed(parent, expectedTarget.relativePath, owned);
+        if (!sameExpected(before, expectedTarget)) mismatch(before);
+        const temp = reopen(roots, preparedCanonicalTemp, owned).file;
+        guarded("The replace race hook failed.", () =>
+          hooks.beforeMutation?.("replace", targetName));
+        const checked = observed(parent, expectedTarget.relativePath, owned);
+        if (!sameExpected(checked, expectedTarget)) mismatch(checked);
+        const tempChecked = reopen(roots, preparedCanonicalTemp, owned);
+        step("rename", targetName);
+        renameRelative(functions, tempChecked.file, parent, targetName);
+        closeOne(tempChecked.file);
+        const post = observed(parent, expectedTarget.relativePath, owned);
+        if (
+          !post.exists
+          || post.fileIdentity !== preparedCanonicalTemp.fileIdentity
+          || post.sha256 !== preparedCanonicalTemp.sha256
+          || post.size !== preparedCanonicalTemp.size
+        ) fail("The conditional replace post-state was uncertain.");
+        step("flush-directory", targetName);
+        if (!functions.flushFileBuffers(parent.native)) {
+          fail("The conditional replace directory flush was uncertain.");
+        }
+        closeAll(owned);
+        return post;
+      } catch (error) {
+        closeAll(owned, error);
+        throw error;
+      }
+    });
+  }
+
+  function conditionalDelete(
+    roots: { journal: string; canonical: string },
+    expectedTarget: ExpectedCanonicalFile,
+  ): NativeMutationResult<{ deleted: true }> {
+    return execute(() => {
+      if (!expectedTarget.exists || !validSegments(expectedTarget.relativePath)) {
+        fail("The conditional delete request is invalid.");
+      }
+      const owned: NativeHandle[] = [];
+      const name = expectedTarget.relativePath.at(-1)!;
+      try {
+        const parent = openParentPath(
+          roots.canonical,
+          expectedTarget.relativePath.slice(0, -1),
+          owned,
+          name,
+        );
+        const before = observed(parent, expectedTarget.relativePath, owned);
+        if (!sameExpected(before, expectedTarget)) mismatch(before);
+        guarded("The delete race hook failed.", () => hooks.beforeMutation?.("delete", name));
+        const checked = observed(parent, expectedTarget.relativePath, owned);
+        if (!sameExpected(checked, expectedTarget)) mismatch(checked);
+        const target = createRelativeHandle(functions, parent, name, "file");
+        if (!target) mismatch(checked);
+        owned.push(target);
+        step("delete", name);
+        markDelete(functions, target);
+        closeOne(target);
+        step("flush-directory", name);
+        if (!functions.flushFileBuffers(parent.native)) {
+          fail("The conditional delete directory flush was uncertain.");
+        }
+        closeAll(owned);
+        return { deleted: true as const };
+      } catch (error) {
+        closeAll(owned, error);
+        throw error;
+      }
+    });
+  }
+
+  function conditionalCleanupOwned(
+    roots: { journal: string; canonical: string },
+    ref: VerifiedOwnedFileRef,
+  ): NativeMutationResult<{ deleted: true }> {
+    return execute(() => {
+      const owned: NativeHandle[] = [];
+      const name = ref.relativePath.at(-1) ?? "";
+      try {
+        reopen(roots, ref, owned);
+        guarded("The cleanup race hook failed.", () =>
+          hooks.beforeMutation?.("cleanup", name));
+        const checked = reopen(roots, ref, owned);
+        step("delete", name);
+        markDelete(functions, checked.file);
+        closeOne(checked.file);
+        step("flush-directory", name);
+        if (!functions.flushFileBuffers(checked.parent.native)) {
+          fail("The owned cleanup directory flush was uncertain.");
+        }
+        closeAll(owned);
+        return { deleted: true as const };
+      } catch (error) {
+        closeAll(owned, error);
+        throw error;
+      }
+    });
+  }
+
+  return {
+    conditionalCleanupOwned,
+    conditionalDelete,
+    conditionalReplacePrepared,
+    prepareCanonicalTempFromOwned,
+    prepareOwnedFile,
+    reopenOwnedFile,
+  };
 }
