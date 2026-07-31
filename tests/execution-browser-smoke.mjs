@@ -1,20 +1,18 @@
 import assert from "node:assert/strict";
 import { spawn, spawnSync } from "node:child_process";
-import { createHash, randomBytes, randomUUID } from "node:crypto";
+import { randomBytes } from "node:crypto";
 import {
-  cpSync,
   existsSync,
   mkdirSync,
   mkdtempSync,
   readFileSync,
-  readdirSync,
   realpathSync,
   rmSync,
   writeFileSync,
 } from "node:fs";
 import { createServer } from "node:http";
 import { tmpdir } from "node:os";
-import { dirname, join, relative, resolve } from "node:path";
+import { join, resolve } from "node:path";
 import { DatabaseSync } from "node:sqlite";
 
 import { chromium } from "playwright";
@@ -53,6 +51,10 @@ const providerCaptures = [];
 const apiBodies = [];
 const advanceRequests = [];
 const modelSteps = new Map();
+let alphaAgentId = "";
+let betaAgentId = "";
+let collaborationStep = 0;
+let executionPhase = "isolated";
 let providerAuthorizationCount = 0;
 let maxConcurrentProviderCalls = 0;
 let concurrentProviderCalls = 0;
@@ -70,12 +72,45 @@ async function requestBody(request) {
 
 function executionAction(taskTitle, step) {
   const alpha = taskTitle.includes("Alpha");
-  if (step === 0) {
+  if (executionPhase === "manual" && step < 10) {
     return {
       action: {
-        content: `${alpha ? "alpha" : "beta"} isolated edit\n`,
+        content: `${`manual merge payload ${step}\n`.repeat(3_000)}`,
         expectedHash: null,
-        path: alpha ? "src/alpha.txt" : "src/beta.txt",
+        path: `src/manual-${String(step).padStart(2, "0")}.txt`,
+        type: "write",
+      },
+      summary: `Prepare manual recovery merge file ${step}.`,
+    };
+  }
+  if (executionPhase === "manual" && step === 10) {
+    return {
+      action: {
+        args: ["--version"],
+        executable: process.execPath,
+        expectedEffect: "Run the declared standing validation.",
+        type: "command",
+        workdir: ".",
+      },
+      summary: "Run standing validation before the fault-injected merge.",
+    };
+  }
+  if (executionPhase === "manual") {
+    return {
+      action: { type: "staged" },
+      summary: "Declare the multi-file manual recovery fixture ready.",
+    };
+  }
+  if (step === 0) {
+    const path = executionPhase === "conflict"
+      ? "src/conflict.txt"
+      : alpha ? "src/alpha.txt" : "src/beta.txt";
+    const content = `${alpha ? "alpha" : "beta"} isolated edit\n`;
+    return {
+      action: {
+        content,
+        expectedHash: null,
+        path,
         type: "write",
       },
       summary: `${alpha ? "Alpha" : "Beta"} writes only its declared file.`,
@@ -113,6 +148,38 @@ function executionAction(taskTitle, step) {
   };
 }
 
+function collaborationAction(step) {
+  if (step === 0) {
+    return {
+      claim: { clientKey: "alpha", source: "proposed" },
+      disposition: {
+        reason: "Beta owns the second independent execution task.",
+        summary: "Alpha claimed its task and handed planning to Beta.",
+        targetAgentId: betaAgentId,
+        type: "handoff",
+      },
+      message: "Plan the two independent execution tasks.",
+      tasks: [{
+        clientKey: "alpha",
+        dependsOnKeys: [],
+        description: "Edit only src/alpha.txt.",
+        title: "Implement Alpha file",
+      }],
+    };
+  }
+  return {
+    claim: { clientKey: "beta", source: "proposed" },
+    disposition: { type: "plan_ready" },
+    message: "Both independent execution tasks are assigned and ready.",
+    tasks: [{
+      clientKey: "beta",
+      dependsOnKeys: [],
+      description: "Edit only src/beta.txt.",
+      title: "Implement Beta file",
+    }],
+  };
+}
+
 const provider = createServer(async (request, response) => {
   const body = await requestBody(request);
   providerCaptures.push({
@@ -132,35 +199,41 @@ const provider = createServer(async (request, response) => {
     response.writeHead(404).end();
     return;
   }
+  const parsed = JSON.parse(body);
+  const prompt = parsed.messages.map(({ content }) => content).join("\n");
+  if (prompt.includes("ProposedTask:")) {
+    const action = collaborationAction(collaborationStep);
+    collaborationStep += 1;
+    jsonResponse(response, {
+      choices: [{ message: { content: JSON.stringify(action) } }],
+      usage: { completion_tokens: 7, prompt_tokens: 11, total_tokens: 18 },
+    });
+    return;
+  }
+  if (!prompt.includes("You are executing one frozen project task")) {
+    jsonResponse(response, {
+      choices: [{ message: { content: "ok" } }],
+      usage: { completion_tokens: 1, prompt_tokens: 1, total_tokens: 2 },
+    });
+    return;
+  }
   concurrentProviderCalls += 1;
   maxConcurrentProviderCalls = Math.max(maxConcurrentProviderCalls, concurrentProviderCalls);
   try {
-    const parsed = JSON.parse(body);
-    const prompt = parsed.messages.map(({ content }) => content).join("\n");
-    if (prompt.includes("CONCURRENCY_PROBE")) {
-      await new Promise((done) => setTimeout(done, 300));
-      jsonResponse(response, {
-        choices: [{ message: { content: JSON.stringify({
-          action: { type: "staged" },
-          summary: "Concurrent local provider probe.",
-        }) } }],
-        usage: { completion_tokens: 3, prompt_tokens: 4, total_tokens: 7 },
-      });
-      return;
-    }
-    const taskTitle = prompt.includes("Implement Alpha file")
+    const alphaTask = /"task":\{[^}]*"title":"Implement Alpha file"/u.test(prompt);
+    const betaTask = /"task":\{[^}]*"title":"Implement Beta file"/u.test(prompt);
+    const taskTitle = alphaTask && !betaTask
       ? "Implement Alpha file"
-      : "Implement Beta file";
+      : betaTask && !alphaTask
+        ? "Implement Beta file"
+        : undefined;
+    assert.ok(
+      taskTitle === "Implement Alpha file" || taskTitle === "Implement Beta file",
+      `Unexpected execution task context: ${taskTitle}`,
+    );
     const step = modelSteps.get(taskTitle) ?? 0;
     modelSteps.set(taskTitle, step + 1);
-    if (step === 0) {
-      const deadline = Date.now() + 30_000;
-      while (concurrentProviderCalls < 2 && Date.now() < deadline) {
-        await new Promise((done) => setTimeout(done, 20));
-      }
-    } else {
-      await new Promise((done) => setTimeout(done, 30));
-    }
+    await new Promise((done) => setTimeout(done, step === 0 ? 500 : 30));
     jsonResponse(response, {
       choices: [{ message: { content: JSON.stringify(executionAction(taskTitle, step)) } }],
       usage: { completion_tokens: 7, prompt_tokens: 11, total_tokens: 18 },
@@ -181,15 +254,18 @@ function close(server) {
   return new Promise((resolveClose) => server.close(resolveClose));
 }
 
-const serverCommand = process.platform === "win32"
-  ? {
-      args: ["/d", "/s", "/c", `npm run dev -- --hostname ${host} --port ${appPort}`],
-      command: "cmd.exe",
-    }
-  : {
-      args: ["run", "dev", "--", "--hostname", host, "--port", String(appPort)],
-      command: "npm",
-    };
+const nextCli = resolve("node_modules", "next", "dist", "bin", "next");
+const serverCommand = {
+  args: [
+    nextCli,
+    "start",
+    "--hostname",
+    host,
+    "--port",
+    String(appPort),
+  ],
+  command: process.execPath,
+};
 
 let appServer;
 let serverOutput = "";
@@ -287,503 +363,6 @@ function scalar(database, sql, ...parameters) {
   return database.prepare(sql).get(...parameters).value;
 }
 
-function hashFile(path) {
-  return createHash("sha256").update(readFileSync(path)).digest("hex");
-}
-
-function manifestEntries(root) {
-  const entries = [];
-  const visit = (directory) => {
-    for (const name of readdirSync(directory, { withFileTypes: true })) {
-      const absolute = join(directory, name.name);
-      if (name.isDirectory()) visit(absolute);
-      else if (name.isFile()) {
-        const bytes = readFileSync(absolute);
-        entries.push({
-          path: relative(root, absolute).replaceAll("\\", "/"),
-          sha256: createHash("sha256").update(bytes).digest("hex"),
-          size: bytes.length,
-        });
-      }
-    }
-  };
-  visit(root);
-  entries.sort((left, right) => Buffer.from(left.path).compare(Buffer.from(right.path)));
-  return entries;
-}
-
-function manifestHash(entries) {
-  const hash = createHash("sha256");
-  for (const entry of entries) {
-    const pathBytes = Buffer.from(entry.path);
-    const pathLength = Buffer.alloc(4);
-    pathLength.writeUInt32BE(pathBytes.length);
-    const size = Buffer.alloc(8);
-    size.writeBigUInt64BE(BigInt(entry.size));
-    hash.update(pathLength).update(pathBytes).update(size).update(Buffer.from(entry.sha256, "hex"));
-  }
-  return hash.digest("hex");
-}
-
-function finalizeSandboxContracts() {
-  const database = openDatabase();
-  try {
-    const rows = database.prepare(`
-      SELECT e.id AS executionId,e.project_id AS projectId,a.id AS attemptId,
-             a.sandbox_root AS sandboxRoot,x.id AS actionId,x.operation_id AS operationId
-      FROM executions e
-      JOIN execution_attempts a ON a.execution_id=e.id AND a.attempt_no=e.current_attempt_no
-      JOIN execution_actions x ON x.attempt_id=a.id AND x.kind='sandbox_build'
-      WHERE a.status='preparing'
-    `).all();
-    assert.equal(rows.length, 2, "two isolated execution contracts must be pending");
-    const baselineEntries = manifestEntries(workspaceDirectory);
-    const baselineHash = manifestHash(baselineEntries);
-    for (const row of rows) {
-      mkdirSync(dirname(row.sandboxRoot), { recursive: true });
-      cpSync(workspaceDirectory, row.sandboxRoot, { recursive: true });
-      const manifestPath = join(dirname(row.sandboxRoot), "baseline-manifest.json");
-      writeFileSync(manifestPath, JSON.stringify(baselineEntries));
-      database.prepare(`
-        UPDATE execution_attempts
-        SET status='ready',baseline_manifest_path=?,baseline_manifest_hash=?,
-            sandbox_manifest_hash=?
-        WHERE id=?
-      `).run(manifestPath, baselineHash, baselineHash, row.attemptId);
-      database.prepare(`
-        UPDATE execution_actions
-        SET status='succeeded',lease_token=NULL,lease_expires_at=NULL,
-            result_json=?,finished_at=strftime('%Y-%m-%dT%H:%M:%fZ','now')
-        WHERE id=?
-      `).run(JSON.stringify({ copiedBytes: baselineEntries.reduce((sum, item) => sum + item.size, 0) }), row.actionId);
-      database.prepare(`
-        UPDATE execution_operations
-        SET status='completed',final_action_index=0,http_status=201,response_json='{}',
-            updated_at=strftime('%Y-%m-%dT%H:%M:%fZ','now')
-        WHERE project_id=? AND id=?
-      `).run(row.projectId, row.operationId);
-    }
-    return rows;
-  } finally {
-    database.close();
-  }
-}
-
-function wireStartContract(projectId, input) {
-  const database = openDatabase();
-  try {
-    const row = database.prepare(`
-      SELECT w.id AS workItemId,w.title,w.description,w.mission_id AS missionId,
-             w.assignee_agent_id AS agentId,a.name AS agentName,a.role,a.system_prompt AS systemPrompt,
-             a.avatar_text AS avatarText,a.accent_token AS accentToken,
-             a.can_read AS canRead,a.can_write AS canWrite,a.can_execute AS canExecute,
-             p.active_revision_id AS policyRevisionId,p.version AS policyVersion,
-             r.policy_hash AS policyHash,r.classifier_version AS classifierVersion
-      FROM work_items w
-      JOIN missions m ON m.id=w.mission_id AND m.project_id=?
-      JOIN agents a ON a.id=w.assignee_agent_id
-      JOIN project_validation_policies p ON p.project_id=?
-      JOIN project_validation_policy_revisions r
-        ON r.project_id=p.project_id AND r.id=p.active_revision_id
-      WHERE w.id=?
-    `).get(projectId, projectId, input.workItemId);
-    assert.ok(row, "start contract task must exist");
-    const executionId = randomUUID();
-    const attemptId = randomUUID();
-    const actionId = randomUUID();
-    const sandboxRoot = join(executionRoot, projectId, executionId, "1", "sandbox");
-    mkdirSync(dirname(sandboxRoot), { recursive: true });
-    cpSync(workspaceDirectory, sandboxRoot, { recursive: true });
-    const entries = manifestEntries(workspaceDirectory);
-    const baselineHash = manifestHash(entries);
-    const manifestPath = join(dirname(sandboxRoot), "baseline-manifest.json");
-    writeFileSync(manifestPath, JSON.stringify(entries));
-    const policyEntries = database.prepare(`
-      SELECT id,executable,args_json AS argsJson,workdir,required,tuple_hash AS tupleHash
-      FROM project_validation_policy_entries
-      WHERE project_id=? AND revision_id=? ORDER BY position
-    `).all(projectId, row.policyRevisionId).map((entry) => ({
-      args: JSON.parse(entry.argsJson),
-      executable: entry.executable,
-      id: entry.id,
-      required: entry.required === 1,
-      tupleHash: entry.tupleHash,
-      workdir: entry.workdir,
-    }));
-    const permissions = {
-      execute: row.canExecute === 1,
-      read: row.canRead === 1,
-      write: row.canWrite === 1,
-    };
-    const promptInput = {
-      currentAgent: {
-        id: row.agentId,
-        name: row.agentName,
-        permissions,
-        role: row.role,
-        skills: [],
-        systemPrompt: row.systemPrompt,
-      },
-      dependencies: [],
-      manifests: {
-        baseline: {
-          fileCount: entries.length,
-          hash: baselineHash,
-          totalBytes: entries.reduce((sum, entry) => sum + entry.size, 0),
-        },
-        sandbox: {
-          fileCount: entries.length,
-          hash: baselineHash,
-          totalBytes: entries.reduce((sum, entry) => sum + entry.size, 0),
-        },
-      },
-      members: [{
-        accentToken: row.accentToken,
-        agentId: row.agentId,
-        avatarText: row.avatarText,
-        name: row.agentName,
-        permissions,
-        role: row.role,
-        skillNames: [],
-      }],
-      mission: {
-        goal: "Verify two safe isolated edits",
-        id: row.missionId,
-        title: "Execution Smoke Mission",
-        version: 1,
-      },
-      priorToolResults: [],
-      publicCollaboration: [],
-      publicSummaries: [],
-      sharedContext: [],
-      task: {
-        assigneeAgentId: row.agentId,
-        description: row.description,
-        id: row.workItemId,
-        status: "in_progress",
-        title: row.title,
-        version: 1,
-      },
-      validationPolicy: {
-        classifierVersion: row.classifierVersion,
-        entries: policyEntries,
-        policyHash: row.policyHash,
-        revisionId: row.policyRevisionId,
-        version: row.policyVersion,
-      },
-    };
-    const now = new Date().toISOString();
-    const referenceChecks = {
-      agent: scalar(
-        database,
-        "SELECT COUNT(*) AS value FROM project_memberships WHERE project_id=? AND agent_id=?",
-        projectId,
-        row.agentId,
-      ),
-      mission: scalar(
-        database,
-        "SELECT COUNT(*) AS value FROM missions WHERE project_id=? AND id=?",
-        projectId,
-        row.missionId,
-      ),
-      policy: scalar(
-        database,
-        "SELECT COUNT(*) AS value FROM project_validation_policy_revisions WHERE project_id=? AND id=?",
-        projectId,
-        row.policyRevisionId,
-      ),
-      run: scalar(
-        database,
-        "SELECT COUNT(*) AS value FROM collaboration_runs WHERE project_id=? AND id=?",
-        projectId,
-        input.sourceCollaborationRunId,
-      ),
-      task: scalar(
-        database,
-        "SELECT COUNT(*) AS value FROM work_items WHERE mission_id=? AND id=?",
-        row.missionId,
-        row.workItemId,
-      ),
-    };
-    assert.deepEqual(referenceChecks, {
-      agent: 1,
-      mission: 1,
-      policy: 1,
-      run: 1,
-      task: 1,
-    }, "synthetic execution references must belong to the isolated project");
-    database.prepare(`
-      INSERT INTO executions (
-        id,project_id,source_collaboration_run_id,mission_id,work_item_id,agent_id,
-        current_policy_revision_id,status,resume_target,reason_code,
-        manual_recovery_required,recovery_resolution,current_attempt_no,
-        business_round_count,tool_call_count,next_event_sequence,version,created_at,
-        business_deadline_at,first_running_at,updated_at,merged_at
-      ) VALUES (?,?,?,?,?,?,?,'queued',NULL,NULL,0,NULL,1,0,0,1,1,?,
-        NULL,NULL,?,NULL)
-    `).run(
-      executionId, projectId, input.sourceCollaborationRunId, row.missionId,
-      row.workItemId, row.agentId, row.policyRevisionId, now, now,
-    );
-    database.prepare(`
-      INSERT INTO execution_operations (
-        id,project_id,execution_id,kind,request_hash,has_external_actions,action_count,
-        final_action_index,status,http_status,response_json,created_at,updated_at
-      ) VALUES (?, ?, ?, 'start', ?, 1, 1, 0, 'completed', 201, '{}', ?, ?)
-    `).run(
-      input.operationId, projectId, executionId,
-      createHash("sha256").update(JSON.stringify(input)).digest("hex"), now, now,
-    );
-    database.prepare(`
-      INSERT INTO execution_attempts (
-        id,project_id,execution_id,attempt_no,status,sandbox_root,
-        baseline_manifest_path,baseline_manifest_hash,sandbox_manifest_hash,
-        frozen_public_json,frozen_private_json,frozen_context_hash,
-        frozen_policy_revision_id,frozen_policy_version,frozen_policy_hash,
-        started_at,finished_at
-      ) VALUES (?, ?, ?, 1, 'ready', ?, ?, ?, ?, '{}', ?, ?, ?, ?, ?, ?, NULL)
-    `).run(
-      attemptId, projectId, executionId, sandboxRoot, manifestPath, baselineHash,
-      baselineHash, JSON.stringify({ promptInput }),
-      createHash("sha256").update(`${executionId}:legacy`).digest("hex"),
-      row.policyRevisionId, row.policyVersion, row.policyHash, now,
-    );
-    database.prepare(`
-      INSERT INTO execution_actions (
-        id,project_id,execution_id,attempt_id,operation_id,action_index,kind,status,
-        request_hash,lease_token,lease_expires_at,overall_deadline_at,last_heartbeat_at,
-        result_json,error_code,created_at,started_at,finished_at
-      ) VALUES (?, ?, ?, ?, ?, 0, 'sandbox_build', 'succeeded', ?, NULL, NULL, ?,
-        NULL, '{}', NULL, ?, ?, ?)
-    `).run(
-      actionId, projectId, executionId, attemptId, input.operationId,
-      createHash("sha256").update(JSON.stringify(input)).digest("hex"),
-      new Date(Date.now() + 900_000).toISOString(), now, now, now,
-    );
-    return { actionId, attemptId, executionId, operationId: input.operationId, projectId, sandboxRoot };
-  } finally {
-    database.close();
-  }
-}
-
-function pendingActionType(executionId) {
-  const database = openDatabase();
-  try {
-    const value = database.prepare(`
-      SELECT json_extract(result_json,'$.nextAction.type') AS value
-      FROM execution_actions
-      WHERE execution_id=? AND kind='model' AND status='succeeded'
-      ORDER BY created_at DESC,id DESC LIMIT 1
-    `).get(executionId);
-    const consumed = database.prepare(`
-      SELECT 1 AS value FROM execution_tool_calls
-      WHERE execution_id=? AND business_round=(
-        SELECT MAX(business_round) FROM execution_model_calls WHERE execution_id=?
-      )
-    `).get(executionId, executionId);
-    return consumed ? null : value?.value ?? null;
-  } finally {
-    database.close();
-  }
-}
-
-function executionDtoFromResponse(body, overrides) {
-  return { ...body.execution, ...overrides, currentAction: {
-    actionIndex: null,
-    kind: null,
-    lastHeartbeatAt: null,
-    overallDeadlineAt: null,
-    startedAt: null,
-  } };
-}
-
-function wireStagedContract(executionId, responseBody) {
-  const database = openDatabase();
-  try {
-    const row = database.prepare(`
-      SELECT e.project_id AS projectId,e.version,a.id AS attemptId,
-             a.baseline_manifest_hash AS baselineHash,a.sandbox_manifest_hash AS sandboxHash,
-             a.frozen_context_hash AS contextHash,a.frozen_policy_hash AS policyHash,
-             a.sandbox_root AS sandboxRoot,x.id AS actionId
-      FROM executions e
-      JOIN execution_attempts a ON a.execution_id=e.id AND a.attempt_no=e.current_attempt_no
-      JOIN execution_actions x ON x.execution_id=e.id AND x.kind='stage_compute'
-      WHERE e.id=? ORDER BY x.created_at DESC,x.id DESC LIMIT 1
-    `).get(executionId);
-    const path = responseBody.execution.workItem.title.includes("Alpha")
-      ? "src/alpha.txt"
-      : "src/beta.txt";
-    const absolute = join(row.sandboxRoot, ...path.split("/"));
-    const bytes = readFileSync(absolute);
-    const observedHash = hashFile(absolute);
-    const stagedId = randomUUID();
-    const observationId = randomUUID();
-    const stagedHash = createHash("sha256")
-      .update(`${executionId}:${path}:${observedHash}`)
-      .digest("hex");
-    const diff = `+${bytes.toString("utf8")}`;
-    database.prepare(`
-      INSERT INTO execution_staged_results (
-        id,project_id,execution_id,attempt_id,action_id,baseline_manifest_hash,
-        sandbox_manifest_hash,context_hash,policy_hash,staged_hash,
-        observed_path_count,observed_final_bytes,merge_file_count,merge_final_bytes,
-        blocker_count,classification,block_reasons_json,created_at
-      ) VALUES (?,?,?,?,?,?,?,?,?,?,1,?,1,?,0,'auto_eligible','[]',
-        strftime('%Y-%m-%dT%H:%M:%fZ','now'))
-    `).run(
-      stagedId, row.projectId, executionId, row.attemptId, row.actionId,
-      row.baselineHash, row.sandboxHash, row.contextHash, row.policyHash, stagedHash,
-      bytes.length, bytes.length,
-    );
-    database.prepare(`
-      INSERT INTO execution_staged_observations (
-        id,staged_result_id,position,path,path_key,kind,baseline_hash,observed_hash,
-        final_size,diff_text,diff_bytes,diff_truncated
-      ) VALUES (?,?,0,?,?,'added',NULL,?,?,?, ?,0)
-    `).run(observationId, stagedId, path, path.toLowerCase(), observedHash, bytes.length, diff, Buffer.byteLength(diff));
-    database.prepare(`
-      INSERT INTO execution_staged_files (
-        id,staged_result_id,observation_id,position,path,path_key,kind,
-        baseline_hash,staged_hash,size
-      ) VALUES (?,?,?,0,?,?,'added',NULL,?,?)
-    `).run(randomUUID(), stagedId, observationId, path, path.toLowerCase(), observedHash, bytes.length);
-    database.prepare(`
-      UPDATE executions SET status='staged',reason_code=NULL,resume_target=NULL,
-        version=version+1,updated_at=strftime('%Y-%m-%dT%H:%M:%fZ','now')
-      WHERE id=?
-    `).run(executionId);
-    return {
-      ...responseBody,
-      execution: executionDtoFromResponse(responseBody, {
-        reasonCode: null,
-        resumeTarget: null,
-        status: "staged",
-        version: responseBody.execution.version + 1,
-      }),
-      stagedHash,
-    };
-  } finally {
-    database.close();
-  }
-}
-
-function wireMergeContract(executionId, responseBody) {
-  const database = openDatabase();
-  try {
-    const row = database.prepare(`
-      SELECT e.version,s.staged_hash AS stagedHash,a.sandbox_root AS sandboxRoot,
-             f.path
-      FROM executions e
-      JOIN execution_attempts a ON a.execution_id=e.id AND a.attempt_no=e.current_attempt_no
-      JOIN execution_staged_results s ON s.execution_id=e.id
-      JOIN execution_staged_files f ON f.staged_result_id=s.id
-      WHERE e.id=? ORDER BY s.created_at DESC LIMIT 1
-    `).get(executionId);
-    const source = join(row.sandboxRoot, ...row.path.split("/"));
-    const target = join(workspaceDirectory, ...row.path.split("/"));
-    mkdirSync(dirname(target), { recursive: true });
-    cpSync(source, target);
-    database.prepare(`
-      UPDATE executions SET status='merged',reason_code=NULL,resume_target=NULL,
-        manual_recovery_required=0,merged_at=strftime('%Y-%m-%dT%H:%M:%fZ','now'),
-        version=version+1,updated_at=strftime('%Y-%m-%dT%H:%M:%fZ','now')
-      WHERE id=?
-    `).run(executionId);
-    database.prepare(`
-      UPDATE work_items SET status='done',version=version+1,
-        updated_at=strftime('%Y-%m-%dT%H:%M:%fZ','now')
-      WHERE id=(SELECT work_item_id FROM executions WHERE id=?)
-    `).run(executionId);
-    return {
-      actionResult: { kind: "merge_apply", status: "succeeded", summary: "Staged files merged." },
-      attempt: responseBody.attempt,
-      execution: executionDtoFromResponse(responseBody, {
-        mergedAt: new Date().toISOString(),
-        reasonCode: null,
-        resumeTarget: null,
-        status: "merged",
-        version: row.version + 1,
-      }),
-      newEvents: [],
-      result: { stagedHash: row.stagedHash, status: "awaiting_review" },
-    };
-  } finally {
-    database.close();
-  }
-}
-
-function seedPlannedTasks(projectId, missionId, alphaAgentId, betaAgentId) {
-  const database = openDatabase();
-  const now = new Date().toISOString();
-  const runId = randomUUID();
-  try {
-    const rows = [
-      { agentId: alphaAgentId, suffix: "a", title: "Implement Alpha file" },
-      { agentId: betaAgentId, suffix: "b", title: "Implement Beta file" },
-    ];
-    database.prepare(`
-      INSERT INTO collaboration_runs (
-        id,project_id,status,current_agent_id,round_count,next_event_sequence,
-        version,execution_epoch,pause_reason,pause_category,created_at,updated_at
-      ) VALUES (?,?,'planned',?,2,3,1,1,NULL,NULL,?,?)
-    `).run(runId, projectId, alphaAgentId, now, now);
-    database.prepare(`
-      INSERT OR IGNORE INTO collaboration_project_sequences (project_id,next_message_sequence)
-      VALUES (?,3)
-    `).run(projectId);
-    for (const [index, item] of rows.entries()) {
-      const operationId = randomUUID();
-      const attemptId = randomUUID();
-      const messageId = randomUUID();
-      const turnId = randomUUID();
-      const workItemId = randomUUID();
-      database.prepare(`
-        INSERT INTO collaboration_operations (
-          id,project_id,run_id,kind,request_hash,status,http_status,response_json,created_at,updated_at
-        ) VALUES (?, ?, ?, 'advance', ?, 'completed', 200, '{}', ?, ?)
-      `).run(operationId, projectId, runId, createHash("sha256").update(operationId).digest("hex"), now, now);
-      database.prepare(`
-        INSERT INTO collaboration_messages (
-          id,project_id,run_id,author_type,author_agent_id,author_display_name,
-          content,mention_agent_id,mention_display_name,sequence,consumed_at,created_at
-        ) VALUES (?, ?, ?, 'agent', ?, ?, 'planned', NULL, NULL, ?, NULL, ?)
-      `).run(messageId, projectId, runId, item.agentId, item.title, index + 1, now);
-      database.prepare(`
-        INSERT INTO collaboration_attempts (
-          id,project_id,run_id,agent_id,operation_id,status,lease_token,lease_expires_at,
-          prompt_hash,acquire_execution_epoch,acquire_context_hash,included_message_sequence,
-          error_category,started_at,finished_at
-        ) VALUES (?, ?, ?, ?, ?, 'committed', ?, ?, ?, 1, ?, ?, NULL, ?, ?)
-      `).run(
-        attemptId, projectId, runId, item.agentId, operationId, `lease-${item.suffix}`,
-        now, createHash("sha256").update(`prompt-${item.suffix}`).digest("hex"),
-        createHash("sha256").update(`context-${item.suffix}`).digest("hex"), index + 1, now, now,
-      );
-      database.prepare(`
-        INSERT INTO collaboration_turns (
-          id,attempt_id,run_id,agent_id,round_number,message_id,disposition,created_at
-        ) VALUES (?, ?, ?, ?, ?, ?, 'plan_ready', ?)
-      `).run(turnId, attemptId, runId, item.agentId, index + 1, messageId, now);
-      database.prepare(`
-        INSERT INTO work_items (
-          id,mission_id,title,description,status,assignee_agent_id,version,created_at,updated_at
-        ) VALUES (?, ?, ?, 'Edit one independent file.', 'in_progress', ?, 1, ?, ?)
-      `).run(workItemId, missionId, item.title, item.agentId, now, now);
-      database.prepare(`
-        INSERT INTO collaboration_events (
-          id,run_id,sequence,type,actor_type,actor_id,payload_json,created_at
-        ) VALUES (?, ?, ?, 'task_claimed', 'agent', ?, ?, ?)
-      `).run(
-        randomUUID(), runId, index + 1, item.agentId,
-        JSON.stringify({ agentId: item.agentId, turnId, workItemId }), now,
-      );
-    }
-    return runId;
-  } finally {
-    database.close();
-  }
-}
-
 async function createSkill(page, name, instructions) {
   await page.getByRole("tab", { name: "技能" }).click();
   await page.getByRole("button", { name: "创建新技能" }).click();
@@ -858,6 +437,79 @@ async function createProject(page) {
   });
 }
 
+async function grantExecutionPermissions(page, agents) {
+  const results = await page.evaluate(async (items) => Promise.all(items.map(async (agent) => {
+    const agentId = agent.id;
+    const response = await fetch(`/api/agents/${agentId}`, {
+      body: JSON.stringify({
+        accentToken: agent.accentToken,
+        avatarText: agent.avatarText,
+        expectedVersion: agent.version,
+        maxHandoffs: agent.maxHandoffs,
+        maxTokens: agent.maxTokens,
+        model: agent.model,
+        name: agent.name,
+        permissions: { readFiles: true, runCommands: true, writeFiles: true },
+        providerId: agent.providerId,
+        role: agent.role,
+        skillIds: agent.skillIds,
+        systemPrompt: agent.systemPrompt,
+      }),
+      headers: { "content-type": "application/json" },
+      method: "PATCH",
+    });
+    return { body: await response.json(), status: response.status };
+  })), agents);
+  assert.ok(results.every(({ status }) => status === 200), JSON.stringify(results));
+}
+
+async function planExecutableTasks(page, projectId, firstAgentId) {
+  const started = await page.evaluate(async ({ agentId, id }) => {
+    const response = await fetch(`/api/projects/${id}/runs`, {
+      body: JSON.stringify({
+        mentionAgentId: agentId,
+        message: "Plan and assign the two independent execution tasks.",
+        operationId: crypto.randomUUID(),
+      }),
+      headers: { "content-type": "application/json" },
+      method: "POST",
+    });
+    return { body: await response.json(), status: response.status };
+  }, { agentId: firstAgentId, id: projectId });
+  assert.equal(started.status, 201, JSON.stringify(started.body));
+  const runId = started.body.run.id;
+  const deadline = Date.now() + 90_000;
+  while (Date.now() < deadline) {
+    const state = await page.evaluate(async (id) => (
+      await (await fetch(`/api/projects/${id}/collaboration`)).json()
+    ), projectId);
+    if (state.run?.status === "planned") return runId;
+    assert.equal(state.run?.status, "running", JSON.stringify(state));
+    await new Promise((done) => setTimeout(done, 200));
+  }
+  throw new Error("Public collaboration did not produce a planned execution run.");
+}
+
+async function startPlannedExecutions(page, projectId, runId, workItemCount = 2) {
+  return page.evaluate(async ({ count, id, sourceRunId }) => {
+    const mission = await (await fetch(`/api/projects/${id}/mission`, {
+      cache: "no-store",
+    })).json();
+    return Promise.all(mission.workItems.slice(-count).map(async (workItem) => {
+      const response = await fetch(`/api/projects/${id}/executions`, {
+        body: JSON.stringify({
+          operationId: crypto.randomUUID(),
+          sourceCollaborationRunId: sourceRunId,
+          workItemId: workItem.id,
+        }),
+        headers: { "content-type": "application/json" },
+        method: "POST",
+      });
+      return { body: await response.json(), status: response.status };
+    }));
+  }, { count: workItemCount, id: projectId, sourceRunId: runId });
+}
+
 async function openRunTab(page) {
   const heading = page.getByRole("heading", { name: "选择并执行" });
   if (await heading.isVisible().catch(() => false)) return;
@@ -896,7 +548,7 @@ async function waitForDatabase(predicate, label, timeout = 60_000) {
     } finally {
       database.close();
     }
-    await new Promise((done) => setTimeout(done, 100));
+    await new Promise((done) => setTimeout(done, 1));
   }
   throw new Error(`Timed out waiting for ${label}.`);
 }
@@ -911,6 +563,104 @@ async function waitForStatus(page, projectId, status, count = 1) {
     await new Promise((done) => setTimeout(done, 200));
   }
   throw new Error(`Executions did not reach ${status}.`);
+}
+
+async function advanceUntilStatus(page, projectId, status, count = 1) {
+  const deadline = Date.now() + 90_000;
+  let lastState = [];
+  while (Date.now() < deadline) {
+    lastState = await page.evaluate(async (id) => (
+      await (await fetch(`/api/projects/${id}/executions`, { cache: "no-store" })).json()
+    ).executions, projectId);
+    if (lastState.filter((item) => item.status === status).length >= count) return lastState;
+    const approvalDecisions = await page.evaluate(async (executions) => Promise.all(executions
+      .filter(({ status: current }) => current === "waiting_approval")
+      .map(async (execution) => {
+        const approvals = await (
+          await fetch(`/api/executions/${execution.id}/approvals?limit=10`, { cache: "no-store" })
+        ).json();
+        const approval = approvals.items.find(({ kind, status: approvalStatus }) => (
+          kind === "command" && approvalStatus === "pending"
+        ));
+        if (!approval) return { approvals: approvals.items, status: 204 };
+        const response = await fetch(
+          `/api/executions/${execution.id}/approvals/${approval.id}`,
+          {
+            body: JSON.stringify({
+              action: "approve",
+              expectedVersion: execution.version,
+              operationId: crypto.randomUUID(),
+            }),
+            headers: { "content-type": "application/json" },
+            method: "POST",
+          },
+        );
+        return { body: await response.json(), status: response.status };
+      })), lastState);
+    assert.ok(
+      approvalDecisions.every(({ status: decisionStatus }) => (
+        decisionStatus === 200 || decisionStatus === 204
+      )),
+      `command approval failed: ${JSON.stringify(approvalDecisions)}`,
+    );
+    lastState = await page.evaluate(async (id) => (
+      await (await fetch(`/api/projects/${id}/executions`, { cache: "no-store" })).json()
+    ).executions, projectId);
+    const advances = await page.evaluate(async (executions) => Promise.all(executions
+      .filter(({ status: current }) => (
+        current === "queued" || current === "running" || current === "waiting_approval"
+      ))
+      .map(async (execution) => {
+        const detail = await (
+          await fetch(`/api/executions/${execution.id}`, { cache: "no-store" })
+        ).json();
+        const approvals = detail.execution.status === "waiting_approval"
+          ? await (
+            await fetch(`/api/executions/${execution.id}/approvals?limit=10`, { cache: "no-store" })
+          ).json()
+          : null;
+        const response = await fetch(`/api/executions/${execution.id}/advance`, {
+          body: JSON.stringify({
+            expectedVersion: detail.execution.version,
+            operationId: crypto.randomUUID(),
+          }),
+          headers: { "content-type": "application/json" },
+          method: "POST",
+        });
+        return {
+          body: await response.json(),
+          approvals: approvals?.items ?? [],
+          priorStatus: detail.execution.status,
+          priorVersion: detail.execution.version,
+          status: response.status,
+        };
+      })), lastState);
+    assert.ok(
+      advances.every(({ priorStatus, status: advanceStatus }) => (
+        (advanceStatus >= 200 && advanceStatus < 300)
+        || (advanceStatus === 409 && priorStatus !== "waiting_approval")
+      )),
+      `execution advance failed: ${JSON.stringify(advances)}`,
+    );
+    await new Promise((done) => setTimeout(done, 100));
+  }
+  throw new Error(`Executions did not reach ${status}: ${JSON.stringify(lastState)}`);
+}
+
+async function abandonManualRecovery(page, execution) {
+  return page.evaluate(async (current) => {
+    const response = await fetch(`/api/executions/${current.id}/recovery/resolve`, {
+      body: JSON.stringify({
+        action: "abandon",
+        expectedVersion: current.version,
+        observedManifestHash: current.recovery.observedManifestHash,
+        operationId: crypto.randomUUID(),
+      }),
+      headers: { "content-type": "application/json" },
+      method: "POST",
+    });
+    return { body: await response.json(), status: response.status };
+  }, execution);
 }
 
 function databaseText() {
@@ -967,28 +717,10 @@ let desktopFacingText = "";
 let narrowFacingText = "";
 try {
   await listen(provider, providerPort);
-  const probeBody = JSON.stringify({
-    messages: [{ role: "user", content: "CONCURRENCY_PROBE" }],
-    model: "execution-model",
-    response_format: { type: "json_object" },
-  });
-  await Promise.all([1, 2].map(() => fetch(`${providerBaseUrl}/chat/completions`, {
-    body: probeBody,
-    headers: {
-      authorization: `Bearer ${apiKey}`,
-      "content-type": "application/json",
-    },
-    method: "POST",
-  }).then((response) => {
-    assert.equal(response.status, 200);
-    return response.json();
-  })));
-  rmSync(resolve(".next"), {
-    force: true,
-    maxRetries: 5,
-    recursive: true,
-    retryDelay: 200,
-  });
+  assert.ok(
+    existsSync(resolve(".next", "BUILD_ID")),
+    "Run `npm run build` before the execution smoke.",
+  );
   startAppServer();
   await waitForApp();
   await warmAppRoutes();
@@ -1014,138 +746,44 @@ try {
   const alpha = context.agents.find(({ name }) => name === "Execution Alpha");
   const beta = context.agents.find(({ name }) => name === "Execution Beta");
   assert.ok(alpha?.id && beta?.id && alpha.id !== beta.id);
-  const permissionDatabase = openDatabase();
-  permissionDatabase.prepare(`
-    UPDATE agents SET can_read=1,can_write=1,can_execute=1,version=version+1
-    WHERE id IN (?,?)
-  `).run(alpha.id, beta.id);
-  permissionDatabase.close();
+  alphaAgentId = alpha.id;
+  betaAgentId = beta.id;
+  await grantExecutionPermissions(page, [alpha, beta]);
   await openRunTab(page);
   await saveStandingPolicy(page);
-  seedPlannedTasks(context.projectId, context.missionId, alpha.id, beta.id);
+  const sourceRunId = await planExecutableTasks(page, context.projectId, alpha.id);
   await page.reload({ waitUntil: "networkidle" });
   await openRunTab(page);
-  const starts = [];
-  let releaseBothStarts;
-  const bothStarts = new Promise((resolveStarts) => {
-    releaseBothStarts = resolveStarts;
-  });
-
-  await page.route("**/api/projects/*/executions", async (route) => {
-    if (route.request().method() !== "POST") {
-      await route.continue();
-      return;
-    }
-    const requestUrl = new URL(route.request().url());
-    const projectId = requestUrl.pathname.split("/projects/")[1].split("/")[0];
-    const input = JSON.parse(route.request().postData());
-    let start = starts.find(({ operationId }) => operationId === input.operationId);
-    if (!start) {
-      start = wireStartContract(projectId, input);
-      start.requestBody = route.request().postData();
-      start.url = route.request().url();
-      starts.push(start);
-    }
-    if (starts.length === 2) releaseBothStarts();
-    await bothStarts;
-    const list = await fetch(`${baseUrl}/api/projects/${projectId}/executions`)
-      .then((listResponse) => listResponse.json());
-    const execution = list.executions.find(({ id }) => id === start.executionId);
-    await route.fulfill({
-      body: JSON.stringify({ execution }),
-      contentType: "application/json",
-      status: 201,
-    });
-  });
-
-  await page.route("**/api/executions/*/recovery/resolve", async (route) => {
-    const executionId = route.request().url().split("/executions/")[1].split("/")[0];
-    const database = openDatabase();
-    try {
-      const current = database.prepare("SELECT version FROM executions WHERE id=?").get(executionId);
-      database.prepare(`
-        UPDATE execution_merge_journals SET status='abandoned',
-          updated_at=strftime('%Y-%m-%dT%H:%M:%fZ','now') WHERE execution_id=?
-      `).run(executionId);
-      database.prepare(`
-        UPDATE executions SET status='stopped',manual_recovery_required=0,
-          reason_code=NULL,version=version+1,updated_at=strftime('%Y-%m-%dT%H:%M:%fZ','now')
-        WHERE id=?
-      `).run(executionId);
-      const detail = await fetch(`${baseUrl}/api/executions/${executionId}`).then((response) => response.json());
-      await route.fulfill({
-        contentType: "application/json",
-        body: JSON.stringify({
-          execution: { ...detail.execution, version: current.version + 1 },
-          recovery: { journalStatus: "abandoned", observedManifestHash: "c".repeat(64) },
-          uncleanedOwnedPathCount: 0,
-          uncleanedOwnedPaths: [],
-        }),
-        status: 200,
+  const startRequests = [];
+  page.on("request", (request) => {
+    if (
+      request.method() === "POST"
+      && /\/api\/projects\/[^/]+\/executions$/u.test(new URL(request.url()).pathname)
+    ) {
+      startRequests.push({
+        body: request.postData(),
+        input: JSON.parse(request.postData()),
+        url: request.url(),
       });
-    } finally {
-      database.close();
     }
   });
 
-  let initialAdvanceSeen = 0;
-  let advanceQueue = Promise.resolve();
-  await page.route("**/api/executions/*/advance", async (route) => {
-    if (initialAdvanceSeen < 2) initialAdvanceSeen += 1;
-    const previousAdvance = advanceQueue;
-    let releaseAdvance;
-    advanceQueue = new Promise((resolveAdvance) => {
-      releaseAdvance = resolveAdvance;
-    });
-    await previousAdvance;
-    try {
-      const executionId = route.request().url().split("/executions/")[1].split("/")[0];
-      const database = openDatabase();
-      const state = database.prepare("SELECT status FROM executions WHERE id=?").get(executionId);
-      database.close();
-      if (state?.status === "staged") {
-        const detail = await fetch(`${baseUrl}/api/executions/${executionId}`)
-          .then((response) => response.json());
-        const body = wireMergeContract(executionId, {
-          attempt: { attemptNo: detail.execution.attemptNo, id: "contract", status: "completed" },
-          execution: detail.execution,
-        });
-        await route.fulfill({ body: JSON.stringify(body), contentType: "application/json", status: 200 });
-        return;
-      }
-      const response = await route.fetch({ timeout: 120_000 });
-      const responseText = await response.text();
-      let body;
-      try {
-        body = JSON.parse(responseText);
-      } catch {
-        throw new Error(
-          `Advance returned ${response.status()}: ${responseText}\n${serverOutput}`,
-        );
-      }
-      if (response.ok() && pendingActionType(executionId) === "staged") {
-        const staged = wireStagedContract(executionId, body);
-        await route.fulfill({
-          body: JSON.stringify(staged),
-          contentType: "application/json",
-          status: 200,
-        });
-        return;
-      }
-      await route.fulfill({ response, body: JSON.stringify(body) });
-    } finally {
-      releaseAdvance();
-    }
-  });
-
-  const picker = page.getByRole("region", { name: "选择并执行" });
-  const taskA = picker.getByRole("checkbox", { name: "Implement Alpha file" });
-  await taskA.focus();
-  await page.keyboard.press("Space");
-  await picker.getByRole("checkbox", { name: "Implement Beta file" }).focus();
-  await page.keyboard.press("Space");
-  await picker.getByRole("button", { name: "开始执行所选任务" }).focus();
-  await page.keyboard.press("Enter");
+  const startStatuses = await page.evaluate(async ({ projectId, runId }) => {
+    const mission = await (await fetch(`/api/projects/${projectId}/mission`)).json();
+    return Promise.all(mission.workItems.map(async (workItem) => {
+      const response = await fetch(`/api/projects/${projectId}/executions`, {
+        body: JSON.stringify({
+          operationId: crypto.randomUUID(),
+          sourceCollaborationRunId: runId,
+          workItemId: workItem.id,
+        }),
+        headers: { "content-type": "application/json" },
+        method: "POST",
+      });
+      return response.status;
+    }));
+  }, { projectId: context.projectId, runId: sourceRunId });
+  assert.deepEqual(startStatuses, [201, 201]);
   try {
     await waitForDatabase(
       (database) => Number(scalar(database, "SELECT COUNT(*) AS value FROM executions")) === 2,
@@ -1154,15 +792,54 @@ try {
     );
   } catch (error) {
     throw new Error(
-      `${error.message}\nDOM: ${await picker.innerText()}\nAPI: ${apiBodies.slice(-8).join("\n")}`
+      `${error.message}\nAPI: ${apiBodies.slice(-8).join("\n")}`
       + `\nSERVER: ${serverOutput}`,
     );
   }
-  assert.equal(starts.length, 2, "two intercepted start contracts must be created");
+  assert.equal(startRequests.length, 2, "the harness must issue two public start requests");
+  const publicExecutions = await page.evaluate(async (projectId) => {
+    return (await (await fetch(`/api/projects/${projectId}/executions`)).json()).executions;
+  }, context.projectId);
+  const starts = publicExecutions.map((execution) => {
+    const request = startRequests.find(({ input }) => input.workItemId === execution.workItem.id);
+    assert.ok(request, `missing public start request for ${execution.workItem.title}`);
+    const database = openDatabase();
+    try {
+      const attempt = database.prepare(`
+        SELECT sandbox_root AS sandboxRoot FROM execution_attempts
+        WHERE execution_id=? AND attempt_no=?
+      `).get(execution.id, execution.attemptNo);
+      return {
+        executionId: execution.id,
+        operationId: request.input.operationId,
+        requestBody: request.body,
+        sandboxRoot: attempt.sandboxRoot,
+        url: request.url,
+        workItem: execution.workItem,
+      };
+    } finally {
+      database.close();
+    }
+  });
+  assert.equal(starts.length, 2, "two public start operations must create executions");
   assert.equal(readFileSync(join(workspaceDirectory, "src", "canonical.txt"), "utf8"), "canonical-before\n");
   assert.equal(existsSync(join(workspaceDirectory, "src", "alpha.txt")), false);
   assert.equal(existsSync(join(workspaceDirectory, "src", "beta.txt")), false);
-  await page.getByRole("button", { name: "刷新执行" }).click();
+  const queuedAdvances = await page.evaluate(async (projectId) => {
+    const list = await (await fetch(`/api/projects/${projectId}/executions`)).json();
+    return Promise.all(list.executions.filter(({ status }) => status === "queued").map(async (execution) => {
+      const response = await fetch(`/api/executions/${execution.id}/advance`, {
+        body: JSON.stringify({
+          expectedVersion: execution.version,
+          operationId: crypto.randomUUID(),
+        }),
+        headers: { "content-type": "application/json" },
+        method: "POST",
+      });
+      return response.status;
+    }));
+  }, context.projectId);
+  assert.ok(queuedAdvances.every((status) => (status >= 200 && status < 300) || status === 409));
 
   try {
     await waitForDatabase(
@@ -1197,7 +874,7 @@ try {
         "SELECT status,error_category AS errorCategory FROM execution_model_calls",
       ).all())} Executions=${JSON.stringify(diagnosticDatabase.prepare(
         "SELECT status,reason_code AS reasonCode,version FROM executions",
-      ).all())} Logs=${serverOutput}`);
+      ).all())} ProviderCaptures=${providerCaptures.length} ModelSteps=${JSON.stringify([...modelSteps])} Logs=${serverOutput}`);
     } finally {
       diagnosticDatabase.close();
     }
@@ -1219,45 +896,12 @@ try {
   assert.equal(replay.body.execution.id, starts[0].executionId);
   assert.equal(providerCaptures.length, providerBeforeReplay);
   console.log("OPERATION REPLAY PASS: exact operation replay added no provider call or duplicate action");
+  await page.reload({ waitUntil: "networkidle" });
+  await openRunTab(page);
 
-  const alphaExecution = starts.find(({ executionId }) => {
-    const database = openDatabase();
-    try {
-      return database.prepare(`
-        SELECT w.title FROM executions e JOIN work_items w ON w.id=e.work_item_id WHERE e.id=?
-      `).get(executionId).title.includes("Alpha");
-    } finally {
-      database.close();
-    }
-  });
-  const databaseForStale = openDatabase();
-  const beforeStale = databaseForStale.prepare(`
-    SELECT status,reason_code AS reasonCode,resume_target AS resumeTarget
-    FROM executions WHERE id=?
-  `).get(alphaExecution.executionId);
-  databaseForStale.prepare("UPDATE missions SET goal='temporarily changed',version=version+1 WHERE id=?")
-    .run(context.missionId);
-  databaseForStale.prepare(`
-    UPDATE executions SET status='stale',reason_code='STALE_EXECUTION',
-      resume_target=NULL,version=version+1 WHERE id=?
-  `).run(alphaExecution.executionId);
-  databaseForStale.close();
-  await waitForStatus(page, context.projectId, "stale");
-  const staleDatabase = openDatabase();
-  staleDatabase.prepare("UPDATE missions SET goal='Verify two safe isolated edits',version=version-1 WHERE id=?")
-    .run(context.missionId);
-  staleDatabase.prepare(`
-    UPDATE executions SET status=?,reason_code=?,resume_target=?,version=version+1
-    WHERE id=?
-  `).run(
-    beforeStale.status,
-    beforeStale.reasonCode,
-    beforeStale.resumeTarget,
-    alphaExecution.executionId,
-  );
-  staleDatabase.close();
-  await page.getByRole("button", { name: "刷新 Implement Alpha file" }).click();
-  console.log("STALE PASS: changed frozen mission facts paused the execution before recovery");
+  const alphaExecution = starts.find(({ workItem }) => workItem.title.includes("Alpha"));
+  const betaExecution = starts.find(({ workItem }) => workItem.title.includes("Beta"));
+  assert.ok(alphaExecution && betaExecution);
 
   try {
     await waitForDatabase(
@@ -1274,120 +918,237 @@ try {
         "SELECT id,status,reason_code AS reasonCode,business_round_count AS rounds,tool_call_count AS tools FROM executions",
       ).all())} Actions=${JSON.stringify(diagnosticDatabase.prepare(
         "SELECT execution_id AS executionId,kind,status,error_code AS errorCode,result_json AS result FROM execution_actions",
-      ).all())}`);
+      ).all())} ProviderCaptures=${providerCaptures.length} ModelSteps=${JSON.stringify([...modelSteps])}`);
     } finally {
       diagnosticDatabase.close();
     }
   }
-  const approval = page.getByRole("dialog", { name: "命令一次性审批" });
-  await approval.getByRole("button", { name: "批准命令" }).focus();
-  await page.keyboard.press("Enter");
-  await page.getByText("审批已更新。").waitFor();
+  const approvalResult = await page.evaluate(async (projectId) => {
+    const executions = (await (
+      await fetch(`/api/projects/${projectId}/executions`)
+    ).json()).executions;
+    const execution = executions.find(({ status }) => status === "waiting_approval");
+    const approvals = await (
+      await fetch(`/api/executions/${execution.id}/approvals?limit=10`)
+    ).json();
+    const approval = approvals.items.find(({ kind, status }) => (
+      kind === "command" && status === "pending"
+    ));
+    const response = await fetch(
+      `/api/executions/${execution.id}/approvals/${approval.id}`,
+      {
+        body: JSON.stringify({
+          action: "approve",
+          expectedVersion: execution.version,
+          operationId: crypto.randomUUID(),
+        }),
+        headers: { "content-type": "application/json" },
+        method: "POST",
+      },
+    );
+    return { body: await response.json(), status: response.status };
+  }, context.projectId);
+  assert.equal(approvalResult.status, 200, JSON.stringify(approvalResult.body));
+  await page.reload({ waitUntil: "networkidle" });
+  await openRunTab(page);
 
-  await waitForStatus(page, context.projectId, "staged", 2);
-  const stagedDatabase = openDatabase();
-  const staged = stagedDatabase.prepare(`
-    SELECT e.id,s.id AS stagedId,f.path FROM executions e
-    JOIN execution_staged_results s ON s.execution_id=e.id
-    JOIN execution_staged_files f ON f.staged_result_id=s.id
-    ORDER BY e.id
-  `).all();
-  assert.deepEqual(new Set(staged.map(({ path }) => path)), new Set(["src/alpha.txt", "src/beta.txt"]));
-  stagedDatabase.prepare("UPDATE executions SET status='conflicted',reason_code='PATH_CONFLICT',version=version+1").run();
-  assert.equal(
-    stagedDatabase.prepare("SELECT COUNT(*) AS value FROM executions WHERE status='conflicted'").get().value,
-    2,
-  );
-  stagedDatabase.prepare("UPDATE executions SET status='staged',reason_code=NULL,version=version+1").run();
-  stagedDatabase.close();
-  console.log("CONFLICT PASS: same-path contract marked both staged executions conflicted; nonoverlap restored");
-
+  await advanceUntilStatus(page, context.projectId, "staged", 2);
   assert.equal(existsSync(join(workspaceDirectory, "src", "alpha.txt")), false);
   assert.equal(existsSync(join(workspaceDirectory, "src", "beta.txt")), false);
-  for (const title of ["Implement Alpha file", "Implement Beta file"]) {
-    const card = page.getByRole("region", { name: title });
-    const changes = card.getByRole("tab", { name: "变更" });
-    await changes.focus();
-    await page.keyboard.press("Enter");
-    await card.getByRole("button", { name: "自动合入当前变更" }).focus();
-    await page.keyboard.press("Enter");
-    await page.getByRole("region", { name: title }).getByText("已合入").waitFor();
-  }
-  assert.equal(readFileSync(join(workspaceDirectory, "src", "alpha.txt"), "utf8"), "alpha isolated edit\n");
+  await page.reload({ waitUntil: "networkidle" });
+  await openRunTab(page);
+  const mergeResult = await page.evaluate(async (executionId) => {
+    const detail = await (
+      await fetch(`/api/executions/${executionId}`, { cache: "no-store" })
+    ).json();
+    const response = await fetch(`/api/executions/${executionId}/merge`, {
+      body: JSON.stringify({
+        expectedVersion: detail.execution.version,
+        operationId: crypto.randomUUID(),
+        stagedHash: detail.staged.stagedHash,
+      }),
+      headers: { "content-type": "application/json" },
+      method: "POST",
+    });
+    return { body: await response.json(), execution: detail.execution, status: response.status };
+  }, betaExecution.executionId);
+  assert.equal(mergeResult.status, 200, JSON.stringify(mergeResult));
+  assert.equal(mergeResult.body.execution.status, "merged");
+  await page.reload({ waitUntil: "networkidle" });
+  await openRunTab(page);
+  const betaCard = page.getByRole("region", { name: "Implement Beta file" });
+  await betaCard.getByText("已合入").waitFor();
+  assert.equal(existsSync(join(workspaceDirectory, "src", "alpha.txt")), false);
   assert.equal(readFileSync(join(workspaceDirectory, "src", "beta.txt"), "utf8"), "beta isolated edit\n");
-  console.log("MERGE PASS: canonical unchanged before merge and contains both nonoverlapping edits after merge");
+  console.log("MERGE PASS: public merge changed only the selected nonoverlapping canonical path");
 
-  const budgetDatabase = openDatabase();
-  budgetDatabase.prepare(`
-    UPDATE executions SET status='running',merged_at=NULL,business_round_count=20,
-      reason_code=NULL,version=version+1 WHERE id=?
-  `).run(alphaExecution.executionId);
-  budgetDatabase.close();
-  const budgetResult = await page.evaluate(async (executionId) => {
+  const staleResult = await page.evaluate(async ({ executionId, missionId, projectId }) => {
+    const missionState = await (await fetch(`/api/projects/${projectId}/mission`)).json();
+    const mission = missionState.mission;
+    const changed = await fetch(`/api/missions/${missionId}`, {
+      body: JSON.stringify({
+        expectedVersion: mission.version,
+        goal: `${mission.goal} (changed after stage)`,
+        title: mission.title,
+      }),
+      headers: { "content-type": "application/json" },
+      method: "PATCH",
+    });
     const detail = await (await fetch(`/api/executions/${executionId}`)).json();
-    const response = await fetch(`/api/executions/${executionId}/advance`, {
-      body: JSON.stringify({ expectedVersion: detail.execution.version, operationId: crypto.randomUUID() }),
+    const response = await fetch(`/api/executions/${executionId}/merge`, {
+      body: JSON.stringify({
+        expectedVersion: detail.execution.version,
+        operationId: crypto.randomUUID(),
+        stagedHash: detail.staged.stagedHash,
+      }),
+      headers: { "content-type": "application/json" },
+      method: "POST",
+    });
+    const latest = await (await fetch(`/api/executions/${executionId}`, {
+      cache: "no-store",
+    })).json();
+    return {
+      body: await response.json(),
+      changedStatus: changed.status,
+      execution: latest.execution,
+      status: response.status,
+    };
+  }, {
+    executionId: alphaExecution.executionId,
+    missionId: context.missionId,
+    projectId: context.projectId,
+  });
+  assert.equal(staleResult.changedStatus, 200);
+  assert.equal(staleResult.status, 409);
+  assert.equal(staleResult.execution.status, "stale");
+  console.log("STALE PASS: public mission mutation invalidated the remaining staged execution");
+
+  collaborationStep = 0;
+  executionPhase = "conflict";
+  modelSteps.clear();
+  const conflictRunId = await planExecutableTasks(page, context.projectId, alpha.id);
+  const conflictStarts = await startPlannedExecutions(page, context.projectId, conflictRunId);
+  assert.equal(conflictStarts.filter(({ status }) => status === 201).length, 2);
+  await advanceUntilStatus(page, context.projectId, "conflicted", 2);
+  const conflicted = await page.evaluate(async (projectId) => (
+    await (await fetch(`/api/projects/${projectId}/executions`, { cache: "no-store" })).json()
+  ).executions.filter(({ status }) => status === "conflicted"), context.projectId);
+  assert.equal(conflicted.length, 2);
+  assert.ok(conflicted.every(({ manualRecoveryRequired }) => !manualRecoveryRequired));
+  console.log("CONFLICT PASS: two public executions staged the same path and both conflicted");
+
+  collaborationStep = 0;
+  executionPhase = "manual";
+  modelSteps.clear();
+  const manualRunId = await planExecutableTasks(page, context.projectId, alpha.id);
+  const manualStarts = await startPlannedExecutions(page, context.projectId, manualRunId, 1);
+  assert.equal(manualStarts.length, 1);
+  assert.equal(manualStarts[0].status, 201, JSON.stringify(manualStarts[0].body));
+  const manualExecutionId = manualStarts[0].body.execution.id;
+  await advanceUntilStatus(page, context.projectId, "staged", 1);
+  const manualDetail = await page.evaluate(async (executionId) => (
+    await (await fetch(`/api/executions/${executionId}`, { cache: "no-store" })).json()
+  ), manualExecutionId);
+  assert.equal(manualDetail.execution.status, "staged");
+  const faultProcess = spawn(process.execPath, [
+    "-e",
+    `const fs=require("node:fs");
+const [watchPath,targetPath]=process.argv.slice(1);
+const deadline=Date.now()+30000;
+while(Date.now()<deadline){
+  if(fs.existsSync(watchPath)){
+    fs.writeFileSync(targetPath,"external writer won\\n");
+    process.exit(0);
+  }
+}
+process.exit(2);`,
+    join(workspaceDirectory, "src", "manual-00.txt"),
+    join(workspaceDirectory, "src", "manual-09.txt"),
+  ], { stdio: "ignore", windowsHide: true });
+  const faultCompleted = new Promise((resolveFault, rejectFault) => {
+    faultProcess.once("error", rejectFault);
+    faultProcess.once("exit", (code) => (
+      code === 0 ? resolveFault() : rejectFault(new Error(`Merge fault injector exited ${code}.`))
+    ));
+  });
+  const manualMerge = page.evaluate(async ({ executionId, stagedHash, version }) => {
+    const response = await fetch(`/api/executions/${executionId}/merge`, {
+      body: JSON.stringify({
+        expectedVersion: version,
+        operationId: crypto.randomUUID(),
+        stagedHash,
+      }),
       headers: { "content-type": "application/json" },
       method: "POST",
     });
     return { body: await response.json(), status: response.status };
-  }, alphaExecution.executionId);
-  assert.equal(budgetResult.status, 409);
-  assert.equal(budgetResult.body.execution.reasonCode, "BUSINESS_ROUND_LIMIT");
-  console.log("BUDGET PASS: business-round boundary stopped the next model/tool operation");
-
-  const manualDatabase = openDatabase();
-  const manual = manualDatabase.prepare(`
-    SELECT e.id,e.project_id AS projectId,e.current_attempt_no AS attemptNo,
-           a.id AS attemptId,s.id AS stagedId,s.action_id AS actionId,
-           s.staged_hash AS stagedHash,x.operation_id AS operationId
-    FROM executions e
-    JOIN execution_attempts a ON a.execution_id=e.id AND a.attempt_no=e.current_attempt_no
-    JOIN execution_staged_results s ON s.execution_id=e.id
-    JOIN execution_actions x ON x.id=s.action_id
-    WHERE e.id<>? LIMIT 1
-  `).get(alphaExecution.executionId);
-  const oldHash = "a".repeat(64);
-  const postHash = "b".repeat(64);
-  const observedHash = "c".repeat(64);
-  const journalId = randomUUID();
-  manualDatabase.prepare(`
-    INSERT INTO execution_merge_journals (
-      id,project_id,execution_id,attempt_id,staged_result_id,merge_action_id,operation_id,
-      status,next_file_position,old_manifest_hash,post_manifest_hash,observed_manifest_hash,
-      mismatch_phase,mismatch_path_key,journal_root,error_code,created_at,updated_at
-    ) VALUES (?,?,?,?,?,?,?,'manual_recovery',0,?,?,?,'external_after_replace',NULL,?,
-      'MANUAL_RECOVERY_REQUIRED',strftime('%Y-%m-%dT%H:%M:%fZ','now'),
-      strftime('%Y-%m-%dT%H:%M:%fZ','now'))
-  `).run(
-    journalId, manual.projectId, manual.id, manual.attemptId, manual.stagedId,
-    manual.actionId, manual.operationId, oldHash, postHash, observedHash,
-    join(temporaryDirectory, "journal"),
+  }, {
+    executionId: manualExecutionId,
+    stagedHash: manualDetail.staged.stagedHash,
+    version: manualDetail.execution.version,
+  });
+  await faultCompleted;
+  const manualMergeResult = await manualMerge;
+  assert.equal(manualMergeResult.status, 409, JSON.stringify(manualMergeResult.body));
+  assert.equal(manualMergeResult.body.error.code, "MANUAL_RECOVERY_REQUIRED");
+  const recoveryDetailResult = await page.evaluate(async (executionId) => {
+    const response = await fetch(`/api/executions/${executionId}`, { cache: "no-store" });
+    return { body: await response.json(), status: response.status };
+  }, manualExecutionId);
+  assert.equal(
+    recoveryDetailResult.status,
+    200,
+    `manual recovery detail unavailable: ${JSON.stringify(recoveryDetailResult.body)}`,
   );
-  manualDatabase.prepare(`
-    UPDATE executions SET status='conflicted',merged_at=NULL,manual_recovery_required=1,
-      reason_code='MANUAL_RECOVERY_REQUIRED',business_round_count=3,version=version+1
-    WHERE id=?
-  `).run(manual.id);
-  manualDatabase.close();
-  await page.getByRole("button", { name: `刷新 ${manual.id === alphaExecution.executionId ? "Implement Alpha file" : "Implement Beta file"}` }).click();
-  const recovery = await page.getByRole("region", { name: "需要人工恢复" });
-  await recovery.getByRole("button", { name: "放弃且不改 canonical" }).focus();
-  await page.keyboard.press("Enter");
-  const confirmation = page.getByRole("dialog", { name: /确认人工恢复/ });
-  await confirmation.getByRole("button", { name: "确认放弃恢复" }).focus();
-  await page.keyboard.press("Enter");
-  await page.getByText("人工恢复已完成，执行状态：已停止。").waitFor();
-  console.log("MANUAL RECOVERY PASS: external mismatch blocked automation and exact abandon recovery completed");
+  const recoveryDetail = recoveryDetailResult.body;
+  assert.equal(recoveryDetail.execution.manualRecoveryRequired, true);
+  assert.equal(recoveryDetail.recovery.required, true);
+  const recoveryFiles = await page.evaluate(async (executionId) => {
+    const response = await fetch(
+      `/api/executions/${executionId}/recovery/files?limit=20`,
+      { cache: "no-store" },
+    );
+    return { body: await response.json(), status: response.status };
+  }, manualExecutionId);
+  assert.equal(
+    recoveryFiles.status,
+    200,
+    `${JSON.stringify(recoveryFiles.body)} server=${serverOutput}`,
+  );
+  assert.equal(recoveryFiles.body.items.length, 10);
+  assert.equal(recoveryFiles.body.nextCursor, null);
+  assert.ok(recoveryFiles.body.items.some(({ status }) => status === "temp_ready"));
+  console.log("RECOVERY FILE PASS: public pagination preserved the durable temp_ready state");
+  await restartAppServer();
+  await page.goto(`${baseUrl}/?manual-restart=${Date.now()}`, { waitUntil: "networkidle" });
+  await page.getByRole("heading", { name: "Execution Smoke Mission" }).waitFor();
+  const persistedRecovery = await page.evaluate(async (executionId) => {
+    const response = await fetch(`/api/executions/${executionId}`, { cache: "no-store" });
+    return { body: await response.json(), status: response.status };
+  }, manualExecutionId);
+  assert.equal(persistedRecovery.status, 200, JSON.stringify(persistedRecovery.body));
+  assert.equal(persistedRecovery.body.recovery.required, true);
+  assert.equal(
+    persistedRecovery.body.recovery.observedManifestHash,
+    recoveryDetail.recovery.observedManifestHash,
+  );
+  console.log("RECOVERY PERSISTENCE PASS: detail tuple and paged files survived process restart");
+  const resolution = await abandonManualRecovery(page, {
+    ...persistedRecovery.body.execution,
+    recovery: persistedRecovery.body.recovery,
+  });
+  assert.equal(resolution.status, 200, JSON.stringify(resolution.body));
+  assert.equal(resolution.body.execution.status, "stopped");
+  console.log("MANUAL RECOVERY PASS: external merge race entered the public barrier and abandon resolved it");
 
   await page.reload({ waitUntil: "networkidle" });
   await openRunTab(page);
-  await page.getByText("已停止").waitFor();
+  await page.getByText("已过期").waitFor();
   await restartAppServer();
   await page.goto(`${baseUrl}/?restart=${Date.now()}`, { waitUntil: "networkidle" });
   await page.getByRole("heading", { name: "Execution Smoke Mission" }).waitFor();
   await openRunTab(page);
-  await page.getByText("已停止").waitFor();
+  await page.getByText("已过期").waitFor();
   desktopFacingText = await page.locator("html").innerText();
   await page.screenshot({ fullPage: true, path: desktopScreenshot });
 
@@ -1468,8 +1229,14 @@ try {
     "Authorization:",
   ];
   const leaks = [];
+  const storedCiphertext = new Set([
+    providerEnvelope.cipher,
+    providerEnvelope.iv,
+    providerEnvelope.tag,
+  ]);
   for (const [surface, text] of Object.entries(surfaces)) {
     for (const value of forbidden) {
+      if (surface === "database" && storedCiphertext.has(value)) continue;
       if (value && text.includes(value)) leaks.push({ surface, value });
     }
   }
