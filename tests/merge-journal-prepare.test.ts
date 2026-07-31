@@ -10,9 +10,16 @@ import { mkdir, readFile, writeFile } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import { dirname, join, relative, resolve } from "node:path";
 import type { DatabaseSync } from "node:sqlite";
-import { afterEach, beforeEach, describe, expect, it } from "vitest";
+import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
 import { openDatabase } from "@/src/server/db";
+import { validateV5 } from "@/src/server/migrations-v5";
+import {
+  createWindowsVerifiedMergeAdapter,
+  type MergeVerifiedAdapter,
+} from "@/src/server/execution/merge-verified-adapter";
+
+vi.mock("server-only", () => ({}));
 
 type MergePoint =
   | "before_prepare"
@@ -32,6 +39,7 @@ type MergeModule = {
     database: DatabaseSync;
     executionId: string;
     expectedVersion: number;
+    fs?: MergeVerifiedAdapter;
     hooks?: {
       point(input: { path: string | null; point: MergePoint }): void | Promise<void>;
     };
@@ -76,6 +84,64 @@ afterEach(() => {
 });
 
 describe("merge journal prepare and conditional apply", () => {
+  it("fails capability before journal creation or canonical writes", async () => {
+    const fixture = await createFixture();
+    try {
+      await expect(mergeModule.executeMergePrepare({
+        ...fixture.input,
+        fs: {
+          ...createWindowsVerifiedMergeAdapter(),
+          async assertCapability() {
+            throw Object.assign(new Error("native capability unavailable"), {
+              code: "SANDBOX_UNVERIFIABLE",
+            });
+          },
+        },
+      })).rejects.toMatchObject({ code: "SANDBOX_UNVERIFIABLE" });
+
+      expect(readFileSync(join(fixture.workspaceRoot, "src/a.txt"), "utf8")).toBe("old-a");
+      expect(existsSync(join(fixture.workspaceRoot, "src/z.txt"))).toBe(false);
+      expect(fixture.database.prepare(
+        "SELECT count(*) AS count FROM execution_merge_journals",
+      ).get()).toEqual({ count: 0 });
+      expect(fixture.database.prepare(
+        "SELECT count(*) AS count FROM execution_operations WHERE kind='merge'",
+      ).get()).toEqual({ count: 0 });
+    } finally {
+      fixture.database.close();
+    }
+  });
+
+  it("turns a post-journal native uncertainty into a zero-result manual barrier", async () => {
+    const fixture = await createFixture("native-uncertain");
+    const native = createWindowsVerifiedMergeAdapter();
+    try {
+      await expect(mergeModule.executeMergePrepare({
+        ...fixture.input,
+        fs: {
+          ...native,
+          conditionalReplacePrepared() {
+            return { kind: "mutation-uncertain", phase: "rename" };
+          },
+        },
+      })).rejects.toMatchObject({ code: "MANUAL_RECOVERY_REQUIRED" });
+
+      expect(readFileSync(join(fixture.workspaceRoot, "src/a.txt"), "utf8")).toBe("old-a");
+      expect(existsSync(join(fixture.workspaceRoot, "src/z.txt"))).toBe(false);
+      expect(fixture.database.prepare(`
+        SELECT status,error_code AS errorCode FROM execution_merge_journals
+      `).get()).toEqual({
+        errorCode: "MANUAL_RECOVERY_REQUIRED",
+        status: "manual_recovery",
+      });
+      expect(fixture.database.prepare(
+        "SELECT count(*) AS count FROM work_item_execution_results",
+      ).get()).toEqual({ count: 0 });
+    } finally {
+      fixture.database.close();
+    }
+  });
+
   it("durably prepares full manifests and applies modified/added paths in stable order", async () => {
     const fixture = await createFixture();
     const points: string[] = [];
@@ -108,36 +174,58 @@ describe("merge journal prepare and conditional apply", () => {
       expect(resolve(journal.journalRoot).startsWith(resolve(fixture.workspaceRoot))).toBe(false);
 
       const files = fixture.database.prepare(`
-        SELECT position,path,old_exists AS oldExists,old_hash AS oldHash,new_hash AS newHash,
-               backup_path AS backupPath,durable_new_path AS durableNewPath,
-               owned_backup_identity AS backupIdentity,owned_backup_hash AS backupHash,
-               owned_new_identity AS newIdentity,post_identity AS postIdentity,status
+        SELECT position,path,old_target_ref_json AS oldTargetJson,
+               post_target_ref_json AS postTargetJson,backup_ref_json AS backupRefJson,
+               durable_new_ref_json AS durableNewRefJson,
+               canonical_temp_ref_json AS canonicalTempRefJson,status
         FROM execution_merge_files WHERE journal_id=? ORDER BY position
       `).all(result.journalId) as Array<Record<string, string | number | null>>;
       expect(files.map(({ path, position, status }) => ({ path, position, status }))).toEqual([
         { path: "src/a.txt", position: 0, status: "applied" },
         { path: "src/z.txt", position: 1, status: "applied" },
       ]);
-      expect(files[0]).toMatchObject({
-        backupHash: sha256("old-a"),
-        newHash: sha256("new-a"),
-        oldExists: 1,
-        oldHash: sha256("old-a"),
-      });
-      expect(files[1]).toMatchObject({
-        backupPath: null,
-        newHash: sha256("new-z"),
-        oldExists: 0,
-        oldHash: null,
-      });
       for (const file of files) {
-        expect(file.newIdentity).toEqual(expect.any(String));
-        expect(file.postIdentity).toEqual(expect.any(String));
-        expect(existsSync(String(file.durableNewPath))).toBe(true);
-        expect(resolve(String(file.durableNewPath)).startsWith(resolve(fixture.workspaceRoot))).toBe(false);
+        const oldTarget = JSON.parse(String(file.oldTargetJson)) as Record<string, unknown>;
+        const postTarget = JSON.parse(String(file.postTargetJson)) as Record<string, unknown>;
+        const durableNew = JSON.parse(String(file.durableNewRefJson)) as Record<string, unknown>;
+        const canonicalTemp = JSON.parse(String(file.canonicalTempRefJson)) as Record<string, unknown>;
+        expect(oldTarget).toMatchObject({
+          rootKind: "canonical",
+          relativePath: String(file.path).split("/"),
+        });
+        expect(postTarget).toMatchObject({
+          exists: true,
+          rootKind: "canonical",
+          relativePath: String(file.path).split("/"),
+        });
+        expect(durableNew).toMatchObject({
+          rootKind: "journal",
+          relativePath: expect.any(Array),
+          ownerId: result.actionId,
+        });
+        expect(canonicalTemp).toMatchObject({
+          rootKind: "canonical",
+          relativePath: expect.any(Array),
+          ownerId: result.actionId,
+        });
       }
-      expect(existsSync(String(files[0].backupPath))).toBe(true);
-      expect(files[0].backupIdentity).toEqual(expect.any(String));
+      expect(JSON.parse(String(files[0].oldTargetJson))).toMatchObject({
+        exists: true,
+        sha256: sha256("old-a"),
+      });
+      expect(JSON.parse(String(files[0].postTargetJson))).toMatchObject({
+        sha256: sha256("new-a"),
+      });
+      expect(JSON.parse(String(files[0].backupRefJson))).toMatchObject({
+        rootKind: "journal",
+        ownerId: result.actionId,
+        sha256: sha256("old-a"),
+      });
+      expect(JSON.parse(String(files[1].oldTargetJson))).toMatchObject({
+        exists: false,
+        sha256: null,
+      });
+      expect(files[1].backupRefJson).toBeNull();
 
       expect(fixture.database.prepare(`
         SELECT o.status AS operationStatus,o.final_action_index AS finalActionIndex,
@@ -154,6 +242,13 @@ describe("merge journal prepare and conditional apply", () => {
       expect(fixture.database.prepare(
         "SELECT status,consumed_at IS NOT NULL AS consumed FROM execution_approvals",
       ).get()).toEqual({ consumed: 1, status: "consumed" });
+      expect(validateV5(fixture.database)).toBeNull();
+      fixture.database.prepare(`
+        UPDATE execution_merge_files
+        SET durable_new_ref_json=json_set(durable_new_ref_json,'$.ownerId','wrong-owner')
+        WHERE journal_id=? AND position=0
+      `).run(result.journalId);
+      expect(validateV5(fixture.database)).toBe("SCHEMA_DATA_INVALID");
     } finally {
       fixture.database.close();
     }

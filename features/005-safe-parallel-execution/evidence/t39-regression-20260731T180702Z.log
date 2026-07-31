@@ -1,0 +1,30 @@
+# hf-gate-run
+# label: t39-regression
+# command: npm.cmd test -- tests/migrations-v5.test.ts tests/windows-native-loader.test.ts tests/windows-native-read-adapter.test.ts tests/windows-native-write-adapter.test.ts tests/windows-native-merge-lifecycle.test.ts tests/execution-list-tool.test.ts tests/execution-read-tool.test.ts tests/execution-write-tool.test.ts tests/execution-staging.test.ts tests/sandbox-preflight.test.ts tests/sandbox-snapshot.test.ts
+# started: 2026-07-31T18:07:02+00:00
+
+> collaboration-cockpit@0.1.0 test
+> vitest run tests/migrations-v5.test.ts tests/windows-native-loader.test.ts tests/windows-native-read-adapter.test.ts tests/windows-native-write-adapter.test.ts tests/windows-native-merge-lifecycle.test.ts tests/execution-list-tool.test.ts tests/execution-read-tool.test.ts tests/execution-write-tool.test.ts tests/execution-staging.test.ts tests/sandbox-preflight.test.ts tests/sandbox-snapshot.test.ts
+
+
+ RUN  v4.1.10 D:/cool-ai
+
+(node:12788) ExperimentalWarning: SQLite is an experimental feature and might change at any time
+(Use `node --trace-warnings ...` to show where the warning was created)
+(node:10604) ExperimentalWarning: SQLite is an experimental feature and might change at any time
+(Use `node --trace-warnings ...` to show where the warning was created)
+(node:3604) ExperimentalWarning: SQLite is an experimental feature and might change at any time
+(Use `node --trace-warnings ...` to show where the warning was created)
+(node:12160) ExperimentalWarning: SQLite is an experimental feature and might change at any time
+(Use `node --trace-warnings ...` to show where the warning was created)
+(node:3932) ExperimentalWarning: SQLite is an experimental feature and might change at any time
+(Use `node --trace-warnings ...` to show where the warning was created)
+(node:10132) ExperimentalWarning: SQLite is an experimental feature and might change at any time
+(Use `node --trace-warnings ...` to show where the warning was created)
+
+ Test Files  11 passed (11)
+      Tests  146 passed (146)
+   Start at  02:07:03
+   Duration  16.20s (transform 1.76s, setup 5.71s, import 1.93s, tests 35.55s, environment 24.74s)
+
+# exit: 0

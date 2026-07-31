@@ -10,7 +10,7 @@ import { mkdir, writeFile } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import type { DatabaseSync } from "node:sqlite";
-import { afterEach, describe, expect, it } from "vitest";
+import { afterEach, describe, expect, it, vi } from "vitest";
 
 import { openDatabase } from "@/src/server/db";
 import { compareCanonicalPathStates } from "@/src/server/execution/execution-conflicts";
@@ -21,6 +21,8 @@ import {
   recoverIncompleteMergeJournals,
   resolveManualRecovery,
 } from "@/src/server/execution/merge-journal-service";
+
+vi.mock("server-only", () => ({}));
 
 const roots: string[] = [];
 const NOW = "2026-07-30T12:00:00.000Z";

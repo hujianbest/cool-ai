@@ -1,16 +1,5 @@
 import { createHash, randomUUID } from "node:crypto";
-import { constants, statSync } from "node:fs";
-import {
-  lstat,
-  mkdir,
-  open,
-  realpath,
-  rename,
-  rm,
-  stat,
-  unlink,
-} from "node:fs/promises";
-import type { FileHandle } from "node:fs/promises";
+import { mkdir, rmdir } from "node:fs/promises";
 import {
   dirname,
   join,
@@ -25,6 +14,16 @@ import {
   assertManualRecoveryNotRequired,
   ExecutionError,
 } from "@/src/server/execution/execution-service";
+import {
+  createWindowsVerifiedMergeAdapter,
+  type MergeVerifiedAdapter,
+  type MergeVerifiedState,
+} from "@/src/server/execution/merge-verified-adapter";
+import type {
+  ExpectedCanonicalFile,
+  NativeMutationResult,
+  VerifiedOwnedFileRef,
+} from "@/src/server/execution/windows-native-merge-lifecycle";
 
 export type MergeFaultPoint =
   | "before_prepare"
@@ -51,6 +50,7 @@ type MergeInput = {
   database: DatabaseSync;
   executionId: string;
   expectedVersion: number;
+  fs?: MergeVerifiedAdapter;
   hooks?: {
     point(input: { path: string | null; point: MergeFaultPoint }): void | Promise<void>;
   };
@@ -60,6 +60,29 @@ type MergeInput = {
   stagedHash: string;
   workspaceRoot: string;
 };
+
+function mergeAdapter(input?: MergeVerifiedAdapter): MergeVerifiedAdapter {
+  return input ?? createWindowsVerifiedMergeAdapter();
+}
+
+function sandboxRootForExecution(
+  database: DatabaseSync,
+  projectId: string,
+  executionId: string,
+): string {
+  const row = database.prepare(`
+    SELECT a.sandbox_root AS sandboxRoot
+    FROM executions e
+    JOIN execution_attempts a
+      ON a.project_id=e.project_id AND a.execution_id=e.id
+     AND a.attempt_no=e.current_attempt_no
+    WHERE e.project_id=? AND e.id=?
+  `).get(projectId, executionId) as { sandboxRoot: string } | undefined;
+  if (!row) {
+    throw new ExecutionError("EXECUTION_STATE_CONFLICT", 409, "Execution attempt is unavailable.");
+  }
+  return row.sandboxRoot;
+}
 
 type StagedFileRow = {
   baselineHash: string | null;
@@ -72,23 +95,16 @@ type StagedFileRow = {
 };
 
 type PreparedFile = StagedFileRow & {
-  backupHash: string | null;
-  backupIdentity: string | null;
-  backupPath: string | null;
-  durableNewIdentity: string;
-  durableNewPath: string;
-  oldExists: boolean;
-  oldHash: string | null;
-  oldIdentity: string | null;
-  parentIdentity: string;
-  postIdentity: string;
-  tempName: string;
-};
-
-type PathState = {
-  bytes: Buffer;
-  hash: string;
-  identity: string;
+  backupRef: VerifiedOwnedFileRef | null;
+  durableNewRef: VerifiedOwnedFileRef;
+  oldTarget: ExpectedCanonicalFile;
+  postTarget: ExpectedCanonicalFile | null;
+  tempLocator: {
+    ownerId: string;
+    relativePath: string[];
+    rootKind: "canonical";
+  };
+  tempRef: VerifiedOwnedFileRef | null;
 };
 
 type MergeResult = {
@@ -149,19 +165,20 @@ type ObservedManifestEntry = {
 type ManualResolutionAction = "recovered_old" | "recovered_new" | "abandon";
 
 type JournalFileRow = {
-  backupPath: string | null;
-  durableNewPath: string;
-  newHash: string;
-  oldExists: number;
-  oldHash: string | null;
-  oldIdentity: string | null;
-  ownedBackupHash: string | null;
-  ownedBackupIdentity: string | null;
-  ownedNewIdentity: string;
+  backupRef: VerifiedOwnedFileRef | null;
+  durableNewRef: VerifiedOwnedFileRef;
+  oldTarget: ExpectedCanonicalFile;
   path: string;
   pathKey: string;
   position: number;
-  postIdentity: string;
+  postTarget: ExpectedCanonicalFile | null;
+  status: string;
+  tempLocator: {
+    ownerId: string;
+    relativePath: string[];
+    rootKind: "canonical";
+  };
+  tempRef: VerifiedOwnedFileRef | null;
 };
 
 const MAX_FILES = 100;
@@ -175,10 +192,6 @@ function sha256(value: string | Uint8Array): string {
 
 function compareUtf8(left: string, right: string): number {
   return Buffer.from(left, "utf8").compare(Buffer.from(right, "utf8"));
-}
-
-function identityOf(value: Awaited<ReturnType<FileHandle["stat"]>>): string {
-  return `${value.dev}:${value.ino}`;
 }
 
 function comparablePath(value: string): string {
@@ -222,121 +235,48 @@ async function callHook(
   await input.hooks?.point({ path, point });
 }
 
-async function syncDirectory(path: string): Promise<void> {
-  let handle: FileHandle | null = null;
-  try {
-    handle = await open(path, constants.O_RDONLY);
-    await handle.sync();
-  } catch (error) {
-    if (process.platform !== "win32") throw error;
-  } finally {
-    await handle?.close().catch(() => undefined);
-  }
+function pathSegments(path: string): string[] {
+  return path.split("/").filter(Boolean);
 }
 
-async function writeDurable(path: string, bytes: Uint8Array): Promise<PathState> {
-  await mkdir(dirname(path), { recursive: true });
-  const noFollow = typeof constants.O_NOFOLLOW === "number" ? constants.O_NOFOLLOW : 0;
-  const handle = await open(
-    path,
-    constants.O_CREAT | constants.O_EXCL | constants.O_RDWR | noFollow,
-    0o600,
+function mutationValue<T>(
+  result: NativeMutationResult<T>,
+  message: string,
+): T {
+  if (result.kind === "succeeded") return result.value;
+  throw new ExecutionError(
+    "MERGE_RECOVERY_REQUIRED",
+    409,
+    result.kind === "mutation-uncertain"
+      ? `${message} (${result.phase})`
+      : `${message} (condition mismatch: ${JSON.stringify(result.observed)})`,
   );
-  try {
-    await handle.writeFile(bytes);
-    await handle.sync();
-    const facts = await handle.stat();
-    if (!facts.isFile() || Number(facts.size) !== bytes.byteLength) {
-      throw new ExecutionError("MERGE_INVARIANT_FAILED", 500, "Durable merge file is incomplete.");
-    }
-    return {
-      bytes: Buffer.from(bytes),
-      hash: sha256(bytes),
-      identity: identityOf(facts),
-    };
-  } finally {
-    await handle.close();
-  }
 }
 
-async function readOrdinary(path: string, maximumBytes = MAX_FILE_BYTES): Promise<PathState> {
-  const noFollow = typeof constants.O_NOFOLLOW === "number" ? constants.O_NOFOLLOW : 0;
-  const handle = await open(path, constants.O_RDONLY | noFollow);
-  try {
-    const before = await handle.stat();
-    if (!before.isFile() || Number(before.size) > maximumBytes) {
-      throw new ExecutionError("STAGED_NOT_ELIGIBLE", 422, "Merge path is not an eligible file.");
-    }
-    const bytes = await handle.readFile();
-    const after = await handle.stat();
-    if (
-      identityOf(before) !== identityOf(after)
-      || before.size !== after.size
-      || bytes.byteLength !== Number(before.size)
-    ) {
-      throw new ExecutionError("STALE_EXECUTION", 409, "Merge path changed while being read.");
-    }
-    return {
-      bytes,
-      hash: sha256(bytes),
-      identity: identityOf(after),
-    };
-  } finally {
-    await handle.close();
-  }
-}
-
-async function readOptional(path: string): Promise<PathState | null> {
-  try {
-    return await readOrdinary(path);
-  } catch (error) {
-    if ((error as NodeJS.ErrnoException).code === "ENOENT") return null;
-    throw error;
-  }
-}
-
-async function readCanonicalOptional(path: string): Promise<PathState | null> {
-  try {
-    return await readOptional(path);
-  } catch (error) {
-    throw new ExecutionError(
-      "MERGE_RECOVERY_REQUIRED",
-      409,
-      `Canonical path is no longer an ordinary stable file: ${
-        error instanceof Error ? error.message : "unknown mismatch"
-      }`,
-    );
-  }
-}
-
-async function directoryIdentity(path: string, root: string): Promise<string> {
-  const [resolved, resolvedRoot] = await Promise.all([realpath(path), realpath(root)]);
-  if (!isWithin(resolvedRoot, resolved)) {
-    throw new ExecutionError("MERGE_INVARIANT_FAILED", 500, "Merge parent escaped the workspace.");
-  }
-  const facts = await stat(path, { bigint: true });
-  if (!facts.isDirectory()) {
-    throw new ExecutionError("MERGE_INVARIANT_FAILED", 500, "Merge parent is not a directory.");
-  }
-  return `${facts.dev}:${facts.ino}`;
-}
-
-async function assertParentIdentity(file: PreparedFile, workspaceRoot: string): Promise<void> {
-  const current = await directoryIdentity(dirname(join(workspaceRoot, file.path)), workspaceRoot);
-  if (current !== file.parentIdentity) {
-    throw new ExecutionError("MERGE_RECOVERY_REQUIRED", 409, "Merge parent identity changed.");
-  }
-}
-
-function sameState(
-  current: PathState | null,
-  expected: { exists: boolean; hash: string | null; identity: string | null },
+function sameTarget(
+  current: ExpectedCanonicalFile,
+  expected: ExpectedCanonicalFile,
 ): boolean {
-  return expected.exists
-    ? current !== null
-      && current.hash === expected.hash
-      && current.identity === expected.identity
-    : current === null;
+  return current.rootKind === expected.rootKind
+    && current.relativePath.join("\0") === expected.relativePath.join("\0")
+    && current.exists === expected.exists
+    && current.parentIdentity === expected.parentIdentity
+    && current.fileIdentity === expected.fileIdentity
+    && current.sha256 === expected.sha256
+    && current.size === expected.size;
+}
+
+async function readVerified(
+  fs: MergeVerifiedAdapter,
+  root: string,
+  path: string,
+  maximumBytes = MAX_FILE_BYTES,
+): Promise<MergeVerifiedState> {
+  return fs.readFile({
+    maximumBytes,
+    pathSegments: pathSegments(path),
+    root,
+  });
 }
 
 function manifestHash(entries: unknown): string {
@@ -589,6 +529,7 @@ function validateAndBegin(
 
 async function prepareFiles(
   input: MergeInput,
+  fs: MergeVerifiedAdapter,
   actionId: string,
   journalRoot: string,
   sandboxRoot: string,
@@ -598,58 +539,67 @@ async function prepareFiles(
   await mkdir(join(journalRoot, "new"), { recursive: true });
   const prepared: PreparedFile[] = [];
   for (const row of rows) {
-    const targetPath = join(input.workspaceRoot, row.path);
-    const sourcePath = join(sandboxRoot, row.path);
-    if (!isWithin(input.workspaceRoot, targetPath) || !isWithin(sandboxRoot, sourcePath)) {
-      throw new ExecutionError("STAGED_NOT_ELIGIBLE", 422, "Merge path escaped a root.");
-    }
-    const parentPath = dirname(targetPath);
-    const parentIdentity = await directoryIdentity(parentPath, input.workspaceRoot);
-    const old = await readOptional(targetPath);
+    const segments = pathSegments(row.path);
+    const old = await readVerified(fs, input.workspaceRoot, row.path);
     await callHook(input, "after_old_read", row.path);
     if (
       row.kind === "modified"
-        ? !old || old.hash !== row.baselineHash
-        : old !== null || row.baselineHash !== null
+        ? !old.target.exists || old.target.sha256 !== row.baselineHash
+        : old.target.exists || row.baselineHash !== null
     ) {
       throw new ExecutionError("STALE_EXECUTION", 409, "Canonical baseline changed before merge.");
     }
 
-    let backupPath: string | null = null;
-    let backup: PathState | null = null;
-    if (old) {
-      backupPath = join(journalRoot, "backups", `${row.position}.bin`);
-      backup = await writeDurable(backupPath, old.bytes);
-      await syncDirectory(dirname(backupPath));
+    let backupRef: VerifiedOwnedFileRef | null = null;
+    if (old.bytes) {
+      backupRef = mutationValue(
+        fs.prepareOwnedFile(
+          "journal",
+          journalRoot,
+          ["backups"],
+          `${actionId}-${row.position}.bin`,
+          actionId,
+          old.bytes,
+        ),
+        "The merge backup could not be prepared.",
+      );
     }
     await callHook(input, "after_backup", row.path);
 
-    const source = await readOrdinary(sourcePath);
-    if (source.hash !== row.stagedHash || source.bytes.byteLength !== row.size) {
+    const source = await readVerified(fs, sandboxRoot, row.path);
+    if (
+      !source.bytes
+      || source.target.sha256 !== row.stagedHash
+      || source.bytes.byteLength !== row.size
+    ) {
       throw new ExecutionError("STALE_EXECUTION", 409, "Sandbox staged bytes changed before merge.");
     }
-    const durableNewPath = join(journalRoot, "new", `${row.position}.bin`);
-    const durableNew = await writeDurable(durableNewPath, source.bytes);
-    await syncDirectory(dirname(durableNewPath));
+    const durableNewRef = mutationValue(
+      fs.prepareOwnedFile(
+        "journal",
+        journalRoot,
+        ["new"],
+        `${actionId}-${row.position}.bin`,
+        actionId,
+        source.bytes,
+      ),
+      "The durable merge source could not be prepared.",
+    );
     await callHook(input, "after_durable_new", row.path);
 
     const tempName = `.cool-ai-merge-${actionId}-${row.position}.tmp`;
-    const tempPath = join(parentPath, tempName);
-    const temp = await writeDurable(tempPath, source.bytes);
-    await syncDirectory(parentPath);
     prepared.push({
       ...row,
-      backupHash: backup?.hash ?? null,
-      backupIdentity: backup?.identity ?? null,
-      backupPath,
-      durableNewIdentity: durableNew.identity,
-      durableNewPath,
-      oldExists: old !== null,
-      oldHash: old?.hash ?? null,
-      oldIdentity: old?.identity ?? null,
-      parentIdentity,
-      postIdentity: temp.identity,
-      tempName,
+      backupRef,
+      durableNewRef,
+      oldTarget: old.target,
+      postTarget: null,
+      tempLocator: {
+        rootKind: "canonical",
+        relativePath: [...segments.slice(0, -1), tempName],
+        ownerId: actionId,
+      },
+      tempRef: null,
     });
   }
   return prepared;
@@ -664,26 +614,21 @@ async function persistJournal(
   journalRoot: string,
 ): Promise<{ oldManifestHash: string; postManifestHash: string }> {
   const oldManifest = prepared.map((file) => ({
-    exists: file.oldExists,
-    hash: file.oldHash,
-    identity: file.oldIdentity,
+    exists: file.oldTarget.exists,
+    hash: file.oldTarget.sha256,
+    identity: file.oldTarget.fileIdentity,
     path: file.path,
     pathKey: file.pathKey,
   }));
   const postManifest = prepared.map((file) => ({
     exists: true,
     hash: file.stagedHash,
-    identity: file.postIdentity,
+    identity: null,
     path: file.path,
     pathKey: file.pathKey,
   }));
-  const oldManifestBytes = Buffer.from(JSON.stringify(oldManifest), "utf8");
-  const postManifestBytes = Buffer.from(JSON.stringify(postManifest), "utf8");
   const oldManifestHash = manifestHash(oldManifest);
   const postManifestHash = manifestHash(postManifest);
-  await writeDurable(join(journalRoot, "old-manifest.json"), oldManifestBytes);
-  await writeDurable(join(journalRoot, "post-manifest.json"), postManifestBytes);
-  await syncDirectory(journalRoot);
 
   transaction(input.database, () => {
     input.database.prepare(`
@@ -709,10 +654,10 @@ async function persistJournal(
     );
     const insert = input.database.prepare(`
       INSERT INTO execution_merge_files (
-        journal_id,position,path,path_key,old_exists,old_identity,old_hash,
-        post_identity,new_hash,backup_path,durable_new_path,owned_backup_identity,
-        owned_backup_hash,owned_new_identity,status
-      ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 'pending')
+        journal_id,position,path,path_key,old_target_ref_json,post_target_ref_json,
+        backup_ref_json,durable_new_ref_json,canonical_temp_locator_json,
+        canonical_temp_ref_json,status
+      ) VALUES (?, ?, ?, ?, ?, NULL, ?, ?, ?, NULL, 'pending')
     `);
     for (const file of prepared) {
       insert.run(
@@ -720,88 +665,63 @@ async function persistJournal(
         file.position,
         file.path,
         file.pathKey,
-        file.oldExists ? 1 : 0,
-        file.oldIdentity,
-        file.oldHash,
-        file.postIdentity,
-        file.stagedHash,
-        file.backupPath,
-        file.durableNewPath,
-        file.backupIdentity,
-        file.backupHash,
-        file.durableNewIdentity,
+        JSON.stringify(file.oldTarget),
+        file.backupRef ? JSON.stringify(file.backupRef) : null,
+        JSON.stringify(file.durableNewRef),
+        JSON.stringify(file.tempLocator),
       );
     }
   });
   return { oldManifestHash, postManifestHash };
 }
 
-async function removeTempConditionally(
-  input: MergeInput,
-  file: PreparedFile,
-): Promise<boolean> {
-  const tempPath = join(dirname(join(input.workspaceRoot, file.path)), file.tempName);
-  const current = await readOptional(tempPath);
-  if (!sameState(current, {
-    exists: true,
-    hash: file.stagedHash,
-    identity: file.postIdentity,
-  })) return current === null;
-  await unlink(tempPath);
-  await syncDirectory(dirname(tempPath));
-  return true;
-}
-
 async function rollbackApplied(
   input: MergeInput,
+  fs: MergeVerifiedAdapter,
+  journalRoot: string,
   journalId: string | null,
   files: PreparedFile[],
   applied: PreparedFile[],
 ): Promise<boolean> {
+  const roots = { canonical: input.workspaceRoot, journal: journalRoot };
   let complete = true;
   for (const file of [...applied].reverse()) {
-    const targetPath = join(input.workspaceRoot, file.path);
     try {
-      await assertParentIdentity(file, input.workspaceRoot);
-      const current = await readCanonicalOptional(targetPath);
-      if (!sameState(current, {
-        exists: true,
-        hash: file.stagedHash,
-        identity: file.postIdentity,
-      })) {
+      if (!file.postTarget || !file.tempRef) {
         complete = false;
         continue;
       }
-      if (!file.oldExists) {
-        await unlink(targetPath);
-        await syncDirectory(dirname(targetPath));
+      if (!file.oldTarget.exists) {
+        if (fs.conditionalDelete(roots, file.postTarget).kind !== "succeeded") {
+          complete = false;
+          continue;
+        }
       } else {
-        const backup = await readOrdinary(file.backupPath!);
+        if (!file.backupRef) {
+          complete = false;
+          continue;
+        }
+        const rollbackTemp = fs.prepareCanonicalTempFromOwned(
+          roots,
+          file.backupRef,
+          file.oldTarget.relativePath.slice(0, -1),
+          `.cool-ai-rollback-${input.operationId}-${file.position}.tmp`,
+          input.operationId,
+        );
+        if (rollbackTemp.kind !== "succeeded") {
+          complete = false;
+          continue;
+        }
+        const restored = fs.conditionalReplacePrepared(
+          roots,
+          file.postTarget,
+          rollbackTemp.value,
+        );
         if (
-          backup.hash !== file.backupHash
-          || backup.identity !== file.backupIdentity
-          || backup.hash !== file.oldHash
-        ) {
-          complete = false;
-          continue;
-        }
-        const rollbackName = `.cool-ai-rollback-${randomUUID()}.tmp`;
-        const rollbackPath = join(dirname(targetPath), rollbackName);
-        await writeDurable(rollbackPath, backup.bytes);
-        const beforeReplace = await readCanonicalOptional(targetPath);
-        if (!sameState(beforeReplace, {
-          exists: true,
-          hash: file.stagedHash,
-          identity: file.postIdentity,
-        })) {
-          await rm(rollbackPath, { force: true });
-          complete = false;
-          continue;
-        }
-        await rename(rollbackPath, targetPath);
-        await syncDirectory(dirname(targetPath));
-        const restored = await readCanonicalOptional(targetPath);
-        if (!restored || restored.hash !== file.oldHash) complete = false;
+          restored.kind !== "succeeded"
+          || restored.value.sha256 !== file.oldTarget.sha256
+          || restored.value.size !== file.oldTarget.size
+        ) complete = false;
       }
       if (journalId) {
         input.database.prepare(`
@@ -814,10 +734,22 @@ async function rollbackApplied(
     }
   }
   for (const file of files) {
-    try {
-      if (!(await removeTempConditionally(input, file))) complete = false;
-    } catch {
-      complete = false;
+    for (const ref of [
+      ...(file.tempRef ? [file.tempRef] : []),
+      ...(journalId ? [] : [
+        file.durableNewRef,
+        ...(file.backupRef ? [file.backupRef] : []),
+      ]),
+    ]) {
+      try {
+        const cleaned = fs.conditionalCleanupOwned(roots, ref);
+        if (
+          cleaned.kind === "mutation-uncertain"
+          || (cleaned.kind === "condition-mismatch" && cleaned.observed.exists)
+        ) complete = false;
+      } catch {
+        complete = false;
+      }
     }
   }
   return complete;
@@ -860,71 +792,103 @@ function failDurableOperation(
 
 async function applyPrepared(
   input: MergeInput,
+  fs: MergeVerifiedAdapter,
+  journalRoot: string,
   journalId: string,
   prepared: PreparedFile[],
   applied: PreparedFile[],
 ): Promise<void> {
+  const roots = { canonical: input.workspaceRoot, journal: journalRoot };
   input.database.prepare(`
     UPDATE execution_merge_journals
     SET status='applying',updated_at=strftime('%Y-%m-%dT%H:%M:%fZ','now')
     WHERE id=? AND status='prepared'
   `).run(journalId);
   for (const file of prepared) {
+    const tempRef = mutationValue(
+      fs.prepareCanonicalTempFromOwned(
+        roots,
+        file.durableNewRef,
+        file.tempLocator.relativePath.slice(0, -1),
+        file.tempLocator.relativePath.at(-1)!,
+        file.tempLocator.ownerId,
+      ),
+      "The canonical merge temp could not be prepared.",
+    );
+    const postTarget: ExpectedCanonicalFile = {
+      rootKind: "canonical",
+      relativePath: file.oldTarget.relativePath,
+      exists: true,
+      parentIdentity: tempRef.parentIdentity,
+      fileIdentity: tempRef.fileIdentity,
+      sha256: tempRef.sha256,
+      size: tempRef.size,
+    };
+    transaction(input.database, () => {
+      const updated = input.database.prepare(`
+        UPDATE execution_merge_files
+        SET post_target_ref_json=?,canonical_temp_ref_json=?,status='temp_ready'
+        WHERE journal_id=? AND position=? AND status='pending'
+      `).run(
+        JSON.stringify(postTarget),
+        JSON.stringify(tempRef),
+        journalId,
+        file.position,
+      );
+      if (updated.changes !== 1) {
+        throw new ExecutionError(
+          "MERGE_RECOVERY_REQUIRED",
+          409,
+          "The canonical temp descriptor was not durably registered.",
+        );
+      }
+    });
+    file.postTarget = postTarget;
+    file.tempRef = tempRef;
+  }
+  const postManifest = prepared.map((file) => ({
+    exists: true,
+    hash: file.postTarget!.sha256,
+    identity: file.postTarget!.fileIdentity,
+    path: file.path,
+    pathKey: file.pathKey,
+  }));
+  input.database.prepare(`
+    UPDATE execution_merge_journals
+    SET post_manifest_hash=?,updated_at=strftime('%Y-%m-%dT%H:%M:%fZ','now')
+    WHERE id=? AND status='applying'
+  `).run(manifestHash(postManifest), journalId);
+  for (const file of prepared) {
+    if (!file.postTarget || !file.tempRef) {
+      throw new ExecutionError("MERGE_RECOVERY_REQUIRED", 409, "Merge temp is not registered.");
+    }
     await callHook(input, "before_apply_file", file.path);
-    await assertParentIdentity(file, input.workspaceRoot);
-    const targetPath = join(input.workspaceRoot, file.path);
-    const current = await readCanonicalOptional(targetPath);
-    if (!sameState(current, {
-      exists: file.oldExists,
-      hash: file.oldHash,
-      identity: file.oldIdentity,
-    })) {
-      throw new ExecutionError("STALE_EXECUTION", 409, "Canonical path changed before apply.");
-    }
-    const tempPath = join(dirname(targetPath), file.tempName);
-    const temp = await readOrdinary(tempPath);
-    if (temp.hash !== file.stagedHash || temp.identity !== file.postIdentity) {
-      throw new ExecutionError("MERGE_INVARIANT_FAILED", 500, "Owned merge temp changed.");
-    }
+    mutationValue(
+      fs.reopenOwnedFile(roots, file.durableNewRef),
+      "The durable merge source changed before apply.",
+    );
+    mutationValue(
+      fs.reopenOwnedFile(roots, file.tempRef),
+      "The canonical merge temp changed before apply.",
+    );
     await callHook(input, "after_temp_write", file.path);
-    await assertParentIdentity(file, input.workspaceRoot);
-    const immediatelyBefore = await readCanonicalOptional(targetPath);
-    if (!sameState(immediatelyBefore, {
-      exists: file.oldExists,
-      hash: file.oldHash,
-      identity: file.oldIdentity,
-    })) {
-      throw new ExecutionError("STALE_EXECUTION", 409, "Canonical path changed before replace.");
-    }
     await callHook(input, "before_replace", file.path);
-    const atReplace = await readCanonicalOptional(targetPath);
-    if (!sameState(atReplace, {
-      exists: file.oldExists,
-      hash: file.oldHash,
-      identity: file.oldIdentity,
-    })) {
+    const post = mutationValue(
+      fs.conditionalReplacePrepared(roots, file.oldTarget, file.tempRef),
+      `The conditional canonical replace did not complete for ${JSON.stringify(file.oldTarget)}.`,
+    );
+    if (!sameTarget(post, file.postTarget)) {
       throw new ExecutionError(
         "MERGE_RECOVERY_REQUIRED",
         409,
-        "Canonical path changed in the replace window.",
+        "The conditional canonical replace produced an unexpected descriptor.",
       );
     }
-    await rename(tempPath, targetPath);
     applied.push(file);
-    await syncDirectory(dirname(targetPath));
     await callHook(input, "after_replace", file.path);
-    await assertParentIdentity(file, input.workspaceRoot);
-    const after = await readCanonicalOptional(targetPath);
-    if (!sameState(after, {
-      exists: true,
-      hash: file.stagedHash,
-      identity: file.postIdentity,
-    })) {
-      throw new ExecutionError("MERGE_RECOVERY_REQUIRED", 409, "Canonical path changed after replace.");
-    }
     input.database.prepare(`
       UPDATE execution_merge_files SET status='applied'
-      WHERE journal_id=? AND position=? AND status='pending'
+      WHERE journal_id=? AND position=? AND status='temp_ready'
     `).run(journalId, file.position);
     input.database.prepare(`
       UPDATE execution_merge_journals
@@ -951,16 +915,131 @@ function journalRow(database: DatabaseSync, journalId: string): JournalRow {
   return row;
 }
 
+function parseJsonObject(value: string, label: string): Record<string, unknown> {
+  let parsed: unknown;
+  try {
+    parsed = JSON.parse(value);
+  } catch {
+    throw new ExecutionError("SCHEMA_DATA_INVALID", 500, `${label} is not valid JSON.`);
+  }
+  if (!parsed || typeof parsed !== "object" || Array.isArray(parsed)) {
+    throw new ExecutionError("SCHEMA_DATA_INVALID", 500, `${label} is not a JSON object.`);
+  }
+  return parsed as Record<string, unknown>;
+}
+
+function validRefSegments(value: unknown): value is string[] {
+  return Array.isArray(value)
+    && value.length > 0
+    && value.every((segment) =>
+      typeof segment === "string"
+      && segment.length > 0
+      && segment !== "."
+      && segment !== ".."
+      && !/[\\/\0]/u.test(segment));
+}
+
+function parseOwnedRef(value: string, label: string): VerifiedOwnedFileRef {
+  const parsed = parseJsonObject(value, label);
+  if (
+    !["journal", "canonical"].includes(String(parsed.rootKind))
+    || !validRefSegments(parsed.relativePath)
+    || typeof parsed.ownerId !== "string"
+    || !parsed.ownerId
+    || typeof parsed.parentIdentity !== "string"
+    || !parsed.parentIdentity
+    || typeof parsed.fileIdentity !== "string"
+    || !parsed.fileIdentity
+    || typeof parsed.finalPath !== "string"
+    || !parsed.finalPath
+    || typeof parsed.sha256 !== "string"
+    || !HASH_PATTERN.test(parsed.sha256)
+    || !Number.isInteger(parsed.size)
+    || Number(parsed.size) < 0
+  ) {
+    throw new ExecutionError("SCHEMA_DATA_INVALID", 500, `${label} is not a valid owned ref.`);
+  }
+  return parsed as VerifiedOwnedFileRef;
+}
+
+function parseExpectedTarget(value: string, label: string): ExpectedCanonicalFile {
+  const parsed = parseJsonObject(value, label);
+  const exists = parsed.exists === true;
+  if (
+    parsed.rootKind !== "canonical"
+    || !validRefSegments(parsed.relativePath)
+    || typeof parsed.exists !== "boolean"
+    || typeof parsed.parentIdentity !== "string"
+    || !parsed.parentIdentity
+    || (exists
+      ? typeof parsed.fileIdentity !== "string"
+        || !parsed.fileIdentity
+        || typeof parsed.sha256 !== "string"
+        || !HASH_PATTERN.test(parsed.sha256)
+        || !Number.isInteger(parsed.size)
+        || Number(parsed.size) < 0
+      : parsed.fileIdentity !== null || parsed.sha256 !== null || parsed.size !== null)
+  ) {
+    throw new ExecutionError("SCHEMA_DATA_INVALID", 500, `${label} is not a valid target ref.`);
+  }
+  return parsed as ExpectedCanonicalFile;
+}
+
+function parseTempLocator(value: string): JournalFileRow["tempLocator"] {
+  const parsed = parseJsonObject(value, "merge canonical_temp_locator_json");
+  if (
+    parsed.rootKind !== "canonical"
+    || !validRefSegments(parsed.relativePath)
+    || typeof parsed.ownerId !== "string"
+    || !parsed.ownerId
+  ) {
+    throw new ExecutionError(
+      "SCHEMA_DATA_INVALID",
+      500,
+      "merge canonical_temp_locator_json is invalid.",
+    );
+  }
+  return parsed as JournalFileRow["tempLocator"];
+}
+
 function journalFiles(database: DatabaseSync, journalId: string): JournalFileRow[] {
-  return database.prepare(`
-    SELECT position,path,path_key AS pathKey,old_exists AS oldExists,
-           old_identity AS oldIdentity,old_hash AS oldHash,
-           post_identity AS postIdentity,new_hash AS newHash,
-           backup_path AS backupPath,durable_new_path AS durableNewPath,
-           owned_backup_identity AS ownedBackupIdentity,
-           owned_backup_hash AS ownedBackupHash,owned_new_identity AS ownedNewIdentity
+  const rows = database.prepare(`
+    SELECT position,path,path_key AS pathKey,old_target_ref_json AS oldTargetJson,
+           post_target_ref_json AS postTargetJson,backup_ref_json AS backupRefJson,
+           durable_new_ref_json AS durableNewRefJson,
+           canonical_temp_locator_json AS tempLocatorJson,
+           canonical_temp_ref_json AS tempRefJson,status
     FROM execution_merge_files WHERE journal_id=? ORDER BY position
-  `).all(journalId) as JournalFileRow[];
+  `).all(journalId) as Array<{
+    backupRefJson: string | null;
+    durableNewRefJson: string;
+    oldTargetJson: string;
+    path: string;
+    pathKey: string;
+    position: number;
+    postTargetJson: string | null;
+    status: string;
+    tempLocatorJson: string;
+    tempRefJson: string | null;
+  }>;
+  return rows.map((row) => ({
+    backupRef: row.backupRefJson
+      ? parseOwnedRef(row.backupRefJson, "merge backup_ref_json")
+      : null,
+    durableNewRef: parseOwnedRef(row.durableNewRefJson, "merge durable_new_ref_json"),
+    oldTarget: parseExpectedTarget(row.oldTargetJson, "merge old_target_json"),
+    path: row.path,
+    pathKey: row.pathKey,
+    position: row.position,
+    postTarget: row.postTargetJson
+      ? parseExpectedTarget(row.postTargetJson, "merge post_target_ref_json")
+      : null,
+    status: row.status,
+    tempLocator: parseTempLocator(row.tempLocatorJson),
+    tempRef: row.tempRefJson
+      ? parseOwnedRef(row.tempRefJson, "merge canonical_temp_ref_json")
+      : null,
+  }));
 }
 
 function workspaceFor(database: DatabaseSync, projectId: string): string {
@@ -998,12 +1077,16 @@ async function assertPostManifest(
   database: DatabaseSync,
   journal: JournalRow,
   workspaceRoot: string,
+  fs: MergeVerifiedAdapter,
 ): Promise<void> {
   const files = journalFiles(database, journal.id);
+  if (files.some((file) => !file.postTarget)) {
+    throw new ExecutionError("MERGE_RECOVERY_REQUIRED", 409, "Stored post refs are incomplete.");
+  }
   const manifest = files.map((file) => ({
     exists: true,
-    hash: file.newHash,
-    identity: file.postIdentity,
+    hash: file.postTarget!.sha256,
+    identity: file.postTarget!.fileIdentity,
     path: file.path,
     pathKey: file.pathKey,
   }));
@@ -1011,12 +1094,8 @@ async function assertPostManifest(
     throw new ExecutionError("MERGE_INVARIANT_FAILED", 500, "Stored post manifest drifted.");
   }
   for (const file of files) {
-    const current = await readCanonicalOptional(join(workspaceRoot, file.path));
-    if (!sameState(current, {
-      exists: true,
-      hash: file.newHash,
-      identity: file.postIdentity,
-    })) {
+    const current = await readVerified(fs, workspaceRoot, file.path);
+    if (!sameTarget(current.target, file.postTarget!)) {
       throw new ExecutionError(
         "MERGE_RECOVERY_REQUIRED",
         409,
@@ -1030,17 +1109,18 @@ async function observeJournalManifest(
   database: DatabaseSync,
   journal: JournalRow,
   workspaceRoot: string,
+  fs?: MergeVerifiedAdapter,
 ): Promise<{ entries: ObservedManifestEntry[]; hash: string }> {
   const entries: ObservedManifestEntry[] = [];
   for (const file of journalFiles(database, journal.id)) {
-    const path = join(workspaceRoot, file.path);
     try {
-      const current = await readOptional(path);
-      entries.push(current
+      if (!fs) throw new Error("native merge adapter unavailable");
+      const current = await readVerified(fs, workspaceRoot, file.path);
+      entries.push(current.target.exists
         ? {
             exists: true,
-            hash: current.hash,
-            identity: current.identity,
+            hash: current.target.sha256,
+            identity: current.target.fileIdentity,
             path: file.path,
             pathKey: file.pathKey,
           }
@@ -1052,26 +1132,14 @@ async function observeJournalManifest(
             pathKey: file.pathKey,
           });
     } catch {
-      try {
-        const facts = await lstat(path, { bigint: true });
-        entries.push({
-          exists: true,
-          hash: null,
-          identity: `${facts.dev}:${facts.ino}`,
-          path: file.path,
-          pathKey: file.pathKey,
-          type: "special",
-        });
-      } catch (error) {
-        if ((error as NodeJS.ErrnoException).code !== "ENOENT") throw error;
-        entries.push({
-          exists: false,
-          hash: null,
-          identity: null,
-          path: file.path,
-          pathKey: file.pathKey,
-        });
-      }
+      entries.push({
+        exists: true,
+        hash: null,
+        identity: null,
+        path: file.path,
+        pathKey: file.pathKey,
+        type: "special",
+      });
     }
   }
   return { entries, hash: manifestHash(entries) };
@@ -1084,16 +1152,16 @@ function expectedManifest(
 ): ObservedManifestEntry[] {
   return journalFiles(database, journal.id).map((file) => target === "old"
     ? {
-        exists: file.oldExists === 1,
-        hash: file.oldHash,
-        identity: file.oldIdentity,
+        exists: file.oldTarget.exists,
+        hash: file.oldTarget.sha256,
+        identity: file.oldTarget.fileIdentity,
         path: file.path,
         pathKey: file.pathKey,
       }
     : {
         exists: true,
-        hash: file.newHash,
-        identity: file.postIdentity,
+        hash: file.postTarget?.sha256 ?? null,
+        identity: file.postTarget?.fileIdentity ?? null,
         path: file.path,
         pathKey: file.pathKey,
       });
@@ -1103,9 +1171,10 @@ async function enterManualRecovery(
   database: DatabaseSync,
   journal: JournalRow,
   mismatchPhase: string,
+  fs?: MergeVerifiedAdapter,
 ): Promise<{ entries: ObservedManifestEntry[]; hash: string }> {
   const workspaceRoot = workspaceFor(database, journal.projectId);
-  const observed = await observeJournalManifest(database, journal, workspaceRoot);
+  const observed = await observeJournalManifest(database, journal, workspaceRoot, fs);
   transaction(database, () => {
     database.prepare(
       "DELETE FROM work_item_execution_results WHERE merge_journal_id=?",
@@ -1151,47 +1220,53 @@ async function enterManualRecovery(
 async function cleanupOwnedJournal(
   database: DatabaseSync,
   journal: JournalRow,
+  fs: MergeVerifiedAdapter,
 ): Promise<void> {
-  if (!existsSyncCompat(journal.journalRoot)) return;
-  for (const file of journalFiles(database, journal.id)) {
-    const durableNew = await readOptional(file.durableNewPath);
-    if (durableNew && !sameState(durableNew, {
-      exists: true,
-      hash: file.newHash,
-      identity: file.ownedNewIdentity,
-    })) {
-      throw new ExecutionError("MERGE_RECOVERY_REQUIRED", 409, "Owned durable-new changed.");
-    }
-    if (file.backupPath) {
-      const backup = await readOptional(file.backupPath);
-      if (backup && !sameState(backup, {
-        exists: true,
-        hash: file.ownedBackupHash,
-        identity: file.ownedBackupIdentity,
-      })) {
-        throw new ExecutionError("MERGE_RECOVERY_REQUIRED", 409, "Owned backup changed.");
+  const files = journalFiles(database, journal.id);
+  if (files.length > 0 && files.every((file) => file.status === "verified")) return;
+  const roots = {
+    canonical: workspaceFor(database, journal.projectId),
+    journal: journal.journalRoot,
+  };
+  for (const file of files) {
+    for (const ref of [
+      file.durableNewRef,
+      ...(file.backupRef ? [file.backupRef] : []),
+      ...(file.tempRef ? [file.tempRef] : []),
+    ]) {
+      const result = fs.conditionalCleanupOwned(roots, ref);
+      if (
+        result.kind === "mutation-uncertain"
+        || (result.kind === "condition-mismatch" && result.observed.exists)
+      ) {
+        throw new ExecutionError(
+          "MERGE_RECOVERY_REQUIRED",
+          409,
+          "Owned merge cleanup could not be proven.",
+        );
       }
     }
   }
-  await rm(journal.journalRoot, { force: true, recursive: true });
-  await syncDirectory(dirname(journal.journalRoot));
-}
-
-function existsSyncCompat(path: string): boolean {
-  try {
-    statSyncCompat(path);
-    return true;
-  } catch (error) {
-    if ((error as NodeJS.ErrnoException).code === "ENOENT") return false;
-    throw error;
+  for (const path of [
+    join(journal.journalRoot, "backups"),
+    join(journal.journalRoot, "new"),
+    journal.journalRoot,
+  ]) {
+    try {
+      await rmdir(path);
+    } catch (error) {
+      if ((error as NodeJS.ErrnoException).code !== "ENOENT") {
+        throw new ExecutionError(
+          "MERGE_RECOVERY_REQUIRED",
+          409,
+          "Owned merge directory cleanup could not be proven.",
+        );
+      }
+    }
   }
-}
-
-function statSyncCompat(path: string): void {
-  const handle = statSync(path);
-  if (!handle.isDirectory()) {
-    throw new ExecutionError("MERGE_RECOVERY_REQUIRED", 409, "Journal root changed type.");
-  }
+  database.prepare(
+    "UPDATE execution_merge_files SET status='verified' WHERE journal_id=? AND status<>'pending'",
+  ).run(journal.id);
 }
 
 function insertEvent(
@@ -1438,24 +1513,47 @@ async function callCommitHook(
 
 export async function executeMergeCommit(input: {
   database: DatabaseSync;
+  fs?: MergeVerifiedAdapter;
   hooks?: {
     point(input: { path: string | null; point: MergeFaultPoint }): void | Promise<void>;
   };
   journalId: string;
+  recovery?: boolean;
 }): Promise<MergeOperationResult> {
   let journal = journalRow(input.database, input.journalId);
   const replay = storedCommitResult(input.database, journal);
   if (replay) return replay;
   const workspaceRoot = workspaceFor(input.database, journal.projectId);
+  let fs: MergeVerifiedAdapter | undefined;
 
   try {
+    fs = mergeAdapter(input.fs);
+    await fs.assertCapability({
+      journalBaseRoot: dirname(journal.journalRoot),
+      sandboxRoot: sandboxRootForExecution(
+        input.database,
+        journal.projectId,
+        journal.executionId,
+      ),
+      workspaceRoot,
+    });
+    if (
+      input.recovery
+      && ["db_committed", "rolling_forward"].includes(journal.status)
+    ) {
+      input.database.prepare(
+        "UPDATE execution_merge_journals SET status='rolling_forward' WHERE id=?",
+      ).run(journal.id);
+      await restoreAllPost(input.database, journal, fs);
+      journal = journalRow(input.database, input.journalId);
+    }
     if (journal.status === "applying") {
     await callCommitHook(input.hooks, "before_precommit_check");
-    await assertPostManifest(input.database, journal, workspaceRoot);
+    await assertPostManifest(input.database, journal, workspaceRoot, fs);
     await callCommitHook(input.hooks, "after_precommit_check");
     input.database.exec("BEGIN IMMEDIATE");
     try {
-      await assertPostManifest(input.database, journal, workspaceRoot);
+      await assertPostManifest(input.database, journal, workspaceRoot, fs);
       await callCommitHook(input.hooks, "before_db_commit");
       commitDatabaseFacts(input.database, journal, true);
       input.database.exec("COMMIT");
@@ -1470,22 +1568,26 @@ export async function executeMergeCommit(input: {
     await callCommitHook(input.hooks, "after_db_commit");
       journal = journalRow(input.database, input.journalId);
     }
-    if (journal.status !== "db_committed") {
+    if (!["db_committed", "rolling_forward"].includes(journal.status)) {
       throw new ExecutionError("MERGE_INVARIANT_FAILED", 500, "Journal is not commit-ready.");
     }
-    await assertPostManifest(input.database, journal, workspaceRoot);
+    await assertPostManifest(input.database, journal, workspaceRoot, fs);
     await callCommitHook(input.hooks, "after_postcommit_check");
     await callCommitHook(input.hooks, "before_cleanup");
-    await cleanupOwnedJournal(input.database, journal);
+    await cleanupOwnedJournal(input.database, journal, fs);
     await callCommitHook(input.hooks, "after_cleanup");
     await callCommitHook(input.hooks, "before_finalize");
-    await assertPostManifest(input.database, journal, workspaceRoot);
+    await assertPostManifest(input.database, journal, workspaceRoot, fs);
     return finalizeCommittedMerge(input.database, journal);
   } catch (error) {
-    if (error instanceof ExecutionError && error.code === "MERGE_RECOVERY_REQUIRED") {
+    if (
+      !fs
+      || (error instanceof ExecutionError
+        && ["MERGE_RECOVERY_REQUIRED", "SANDBOX_UNVERIFIABLE"].includes(error.code))
+    ) {
       await enterManualRecovery(input.database, journal, journal.status === "db_committed"
         ? "postcheck"
-        : "precommit");
+        : "precommit", fs);
       throw new ExecutionError(
         "MANUAL_RECOVERY_REQUIRED",
         409,
@@ -1496,51 +1598,52 @@ export async function executeMergeCommit(input: {
   }
 }
 
-async function restoreAllOld(database: DatabaseSync, journal: JournalRow): Promise<void> {
+async function restoreAllOld(
+  database: DatabaseSync,
+  journal: JournalRow,
+  fs: MergeVerifiedAdapter,
+): Promise<void> {
   const workspaceRoot = workspaceFor(database, journal.projectId);
+  const roots = { canonical: workspaceRoot, journal: journal.journalRoot };
   const files = journalFiles(database, journal.id);
   for (const file of [...files].reverse()) {
-    const targetPath = join(workspaceRoot, file.path);
-    const current = await readCanonicalOptional(targetPath);
-    const isPost = sameState(current, {
-      exists: true,
-      hash: file.newHash,
-      identity: file.postIdentity,
-    });
-    const isOld = file.oldExists === 1
-      ? current !== null && current.hash === file.oldHash
-      : current === null;
+    const current = await readVerified(fs, workspaceRoot, file.path);
+    const isPost = file.postTarget !== null && sameTarget(current.target, file.postTarget);
+    const isOld = sameTarget(current.target, file.oldTarget);
     if (isOld) continue;
     if (!isPost) {
       throw new ExecutionError("MERGE_RECOVERY_REQUIRED", 409, "Recovery found a path mismatch.");
     }
-    if (file.oldExists === 0) {
-      await unlink(targetPath);
-      await syncDirectory(dirname(targetPath));
+    if (!file.postTarget) {
+      throw new ExecutionError("MERGE_RECOVERY_REQUIRED", 409, "Recovery post ref is missing.");
+    }
+    if (!file.oldTarget.exists) {
+      mutationValue(
+        fs.conditionalDelete(roots, file.postTarget),
+        "Added-file rollback was uncertain.",
+      );
     } else {
-      const backup = await readOrdinary(file.backupPath!);
-      if (!sameState(backup, {
-        exists: true,
-        hash: file.ownedBackupHash,
-        identity: file.ownedBackupIdentity,
-      }) || backup.hash !== file.oldHash) {
+      if (!file.backupRef) {
         throw new ExecutionError("MERGE_RECOVERY_REQUIRED", 409, "Recovery backup changed.");
       }
-      const rollbackPath = join(dirname(targetPath), `.cool-ai-rollback-${randomUUID()}.tmp`);
-      await writeDurable(rollbackPath, backup.bytes);
-      const before = await readCanonicalOptional(targetPath);
-      if (!sameState(before, {
-        exists: true,
-        hash: file.newHash,
-        identity: file.postIdentity,
-      })) {
-        await rm(rollbackPath, { force: true });
-        throw new ExecutionError("MERGE_RECOVERY_REQUIRED", 409, "Recovery target changed.");
-      }
-      await rename(rollbackPath, targetPath);
-      await syncDirectory(dirname(targetPath));
-      const restored = await readCanonicalOptional(targetPath);
-      if (!restored || restored.hash !== file.oldHash) {
+      const rollbackTemp = mutationValue(
+        fs.prepareCanonicalTempFromOwned(
+          roots,
+          file.backupRef,
+          file.oldTarget.relativePath.slice(0, -1),
+          `.cool-ai-rollback-${journal.actionId}-${file.position}.tmp`,
+          journal.actionId,
+        ),
+        "Recovery rollback temp was uncertain.",
+      );
+      const restored = mutationValue(
+        fs.conditionalReplacePrepared(roots, file.postTarget, rollbackTemp),
+        "Recovery rollback replace was uncertain.",
+      );
+      if (
+        restored.sha256 !== file.oldTarget.sha256
+        || restored.size !== file.oldTarget.size
+      ) {
         throw new ExecutionError("MERGE_RECOVERY_REQUIRED", 409, "Rollback verification failed.");
       }
     }
@@ -1582,6 +1685,66 @@ function finalizeRolledBack(database: DatabaseSync, journal: JournalRow): MergeO
   return { body: errorBody, status: 409 };
 }
 
+async function restoreAllPost(
+  database: DatabaseSync,
+  journal: JournalRow,
+  fs: MergeVerifiedAdapter,
+): Promise<void> {
+  const workspaceRoot = workspaceFor(database, journal.projectId);
+  const roots = { canonical: workspaceRoot, journal: journal.journalRoot };
+  for (const file of journalFiles(database, journal.id)) {
+    if (!file.postTarget) {
+      throw new ExecutionError("MERGE_RECOVERY_REQUIRED", 409, "Roll-forward post ref is missing.");
+    }
+    const current = await readVerified(fs, workspaceRoot, file.path);
+    if (sameTarget(current.target, file.postTarget)) continue;
+    if (!sameTarget(current.target, file.oldTarget)) {
+      throw new ExecutionError("MERGE_RECOVERY_REQUIRED", 409, "Roll-forward found a path mismatch.");
+    }
+    let tempRef = file.tempRef;
+    const reopened = tempRef ? fs.reopenOwnedFile(roots, tempRef) : null;
+    if (!tempRef || reopened?.kind !== "succeeded") {
+      tempRef = mutationValue(
+        fs.prepareCanonicalTempFromOwned(
+          roots,
+          file.durableNewRef,
+          file.oldTarget.relativePath.slice(0, -1),
+          `.cool-ai-rollforward-${journal.actionId}-${file.position}.tmp`,
+          journal.actionId,
+        ),
+        "Roll-forward temp preparation was uncertain.",
+      );
+    }
+    const postTarget = mutationValue(
+      fs.conditionalReplacePrepared(roots, file.oldTarget, tempRef),
+      "Roll-forward replace was uncertain.",
+    );
+    database.prepare(`
+      UPDATE execution_merge_files
+      SET post_target_ref_json=?,canonical_temp_ref_json=?,status='rolled_forward'
+      WHERE journal_id=? AND position=?
+    `).run(
+      JSON.stringify(postTarget),
+      JSON.stringify(tempRef),
+      journal.id,
+      file.position,
+    );
+  }
+  const postManifest = journalFiles(database, journal.id).map((file) => ({
+    exists: true,
+    hash: file.postTarget!.sha256,
+    identity: file.postTarget!.fileIdentity,
+    path: file.path,
+    pathKey: file.pathKey,
+  }));
+  database.prepare(`
+    UPDATE execution_merge_journals
+    SET post_manifest_hash=?,status='db_committed',
+        updated_at=strftime('%Y-%m-%dT%H:%M:%fZ','now')
+    WHERE id=?
+  `).run(manifestHash(postManifest), journal.id);
+}
+
 export function assertNoMergeBarrier(database: DatabaseSync, projectId: string): void {
   const unresolved = database.prepare(`
     SELECT 1 FROM execution_merge_journals
@@ -1600,6 +1763,7 @@ export function assertNoMergeBarrier(database: DatabaseSync, projectId: string):
 
 export async function recoverIncompleteMergeJournals(input: {
   database: DatabaseSync;
+  fs?: MergeVerifiedAdapter;
   projectId: string;
 }): Promise<MergeOperationResult[]> {
   const rows = input.database.prepare(`
@@ -1611,28 +1775,45 @@ export async function recoverIncompleteMergeJournals(input: {
   const recovered: MergeOperationResult[] = [];
   for (const { id } of rows) {
     const journal = journalRow(input.database, id);
+    let fs: MergeVerifiedAdapter | undefined;
     try {
+      fs = mergeAdapter(input.fs);
+      await fs.assertCapability({
+        journalBaseRoot: dirname(journal.journalRoot),
+        sandboxRoot: sandboxRootForExecution(
+          input.database,
+          journal.projectId,
+          journal.executionId,
+        ),
+        workspaceRoot: workspaceFor(input.database, journal.projectId),
+      });
       if (["db_committed", "rolling_forward"].includes(journal.status)) {
-        recovered.push(await executeMergeCommit({ database: input.database, journalId: id }));
+        recovered.push(await executeMergeCommit({
+          database: input.database,
+          fs,
+          journalId: id,
+          recovery: true,
+        }));
         continue;
       }
       input.database.prepare(`
         UPDATE execution_merge_journals SET status='rolling_back' WHERE id=?
       `).run(id);
-      await restoreAllOld(input.database, journal);
-      await cleanupOwnedJournal(input.database, journal);
+      await restoreAllOld(input.database, journal, fs);
+      await cleanupOwnedJournal(input.database, journal, fs);
       recovered.push(finalizeRolledBack(input.database, journal));
     } catch (error) {
       if (error instanceof ExecutionError && error.code === "MANUAL_RECOVERY_REQUIRED") {
         throw error;
       }
       if (
-        error instanceof ExecutionError
-        && error.code === "MERGE_RECOVERY_REQUIRED"
+        !fs
+        || (error instanceof ExecutionError
+          && ["MERGE_RECOVERY_REQUIRED", "SANDBOX_UNVERIFIABLE"].includes(error.code))
       ) {
         await enterManualRecovery(input.database, journal, journal.status === "db_committed"
           ? "restart_rollforward"
-          : "restart_rollback");
+          : "restart_rollback", fs);
         throw new ExecutionError(
           "MANUAL_RECOVERY_REQUIRED",
           409,
@@ -1658,6 +1839,16 @@ export async function executeMergePrepare(input: MergeInput): Promise<MergeResul
   if (context.disposition === "stale") {
     throw new ExecutionError("STALE_EXECUTION", 409, "Execution context changed before merge.");
   }
+  const fs = mergeAdapter(input.fs);
+  await fs.assertCapability({
+    journalBaseRoot: input.journalBaseRoot,
+    sandboxRoot: sandboxRootForExecution(
+      input.database,
+      input.projectId,
+      input.executionId,
+    ),
+    workspaceRoot: input.workspaceRoot,
+  });
   const ids = {
     actionId: randomUUID(),
     journalId: randomUUID(),
@@ -1673,6 +1864,7 @@ export async function executeMergePrepare(input: MergeInput): Promise<MergeResul
     await mkdir(journalRoot, { recursive: true });
     prepared = await prepareFiles(
       input,
+      fs,
       ids.actionId,
       journalRoot,
       durable.sandboxRoot,
@@ -1689,7 +1881,7 @@ export async function executeMergePrepare(input: MergeInput): Promise<MergeResul
     journalPersisted = true;
     await callHook(input, "after_journal_persist");
     try {
-      await applyPrepared(input, ids.journalId, prepared, applied);
+      await applyPrepared(input, fs, journalRoot, ids.journalId, prepared, applied);
     } catch (error) {
       const persistedApplied = prepared.filter((file) => {
         const row = input.database.prepare(`
@@ -1701,41 +1893,46 @@ export async function executeMergePrepare(input: MergeInput): Promise<MergeResul
       // The replace may have happened before the row status was persisted.
       for (const file of prepared) {
         if (applied.includes(file)) continue;
-        const current = await readOptional(join(input.workspaceRoot, file.path)).catch(() => null);
-        if (sameState(current, {
-          exists: true,
-          hash: file.stagedHash,
-          identity: file.postIdentity,
-        })) applied.push(file);
+        const current = await readVerified(fs, input.workspaceRoot, file.path).catch(() => null);
+        if (current && file.postTarget && sameTarget(current.target, file.postTarget)) {
+          applied.push(file);
+        }
       }
       throw error;
     }
     return {
       actionId: ids.actionId,
       journalId: ids.journalId,
-      ...manifests,
+      oldManifestHash: manifests.oldManifestHash,
+      postManifestHash: journalRow(input.database, ids.journalId).postManifestHash,
     };
   } catch (error) {
     const rolledBack = await rollbackApplied(
       input,
+      fs,
+      journalRoot,
       journalPersisted ? ids.journalId : null,
       prepared,
       applied,
     );
     const externalMismatch = !rolledBack || (
       error instanceof ExecutionError
-      && ["STALE_EXECUTION", "MERGE_RECOVERY_REQUIRED"].includes(error.code)
+      && ["STALE_EXECUTION", "MERGE_RECOVERY_REQUIRED", "SANDBOX_UNVERIFIABLE"]
+        .includes(error.code)
     );
     if (journalPersisted && externalMismatch) {
       await enterManualRecovery(
         input.database,
         journalRow(input.database, ids.journalId),
         "apply_or_rollback",
+        fs,
       );
       const recovery = new ExecutionError(
         "MANUAL_RECOVERY_REQUIRED",
         409,
-        "Conditional merge rollback found an external writer mismatch.",
+        `Conditional merge rollback found an external writer mismatch: ${
+          error instanceof Error ? error.message : "unknown native failure"
+        }`,
       );
       throw recovery;
     }
@@ -1747,9 +1944,6 @@ export async function executeMergePrepare(input: MergeInput): Promise<MergeResul
       code,
       error instanceof Error ? error.message : "Merge prepare failed.",
     );
-    if (!journalPersisted) {
-      await rm(journalRoot, { force: true, recursive: true }).catch(() => undefined);
-    }
     throw error;
   }
 }
@@ -1757,53 +1951,32 @@ export async function executeMergePrepare(input: MergeInput): Promise<MergeResul
 async function cleanupOwnedForAbandon(
   database: DatabaseSync,
   journal: JournalRow,
+  fs: MergeVerifiedAdapter,
 ): Promise<string[]> {
   const uncleaned: string[] = [];
   const workspaceRoot = workspaceFor(database, journal.projectId);
+  const roots = { canonical: workspaceRoot, journal: journal.journalRoot };
   for (const file of journalFiles(database, journal.id)) {
     const candidates = [
-      {
-        expected: {
-          exists: true,
-          hash: file.newHash,
-          identity: file.ownedNewIdentity,
-        },
-        path: file.durableNewPath,
-      },
-      ...(file.backupPath
-        ? [{
-            expected: {
-              exists: true,
-              hash: file.ownedBackupHash,
-              identity: file.ownedBackupIdentity,
-            },
-            path: file.backupPath,
-          }]
-        : []),
-      {
-        expected: {
-          exists: true,
-          hash: file.newHash,
-          identity: file.postIdentity,
-        },
-        path: join(
-          dirname(join(workspaceRoot, file.path)),
-          `.cool-ai-merge-${journal.actionId}-${file.position}.tmp`,
-        ),
-      },
+      file.durableNewRef,
+      ...(file.backupRef ? [file.backupRef] : []),
+      ...(file.tempRef ? [file.tempRef] : []),
     ];
-    for (const candidate of candidates) {
+    if (!file.tempRef) {
+      uncleaned.push(
+        `${file.tempLocator.rootKind}:${file.tempLocator.relativePath.join("/")}`,
+      );
+    }
+    for (const ref of candidates) {
+      const label = `${ref.rootKind}:${ref.relativePath.join("/")}`;
       try {
-        const current = await readOptional(candidate.path);
-        if (!current) continue;
-        if (!sameState(current, candidate.expected)) {
-          uncleaned.push(candidate.path);
-          continue;
-        }
-        await unlink(candidate.path);
-        await syncDirectory(dirname(candidate.path));
+        const result = fs.conditionalCleanupOwned(roots, ref);
+        if (
+          result.kind === "mutation-uncertain"
+          || (result.kind === "condition-mismatch" && result.observed.exists)
+        ) uncleaned.push(label);
       } catch {
-        uncleaned.push(candidate.path);
+        uncleaned.push(label);
       }
     }
   }
@@ -1900,6 +2073,7 @@ export async function resolveManualRecovery(input: {
   observedManifestHash: string;
   operationId: string;
   projectId: string;
+  fs?: MergeVerifiedAdapter;
 }): Promise<MergeOperationResult> {
   const requestHash = sha256(JSON.stringify({
     action: input.action,
@@ -1926,10 +2100,21 @@ export async function resolveManualRecovery(input: {
     throw new ExecutionError("MANUAL_RECOVERY_REQUIRED", 409, "Manual recovery state changed.");
   }
   const journal = journalRow(input.database, row.id);
+  const fs = mergeAdapter(input.fs);
+  await fs.assertCapability({
+    journalBaseRoot: dirname(journal.journalRoot),
+    sandboxRoot: sandboxRootForExecution(
+      input.database,
+      journal.projectId,
+      journal.executionId,
+    ),
+    workspaceRoot: workspaceFor(input.database, input.projectId),
+  });
   const observed = await observeJournalManifest(
     input.database,
     journal,
     workspaceFor(input.database, input.projectId),
+    fs,
   );
   const target = input.action === "recovered_old"
     ? journal.oldManifestHash
@@ -1965,7 +2150,7 @@ export async function resolveManualRecovery(input: {
   }
 
   const uncleanedOwnedPaths = input.action === "abandon"
-    ? await cleanupOwnedForAbandon(input.database, journal)
+    ? await cleanupOwnedForAbandon(input.database, journal, fs)
     : [];
   let result!: MergeOperationResult;
   transaction(input.database, () => {

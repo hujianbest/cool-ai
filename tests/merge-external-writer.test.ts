@@ -10,9 +10,12 @@ import { mkdir, rename, symlink, unlink, writeFile } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import type { DatabaseSync } from "node:sqlite";
-import { afterEach, beforeEach, describe, expect, it } from "vitest";
+import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
 import { openDatabase } from "@/src/server/db";
+import { createWindowsVerifiedMergeAdapter } from "@/src/server/execution/merge-verified-adapter";
+
+vi.mock("server-only", () => ({}));
 
 type MergePoint =
   | "before_apply_file"
@@ -152,25 +155,35 @@ describe("external-writer merge recovery", () => {
         const oldPath = join(fixture.workspaceRoot, "src/a.txt");
         const originalPath = join(fixture.root, "original-a.txt");
         writeFileSync(originalPath, "old-a");
-        const oldIdentity = identity(originalPath);
-        fixture.database.prepare(
-          "UPDATE execution_merge_files SET old_identity=? WHERE path_key='src/a.txt'",
-        ).run(oldIdentity);
         await unlink(oldPath);
         await rename(originalPath, oldPath);
+        const oldTarget = (await createWindowsVerifiedMergeAdapter().readFile({
+          maximumBytes: 1_048_576,
+          pathSegments: ["src", "a.txt"],
+          root: fixture.workspaceRoot,
+        })).target;
+        fixture.database.prepare(
+          "UPDATE execution_merge_files SET old_target_ref_json=? WHERE path_key='src/a.txt'",
+        ).run(JSON.stringify(oldTarget));
         refreshStoredManifest(fixture.database, "old");
       } else {
         // The raced path is recreated from the still-owned merge temp identity.
         const file = fixture.database.prepare(`
-          SELECT durable_new_path AS durableNewPath FROM execution_merge_files
+          SELECT durable_new_ref_json AS durableNewRefJson FROM execution_merge_files
           WHERE path_key='src/a.txt'
-        `).get() as { durableNewPath: string };
+        `).get() as { durableNewRefJson: string };
+        const durableNew = JSON.parse(file.durableNewRefJson) as { finalPath: string };
         const target = join(fixture.workspaceRoot, "src/a.txt");
         await unlink(target);
-        await rename(file.durableNewPath, target);
+        await rename(durableNew.finalPath, target);
+        const postTarget = (await createWindowsVerifiedMergeAdapter().readFile({
+          maximumBytes: 1_048_576,
+          pathSegments: ["src", "a.txt"],
+          root: fixture.workspaceRoot,
+        })).target;
         fixture.database.prepare(
-          "UPDATE execution_merge_files SET post_identity=? WHERE path_key='src/a.txt'",
-        ).run(identity(target));
+          "UPDATE execution_merge_files SET post_target_ref_json=? WHERE path_key='src/a.txt'",
+        ).run(JSON.stringify(postTarget));
         refreshStoredManifest(fixture.database, "post");
       }
       const targetManifest = fixture.database.prepare(`
@@ -209,10 +222,12 @@ describe("external-writer merge recovery", () => {
   it("abandons without touching canonical bytes and only conditionally cleans owned files", async () => {
     const fixture = await createManualFixture("abandon");
     const owned = fixture.database.prepare(`
-      SELECT backup_path AS backupPath,durable_new_path AS durableNewPath
+      SELECT backup_ref_json AS backupRefJson,durable_new_ref_json AS durableNewRefJson
       FROM execution_merge_files WHERE path_key='src/a.txt'
-    `).get() as { backupPath: string; durableNewPath: string };
-    writeFileSync(owned.backupPath, "external-owned-path");
+    `).get() as { backupRefJson: string; durableNewRefJson: string };
+    const backupPath = (JSON.parse(owned.backupRefJson) as { finalPath: string }).finalPath;
+    const durableNewPath = (JSON.parse(owned.durableNewRefJson) as { finalPath: string }).finalPath;
+    writeFileSync(backupPath, "external-owned-path");
     const before = readFileSync(join(fixture.workspaceRoot, "src/a.txt"));
     const state = manualState(fixture.database);
     const input = {
@@ -228,8 +243,8 @@ describe("external-writer merge recovery", () => {
     expect(await mergeModule.resolveManualRecovery(input)).toEqual(first);
     expect(first.body).toMatchObject({ uncleanedOwnedPathCount: 1 });
     expect(readFileSync(join(fixture.workspaceRoot, "src/a.txt"))).toEqual(before);
-    expect(readFileSync(owned.backupPath, "utf8")).toBe("external-owned-path");
-    expect(existsSync(owned.durableNewPath)).toBe(false);
+    expect(readFileSync(backupPath, "utf8")).toBe("external-owned-path");
+    expect(existsSync(durableNewPath)).toBe(false);
     expect(manualState(fixture.database)).toMatchObject({
       executionStatus: "stopped",
       journalStatus: "abandoned",
@@ -407,21 +422,31 @@ async function createManualFixture(label: string) {
 
 function refreshStoredManifest(database: DatabaseSync, target: "old" | "post"): void {
   const rows = database.prepare(`
-    SELECT path,path_key AS pathKey,old_exists AS oldExists,old_identity AS oldIdentity,
-           old_hash AS oldHash,post_identity AS postIdentity,new_hash AS newHash
+    SELECT path,path_key AS pathKey,old_target_ref_json AS oldTargetJson,
+           post_target_ref_json AS postTargetJson
     FROM execution_merge_files ORDER BY position
   `).all() as Array<{
-    newHash: string;
-    oldExists: number;
-    oldHash: string | null;
-    oldIdentity: string | null;
+    oldTargetJson: string;
     path: string;
     pathKey: string;
-    postIdentity: string;
+    postTargetJson: string;
   }>;
-  const manifest = rows.map((row) => target === "old"
-    ? { exists: row.oldExists === 1, hash: row.oldHash, identity: row.oldIdentity, path: row.path, pathKey: row.pathKey }
-    : { exists: true, hash: row.newHash, identity: row.postIdentity, path: row.path, pathKey: row.pathKey });
+  const manifest = rows.map((row) => {
+    const descriptor = JSON.parse(target === "old"
+      ? row.oldTargetJson
+      : row.postTargetJson) as {
+      exists: boolean;
+      fileIdentity: string | null;
+      sha256: string | null;
+    };
+    return {
+      exists: descriptor.exists,
+      hash: descriptor.sha256,
+      identity: descriptor.fileIdentity,
+      path: row.path,
+      pathKey: row.pathKey,
+    };
+  });
   database.prepare(`UPDATE execution_merge_journals SET ${target === "old"
     ? "old_manifest_hash"
     : "post_manifest_hash"}=?`).run(sha256(JSON.stringify(manifest)));

@@ -1,0 +1,26 @@
+# hf-gate-run
+# label: t39-green
+# command: npm.cmd test -- tests/merge-journal-prepare.test.ts tests/merge-recovery.test.ts tests/merge-fault-injection.test.ts tests/merge-external-writer.test.ts
+# started: 2026-07-31T18:06:33+00:00
+
+> collaboration-cockpit@0.1.0 test
+> vitest run tests/merge-journal-prepare.test.ts tests/merge-recovery.test.ts tests/merge-fault-injection.test.ts tests/merge-external-writer.test.ts
+
+
+ RUN  v4.1.10 D:/cool-ai
+
+(node:8624) ExperimentalWarning: SQLite is an experimental feature and might change at any time
+(Use `node --trace-warnings ...` to show where the warning was created)
+(node:11336) ExperimentalWarning: SQLite is an experimental feature and might change at any time
+(Use `node --trace-warnings ...` to show where the warning was created)
+(node:15732) ExperimentalWarning: SQLite is an experimental feature and might change at any time
+(Use `node --trace-warnings ...` to show where the warning was created)
+(node:15748) ExperimentalWarning: SQLite is an experimental feature and might change at any time
+(Use `node --trace-warnings ...` to show where the warning was created)
+
+ Test Files  4 passed (4)
+      Tests  26 passed (26)
+   Start at  02:06:35
+   Duration  19.73s (transform 1.16s, setup 1.95s, import 1.71s, tests 39.35s, environment 7.80s)
+
+# exit: 0

@@ -990,8 +990,10 @@ export async function listRecoveryFiles(
       throw new ExecutionError("MERGE_RECOVERY_REQUIRED", 409, "Manual recovery files are unavailable.");
     }
     const rows = database.prepare(`
-      SELECT position,path,path_key AS pathKey,old_exists AS oldExists,
-             old_hash AS oldHash,new_hash AS newHash,status
+      SELECT position,path,path_key AS pathKey,
+             json_extract(old_target_ref_json,'$.exists') AS oldExists,
+             json_extract(old_target_ref_json,'$.sha256') AS oldHash,
+             json_extract(post_target_ref_json,'$.sha256') AS newHash,status
       FROM execution_merge_files WHERE journal_id=?
         AND (? IS NULL OR position>? OR (position=? AND path_key>?))
       ORDER BY position,path_key LIMIT ?

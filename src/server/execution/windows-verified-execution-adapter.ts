@@ -21,12 +21,17 @@ type NativeHandle = ReturnType<NativeReadAdapter["openRootDirectory"]>;
 
 export type WindowsVerifiedFileAdapter =
   SandboxFileHandleAdapter<NativeHandle> & {
+    deleteNativeVerifiedFile(input: {
+      expectedHash: string;
+      pathSegments: string[];
+      sandboxRoot: string;
+    }): void;
     writeNativeVerifiedFile(input: {
       bytes: Uint8Array;
       expectedHash: string | null;
       pathSegments: string[];
       sandboxRoot: string;
-    }): { hash: string };
+    }): { hash: string; identity: string };
   };
 
 function identityKey(identity: { fileId: string; volumeSerialNumber: string }): string {
@@ -88,13 +93,24 @@ function createFileAdapter(): WindowsVerifiedFileAdapter {
     async readFromHandle(handle, maximumBytes) {
       return read.readFromHandle(handle, maximumBytes);
     },
+    deleteNativeVerifiedFile(input) {
+      write.deleteVerifiedFile(
+        input.sandboxRoot,
+        input.pathSegments,
+        input.expectedHash,
+      );
+    },
     writeNativeVerifiedFile(input) {
-      return write.writeVerifiedFile(
+      const result = write.writeVerifiedFile(
         input.sandboxRoot,
         input.pathSegments,
         input.bytes,
         input.expectedHash,
       );
+      return {
+        hash: result.hash,
+        identity: identityKey(result.identity),
+      };
     },
   };
 }

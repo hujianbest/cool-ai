@@ -368,19 +368,16 @@ CREATE TABLE execution_merge_files(
  position INTEGER NOT NULL CHECK(position>=0),
  path TEXT NOT NULL CHECK(length(CAST(path AS BLOB)) BETWEEN 1 AND 4096),
  path_key TEXT NOT NULL CHECK(length(CAST(path_key AS BLOB)) BETWEEN 1 AND 4096),
- old_exists INTEGER NOT NULL CHECK(old_exists IN (0,1)), old_identity TEXT,
- old_hash TEXT CHECK(old_hash IS NULL OR (length(old_hash)=64 AND old_hash NOT GLOB '*[^0-9a-f]*')),
- post_identity TEXT NOT NULL,
- new_hash TEXT NOT NULL CHECK(length(new_hash)=64 AND new_hash NOT GLOB '*[^0-9a-f]*'),
- backup_path TEXT CHECK(backup_path IS NULL OR length(CAST(backup_path AS BLOB)) BETWEEN 1 AND 32767),
- durable_new_path TEXT NOT NULL CHECK(length(CAST(durable_new_path AS BLOB)) BETWEEN 1 AND 32767),
- owned_backup_identity TEXT,
- owned_backup_hash TEXT CHECK(owned_backup_hash IS NULL OR (length(owned_backup_hash)=64 AND owned_backup_hash NOT GLOB '*[^0-9a-f]*')),
- owned_new_identity TEXT NOT NULL,
- status TEXT NOT NULL CHECK(status IN ('pending','applied','rolled_back','rolled_forward','verified')),
+ old_target_ref_json TEXT NOT NULL CHECK(json_valid(old_target_ref_json) AND length(CAST(old_target_ref_json AS BLOB))<=16384),
+ post_target_ref_json TEXT CHECK(post_target_ref_json IS NULL OR (json_valid(post_target_ref_json) AND length(CAST(post_target_ref_json AS BLOB))<=16384)),
+ backup_ref_json TEXT CHECK(backup_ref_json IS NULL OR (json_valid(backup_ref_json) AND length(CAST(backup_ref_json AS BLOB))<=16384)),
+ durable_new_ref_json TEXT NOT NULL CHECK(json_valid(durable_new_ref_json) AND length(CAST(durable_new_ref_json AS BLOB))<=16384),
+ canonical_temp_locator_json TEXT NOT NULL CHECK(json_valid(canonical_temp_locator_json) AND length(CAST(canonical_temp_locator_json AS BLOB))<=8192),
+ canonical_temp_ref_json TEXT CHECK(canonical_temp_ref_json IS NULL OR (json_valid(canonical_temp_ref_json) AND length(CAST(canonical_temp_ref_json AS BLOB))<=16384)),
+ status TEXT NOT NULL CHECK(status IN ('pending','temp_ready','applied','rolled_back','rolled_forward','verified')),
  PRIMARY KEY(journal_id,position), UNIQUE(journal_id,path_key),
- CHECK((old_exists=0 AND old_identity IS NULL AND old_hash IS NULL) OR (old_exists=1 AND old_identity IS NOT NULL AND length(old_hash)=64)),
- CHECK(length(new_hash)=64 AND length(owned_new_identity)>0)
+ CHECK((status='pending' AND canonical_temp_ref_json IS NULL AND post_target_ref_json IS NULL)
+    OR (status<>'pending' AND canonical_temp_ref_json IS NOT NULL AND post_target_ref_json IS NOT NULL))
 );
 CREATE TABLE work_item_execution_results(
  id TEXT PRIMARY KEY, project_id TEXT NOT NULL, mission_id TEXT NOT NULL, work_item_id TEXT NOT NULL,
@@ -532,6 +529,137 @@ function chunkFactsAreValid(database: DatabaseSync): boolean {
   return true;
 }
 
+function mergeDescriptorFactsAreValid(database: DatabaseSync): boolean {
+  const rows = database.prepare(`
+    SELECT f.path,f.old_target_ref_json AS oldTargetJson,
+           f.post_target_ref_json AS postTargetJson,f.backup_ref_json AS backupRefJson,
+           f.durable_new_ref_json AS durableNewRefJson,
+           f.canonical_temp_locator_json AS tempLocatorJson,
+           f.canonical_temp_ref_json AS tempRefJson,f.status,
+           j.merge_action_id AS actionId
+    FROM execution_merge_files f
+    JOIN execution_merge_journals j ON j.id=f.journal_id
+    ORDER BY f.journal_id,f.position
+  `).all() as Array<{
+    actionId: string;
+    backupRefJson: string | null;
+    durableNewRefJson: string;
+    oldTargetJson: string;
+    path: string;
+    postTargetJson: string | null;
+    status: string;
+    tempLocatorJson: string;
+    tempRefJson: string | null;
+  }>;
+  const hash = /^[0-9a-f]{64}$/u;
+  const validSegments = (value: unknown): value is string[] =>
+    Array.isArray(value)
+    && value.length > 0
+    && value.every((segment) =>
+      typeof segment === "string"
+      && segment.length > 0
+      && segment !== "."
+      && segment !== ".."
+      && !/[\\/\0]/u.test(segment));
+  const parse = (value: string): Record<string, unknown> | null => {
+    try {
+      const parsed = JSON.parse(value) as unknown;
+      return parsed && typeof parsed === "object" && !Array.isArray(parsed)
+        ? parsed as Record<string, unknown>
+        : null;
+    } catch {
+      return null;
+    }
+  };
+  const validRef = (value: Record<string, unknown> | null): boolean =>
+    value !== null
+    && ["journal", "canonical"].includes(String(value.rootKind))
+    && validSegments(value.relativePath)
+    && typeof value.ownerId === "string"
+    && value.ownerId.length > 0
+    && typeof value.parentIdentity === "string"
+    && value.parentIdentity.length > 0
+    && typeof value.fileIdentity === "string"
+    && value.fileIdentity.length > 0
+    && typeof value.finalPath === "string"
+    && value.finalPath.length > 0
+    && typeof value.sha256 === "string"
+    && hash.test(value.sha256)
+    && Number.isInteger(value.size)
+    && Number(value.size) >= 0;
+  const validTarget = (value: Record<string, unknown> | null): boolean => {
+    if (
+      value === null
+      || value.rootKind !== "canonical"
+      || !validSegments(value.relativePath)
+      || typeof value.exists !== "boolean"
+      || typeof value.parentIdentity !== "string"
+      || value.parentIdentity.length === 0
+    ) return false;
+    return value.exists
+      ? typeof value.fileIdentity === "string"
+        && value.fileIdentity.length > 0
+        && typeof value.sha256 === "string"
+        && hash.test(value.sha256)
+        && Number.isInteger(value.size)
+        && Number(value.size) >= 0
+      : value.fileIdentity === null && value.sha256 === null && value.size === null;
+  };
+  for (const row of rows) {
+    const oldTarget = parse(row.oldTargetJson);
+    const postTarget = row.postTargetJson ? parse(row.postTargetJson) : null;
+    const backupRef = row.backupRefJson ? parse(row.backupRefJson) : null;
+    const durableNewRef = parse(row.durableNewRefJson);
+    const tempLocator = parse(row.tempLocatorJson);
+    const tempRef = row.tempRefJson ? parse(row.tempRefJson) : null;
+    const expectedSegments = row.path.split("/");
+    if (
+      !validTarget(oldTarget)
+      || !validRef(durableNewRef)
+      || (backupRef !== null && !validRef(backupRef))
+      || tempLocator === null
+      || tempLocator.rootKind !== "canonical"
+      || !validSegments(tempLocator.relativePath)
+      || tempLocator.ownerId !== row.actionId
+      || JSON.stringify(oldTarget!.relativePath) !== JSON.stringify(expectedSegments)
+      || durableNewRef!.rootKind !== "journal"
+      || durableNewRef!.ownerId !== row.actionId
+      || (backupRef !== null && (
+        backupRef.rootKind !== "journal"
+        || backupRef.ownerId !== row.actionId
+      ))
+      || (oldTarget!.exists !== (backupRef !== null))
+      || (backupRef !== null && (
+        backupRef.sha256 !== oldTarget!.sha256
+        || backupRef.size !== oldTarget!.size
+      ))
+      || JSON.stringify((tempLocator.relativePath as string[]).slice(0, -1))
+        !== JSON.stringify(expectedSegments.slice(0, -1))
+    ) return false;
+    if (row.status === "pending") {
+      if (postTarget !== null || tempRef !== null) return false;
+      continue;
+    }
+    if (
+      !validTarget(postTarget)
+      || !postTarget!.exists
+      || !validRef(tempRef)
+      || JSON.stringify(postTarget!.relativePath) !== JSON.stringify(expectedSegments)
+      || oldTarget!.parentIdentity !== postTarget!.parentIdentity
+      || tempRef!.rootKind !== "canonical"
+      || tempRef!.ownerId !== row.actionId
+      || durableNewRef!.sha256 !== postTarget!.sha256
+      || durableNewRef!.size !== postTarget!.size
+      || tempRef!.sha256 !== postTarget!.sha256
+      || tempRef!.size !== postTarget!.size
+      || tempRef!.parentIdentity !== postTarget!.parentIdentity
+      || tempRef!.fileIdentity !== postTarget!.fileIdentity
+      || JSON.stringify(tempRef!.relativePath) !== JSON.stringify(tempLocator.relativePath)
+    ) return false;
+  }
+  return true;
+}
+
 export function validateV5(database: DatabaseSync): "SCHEMA_DRIFT" | "SCHEMA_DATA_INVALID" | null {
   if (!schemaIsExact(database)) return "SCHEMA_DRIFT";
   if ((database.prepare("PRAGMA foreign_key_check").all() as unknown[]).length > 0) {
@@ -606,6 +734,7 @@ export function validateV5(database: DatabaseSync): "SCHEMA_DRIFT" | "SCHEMA_DAT
     `) > 0
   ) return "SCHEMA_DATA_INVALID";
   if (!chunkFactsAreValid(database)) return "SCHEMA_DATA_INVALID";
+  if (!mergeDescriptorFactsAreValid(database)) return "SCHEMA_DATA_INVALID";
   if (
     scalar(database, `
       SELECT COUNT(*) count FROM execution_staged_results s

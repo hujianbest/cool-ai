@@ -322,7 +322,7 @@ function identityOf(functions: NativeFunctions, handle: NativeHandle): NativeIde
   )) {
     fail("The native handle identity is unavailable.");
   }
-  const fileId = output.subarray(8, 24).toString("hex");
+  const fileId = output.readBigUInt64LE(8).toString(16).padStart(32, "0");
   if (/^0+$/.test(fileId)) fail("The native handle identity is invalid.");
   return {
     fileId,
