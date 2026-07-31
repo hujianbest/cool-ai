@@ -88,11 +88,17 @@ type CommandActionRow = {
   attemptId: string;
   attemptNo: number;
   executionId: string;
+  leaseExpiresAt: string;
+  leaseToken: string;
+  operationId: string;
+  actionIndex: number;
+  overallDeadlineAt: string;
   publicRequestJson: string;
   requestHash: string;
   sandboxManifestHash: string | null;
   sandboxRoot: string;
   sequence: number;
+  toolBeforeSandboxHash: string | null;
   toolCallId: string;
 };
 
@@ -104,6 +110,15 @@ type StoredCommandResult = {
   stderr: Omit<ProcessOutput, "chunks"> & { chunkCount: number };
   stdout: Omit<ProcessOutput, "chunks"> & { chunkCount: number };
 };
+
+class CommandProcessError extends Error {
+  constructor(
+    readonly processStarted: boolean,
+    readonly terminationConfirmed: boolean,
+  ) {
+    super("Command process failed.");
+  }
+}
 
 class BoundedStream {
   private bytes = 0;
@@ -470,6 +485,20 @@ export async function runDirectProcess(input: {
         observeStop();
       }),
     ]);
+  } catch {
+    if (!child.pid) throw new CommandProcessError(false, true);
+    let terminated = false;
+    let confirmed = false;
+    try {
+      terminated = await adapter.terminateTree(child.pid);
+      if (terminated) {
+        await exit.catch(() => ({ code: null, signal: null }));
+        confirmed = await adapter.confirmTreeExited(child.pid);
+      }
+    } catch {
+      confirmed = false;
+    }
+    throw new CommandProcessError(true, terminated && confirmed);
   } finally {
     input.registerTerminationRequest?.(null);
     clock.clearInterval(intervalHandle);
@@ -590,11 +619,12 @@ function finalizeCommandManifestFailure(
     effects(currentDatabase) {
       const tool = currentDatabase.prepare(`
         UPDATE execution_tool_calls
-        SET status='failed',error_code='SANDBOX_UNVERIFIABLE',
+        SET status=?,error_code='SANDBOX_UNVERIFIABLE',
             public_result_json=?,before_sandbox_hash=?,after_sandbox_hash=NULL,
             finished_at=strftime('%Y-%m-%dT%H:%M:%fZ','now')
         WHERE project_id=? AND id=? AND action_id=? AND status='requested'
       `).run(
+        input.postAction ? "interrupted" : "failed",
         JSON.stringify({ code: "SANDBOX_UNVERIFIABLE" }),
         input.preHash,
         input.projectId,
@@ -603,29 +633,17 @@ function finalizeCommandManifestFailure(
       );
       const attempt = currentDatabase.prepare(`
         UPDATE execution_attempts
-        SET status=?,finished_at=strftime('%Y-%m-%dT%H:%M:%fZ','now')
+        SET status='failed',finished_at=strftime('%Y-%m-%dT%H:%M:%fZ','now')
         WHERE project_id=? AND id=? AND execution_id=? AND status IN ('ready','acting')
-      `).run(
-        input.postAction ? "failed" : "interrupted",
-        input.projectId,
-        action.attemptId,
-        action.executionId,
-      );
+      `).run(input.projectId, action.attemptId, action.executionId);
       const execution = currentDatabase.prepare(`
         UPDATE executions
-        SET status=?,resume_target=?,reason_code='SANDBOX_UNVERIFIABLE',
+        SET status='failed',resume_target=NULL,reason_code='SANDBOX_UNVERIFIABLE',
             next_event_sequence=next_event_sequence+1,version=version+1,
             updated_at=strftime('%Y-%m-%dT%H:%M:%fZ','now')
         WHERE project_id=? AND id=? AND status='running'
           AND current_attempt_no=? AND next_event_sequence=?
-      `).run(
-        input.postAction ? "failed" : "paused",
-        input.postAction ? null : "running",
-        input.projectId,
-        action.executionId,
-        action.attemptNo,
-        action.sequence,
-      );
+      `).run(input.projectId, action.executionId, action.attemptNo, action.sequence);
       if (tool.changes !== 1 || attempt.changes !== 1 || execution.changes !== 1) {
         throw new Error("Manifest refresh failure lost its terminal CAS.");
       }
@@ -635,6 +653,101 @@ function finalizeCommandManifestFailure(
     projectId: input.projectId,
     result: { code: "SANDBOX_UNVERIFIABLE" },
     status: "failed",
+  });
+  return { affectedRows: committed.affectedRows, result: null };
+}
+
+function finalizeCommandFailure(
+  database: DatabaseSync,
+  input: {
+    action: CommandActionRow;
+    actionErrorCode: string;
+    actionStatus?: "failed" | "interrupted";
+    attemptStatus: "failed" | "interrupted" | "ready";
+    executionStatus: "failed" | "paused";
+    httpStatus: number;
+    leaseToken: string;
+    postManifest?: VerifiedSandboxManifest;
+    postManifestPath?: string;
+    preHash?: string;
+    projectId: string;
+    reasonCode: string;
+    resumeTarget: "running" | null;
+    toolStatus: "failed" | "interrupted";
+  },
+): { affectedRows: 0 | 1; result: null } {
+  const body = { error: { code: input.reasonCode } };
+  const committed = finalizeExecutionActionWithEffects(database, {
+    actionId: input.action.actionId,
+    body,
+    effects(currentDatabase) {
+      const tool = currentDatabase.prepare(`
+        UPDATE execution_tool_calls
+        SET status=?,error_code=?,public_result_json=?,
+            after_sandbox_hash=NULL,finished_at=strftime('%Y-%m-%dT%H:%M:%fZ','now')
+        WHERE project_id=? AND id=? AND (action_id=? OR action_id IS NULL)
+          AND status='requested'
+      `).run(
+        input.toolStatus,
+        input.reasonCode,
+        JSON.stringify({ code: input.reasonCode }),
+        input.projectId,
+        input.action.toolCallId,
+        input.action.actionId,
+      );
+      const attempt = input.postManifest
+        ? currentDatabase.prepare(`
+            UPDATE execution_attempts
+            SET status=?,sandbox_manifest_path=?,sandbox_manifest_hash=?,
+                finished_at=CASE WHEN ?='failed'
+                  THEN strftime('%Y-%m-%dT%H:%M:%fZ','now') ELSE NULL END
+            WHERE project_id=? AND id=? AND execution_id=? AND status IN ('ready','acting')
+              AND sandbox_manifest_hash=?
+          `).run(
+            input.attemptStatus,
+            input.postManifestPath ?? null,
+            input.postManifest.hash,
+            input.attemptStatus,
+            input.projectId,
+            input.action.attemptId,
+            input.action.executionId,
+            input.preHash ?? null,
+          )
+        : currentDatabase.prepare(`
+            UPDATE execution_attempts
+            SET status=?,finished_at=CASE WHEN ?='failed'
+              THEN strftime('%Y-%m-%dT%H:%M:%fZ','now') ELSE NULL END
+            WHERE project_id=? AND id=? AND execution_id=? AND status IN ('ready','acting')
+          `).run(
+            input.attemptStatus,
+            input.attemptStatus,
+            input.projectId,
+            input.action.attemptId,
+            input.action.executionId,
+          );
+      const execution = currentDatabase.prepare(`
+        UPDATE executions
+        SET status=?,resume_target=?,reason_code=?,
+            version=version+1,updated_at=strftime('%Y-%m-%dT%H:%M:%fZ','now')
+        WHERE project_id=? AND id=? AND status='running' AND current_attempt_no=?
+      `).run(
+        input.executionStatus,
+        input.resumeTarget,
+        input.reasonCode,
+        input.projectId,
+        input.action.executionId,
+        input.action.attemptNo,
+      );
+      if (tool.changes !== 1 || attempt.changes !== 1 || execution.changes !== 1) {
+        throw new Error("Command failure lost its terminal CAS.");
+      }
+    },
+    errorCode: input.actionErrorCode,
+    httpStatus: input.httpStatus,
+    leaseToken: input.leaseToken,
+    projectId: input.projectId,
+    result: { code: input.reasonCode },
+    status: input.actionStatus ?? "failed",
   });
   return { affectedRows: committed.affectedRows, result: null };
 }
@@ -666,47 +779,151 @@ export async function executeCommandProcessAction(input: {
   }
   const action = input.database.prepare(`
     SELECT a.id AS actionId,a.execution_id AS executionId,a.attempt_id AS attemptId,
-           a.request_hash AS requestHash,t.id AS toolCallId,
+           a.operation_id AS operationId,a.action_index AS actionIndex,
+           a.request_hash AS requestHash,a.lease_token AS leaseToken,
+           a.lease_expires_at AS leaseExpiresAt,a.overall_deadline_at AS overallDeadlineAt,
+           t.id AS toolCallId,t.before_sandbox_hash AS toolBeforeSandboxHash,
            t.public_request_json AS publicRequestJson,attempts.sandbox_root AS sandboxRoot,
            attempts.sandbox_manifest_hash AS sandboxManifestHash,
            e.current_attempt_no AS attemptNo,e.next_event_sequence AS sequence
     FROM execution_actions a
+    JOIN execution_operations operation
+      ON operation.project_id=a.project_id AND operation.id=a.operation_id
+     AND operation.execution_id=a.execution_id AND operation.status='pending'
     JOIN execution_tool_calls t
-      ON t.project_id=a.project_id AND t.action_id=a.id AND t.request_hash=a.request_hash
+      ON t.project_id=a.project_id AND t.execution_id=a.execution_id
+     AND t.attempt_id=a.attempt_id AND t.action_id=a.id AND t.request_hash=a.request_hash
     JOIN execution_attempts attempts
       ON attempts.project_id=a.project_id AND attempts.execution_id=a.execution_id
      AND attempts.id=a.attempt_id
     JOIN executions e ON e.project_id=a.project_id AND e.id=a.execution_id
     WHERE a.project_id=? AND a.operation_id=? AND a.action_index=?
       AND a.kind='command' AND a.status='running' AND a.lease_token=?
+      AND a.lease_expires_at>strftime('%Y-%m-%dT%H:%M:%fZ','now')
+      AND a.overall_deadline_at>strftime('%Y-%m-%dT%H:%M:%fZ','now')
       AND t.type='command' AND t.status='requested'
       AND attempts.status IN ('ready','acting')
-      AND e.status='running'
+      AND e.status='running' AND attempts.attempt_no=e.current_attempt_no
   `).get(
     input.projectId,
     input.operationId,
     input.actionIndex,
     acquired.leaseToken,
   ) as CommandActionRow | undefined;
-  if (!action) return { affectedRows: 0, result: null };
-
-  const approval = input.database.prepare(`
-    SELECT status,request_hash AS requestHash
-    FROM execution_approvals WHERE project_id=? AND tool_call_id=?
-  `).get(input.projectId, action.toolCallId) as
-    | { requestHash: string; status: string }
-    | undefined;
-  if (
-    (input.authorizationSource === "standing_policy" && approval)
-    || (
-      input.authorizationSource === "one_shot"
-      && (!approval || approval.status !== "approved" || approval.requestHash !== action.requestHash)
-    )
-  ) {
-    throw new Error("Command authorization source is not backed by durable approval state.");
+  if (!action) {
+    const unbound = input.database.prepare(`
+      SELECT a.id AS actionId,operation.execution_id AS executionId,
+             attempt.id AS attemptId,e.current_attempt_no AS attemptNo,
+             a.operation_id AS operationId,a.action_index AS actionIndex,
+             a.request_hash AS requestHash,a.lease_token AS leaseToken,
+             a.lease_expires_at AS leaseExpiresAt,a.overall_deadline_at AS overallDeadlineAt,
+             coalesce(linked_tool.id,approval_tool.id) AS toolCallId,
+             coalesce(linked_tool.public_request_json,approval_tool.public_request_json)
+               AS publicRequestJson,
+             coalesce(linked_tool.before_sandbox_hash,approval_tool.before_sandbox_hash)
+               AS toolBeforeSandboxHash,
+             attempt.sandbox_root AS sandboxRoot,
+             attempt.sandbox_manifest_hash AS sandboxManifestHash,
+             e.next_event_sequence AS sequence
+      FROM execution_actions a
+      JOIN execution_operations operation
+        ON operation.project_id=a.project_id AND operation.id=a.operation_id
+      JOIN executions e
+        ON e.project_id=operation.project_id AND e.id=operation.execution_id
+      JOIN execution_attempts attempt
+        ON attempt.project_id=e.project_id AND attempt.execution_id=e.id
+       AND attempt.attempt_no=e.current_attempt_no
+      LEFT JOIN execution_tool_calls linked_tool
+        ON linked_tool.project_id=a.project_id AND linked_tool.action_id=a.id
+      LEFT JOIN execution_approvals approval
+        ON approval.project_id=e.project_id AND approval.execution_id=e.id
+       AND approval.attempt_id=attempt.id AND approval.kind='command'
+       AND approval.status='consumed'
+      LEFT JOIN execution_tool_calls approval_tool
+        ON approval_tool.project_id=approval.project_id
+       AND approval_tool.id=approval.tool_call_id
+      WHERE a.project_id=? AND a.operation_id=? AND a.action_index=?
+        AND a.kind='command' AND a.status='running' AND a.lease_token=?
+    `).get(
+      input.projectId,
+      input.operationId,
+      input.actionIndex,
+      acquired.leaseToken,
+    ) as CommandActionRow | undefined;
+    if (!unbound?.toolCallId) return { affectedRows: 0, result: null };
+    return finalizeCommandFailure(input.database, {
+      action: unbound,
+      actionErrorCode: "COMMAND_AUTHORIZATION_INVALID",
+      attemptStatus: "failed",
+      executionStatus: "failed",
+      httpStatus: 409,
+      leaseToken: acquired.leaseToken,
+      projectId: input.projectId,
+      reasonCode: "COMMAND_AUTHORIZATION_INVALID",
+      resumeTarget: null,
+      toolStatus: "failed",
+    });
   }
 
-  const request = parseStoredCommandRequest(action.publicRequestJson);
+  const approvals = input.database.prepare(`
+    SELECT project_id AS projectId,execution_id AS executionId,attempt_id AS attemptId,
+           tool_call_id AS toolCallId,status,request_hash AS requestHash,input_hash AS inputHash
+    FROM execution_approvals
+    WHERE project_id=? AND tool_call_id=? AND kind='command'
+  `).all(input.projectId, action.toolCallId) as Array<{
+    attemptId: string;
+    executionId: string;
+    inputHash: string;
+    projectId: string;
+    requestHash: string;
+    status: string;
+    toolCallId: string;
+  }>;
+  const approval = approvals[0];
+  const oneShotAuthorized = approvals.length === 1
+    && approval.status === "consumed"
+    && approval.projectId === input.projectId
+    && approval.executionId === action.executionId
+    && approval.attemptId === action.attemptId
+    && approval.toolCallId === action.toolCallId
+    && approval.requestHash === action.requestHash
+    && approval.inputHash === action.toolBeforeSandboxHash
+    && approval.inputHash === action.sandboxManifestHash;
+  const authorizationValid = input.authorizationSource === "one_shot"
+    ? oneShotAuthorized
+    : approvals.length === 0;
+  if (!authorizationValid) {
+    return finalizeCommandFailure(input.database, {
+      action,
+      actionErrorCode: "COMMAND_AUTHORIZATION_INVALID",
+      attemptStatus: "failed",
+      executionStatus: "failed",
+      httpStatus: 409,
+      leaseToken: acquired.leaseToken,
+      projectId: input.projectId,
+      reasonCode: "COMMAND_AUTHORIZATION_INVALID",
+      resumeTarget: null,
+      toolStatus: "failed",
+    });
+  }
+
+  let request: ReturnType<typeof parseStoredCommandRequest>;
+  try {
+    request = parseStoredCommandRequest(action.publicRequestJson);
+  } catch {
+    return finalizeCommandFailure(input.database, {
+      action,
+      actionErrorCode: "COMMAND_AUTHORIZATION_INVALID",
+      attemptStatus: "failed",
+      executionStatus: "failed",
+      httpStatus: 409,
+      leaseToken: acquired.leaseToken,
+      projectId: input.projectId,
+      reasonCode: "COMMAND_AUTHORIZATION_INVALID",
+      resumeTarget: null,
+      toolStatus: "failed",
+    });
+  }
   const refreshManifest = input.manifestAdapter?.refreshSandboxManifest?.bind(
     input.manifestAdapter,
   );
@@ -734,29 +951,117 @@ export async function executeCommandProcessAction(input: {
       projectId: input.projectId,
     }, action);
   }
-  const processResult = await runDirectProcess({
-    args: request.args,
-    authorizationSource: input.authorizationSource,
-    clock: input.clock,
-    executable: request.executable,
-    heartbeat: () => heartbeatExecutionAction(input.database, {
-      actionId: action.actionId,
-      leaseToken: acquired.leaseToken!,
+  let processResult: DirectProcessResult;
+  try {
+    processResult = await runDirectProcess({
+      args: request.args,
+      authorizationSource: input.authorizationSource,
+      clock: input.clock,
+      executable: request.executable,
+      heartbeat: () => heartbeatExecutionAction(input.database, {
+        actionId: action.actionId,
+        leaseToken: acquired.leaseToken!,
+        projectId: input.projectId,
+      }).affectedRows === 1,
+      processAdapter: input.processAdapter,
+      registerTerminationRequest(request) {
+        if (request) processTerminationRequests.set(action.actionId, request);
+        else processTerminationRequests.delete(action.actionId);
+      },
+      sandboxRoot: action.sandboxRoot,
+      secretValues: input.secretValues,
+      workdir: request.workdir,
+    });
+  } catch (error) {
+    processTerminationRequests.delete(action.actionId);
+    if (error instanceof CommandProcessError && error.processStarted && !error.terminationConfirmed) {
+      return finalizeCommandFailure(input.database, {
+        action,
+        actionErrorCode: "PROCESS_TERMINATION_UNCONFIRMED",
+        attemptStatus: "failed",
+        executionStatus: "failed",
+        httpStatus: 503,
+        leaseToken: acquired.leaseToken,
+        projectId: input.projectId,
+        reasonCode: "PROCESS_TERMINATION_UNCONFIRMED",
+        resumeTarget: null,
+        toolStatus: "interrupted",
+      });
+    }
+    let failedPostManifest: VerifiedSandboxManifest | undefined;
+    let failedPostManifestPath: string | undefined;
+    if (error instanceof CommandProcessError && error.processStarted) {
+      try {
+        failedPostManifest = manifestAdapter
+          ? await manifestAdapter({ sandboxRoot: action.sandboxRoot })
+          : undefined;
+        if (failedPostManifest) {
+          failedPostManifestPath = await persistVerifiedSandboxManifest(
+            action.sandboxRoot,
+            failedPostManifest,
+          );
+        }
+      } catch {
+        return finalizeCommandManifestFailure(input.database, {
+          leaseToken: acquired.leaseToken,
+          postAction: true,
+          preHash: preManifest?.hash ?? null,
+          projectId: input.projectId,
+        }, action);
+      }
+    }
+    return finalizeCommandFailure(input.database, {
+      action,
+      actionErrorCode: "COMMAND_PROCESS_FAILED",
+      attemptStatus: "ready",
+      executionStatus: "paused",
+      httpStatus: 500,
+      leaseToken: acquired.leaseToken,
+      postManifest: failedPostManifest,
+      postManifestPath: failedPostManifestPath,
+      preHash: preManifest?.hash ?? undefined,
       projectId: input.projectId,
-    }).affectedRows === 1,
-    processAdapter: input.processAdapter,
-    registerTerminationRequest(request) {
-      if (request) processTerminationRequests.set(action.actionId, request);
-      else processTerminationRequests.delete(action.actionId);
-    },
-    sandboxRoot: action.sandboxRoot,
-    secretValues: input.secretValues,
-    workdir: request.workdir,
-  });
+      reasonCode: "COMMAND_PROCESS_FAILED",
+      resumeTarget: "running",
+      toolStatus: "failed",
+    });
+  }
+  if (processResult.status === "termination_unconfirmed") {
+    const terminal = finalizeCommandFailure(input.database, {
+      action,
+      actionErrorCode: "PROCESS_TERMINATION_UNCONFIRMED",
+      attemptStatus: "failed",
+      executionStatus: "failed",
+      httpStatus: 503,
+      leaseToken: acquired.leaseToken,
+      projectId: input.projectId,
+      reasonCode: "PROCESS_TERMINATION_UNCONFIRMED",
+      resumeTarget: null,
+      toolStatus: "interrupted",
+    });
+    return terminal.affectedRows === 1
+      ? { affectedRows: 1, result: storedResult(processResult) }
+      : terminal;
+  }
+  if (processResult.status === "lease_lost") {
+    return finalizeCommandFailure(input.database, {
+      action,
+      actionErrorCode: "ACTION_LEASE_LOST",
+      actionStatus: "interrupted",
+      attemptStatus: "interrupted",
+      executionStatus: "paused",
+      httpStatus: 409,
+      leaseToken: acquired.leaseToken,
+      projectId: input.projectId,
+      reasonCode: "ACTION_LEASE_LOST",
+      resumeTarget: "running",
+      toolStatus: "interrupted",
+    });
+  }
   let postManifest: VerifiedSandboxManifest | null = null;
   let postManifestPath: string | null = null;
   try {
-    postManifest = manifestAdapter && processResult.status !== "termination_unconfirmed"
+    postManifest = manifestAdapter
       ? await manifestAdapter({ sandboxRoot: action.sandboxRoot })
       : null;
     if (postManifest) {
@@ -770,17 +1075,30 @@ export async function executeCommandProcessAction(input: {
       projectId: input.projectId,
     }, action);
   }
-  await input.hooks?.afterProcess?.();
+  try {
+    await input.hooks?.afterProcess?.();
+  } catch {
+    return finalizeCommandFailure(input.database, {
+      action,
+      actionErrorCode: "INTERNAL_ERROR",
+      attemptStatus: "failed",
+      executionStatus: "failed",
+      httpStatus: 500,
+      leaseToken: acquired.leaseToken,
+      projectId: input.projectId,
+      reasonCode: "INTERNAL_ERROR",
+      resumeTarget: null,
+      toolStatus: "interrupted",
+    });
+  }
   const result = storedResult(processResult);
-  const terminationUnconfirmed = processResult.status === "termination_unconfirmed";
-  const leaseLost = processResult.status === "lease_lost";
-  const toolStatus = terminationUnconfirmed || leaseLost
-    ? "interrupted"
-    : processResult.status === "completed" && processResult.exitCode === 0
+  const toolStatus = processResult.status === "completed" && processResult.exitCode === 0
       ? "succeeded"
       : "failed";
-  const httpStatus = terminationUnconfirmed ? 500 : 200;
-  const committed = finalizeExecutionActionWithEffects(input.database, {
+  const httpStatus = 200;
+  let committed: { affectedRows: 0 | 1 };
+  try {
+    committed = finalizeExecutionActionWithEffects(input.database, {
     actionId: action.actionId,
     body: input.responseBody ?? { result },
     effects(database) {
@@ -799,7 +1117,7 @@ export async function executeCommandProcessAction(input: {
         action.actionId,
       );
       if (updatedTool.changes !== 1) throw new Error("Command tool call changed before commit.");
-      const policyEntry = request.executableIdentity
+      const policyEntry = input.authorizationSource === "standing_policy" && request.executableIdentity
         ? database.prepare(`
             SELECT entry.id,entry.required
             FROM execution_attempts attempt
@@ -906,33 +1224,14 @@ export async function executeCommandProcessAction(input: {
         output: processResult.stderr,
         projectId: input.projectId,
       });
-      if (terminationUnconfirmed) {
-        const failedAttempt = database.prepare(`
-          UPDATE execution_attempts
-          SET status='failed',finished_at=strftime('%Y-%m-%dT%H:%M:%fZ','now')
-          WHERE project_id=? AND id=? AND execution_id=? AND status IN ('ready','acting')
-        `).run(input.projectId, action.attemptId, action.executionId);
-        const failedExecution = database.prepare(`
-          UPDATE executions
-          SET status='failed',resume_target=NULL,reason_code='PROCESS_TERMINATION_UNCONFIRMED',
-              next_event_sequence=next_event_sequence+1,
-              updated_at=strftime('%Y-%m-%dT%H:%M:%fZ','now'),version=version+1
-          WHERE project_id=? AND id=? AND status='running'
-            AND current_attempt_no=? AND next_event_sequence=?
-        `).run(input.projectId, action.executionId, action.attemptNo, action.sequence);
-        if (failedAttempt.changes !== 1 || failedExecution.changes !== 1) {
-          throw new Error("Unconfirmed process termination could not fail closed.");
-        }
-      } else {
-        const execution = database.prepare(`
-          UPDATE executions
-          SET next_event_sequence=next_event_sequence+1,
-              updated_at=strftime('%Y-%m-%dT%H:%M:%fZ','now'),version=version+1
-          WHERE project_id=? AND id=? AND status='running'
-            AND current_attempt_no=? AND next_event_sequence=?
-        `).run(input.projectId, action.executionId, action.attemptNo, action.sequence);
-        if (execution.changes !== 1) throw new Error("Execution changed before command commit.");
-      }
+      const execution = database.prepare(`
+        UPDATE executions
+        SET next_event_sequence=next_event_sequence+1,
+            updated_at=strftime('%Y-%m-%dT%H:%M:%fZ','now'),version=version+1
+        WHERE project_id=? AND id=? AND status='running'
+          AND current_attempt_no=? AND next_event_sequence=?
+      `).run(input.projectId, action.executionId, action.attemptNo, action.sequence);
+      if (execution.changes !== 1) throw new Error("Execution changed before command commit.");
       database.prepare(`
         INSERT INTO execution_events (
           id,project_id,execution_id,sequence,attempt_no,type,actor_type,
@@ -963,7 +1262,21 @@ export async function executeCommandProcessAction(input: {
     projectId: input.projectId,
     result,
     status: toolStatus === "succeeded" ? "succeeded" : "failed",
-  });
+    });
+  } catch {
+    return finalizeCommandFailure(input.database, {
+      action,
+      actionErrorCode: "INTERNAL_ERROR",
+      attemptStatus: "failed",
+      executionStatus: "failed",
+      httpStatus: 500,
+      leaseToken: acquired.leaseToken,
+      projectId: input.projectId,
+      reasonCode: "INTERNAL_ERROR",
+      resumeTarget: null,
+      toolStatus: "interrupted",
+    });
+  }
   return committed.affectedRows === 1
     ? { affectedRows: 1, result }
     : { affectedRows: 0, result: null };

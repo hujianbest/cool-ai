@@ -4,7 +4,7 @@ import type { DatabaseSync } from "node:sqlite";
 import { ExecutionError } from "@/src/server/execution/execution-service";
 
 type CasResult = { affectedRows: 0 | 1 };
-type TerminalStatus = "succeeded" | "failed";
+type TerminalStatus = "succeeded" | "failed" | "interrupted" | "discarded";
 
 const DB_NOW = "strftime('%Y-%m-%dT%H:%M:%fZ','now')";
 const DB_LEASE_END = "strftime('%Y-%m-%dT%H:%M:%fZ','now','+120 seconds')";

@@ -268,6 +268,34 @@ function seedCommandAction(databasePath: string): void {
   }
 }
 
+function seedConsumedOneShot(databasePath: string): void {
+  seedCommandAction(databasePath);
+  const database = openDatabase(databasePath);
+  const hash = "a".repeat(64);
+  try {
+    database.exec(`
+      UPDATE execution_attempts
+      SET baseline_manifest_hash='${hash}',sandbox_manifest_hash='${hash}'
+      WHERE id='attempt';
+      UPDATE execution_tool_calls SET before_sandbox_hash='${hash}'
+      WHERE id='command-tool';
+      INSERT INTO execution_approvals (
+        id,project_id,execution_id,attempt_id,tool_call_id,kind,status,
+        request_hash,input_hash,staged_hash,public_request_json,
+        decided_at,consumed_at,created_at
+      ) VALUES (
+        'command-approval','process-project','execution','attempt','command-tool',
+        'command','consumed','${hash}','${hash}',NULL,'{}',
+        strftime('%Y-%m-%dT%H:%M:%fZ','now'),
+        strftime('%Y-%m-%dT%H:%M:%fZ','now'),
+        strftime('%Y-%m-%dT%H:%M:%fZ','now')
+      );
+    `);
+  } finally {
+    database.close();
+  }
+}
+
 describe("direct process runner", () => {
   it("spawns executable and args directly in sandbox with fixed minimal environment", async () => {
     const childScript = script("inspect-child.mjs", `
@@ -557,6 +585,113 @@ describe("direct process runner", () => {
     }
   });
 
+  it("terminalizes a synchronous spawn exception without orphaning the action or receipt", async () => {
+    const databasePath = join(directory, "spawn-exception.sqlite");
+    seedCommandAction(databasePath);
+    const database = openDatabase(databasePath);
+    const adapter: ProcessAdapter = {
+      confirmTreeExited: async () => true,
+      spawn: () => {
+        throw new Error("spawn failed before process start");
+      },
+      terminateTree: async () => true,
+    };
+    try {
+      await runner.executeCommandProcessAction({
+        actionIndex: 0,
+        authorizationSource: "standing_policy",
+        database,
+        operationId: "00000000-0000-4000-8000-000000000013",
+        processAdapter: adapter,
+        projectId: "process-project",
+      }).catch(() => undefined);
+
+      expect(database.prepare(`
+        SELECT status,error_code AS errorCode FROM execution_actions
+        WHERE id='command-action'
+      `).get()).toEqual({ errorCode: "COMMAND_PROCESS_FAILED", status: "failed" });
+      expect(database.prepare(`
+        SELECT status,http_status AS httpStatus FROM execution_operations
+        WHERE id='00000000-0000-4000-8000-000000000013'
+      `).get()).toEqual({ httpStatus: 500, status: "completed" });
+      expect(database.prepare(`
+        SELECT status,resume_target AS resumeTarget,reason_code AS reasonCode
+        FROM executions WHERE id='execution'
+      `).get()).toEqual({
+        reasonCode: "COMMAND_PROCESS_FAILED",
+        resumeTarget: "running",
+        status: "paused",
+      });
+      expect(database.prepare("SELECT status FROM execution_attempts WHERE id='attempt'").get())
+        .toEqual({ status: "ready" });
+      expect(database.prepare("SELECT status FROM execution_tool_calls WHERE id='command-tool'").get())
+        .toEqual({ status: "failed" });
+      expect(database.prepare(`
+        SELECT count(*) AS count FROM execution_actions WHERE status='running'
+      `).get()).toEqual({ count: 0 });
+      expect(database.prepare(`
+        SELECT count(*) AS count FROM execution_operations WHERE status='pending'
+      `).get()).toEqual({ count: 0 });
+    } finally {
+      database.close();
+    }
+  });
+
+  it.each([
+    ["approval input", "UPDATE execution_approvals SET input_hash=? WHERE id='command-approval'"],
+    ["tool input", "UPDATE execution_tool_calls SET before_sandbox_hash=? WHERE id='command-tool'"],
+    ["action request", "UPDATE execution_actions SET request_hash=? WHERE id='command-action'"],
+    ["tool action link", "UPDATE execution_tool_calls SET action_id=NULL WHERE id='command-tool'"],
+  ] as const)("rejects %s tamper before spawn and terminalizes authorization", async (_label, mutation) => {
+    const databasePath = join(directory, `tamper-${_label.replace(" ", "-")}.sqlite`);
+    seedConsumedOneShot(databasePath);
+    const database = openDatabase(databasePath);
+    let spawnCount = 0;
+    const adapter: ProcessAdapter = {
+      confirmTreeExited: async () => true,
+      spawn: () => {
+        spawnCount += 1;
+        return fakeChild();
+      },
+      terminateTree: async () => true,
+    };
+    try {
+      if (mutation.includes("?")) {
+        database.prepare(mutation).run("b".repeat(64));
+      } else {
+        database.prepare(mutation).run();
+      }
+      await runner.executeCommandProcessAction({
+        actionIndex: 0,
+        authorizationSource: "one_shot",
+        database,
+        operationId: "00000000-0000-4000-8000-000000000013",
+        processAdapter: adapter,
+        projectId: "process-project",
+      });
+      expect(spawnCount).toBe(0);
+      expect(database.prepare(`
+        SELECT status,error_code AS errorCode FROM execution_actions
+        WHERE id='command-action'
+      `).get()).toEqual({
+        errorCode: "COMMAND_AUTHORIZATION_INVALID",
+        status: "failed",
+      });
+      expect(database.prepare(`
+        SELECT status,http_status AS httpStatus FROM execution_operations
+        WHERE id='00000000-0000-4000-8000-000000000013'
+      `).get()).toEqual({ httpStatus: 409, status: "completed" });
+      expect(database.prepare(`
+        SELECT count(*) AS count FROM execution_actions WHERE status='running'
+      `).get()).toEqual({ count: 0 });
+      expect(database.prepare(`
+        SELECT count(*) AS count FROM execution_operations WHERE status='pending'
+      `).get()).toEqual({ count: 0 });
+    } finally {
+      database.close();
+    }
+  });
+
   it.each(["stop", "reconcile"] as const)(
     "drops late process facts after %s wins and preserves its exact receipt",
     async (winner) => {
@@ -671,7 +806,7 @@ describe("direct process runner", () => {
       expect(database.prepare(`
         SELECT status,http_status AS httpStatus FROM execution_operations
         WHERE id='00000000-0000-4000-8000-000000000013'
-      `).get()).toEqual({ httpStatus: 500, status: "completed" });
+      `).get()).toEqual({ httpStatus: 503, status: "completed" });
       expect(database.prepare("SELECT COUNT(*) AS count FROM execution_validation_results").get())
         .toEqual({ count: 0 });
       expect(database.prepare("SELECT COUNT(*) AS count FROM execution_staged_results").get())

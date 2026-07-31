@@ -1,10 +1,11 @@
-import { mkdtempSync, rmSync } from "node:fs";
+import { existsSync, mkdirSync, mkdtempSync, readFileSync, rmSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import type { DatabaseSync } from "node:sqlite";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
 import { canonicalRequestHash } from "@/src/server/collaboration/operation-receipts";
+import { createCredentialVault } from "@/src/server/credential-vault";
 import { openDatabase } from "@/src/server/db";
 import { controlExecution } from "@/src/server/execution/execution-control-service";
 
@@ -43,6 +44,15 @@ type ApprovalModule = {
   };
 };
 
+type AdvanceModule = {
+  advanceExecution(
+    databasePath: string,
+    executionId: string,
+    input: { expectedVersion: number; operationId: string },
+    dependencies: { fileAdapter: object },
+  ): Promise<{ body: Record<string, unknown>; status: number }>;
+};
+
 const NOW = "2026-07-30T08:00:00.000Z";
 const PROJECT_ID = "approval-project";
 const EXECUTION_ID = "approval-execution";
@@ -50,9 +60,9 @@ const ATTEMPT_ID = "approval-attempt";
 const TOOL_CALL_ID = "approval-tool-call";
 const APPROVAL_ID = "approval-command";
 const CONTEXT_HASH = "c".repeat(64);
-const INPUT_HASH = "i".repeat(64).replaceAll("i", "1");
 const REQUEST_HASH = "a".repeat(64);
 const MANIFEST_HASH = "b".repeat(64);
+const MASTER_KEY = Buffer.alloc(32, 43).toString("base64url");
 const STAGED_HASH = "d".repeat(64);
 const POLICY_HASH =
   "4f53cda18c2baa0c0354bb5f9a3ecbe5ed12ab4d8e11ba873c2f11161202b945";
@@ -61,6 +71,7 @@ let directory: string;
 let databasePath: string;
 let database: DatabaseSync;
 let approvals: ApprovalModule;
+let advance: AdvanceModule;
 let sequence: number;
 
 function operationId(): string {
@@ -69,6 +80,9 @@ function operationId(): string {
 }
 
 function seed(): void {
+  const credential = createCredentialVault().encrypt("approval-provider", "approval-secret");
+  const sandboxRoot = join(directory, "sandbox").replaceAll("'", "''");
+  mkdirSync(sandboxRoot, { recursive: true });
   database.exec(`
     INSERT INTO projects (id,name,created_at,workspace_path,workspace_key,version)
     VALUES ('${PROJECT_ID}','Approvals','${NOW}','D:\\approval','d:/approval',1);
@@ -77,8 +91,9 @@ function seed(): void {
       credential_version,credential_generation,key_id,api_key_mask,verified_at,
       version,created_at,updated_at
     ) VALUES (
-      'approval-provider','Provider','http://127.0.0.1:4000/v1','model','c','i','t',
-      1,1,'k','***','${NOW}',1,'${NOW}','${NOW}'
+      'approval-provider','Provider','http://127.0.0.1:4000/v1','model',
+      '${credential.apiKeyCipher}','${credential.apiKeyIv}','${credential.apiKeyTag}',
+      1,1,'${credential.keyId}','${credential.apiKeyMask}','${NOW}',1,'${NOW}','${NOW}'
     );
     INSERT INTO agents (
       id,name,role,system_prompt,provider_id,model,avatar_text,accent_token,
@@ -131,7 +146,7 @@ function seed(): void {
       frozen_policy_revision_id,frozen_policy_version,frozen_policy_hash,
       started_at,finished_at
     ) VALUES (
-      '${ATTEMPT_ID}','${PROJECT_ID}','${EXECUTION_ID}',1,'ready','D:\\approval\\sandbox',
+      '${ATTEMPT_ID}','${PROJECT_ID}','${EXECUTION_ID}',1,'ready','${sandboxRoot}',
       NULL,'${MANIFEST_HASH}','${MANIFEST_HASH}','{}','{}','${CONTEXT_HASH}',
       'approval-policy',1,'${POLICY_HASH}','${NOW}',NULL
     );
@@ -140,17 +155,18 @@ function seed(): void {
 }
 
 function commandPublicRequest() {
+  const markerPath = join(directory, "one-shot-spawned.txt");
   return {
     agentPermission: "execute",
-    args: ["test", "--run"],
+    args: ["-e", `require("node:fs").appendFileSync(${JSON.stringify(markerPath)}, "spawned\\n")`],
     attemptId: ATTEMPT_ID,
     attemptNo: 1,
     classifierVersion: 1,
     contextHash: CONTEXT_HASH,
-    executable: "C:/verified/node.exe",
+    executable: process.execPath,
     executableIdentity: "f".repeat(64),
     expectedEffect: "Run tests",
-    inputHash: INPUT_HASH,
+    inputHash: MANIFEST_HASH,
     policySource: { hash: POLICY_HASH, revisionId: "approval-policy", version: 1 },
     riskReasons: ["UNLISTED_COMMAND"],
     type: "command",
@@ -190,7 +206,7 @@ function seedCommandApproval(): void {
     ATTEMPT_ID,
     TOOL_CALL_ID,
     REQUEST_HASH,
-    INPUT_HASH,
+    MANIFEST_HASH,
     JSON.stringify({ ...publicRequest, parseResult: "unknown_non_path", requestHash: REQUEST_HASH }),
     NOW,
   );
@@ -221,6 +237,7 @@ async function decide(
 }
 
 beforeEach(async () => {
+  vi.stubEnv("COCKPIT_MASTER_KEY", MASTER_KEY);
   directory = mkdtempSync(join(tmpdir(), "cool-ai-execution-approvals-"));
   databasePath = join(directory, "cockpit.sqlite");
   database = openDatabase(databasePath);
@@ -229,6 +246,8 @@ beforeEach(async () => {
   try {
     const servicePath = "@/src/server/execution/execution-approval-service";
     approvals = await import(/* @vite-ignore */ servicePath) as ApprovalModule;
+    const advancePath = "@/src/server/execution/action-orchestrator";
+    advance = await import(/* @vite-ignore */ advancePath) as AdvanceModule;
   } catch {
     expect.fail("The T-25 execution approval service is unavailable.");
   }
@@ -241,6 +260,37 @@ afterEach(() => {
 });
 
 describe("execution approvals", () => {
+  it("advances an approved one-shot command through consume and executes it exactly once", async () => {
+    await decide("approve");
+    const markerPath = join(directory, "one-shot-spawned.txt");
+    const advanceOperationId = operationId();
+
+    const result = await advance.advanceExecution(
+      databasePath,
+      EXECUTION_ID,
+      { expectedVersion: 2, operationId: advanceOperationId },
+      { fileAdapter: {} },
+    );
+
+    expect(result.status).toBe(200);
+    expect(existsSync(markerPath)).toBe(true);
+    expect(row("execution_approvals", "id=?", APPROVAL_ID).status).toBe("consumed");
+    expect(database.prepare(`
+      SELECT count(*) AS count FROM execution_actions WHERE status='running'
+    `).get()).toEqual({ count: 0 });
+    expect(database.prepare(`
+      SELECT count(*) AS count FROM execution_operations WHERE status='pending'
+    `).get()).toEqual({ count: 0 });
+
+    await expect(advance.advanceExecution(
+      databasePath,
+      EXECUTION_ID,
+      { expectedVersion: 2, operationId: advanceOperationId },
+      { fileAdapter: {} },
+    )).resolves.toEqual(result);
+    expect(readFileSync(markerPath, "utf8")).toBe("spawned\n");
+  });
+
   it("approves an exact command once and atomically consumes it into one command action", async () => {
     const approved = await decide("approve");
     expect(approved.body).toMatchObject({

@@ -1517,7 +1517,17 @@ export async function advanceExecution(
       if (executed.affectedRows !== 1) {
         throw new ExecutionError("ACTION_LEASE_LOST", 409, "Command result was discarded.");
       }
-      return { body, status: 200 };
+      const completed = readExecutionOperation(database, {
+        kind: "advance",
+        operationId: input.operationId,
+        projectId: consumed.projectId,
+        requestHash: hash,
+        responseSchema: anyResponseSchema,
+      });
+      if (!completed) {
+        throw new ExecutionError("INTERNAL_ERROR", 500, "Command receipt was not completed.");
+      }
+      return completed;
     }
     if (!["queued", "running"].includes(row.status)) {
       throw new ExecutionError("EXECUTION_STATE_CONFLICT", 409, "Execution cannot advance.");

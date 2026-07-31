@@ -1013,10 +1013,41 @@ start 在同一 SQLite read transaction生成:
 
 1. command 非 absolute-deny、非 frozen exact policy时创建 tool call pending + approval pending，execution=`waiting_approval`。
 2. `approve` 绑定 execution/attempt/tool call、canonical request hash、当前 sandbox manifest/input hash；状态 approved，但不在批准 HTTP请求内启动命令。
-3. 下一 `advance` 在事务内原子 `approved→consumed`、execution→running并取得 command lease；只有该 CAS 胜者启动。
+3. 下一 `advance` 在事务内原子 `approved→consumed`、execution→running并建立唯一 pending command action/parent receipt。消费时必须令 `approval.input_hash = tool.before_sandbox_hash = attempt.sandbox_manifest_hash`；action 只直接持有与 approval/tool 相同的 `request_hash`，并由 `tool.action_id`、三表 `(project_id,execution_id,attempt_id)` 复合身份和 action 的 operation/action-index 间接绑定到该 input hash。事务提交后只有取得该 action lease 的 CAS 胜者可启动命令；不新增或改动 v5 DDL。
 4. reject/revoke/replace 分别置 approval终态，execution→paused，`resume_target=running`和对应 reason；continue 后下一模型回合收到 typed rejection。replace 只废弃旧请求，不允许 owner改参数。
 5. execution stale/conflict/retry/stop、attempt变化、任一 tuple/hash变化全部 expire；consumed不能撤销，只能 pause/stop请求终止进程。
 6. 无 required validation 的 staged merge approval同理绑定 staged hash，消费发生在 merge prepare事务；它不放宽任何 guard。
+
+一次性命令的执行授权不是“存在一条 consumed approval”，而是消费事务建立的完整因果链。`process-runner` 在 spawn 前从当前 leased command action 反查 `tool.action_id=action.id` 的唯一 command tool，再反查 `approval.tool_call_id=tool.id` 的唯一 approval，并同时证明：
+
+- approval=`consumed`，approval/tool/action 的 `(project_id,execution_id,attempt_id)` 完全相等，且都指向当前 execution/current attempt；
+- `approval.request_hash = tool.request_hash = action.request_hash`；
+- `approval.input_hash = tool.before_sandbox_hash = consume 时及执行前重读的 attempt.sandbox_manifest_hash`；
+- action 的 `operation_id/action_index/status='running'/lease_token/lease expiry/overall deadline` 仍是当前 CAS 胜者，execution=`running`，attempt=`ready|acting`。
+
+只有这组真实 v5 列上的精确绑定事实可放行 `authorizationSource='one_shot'`。`pending`、尚未消费的 `approved`、`expired/rejected/revoked/replaced`、来自旧 attempt/action/operation 的 consumed、同 hash 但不同 tool call，以及 `approval.input_hash`、`tool.before_sandbox_hash`、`tool.action_id`、action 的复合 identity/request_hash/operation_id/action_index/lease 任一篡改或 replay，spawn 次数均为 0。standing policy 继续只凭冻结 policy revision 的 exact executable identity/args/workdir 匹配，不要求或借用 approval 行；存在 command approval 反而是 authorization source 冲突。
+
+consume 提交后，command action 的所有同步/异步出口由统一 terminalizer 收口。`manifest` 列中的 `pre`/`post` 指 attempt 的持久 `sandbox_manifest_hash`；`validation=matching` 仅指 frozen standing-policy entry exact match 时写一条绑定 postHash 的结果，one-shot 不凭 approval 伪造 validation。唯一持久矩阵如下，未列组合禁止出现：
+
+| 出口 | command action；advance receipt | execution（resume/reason）；owner 后续 | attempt；tool | manifest；validation |
+|---|---|---|---|---|
+| success（exit=0） | `succeeded(null)`；completed 200、无 error code | `running`（null/null）；自动进入下一模型动作 | `ready`；`succeeded` | pre-refresh 相等且 pointer→postHash；matching validation=`succeeded=1` |
+| nonzero exit | `failed(null)`；completed 200、无 error code | `running`（null/null）；自动进入下一模型动作 | `ready`；`failed`，保留 exit/output | pointer→postHash；matching validation=`succeeded=0` |
+| 120s process timeout，进程树已确认终止且 process finalizer 先赢 | `failed(null)`；completed 200、无 error code | `running`（null/null）；自动进入下一模型动作 | `ready`；`failed`，保留 `timed_out` 结果 | pointer→postHash；validation=0 |
+| spawn 同步/异步异常，确认进程从未启动 | `failed(COMMAND_PROCESS_FAILED)`；completed 500 `COMMAND_PROCESS_FAILED` | `paused`（resume=`running`, reason=`COMMAND_PROCESS_FAILED`）；continue | `ready`；`failed` | pointer 保持 preHash；validation=0 |
+| run/stream/adapter 异常，进程树已确认终止且 post-refresh 成功 | `failed(COMMAND_PROCESS_FAILED)`；completed 500 `COMMAND_PROCESS_FAILED` | `paused`（resume=`running`, reason=`COMMAND_PROCESS_FAILED`）；continue | `ready`；`failed`，只持久脱敏有界摘要 | pointer→postHash；validation=0 |
+| 任一终止请求无法确认进程树已退出 | `failed(PROCESS_TERMINATION_UNCONFIRMED)`；completed 503 `PROCESS_TERMINATION_UNCONFIRMED` | `failed`（resume=null, reason=`PROCESS_TERMINATION_UNCONFIRMED`）；retry 新 attempt | `failed`；`interrupted` | pointer 保持 preHash且旧 attempt 永不可 stage；validation=0 |
+| pre-manifest refresh/parse/identity 失败或与 consumed input hash 不等 | `failed(SANDBOX_UNVERIFIABLE)`；completed 422 `SANDBOX_UNVERIFIABLE` | `failed`（resume=null, reason=`SANDBOX_UNVERIFIABLE`）；retry 新 attempt | `failed`；`failed` | pointer 保持旧值且视为不可信；validation=0；spawn=0 |
+| post-manifest refresh/parse/persist 失败 | `failed(SANDBOX_UNVERIFIABLE)`；completed 422 `SANDBOX_UNVERIFIABLE` | `failed`（resume=null, reason=`SANDBOX_UNVERIFIABLE`）；retry 新 attempt | `failed`；`interrupted` | pointer 保持 preHash且旧 attempt 永不可 stage；validation=0 |
+| artifact/validation/tool/result/event/final receipt 事务异常或回滚 | fallback CAS=`failed(INTERNAL_ERROR)`；completed 500 `INTERNAL_ERROR` | `failed`（resume=null, reason=`INTERNAL_ERROR`）；retry 新 attempt | `failed`；`interrupted` | pointer 保持事务前值；事务内 manifest/validation/artifact/result/event 全部为0 |
+| owner pause 先赢且进程树已确认终止 | `discarded(OWNER_PAUSED)`；completed 409 `EXECUTION_STATE_CONFLICT` | `paused`（resume=`running`, reason=`OWNER_PAUSED`）；continue 前由 control cleanup 完成一次 verified refresh | `ready`；`discarded` | 未启动则保持 preHash；已启动则 control cleanup pointer→postHash；validation=0 |
+| owner stop 先赢 | `discarded(OWNER_STOPPED)`；completed 409 `EXECUTION_STATE_CONFLICT` | `stopped`（resume=null, reason=`OWNER_STOPPED`）；无 continue/retry | `ready`；`discarded` | pointer 不再推进；validation=0；任何 late facts=0 |
+| command lease expiry reconcile 先赢且进程树已确认终止 | `interrupted(ACTION_LEASE_LOST)`；completed 409 `ACTION_LEASE_LOST` | `paused`（resume=`running`, reason=`ACTION_LEASE_LOST`）；只允许 retry 新 attempt | `interrupted`；`interrupted` | pointer 保持 preHash；validation=0 |
+| command overall deadline reconcile 先赢且进程树已确认终止 | `interrupted(ACTION_DEADLINE_EXCEEDED)`；completed 504 `ACTION_DEADLINE_EXCEEDED` | `paused`（resume=`running`, reason=`ACTION_DEADLINE_EXCEEDED`）；只允许 retry 新 attempt | `interrupted`；`interrupted` | pointer 保持 preHash；validation=0 |
+
+authorization chain 无效或 stored request 无效使用 `COMMAND_AUTHORIZATION_INVALID` 409：action=`failed`、receipt=completed、execution/attempt=`failed`、tool=`failed`、manifest pointer不变、validation=0，owner只可 retry 新 attempt。owner pause 的 control operation 必须先请求并确认 command tree 终止，再原子提交 pause 行；无法确认时不暴露 paused，而由该 control operation 按 `PROCESS_TERMINATION_UNCONFIRMED` 行失败关闭。owner stop 已是终态，终止不确定只追加固定审计且不得改变 stopped 或提交 manifest/validation。每行在事务提交及数据库重开后均要求 running command action=0、pending advance receipt=0。
+
+owner pause/stop、lease/deadline reconcile 与 process finalizer 以 action status+lease CAS 竞争：胜者在同一事务写完该行 action/receipt/execution/attempt/tool 状态；late finalizer CAS=0，只读取胜者 receipt，artifact/validation/manifest/result/event 写入均为0，不得恢复 running、覆盖 owner 状态或改写 HTTP/code。terminalizer 主事务注入失败时以新短事务执行 persist 行的 fallback CAS；若 control/reconcile 已赢则 fallback 也必须 CAS=0。
 
 ## 6. API、DTO、错误与事件契约
 
@@ -1154,11 +1185,11 @@ DTO 只含上述字段。stdout/stderr/diff/tool content均是边界内脱敏文
 - 400: `INVALID_JSON`, `INVALID_INPUT`, `INVALID_CURSOR`, `STRUCTURED_OUTPUT_INVALID`, `PATH_INVALID`, `TEXT_INVALID`
 - 403: `AGENT_PERMISSION_REQUIRED`, `COMMAND_ABSOLUTELY_DENIED`, `OWNER_REQUIRED`
 - 404: `PROJECT_NOT_FOUND`, `EXECUTION_NOT_FOUND`, `WORK_ITEM_NOT_FOUND`, `APPROVAL_NOT_FOUND`, `POLICY_NOT_FOUND`, `POLICY_REVISION_NOT_FOUND`, `VALIDATION_NOT_FOUND`, `ARTIFACT_NOT_FOUND`, `STAGED_OBSERVATION_NOT_FOUND`, `CHUNK_NOT_FOUND`
-- 409: `TASK_NOT_ELIGIBLE`, `PROJECT_EXECUTION_LIMIT`, `TASK_EXECUTION_ACTIVE`, `AGENT_EXECUTION_ACTIVE`, `EXECUTION_STATE_CONFLICT`, `OPERATION_CONFLICT`, `OPERATION_IN_PROGRESS`, `ACTION_LEASE_LOST`, `EXECUTION_TIME_LIMIT`, `STALE_EXECUTION`, `PATH_CONFLICT`, `SANDBOX_FILE_CONFLICT`, `APPROVAL_STATE_CONFLICT`, `MERGE_RECOVERY_REQUIRED`, `MANUAL_RECOVERY_REQUIRED`, `RECOVERY_MANIFEST_MISMATCH`, `MERGE_ALREADY_COMMITTED`
+- 409: `TASK_NOT_ELIGIBLE`, `PROJECT_EXECUTION_LIMIT`, `TASK_EXECUTION_ACTIVE`, `AGENT_EXECUTION_ACTIVE`, `EXECUTION_STATE_CONFLICT`, `OPERATION_CONFLICT`, `OPERATION_IN_PROGRESS`, `ACTION_LEASE_LOST`, `EXECUTION_TIME_LIMIT`, `STALE_EXECUTION`, `PATH_CONFLICT`, `SANDBOX_FILE_CONFLICT`, `APPROVAL_STATE_CONFLICT`, `COMMAND_AUTHORIZATION_INVALID`, `MERGE_RECOVERY_REQUIRED`, `MANUAL_RECOVERY_REQUIRED`, `RECOVERY_MANIFEST_MISMATCH`, `MERGE_ALREADY_COMMITTED`
 - 413: `REQUEST_LIMIT_EXCEEDED`, `RESPONSE_LIMIT_EXCEEDED`, `SANDBOX_LIMIT_EXCEEDED`, `FILE_LIMIT_EXCEEDED`, `OUTPUT_LIMIT_EXCEEDED`, `STAGED_LIMIT_EXCEEDED`
 - 422: `SANDBOX_UNVERIFIABLE`, `SPECIAL_FILE_REJECTED`, `VALIDATION_REQUIRED`, `STAGED_NOT_ELIGIBLE`
 - 401/429/502/504/503: 复用 S-4 provider/storage codes；新增504 `ACTION_DEADLINE_EXCEEDED`,`SANDBOX_BUILD_DEADLINE_EXCEEDED`，503 `PROCESS_TERMINATION_UNCONFIRMED`
-- 500: `MERGE_INVARIANT_FAILED`, `INTERNAL_ERROR`
+- 500: `COMMAND_PROCESS_FAILED`, `MERGE_INVARIANT_FAILED`, `INTERNAL_ERROR`
 
 错误/receipt response先过 public schema和secret redactor；未知 cause只记录 correlationId/code/route。数据库、HTTP响应、DOM、console、截图和 evidence 对 key、Authorization、master key、cipher、raw provider body、private prompt marker与隐藏思维 marker匹配数必须为0。
 
@@ -1213,11 +1244,17 @@ diff使用LF展示但hash/merge保留原始bytes；每observation diff≤256KiB�
 | provider/usage/二次 schema无效 | paused，call/usage保留 | 0 | 修 provider后 retry/continue按原因 |
 | 权限缺失/absolute deny | paused，tool rejected | 0 | 修改 Agent会使旧 attempt stale，再 retry |
 | 待批拒绝/撤销/替换 | paused，旧 approval终态 | 0 | continue，模型收到结果 |
-| command timeout且树已终止 | paused/failed，输出审计 | 0 | retry新 attempt |
-| 树终止无法确认 | failed | 0，sandbox不可提交 | owner确认环境后 retry全新 sandbox |
+| one-shot consumed 因果链/存储请求无效 | §5.2 authorization 行：action failed、receipt 409 `COMMAND_AUTHORIZATION_INVALID`、execution/attempt failed、tool failed、spawn/manifest/validation=0 | 0 | retry 新 attempt；旧 approval 永不重放 |
+| process success/nonzero/已确认终止的120s timeout | §5.2 对应三行：receipt 均200；execution running、attempt ready；tool按 exit/timed_out 唯一终态；实际启动均 post-refresh，validation只按矩阵 | 0 | 无 owner 恢复，下一模型动作读取 typed result |
+| spawn/run异常且未启动或已确认终止 | §5.2 对应行：500 `COMMAND_PROCESS_FAILED`；execution paused(resume running)、attempt ready、tool failed；manifest按是否启动选择 pre/post | 0 | continue；绝不重新执行旧 consumed approval |
+| process tree终止无法确认 | action failed、receipt 503 `PROCESS_TERMINATION_UNCONFIRMED`；execution/attempt failed、tool interrupted；manifest停在pre、validation=0 | 0，旧sandbox不可提交 | retry 新 attempt |
+| command pre/post manifest不可验证 | action failed、receipt 422 `SANDBOX_UNVERIFIABLE`；execution/attempt failed；tool按§5.2为failed/interrupted；validation=0 | 0，旧sandbox不可提交 | retry 新 attempt |
+| command persist事务异常/回滚 | fallback action failed、receipt 500 `INTERNAL_ERROR`；execution/attempt failed、tool interrupted；事务内manifest/validation/artifact/result/event=0 | 0，旧sandbox不可提交 | retry 新 attempt |
+| owner pause/stop先赢 | §5.2 owner行：command action/tool discarded、advance receipt 409；pause仅在确认终止后paused(resume running)并可continue，stop为stopped且无恢复；validation=0 | 0 | 严格按 pause=continue、stop=无操作 |
 | heartbeat按30s成功 | running child/parent pending | 0 | 无；lease续至min(now+120s,overall)，总deadline不变 |
 | heartbeat与reconcile/finalize竞态 | 唯一CAS胜者状态 | 0 | changes=0一方读durable child/receipt；不补写 |
-| lease失联或overall deadline | interrupted pause | 0 | recover后owner retry；不自动重放 |
+| command lease/overall deadline reconcile先赢 | action/tool/attempt interrupted；receipt分别409 `ACTION_LEASE_LOST`/504 `ACTION_DEADLINE_EXCEEDED`；execution paused(resume running,同reason)；manifest停在pre、validation=0 | 0，旧sandbox不可提交 | 只允许 retry 新 attempt，不允许 continue |
+| owner/reconcile 与 command late finalizer 竞态 | owner/reconcile 完整写入§5.2对应行；late CAS=0 | late artifact/validation/manifest/result/event=0 | 读取胜者 receipt；不得恢复 running 或覆盖 HTTP/code |
 | provider单call 90s deadline | model child failed/interrupted，call timeout保留 | 0 | continue/retry；repair不会继承或延长primary deadline |
 | sandbox_build lease过期 | execution paused/resume queued，attempt interrupted | 0 | continue后新start-resume operation/attempt；原start只重放interrupted receipt |
 | context变化 | stale | 0 | retry捕获新事实 |
@@ -1265,6 +1302,7 @@ diff使用LF展示但hash/merge保留原始bytes；每observation diff≤256KiB�
 - 迁移: 真实临时SQLite，v4→v5完整/漂移/故障/23表/22 index/6 trigger/FK；initial empty revision；policy revision/entry/audit UPDATE/DELETE拒绝与project delete cascade。
 - 文件系统: Windows x64/NTFS-ReFS 上用临时目录创建真实 canonical/execution roots；覆盖普通文件、空文件、UTF-8/BOM/NUL/invalid、junction/reparse、设备名、大小/条目边界、write race和manifest determinism。其他 OS/arch/fs 测 capability fail-closed；mock FS只用于注入不可达分支，不替代当前支持平台的真实测试。
 - 进程: 真实 child fixture 创建孙进程、写 stdout/stderr、hang、尝试 env读取和sandbox内改动；验证 direct args、minimal env、120s fake-clock单测+短真实 timeout、tree kill、截断/redaction、无法确认终止注入。
+- 审批→进程集成: 扩展 `tests/execution-approvals.test.ts`，由 `advanceExecution` 走真实 approve→consume→command action acquire→`process-runner` 链路，以 harmless child 断言 one-shot 只启动一次；同文件分别篡改 `approval.input_hash`、`tool.before_sandbox_hash`、`tool.action_id`、action `(project_id,execution_id,attempt_id)`/`request_hash`/`operation_id`/`action_index`/lease，并覆盖 pending、未消费 approved、旧 consumed/replay，断言 spawn=0且不改 v5 DDL。扩展 `tests/process-runner.test.ts` 注入 success/nonzero/confirmed-timeout、authorization、pre/post manifest、spawn/run/termination/persist throw/reject、owner pause/stop及 lease/deadline reconcile late-finalizer 竞态，逐行核对 §5.2 的 action/receipt HTTP+code、execution/resume/reason、attempt/tool、manifest/validation，数据库重开后 running action=0/pending receipt=0。standing policy 既有 exact-match 测试必须保持不变。
 - Provider: 本地OpenAI-compatible server；同model child primary+repair call_index 1/2、各90s不可续deadline、30s action heartbeat、usage与delay/late竞态。
 - 并发/恢复: UI两次独立start；parent/ordered child；heartbeat恰在expiry前后与reconcile/finalize三方竞态；overall deadline不延；D-5全fault/race和三resolution。
 - Service/API: append-only policy；sandbox 15m cap与首次running business DB clock隔离；1MiB validation/artifact按最多17×64KiB读回；0/16/17 chunks、1048575-byte三字节scalar、gap/hash；100/101/100000 observations。
@@ -1360,7 +1398,8 @@ manual recovery警示明确“检测到平台外写入；平台已停止自动�
 - [x] T-40 接通生产默认 sandbox executor 与 start receipt 收口 (覆盖: FR-1, FR-2, FR-4, FR-5, FR-8, FR-10, FR-11, NFR-1, NFR-2, NFR-4) — 判据: `npm test -- tests/execution-sandbox-orchestrator.test.ts`先红后绿；不调用 `setSandboxExecutorForTests`，公开 start route 对真实临时 SQLite/canonical/execution root 返回201，verified snapshot 文件存在且 canonical 零修改，attempt=`ready`、sandbox action=`succeeded`、start receipt=`completed`、manifest一致；逐项覆盖 D-2 fault/concurrency oracle，断言四项成功事实全有或全无、snapshot执行次数、精确状态/HTTP/清理结果与 canonical hash
 - [x] T-41 统一并刷新 verified sandbox manifest 生命周期 (覆盖: FR-3, FR-5, FR-7, FR-8, FR-10, FR-11, NFR-1, NFR-2, NFR-4) — 判据: `npm test -- tests/execution-write-stage-integration.test.ts`先红后绿；生产 Windows adapter 的真实 write、成功 command、非零/timeout且已确认终止 command 均记录 pre/post 整树 hash并更新 attempt，canonical 不变，baseline/current entry 统一 `sha256`；validation 只绑定 postHash，后续 refresh 正确失鲜；stage 只消费单次 refresh 的 entries/hash并产生 observation+merge file；pre/post refresh、stage遍历、lease/version/expected-hash CAS 竞争失败均不留 succeeded tool/action/validation/staged facts并按设计进入 paused/failed/interrupted
 - [x] T-42 保留 canonical identity 并收口 stage action 全异常路径 (覆盖: FR-7, FR-8, FR-11, NFR-1, NFR-4) — 判据: `npm test -- tests/execution-write-stage-integration.test.ts`先红后绿；strict baseline/current manifest 持久 identity 并在关闭数据库/adapter后重开，同 bytes 新 identity 仍 stale；完整 production adapter 逐项覆盖 success、stale、no-changes、validation stale、identity/parse error、未知异常、lease/reconcile、事务注入重开与 late finalizer，精确匹配 §7 矩阵，非成功分支 running action=0、pending receipt=0、staged facts=0且 handle close恰一次
-- [ ] T-43 收口只经公开行为的真实 browser smoke harness (覆盖: FR-1, FR-2, FR-3, FR-8, FR-9, FR-11, FR-14, NFR-1, NFR-4, NFR-5) — 判据: `npm test -- tests/execution-browser-smoke.test.ts`先红后绿；smoke 不拦截 start/advance/stage/merge/recovery 路由、不直接写业务 SQLite 或复制 canonical 文件来合成状态，双 execution 从 start 经真实 provider、工具/验证、stage 到至少一次 merge 只走产品公开 API；stale/conflict/manual recovery 由公开行为或专用故障注入触发；provider 健康探针不计入 execution 并发断言
-- [ ] T-44 运行S-5 desktop+narrow smoke/demo，仅验证前序已实现行为 (覆盖: FR-1..FR-14, NFR-1..NFR-5) — 判据: 本任务不得新增或修改product code/test行为；README、`npm test`、`npm run build`、`npm run smoke:execution`通过，并留真实provider双Agent不相交合入、重复/边界/standing+one-shot、stale/conflict/manual recovery及desktop/narrow证据
+- [x] T-43 修复 one-shot consume→execute 精确授权与全异常终态收口 (覆盖: FR-2, FR-6, FR-10, FR-11, FR-12, FR-13, NFR-1, NFR-2, NFR-3, NFR-4) — 判据: `npm test -- tests/execution-approvals.test.ts tests/process-runner.test.ts`先红后绿；RED 必须通过 `advanceExecution`（不得直接调用 consume/runner 拼接中间状态）的真实 approve→consume→execute 链路稳定复现“approval 已 consumed 后 runner 拒绝且遗留 running action/pending receipt”，并使 §5.2 至少一个异常注入暴露孤儿；GREEN 必须只凭真实 v5 列证明 `approval.input_hash=tool.before_sandbox_hash=consume时attempt.sandbox_manifest_hash`，由 `tool.action_id`+三表复合 identity 间接绑定 action、由共同 `request_hash` 直接绑定请求，standing policy 行为不变，pending/未消费 approved/旧 consumed/replay及 `approval.input_hash`、`tool.before_sandbox_hash`、`tool.action_id`、action identity/request_hash/operation/action-index/lease tamper 全部 spawn=0且不改 DDL；success、nonzero、已确认终止120s timeout、spawn/run异常、终止不确定、pre/post manifest、persist、owner pause/stop、lease/deadline reconcile 与 late-finalizer 逐行匹配 §5.2 的 action/receipt HTTP+code、execution/resume/reason、attempt/tool、manifest/validation；数据库重开后 running command action=0、pending receipt=0，late CAS 不覆盖 owner/reconcile 胜者
+- [ ] T-44 收口只经公开行为的真实 browser smoke harness (覆盖: FR-1, FR-2, FR-3, FR-8, FR-9, FR-11, FR-14, NFR-1, NFR-4, NFR-5) — 判据: `npm test -- tests/execution-browser-smoke.test.ts`先红后绿；smoke 不拦截 start/advance/stage/merge/recovery 路由、不直接写业务 SQLite 或复制 canonical 文件来合成状态，双 execution 从 start 经真实 provider、工具/验证、stage 到至少一次 merge 只走产品公开 API；stale/conflict/manual recovery 由公开行为或专用故障注入触发；provider 健康探针不计入 execution 并发断言
+- [ ] T-45 运行S-5 desktop+narrow smoke/demo，仅验证前序已实现行为 (覆盖: FR-1..FR-14, NFR-1..NFR-5) — 判据: 本任务不得新增或修改product code/test行为；README、`npm test`、`npm run build`、`npm run smoke:execution`通过，并留真实provider双Agent不相交合入、重复/边界/standing+one-shot、stale/conflict/manual recovery及desktop/narrow证据
 
-任务覆盖索引：FR-1→T-2/3/17/20/27/28/31/40/43–44；FR-2→T-1/2/5/16/22–26/28/30–31/40/43–44；FR-3→T-8–10/12/14–19/28/31–32/37/41/43–44；FR-4→T-6–10/16/31/33–34/36–37/40/44；FR-5→T-6/7/10/16/31/34–37/40–41/44；FR-6→T-11–13/16/19/25/27/29/31/44；FR-7→T-19/20/26/29/31/37/41–42/44；FR-8→T-7/11/15/18–23/29/31/33–44；FR-9→T-19–23/25/29/30–31/33/35/38–39/43–44；FR-10→T-1/5/6/8–14/17/19/24/26/28/31–32/36/40–41/44；FR-11→T-1/2/4/5/7/8/10/13/14/16/18/21–26/31/36–37/39–44；FR-12→T-4/5/18/20/23–25/28/30–31/44；FR-13→T-1/4/5/9/11–15/18/22–26/29/31/44；FR-14→T-2/11/27–30/43–44。NFR-1→T-1–3/5/7/10/16–24/28/30–44；NFR-2→T-6–17/19/21/26/29/31/33–41/44；NFR-3→T-6/8–15/25/27/29/30–35/37/44；NFR-4→T-1/2/4/5/7–9/11–18/20–26/31/36–44；NFR-5→T-2/27–30/43–44。
+任务覆盖索引：FR-1→T-2/3/17/20/27/28/31/40/44–45；FR-2→T-1/2/5/16/22–26/28/30–31/40/43–45；FR-3→T-8–10/12/14–19/28/31–32/37/41/44–45；FR-4→T-6–10/16/31/33–34/36–37/40/45；FR-5→T-6/7/10/16/31/34–37/40–41/45；FR-6→T-11–13/16/19/25/27/29/31/43/45；FR-7→T-19/20/26/29/31/37/41–42/45；FR-8→T-7/11/15/18–23/29/31/33–42/44–45；FR-9→T-19–23/25/29/30–31/33/35/38–39/44–45；FR-10→T-1/5/6/8–14/17/19/24/26/28/31–32/36/40–41/43/45；FR-11→T-1/2/4/5/7/8/10/13/14/16/18/21–26/31/36–45；FR-12→T-4/5/18/20/23–25/28/30–31/43/45；FR-13→T-1/4/5/9/11–15/18/22–26/29/31/43/45；FR-14→T-2/11/27–30/44–45。NFR-1→T-1–3/5/7/10/16–24/28/30–45；NFR-2→T-6–17/19/21/26/29/31/33–41/43/45；NFR-3→T-6/8–15/25/27/29/30–35/37/43/45；NFR-4→T-1/2/4/5/7–9/11–18/20–26/31/36–45；NFR-5→T-2/27–30/44–45。

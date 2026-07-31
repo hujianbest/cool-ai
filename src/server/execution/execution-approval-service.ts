@@ -604,7 +604,10 @@ export function consumeApprovedCommand(input: {
     const approval = input.database.prepare(`
       SELECT approval.id AS approvalId,approval.project_id AS projectId,
              approval.attempt_id AS attemptId,approval.tool_call_id AS toolCallId,
-             approval.request_hash AS requestHash,execution.business_deadline_at AS deadline
+             approval.request_hash AS requestHash,approval.input_hash AS inputHash,
+             tool.before_sandbox_hash AS toolInputHash,
+             attempt.sandbox_manifest_hash AS sandboxManifestHash,
+             execution.business_deadline_at AS deadline
       FROM execution_approvals approval
       JOIN executions execution
         ON execution.project_id=approval.project_id AND execution.id=approval.execution_id
@@ -615,16 +618,24 @@ export function consumeApprovedCommand(input: {
         ON tool.project_id=approval.project_id AND tool.id=approval.tool_call_id
        AND tool.attempt_id=approval.attempt_id AND tool.request_hash=approval.request_hash
        AND tool.status='waiting_approval' AND tool.action_id IS NULL
+      JOIN execution_attempts attempt
+        ON attempt.project_id=approval.project_id AND attempt.execution_id=approval.execution_id
+       AND attempt.id=approval.attempt_id
       WHERE approval.execution_id=? AND approval.kind='command'
         AND approval.status='approved'
+        AND approval.input_hash=tool.before_sandbox_hash
+        AND approval.input_hash=attempt.sandbox_manifest_hash
         AND execution.status='waiting_approval' AND execution.version=?
     `).get(input.executionId, input.expectedVersion) as {
       approvalId: string;
       attemptId: string;
       deadline: string | null;
+      inputHash: string;
       projectId: string;
       requestHash: string;
+      sandboxManifestHash: string;
       toolCallId: string;
+      toolInputHash: string;
     } | undefined;
     if (!approval) {
       throw new ExecutionError(

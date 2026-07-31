@@ -57,3 +57,28 @@
 
 - baseline/current manifest 与 adapter entry 已统一为含 `identity` 的 strict 持久契约，新增 `sandbox_manifest_path` 并明确 refresh 的原子指针/hash 更新、重启 strict parse；byte-manifest hash 仍仅输入 path/size/sha256。T-42 已覆盖关闭数据库/adapter后重开及 same-bytes-new-identity stale。
 - `stage_compute` acquire 后已按 success、stale、no-changes、validation stale、adapter/identity/parse error、未知异常、lease/deadline/reconcile、late finalizer 给出唯一 action/receipt/execution/attempt/staged-facts 出口，并明确事务回滚后的 reconcile 收口。T-42 已逐支覆盖且保持 T-42→T-43→T-44 顺序。
+
+# 技术设计 评审 (第 19 轮)
+
+- 日期: 2026-07-31
+- 评审方式: subagent
+- 结论: 需修改
+
+## Findings
+
+- [严重] `design.md` §5.2 第 3 步/精确因果链、§10 审批→进程集成与 T-43：契约要求 command action 自身绑定并参与 `inputHash` 相等/篡改检查，但既有严格 v5 DDL 中 `execution_actions` 只有 `request_hash`，没有 `input_hash`；`execution_tool_calls` 也没有名为 `input_hash` 的列，实际输入事实是 `before_sandbox_hash`，只有 `execution_approvals` 存在 `input_hash`。当前 consume 事务可用 `approval.tool_call_id → tool.action_id`、三表复合 execution/attempt 身份、共同 `request_hash`，以及 `approval.input_hash = tool.before_sandbox_hash = consume 时 attempt.sandbox_manifest_hash` 建立因果链，却不能按文字比较不存在的 action/tool `inputHash`。照现设计实现会迫使 T-43 临时修改已冻结的 v5 DDL/严格列校验并扩大到 migration 测试，或把不存在的字段伪装进 JSON，均超出任务判据，因而不能在一次 TDD 内确定完成。应把持久绑定逐字段映射到现有真实列，明确 action 通过 `tool.action_id` 与复合身份间接绑定 input hash、action 只直接持有 `request_hash`；相应把 §10/T-43 的逐字段 tamper 改为可实际篡改的 `approval.input_hash`、`tool.before_sandbox_hash`、`tool.action_id`、action identity/request_hash/operation/action-index/lease，除非明确新增迁移任务并更新完整 v5 DDL、validator、迁移测试与任务顺序。
+- [严重] `design.md` §5.2 异常终态矩阵、§6.4、§8 与 T-43：consume 后分支仍不唯一且与既有 timeout/owner-control/reconcile 契约冲突。已确认终止的 timeout 在 §5.2 没有唯一一行，§8 又写成 `paused/failed`；`PROCESS_TERMINATION_UNCONFIRMED` 在 §5.2 指定 receipt 500，而 §6.4 把它列为 503；矩阵新增的 `COMMAND_AUTHORIZATION_INVALID`、`COMMAND_PROCESS_FAILED` 未进入 §6.4 error code 集。更关键的是，§5.2 将 spawn/运行异常收口为普通 paused，却在 §8 要求“显式 retry 新 attempt”，而 3.2/现有 owner control 只允许 interrupted/deadline 类 paused retry；generic reconcile 对非 model action目前只终结 action/receipt，不定义 command tool、execution、attempt 的唯一状态，矩阵的“保留 reconcile 胜者状态”因此仍要求实现者发明。应为成功、非零退出、已确认终止 timeout、spawn/运行异常、终止不确定、pre/post manifest、persist、owner pause、owner stop、command lease/deadline reconcile 分别给出唯一 action/receipt HTTP+code/execution resume target+reason/attempt/tool/manifest/validation 结果，并统一 §6.4 与 §8；明确普通 paused 是 continue 还是将 reason 纳入 retry eligibility。T-43 测试逐行覆盖该唯一矩阵，并因其重新验证 command 120 秒 timeout/lease 边界而补记 FR-10（必要时 NFR-2）覆盖及任务覆盖索引。
+
+# 技术设计 评审 (第 20 轮)
+
+- 日期: 2026-07-31
+- 评审方式: subagent
+- 结论: 通过
+- 用户确认: auto-approved 2026-07-31
+
+## Findings
+
+无。第 19 轮两项 findings 均已闭合：
+
+- one-shot 因果链已完全映射到真实 v5 列：`approval.input_hash = tool.before_sandbox_hash = attempt.sandbox_manifest_hash`，action 仅直接持有共同 `request_hash`，并通过 `tool.action_id`、复合 identity、operation/action-index/lease 间接绑定；§10 与 T-43 的 tamper 集同步改为现有字段，明确不改 DDL，任务可在既定 TDD 边界内实现。
+- §5.2 已为 success、nonzero、已确认终止 timeout、spawn/run、终止不确定、pre/post manifest、persist、owner pause/stop、lease/deadline reconcile 与 late finalizer 分别给出唯一 action/receipt HTTP+code、execution/resume/reason、attempt/tool、manifest/validation 结果；§6.4 与 §8 已统一，continue/retry 语义明确，T-43 及覆盖索引已补 FR-10/NFR-2。
