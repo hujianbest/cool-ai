@@ -1,0 +1,51 @@
+# hf-gate-run
+# label: t40-red
+# command: npm.cmd test -- tests/execution-sandbox-orchestrator.test.ts
+# started: 2026-07-31T18:11:10+00:00
+
+> collaboration-cockpit@0.1.0 test
+> vitest run tests/execution-sandbox-orchestrator.test.ts
+
+
+ RUN  v4.1.10 D:/cool-ai
+
+(node:15800) ExperimentalWarning: SQLite is an experimental feature and might change at any time
+(Use `node --trace-warnings ...` to show where the warning was created)
+stderr | tests/execution-sandbox-orchestrator.test.ts > production sandbox executor orchestration > starts through the public route without a test executor override
+{
+  code: 'INTERNAL_ERROR',
+  correlationId: 'ad6163ec-d209-4b6d-b3a0-860ffacd26e0',
+  route: 'POST /api/projects/:projectId/executions'
+}
+
+ ❯ tests/execution-sandbox-orchestrator.test.ts (1 test | 1 failed) 755ms
+     × starts through the public route without a test executor override 753ms
+
+⎯⎯⎯⎯⎯⎯⎯ Failed Tests 1 ⎯⎯⎯⎯⎯⎯⎯
+
+ FAIL  tests/execution-sandbox-orchestrator.test.ts > production sandbox executor orchestration > starts through the public route without a test executor override
+AssertionError: expected 500 to be 201 // Object.is equality
+
+- Expected
++ Received
+
+- 201
++ 500
+
+ ❯ tests/execution-sandbox-orchestrator.test.ts:155:29
+    153|     const response = await postStart();
+    154|
+    155|     expect(response.status).toBe(201);
+       |                             ^
+    156|     const body = await response.json() as { execution: { id: string; s…
+    157|     expect(body.execution.status).toBe("queued");
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[1/1]⎯
+
+
+ Test Files  1 failed (1)
+      Tests  1 failed (1)
+   Start at  02:11:11
+   Duration  3.39s (transform 338ms, setup 425ms, import 101ms, tests 755ms, environment 1.82s)
+
+# exit: 1

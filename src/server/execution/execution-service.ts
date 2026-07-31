@@ -12,10 +12,12 @@ import {
   executionListResponseSchema,
   startExecutionRejectionSchema,
   startExecutionInputSchema,
+  startExecutionResponseSchema,
   type StartExecutionRejection,
   type ExecutionDto,
   type ExecutionListResponse,
   type StartExecutionInput,
+  type StartExecutionResponse,
   type TaskRejection,
 } from "@/src/shared/execution-contracts";
 
@@ -276,6 +278,7 @@ export function getExecution(databasePath: string, executionId: string): Executi
 
 type EligibleTask = {
   agentId: string;
+  canonicalRoot: string;
   missionId: string;
   policyHash: string;
   policyRevisionId: string;
@@ -284,7 +287,10 @@ type EligibleTask = {
 };
 
 export type StartExecutionResult = {
-  body: StartExecutionRejection;
+  body:
+    | StartExecutionRejection
+    | StartExecutionResponse
+    | { error: { code: string; message: string } };
   status: number;
 };
 
@@ -333,7 +339,9 @@ function readStartReceipt(
     throw new ExecutionError("OPERATION_IN_PROGRESS", 409, "Operation is still in progress.");
   }
   return {
-    body: startExecutionRejectionSchema.parse(JSON.parse(row.responseJson)),
+    body: row.httpStatus === 201
+      ? startExecutionResponseSchema.parse(JSON.parse(row.responseJson))
+      : JSON.parse(row.responseJson),
     status: row.httpStatus,
   };
 }
@@ -524,7 +532,7 @@ function qualifyTask(
       }
     | undefined;
   if (!row) return rejection(input.workItemId, "NOT_FOUND");
-  return row;
+  return { ...row, canonicalRoot: project.workspacePath };
 }
 
 export async function startExecution(
@@ -703,8 +711,12 @@ export async function startExecution(
         externalInput: {
           actionId,
           attemptId,
+          canonicalRoot: task.canonicalRoot,
+          databasePath,
           executionId,
+          leaseToken: "",
           operationId: input.operationId,
+          overallDeadlineAt,
           projectId,
           sandboxRoot,
         },
@@ -722,15 +734,41 @@ export async function startExecution(
       operationId: prepared.externalInput.operationId,
       projectId,
     });
-    if (acquired.affectedRows !== 1) {
+    if (acquired.affectedRows !== 1 || !acquired.leaseToken) {
       throw new ExecutionError(
         "SANDBOX_ACTION_INTERRUPTED",
         409,
         "The queued sandbox action could not be acquired.",
       );
     }
+    prepared.externalInput.leaseToken = acquired.leaseToken;
   } finally {
     actionDatabase.close();
   }
-  return executor(prepared.externalInput);
+  const outcome = await executor(prepared.externalInput);
+  const receiptDatabase = openDatabase(databasePath);
+  try {
+    const receipt = readStartReceipt(
+      receiptDatabase,
+      projectId,
+      input.operationId,
+      requestHash,
+    );
+    const completedSuccess = outcome.kind === "completed"
+      && receipt?.status === 201
+      && "execution" in receipt.body;
+    const completedFailure = outcome.kind === "failed"
+      && receipt?.status === outcome.httpStatus
+      && "error" in receipt.body;
+    if (!receipt || (!completedSuccess && !completedFailure)) {
+      throw new ExecutionError(
+        "MERGE_INVARIANT_FAILED",
+        500,
+        "Completed sandbox execution has no completed start receipt.",
+      );
+    }
+    return receipt;
+  } finally {
+    receiptDatabase.close();
+  }
 }

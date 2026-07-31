@@ -401,6 +401,7 @@ export async function controlExecution(
     value: null,
   };
   const database = openDatabase(databasePath);
+  let databaseOpen = true;
   try {
     const result = transaction(database, () => {
       const row = executionRow(database, executionId);
@@ -603,8 +604,12 @@ export async function controlExecution(
         retryRequest.value = {
           actionId,
           attemptId,
+          canonicalRoot: row.workspacePath!,
+          databasePath,
           executionId,
+          leaseToken: "",
           operationId: input.operationId,
+          overallDeadlineAt: clock.deadline,
           projectId: row.projectId,
           sandboxRoot,
         };
@@ -640,6 +645,7 @@ export async function controlExecution(
     }
     const retryInput = retryRequest.value;
     if (retryInput !== null) {
+      const leaseToken = randomUUID();
       const acquired = database.prepare(`
         UPDATE execution_actions
         SET status='running',lease_token=?,lease_expires_at=min(
@@ -648,11 +654,39 @@ export async function controlExecution(
             ),last_heartbeat_at=strftime('%Y-%m-%dT%H:%M:%fZ','now'),
             started_at=coalesce(started_at,strftime('%Y-%m-%dT%H:%M:%fZ','now'))
         WHERE id=? AND status='pending'
-      `).run(randomUUID(), retryInput.actionId);
+      `).run(leaseToken, retryInput.actionId);
       if (acquired.changes !== 1) {
         throw new ExecutionError("OPERATION_IN_PROGRESS", 409, "Retry sandbox action was not acquired.");
       }
-      return dependencies.sandboxExecutor(retryInput);
+      retryInput.leaseToken = leaseToken;
+      database.close();
+      databaseOpen = false;
+      const outcome = await dependencies.sandboxExecutor(retryInput);
+      if (outcome.kind !== "completed") {
+        throw new ExecutionError(outcome.code, outcome.httpStatus, "Retry sandbox execution failed.");
+      }
+      const receiptDatabase = openDatabase(databasePath);
+      try {
+        const receipt = receiptDatabase.prepare(`
+          SELECT http_status AS httpStatus,response_json AS responseJson
+          FROM execution_operations WHERE project_id=? AND id=? AND status='completed'
+        `).get(retryInput.projectId, input.operationId) as
+          | { httpStatus: number; responseJson: string }
+          | undefined;
+        if (!receipt) {
+          throw new ExecutionError(
+            "MERGE_INVARIANT_FAILED",
+            500,
+            "Completed retry sandbox has no completed receipt.",
+          );
+        }
+        return {
+          body: executionControlResponseSchema.parse(JSON.parse(receipt.responseJson)),
+          status: receipt.httpStatus,
+        };
+      } finally {
+        receiptDatabase.close();
+      }
     }
     return result!;
   } catch (error) {
@@ -675,6 +709,6 @@ export async function controlExecution(
     }
     throw error;
   } finally {
-    database.close();
+    if (databaseOpen) database.close();
   }
 }

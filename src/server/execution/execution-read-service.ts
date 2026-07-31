@@ -5,10 +5,6 @@ import { z } from "zod";
 
 import { openDatabase } from "@/src/server/db";
 import {
-  assertNoMergeBarrier,
-  recoverIncompleteMergeJournals,
-} from "@/src/server/execution/merge-journal-service";
-import {
   ExecutionError,
   executionDtoFromDatabase,
 } from "@/src/server/execution/execution-service";
@@ -35,6 +31,23 @@ type CursorPage<T> = {
   items: T[];
   nextCursor: string | null;
 };
+
+async function recoverMergeBarrier(
+  database: DatabaseSync,
+  projectId: string,
+  allowManualRecovery = false,
+): Promise<void> {
+  const unresolved = database.prepare(`
+    SELECT 1 FROM execution_merge_journals
+    WHERE project_id=? AND status IN (
+      'prepared','applying','db_committed','rolling_back','rolling_forward','manual_recovery'
+    ) LIMIT 1
+  `).get(projectId);
+  if (!unresolved) return;
+  const merge = await import("@/src/server/execution/merge-journal-service");
+  await merge.recoverIncompleteMergeJournals({ database, projectId });
+  if (!allowManualRecovery) merge.assertNoMergeBarrier(database, projectId);
+}
 
 const HASH = z.string().regex(/^[0-9a-f]{64}$/u);
 const MAX_LIST_BYTES = 512 * 1024;
@@ -292,8 +305,7 @@ async function openForProject(
     if (!database.prepare("SELECT 1 FROM projects WHERE id=?").get(projectId)) {
       throw new ExecutionError("PROJECT_NOT_FOUND", 404, "Project was not found.");
     }
-    await recoverIncompleteMergeJournals({ database, projectId });
-    assertNoMergeBarrier(database, projectId);
+    await recoverMergeBarrier(database, projectId);
     return database;
   } catch (error) {
     database.close();
@@ -314,8 +326,7 @@ async function openForExecution(
     if (!execution) {
       throw new ExecutionError("EXECUTION_NOT_FOUND", 404, "Execution was not found.");
     }
-    await recoverIncompleteMergeJournals({ database, projectId: execution.projectId });
-    if (!allowManualRecovery) assertNoMergeBarrier(database, execution.projectId);
+    await recoverMergeBarrier(database, execution.projectId, allowManualRecovery);
     return { database, projectId: execution.projectId };
   } catch (error) {
     database.close();
