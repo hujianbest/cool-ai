@@ -72,15 +72,44 @@ function transaction<T>(database: DatabaseSync, operation: () => T): T {
 async function writeBaselineManifest(
   sandboxRoot: string,
   manifest: {
-    entries: Array<{ modeTag: string; path: string; sha256: string; size: number }>;
-    itemCount: number;
-    totalBytes: number;
+    entries: Array<{
+      identity: string;
+      modeTag: string;
+      path: string;
+      sha256: string;
+      size: number;
+    }>;
+    hash: string;
   },
 ): Promise<string> {
   const path = join(dirname(sandboxRoot), "baseline-manifest.json");
   const temporary = `${path}.tmp-${randomUUID()}`;
   await mkdir(dirname(path), { recursive: true });
   await writeFile(temporary, JSON.stringify(manifest), { encoding: "utf8", flag: "wx", mode: 0o600 });
+  await rename(temporary, path);
+  return path;
+}
+
+async function writeSandboxManifest(
+  sandboxRoot: string,
+  manifest: {
+    entries: Array<{
+      identity: string;
+      modeTag: string;
+      path: string;
+      sha256: string;
+      size: number;
+    }>;
+    hash: string;
+  },
+): Promise<string> {
+  const path = join(dirname(sandboxRoot), `sandbox-manifest-${randomUUID()}.json`);
+  const temporary = `${path}.tmp`;
+  await writeFile(temporary, JSON.stringify(manifest), {
+    encoding: "utf8",
+    flag: "wx",
+    mode: 0o600,
+  });
   await rename(temporary, path);
   return path;
 }
@@ -308,8 +337,11 @@ export function createProductionSandboxExecutor(
     }
     const manifestPath = await writeBaselineManifest(input.sandboxRoot, {
       entries: snapshot.files,
-      itemCount: snapshot.itemCount,
-      totalBytes: snapshot.totalBytes,
+      hash: snapshot.manifestHash,
+    });
+    const sandboxManifestPath = await writeSandboxManifest(input.sandboxRoot, {
+      entries: snapshot.sandboxFiles,
+      hash: snapshot.manifestHash,
     });
     await dependencies.onPhase?.("after-manifest");
 
@@ -359,11 +391,12 @@ export function createProductionSandboxExecutor(
         const attempt = database.prepare(`
           UPDATE execution_attempts
           SET status='ready',baseline_manifest_path=?,baseline_manifest_hash=?,
-              sandbox_manifest_hash=?
+              sandbox_manifest_path=?,sandbox_manifest_hash=?
           WHERE project_id=? AND id=? AND execution_id=? AND status='preparing'
         `).run(
           manifestPath,
           snapshot.manifestHash,
+          sandboxManifestPath,
           snapshot.manifestHash,
           input.projectId,
           input.attemptId,

@@ -12,6 +12,14 @@ import type {
   ExecutionStagingAdapter,
   StagingEntry,
 } from "@/src/server/execution/stage-service";
+import type {
+  VerifiedSandboxManifest,
+  VerifiedSandboxManifestEntry,
+} from "@/src/server/execution/sandbox-manifest-store";
+export type {
+  VerifiedSandboxManifest,
+  VerifiedSandboxManifestEntry,
+} from "@/src/server/execution/sandbox-manifest-store";
 import { ExecutionError } from "@/src/server/execution/execution-service";
 import { createWindowsNativeReadAdapter } from "@/src/server/execution/windows-native-read-adapter";
 import { createWindowsNativeWriteAdapter } from "@/src/server/execution/windows-native-write-adapter";
@@ -128,7 +136,7 @@ function failStage(message: string): never {
   throw new ExecutionError("SANDBOX_UNVERIFIABLE", 422, message);
 }
 
-function stagingEntry(path: string, bytes: Uint8Array): StagingEntry {
+function stagingEntry(path: string, identity: string, bytes: Uint8Array): StagingEntry {
   let content: string | undefined;
   try {
     const decoded = new TextDecoder("utf-8", { fatal: true }).decode(bytes);
@@ -138,6 +146,7 @@ function stagingEntry(path: string, bytes: Uint8Array): StagingEntry {
   }
   return {
     ...(content === undefined ? {} : { content }),
+    identity,
     kind: content === undefined ? "binary" : "text",
     modeTag: "file",
     path,
@@ -145,17 +154,6 @@ function stagingEntry(path: string, bytes: Uint8Array): StagingEntry {
     size: bytes.byteLength,
   };
 }
-
-export type VerifiedSandboxManifestEntry = Pick<
-  StagingEntry,
-  "modeTag" | "path" | "sha256" | "size"
->;
-
-export type VerifiedSandboxManifest = {
-  entries: VerifiedSandboxManifestEntry[];
-  hash: string;
-  stagingEntries: StagingEntry[];
-};
 
 async function* walkVerifiedTree(
   fileAdapter: WindowsVerifiedFileAdapter,
@@ -194,7 +192,7 @@ async function* walkVerifiedTree(
           ) {
             return failStage("A staged file changed during verified reading.");
           }
-          yield stagingEntry(path, bytes);
+          yield stagingEntry(path, opened.identity, bytes);
         } else {
           return failStage("A staged entry is not an ordinary file or directory.");
         }
@@ -230,6 +228,7 @@ export async function refreshSandboxManifest(input: {
   for await (const entry of walkVerifiedTree(input.fileAdapter, input.sandboxRoot)) {
     stagingEntries.push(entry);
     entries.push({
+      identity: entry.identity!,
       modeTag: entry.modeTag,
       path: entry.path,
       sha256: entry.sha256,
@@ -240,42 +239,70 @@ export async function refreshSandboxManifest(input: {
     Buffer.from(left.path, "utf8").compare(Buffer.from(right.path, "utf8")));
   return {
     entries,
-    hash: createHash("sha256").update(JSON.stringify(entries)).digest("hex"),
+    hash: createHash("sha256").update(JSON.stringify(
+      entries.map(({ identity: _identity, ...entry }) => entry),
+    )).digest("hex"),
     stagingEntries,
   };
 }
 
-async function* baselineManifestEntries(
+async function* verifiedManifestEntries(
   fileAdapter: WindowsVerifiedFileAdapter,
   manifestPath: string | null,
+  label: "baseline" | "current",
 ): AsyncIterable<StagingEntry> {
   if (!manifestPath || !isAbsolute(manifestPath)) {
-    return failStage("The baseline manifest path is unavailable.");
+    return failStage(`The ${label} manifest path is unavailable.`);
   }
   const bytes = await readVerifiedAbsoluteFile(fileAdapter, manifestPath);
   let parsed: unknown;
   try {
     parsed = JSON.parse(new TextDecoder("utf-8", { fatal: true }).decode(bytes));
   } catch {
-    return failStage("The baseline manifest is invalid.");
+    return failStage(`The ${label} manifest is invalid.`);
   }
-  const entries = (parsed as { entries?: unknown })?.entries
-    ?? (parsed as { files?: unknown })?.files;
-  if (!Array.isArray(entries)) return failStage("The baseline manifest entries are unavailable.");
+  const entries = (parsed as { entries?: unknown })?.entries;
+  if (!Array.isArray(entries)) return failStage(`The ${label} manifest entries are unavailable.`);
+  const record = parsed as Record<string, unknown>;
+  if (
+    !record
+    || typeof record !== "object"
+    || Array.isArray(record)
+    || Object.keys(record).sort().join(",") !== "entries,hash"
+    || typeof record.hash !== "string"
+    || !/^[0-9a-f]{64}$/u.test(record.hash)
+  ) return failStage(`The ${label} manifest envelope is invalid.`);
+  const validated: VerifiedSandboxManifestEntry[] = [];
   for (const value of entries) {
     const file = value as Partial<StagingEntry>;
     if (
-      typeof file.path !== "string"
+      !file
+      || typeof file !== "object"
+      || Array.isArray(file)
+      || Object.keys(file).sort().join(",") !== "identity,modeTag,path,sha256,size"
+      || typeof file.identity !== "string"
+      || file.identity.length === 0
+      || typeof file.modeTag !== "string"
+      || typeof file.path !== "string"
       || typeof file.sha256 !== "string"
       || typeof file.size !== "number"
-    ) return failStage("A baseline manifest entry is invalid.");
-    yield {
-      kind: "text",
-      modeTag: typeof file.modeTag === "string" ? file.modeTag : "file",
+    ) return failStage(`A ${label} manifest entry is invalid.`);
+    validated.push({
+      identity: file.identity,
+      modeTag: file.modeTag,
       path: file.path,
       sha256: file.sha256,
       size: file.size,
-    };
+    });
+  }
+  const expectedHash = createHash("sha256").update(JSON.stringify(
+    validated.map(({ identity: _identity, ...entry }) => entry),
+  )).digest("hex");
+  if ((parsed as { hash: string }).hash !== expectedHash) {
+    return failStage(`The ${label} manifest hash is inconsistent.`);
+  }
+  for (const file of validated) {
+    yield { ...file, kind: "text" };
   }
 }
 
@@ -319,10 +346,13 @@ export function createWindowsVerifiedExecutionAdapters(): {
   const fileAdapter = createFileAdapter();
   const stagingAdapter: ExecutionStagingAdapter = {
     baselineEntries(input) {
-      return baselineManifestEntries(fileAdapter, input.baselineManifestPath);
+      return verifiedManifestEntries(fileAdapter, input.baselineManifestPath, "baseline");
     },
     canonicalEntries(input) {
       return walkVerifiedTree(fileAdapter, input.workspaceRoot);
+    },
+    currentEntries(input) {
+      return verifiedManifestEntries(fileAdapter, input.sandboxManifestPath, "current");
     },
     refreshSandboxManifest(input) {
       return refreshSandboxManifest({

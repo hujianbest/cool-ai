@@ -32,3 +32,28 @@
 ## Findings
 
 无。第 15 轮 finding 已闭合：write 与所有实际启动且已确认终止的 command（成功、非零退出、timeout）均明确执行 verified pre/post 整树 refresh；finalize 已规定 lease/token、execution version/status、attempt status、preHash 的 CAS 与 tool/action、postHash validation、attempt manifest、receipt 的唯一事务顺序，refresh/CAS/termination 不确定均不留下成功事实且旧 attempt 不可 stage；validation 绑定同次 postHash，stage 只消费单次 refresh 的不可变 entries/hash。T-41 已在单一测试任务中覆盖成功/失败/timeout command、`sha256` 统一、validation 失鲜、stage、refresh/遍历失败及 lease/version/hash CAS 竞争，并保持 T-41→T-42→T-43 顺序。
+
+# 技术设计 评审 (第 17 轮)
+
+- 日期: 2026-07-31
+- 评审方式: subagent
+- 结论: 需修改
+
+## Findings
+
+- [严重] `design.md` §2 D-2 `ManifestEntry`、§3 `execution_attempts.baseline_manifest_path` 与 §7 canonical/sandbox manifest 契约互相冲突：`ManifestEntry` 和 §7 新段要求保留 `identity`，但 §7 仍明确把“baseline/当前 manifest 文件与 adapter DTO”限定为 `{path,size,sha256,modeTag}`，且没有写明 identity 随 baseline/current manifest 持久化、重启后如何读取并比较。这样实现既可合法地不序列化 identity，也无法保证重启后的 same-bytes-new-identity 被判 stale；T-42 也只要求缺失/替换场景，没有覆盖落盘重开。应统一持久 manifest/adapter entry 的 strict schema为含 `identity`，明确 baseline 与每次 current refresh 的 identity 持久化和重启读取路径，同时保留 byte-manifest hash 只输入 path/size/sha256；T-42 增加“落盘关闭并重开后 byte hash 相同、identity 不同仍 stale”的 production-adapter 测试。
+- [严重] `design.md` §7 `stage_compute` 异常收口与 T-42 尚不具备唯一可实现契约：“staged/stale/paused/failed 的唯一状态”和“paused/failed”仍是结果集合，不是按分支确定的映射，也未解决 finalize lease CAS 已失败时 catch/finally 不可能再用同一 lease 完成 action/receipt 的情况。known guard（无变化、validation 不新鲜、pending action）、stale、adapter error、未知异常、lease/deadline/reconcile 胜出分别应落到哪个 action terminal status/error、execution status/resume_target/reason、receipt HTTP/body、attempt status仍需实现者发明，存在 action/receipt/execution 分裂或 pending/running 残留风险。应给出 acquire 后每一出口的精确矩阵，并明确 CAS 失手由 reconcile 以何种状态完成原 receipt；T-42 在 T-43/T-44 前逐支覆盖上述出口、事务注入、重开与 late finalizer，断言 running action=0、pending receipt=0、staged facts=0（非成功分支）及唯一 execution/attempt 状态。
+
+# 技术设计 评审 (第 18 轮)
+
+- 日期: 2026-07-31
+- 评审方式: subagent
+- 结论: 通过
+- 用户确认: auto-approved 2026-07-31
+
+## Findings
+
+无。第 17 轮两项 findings 均已闭合：
+
+- baseline/current manifest 与 adapter entry 已统一为含 `identity` 的 strict 持久契约，新增 `sandbox_manifest_path` 并明确 refresh 的原子指针/hash 更新、重启 strict parse；byte-manifest hash 仍仅输入 path/size/sha256。T-42 已覆盖关闭数据库/adapter后重开及 same-bytes-new-identity stale。
+- `stage_compute` acquire 后已按 success、stale、no-changes、validation stale、adapter/identity/parse error、未知异常、lease/deadline/reconcile、late finalizer 给出唯一 action/receipt/execution/attempt/staged-facts 出口，并明确事务回滚后的 reconcile 收口。T-42 已逐支覆盖且保持 T-42→T-43→T-44 顺序。

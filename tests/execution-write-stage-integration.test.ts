@@ -5,6 +5,7 @@ import {
   mkdtempSync,
   readFileSync,
   realpathSync,
+  renameSync,
   rmSync,
   statSync,
   writeFileSync,
@@ -19,6 +20,7 @@ vi.mock("server-only", () => ({}));
 
 import { openDatabase } from "@/src/server/db";
 import { declareStaged } from "@/src/server/execution/action-orchestrator";
+import { ExecutionError } from "@/src/server/execution/execution-service";
 import { executeWriteToolAction } from "@/src/server/execution/file-tools";
 import { executeCommandProcessAction } from "@/src/server/execution/process-runner";
 import {
@@ -37,6 +39,7 @@ let root: string;
 let workspace: string;
 let sandbox: string;
 let baselinePath: string;
+let currentPath: string;
 let databasePath: string;
 
 beforeEach(() => {
@@ -44,6 +47,7 @@ beforeEach(() => {
   workspace = join(root, "workspace");
   sandbox = join(root, "sandbox");
   baselinePath = join(root, "baseline.json");
+  currentPath = join(root, "current.json");
   databasePath = join(root, "cockpit.sqlite");
   mkdirSync(workspace);
   mkdirSync(sandbox);
@@ -108,12 +112,13 @@ function seedDatabase(initialHash: string): DatabaseSync {
       strftime('%Y-%m-%dT%H:%M:%fZ','now'),'${NOW}',NULL);
     INSERT INTO execution_attempts (
       id,project_id,execution_id,attempt_no,status,sandbox_root,
-      baseline_manifest_path,baseline_manifest_hash,sandbox_manifest_hash,
+      baseline_manifest_path,sandbox_manifest_path,baseline_manifest_hash,sandbox_manifest_hash,
       frozen_public_json,frozen_private_json,frozen_context_hash,
       frozen_policy_revision_id,frozen_policy_version,frozen_policy_hash,
       started_at,finished_at
     ) VALUES ('${ATTEMPT_ID}','${PROJECT_ID}','${EXECUTION_ID}',1,'acting',
       '${sandbox.replaceAll("'", "''")}','${baselinePath.replaceAll("'", "''")}',
+      '${currentPath.replaceAll("'", "''")}',
       '${initialHash}','${initialHash}','{}','{}','${"c".repeat(64)}',
       'policy',1,'${POLICY_HASH}','${NOW}',NULL);
   `);
@@ -198,7 +203,503 @@ function seedCommandAction(database: DatabaseSync, scriptPath: string, index: nu
   `);
 }
 
+function stageRow(database: DatabaseSync) {
+  const version = (database.prepare(
+    "SELECT version FROM executions WHERE id=?",
+  ).get(EXECUTION_ID) as { version: number }).version;
+  return {
+    agentId: "agent",
+    attemptId: ATTEMPT_ID,
+    attemptNo: 1,
+    attemptStatus: "acting",
+    businessDeadlineAt: "2099-01-01T00:00:00.000Z",
+    businessRound: 1,
+    executionRoot: root,
+    frozenPrivateJson: "{}",
+    projectId: PROJECT_ID,
+    sandboxRoot: sandbox,
+    status: "running",
+    version,
+    workspaceRoot: workspace,
+  } as const;
+}
+
+function expectNoStageOrphans(database: DatabaseSync, operation: string): void {
+  expect(database.prepare(`
+    SELECT
+      (SELECT COUNT(*) FROM execution_actions
+       WHERE kind='stage_compute' AND status='running') AS running,
+      (SELECT COUNT(*) FROM execution_operations
+       WHERE id=? AND status='pending') AS pending,
+      (SELECT COUNT(*) FROM execution_staged_results) AS stagedResults,
+      (SELECT COUNT(*) FROM execution_staged_observations) AS observations,
+      (SELECT COUNT(*) FROM execution_staged_files) AS stagedFiles
+  `).get(operation)).toEqual({
+    observations: 0,
+    pending: 0,
+    running: 0,
+    stagedFiles: 0,
+    stagedResults: 0,
+  });
+}
+
+async function persistBaselineAndCurrent(
+  adapters: ReturnType<typeof createWindowsVerifiedExecutionAdapters>,
+) {
+  const baseline = await refreshSandboxManifest({
+    fileAdapter: adapters.fileAdapter,
+    sandboxRoot: workspace,
+  });
+  const current = await refreshSandboxManifest({
+    fileAdapter: adapters.fileAdapter,
+    sandboxRoot: sandbox,
+  });
+  expect(current.hash).toBe(baseline.hash);
+  writeFileSync(baselinePath, JSON.stringify({ entries: baseline.entries, hash: baseline.hash }));
+  writeFileSync(currentPath, JSON.stringify({ entries: current.entries, hash: current.hash }));
+  return { baseline, current };
+}
+
 describe("verified sandbox manifest lifecycle", () => {
+  it("persists strict baseline and current manifest identities across reopen", async () => {
+    const adapters = createWindowsVerifiedExecutionAdapters();
+    const { baseline, current } = await persistBaselineAndCurrent(adapters);
+    expect(current.entries[0]).toEqual(expect.objectContaining({
+      identity: expect.any(String),
+      modeTag: "file",
+      path: "README.md",
+      sha256: sha256("before\n"),
+      size: 7,
+    }));
+    expect(baseline.entries[0]?.identity).not.toBe(current.entries[0]?.identity);
+    const database = seedDatabase(current.hash);
+    database.close();
+
+    const reopened = openDatabase(databasePath);
+    try {
+      expect(reopened.prepare(`
+        SELECT baseline_manifest_path AS baselinePath,sandbox_manifest_path AS currentPath
+        FROM execution_attempts WHERE id=?
+      `).get(ATTEMPT_ID)).toEqual({ baselinePath, currentPath });
+      const baseline = JSON.parse(readFileSync(baselinePath, "utf8")) as {
+        entries: Array<{ identity?: string }>;
+      };
+      const current = JSON.parse(readFileSync(currentPath, "utf8")) as {
+        entries: Array<{ identity?: string }>;
+      };
+      expect(baseline.entries[0]?.identity).toBe(
+        (await refreshSandboxManifest({
+          fileAdapter: adapters.fileAdapter,
+          sandboxRoot: workspace,
+        })).entries[0]?.identity,
+      );
+      expect(current.entries[0]?.identity).toBe(
+        (await refreshSandboxManifest({
+          fileAdapter: adapters.fileAdapter,
+          sandboxRoot: sandbox,
+        })).entries[0]?.identity,
+      );
+    } finally {
+      reopened.close();
+    }
+  });
+
+  it("marks same bytes with a new canonical identity stale after reopen", async () => {
+    const adapters = createWindowsVerifiedExecutionAdapters();
+    const { baseline, current } = await persistBaselineAndCurrent(adapters);
+    const database = seedDatabase(current.hash);
+    seedStagedDecision(database);
+    writeFileSync(join(sandbox, "RESULT.md"), "changed\n");
+    writeFileSync(join(sandbox, "README.md"), "after\n");
+    const replacement = join(workspace, "README.replacement");
+    writeFileSync(replacement, "before\n");
+    rmSync(join(workspace, "README.md"));
+    renameSync(replacement, join(workspace, "README.md"));
+    const replaced = await refreshSandboxManifest({
+      fileAdapter: adapters.fileAdapter,
+      sandboxRoot: workspace,
+    });
+    expect(replaced.hash).toBe(baseline.hash);
+    expect(replaced.entries[0]?.identity).not.toBe(baseline.entries[0]?.identity);
+    database.close();
+
+    const reopened = openDatabase(databasePath);
+    try {
+      const version = (reopened.prepare(
+        "SELECT version FROM executions WHERE id=?",
+      ).get(EXECUTION_ID) as { version: number }).version;
+      const result = await declareStaged(
+        databasePath,
+        reopened,
+        EXECUTION_ID,
+        {
+          agentId: "agent",
+          attemptId: ATTEMPT_ID,
+          attemptNo: 1,
+          attemptStatus: "acting",
+          businessDeadlineAt: "2099-01-01T00:00:00.000Z",
+          businessRound: 1,
+          executionRoot: root,
+          frozenPrivateJson: "{}",
+          projectId: PROJECT_ID,
+          sandboxRoot: sandbox,
+          status: "running",
+          version,
+          workspaceRoot: workspace,
+        },
+        operationId(420),
+        "4".repeat(64),
+        createWindowsVerifiedExecutionAdapters().stagingAdapter,
+      );
+      expect(result.status).toBe(409);
+      expect(reopened.prepare(
+        "SELECT status,reason_code AS reasonCode FROM executions WHERE id=?",
+      ).get(EXECUTION_ID)).toEqual({ reasonCode: "STALE_EXECUTION", status: "stale" });
+    } finally {
+      reopened.close();
+    }
+  });
+
+  it("terminalizes acquired stage actions and receipts when the adapter throws", async () => {
+    const adapters = createWindowsVerifiedExecutionAdapters();
+    const initial = await refreshSandboxManifest({
+      fileAdapter: adapters.fileAdapter,
+      sandboxRoot: sandbox,
+    });
+    writeFileSync(baselinePath, JSON.stringify({ entries: initial.entries, hash: initial.hash }));
+    writeFileSync(currentPath, JSON.stringify({ entries: initial.entries, hash: initial.hash }));
+    const database = seedDatabase(initial.hash);
+    seedStagedDecision(database);
+    writeFileSync(join(sandbox, "RESULT.md"), "changed\n");
+    const version = (database.prepare(
+      "SELECT version FROM executions WHERE id=?",
+    ).get(EXECUTION_ID) as { version: number }).version;
+    try {
+      const result = await declareStaged(
+        databasePath,
+        database,
+        EXECUTION_ID,
+        {
+          agentId: "agent",
+          attemptId: ATTEMPT_ID,
+          attemptNo: 1,
+          attemptStatus: "acting",
+          businessDeadlineAt: "2099-01-01T00:00:00.000Z",
+          businessRound: 1,
+          executionRoot: root,
+          frozenPrivateJson: "{}",
+          projectId: PROJECT_ID,
+          sandboxRoot: sandbox,
+          status: "running",
+          version,
+          workspaceRoot: workspace,
+        },
+        operationId(421),
+        "5".repeat(64),
+        {
+          ...adapters.stagingAdapter,
+          async refreshSandboxManifest() {
+            throw new ExecutionError(
+              "SANDBOX_UNVERIFIABLE",
+              422,
+              "injected adapter failure",
+            );
+          },
+        },
+      );
+      expect(result).toMatchObject({
+        body: { error: { code: "SANDBOX_UNVERIFIABLE" } },
+        status: 422,
+      });
+      expectNoStageOrphans(database, operationId(421));
+      expect(database.prepare(`
+        SELECT e.status,e.reason_code AS reasonCode,a.status AS attemptStatus
+        FROM executions e JOIN execution_attempts a ON a.execution_id=e.id
+        WHERE e.id=?
+      `).get(EXECUTION_ID)).toEqual({
+        attemptStatus: "ready",
+        reasonCode: "SANDBOX_UNVERIFIABLE",
+        status: "paused",
+      });
+    } finally {
+      database.close();
+    }
+  });
+
+  it("matches the no-changes and stale-validation stage exit rows", async () => {
+    for (const scenario of ["no-changes", "validation-stale"] as const) {
+      const scenarioRoot = mkdtempSync(join(tmpdir(), `cool-ai-stage-${scenario}-`));
+      const previous = { baselinePath, currentPath, databasePath, root, sandbox, workspace };
+      root = scenarioRoot;
+      workspace = join(root, "workspace");
+      sandbox = join(root, "sandbox");
+      baselinePath = join(root, "baseline.json");
+      currentPath = join(root, "current.json");
+      databasePath = join(root, "cockpit.sqlite");
+      mkdirSync(workspace);
+      mkdirSync(sandbox);
+      writeFileSync(join(workspace, "README.md"), "before\n");
+      writeFileSync(join(sandbox, "README.md"), "before\n");
+      const adapters = createWindowsVerifiedExecutionAdapters();
+      const initial = await refreshSandboxManifest({
+        fileAdapter: adapters.fileAdapter,
+        sandboxRoot: sandbox,
+      });
+      writeFileSync(baselinePath, JSON.stringify({ entries: initial.entries, hash: initial.hash }));
+      writeFileSync(currentPath, JSON.stringify({ entries: initial.entries, hash: initial.hash }));
+      const database = seedDatabase(initial.hash);
+      seedStagedDecision(database);
+      if (scenario === "validation-stale") {
+        writeFileSync(join(sandbox, "RESULT.md"), "changed\n");
+        database.prepare(`
+          INSERT INTO project_validation_policy_entries (
+            id,project_id,revision_id,position,executable,executable_identity,
+            args_json,workdir,required,tuple_hash
+          ) VALUES ('required','${PROJECT_ID}','policy',0,'node','${"e".repeat(64)}',
+            '[]','.',1,'${"f".repeat(64)}')
+        `).run();
+      }
+      const operation = operationId(scenario === "no-changes" ? 422 : 423);
+      try {
+        const result = await declareStaged(
+          databasePath,
+          database,
+          EXECUTION_ID,
+          stageRow(database),
+          operation,
+          "6".repeat(64),
+          adapters.stagingAdapter,
+        );
+        const code = scenario === "no-changes" ? "STAGED_NO_CHANGES" : "VALIDATION_REQUIRED";
+        expect(result).toMatchObject({
+          body: { error: { code } },
+          status: scenario === "no-changes" ? 409 : 422,
+        });
+        expectNoStageOrphans(database, operation);
+        expect(database.prepare(`
+          SELECT e.status,e.resume_target AS resumeTarget,e.reason_code AS reasonCode,
+                 a.status AS attemptStatus
+          FROM executions e JOIN execution_attempts a ON a.execution_id=e.id
+          WHERE e.id=?
+        `).get(EXECUTION_ID)).toEqual({
+          attemptStatus: "ready",
+          reasonCode: code,
+          resumeTarget: "running",
+          status: "paused",
+        });
+      } finally {
+        database.close();
+        rmSync(scenarioRoot, { force: true, recursive: true });
+        ({ baselinePath, currentPath, databasePath, root, sandbox, workspace } = previous);
+      }
+    }
+  });
+
+  it("fails closed on strict manifest parse without orphaning stage facts", async () => {
+    const adapters = createWindowsVerifiedExecutionAdapters();
+    const initial = await refreshSandboxManifest({
+      fileAdapter: adapters.fileAdapter,
+      sandboxRoot: sandbox,
+    });
+    writeFileSync(baselinePath, JSON.stringify({
+      entries: initial.entries.map(({ identity: _identity, ...entry }) => entry),
+      hash: initial.hash,
+    }));
+    writeFileSync(currentPath, JSON.stringify({ entries: initial.entries, hash: initial.hash }));
+    const database = seedDatabase(initial.hash);
+    seedStagedDecision(database);
+    writeFileSync(join(sandbox, "RESULT.md"), "changed\n");
+    try {
+      const result = await declareStaged(
+        databasePath,
+        database,
+        EXECUTION_ID,
+        stageRow(database),
+        operationId(424),
+        "7".repeat(64),
+        adapters.stagingAdapter,
+      );
+      expect(result).toMatchObject({
+        body: { error: { code: "SANDBOX_UNVERIFIABLE" } },
+        status: 422,
+      });
+      expectNoStageOrphans(database, operationId(424));
+      expect(database.prepare(`
+        SELECT action.status AS actionStatus,action.error_code AS errorCode,
+               operation.status AS receiptStatus,operation.http_status AS httpStatus,
+               execution.status AS executionStatus,attempt.status AS attemptStatus
+        FROM execution_actions action
+        JOIN execution_operations operation ON operation.id=action.operation_id
+        JOIN executions execution ON execution.id=action.execution_id
+        JOIN execution_attempts attempt ON attempt.id=action.attempt_id
+        WHERE action.operation_id=?
+      `).get(operationId(424))).toEqual({
+        actionStatus: "failed",
+        attemptStatus: "ready",
+        errorCode: "SANDBOX_UNVERIFIABLE",
+        executionStatus: "paused",
+        httpStatus: 422,
+        receiptStatus: "completed",
+      });
+    } finally {
+      database.close();
+    }
+  });
+
+  it("reconciles lease loss, transaction injection, and a late finalizer", async () => {
+    for (const scenario of ["lease", "transaction", "late"] as const) {
+      const scenarioRoot = mkdtempSync(join(tmpdir(), `cool-ai-stage-${scenario}-`));
+      const previous = { baselinePath, currentPath, databasePath, root, sandbox, workspace };
+      root = scenarioRoot;
+      workspace = join(root, "workspace");
+      sandbox = join(root, "sandbox");
+      baselinePath = join(root, "baseline.json");
+      currentPath = join(root, "current.json");
+      databasePath = join(root, "cockpit.sqlite");
+      mkdirSync(workspace);
+      mkdirSync(sandbox);
+      writeFileSync(join(workspace, "README.md"), "before\n");
+      writeFileSync(join(sandbox, "README.md"), "before\n");
+      const adapters = createWindowsVerifiedExecutionAdapters();
+      const initial = await refreshSandboxManifest({
+        fileAdapter: adapters.fileAdapter,
+        sandboxRoot: sandbox,
+      });
+      writeFileSync(baselinePath, JSON.stringify({ entries: initial.entries, hash: initial.hash }));
+      writeFileSync(currentPath, JSON.stringify({ entries: initial.entries, hash: initial.hash }));
+      const database = seedDatabase(initial.hash);
+      seedStagedDecision(database);
+      writeFileSync(join(sandbox, "RESULT.md"), "changed\n");
+      const operation = operationId(
+        scenario === "lease" ? 425 : scenario === "transaction" ? 426 : 427,
+      );
+      if (scenario === "transaction") {
+        database.exec(`
+          CREATE TRIGGER inject_stage_transaction
+          BEFORE INSERT ON execution_staged_results
+          BEGIN SELECT RAISE(ABORT,'injected stage transaction'); END
+        `);
+      }
+      try {
+        const result = await declareStaged(
+          databasePath,
+          database,
+          EXECUTION_ID,
+          stageRow(database),
+          operation,
+          "8".repeat(64),
+          {
+            ...adapters.stagingAdapter,
+            async refreshSandboxManifest(input) {
+              const refreshed = await adapters.stagingAdapter.refreshSandboxManifest!(input);
+              if (scenario !== "transaction") {
+                const action = database.prepare(`
+                  SELECT id FROM execution_actions
+                  WHERE operation_id=? AND kind='stage_compute' AND status='running'
+                `).get(operation) as { id: string };
+                if (scenario === "lease") {
+                  database.prepare(`
+                    UPDATE execution_actions
+                    SET lease_expires_at='2020-01-01T00:00:00.000Z'
+                    WHERE id=?
+                  `).run(action.id);
+                } else {
+                  database.prepare(`
+                    UPDATE execution_actions
+                    SET status='interrupted',lease_token=NULL,lease_expires_at=NULL,
+                        error_code='ACTION_LEASE_LOST',
+                        finished_at=strftime('%Y-%m-%dT%H:%M:%fZ','now')
+                    WHERE id=?
+                  `).run(action.id);
+                  database.prepare(`
+                    UPDATE execution_operations
+                    SET status='completed',final_action_index=0,http_status=409,
+                        response_json='{"error":{"code":"ACTION_LEASE_LOST"}}'
+                    WHERE id=?
+                  `).run(operation);
+                }
+              }
+              return refreshed;
+            },
+          },
+        );
+        expect(result.status).toBe(scenario === "transaction" ? 500 : 409);
+        expectNoStageOrphans(database, operation);
+        expect(database.prepare(`
+          SELECT action.status AS actionStatus,action.error_code AS errorCode,
+                 operation.status AS receiptStatus,operation.http_status AS httpStatus,
+                 execution.status AS executionStatus,attempt.status AS attemptStatus
+          FROM execution_actions action
+          JOIN execution_operations operation ON operation.id=action.operation_id
+          JOIN executions execution ON execution.id=action.execution_id
+          JOIN execution_attempts attempt ON attempt.id=action.attempt_id
+          WHERE action.operation_id=?
+        `).get(operation)).toEqual({
+          actionStatus: scenario === "transaction" ? "failed" : "interrupted",
+          attemptStatus: "failed",
+          errorCode: scenario === "transaction" ? "INTERNAL_ERROR" : "ACTION_LEASE_LOST",
+          executionStatus: "failed",
+          httpStatus: scenario === "transaction" ? 500 : 409,
+          receiptStatus: "completed",
+        });
+        database.close();
+        const reopened = openDatabase(databasePath);
+        expectNoStageOrphans(reopened, operation);
+        reopened.close();
+      } finally {
+        if (database.isOpen) database.close();
+        rmSync(scenarioRoot, { force: true, recursive: true });
+        ({ baselinePath, currentPath, databasePath, root, sandbox, workspace } = previous);
+      }
+    }
+  });
+
+  it("closes every production refresh handle exactly once on failure", async () => {
+    const adapters = createWindowsVerifiedExecutionAdapters();
+    const initial = await refreshSandboxManifest({
+      fileAdapter: adapters.fileAdapter,
+      sandboxRoot: sandbox,
+    });
+    writeFileSync(baselinePath, JSON.stringify({ entries: initial.entries, hash: initial.hash }));
+    writeFileSync(currentPath, JSON.stringify({ entries: initial.entries, hash: initial.hash }));
+    const database = seedDatabase(initial.hash);
+    seedStagedDecision(database);
+    writeFileSync(join(sandbox, "RESULT.md"), "changed\n");
+    const closeCounts = new Map<unknown, number>();
+    const countedFileAdapter = {
+      ...adapters.fileAdapter,
+      async close(handle: unknown) {
+        closeCounts.set(handle, (closeCounts.get(handle) ?? 0) + 1);
+        await adapters.fileAdapter.close(handle as never);
+      },
+    };
+    try {
+      const result = await declareStaged(
+        databasePath,
+        database,
+        EXECUTION_ID,
+        stageRow(database),
+        operationId(428),
+        "9".repeat(64),
+        {
+          ...adapters.stagingAdapter,
+          async refreshSandboxManifest(input) {
+            const refreshed = await refreshSandboxManifest({
+              fileAdapter: countedFileAdapter,
+              sandboxRoot: input.sandboxRoot,
+            });
+            throw new ExecutionError("SANDBOX_UNVERIFIABLE", 422, JSON.stringify(refreshed.hash));
+          },
+        },
+      );
+      expect(result.status).toBe(422);
+      expect([...closeCounts.values()].every((count) => count === 1)).toBe(true);
+      expectNoStageOrphans(database, operationId(428));
+    } finally {
+      database.close();
+    }
+  });
+
   it("refreshes a real write before/after and stages the refreshed tree exactly once", async () => {
     const adapters = createWindowsVerifiedExecutionAdapters();
     const initial = await refreshSandboxManifest({
@@ -206,6 +707,7 @@ describe("verified sandbox manifest lifecycle", () => {
       sandboxRoot: sandbox,
     });
     expect(initial.entries).toEqual([{
+      identity: expect.any(String),
       modeTag: "file",
       path: "README.md",
       sha256: sha256("before\n"),
@@ -477,7 +979,7 @@ process.exit(${exitCode});
       "SELECT version FROM executions WHERE id=?",
     ).get(EXECUTION_ID) as { version: number }).version;
     try {
-      await expect(declareStaged(
+      const result = await declareStaged(
         databasePath,
         database,
         EXECUTION_ID,
@@ -509,7 +1011,11 @@ process.exit(${exitCode});
           },
           sandboxEntries: adapters.stagingAdapter.sandboxEntries,
         },
-      )).rejects.toMatchObject({ code: "STALE_EXECUTION" });
+      );
+      expect(result).toMatchObject({
+        body: { error: { code: "STALE_EXECUTION" } },
+        status: 409,
+      });
       expect(database.prepare(
         "SELECT COUNT(*) AS count FROM execution_staged_results",
       ).get()).toEqual({ count: 0 });

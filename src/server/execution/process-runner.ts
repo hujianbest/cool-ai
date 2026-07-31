@@ -9,6 +9,10 @@ import {
   finalizeExecutionActionWithEffects,
   heartbeatExecutionAction,
 } from "@/src/server/execution/execution-actions";
+import {
+  persistVerifiedSandboxManifest,
+  type VerifiedSandboxManifest,
+} from "@/src/server/execution/sandbox-manifest-store";
 
 const HEARTBEAT_MS = 30_000;
 const OVERALL_DEADLINE_MS = 120_000;
@@ -644,7 +648,7 @@ export async function executeCommandProcessAction(input: {
   manifestAdapter?: {
     refreshSandboxManifest?(input: {
       sandboxRoot: string;
-    }): Promise<{ hash: string }>;
+    }): Promise<VerifiedSandboxManifest>;
   };
   operationId: string;
   processAdapter?: ProcessRunnerAdapter;
@@ -709,7 +713,7 @@ export async function executeCommandProcessAction(input: {
   const manifestAdapter = action.sandboxManifestHash && refreshManifest
     ? refreshManifest
     : null;
-  let preManifest: { hash: string } | null = null;
+  let preManifest: VerifiedSandboxManifest | null = null;
   try {
     preManifest = manifestAdapter
       ? await manifestAdapter({ sandboxRoot: action.sandboxRoot })
@@ -749,11 +753,15 @@ export async function executeCommandProcessAction(input: {
     secretValues: input.secretValues,
     workdir: request.workdir,
   });
-  let postManifest: { hash: string } | null = null;
+  let postManifest: VerifiedSandboxManifest | null = null;
+  let postManifestPath: string | null = null;
   try {
     postManifest = manifestAdapter && processResult.status !== "termination_unconfirmed"
       ? await manifestAdapter({ sandboxRoot: action.sandboxRoot })
       : null;
+    if (postManifest) {
+      postManifestPath = await persistVerifiedSandboxManifest(action.sandboxRoot, postManifest);
+    }
   } catch {
     return finalizeCommandManifestFailure(input.database, {
       leaseToken: acquired.leaseToken,
@@ -866,10 +874,12 @@ export async function executeCommandProcessAction(input: {
       }
       if (preManifest && postManifest) {
         const attempt = database.prepare(`
-          UPDATE execution_attempts SET sandbox_manifest_hash=?
+          UPDATE execution_attempts
+          SET sandbox_manifest_path=?,sandbox_manifest_hash=?
           WHERE project_id=? AND id=? AND execution_id=?
             AND status IN ('ready','acting') AND sandbox_manifest_hash=?
         `).run(
+          postManifestPath,
           postManifest.hash,
           input.projectId,
           action.attemptId,

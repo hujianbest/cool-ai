@@ -53,13 +53,14 @@ import {
   type ExecutionBudgetBoundary,
 } from "@/src/server/execution/execution-usage-budget";
 import { staleExecutionIfFrozenInputChanged } from "@/src/server/execution/execution-frozen-input";
-import { staleExecutionForCanonicalPathChanges } from "@/src/server/execution/execution-conflicts";
+import { compareCanonicalPathStates } from "@/src/server/execution/execution-conflicts";
 import {
   computeStagedSnapshot,
   persistComputedStage,
   type ExecutionStagingAdapter,
   type StagingEntry,
 } from "@/src/server/execution/stage-service";
+import { persistVerifiedSandboxManifest } from "@/src/server/execution/sandbox-manifest-store";
 import {
   advanceExecutionInputSchema,
   advanceExecutionResponseSchema,
@@ -1002,6 +1003,153 @@ function finalizeStageUnverifiable(
   return { body, status: 422 };
 }
 
+type StageFailure = {
+  attemptStatus: "completed" | "failed" | "ready";
+  code: string;
+  executionStatus: "failed" | "paused" | "stale";
+  httpStatus: number;
+};
+
+function stageFailure(error: unknown): StageFailure {
+  if (error instanceof ExecutionError) {
+    if (error.code === "STALE_EXECUTION") {
+      return {
+        attemptStatus: "completed",
+        code: error.code,
+        executionStatus: "stale",
+        httpStatus: 409,
+      };
+    }
+    if (error.code === "STAGED_NO_CHANGES") {
+      return {
+        attemptStatus: "ready",
+        code: error.code,
+        executionStatus: "paused",
+        httpStatus: 409,
+      };
+    }
+    if (error.code === "VALIDATION_REQUIRED" || error.code === "SANDBOX_UNVERIFIABLE") {
+      return {
+        attemptStatus: "ready",
+        code: error.code,
+        executionStatus: "paused",
+        httpStatus: 422,
+      };
+    }
+    if (error.code !== "ACTION_LEASE_LOST") {
+      return {
+        attemptStatus: "ready",
+        code: error.code,
+        executionStatus: "paused",
+        httpStatus: error.httpStatus,
+      };
+    }
+  }
+  return {
+    attemptStatus: "failed",
+    code: error instanceof ExecutionError && error.code === "ACTION_LEASE_LOST"
+      ? "ACTION_LEASE_LOST"
+      : "INTERNAL_ERROR",
+    executionStatus: "failed",
+    httpStatus: error instanceof ExecutionError && error.code === "ACTION_LEASE_LOST" ? 409 : 500,
+  };
+}
+
+function finalizeStageFailure(
+  database: DatabaseSync,
+  input: {
+    actionId: string;
+    attemptId: string;
+    error: unknown;
+    executionId: string;
+    leaseToken: string;
+    operationId: string;
+    projectId: string;
+    refreshedHash: string | null;
+    refreshedPath: string | null;
+  },
+): AdvanceResult {
+  const failure = stageFailure(input.error);
+  const body = {
+    error: {
+      code: failure.code,
+      message: failure.code === "INTERNAL_ERROR"
+        ? "The stage action failed."
+        : "The stage action could not be completed.",
+    },
+  };
+  const applyState = (currentDatabase: DatabaseSync) => {
+    const resumeTarget = failure.executionStatus === "paused" ? "running" : null;
+    currentDatabase.prepare(`
+      UPDATE executions
+      SET status=?,resume_target=?,reason_code=?,version=version+1,
+          updated_at=strftime('%Y-%m-%dT%H:%M:%fZ','now')
+      WHERE project_id=? AND id=? AND status='running'
+    `).run(
+      failure.executionStatus,
+      resumeTarget,
+      failure.code,
+      input.projectId,
+      input.executionId,
+    );
+    currentDatabase.prepare(`
+      UPDATE execution_attempts
+      SET status=?,sandbox_manifest_path=coalesce(?,sandbox_manifest_path),
+          sandbox_manifest_hash=coalesce(?,sandbox_manifest_hash),
+          finished_at=CASE WHEN ?='ready' THEN NULL
+            ELSE coalesce(finished_at,strftime('%Y-%m-%dT%H:%M:%fZ','now')) END
+      WHERE project_id=? AND id=? AND execution_id=?
+        AND status IN ('ready','acting')
+    `).run(
+      failure.attemptStatus,
+      input.refreshedPath,
+      input.refreshedHash,
+      failure.attemptStatus,
+      input.projectId,
+      input.attemptId,
+      input.executionId,
+    );
+  };
+  try {
+    const finalized = finalizeExecutionActionWithEffects(database, {
+      actionId: input.actionId,
+      body,
+      errorCode: failure.code,
+      effects: applyState,
+      httpStatus: failure.httpStatus,
+      leaseToken: input.leaseToken,
+      projectId: input.projectId,
+      result: { code: failure.code },
+      status: "failed",
+    });
+    if (finalized.affectedRows === 1) return { body, status: failure.httpStatus };
+  } catch {
+    // A failed finalizer is reconciled below from the durable action/receipt identity.
+  }
+  transaction(database, () => {
+    applyState(database);
+    database.prepare(`
+      UPDATE execution_actions
+      SET status='interrupted',lease_token=NULL,lease_expires_at=NULL,
+          result_json=NULL,error_code=?,finished_at=coalesce(
+            finished_at,strftime('%Y-%m-%dT%H:%M:%fZ','now'))
+      WHERE project_id=? AND id=? AND status='running'
+    `).run(failure.code, input.projectId, input.actionId);
+    database.prepare(`
+      UPDATE execution_operations
+      SET status='completed',final_action_index=0,http_status=?,response_json=?,
+          updated_at=strftime('%Y-%m-%dT%H:%M:%fZ','now')
+      WHERE project_id=? AND id=? AND status='pending'
+    `).run(
+      failure.httpStatus,
+      JSON.stringify(body),
+      input.projectId,
+      input.operationId,
+    );
+  });
+  return { body, status: failure.httpStatus };
+}
+
 export async function declareStaged(
   databasePath: string,
   database: DatabaseSync,
@@ -1013,7 +1161,8 @@ export async function declareStaged(
 ): Promise<AdvanceResult> {
   const manifest = database.prepare(`
     SELECT baseline_manifest_path AS baselinePath,baseline_manifest_hash AS baselineHash,
-           sandbox_manifest_hash AS sandboxHash,frozen_context_hash AS contextHash,
+           sandbox_manifest_path AS sandboxPath,sandbox_manifest_hash AS sandboxHash,
+           frozen_context_hash AS contextHash,
            frozen_policy_revision_id AS policyRevisionId,frozen_policy_hash AS policyHash
     FROM execution_attempts WHERE id=?
   `).get(row.attemptId) as {
@@ -1023,6 +1172,7 @@ export async function declareStaged(
     policyHash: string;
     policyRevisionId: string;
     sandboxHash: string | null;
+    sandboxPath: string | null;
   };
   const expectedSandboxHash = manifest.sandboxHash;
   let noChanges = !manifest.sandboxHash || manifest.sandboxHash === manifest.baselineHash;
@@ -1053,6 +1203,18 @@ export async function declareStaged(
   if (acquired.affectedRows !== 1 || !acquired.leaseToken) {
     throw new ExecutionError("OPERATION_IN_PROGRESS", 409, "Stage declaration is in progress.");
   }
+  let refreshedHash: string | null = null;
+  let refreshedPath: string | null = null;
+  try {
+  if (stagingAdapter?.currentEntries) {
+    for await (const _entry of stagingAdapter.currentEntries({
+      attemptId: row.attemptId,
+      sandboxManifestPath: manifest.sandboxPath,
+      sandboxRoot: row.sandboxRoot,
+    })) {
+      // Exhaustion is the strict parse/verified-read boundary after process reopen.
+    }
+  }
   const refreshed = stagingAdapter?.refreshSandboxManifest
     ? await stagingAdapter.refreshSandboxManifest({
         attemptId: row.attemptId,
@@ -1061,7 +1223,17 @@ export async function declareStaged(
     : null;
   if (refreshed) {
     manifest.sandboxHash = refreshed.hash;
+    refreshedHash = refreshed.hash;
+    refreshedPath = await persistVerifiedSandboxManifest(row.sandboxRoot, {
+      entries: refreshed.entries,
+      hash: refreshed.hash,
+      stagingEntries: refreshed.stagingEntries ?? [],
+    });
+    manifest.sandboxPath = refreshedPath;
     noChanges = !manifest.baselineHash || refreshed.hash === manifest.baselineHash;
+    if (noChanges) {
+      throw new ExecutionError("STAGED_NO_CHANGES", 409, "The sandbox matches its baseline.");
+    }
   }
   if (
     stagingAdapter
@@ -1153,6 +1325,9 @@ export async function declareStaged(
       sandbox: asEntries(sandboxEntries),
       sandboxManifestHash: manifest.sandboxHash,
     });
+    if (snapshot.blockReasons.includes("VALIDATION_REQUIRED")) {
+      throw new ExecutionError("VALIDATION_REQUIRED", 422, "Required validation is not current.");
+    }
     if (snapshot.outcome === "ready") {
       if (stagingAdapter.canonicalEntries) {
         const canonicalEntries = await collectEntries(stagingAdapter.canonicalEntries({
@@ -1167,37 +1342,30 @@ export async function declareStaged(
           ORDER BY id
         `).all(row.projectId, executionId, row.attemptId) as Array<{ path: string }>)
           .map(({ path }) => path);
-        const canonicalBoundary = staleExecutionForCanonicalPathChanges(database, {
-          attemptNo: row.attemptNo,
+        const canonicalBoundary = compareCanonicalPathStates({
           current: canonicalEntries.map((entry) => ({
             exists: true,
             identity: entry.identity ?? null,
             path: entry.path,
             sha256: entry.sha256,
           })),
-          executionId,
           frozen: baselineEntries.map((entry) => ({
             exists: true,
             identity: entry.identity ?? null,
             path: entry.path,
             sha256: entry.sha256,
           })),
-          projectId: row.projectId,
           relevantPaths: [
             ...readPaths,
             ...snapshot.observations.map(({ path }) => path),
           ],
         });
         if (canonicalBoundary.disposition === "stale") {
-          return {
-            body: {
-              error: {
-                code: "STALE_EXECUTION",
-                message: "Canonical workspace paths changed; retry from a new baseline.",
-              },
-            },
-            status: 409,
-          };
+          throw new ExecutionError(
+            "STALE_EXECUTION",
+            409,
+            "Canonical workspace paths changed; retry from a new baseline.",
+          );
         }
       }
       const body = publicResponse(
@@ -1222,6 +1390,7 @@ export async function declareStaged(
         policyHash: manifest.policyHash,
         projectId: row.projectId,
         sandboxManifestHash: manifest.sandboxHash,
+        sandboxManifestPath: manifest.sandboxPath!,
         snapshot,
       });
       if (persisted.affectedRows !== 1) {
@@ -1229,7 +1398,7 @@ export async function declareStaged(
       }
       return { body, status: 200 };
     }
-    noChanges = true;
+    throw new ExecutionError("STAGED_NO_CHANGES", 409, "The sandbox matches its baseline.");
   }
   const body = publicResponse(
     databasePath,
@@ -1266,11 +1435,20 @@ export async function declareStaged(
   if (finalized.affectedRows !== 1) {
     throw new ExecutionError("ACTION_LEASE_LOST", 409, "Stage declaration result was discarded.");
   }
-  const inputBoundary = staleExecutionIfFrozenInputChanged(database, executionId);
-  if (inputBoundary.disposition === "stale") {
-    return { body: inputBoundary.body, status: 409 };
-  }
   return { body, status: noChanges ? 409 : 200 };
+  } catch (error) {
+    return finalizeStageFailure(database, {
+      actionId,
+      attemptId: row.attemptId,
+      error,
+      executionId,
+      leaseToken: acquired.leaseToken,
+      operationId,
+      projectId: row.projectId,
+      refreshedHash,
+      refreshedPath,
+    });
+  }
 }
 
 export async function advanceExecution(

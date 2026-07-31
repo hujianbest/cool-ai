@@ -628,11 +628,13 @@ export async function startExecution(
         .prepare(
           `INSERT INTO execution_attempts (
              id, project_id, execution_id, attempt_no, status, sandbox_root,
-             baseline_manifest_path, baseline_manifest_hash, sandbox_manifest_hash,
+             baseline_manifest_path, sandbox_manifest_path,
+             baseline_manifest_hash, sandbox_manifest_hash,
              frozen_public_json, frozen_private_json, frozen_context_hash,
              frozen_policy_revision_id, frozen_policy_version, frozen_policy_hash,
              started_at, finished_at
-           ) VALUES (?, ?, ?, 1, 'preparing', ?, NULL, NULL, NULL, ?, ?, ?, ?, ?, ?, ?, NULL)`,
+           ) VALUES (?, ?, ?, 1, 'preparing', ?, NULL, NULL, NULL, NULL,
+             ?, ?, ?, ?, ?, ?, ?, NULL)`,
         )
         .run(
           attemptId,

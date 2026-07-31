@@ -6,6 +6,10 @@ import {
   finalizeExecutionActionWithEffects,
 } from "@/src/server/execution/execution-actions";
 import { validateSandboxRelativePath } from "@/src/server/execution/path-guard";
+import {
+  persistVerifiedSandboxManifest,
+  type VerifiedSandboxManifest,
+} from "@/src/server/execution/sandbox-manifest-store";
 
 type EntryKind = "directory" | "file" | "link" | "reparse" | "special";
 
@@ -82,16 +86,10 @@ export type SandboxNativeWriteAdapter<Handle = unknown> =
 type SandboxManifestRefresh = {
   refreshSandboxManifest?(input: {
     sandboxRoot: string;
-  }): Promise<{
-    entries: Array<{ modeTag: string; path: string; sha256: string; size: number }>;
-    hash: string;
-  }>;
+  }): Promise<VerifiedSandboxManifest>;
 };
 
-type SandboxManifestSnapshot = {
-  entries: Array<{ modeTag: string; path: string; sha256: string; size: number }>;
-  hash: string;
-};
+type SandboxManifestSnapshot = VerifiedSandboxManifest;
 
 export type SandboxExecutionFileAdapter<Handle = unknown, Previous = unknown> = (
   | SandboxWriteAdapter<Handle, Previous>
@@ -1417,9 +1415,11 @@ export async function executeWriteToolAction<Handle, Previous>(input: {
   let written: ReversibleWriteResult;
   let preManifest: SandboxManifestSnapshot | null = null;
   let postManifest: SandboxManifestSnapshot | null = null;
+  let postManifestPath: string | null = null;
   try {
     if (input.fs.refreshSandboxManifest) {
-      preManifest = await input.fs.refreshSandboxManifest({ sandboxRoot: input.sandboxRoot });
+      const refreshed = await input.fs.refreshSandboxManifest({ sandboxRoot: input.sandboxRoot });
+      preManifest = refreshed;
       const current = input.database.prepare(`
         SELECT sandbox_manifest_hash AS hash,status
         FROM execution_attempts
@@ -1430,7 +1430,7 @@ export async function executeWriteToolAction<Handle, Previous>(input: {
       if (
         !current
         || !["ready", "acting"].includes(current.status)
-        || current.hash !== preManifest.hash
+        || current.hash !== refreshed.hash
       ) {
         throw new SandboxWriteError(
           "SANDBOX_UNVERIFIABLE",
@@ -1478,7 +1478,12 @@ export async function executeWriteToolAction<Handle, Previous>(input: {
           sandboxRoot: input.sandboxRoot,
         });
     if (input.fs.refreshSandboxManifest) {
-      postManifest = await input.fs.refreshSandboxManifest({ sandboxRoot: input.sandboxRoot });
+      const refreshed = await input.fs.refreshSandboxManifest({ sandboxRoot: input.sandboxRoot });
+      postManifest = refreshed;
+      postManifestPath = await persistVerifiedSandboxManifest(
+        input.sandboxRoot,
+        refreshed,
+      );
     }
   } catch (error) {
     if ((error as { code?: unknown })?.code === "SANDBOX_UNVERIFIABLE") {
@@ -1555,10 +1560,11 @@ export async function executeWriteToolAction<Handle, Previous>(input: {
         if (preManifest && postManifest) {
           const attempt = database.prepare(`
             UPDATE execution_attempts
-            SET sandbox_manifest_hash=?
+            SET sandbox_manifest_path=?,sandbox_manifest_hash=?
             WHERE project_id=? AND id=? AND execution_id=?
               AND status IN ('ready','acting') AND sandbox_manifest_hash=?
           `).run(
+            postManifestPath,
             postManifest.hash,
             input.projectId,
             action.attemptId,

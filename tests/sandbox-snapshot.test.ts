@@ -128,14 +128,25 @@ describe("verified-handle sandbox snapshot", () => {
     expect(result.itemCount).toBe(preflight.itemCount);
     expect(result.totalBytes).toBe(preflight.totalBytes);
     expect(result.files).toEqual([
-      { modeTag: "file", path: "README.md", sha256: sha256("hello\n"), size: 6 },
       {
+        identity: expect.any(String),
+        modeTag: "file",
+        path: "README.md",
+        sha256: sha256("hello\n"),
+        size: 6,
+      },
+      {
+        identity: expect.any(String),
         modeTag: "file",
         path: "src/index.ts",
         sha256: sha256("export const answer = 42;\n"),
         size: 26,
       },
     ]);
+    expect(result.sandboxFiles.map(({ identity: _identity, ...file }) => file))
+      .toEqual(result.files.map(({ identity: _identity, ...file }) => file));
+    expect(result.sandboxFiles.map(({ identity }) => identity))
+      .not.toEqual(result.files.map(({ identity }) => identity));
     expect(result.manifestHash).toMatch(/^[0-9a-f]{64}$/);
     expect(phases).toContain("source-opened");
     expect(phases.at(-1)).toBe("sandbox-renamed");

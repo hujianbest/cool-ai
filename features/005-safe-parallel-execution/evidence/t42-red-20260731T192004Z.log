@@ -1,0 +1,220 @@
+# hf-gate-run
+# label: t42-red
+# command: npm.cmd test -- tests/execution-write-stage-integration.test.ts
+# started: 2026-07-31T19:20:04+00:00
+
+> collaboration-cockpit@0.1.0 test
+> vitest run tests/execution-write-stage-integration.test.ts
+
+
+ RUN  v4.1.10 D:/cool-ai
+
+(node:11312) ExperimentalWarning: SQLite is an experimental feature and might change at any time
+(Use `node --trace-warnings ...` to show where the warning was created)
+ ❯ tests/execution-write-stage-integration.test.ts (8 tests | 8 failed) 1563ms
+     × persists strict baseline and current manifest identities across reopen 27ms
+     × marks same bytes with a new canonical identity stale after reopen 223ms
+     × terminalizes acquired stage actions and receipts when the adapter throws 217ms
+     × refreshes a real write before/after and stages the refreshed tree exactly once 216ms
+     × refreshes a confirmed command tree for exit code 0 and records the real terminal state 215ms
+     × refreshes a confirmed command tree for exit code 3 and records the real terminal state 231ms
+     × post-refreshes a timed-out command only after confirmed tree termination 215ms
+     × drops a refreshed stage when the cached manifest CAS loses 217ms
+
+⎯⎯⎯⎯⎯⎯⎯ Failed Tests 8 ⎯⎯⎯⎯⎯⎯⎯
+
+ FAIL  tests/execution-write-stage-integration.test.ts > verified sandbox manifest lifecycle > persists strict baseline and current manifest identities across reopen
+AssertionError: expected { modeTag: 'file', …(3) } to deeply equal ObjectContaining{…}
+
+- Expected
++ Received
+
+- ObjectContaining {
+-   "identity": Any<String>,
++ {
+    "modeTag": "file",
+    "path": "README.md",
+    "sha256": "9160d4be34c8695bd172a76c7c7966587ea5a4d991ad22c87b2b91af54aa9ebb",
+    "size": 7,
+  }
+
+ ❯ tests/execution-write-stage-integration.test.ts:212:32
+    210|       sandboxRoot: sandbox,
+    211|     });
+    212|     expect(initial.entries[0]).toEqual(expect.objectContaining({
+       |                                ^
+    213|       identity: expect.any(String),
+    214|       modeTag: "file",
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[1/15]⎯
+
+ FAIL  tests/execution-write-stage-integration.test.ts > verified sandbox manifest lifecycle > marks same bytes with a new canonical identity stale after reopen
+Error: table execution_attempts has no column named sandbox_manifest_path
+ ❯ seedDatabase tests/execution-write-stage-integration.test.ts:70:12
+     68| function seedDatabase(initialHash: string): DatabaseSync {
+     69|   const database = openDatabase(databasePath);
+     70|   database.exec(`
+       |            ^
+     71|     INSERT INTO projects (id,name,created_at,workspace_path,workspace_…
+     72|     VALUES ('${PROJECT_ID}','Manifest','${NOW}','${workspace.replaceAl…
+ ❯ tests/execution-write-stage-integration.test.ts:251:22
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[2/15]⎯
+
+ FAIL  tests/execution-write-stage-integration.test.ts > verified sandbox manifest lifecycle > marks same bytes with a new canonical identity stale after reopen
+Error: EPERM, Permission denied: \\?\C:\Users\ADMINI~1\AppData\Local\Temp\2\cool-ai-write-stage-RVhjIm '\\?\C:\Users\ADMINI~1\AppData\Local\Temp\2\cool-ai-write-stage-RVhjIm'
+ ❯ tests/execution-write-stage-integration.test.ts:59:17
+     57| });
+     58|
+     59| afterEach(() => rmSync(root, { force: true, recursive: true }));
+       |                 ^
+     60|
+     61| const sha256 = (value: string | Uint8Array) =>
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[3/15]⎯
+
+ FAIL  tests/execution-write-stage-integration.test.ts > verified sandbox manifest lifecycle > terminalizes acquired stage actions and receipts when the adapter throws
+Error: table execution_attempts has no column named sandbox_manifest_path
+ ❯ seedDatabase tests/execution-write-stage-integration.test.ts:70:12
+     68| function seedDatabase(initialHash: string): DatabaseSync {
+     69|   const database = openDatabase(databasePath);
+     70|   database.exec(`
+       |            ^
+     71|     INSERT INTO projects (id,name,created_at,workspace_path,workspace_…
+     72|     VALUES ('${PROJECT_ID}','Manifest','${NOW}','${workspace.replaceAl…
+ ❯ tests/execution-write-stage-integration.test.ts:305:22
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[4/15]⎯
+
+ FAIL  tests/execution-write-stage-integration.test.ts > verified sandbox manifest lifecycle > terminalizes acquired stage actions and receipts when the adapter throws
+Error: EPERM, Permission denied: \\?\C:\Users\ADMINI~1\AppData\Local\Temp\2\cool-ai-write-stage-1HWb4c '\\?\C:\Users\ADMINI~1\AppData\Local\Temp\2\cool-ai-write-stage-1HWb4c'
+ ❯ tests/execution-write-stage-integration.test.ts:59:17
+     57| });
+     58|
+     59| afterEach(() => rmSync(root, { force: true, recursive: true }));
+       |                 ^
+     60|
+     61| const sha256 = (value: string | Uint8Array) =>
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[5/15]⎯
+
+ FAIL  tests/execution-write-stage-integration.test.ts > verified sandbox manifest lifecycle > refreshes a real write before/after and stages the refreshed tree exactly once
+Error: table execution_attempts has no column named sandbox_manifest_path
+ ❯ seedDatabase tests/execution-write-stage-integration.test.ts:70:12
+     68| function seedDatabase(initialHash: string): DatabaseSync {
+     69|   const database = openDatabase(databasePath);
+     70|   database.exec(`
+       |            ^
+     71|     INSERT INTO projects (id,name,created_at,workspace_path,workspace_…
+     72|     VALUES ('${PROJECT_ID}','Manifest','${NOW}','${workspace.replaceAl…
+ ❯ tests/execution-write-stage-integration.test.ts:369:22
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[6/15]⎯
+
+ FAIL  tests/execution-write-stage-integration.test.ts > verified sandbox manifest lifecycle > refreshes a real write before/after and stages the refreshed tree exactly once
+Error: EPERM, Permission denied: \\?\C:\Users\ADMINI~1\AppData\Local\Temp\2\cool-ai-write-stage-JF2xFd '\\?\C:\Users\ADMINI~1\AppData\Local\Temp\2\cool-ai-write-stage-JF2xFd'
+ ❯ tests/execution-write-stage-integration.test.ts:59:17
+     57| });
+     58|
+     59| afterEach(() => rmSync(root, { force: true, recursive: true }));
+       |                 ^
+     60|
+     61| const sha256 = (value: string | Uint8Array) =>
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[7/15]⎯
+
+ FAIL  tests/execution-write-stage-integration.test.ts > verified sandbox manifest lifecycle > refreshes a confirmed command tree for exit code 0 and records the real terminal state
+ FAIL  tests/execution-write-stage-integration.test.ts > verified sandbox manifest lifecycle > refreshes a confirmed command tree for exit code 3 and records the real terminal state
+Error: table execution_attempts has no column named sandbox_manifest_path
+ ❯ seedDatabase tests/execution-write-stage-integration.test.ts:70:12
+     68| function seedDatabase(initialHash: string): DatabaseSync {
+     69|   const database = openDatabase(databasePath);
+     70|   database.exec(`
+       |            ^
+     71|     INSERT INTO projects (id,name,created_at,workspace_path,workspace_…
+     72|     VALUES ('${PROJECT_ID}','Manifest','${NOW}','${workspace.replaceAl…
+ ❯ tests/execution-write-stage-integration.test.ts:487:24
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[8/15]⎯
+
+ FAIL  tests/execution-write-stage-integration.test.ts > verified sandbox manifest lifecycle > refreshes a confirmed command tree for exit code 0 and records the real terminal state
+Error: EPERM, Permission denied: \\?\C:\Users\ADMINI~1\AppData\Local\Temp\2\cool-ai-write-stage-v2IcNr '\\?\C:\Users\ADMINI~1\AppData\Local\Temp\2\cool-ai-write-stage-v2IcNr'
+ ❯ tests/execution-write-stage-integration.test.ts:59:17
+     57| });
+     58|
+     59| afterEach(() => rmSync(root, { force: true, recursive: true }));
+       |                 ^
+     60|
+     61| const sha256 = (value: string | Uint8Array) =>
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[9/15]⎯
+
+ FAIL  tests/execution-write-stage-integration.test.ts > verified sandbox manifest lifecycle > refreshes a confirmed command tree for exit code 3 and records the real terminal state
+Error: EPERM, Permission denied: \\?\C:\Users\ADMINI~1\AppData\Local\Temp\2\cool-ai-write-stage-BYIlcL '\\?\C:\Users\ADMINI~1\AppData\Local\Temp\2\cool-ai-write-stage-BYIlcL'
+ ❯ tests/execution-write-stage-integration.test.ts:59:17
+     57| });
+     58|
+     59| afterEach(() => rmSync(root, { force: true, recursive: true }));
+       |                 ^
+     60|
+     61| const sha256 = (value: string | Uint8Array) =>
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[10/15]⎯
+
+ FAIL  tests/execution-write-stage-integration.test.ts > verified sandbox manifest lifecycle > post-refreshes a timed-out command only after confirmed tree termination
+Error: table execution_attempts has no column named sandbox_manifest_path
+ ❯ seedDatabase tests/execution-write-stage-integration.test.ts:70:12
+     68| function seedDatabase(initialHash: string): DatabaseSync {
+     69|   const database = openDatabase(databasePath);
+     70|   database.exec(`
+       |            ^
+     71|     INSERT INTO projects (id,name,created_at,workspace_path,workspace_…
+     72|     VALUES ('${PROJECT_ID}','Manifest','${NOW}','${workspace.replaceAl…
+ ❯ tests/execution-write-stage-integration.test.ts:541:22
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[11/15]⎯
+
+ FAIL  tests/execution-write-stage-integration.test.ts > verified sandbox manifest lifecycle > post-refreshes a timed-out command only after confirmed tree termination
+Error: EPERM, Permission denied: \\?\C:\Users\ADMINI~1\AppData\Local\Temp\2\cool-ai-write-stage-mJxtoQ '\\?\C:\Users\ADMINI~1\AppData\Local\Temp\2\cool-ai-write-stage-mJxtoQ'
+ ❯ tests/execution-write-stage-integration.test.ts:59:17
+     57| });
+     58|
+     59| afterEach(() => rmSync(root, { force: true, recursive: true }));
+       |                 ^
+     60|
+     61| const sha256 = (value: string | Uint8Array) =>
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[12/15]⎯
+
+ FAIL  tests/execution-write-stage-integration.test.ts > verified sandbox manifest lifecycle > drops a refreshed stage when the cached manifest CAS loses
+Error: table execution_attempts has no column named sandbox_manifest_path
+ ❯ seedDatabase tests/execution-write-stage-integration.test.ts:70:12
+     68| function seedDatabase(initialHash: string): DatabaseSync {
+     69|   const database = openDatabase(databasePath);
+     70|   database.exec(`
+       |            ^
+     71|     INSERT INTO projects (id,name,created_at,workspace_path,workspace_…
+     72|     VALUES ('${PROJECT_ID}','Manifest','${NOW}','${workspace.replaceAl…
+ ❯ tests/execution-write-stage-integration.test.ts:624:22
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[13/15]⎯
+
+ FAIL  tests/execution-write-stage-integration.test.ts > verified sandbox manifest lifecycle > drops a refreshed stage when the cached manifest CAS loses
+Error: EPERM, Permission denied: \\?\C:\Users\ADMINI~1\AppData\Local\Temp\2\cool-ai-write-stage-85QjtE '\\?\C:\Users\ADMINI~1\AppData\Local\Temp\2\cool-ai-write-stage-85QjtE'
+ ❯ tests/execution-write-stage-integration.test.ts:59:17
+     57| });
+     58|
+     59| afterEach(() => rmSync(root, { force: true, recursive: true }));
+       |                 ^
+     60|
+     61| const sha256 = (value: string | Uint8Array) =>
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[14/15]⎯
+
+
+ Test Files  1 failed (1)
+      Tests  8 failed (8)
+   Start at  03:20:05
+   Duration  4.71s (transform 453ms, setup 417ms, import 660ms, tests 1.56s, environment 1.76s)
+
+# exit: 1

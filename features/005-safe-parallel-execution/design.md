@@ -165,6 +165,7 @@ type ManifestEntry = {
   size: number;
   sha256: string;     // 文件原始 bytes
   modeTag: string;    // POSIX mode&0777；Windows readonly/normal属性，仅供metadata diff
+  identity: string;   // Windows volume serial + 128-bit file id；用于 stale/race，不进入 byte-manifest hash
 };
 ```
 
@@ -416,6 +417,7 @@ CREATE TABLE execution_attempts(
     ('preparing','ready','acting','interrupted','failed','superseded','completed')),
   sandbox_root TEXT NOT NULL CHECK(length(CAST(sandbox_root AS BLOB)) BETWEEN 1 AND 32767),
   baseline_manifest_path TEXT,
+  sandbox_manifest_path TEXT,
   baseline_manifest_hash TEXT CHECK(baseline_manifest_hash IS NULL OR
     (length(baseline_manifest_hash)=64 AND baseline_manifest_hash NOT GLOB '*[^0-9a-f]*')),
   sandbox_manifest_hash TEXT CHECK(sandbox_manifest_hash IS NULL OR
@@ -1166,12 +1168,29 @@ DTO 只含上述字段。stdout/stderr/diff/tool content均是边界内脱敏文
 
 retention：revision、entries、audit在project生命周期内永久保留，不做时间/数量GC；被attempt/validation引用的revision因此始终可重放。显式删除整个project时才允许FK cascade清理，immutable delete trigger以parent project已不存在为条件放行。当前policy GET只读active pointer；history分页只读immutable revisions/audits。空policy由system创建revision_no=1/entries=0，合法且`automaticMergeAllowed:false`。
 
-verified sandbox manifest 是整棵 sandbox 的唯一字节事实，不得用单文件 hash 代替。baseline/当前 manifest 文件与 adapter DTO 统一字段 `{path,size,sha256,modeTag}`，禁止 `hash`/`sha256` 双契约。`refreshSandboxManifest` 只经 verified handle 遍历并返回确定性 entry 集与 hash：
+verified sandbox manifest 是整棵 sandbox 的唯一字节事实，不得用单文件 hash 代替。baseline/当前 manifest 文件与 adapter DTO 使用 strict `{path,size,sha256,modeTag,identity}`，禁止 `hash`/`sha256` 双契约；baseline 写 immutable `baseline_manifest_path`，每次成功 refresh 原子写新的 `sandbox_manifest_path` 后再 CAS attempt 指针/hash，旧文件只读保留供审计。重启后 baseline/current 都从对应路径 strict parse identity；byte-manifest hash 仍只输入 path/size/sha256。`refreshSandboxManifest` 只经 verified handle 遍历并返回确定性 entry 集与 hash：
 
 - 每次 write 与每个实际启动的 command 都先在 action lease 有效、execution/attempt 可执行时做一次 verified pre-refresh；其 hash 必须等于 attempt 当前 `sandbox_manifest_hash`，并成为 tool-call `before_sandbox_hash`。write 完成后、command 在确认进程树已终止后（无论 exit=0、非零、timeout）都做 post-refresh；termination 无法确认时 attempt/execution 直接 failed 且永久禁止 stage，不把缓存视为可信。
 - 唯一 finalize 顺序：外部动作完成并取得 post entries/hash → 事务以 action lease/token、execution status/version、attempt status 与 `sandbox_manifest_hash=preHash` 做 CAS → 写 tool/action 终态（按真实 exit/错误决定 succeeded/failed）、command validation（若属于政策 entry，绑定 postHash）→ 更新 attempt `sandbox_manifest_hash=postHash` 与 execution version → 最后完成 receipt。任一 pre/post refresh 或 CAS 失败均不得留下 succeeded tool/action/validation；若文件已改变但 late CAS 失败，attempt 由 reconcile 进入 interrupted/failed，owner 只能 retry 新 attempt，旧 attempt 不得 stage。
 - validation 总是绑定同次 command post-refresh 的整树 hash；之后任一 refresh 改变 hash，旧 validation 只读保留但不满足 required。
 - stage 不以缓存 hash 相等直接判 `STAGED_NO_CHANGES`；先通过 production adapter 单次重算整树 entries+hash，并只使用这一份不可变结果计算 observations、diff、staged hash。事务以 action lease、execution version/status、attempt status 与旧缓存 hash 做 CAS；实际 hash 与缓存不一致时同一事务更新 attempt 后再判 required validation freshness，旧 validation 不新鲜则拒绝 stage。遍历/CAS 失败不得插 staged facts；遍历失败 `SANDBOX_UNVERIFIABLE`，实际等于 baseline 才是 `STAGED_NO_CHANGES`。
+- baseline/current canonical 与 sandbox entry 都必须从打开的 verified file handle 保留 `identity`；同 bytes 但 identity 改变仍判 external stale。确定性 byte-manifest hash 明确只输入 path/size/sha256，不因 identity 改变而变化；identity 独立进入 frozen/staged stale 比较。existing entry 缺 identity 是 `SANDBOX_UNVERIFIABLE`，不得作为 `identity:null` 传给 conflict comparator。
+- `stage_compute` action acquire 后所有路径都必须终态收口：success/stale/known guard error/adapter error/未知异常均在 catch/finally 中以 lease CAS 完成 action 与 receipt，并把 execution 置 staged/stale/paused/failed 的唯一状态；未知异常公开为 500 `INTERNAL_ERROR`，可验证性错误为 422 `SANDBOX_UNVERIFIABLE`。任何异常后 `running stage_compute` 数量必须为0，且不插部分 staged facts。
+
+stage action acquire 后出口矩阵：
+
+| 出口 | action / receipt | execution / attempt | staged facts |
+|---|---|---|---|
+| success | `succeeded`, completed 200 | `staged`, attempt=`completed` | 同一事务全量插入 |
+| canonical/context stale | `failed(STALE_EXECUTION)`, completed 409 | execution=`stale`, attempt=`completed` | 0 |
+| actual manifest=baseline | `failed(STAGED_NO_CHANGES)`, completed 409 | execution=`paused,resume_target=running,reason=STAGED_NO_CHANGES`, attempt=`ready` | 0 |
+| required validation 不新鲜 | `failed(VALIDATION_REQUIRED)`, completed 422 | execution=`paused,resume_target=running,reason=VALIDATION_REQUIRED`, attempt=`ready` | 0 |
+| adapter/identity/manifest parse error | `failed(SANDBOX_UNVERIFIABLE)`, completed 422 | execution=`paused,resume_target=running,reason=SANDBOX_UNVERIFIABLE`, attempt=`ready` | 0 |
+| 未知异常（lease 仍归本 action） | `failed(INTERNAL_ERROR)`, completed 500 | execution=`failed,reason=INTERNAL_ERROR`, attempt=`failed` | 0 |
+| lease/deadline/reconcile 先赢或事务注入后重开 | reconcile 置 `interrupted(ACTION_LEASE_LOST)`, completed 409 | execution=`paused,resume_target=running,reason=ACTION_LEASE_LOST`, attempt=`interrupted` | 0 |
+| late finalizer CAS=0 | 只返回上述已持久 receipt，不新增事件/事实 | 不改 durable 状态 | 0 |
+
+pending/running child 等 acquire 前 guard 在创建 stage action/receipt 前返回 `OPERATION_IN_PROGRESS` 409，因此 stage action 数=0。每个完成分支的 action、receipt、execution、attempt 与 staged facts 在同一事务提交；事务注入 rollback 后不声称 catch 已完成，而由重开/lease reconcile 唯一收口。
 
 required validation有效 iff：exact tuple命中冻结 entry、exit=0、结果 `sandbox_manifest_hash` 等于当前 staged sandbox manifest。任一文件工具或会改变 manifest 的命令后，旧结果仍审计可见但不满足 required。staged条件:
 
@@ -1340,7 +1359,8 @@ manual recovery警示明确“检测到平台外写入；平台已停止自动�
 - [x] T-39 将 verified adapter 接入 merge/recovery/manual resolution (覆盖: FR-8, FR-9, FR-11, NFR-1, NFR-2, NFR-4) — 判据: `npm test -- tests/merge-journal-prepare.test.ts tests/merge-recovery.test.ts tests/merge-fault-injection.test.ts tests/merge-external-writer.test.ts`先红后绿；首次 canonical 写前 capability failure 零 journal/零写，journal 后任一 native 不确定进入 manual barrier，conditional apply/rollback/roll-forward/cleanup 全经 handle，external bytes 覆盖0、任务结果提交0
 - [x] T-40 接通生产默认 sandbox executor 与 start receipt 收口 (覆盖: FR-1, FR-2, FR-4, FR-5, FR-8, FR-10, FR-11, NFR-1, NFR-2, NFR-4) — 判据: `npm test -- tests/execution-sandbox-orchestrator.test.ts`先红后绿；不调用 `setSandboxExecutorForTests`，公开 start route 对真实临时 SQLite/canonical/execution root 返回201，verified snapshot 文件存在且 canonical 零修改，attempt=`ready`、sandbox action=`succeeded`、start receipt=`completed`、manifest一致；逐项覆盖 D-2 fault/concurrency oracle，断言四项成功事实全有或全无、snapshot执行次数、精确状态/HTTP/清理结果与 canonical hash
 - [x] T-41 统一并刷新 verified sandbox manifest 生命周期 (覆盖: FR-3, FR-5, FR-7, FR-8, FR-10, FR-11, NFR-1, NFR-2, NFR-4) — 判据: `npm test -- tests/execution-write-stage-integration.test.ts`先红后绿；生产 Windows adapter 的真实 write、成功 command、非零/timeout且已确认终止 command 均记录 pre/post 整树 hash并更新 attempt，canonical 不变，baseline/current entry 统一 `sha256`；validation 只绑定 postHash，后续 refresh 正确失鲜；stage 只消费单次 refresh 的 entries/hash并产生 observation+merge file；pre/post refresh、stage遍历、lease/version/expected-hash CAS 竞争失败均不留 succeeded tool/action/validation/staged facts并按设计进入 paused/failed/interrupted
-- [ ] T-42 收口只经公开行为的真实 browser smoke harness (覆盖: FR-1, FR-2, FR-3, FR-8, FR-9, FR-11, FR-14, NFR-1, NFR-4, NFR-5) — 判据: `npm test -- tests/execution-browser-smoke.test.ts`先红后绿；smoke 不拦截 start/advance/stage/merge/recovery 路由、不直接写业务 SQLite 或复制 canonical 文件来合成状态，双 execution 从 start 经真实 provider、工具/验证、stage 到至少一次 merge 只走产品公开 API；stale/conflict/manual recovery 由公开行为或专用故障注入触发；provider 健康探针不计入 execution 并发断言
-- [ ] T-43 运行S-5 desktop+narrow smoke/demo，仅验证前序已实现行为 (覆盖: FR-1..FR-14, NFR-1..NFR-5) — 判据: 本任务不得新增或修改product code/test行为；README、`npm test`、`npm run build`、`npm run smoke:execution`通过，并留真实provider双Agent不相交合入、重复/边界/standing+one-shot、stale/conflict/manual recovery及desktop/narrow证据
+- [x] T-42 保留 canonical identity 并收口 stage action 全异常路径 (覆盖: FR-7, FR-8, FR-11, NFR-1, NFR-4) — 判据: `npm test -- tests/execution-write-stage-integration.test.ts`先红后绿；strict baseline/current manifest 持久 identity 并在关闭数据库/adapter后重开，同 bytes 新 identity 仍 stale；完整 production adapter 逐项覆盖 success、stale、no-changes、validation stale、identity/parse error、未知异常、lease/reconcile、事务注入重开与 late finalizer，精确匹配 §7 矩阵，非成功分支 running action=0、pending receipt=0、staged facts=0且 handle close恰一次
+- [ ] T-43 收口只经公开行为的真实 browser smoke harness (覆盖: FR-1, FR-2, FR-3, FR-8, FR-9, FR-11, FR-14, NFR-1, NFR-4, NFR-5) — 判据: `npm test -- tests/execution-browser-smoke.test.ts`先红后绿；smoke 不拦截 start/advance/stage/merge/recovery 路由、不直接写业务 SQLite 或复制 canonical 文件来合成状态，双 execution 从 start 经真实 provider、工具/验证、stage 到至少一次 merge 只走产品公开 API；stale/conflict/manual recovery 由公开行为或专用故障注入触发；provider 健康探针不计入 execution 并发断言
+- [ ] T-44 运行S-5 desktop+narrow smoke/demo，仅验证前序已实现行为 (覆盖: FR-1..FR-14, NFR-1..NFR-5) — 判据: 本任务不得新增或修改product code/test行为；README、`npm test`、`npm run build`、`npm run smoke:execution`通过，并留真实provider双Agent不相交合入、重复/边界/standing+one-shot、stale/conflict/manual recovery及desktop/narrow证据
 
-任务覆盖索引：FR-1→T-2/3/17/20/27/28/31/40/42–43；FR-2→T-1/2/5/16/22–26/28/30–31/40/42–43；FR-3→T-8–10/12/14–19/28/31–32/37/41–43；FR-4→T-6–10/16/31/33–34/36–37/40/43；FR-5→T-6/7/10/16/31/34–37/40–41/43；FR-6→T-11–13/16/19/25/27/29/31/43；FR-7→T-19/20/26/29/31/37/41/43；FR-8→T-7/11/15/18–23/29/31/33–43；FR-9→T-19–23/25/29/30–31/33/35/38–39/42–43；FR-10→T-1/5/6/8–14/17/19/24/26/28/31–32/36/40–41/43；FR-11→T-1/2/4/5/7/8/10/13/14/16/18/21–26/31/36–37/39–43；FR-12→T-4/5/18/20/23–25/28/30–31/43；FR-13→T-1/4/5/9/11–15/18/22–26/29/31/43；FR-14→T-2/11/27–30/42–43。NFR-1→T-1–3/5/7/10/16–24/28/30–43；NFR-2→T-6–17/19/21/26/29/31/33–41/43；NFR-3→T-6/8–15/25/27/29/30–35/37/43；NFR-4→T-1/2/4/5/7–9/11–18/20–26/31/36–43；NFR-5→T-2/27–30/42–43。
+任务覆盖索引：FR-1→T-2/3/17/20/27/28/31/40/43–44；FR-2→T-1/2/5/16/22–26/28/30–31/40/43–44；FR-3→T-8–10/12/14–19/28/31–32/37/41/43–44；FR-4→T-6–10/16/31/33–34/36–37/40/44；FR-5→T-6/7/10/16/31/34–37/40–41/44；FR-6→T-11–13/16/19/25/27/29/31/44；FR-7→T-19/20/26/29/31/37/41–42/44；FR-8→T-7/11/15/18–23/29/31/33–44；FR-9→T-19–23/25/29/30–31/33/35/38–39/43–44；FR-10→T-1/5/6/8–14/17/19/24/26/28/31–32/36/40–41/44；FR-11→T-1/2/4/5/7/8/10/13/14/16/18/21–26/31/36–37/39–44；FR-12→T-4/5/18/20/23–25/28/30–31/44；FR-13→T-1/4/5/9/11–15/18/22–26/29/31/44；FR-14→T-2/11/27–30/43–44。NFR-1→T-1–3/5/7/10/16–24/28/30–44；NFR-2→T-6–17/19/21/26/29/31/33–41/44；NFR-3→T-6/8–15/25/27/29/30–35/37/44；NFR-4→T-1/2/4/5/7–9/11–18/20–26/31/36–44；NFR-5→T-2/27–30/43–44。

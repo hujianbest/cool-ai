@@ -34,11 +34,22 @@ export type ExecutionStagingAdapter = {
     attemptId: string;
     workspaceRoot: string;
   }): AsyncIterable<StagingEntry>;
+  currentEntries?(input: {
+    attemptId: string;
+    sandboxManifestPath: string | null;
+    sandboxRoot: string;
+  }): AsyncIterable<StagingEntry>;
   refreshSandboxManifest?(input: {
     attemptId: string;
     sandboxRoot: string;
   }): Promise<{
-    entries: Array<Pick<StagingEntry, "modeTag" | "path" | "sha256" | "size">>;
+    entries: Array<{
+      identity: string;
+      modeTag: string;
+      path: string;
+      sha256: string;
+      size: number;
+    }>;
     hash: string;
     stagingEntries?: StagingEntry[];
   }>;
@@ -655,6 +666,7 @@ export function persistComputedStage(
     policyHash: string;
     projectId: string;
     sandboxManifestHash: string;
+    sandboxManifestPath?: string;
     snapshot: ComputedStagedSnapshot;
   },
 ): { affectedRows: 0 | 1; stagedResultId: string | null } {
@@ -694,24 +706,21 @@ export function persistComputedStage(
         || current.contextHash !== input.contextHash
         || current.policyHash !== input.policyHash
       ) throw new ExecutionError("STALE_EXECUTION", 409, "Stage input changed before commit.");
-      if (current.sandboxHash !== input.sandboxManifestHash) {
-        const previousSandboxHash = input.expectedSandboxManifestHash;
-        if (!previousSandboxHash) {
-          throw new ExecutionError("STALE_EXECUTION", 409, "Stage manifest expectation is missing.");
-        }
-        const refreshed = currentDatabase.prepare(`
-          UPDATE execution_attempts
-          SET sandbox_manifest_hash=?
-          WHERE id=(SELECT attempt_id FROM execution_actions WHERE id=?)
-            AND status IN ('ready','acting') AND sandbox_manifest_hash=?
-        `).run(
-          input.sandboxManifestHash,
-          input.actionId,
-          previousSandboxHash,
-        );
-        if (refreshed.changes !== 1) {
-          throw new ExecutionError("STALE_EXECUTION", 409, "Stage manifest changed before commit.");
-        }
+      const previousSandboxHash = input.expectedSandboxManifestHash ?? input.sandboxManifestHash;
+      const refreshed = currentDatabase.prepare(`
+        UPDATE execution_attempts
+        SET status='completed',sandbox_manifest_path=?,sandbox_manifest_hash=?,
+            finished_at=strftime('%Y-%m-%dT%H:%M:%fZ','now')
+        WHERE id=(SELECT attempt_id FROM execution_actions WHERE id=?)
+          AND status IN ('ready','acting') AND sandbox_manifest_hash=?
+      `).run(
+        input.sandboxManifestPath ?? null,
+        input.sandboxManifestHash,
+        input.actionId,
+        previousSandboxHash,
+      );
+      if (refreshed.changes !== 1) {
+        throw new ExecutionError("STALE_EXECUTION", 409, "Stage manifest changed before commit.");
       }
       if (currentDatabase.prepare(`
         SELECT 1 FROM execution_approvals

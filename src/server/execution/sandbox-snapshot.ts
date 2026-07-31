@@ -34,6 +34,7 @@ export type SandboxSnapshotHooks = {
 };
 
 export type SandboxSnapshotFile = {
+  identity: string;
   modeTag: string;
   path: string;
   sha256: string;
@@ -45,6 +46,7 @@ export type SandboxSnapshotResult = {
   itemCount: number;
   manifestHash: string;
   rootIdentity: string;
+  sandboxFiles: SandboxSnapshotFile[];
   totalBytes: number;
 };
 
@@ -288,6 +290,7 @@ async function writeVerifiedSource(input: {
     await rename(temporaryPath, destinationPath);
     await runHook(hooks, "destination-synced", entry.path);
     return {
+      identity: entry.identity,
       modeTag: "file",
       path: entry.path,
       sha256: digest.digest("hex"),
@@ -306,7 +309,7 @@ async function verifyBuildingManifest(input: {
   platform: SandboxFsAdapter;
   rootPath: string;
   totalBytes: number;
-}): Promise<void> {
+}): Promise<SandboxSnapshotFile[]> {
   const { expectedEntryCount, expectedFiles, platform, rootPath, totalBytes } = input;
   let rootHandle: unknown;
   try {
@@ -327,6 +330,7 @@ async function verifyBuildingManifest(input: {
   });
   let observedItems = 0;
   let observedBytes = 0;
+  const sandboxFiles: SandboxSnapshotFile[] = [];
 
   async function walk(handle: unknown, relativeDirectory: string): Promise<void> {
     const entries = await adapterCall(
@@ -386,6 +390,10 @@ async function verifyBuildingManifest(input: {
           mismatch("The copied file does not match its verified source bytes.");
         }
         observedBytes += size;
+        sandboxFiles.push({
+          ...file,
+          identity: manifestEntries.get(file.path)!.identity,
+        });
         expected.delete(file.path);
       } finally {
         await closePathHandles(platform, opened.handles);
@@ -398,6 +406,7 @@ async function verifyBuildingManifest(input: {
     ) {
       mismatch("The building manifest does not match the preflight manifest.");
     }
+    return sandboxFiles;
   } finally {
     await closeHandle(platform, rootHandle);
   }
@@ -490,7 +499,7 @@ export async function buildSandboxSnapshot(input: {
     if (totalBytes !== input.preflight.totalBytes) {
       mismatch("Snapshot bytes do not match the preflight manifest.");
     }
-    await verifyBuildingManifest({
+    const sandboxFiles = await verifyBuildingManifest({
       expectedEntryCount: input.preflight.entries.length,
       expectedFiles: files,
       platform,
@@ -501,12 +510,15 @@ export async function buildSandboxSnapshot(input: {
     ownedBuilding = false;
     ownedSandbox = true;
     await runHook(input.hooks, "sandbox-renamed");
-    const manifestHash = createHash("sha256").update(JSON.stringify(files)).digest("hex");
+    const manifestHash = createHash("sha256").update(JSON.stringify(
+      files.map(({ identity: _identity, ...file }) => file),
+    )).digest("hex");
     return {
       files,
       itemCount: input.preflight.itemCount,
       manifestHash,
       rootIdentity: input.preflight.rootIdentity,
+      sandboxFiles,
       totalBytes,
     };
   } catch (error) {

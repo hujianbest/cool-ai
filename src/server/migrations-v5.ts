@@ -91,6 +91,7 @@ CREATE TABLE execution_attempts(
  status TEXT NOT NULL CHECK(status IN ('preparing','ready','acting','interrupted','failed','superseded','completed')),
  sandbox_root TEXT NOT NULL CHECK(length(CAST(sandbox_root AS BLOB)) BETWEEN 1 AND 32767),
  baseline_manifest_path TEXT,
+ sandbox_manifest_path TEXT,
  baseline_manifest_hash TEXT CHECK(baseline_manifest_hash IS NULL OR (length(baseline_manifest_hash)=64 AND baseline_manifest_hash NOT GLOB '*[^0-9a-f]*')),
  sandbox_manifest_hash TEXT CHECK(sandbox_manifest_hash IS NULL OR (length(sandbox_manifest_hash)=64 AND sandbox_manifest_hash NOT GLOB '*[^0-9a-f]*')),
  frozen_public_json TEXT NOT NULL CHECK(json_valid(frozen_public_json) AND length(CAST(frozen_public_json AS BLOB))<=2097152),
