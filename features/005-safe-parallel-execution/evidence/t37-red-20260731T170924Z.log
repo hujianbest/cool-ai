@@ -1,0 +1,80 @@
+# hf-gate-run
+# label: t37-red
+# command: npm.cmd test -- tests/execution-list-tool.test.ts tests/execution-read-tool.test.ts tests/execution-write-tool.test.ts tests/execution-staging.test.ts
+# started: 2026-07-31T17:09:24+00:00
+
+> collaboration-cockpit@0.1.0 test
+> vitest run tests/execution-list-tool.test.ts tests/execution-read-tool.test.ts tests/execution-write-tool.test.ts tests/execution-staging.test.ts
+
+
+ RUN  v4.1.10 D:/cool-ai
+
+(node:11500) ExperimentalWarning: SQLite is an experimental feature and might change at any time
+(Use `node --trace-warnings ...` to show where the warning was created)
+(node:1848) ExperimentalWarning: SQLite is an experimental feature and might change at any time
+(Use `node --trace-warnings ...` to show where the warning was created)
+(node:8724) ExperimentalWarning: SQLite is an experimental feature and might change at any time
+(Use `node --trace-warnings ...` to show where the warning was created)
+(node:11996) ExperimentalWarning: SQLite is an experimental feature and might change at any time
+(Use `node --trace-warnings ...` to show where the warning was created)
+ ❯ tests/execution-list-tool.test.ts (42 tests | 2 failed) 2534ms
+     × wires production file and stage actions without the Node path fallback 27ms
+     × durably pauses list native failure with failed tool/action and completed 422 receipt 271ms
+
+⎯⎯⎯⎯⎯⎯⎯ Failed Tests 2 ⎯⎯⎯⎯⎯⎯⎯
+
+ FAIL  tests/execution-list-tool.test.ts > verified-handle bounded list > wires production file and stage actions without the Node path fallback
+AssertionError: expected { adapterLoaded: false, …(2) } to deeply equal { adapterLoaded: true, …(2) }
+
+- Expected
++ Received
+
+  {
+-   "adapterLoaded": true,
++   "adapterLoaded": false,
+    "nativeFactoryWired": true,
+    "nodeFallbackRemoved": true,
+  }
+
+ ❯ tests/execution-list-tool.test.ts:227:8
+    225|       nativeFactoryWired: route.includes("createWindowsVerifiedExecuti…
+    226|       nodeFallbackRemoved: !route.includes("nodeFileToolAdapter"),
+    227|     }).toEqual({
+       |        ^
+    228|       adapterLoaded: true,
+    229|       nativeFactoryWired: true,
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[1/2]⎯
+
+ FAIL  tests/execution-list-tool.test.ts > durable list child action > durably pauses list native failure with failed tool/action and completed 422 receipt
+AssertionError: expected { status: 'running', …(2) } to deeply equal { …(3) }
+
+- Expected
++ Received
+
+  {
+-   "reasonCode": "SANDBOX_UNVERIFIABLE",
+-   "resumeTarget": "running",
+-   "status": "paused",
++   "reasonCode": null,
++   "resumeTarget": null,
++   "status": "running",
+  }
+
+ ❯ tests/execution-list-tool.test.ts:332:29
+    330|         SELECT status,resume_target AS resumeTarget,reason_code AS rea…
+    331|         FROM executions WHERE id=?
+    332|       `).get(EXECUTION_ID)).toEqual({
+       |                             ^
+    333|         reasonCode: "SANDBOX_UNVERIFIABLE",
+    334|         resumeTarget: "running",
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[2/2]⎯
+
+
+ Test Files  1 failed | 3 passed (4)
+      Tests  2 failed | 63 passed (65)
+   Start at  01:09:25
+   Duration  5.67s (transform 839ms, setup 2.01s, import 1.21s, tests 6.82s, environment 7.81s)
+
+# exit: 1

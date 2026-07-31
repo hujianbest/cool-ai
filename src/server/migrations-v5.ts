@@ -207,6 +207,7 @@ CREATE TABLE execution_tool_calls(
  business_round INTEGER NOT NULL CHECK(business_round>=1), type TEXT NOT NULL CHECK(type IN ('list','read','write','command')),
  request_hash TEXT NOT NULL CHECK(length(request_hash)=64 AND request_hash NOT GLOB '*[^0-9a-f]*'),
  status TEXT NOT NULL CHECK(status IN ('requested','waiting_approval','succeeded','rejected','failed','interrupted','discarded')),
+ error_code TEXT,
  public_request_json TEXT NOT NULL CHECK(json_valid(public_request_json) AND length(CAST(public_request_json AS BLOB))<=131072),
  public_result_json TEXT CHECK(public_result_json IS NULL OR (json_valid(public_result_json) AND length(CAST(public_result_json AS BLOB))<=2097152)),
  before_sandbox_hash TEXT CHECK(before_sandbox_hash IS NULL OR (length(before_sandbox_hash)=64 AND before_sandbox_hash NOT GLOB '*[^0-9a-f]*')),

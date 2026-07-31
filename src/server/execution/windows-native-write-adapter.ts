@@ -54,6 +54,20 @@ export type WindowsNativeWriteAdapterOptions = {
   };
 };
 
+export class WindowsNativeWriteFailure extends WindowsNativeError {
+  constructor(
+    public readonly mutationState:
+      | "cleanup-confirmed"
+      | "cleanup-unconfirmed"
+      | "post-replace-unverifiable",
+    message: string,
+    options?: ErrorOptions,
+  ) {
+    super(message, options);
+    this.name = "WindowsNativeWriteFailure";
+  }
+}
+
 type KoffiLibrary = {
   func(
     convention: string,
@@ -770,17 +784,32 @@ export function createWindowsNativeWriteAdapter(
       closeOwned(functions, owned);
       return output;
     } catch (error) {
+      let cleanupConfirmed = true;
       if (temp && !temp.closed && !renamed) {
         try {
           if (sameIdentity(temp.identityAtOpen, identityOf(functions, temp))) {
             markDelete(functions, temp);
+          } else {
+            cleanupConfirmed = false;
           }
         } catch {
-          // An uncertain temp is deliberately retained instead of deleting by path.
+          cleanupConfirmed = false;
         }
       }
-      closeOwned(functions, owned, error);
-      throw error;
+      try {
+        closeOwned(functions, owned);
+      } catch {
+        cleanupConfirmed = false;
+      }
+      throw new WindowsNativeWriteFailure(
+        renamed
+          ? "post-replace-unverifiable"
+          : cleanupConfirmed
+            ? "cleanup-confirmed"
+            : "cleanup-unconfirmed",
+        "The verified native write failed.",
+        { cause: error },
+      );
     }
   }
 

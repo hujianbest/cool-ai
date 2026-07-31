@@ -1,11 +1,13 @@
-import { mkdtempSync, rmSync } from "node:fs";
+import { mkdtempSync, readFileSync, rmSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import type { DatabaseSync } from "node:sqlite";
-import { afterEach, beforeEach, describe, expect, it } from "vitest";
+import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
 import { openDatabase } from "@/src/server/db";
 import { discardExecutionAction } from "@/src/server/execution/execution-actions";
+
+vi.mock("server-only", () => ({}));
 
 type Identity = {
   finalPath: string;
@@ -204,6 +206,33 @@ describe("cross-platform relative path guard", () => {
 });
 
 describe("verified-handle bounded list", () => {
+  it("wires production file and stage actions without the Node path fallback", async () => {
+    const moduleId = "@/src/server/execution/windows-verified-execution-adapter";
+    let adapterLoaded = false;
+    try {
+      const adapter = await import(/* @vite-ignore */ moduleId) as {
+        createWindowsVerifiedExecutionAdapters?: unknown;
+      };
+      adapterLoaded = typeof adapter.createWindowsVerifiedExecutionAdapters === "function";
+    } catch {
+      adapterLoaded = false;
+    }
+    const route = readFileSync(
+      join(process.cwd(), "app/api/executions/[executionId]/advance/route.ts"),
+      "utf8",
+    );
+
+    expect({
+      adapterLoaded,
+      nativeFactoryWired: route.includes("createWindowsVerifiedExecutionAdapters"),
+      nodeFallbackRemoved: !route.includes("nodeFileToolAdapter"),
+    }).toEqual({
+      adapterLoaded: true,
+      nativeFactoryWired: true,
+      nodeFallbackRemoved: true,
+    });
+  });
+
   it("lists at most 1000 direct ordinary children in stable UTF-8 name order", async () => {
     const children: Array<[string, FakeNode]> = [];
     for (let index = 1000; index >= 0; index -= 1) {
@@ -283,6 +312,47 @@ describe("verified-handle bounded list", () => {
 });
 
 describe("durable list child action", () => {
+  it("durably pauses list native failure with failed tool/action and completed 422 receipt", async () => {
+    const fs = simpleAdapter();
+    fs.openRootDirectory = async () => {
+      throw new Error("native identity unavailable");
+    };
+    const database = seedDatabase(7);
+    try {
+      await expect(listTool.executeListToolAction({
+        actionIndex: 0,
+        database,
+        fs,
+        operationId: operationId(7),
+        path: "src",
+        projectId: PROJECT_ID,
+        sandboxRoot: SANDBOX_ROOT,
+      })).rejects.toMatchObject({ code: "SANDBOX_UNVERIFIABLE" });
+      expect(database.prepare(`
+        SELECT status,resume_target AS resumeTarget,reason_code AS reasonCode
+        FROM executions WHERE id=?
+      `).get(EXECUTION_ID)).toEqual({
+        reasonCode: "SANDBOX_UNVERIFIABLE",
+        resumeTarget: "running",
+        status: "paused",
+      });
+      expect(database.prepare(`
+        SELECT status,error_code AS errorCode FROM execution_actions
+      `).get()).toEqual({ errorCode: "SANDBOX_UNVERIFIABLE", status: "failed" });
+      expect(database.prepare(`
+        SELECT status,public_result_json AS resultJson FROM execution_tool_calls
+      `).get()).toEqual({
+        resultJson: JSON.stringify({ code: "SANDBOX_UNVERIFIABLE" }),
+        status: "failed",
+      });
+      expect(database.prepare(`
+        SELECT status,http_status AS httpStatus FROM execution_operations
+      `).get()).toEqual({ httpStatus: 422, status: "completed" });
+    } finally {
+      database.close();
+    }
+  });
+
   it("atomically persists typed tool facts, count, event, action, and receipt", async () => {
     const fs = simpleAdapter();
     const database = seedDatabase(5);

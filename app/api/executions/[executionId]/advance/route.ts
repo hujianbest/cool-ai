@@ -5,7 +5,9 @@ import {
   executionErrorResponse,
   readExecutionJson,
 } from "@/src/server/execution/execution-api";
-import { nodeFileToolAdapter } from "@/src/server/execution/node-file-tool-adapter";
+import {
+  createWindowsVerifiedExecutionAdapters,
+} from "@/src/server/execution/windows-verified-execution-adapter";
 import { advanceExecutionInputSchema } from "@/src/shared/execution-contracts";
 
 type RouteContext = { params: Promise<{ executionId: string }> };
@@ -29,11 +31,12 @@ export async function POST(
     );
   }
   try {
+    const adapters = createWindowsVerifiedExecutionAdapters();
     const result = await advanceExecution(
       databasePath(),
       executionId,
       input.data,
-      { fileAdapter: nodeFileToolAdapter },
+      adapters,
     );
     return Response.json(result.body, { status: result.status });
   } catch (error) {

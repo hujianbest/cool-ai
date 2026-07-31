@@ -241,6 +241,7 @@ export function finalizeExecutionActionWithEffects(
   input: {
     actionId: string;
     body: unknown;
+    errorCode?: string | null;
     effects?: (database: DatabaseSync) => void;
     httpStatus: number;
     leaseToken: string;
@@ -255,13 +256,14 @@ export function finalizeExecutionActionWithEffects(
     const finalized = database.prepare(`
       UPDATE execution_actions
       SET status=?,lease_token=NULL,lease_expires_at=NULL,
-          result_json=?,error_code=NULL,finished_at=${DB_NOW}
+          result_json=?,error_code=?,finished_at=${DB_NOW}
       WHERE project_id=? AND id=? AND status='running' AND lease_token=?
         AND lease_expires_at>${DB_NOW}
         AND overall_deadline_at>${DB_NOW}
     `).run(
       input.status,
       resultJson,
+      input.errorCode ?? null,
       input.projectId,
       input.actionId,
       input.leaseToken,

@@ -69,6 +69,20 @@ export type SandboxWriteAdapter<Handle = unknown, Previous = unknown> =
     writeAll(handle: Handle, bytes: Uint8Array): Promise<void>;
   };
 
+export type SandboxNativeWriteAdapter<Handle = unknown> =
+  SandboxFileHandleAdapter<Handle> & {
+    writeNativeVerifiedFile(input: {
+      bytes: Uint8Array;
+      expectedHash: string | null;
+      pathSegments: string[];
+      sandboxRoot: string;
+    }): { hash: string };
+  };
+
+export type SandboxExecutionFileAdapter<Handle = unknown, Previous = unknown> =
+  | SandboxWriteAdapter<Handle, Previous>
+  | SandboxNativeWriteAdapter<Handle>;
+
 export type PublicListEntry = {
   kind: "directory" | "file";
   name: string;
@@ -610,10 +624,102 @@ type ActionRow = {
   startedAt: string;
 };
 
+function finalizeUnverifiableToolFailure(input: {
+  action: ActionRow;
+  database: DatabaseSync;
+  hardFailure?: boolean;
+  leaseToken: string;
+  projectId: string;
+  publicRequest: unknown;
+  responseBody?: unknown;
+  type: "list" | "read" | "write";
+}): void {
+  const toolCallId = randomUUID();
+  const eventId = randomUUID();
+  const result = { code: "SANDBOX_UNVERIFIABLE" };
+  const committed = finalizeExecutionActionWithEffects(input.database, {
+    actionId: input.action.actionId,
+    body: input.responseBody ?? { error: result },
+    errorCode: "SANDBOX_UNVERIFIABLE",
+    effects(database) {
+      database.prepare(`
+        INSERT INTO execution_tool_calls (
+          id,project_id,execution_id,attempt_id,action_id,business_round,type,
+          request_hash,status,error_code,public_request_json,public_result_json,
+          before_sandbox_hash,after_sandbox_hash,started_at,finished_at
+        ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, 'failed', 'SANDBOX_UNVERIFIABLE', ?, ?, NULL, NULL, ?,
+          strftime('%Y-%m-%dT%H:%M:%fZ','now'))
+      `).run(
+        toolCallId,
+        input.projectId,
+        input.action.executionId,
+        input.action.attemptId,
+        input.action.actionId,
+        Math.max(1, input.action.businessRound),
+        input.type,
+        input.action.requestHash,
+        JSON.stringify(input.publicRequest),
+        JSON.stringify(result),
+        input.action.startedAt,
+      );
+      const execution = database.prepare(`
+        UPDATE executions
+        SET status=?,resume_target=?,reason_code='SANDBOX_UNVERIFIABLE',
+            tool_call_count=tool_call_count+1,
+            next_event_sequence=next_event_sequence+1,
+            updated_at=strftime('%Y-%m-%dT%H:%M:%fZ','now'),
+            version=version+1
+        WHERE project_id=? AND id=? AND status='running'
+          AND current_attempt_no=? AND next_event_sequence=?
+      `).run(
+        input.hardFailure ? "failed" : "paused",
+        input.hardFailure ? null : "running",
+        input.projectId,
+        input.action.executionId,
+        input.action.attemptNo,
+        input.action.sequence,
+      );
+      if (execution.changes !== 1) {
+        throw new Error("Execution changed before the native failure could commit.");
+      }
+      if (input.hardFailure) {
+        database.prepare(`
+          UPDATE execution_attempts
+          SET status='failed',finished_at=strftime('%Y-%m-%dT%H:%M:%fZ','now')
+          WHERE id=? AND status IN ('ready','acting')
+        `).run(input.action.attemptId);
+      }
+      database.prepare(`
+        INSERT INTO execution_events (
+          id,project_id,execution_id,sequence,attempt_no,type,actor_type,
+          actor_id,payload_json,created_at
+        ) VALUES (?, ?, ?, ?, ?, 'tool_failed', 'agent', NULL, ?,
+          strftime('%Y-%m-%dT%H:%M:%fZ','now'))
+      `).run(
+        eventId,
+        input.projectId,
+        input.action.executionId,
+        input.action.sequence,
+        input.action.attemptNo,
+        JSON.stringify({ code: result.code, toolCallId, type: input.type }),
+      );
+    },
+    httpStatus: 422,
+    leaseToken: input.leaseToken,
+    projectId: input.projectId,
+    result,
+    status: "failed",
+  });
+  if (committed.affectedRows !== 1) {
+    throw new Error("The native failure could not be durably finalized.");
+  }
+}
+
 export async function executeListToolAction<Handle>(input: {
   actionIndex: number;
   database: DatabaseSync;
   fs: SandboxDirectoryHandleAdapter<Handle>;
+  failureResponseBody?: unknown;
   hooks?: { afterList?: () => void | Promise<void> };
   operationId: string;
   path: string;
@@ -647,11 +753,27 @@ export async function executeListToolAction<Handle>(input: {
   ) as ActionRow | undefined;
   if (!action) return { affectedRows: 0, result: null };
 
-  const result = await listVerifiedDirectory({
-    fs: input.fs,
-    path: validated.path,
-    sandboxRoot: input.sandboxRoot,
-  });
+  let result: PublicListResult;
+  try {
+    result = await listVerifiedDirectory({
+      fs: input.fs,
+      path: validated.path,
+      sandboxRoot: input.sandboxRoot,
+    });
+  } catch (error) {
+    if ((error as { code?: unknown })?.code === "SANDBOX_UNVERIFIABLE") {
+      finalizeUnverifiableToolFailure({
+        action,
+        database: input.database,
+        leaseToken: acquired.leaseToken,
+        projectId: input.projectId,
+        publicRequest: { path: validated.path, type: "list" },
+        responseBody: input.failureResponseBody,
+        type: "list",
+      });
+    }
+    throw error;
+  }
   await input.hooks?.afterList?.();
 
   const toolCallId = randomUUID();
@@ -740,6 +862,7 @@ export async function executeReadToolAction<Handle>(input: {
   actionIndex: number;
   database: DatabaseSync;
   fs: SandboxFileHandleAdapter<Handle>;
+  failureResponseBody?: unknown;
   hooks?: { afterRead?: () => void | Promise<void> };
   operationId: string;
   path: string;
@@ -774,12 +897,28 @@ export async function executeReadToolAction<Handle>(input: {
   ) as ActionRow | undefined;
   if (!action) return { affectedRows: 0, result: null };
 
-  const result = await readVerifiedFile({
-    fs: input.fs,
-    path: validated.path,
-    redaction: input.redaction,
-    sandboxRoot: input.sandboxRoot,
-  });
+  let result: PublicReadResult;
+  try {
+    result = await readVerifiedFile({
+      fs: input.fs,
+      path: validated.path,
+      redaction: input.redaction,
+      sandboxRoot: input.sandboxRoot,
+    });
+  } catch (error) {
+    if ((error as { code?: unknown })?.code === "SANDBOX_UNVERIFIABLE") {
+      finalizeUnverifiableToolFailure({
+        action,
+        database: input.database,
+        leaseToken: acquired.leaseToken,
+        projectId: input.projectId,
+        publicRequest: { path: validated.path, type: "read" },
+        responseBody: input.failureResponseBody,
+        type: "read",
+      });
+    }
+    throw error;
+  }
   await input.hooks?.afterRead?.();
 
   const summary = readSummary(result);
@@ -1204,7 +1343,9 @@ export async function executeWriteToolAction<Handle, Previous>(input: {
   content: string;
   database: DatabaseSync;
   expectedHash: string | null | undefined;
-  fs: SandboxWriteAdapter<Handle, Previous>;
+  fs: SandboxExecutionFileAdapter<Handle, Previous>;
+  failureResponseBody?: unknown;
+  hardFailureResponseBody?: unknown;
   hooks?: { afterWrite?: () => void | Promise<void> };
   operationId: string;
   path: string;
@@ -1258,14 +1399,71 @@ export async function executeWriteToolAction<Handle, Previous>(input: {
   ) as ActionRow | undefined;
   if (!action) return { affectedRows: 0, result: null };
 
-  const written = await writeVerifiedFile({
-    content: input.content,
-    expectedHash: input.expectedHash,
-    fs: input.fs,
-    ownerId: action.actionId,
-    path: validated.path,
-    sandboxRoot: input.sandboxRoot,
-  });
+  let written: ReversibleWriteResult;
+  try {
+    written = "writeNativeVerifiedFile" in input.fs
+      ? (() => {
+        const bytes = encodeWriteContent(input.content);
+        if (input.expectedHash !== null && !validExpectedHash(input.expectedHash)) {
+          return writeFailure(
+            "SANDBOX_FILE_CONFLICT",
+            "Create requires a null expectation and replace requires a lowercase SHA-256 hash.",
+          );
+        }
+        const native = input.fs.writeNativeVerifiedFile({
+          bytes,
+          expectedHash: input.expectedHash,
+          pathSegments: validated.segments,
+          sandboxRoot: input.sandboxRoot,
+        });
+        const afterHash = createHash("sha256").update(bytes).digest("hex");
+        if (native.hash !== afterHash) {
+          return writeFailure("SANDBOX_UNVERIFIABLE", "The native write hash is unverifiable.");
+        }
+        return {
+          action: input.expectedHash === null ? "created" : "replaced",
+          afterHash,
+          beforeHash: input.expectedHash,
+          bytes: bytes.byteLength,
+          path: validated.path,
+          async release() {},
+          async rollback() {
+            return false;
+          },
+        };
+        })()
+      : await writeVerifiedFile({
+          content: input.content,
+          expectedHash: input.expectedHash,
+          fs: input.fs,
+          ownerId: action.actionId,
+          path: validated.path,
+          sandboxRoot: input.sandboxRoot,
+        });
+  } catch (error) {
+    if ((error as { code?: unknown })?.code === "SANDBOX_UNVERIFIABLE") {
+      const mutationState = (error as { mutationState?: unknown }).mutationState;
+      finalizeUnverifiableToolFailure({
+        action,
+        database: input.database,
+        hardFailure: mutationState === "post-replace-unverifiable"
+          || mutationState === "cleanup-unconfirmed",
+        leaseToken: acquired.leaseToken,
+        projectId: input.projectId,
+        publicRequest: {
+          expectedHash: input.expectedHash,
+          path: validated.path,
+          type: "write",
+        },
+        responseBody: mutationState === "post-replace-unverifiable"
+          || mutationState === "cleanup-unconfirmed"
+          ? input.hardFailureResponseBody
+          : input.failureResponseBody,
+        type: "write",
+      });
+    }
+    throw error;
+  }
   const result: PublicWriteResult = {
     action: written.action,
     afterHash: written.afterHash,

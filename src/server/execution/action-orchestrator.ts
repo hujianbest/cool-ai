@@ -31,7 +31,7 @@ import {
   executeListToolAction,
   executeReadToolAction,
   executeWriteToolAction,
-  type SandboxWriteAdapter,
+  type SandboxExecutionFileAdapter,
 } from "@/src/server/execution/file-tools";
 import {
   beginExternalOperation,
@@ -68,7 +68,7 @@ import {
 
 // The adapter's opaque handle/rollback types never escape the existing tool boundary.
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
-type FileAdapter = SandboxWriteAdapter<any, any>;
+type FileAdapter = SandboxExecutionFileAdapter<any, any>;
 type AdvanceResult = { body: unknown; status: number };
 
 export type ExecutionOrchestratorDependencies = {
@@ -626,11 +626,31 @@ async function runFileTool(
     : pending.action.type === "read"
       ? "file_read"
       : "file_write";
-  const { actionIndex } = createAction(database, row, operationId, hash, kind);
+  const { actionId, actionIndex } = createAction(database, row, operationId, hash, kind);
   const common = {
     actionIndex,
     database,
+    failureResponseBody: publicResponse(
+      databasePath,
+      executionId,
+      row,
+      kind,
+      "failed",
+      "SANDBOX_UNVERIFIABLE",
+      row.version + 1,
+      { reasonCode: "SANDBOX_UNVERIFIABLE", resumeTarget: "running", status: "paused" },
+    ),
     fs: dependencies.fileAdapter,
+    hardFailureResponseBody: publicResponse(
+      databasePath,
+      executionId,
+      row,
+      kind,
+      "failed",
+      "SANDBOX_UNVERIFIABLE",
+      row.version + 1,
+      { reasonCode: "SANDBOX_UNVERIFIABLE", resumeTarget: null, status: "failed" },
+    ),
     operationId,
     projectId: row.projectId,
     responseBody: publicResponse(
@@ -644,25 +664,152 @@ async function runFileTool(
     ),
     sandboxRoot: row.sandboxRoot,
   };
-  const result = pending.action.type === "list"
-    ? await executeListToolAction({ ...common, path: pending.action.path })
-    : pending.action.type === "read"
-      ? await executeReadToolAction({
-          ...common,
-          path: pending.action.path,
-          redaction: {
-            masterKeyMarker: process.env.COCKPIT_MASTER_KEY,
-            providerApiKey: providerConnection(database, row.agentId).apiKey,
-          },
-        })
-      : pending.action.type === "write"
-        ? await executeWriteToolAction({
+  let result;
+  try {
+    result = pending.action.type === "list"
+      ? await executeListToolAction({ ...common, path: pending.action.path })
+      : pending.action.type === "read"
+        ? await executeReadToolAction({
             ...common,
-            content: pending.action.content,
-            expectedHash: pending.action.expectedHash,
             path: pending.action.path,
+            redaction: {
+              masterKeyMarker: process.env.COCKPIT_MASTER_KEY,
+              providerApiKey: providerConnection(database, row.agentId).apiKey,
+            },
           })
-        : null;
+        : pending.action.type === "write"
+          ? await executeWriteToolAction({
+              ...common,
+              content: pending.action.content,
+              expectedHash: pending.action.expectedHash,
+              path: pending.action.path,
+            })
+          : null;
+  } catch (error) {
+    if ((error as { code?: unknown })?.code !== "SANDBOX_UNVERIFIABLE") throw error;
+    const action = database.prepare(`
+      SELECT a.lease_token AS leaseToken,a.started_at AS startedAt,
+             e.next_event_sequence AS sequence
+      FROM execution_actions a
+      JOIN executions e ON e.project_id=a.project_id AND e.id=a.execution_id
+      WHERE a.project_id=? AND a.id=? AND a.status='running'
+    `).get(row.projectId, actionId) as
+      | { leaseToken: string; sequence: number; startedAt: string }
+      | undefined;
+    if (!action?.leaseToken) {
+      const receipt = readExecutionOperation(database, {
+        kind: "advance",
+        operationId,
+        projectId: row.projectId,
+        requestHash: hash,
+        responseSchema: anyResponseSchema,
+      });
+      if (receipt) return receipt;
+      throw error;
+    }
+    const writeState = (error as { mutationState?: unknown }).mutationState;
+    const hardFailure = pending.action.type === "write"
+      && (writeState === "post-replace-unverifiable" || writeState === "cleanup-unconfirmed");
+    const body = publicResponse(
+      databasePath,
+      executionId,
+      row,
+      kind,
+      "failed",
+      "SANDBOX_UNVERIFIABLE",
+      row.version + 1,
+      hardFailure
+        ? { reasonCode: "SANDBOX_UNVERIFIABLE", resumeTarget: null, status: "failed" }
+        : { reasonCode: "SANDBOX_UNVERIFIABLE", resumeTarget: "running", status: "paused" },
+    );
+    if (!("path" in pending.action)) throw error;
+    const request = pending.action.type === "write"
+      ? {
+          expectedHash: pending.action.expectedHash,
+          path: pending.action.path,
+          type: pending.action.type,
+        }
+      : { path: pending.action.path, type: pending.action.type };
+    const toolCallId = randomUUID();
+    const eventId = randomUUID();
+    const finalized = finalizeExecutionActionWithEffects(database, {
+      actionId,
+      body,
+      errorCode: "SANDBOX_UNVERIFIABLE",
+      effects(currentDatabase) {
+        currentDatabase.prepare(`
+          INSERT INTO execution_tool_calls (
+            id,project_id,execution_id,attempt_id,action_id,business_round,type,
+            request_hash,status,public_request_json,public_result_json,
+            before_sandbox_hash,after_sandbox_hash,started_at,finished_at
+          ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, 'failed', ?, ?, NULL, NULL, ?,
+            strftime('%Y-%m-%dT%H:%M:%fZ','now'))
+        `).run(
+          toolCallId,
+          row.projectId,
+          executionId,
+          row.attemptId,
+          actionId,
+          Math.max(1, row.businessRound),
+          pending.action.type,
+          hash,
+          JSON.stringify(request),
+          JSON.stringify({ code: "SANDBOX_UNVERIFIABLE" }),
+          action.startedAt,
+        );
+        const execution = currentDatabase.prepare(`
+          UPDATE executions
+          SET status=?,resume_target=?,reason_code='SANDBOX_UNVERIFIABLE',
+              tool_call_count=tool_call_count+1,next_event_sequence=next_event_sequence+1,
+              version=version+1,updated_at=strftime('%Y-%m-%dT%H:%M:%fZ','now')
+          WHERE project_id=? AND id=? AND status='running' AND version=?
+        `).run(
+          hardFailure ? "failed" : "paused",
+          hardFailure ? null : "running",
+          row.projectId,
+          executionId,
+          action.sequence,
+        );
+        if (execution.changes !== 1) {
+          throw new Error("Execution changed before the native failure could commit.");
+        }
+        if (hardFailure) {
+          currentDatabase.prepare(`
+            UPDATE execution_attempts
+            SET status='failed',finished_at=strftime('%Y-%m-%dT%H:%M:%fZ','now')
+            WHERE id=? AND status IN ('ready','acting')
+          `).run(row.attemptId);
+        }
+        currentDatabase.prepare(`
+          INSERT INTO execution_events (
+            id,project_id,execution_id,sequence,attempt_no,type,actor_type,
+            actor_id,payload_json,created_at
+          ) VALUES (?, ?, ?, ?, ?, 'tool_failed', 'agent', NULL, ?,
+            strftime('%Y-%m-%dT%H:%M:%fZ','now'))
+        `).run(
+          eventId,
+          row.projectId,
+          executionId,
+          row.version,
+          row.attemptNo,
+          JSON.stringify({
+            code: "SANDBOX_UNVERIFIABLE",
+            toolCallId,
+            type: pending.action.type,
+          }),
+        );
+      },
+      httpStatus: 422,
+      leaseToken: action.leaseToken,
+      projectId: row.projectId,
+      result: { code: "SANDBOX_UNVERIFIABLE" },
+      status: "failed",
+    });
+    if (finalized.affectedRows !== 1) {
+      throw new ExecutionError("ACTION_LEASE_LOST", 409, "The native failure was discarded.");
+    }
+    return { body, status: 422 };
+  }
   if (!result || result.affectedRows !== 1) {
     throw new ExecutionError("ACTION_LEASE_LOST", 409, "The file action result was discarded.");
   }
@@ -804,6 +951,53 @@ async function runCommandRequest(
     responseSchema: anyResponseSchema,
   });
   return receipt ?? { body: result, status: result.decision === "denied" ? 403 : 200 };
+}
+
+function finalizeStageUnverifiable(
+  database: DatabaseSync,
+  executionId: string,
+  operationId: string,
+  row: StateRow,
+): AdvanceResult {
+  const action = database.prepare(`
+    SELECT id,lease_token AS leaseToken
+    FROM execution_actions
+    WHERE project_id=? AND operation_id=? AND kind='stage_compute' AND status='running'
+  `).get(row.projectId, operationId) as { id: string; leaseToken: string } | undefined;
+  if (!action?.leaseToken) {
+    throw new ExecutionError("ACTION_LEASE_LOST", 409, "Stage native failure lost its lease.");
+  }
+  const body = {
+    error: {
+      code: "SANDBOX_UNVERIFIABLE",
+      message: "The staged snapshot could not be verified.",
+    },
+  };
+  const finalized = finalizeExecutionActionWithEffects(database, {
+    actionId: action.id,
+    body,
+    errorCode: "SANDBOX_UNVERIFIABLE",
+    effects(currentDatabase) {
+      const execution = currentDatabase.prepare(`
+        UPDATE executions
+        SET status='paused',resume_target='running',reason_code='SANDBOX_UNVERIFIABLE',
+            version=version+1,updated_at=strftime('%Y-%m-%dT%H:%M:%fZ','now')
+        WHERE project_id=? AND id=? AND status='running' AND version=?
+      `).run(row.projectId, executionId, row.version);
+      if (execution.changes !== 1) {
+        throw new Error("Execution changed before stage native failure could commit.");
+      }
+    },
+    httpStatus: 422,
+    leaseToken: action.leaseToken,
+    projectId: row.projectId,
+    result: { code: "SANDBOX_UNVERIFIABLE" },
+    status: "failed",
+  });
+  if (finalized.affectedRows !== 1) {
+    throw new ExecutionError("ACTION_LEASE_LOST", 409, "Stage native failure was discarded.");
+  }
+  return { body, status: 422 };
 }
 
 async function declareStaged(
@@ -1195,15 +1389,61 @@ export async function advanceExecution(
         pending,
       );
     }
-    return await declareStaged(
-      databasePath,
-      database,
-      executionId,
-      row,
-      input.operationId,
-      hash,
-      dependencies.stagingAdapter,
-    );
+    try {
+      return await declareStaged(
+        databasePath,
+        database,
+        executionId,
+        row,
+        input.operationId,
+        hash,
+        dependencies.stagingAdapter,
+      );
+    } catch (error) {
+      if ((error as { code?: unknown })?.code !== "SANDBOX_UNVERIFIABLE") throw error;
+      const action = database.prepare(`
+        SELECT id,lease_token AS leaseToken FROM execution_actions
+        WHERE project_id=? AND operation_id=? AND kind='stage_compute' AND status='running'
+      `).get(row.projectId, input.operationId) as
+        | { id: string; leaseToken: string }
+        | undefined;
+      if (!action?.leaseToken) throw error;
+      const body = publicResponse(
+        databasePath,
+        executionId,
+        row,
+        "stage_compute",
+        "failed",
+        "SANDBOX_UNVERIFIABLE",
+        row.version + 1,
+        { reasonCode: "SANDBOX_UNVERIFIABLE", resumeTarget: "running", status: "paused" },
+      );
+      const finalized = finalizeExecutionActionWithEffects(database, {
+        actionId: action.id,
+        body,
+        errorCode: "SANDBOX_UNVERIFIABLE",
+        effects(currentDatabase) {
+          const updated = currentDatabase.prepare(`
+            UPDATE executions
+            SET status='paused',resume_target='running',reason_code='SANDBOX_UNVERIFIABLE',
+                version=version+1,updated_at=strftime('%Y-%m-%dT%H:%M:%fZ','now')
+            WHERE project_id=? AND id=? AND status='running' AND version=?
+          `).run(row.projectId, executionId, row.version);
+          if (updated.changes !== 1) {
+            throw new Error("Execution changed before the stage failure could commit.");
+          }
+        },
+        httpStatus: 422,
+        leaseToken: action.leaseToken,
+        projectId: row.projectId,
+        result: { code: "SANDBOX_UNVERIFIABLE" },
+        status: "failed",
+      });
+      if (finalized.affectedRows !== 1) {
+        throw new ExecutionError("ACTION_LEASE_LOST", 409, "The stage failure was discarded.");
+      }
+      return { body, status: 422 };
+    }
   } finally {
     database.close();
   }
