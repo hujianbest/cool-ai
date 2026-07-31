@@ -1,6 +1,11 @@
 import { createHash } from "node:crypto";
 import type { DatabaseSync } from "node:sqlite";
 
+import {
+  recoveryMergeFileStatusSchema,
+  type RecoveryMergeFileStatus,
+} from "@/src/shared/execution-contracts";
+
 export const V5_TABLES = [
   "project_validation_policies","project_validation_policy_entries","executions",
   "execution_attempts","execution_actions","execution_operations",
@@ -548,7 +553,7 @@ function mergeDescriptorFactsAreValid(database: DatabaseSync): boolean {
     oldTargetJson: string;
     path: string;
     postTargetJson: string | null;
-    status: string;
+    status: RecoveryMergeFileStatus;
     tempLocatorJson: string;
     tempRefJson: string | null;
   }>;
@@ -615,6 +620,8 @@ function mergeDescriptorFactsAreValid(database: DatabaseSync): boolean {
     const tempRef = row.tempRefJson ? parse(row.tempRefJson) : null;
     const expectedSegments = row.path.split("/");
     if (
+      !recoveryMergeFileStatusSchema.safeParse(row.status).success
+      ||
       !validTarget(oldTarget)
       || !validRef(durableNewRef)
       || (backupRef !== null && !validRef(backupRef))

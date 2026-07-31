@@ -24,6 +24,10 @@ import type {
   NativeMutationResult,
   VerifiedOwnedFileRef,
 } from "@/src/server/execution/windows-native-merge-lifecycle";
+import {
+  recoveryMergeFileStatusSchema,
+  type RecoveryMergeFileStatus,
+} from "@/src/shared/execution-contracts";
 
 export type MergeFaultPoint =
   | "before_prepare"
@@ -172,7 +176,7 @@ type JournalFileRow = {
   pathKey: string;
   position: number;
   postTarget: ExpectedCanonicalFile | null;
-  status: string;
+  status: RecoveryMergeFileStatus;
   tempLocator: {
     ownerId: string;
     relativePath: string[];
@@ -1034,7 +1038,7 @@ function journalFiles(database: DatabaseSync, journalId: string): JournalFileRow
     postTarget: row.postTargetJson
       ? parseExpectedTarget(row.postTargetJson, "merge post_target_ref_json")
       : null,
-    status: row.status,
+    status: recoveryMergeFileStatusSchema.parse(row.status),
     tempLocator: parseTempLocator(row.tempLocatorJson),
     tempRef: row.tempRefJson
       ? parseOwnedRef(row.tempRefJson, "merge canonical_temp_ref_json")

@@ -1,6 +1,7 @@
 import { existsSync, mkdirSync, mkdtempSync, readFileSync, rmSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
+import { DatabaseSync } from "node:sqlite";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
 vi.mock("server-only", () => ({}));
@@ -14,6 +15,7 @@ import {
 import { ExecutionError } from "@/src/server/execution/execution-service";
 import { createWindowsVerifiedMergeAdapter } from "@/src/server/execution/merge-verified-adapter";
 import { saveValidationPolicy } from "@/src/server/execution/validation-policy-service";
+import { recoveryMergeFileStatuses } from "@/src/shared/execution-contracts";
 
 const PROJECT_ID = "merge-route-project";
 const RUN_ID = "merge-route-run";
@@ -636,5 +638,95 @@ describe("T-45 production merge route", () => {
       recovery: { journalStatus: "abandoned" },
     });
     expect(readFileSync(join(workspace, "src", "RESULT.md"), "utf8")).toBe("external\n");
+  });
+
+  it("returns a real temp_ready manual file through the public recovery route", async () => {
+    const staged = await createRealStagedExecution();
+    let injected = false;
+    setMergeExecutionHooksForTests({
+      point({ path, point }) {
+        if (!injected && point === "after_temp_write" && path === "src/RESULT.md") {
+          injected = true;
+          throw new ExecutionError(
+            "MERGE_RECOVERY_REQUIRED",
+            409,
+            "fault after durable canonical temp registration",
+          );
+        }
+      },
+    });
+
+    const merge = await postMerge(staged.executionId, {
+      expectedVersion: staged.version,
+      operationId: operationId(47),
+      stagedHash: staged.stagedHash,
+    });
+    expect(merge.status).toBe(409);
+    expect(await merge.json()).toMatchObject({
+      error: { code: "MANUAL_RECOVERY_REQUIRED" },
+    });
+
+    const detail = await getDetail(staged.executionId);
+    expect(detail.recovery.journalStatus).toBe("manual_recovery");
+    const filesResponse = await getRecoveryFiles(staged.executionId);
+    expect(filesResponse.status).toBe(200);
+    expect(await filesResponse.json()).toMatchObject({
+      items: [{
+        path: "src/RESULT.md",
+        status: "temp_ready",
+      }],
+    });
+
+    const descriptorDatabase = new DatabaseSync(databasePath);
+    const descriptors = descriptorDatabase.prepare(`
+      SELECT canonical_temp_ref_json AS tempRef,post_target_ref_json AS postTarget
+      FROM execution_merge_files
+    `).get() as { postTarget: string; tempRef: string };
+    descriptorDatabase.close();
+    for (const status of recoveryMergeFileStatuses) {
+      const changed = new DatabaseSync(databasePath);
+      changed.prepare(`
+        UPDATE execution_merge_files
+        SET status=?,canonical_temp_ref_json=?,post_target_ref_json=?
+      `).run(
+        status,
+        status === "pending" ? null : descriptors.tempRef,
+        status === "pending" ? null : descriptors.postTarget,
+      );
+      changed.close();
+
+      const parsed = await getRecoveryFiles(staged.executionId);
+      expect(parsed.status).toBe(200);
+      expect(await parsed.json()).toMatchObject({ items: [{ status }] });
+    }
+
+    for (const invalidStatus of ["unknown", "TEMP_READY", "Temp_Ready", "pending"]) {
+      const corrupt = new DatabaseSync(databasePath);
+      corrupt.exec("PRAGMA ignore_check_constraints=ON");
+      corrupt.prepare(`
+        UPDATE execution_merge_files
+        SET status=?,canonical_temp_ref_json=?,post_target_ref_json=?
+      `).run(invalidStatus, descriptors.tempRef, descriptors.postTarget);
+      corrupt.close();
+
+      const rejected = await getRecoveryFiles(staged.executionId);
+      expect(rejected.status).toBe(500);
+      expect(await rejected.text()).not.toContain(invalidStatus);
+
+      const restore = new DatabaseSync(databasePath);
+      restore.exec("PRAGMA ignore_check_constraints=ON");
+      restore.prepare(`
+        UPDATE execution_merge_files
+        SET status='temp_ready',canonical_temp_ref_json=?,post_target_ref_json=?
+      `).run(descriptors.tempRef, descriptors.postTarget);
+      restore.close();
+    }
+
+    openDatabase(databasePath).close();
+    const reopened = await getRecoveryFiles(staged.executionId);
+    expect(reopened.status).toBe(200);
+    expect(await reopened.json()).toMatchObject({
+      items: [{ status: "temp_ready" }],
+    });
   });
 });

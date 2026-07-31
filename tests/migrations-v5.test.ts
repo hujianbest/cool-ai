@@ -6,7 +6,13 @@ import { DatabaseSync } from "node:sqlite";
 import { afterEach, describe, expect, it } from "vitest";
 
 import { openDatabase } from "@/src/server/db";
-import { createV5 } from "@/src/server/migrations-v5";
+import { CREATE_V5, createV5 } from "@/src/server/migrations-v5";
+import {
+  recoveryFileDtoSchema,
+  recoveryFilePageSchema,
+  recoveryMergeFileStatuses,
+  recoveryMergeFileStatusSchema,
+} from "@/src/shared/execution-contracts";
 
 const V5_TABLES = [
   "project_validation_policies",
@@ -190,6 +196,62 @@ afterEach(() => {
 });
 
 describe("SQLite v5 strict atomic migration", () => {
+  it("keeps the DDL, DTO parser, and runtime tuple on the same six statuses", () => {
+    const table = CREATE_V5.match(
+      /CREATE TABLE execution_merge_files\(([\s\S]*?)\n\);/u,
+    )?.[1];
+    const ddlStatuses = table
+      ?.match(/status TEXT NOT NULL CHECK\(status IN \(([^)]+)\)\)/u)?.[1]
+      .split(",")
+      .map((status) => status.trim().replaceAll("'", ""));
+    expect(ddlStatuses).toEqual([...recoveryMergeFileStatuses]);
+
+    for (const status of recoveryMergeFileStatuses) {
+      expect(recoveryMergeFileStatusSchema.parse(status)).toBe(status);
+      expect(recoveryFileDtoSchema.parse({
+        isMismatch: false,
+        oldExists: false,
+        oldHash: null,
+        path: "src/result.txt",
+        pathKey: "src/result.txt",
+        position: 0,
+        postHash: "a".repeat(64),
+        status,
+      }).status).toBe(status);
+    }
+    for (const status of [null, "unknown", "TEMP_READY", "Temp_Ready"]) {
+      expect(recoveryMergeFileStatusSchema.safeParse(status).success).toBe(false);
+    }
+    expect(recoveryFileDtoSchema.safeParse({
+      isMismatch: false,
+      oldExists: false,
+      oldHash: "a".repeat(64),
+      path: "src/result.txt",
+      pathKey: "src/result.txt",
+      position: 0,
+      postHash: "b".repeat(64),
+      status: "temp_ready",
+    }).success).toBe(false);
+    const pageItem = {
+      isMismatch: false,
+      oldExists: false,
+      oldHash: null,
+      path: "src/result.txt",
+      pathKey: "src/result.txt",
+      position: 0,
+      postHash: "b".repeat(64),
+      status: "temp_ready" as const,
+    };
+    expect(recoveryFilePageSchema.safeParse({
+      items: Array.from({ length: 20 }, (_, position) => ({ ...pageItem, position })),
+      nextCursor: "next",
+    }).success).toBe(true);
+    expect(recoveryFilePageSchema.safeParse({
+      items: Array.from({ length: 21 }, (_, position) => ({ ...pageItem, position })),
+      nextCursor: null,
+    }).success).toBe(false);
+  });
+
   it("migrates complete v4 with exactly 23 tables, 22 indexes, and 6 immutable triggers", () => {
     const path = databasePath();
     makeV4(path);

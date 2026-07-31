@@ -16,7 +16,12 @@ import {
   caughtApiErrorCopy,
 } from "@/src/shared/api-error-copy";
 import type { ApiError } from "@/src/shared/contracts";
-import type { ExecutionDto } from "@/src/shared/execution-contracts";
+import {
+  recoveryFilePageSchema,
+  type ExecutionDto,
+  type RecoveryFileDto,
+  type RecoveryMergeFileStatus,
+} from "@/src/shared/execution-contracts";
 
 type Resolution = "recovered_old" | "recovered_new" | "abandon";
 
@@ -31,19 +36,6 @@ type RecoveryDetail = {
     required: boolean;
   };
 };
-
-type RecoveryFile = {
-  isMismatch: boolean;
-  oldExists: boolean;
-  oldHash: string | null;
-  path: string;
-  pathKey: string;
-  postHash: string;
-  position: number;
-  status: string;
-};
-
-type Page<T> = { items: T[]; nextCursor: string | null };
 
 const resolutionCopy: Record<Resolution, {
   button: string;
@@ -71,6 +63,17 @@ function shortHash(value: string | null): string {
   return value ? value.slice(0, 12) : "无";
 }
 
+function recoveryFileStatusLabel(status: RecoveryMergeFileStatus): string {
+  switch (status) {
+    case "pending": return "待准备";
+    case "temp_ready": return "临时文件已准备";
+    case "applied": return "已记录应用";
+    case "rolled_back": return "已记录回退";
+    case "rolled_forward": return "已记录前滚";
+    case "verified": return "已验证";
+  }
+}
+
 async function responseJson<T>(response: Response, fallback: string): Promise<T> {
   const payload = (await response.json()) as T & Partial<ApiError>;
   if (!response.ok) throw new ApiDisplayError(apiErrorCopy(payload, fallback));
@@ -88,7 +91,7 @@ export function ManualRecoverySurface({
   const [detail, setDetail] = useState<RecoveryDetail | null>(null);
   const [detailLoading, setDetailLoading] = useState(true);
   const [detailError, setDetailError] = useState<string | null>(null);
-  const [files, setFiles] = useState<RecoveryFile[]>([]);
+  const [files, setFiles] = useState<RecoveryFileDto[]>([]);
   const [filesCursor, setFilesCursor] = useState<string | null>(null);
   const [filesLoading, setFilesLoading] = useState(false);
   const [filesError, setFilesError] = useState<string | null>(null);
@@ -148,9 +151,11 @@ export function ManualRecoverySurface({
         `/api/executions/${execution.id}/recovery/files?limit=20`
         + (cursor ? `&after=${encodeURIComponent(cursor)}` : ""),
       );
-      const page = await responseJson<Page<RecoveryFile>>(
-        response,
-        "无法加载差异路径，请重试。",
+      const page = recoveryFilePageSchema.parse(
+        await responseJson<unknown>(
+          response,
+          "无法加载差异路径，请重试。",
+        ),
       );
       setFiles((current) => reset ? page.items : [...current, ...page.items]);
       setFilesCursor(page.nextCursor);
@@ -275,7 +280,8 @@ export function ManualRecoverySurface({
               <li className="execution-review-item" key={file.pathKey}>
                 <strong>{file.path}{file.isMismatch ? "（不匹配）" : ""}</strong>
                 <p>
-                  {file.status} · old {shortHash(file.oldHash)} · post {shortHash(file.postHash)}
+                  {recoveryFileStatusLabel(file.status)}
+                  {" · old "}{shortHash(file.oldHash)}{" · post "}{shortHash(file.postHash)}
                 </p>
               </li>
             ))}
@@ -291,7 +297,7 @@ export function ManualRecoverySurface({
           <div className="execution-review-actions">
             {recovery.allowedResolutions.map((action) => (
               <button
-                disabled={submitting || !recovery.observedManifestHash}
+                disabled={submitting || filesError !== null || !recovery.observedManifestHash}
                 key={action}
                 onClick={() => setConfirmation(action)}
                 ref={(element) => { triggerRefs.current[action] = element; }}

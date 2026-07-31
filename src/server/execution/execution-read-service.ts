@@ -12,7 +12,11 @@ import {
 import {
   executionApprovalDtoSchema,
   executionDtoSchema,
+  recoveryFileDtoSchema,
+  recoveryMergeFileStatusSchema,
+  type RecoveryFileDto,
 } from "@/src/shared/execution-contracts";
+import { SchemaMigrationError } from "@/src/server/migrations";
 
 type ReadQuery = {
   after?: string;
@@ -1170,29 +1174,26 @@ export async function listValidationChunks(
   }
 }
 
-const recoveryFileSchema = z.object({
-  isMismatch: z.boolean(),
-  oldExists: z.boolean(),
-  oldHash: HASH.nullable(),
-  path: z.string().min(1),
-  pathKey: z.string().min(1),
-  postHash: HASH,
-  position: z.number().int().nonnegative(),
-  status: z.enum(["pending", "applied", "rolled_back", "rolled_forward", "verified"]),
-}).strict();
-
 export async function listRecoveryFiles(
   databasePath: string,
   executionId: string,
   query: ReadQuery,
-): Promise<CursorPage<z.infer<typeof recoveryFileSchema>>> {
+): Promise<CursorPage<RecoveryFileDto>> {
   const requested = limit(query.limit, 20);
-  const {
-    database,
-    manual,
-    projectId,
-    readTransaction,
-  } = await openForExecution(databasePath, executionId, true);
+  let opened: Awaited<ReturnType<typeof openForExecution>>;
+  try {
+    opened = await openForExecution(databasePath, executionId, true);
+  } catch (error) {
+    if (error instanceof SchemaMigrationError) {
+      throw new ExecutionError(
+        "INTERNAL_ERROR",
+        500,
+        "Recovery file storage facts are invalid.",
+      );
+    }
+    throw error;
+  }
+  const { database, manual, projectId, readTransaction } = opened;
   try {
     if (!manual) {
       throw new ExecutionError("MERGE_RECOVERY_REQUIRED", 409, "Manual recovery files are unavailable.");
@@ -1248,14 +1249,25 @@ export async function listRecoveryFiles(
       pathKey ?? null, requested + 1,
     ) as Array<Record<string, unknown>>;
     const items = rows.map((row) => {
-      const path = String(row.path);
-      const storedPathKey = String(row.pathKey);
-      const postHash = String(row.durablePostHash);
+      const status = recoveryMergeFileStatusSchema.parse(row.status);
+      const path = row.path;
+      const storedPathKey = row.pathKey;
+      const postHash = row.durablePostHash;
       if (
-        Buffer.byteLength(path, "utf8") > 4096
+        typeof path !== "string"
+        || typeof storedPathKey !== "string"
+        || !Number.isInteger(row.position)
+        || (row.oldExists !== 0 && row.oldExists !== 1)
+        || (row.oldExists === 1
+          ? !HASH.safeParse(row.oldHash).success
+          : row.oldHash !== null)
+        || !HASH.safeParse(postHash).success
+        || Buffer.byteLength(path, "utf8") > 4096
         || normalizeCanonicalRelativePath(path) !== storedPathKey
         || row.stagedPostHash !== postHash
-        || (row.targetPostHash !== null && row.targetPostHash !== postHash)
+        || (status === "pending"
+          ? row.targetPostHash !== null
+          : row.targetPostHash !== postHash)
       ) {
         throw new ExecutionError(
           "MERGE_INVARIANT_FAILED",
@@ -1272,13 +1284,13 @@ export async function listRecoveryFiles(
         pathKey: storedPathKey,
         position: row.position,
         postHash,
-        status: row.status,
+        status,
       };
-    }) as Array<z.infer<typeof recoveryFileSchema>>;
+    }) as RecoveryFileDto[];
     return boundedPage(
       databasePath, "recovery-files", parent,
       items,
-      requested, (row) => [row.position, row.pathKey], recoveryFileSchema,
+      requested, (row) => [row.position, row.pathKey], recoveryFileDtoSchema,
     );
   } finally {
     if (readTransaction) database.exec("COMMIT");

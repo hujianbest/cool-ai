@@ -161,3 +161,14 @@
 1. GET reconcile 的 native/capability/identity/cleanup 失败已统一沿用 D-5：进入 durable manual、终结原action并完成原receipt 409；manual-aware barrier只在持久化成功后捕获并重读，同execution GET返回200 manual detail。T-46 测试命令已补入 `merge-recovery` 与 `merge-fault-injection` 回归。
 2. manual 200例外已精确绑定project唯一未解决journal、route execution、journal execution及execution manual flag；sibling detail/project list固定409，identity/flag矛盾固定500，并补齐resolve换journal/无journal与late-CAS判据。
 3. `mismatchPathKey` 已定义为nullable，并规定path-specific detector在进入manual的同一事务写已验证path key，overall/capability/cleanup写NULL且UI显示整体不匹配；recovery-file post hash固定取staged hash并与durable-new descriptor交叉验证，不再依赖nullable post target。
+
+# 技术设计 评审 (第 27 轮)
+
+- 日期: 2026-07-31
+- 评审方式: subagent
+- 结论: 通过
+- 用户确认: auto-approved 2026-07-31
+
+## Findings
+
+无。T-47 recovery file状态契约与真实v5 DDL一致：合法全集精确为 `pending|temp_ready|applied|rolled_back|rolled_forward|verified`，其中当前DTO schema遗漏的 `temp_ready` 可由公开merge fault自然形成合法manual row。设计已要求唯一shared tuple由merge/read service、strict DTO parser与UI共同导入，UI对六值exhaustive映射且无string/fallback/passthrough；unknown、大小写、NULL及DDL row-shape矛盾均fail-closed且不回显。RED/GREEN、真实`temp_ready`、逐值迁移校验、分页/重开及低层fault回归可在一次聚焦TDD内完成，T-48/T-49顺延和FR/NFR覆盖索引一致。

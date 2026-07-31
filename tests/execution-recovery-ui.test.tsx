@@ -95,6 +95,7 @@ function detail(observedManifestHash = OBSERVED) {
 
 function installFetch(
   resolve?: (body: Record<string, unknown>) => Response | Promise<Response>,
+  fileStatus: unknown = "temp_ready",
 ) {
   const calls: Array<Record<string, unknown>> = [];
   vi.stubGlobal("fetch", vi.fn(async (input: RequestInfo | URL, init?: RequestInit) => {
@@ -133,7 +134,7 @@ function installFetch(
               pathKey: "src/changed.ts",
               postHash: POST,
               position: 0,
-              status: "applied",
+              status: fileStatus,
             }],
             nextCursor: "recovery-next",
           });
@@ -195,8 +196,39 @@ describe("T-30 manual recovery UI", () => {
     expect(within(card).queryByRole("button", { name: /暂停|继续|停止|批准|合入|重试推进/u })).toBeNull();
 
     expect(await within(recovery).findByText("src/changed.ts")).toBeInTheDocument();
+    expect(within(recovery).getByText(/临时文件已准备/u)).toBeInTheDocument();
     await user.click(within(recovery).getByRole("button", { name: "加载更多差异路径" }));
     expect(await within(recovery).findByText("owned/item-21.tmp")).toBeInTheDocument();
+  });
+
+  it.each([
+    ["pending", "待准备"],
+    ["temp_ready", "临时文件已准备"],
+    ["applied", "已记录应用"],
+    ["rolled_back", "已记录回退"],
+    ["rolled_forward", "已记录前滚"],
+    ["verified", "已验证"],
+  ] as const)("renders the strict %s recovery file label", async (status, label) => {
+    installFetch(undefined, status);
+    render(<ExecutionPanel projectId={PROJECT_ID} />);
+
+    const recovery = await screen.findByRole("region", { name: "需要人工恢复" });
+    expect(await within(recovery).findByText(new RegExp(label, "u"))).toBeInTheDocument();
+  });
+
+  it("fails closed on an unknown recovery file status", async () => {
+    installFetch(undefined, "TEMP_READY");
+    render(<ExecutionPanel projectId={PROJECT_ID} />);
+
+    const recovery = await screen.findByRole("region", { name: "需要人工恢复" });
+    expect(await within(recovery).findByRole("alert")).toBeInTheDocument();
+    for (const label of [
+      "已恢复为旧版本并重试",
+      "已确认完整新版本",
+      "放弃且不改 canonical",
+    ]) {
+      expect(within(recovery).getByRole("button", { name: label })).toBeDisabled();
+    }
   });
 
   it.each([

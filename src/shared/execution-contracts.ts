@@ -174,6 +174,41 @@ export const mergeExecutionResponseSchema = z.object({
   }).strict(),
 }).strict();
 
+export const recoveryMergeFileStatuses = [
+  "pending",
+  "temp_ready",
+  "applied",
+  "rolled_back",
+  "rolled_forward",
+  "verified",
+] as const;
+
+export const recoveryMergeFileStatusSchema = z.enum(recoveryMergeFileStatuses);
+
+export const recoveryFileDtoSchema = z.object({
+  isMismatch: z.boolean(),
+  oldExists: z.boolean(),
+  oldHash: z.string().regex(/^[0-9a-f]{64}$/u).nullable(),
+  path: z.string().min(1),
+  pathKey: z.string().min(1),
+  postHash: z.string().regex(/^[0-9a-f]{64}$/u),
+  position: z.number().int().nonnegative(),
+  status: recoveryMergeFileStatusSchema,
+}).strict().superRefine((file, context) => {
+  if (file.oldExists !== (file.oldHash !== null)) {
+    context.addIssue({
+      code: "custom",
+      message: "oldExists and oldHash are inconsistent",
+      path: ["oldHash"],
+    });
+  }
+});
+
+export const recoveryFilePageSchema = z.object({
+  items: z.array(recoveryFileDtoSchema).max(20),
+  nextCursor: z.string().min(1).nullable(),
+}).strict();
+
 export const executionControlInputSchema = z.object({
   operationId: z.string().uuid(),
   action: z.enum(["pause", "continue", "retry", "stop"]),
@@ -252,6 +287,8 @@ export type AdvanceExecutionInput = z.infer<typeof advanceExecutionInputSchema>;
 export type AdvanceExecutionResponse = z.infer<typeof advanceExecutionResponseSchema>;
 export type MergeExecutionInput = z.infer<typeof mergeExecutionInputSchema>;
 export type MergeExecutionResponse = z.infer<typeof mergeExecutionResponseSchema>;
+export type RecoveryMergeFileStatus = z.infer<typeof recoveryMergeFileStatusSchema>;
+export type RecoveryFileDto = z.infer<typeof recoveryFileDtoSchema>;
 export type ExecutionControlInput = z.infer<typeof executionControlInputSchema>;
 export type ExecutionControlResponse = z.infer<typeof executionControlResponseSchema>;
 export type ExecutionApprovalDto = z.infer<typeof executionApprovalDtoSchema>;
