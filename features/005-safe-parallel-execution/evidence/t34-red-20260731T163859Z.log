@@ -1,0 +1,45 @@
+# hf-gate-run
+# label: t34-red
+# command: npm.cmd test -- tests/windows-native-read-adapter.test.ts
+# started: 2026-07-31T16:38:59+00:00
+
+> collaboration-cockpit@0.1.0 test
+> vitest run tests/windows-native-read-adapter.test.ts
+
+
+ RUN  v4.1.10 D:/cool-ai
+
+ ❯ tests/windows-native-read-adapter.test.ts (6 tests | 6 failed) 28ms
+     × lists with NtQueryDirectoryFile and reads every short ReadFile transfer 12ms
+     × rejects junctions, reparse points, and non-file targets 4ms
+     × rechecks parent and file identity before reading replacement bytes 3ms
+     × rejects parent rename and file replacement races while retaining ancestor handles 2ms
+     × rejects malformed native directory buffers and closes every owned handle once 3ms
+     × rechecks file and ancestors after EOF and closes high-level owned handles on failure 2ms
+
+⎯⎯⎯⎯⎯⎯⎯ Failed Tests 6 ⎯⎯⎯⎯⎯⎯⎯
+
+ FAIL  tests/windows-native-read-adapter.test.ts > Windows handle-relative read adapter > lists with NtQueryDirectoryFile and reads every short ReadFile transfer
+ FAIL  tests/windows-native-read-adapter.test.ts > Windows handle-relative read adapter > rejects junctions, reparse points, and non-file targets
+ FAIL  tests/windows-native-read-adapter.test.ts > Windows handle-relative read adapter > rechecks parent and file identity before reading replacement bytes
+ FAIL  tests/windows-native-read-adapter.test.ts > Windows handle-relative read adapter > rejects parent rename and file replacement races while retaining ancestor handles
+ FAIL  tests/windows-native-read-adapter.test.ts > Windows handle-relative read adapter > rejects malformed native directory buffers and closes every owned handle once
+ FAIL  tests/windows-native-read-adapter.test.ts > Windows handle-relative read adapter > rechecks file and ancestors after EOF and closes high-level owned handles on failure
+AssertionError: The Windows handle-relative read adapter is unavailable.
+ ❯ tests/windows-native-read-adapter.test.ts:66:12
+     64|     native = await import(/* @vite-ignore */ moduleId) as NativeModule;
+     65|   } catch {
+     66|     expect.fail("The Windows handle-relative read adapter is unavailab…
+       |            ^
+     67|   }
+     68| });
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[1/6]⎯
+
+
+ Test Files  1 failed (1)
+      Tests  6 failed (6)
+   Start at  00:39:00
+   Duration  2.54s (transform 56ms, setup 413ms, import 39ms, tests 28ms, environment 1.77s)
+
+# exit: 1

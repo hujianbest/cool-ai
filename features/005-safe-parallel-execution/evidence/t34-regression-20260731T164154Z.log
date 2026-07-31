@@ -1,0 +1,18 @@
+# hf-gate-run
+# label: t34-regression
+# command: npm.cmd test -- tests/windows-native-loader.test.ts
+# started: 2026-07-31T16:41:54+00:00
+
+> collaboration-cockpit@0.1.0 test
+> vitest run tests/windows-native-loader.test.ts
+
+
+ RUN  v4.1.10 D:/cool-ai
+
+
+ Test Files  1 passed (1)
+      Tests  4 passed (4)
+   Start at  00:41:55
+   Duration  2.76s (transform 83ms, setup 462ms, import 40ms, tests 57ms, environment 1.90s)
+
+# exit: 0
