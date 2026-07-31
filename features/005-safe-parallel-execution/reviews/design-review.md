@@ -172,3 +172,14 @@
 ## Findings
 
 无。T-47 recovery file状态契约与真实v5 DDL一致：合法全集精确为 `pending|temp_ready|applied|rolled_back|rolled_forward|verified`，其中当前DTO schema遗漏的 `temp_ready` 可由公开merge fault自然形成合法manual row。设计已要求唯一shared tuple由merge/read service、strict DTO parser与UI共同导入，UI对六值exhaustive映射且无string/fallback/passthrough；unknown、大小写、NULL及DDL row-shape矛盾均fail-closed且不回显。RED/GREEN、真实`temp_ready`、逐值迁移校验、分页/重开及低层fault回归可在一次聚焦TDD内完成，T-48/T-49顺延和FR/NFR覆盖索引一致。
+
+# 技术设计 评审 (第 28 轮)
+
+- 日期: 2026-07-31
+- 评审方式: subagent
+- 结论: 通过
+- 用户确认: auto-approved 2026-07-31
+
+## Findings
+
+无。T-49 已把 build-graph 模块解析失败与 runtime adapter/capability failure 分成唯一语义：`sandbox-preflight.ts` 静态相对导入Windows native factory，resolver/`koffi`缺失直接令Node/Vitest import或Next build失败；runtime先判platform/arch，supported才调用factory，`WindowsNativeError`/typed `SANDBOX_UNVERIFIABLE`原样传播，unknown construction仅在factory边界包装并保留cause。全链无动态specifier、require/catch module fallback、path-level或普通fs降级；`serverExternalPackages:["koffi"]`及server-only/client-edge边界有build判据。三组聚焦测试加production build可在一次TDD内覆盖默认happy path、typed/unknown/unsupported分支与fallback=0；T-50顺延和FR/NFR覆盖索引一致。

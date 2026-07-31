@@ -60,6 +60,11 @@ type PreflightResult = {
 };
 
 type PreflightModule = {
+  createDefaultSandboxFsAdapter(options?: {
+    arch?: string;
+    factory?: () => NonNullable<PreflightOptions["platform"]>;
+    platform?: string;
+  }): Promise<NonNullable<PreflightOptions["platform"]>>;
   preflightSandbox(options: PreflightOptions): Promise<PreflightResult>;
 };
 
@@ -141,6 +146,55 @@ function syntheticOptions(
 }
 
 describe("sandbox preflight", () => {
+  it("constructs the statically wired default factory exactly once on supported Windows x64", async () => {
+    const adapter = syntheticOptions(0, () => 0).platform!;
+    const factory = vi.fn(() => adapter);
+
+    await expect(preflight.createDefaultSandboxFsAdapter({
+      arch: "x64",
+      factory,
+      platform: "win32",
+    })).resolves.toBe(adapter);
+    expect(factory).toHaveBeenCalledTimes(1);
+  });
+
+  it.each([
+    ["linux", "x64"],
+    ["win32", "arm64"],
+  ])("rejects unsupported runtime %s/%s before calling the native factory", async (platform, arch) => {
+    const factory = vi.fn(() => syntheticOptions(0, () => 0).platform!);
+
+    await expect(preflight.createDefaultSandboxFsAdapter({
+      arch,
+      factory,
+      platform,
+    })).rejects.toMatchObject({ code: "SANDBOX_UNVERIFIABLE" });
+    expect(factory).not.toHaveBeenCalled();
+  });
+
+  it("preserves typed native failures and wraps only unknown construction failures with cause", async () => {
+    const nativeCause = new Error("missing fixed symbol");
+    const typed = Object.assign(new Error("native ABI mismatch", { cause: nativeCause }), {
+      code: "SANDBOX_UNVERIFIABLE" as const,
+    });
+    await expect(preflight.createDefaultSandboxFsAdapter({
+      arch: "x64",
+      factory: () => { throw typed; },
+      platform: "win32",
+    })).rejects.toBe(typed);
+
+    const unknown = new Error("unexpected constructor failure");
+    await expect(preflight.createDefaultSandboxFsAdapter({
+      arch: "x64",
+      factory: () => { throw unknown; },
+      platform: "win32",
+    })).rejects.toMatchObject({
+      cause: unknown,
+      code: "SANDBOX_UNVERIFIABLE",
+      message: "The Windows verified-handle adapter construction failed.",
+    });
+  });
+
   it("fails closed through the verified-handle adapter instead of using a path fallback", async () => {
     write("ordinary.txt", "ordinary");
     let rootOpenCount = 0;

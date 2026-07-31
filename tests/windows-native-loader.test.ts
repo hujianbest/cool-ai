@@ -3,6 +3,10 @@ import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { afterAll, beforeAll, describe, expect, it, vi } from "vitest";
 
+import nextConfig from "../next.config";
+import * as nativeModule from "../src/server/execution/windows-native-loader";
+import { createDefaultSandboxFsAdapter } from "../src/server/execution/sandbox-preflight";
+
 vi.mock("server-only", () => ({}));
 
 type NativeFailure = Error & { code?: string };
@@ -59,7 +63,7 @@ type WindowsNativeModule = {
 };
 
 let directory: string;
-let native: WindowsNativeModule;
+const native = nativeModule as WindowsNativeModule;
 
 function expectUnverifiable(run: () => unknown): void {
   try {
@@ -70,15 +74,9 @@ function expectUnverifiable(run: () => unknown): void {
   }
 }
 
-beforeAll(async () => {
+beforeAll(() => {
   directory = mkdtempSync(join(tmpdir(), "cool-ai-native-root-"));
   mkdirSync(join(directory, "child"));
-  const moduleId = "@/src/server/execution/windows-native-loader";
-  try {
-    native = await import(/* @vite-ignore */ moduleId) as WindowsNativeModule;
-  } catch {
-    expect.fail("The Windows x64 native loader capability is unavailable.");
-  }
 });
 
 afterAll(() => {
@@ -86,6 +84,11 @@ afterAll(() => {
 });
 
 describe("Windows x64 native loader ABI", () => {
+  it("keeps the static default factory resolvable and Koffi server-external", () => {
+    expect(createDefaultSandboxFsAdapter).toBeTypeOf("function");
+    expect(nextConfig.serverExternalPackages).toContain("koffi");
+  });
+
   it("pins every D-2 symbol, info class, flag, struct size, and offset", () => {
     expect(native.WINDOWS_NATIVE_CONSTANTS).toEqual(expect.objectContaining({
       symbols: {

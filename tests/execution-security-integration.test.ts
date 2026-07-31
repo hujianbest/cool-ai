@@ -11,6 +11,8 @@ import { tmpdir } from "node:os";
 import { dirname, join, resolve } from "node:path";
 import { afterEach, describe, expect, it, vi } from "vitest";
 
+vi.mock("server-only", () => ({}));
+
 import {
   callOpenAiChat,
   OPENAI_CHAT_TIMEOUT_MILLISECONDS,

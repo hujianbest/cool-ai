@@ -1,0 +1,20 @@
+# hf-gate-run
+# label: t49-green
+# command: npm.cmd test -- tests/execution-security-integration.test.ts tests/sandbox-preflight.test.ts tests/windows-native-loader.test.ts
+# started: 2026-07-31T22:29:44+00:00
+
+> collaboration-cockpit@0.1.0 test
+> vitest run tests/execution-security-integration.test.ts tests/sandbox-preflight.test.ts tests/windows-native-loader.test.ts
+
+
+ RUN  v4.1.10 D:/cool-ai
+
+(node:17144) ExperimentalWarning: SQLite is an experimental feature and might change at any time
+(Use `node --trace-warnings ...` to show where the warning was created)
+
+ Test Files  3 passed (3)
+      Tests  29 passed (29)
+   Start at  06:29:45
+   Duration  14.69s (transform 506ms, setup 1.30s, import 676ms, tests 12.05s, environment 6.11s)
+
+# exit: 0

@@ -1,5 +1,7 @@
 import { isAbsolute, relative, resolve, sep } from "node:path";
 
+import { createWindowsNativeReadAdapter } from "./windows-native-read-adapter";
+
 export const SANDBOX_MAX_ENTRIES = 100_000;
 export const SANDBOX_MAX_BYTES = 2_147_483_648;
 
@@ -76,8 +78,9 @@ export class SandboxPreflightError extends Error {
       | "SANDBOX_UNVERIFIABLE"
       | "SPECIAL_FILE_REJECTED",
     message: string,
+    options?: ErrorOptions,
   ) {
-    super(message);
+    super(message, options);
     this.name = "SandboxPreflightError";
   }
 }
@@ -152,12 +155,38 @@ function identityKey(identity: unknown): string {
   return failUnverifiable("The platform adapter returned an invalid identity.");
 }
 
-export async function createDefaultSandboxFsAdapter(): Promise<SandboxFsAdapter> {
+type DefaultSandboxFsAdapterOptions = {
+  arch?: string;
+  factory?: () => SandboxFsAdapter;
+  platform?: string;
+};
+
+function isSandboxUnverifiable(error: unknown): error is { code: "SANDBOX_UNVERIFIABLE" } {
+  return typeof error === "object"
+    && error !== null
+    && "code" in error
+    && error.code === "SANDBOX_UNVERIFIABLE";
+}
+
+export async function createDefaultSandboxFsAdapter(
+  options: DefaultSandboxFsAdapterOptions = {},
+): Promise<SandboxFsAdapter> {
+  if ((options.platform ?? process.platform) !== "win32") {
+    return failUnverifiable("The Windows verified-handle adapter requires Windows.");
+  }
+  if ((options.arch ?? process.arch) !== "x64") {
+    return failUnverifiable("The Windows verified-handle adapter requires x64 Node.");
+  }
+
   try {
-    const native = await import("@/src/server/execution/windows-native-read-adapter");
-    return native.createWindowsNativeReadAdapter();
-  } catch {
-    return failUnverifiable("The Windows verified-handle adapter is unavailable.");
+    return (options.factory ?? createWindowsNativeReadAdapter)();
+  } catch (error) {
+    if (isSandboxUnverifiable(error)) throw error;
+    throw new SandboxPreflightError(
+      "SANDBOX_UNVERIFIABLE",
+      "The Windows verified-handle adapter construction failed.",
+      { cause: error },
+    );
   }
 }
 
