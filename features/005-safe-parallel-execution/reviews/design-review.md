@@ -103,3 +103,32 @@
 ## Findings
 
 无。第 21 轮 finding 已闭合：one-shot request 已明确选择无 action 的短事务协议，不做 FS refresh、不创建 lease/heartbeat/reconcile；manifest input 直接取事务内 current attempt 的缓存 hash，receipt/tool/approval/events/waiting execution 全有或全无，并补齐并发、崩溃、重放、事务注入与重开后的公开链 TDD 判据。standing exact 仍独立创建真实 command action，T-44 无需新增 FR-10/NFR-2 覆盖。
+
+# 技术设计 评审 (第 23 轮)
+
+- 日期: 2026-07-31
+- 评审方式: subagent
+- 结论: 需修改
+
+## Findings
+
+1. [严重] D-5 新增的 pre-acquire receipt 语义与现有 `executeMergePrepare` 调用边界不一致，`SANDBOX_UNVERIFIABLE` 无法按矩阵获得唯一、崩溃安全的幂等终态。design.md:283-298 要求所有通过 route 验证的请求先查 receipt，且 capability 失败属于 `has_external_actions=0`、action=0、journal=0 的 completed 422 receipt；但现有 `merge-journal-service.ts:1830-1857` 在 `validateAndBegin` 创建 operation/action 之前先执行 production adapter `assertCapability`，当前低层测试还明确断言该失败 operation=0。若 service 仅在 catch 后补拒绝 receipt，则 capability 调用期间崩溃或同 operation 并发没有 pending oracle；若把检查移到 acquire 后，又与 action=0 矩阵及 design.md:153 的“merge action/receipt completed 422”冲突。请明确唯一协议并同步 D-5、异常矩阵和 T-45 判据：capability 究竟是可重复的 preflight（需说明并发/崩溃窗口如何由 receipt 收口），还是持有 pending receipt/`merge_apply` lease 的外部步骤；相应规定 receipt/action 数量、`has_external_actions`、same-operation replay 与 fault 注入预期。
+
+2. [严重] T-45 所要求的 recovery 可达性引用了不存在且语义不同的生产入口。design.md:274-275、293-295 要求过期原 action/receipt 先终结，再以新 `kind=recover` operation 创建 `merge_recover` action；T-45 又要求证明 route 产出的 journal 可经“既有 recover/resolution 入口”到达。但当前 execution API 只有 manual `/recovery/resolve`，没有 automatic recover route；`execution-read-service.ts:38-49` 是在 GET/read barrier 内直接调用 `recoverIncompleteMergeJournals`，该函数没有 `operationId` 输入，也不创建新的 recover receipt/action，而 `/api/runs/:runId/recover` 属于 collaboration run，不能作为 execution merge recovery。因而 crash/lease/deadline 行无法从公开 API 按所述 receipt/action 矩阵到达，T-45 的单个 RED/GREEN 也缺少 recover route、请求 schema、owner/expectedVersion、幂等 hash、原 receipt 终结顺序和 UI/读屏障触发规则。请选定并完整定义公开 recovery 协议（或把新入口拆为前置任务），并把现有 read-triggered helper 如何迁移/禁止自动外部写、same/different operation、并发 reconcile/late finalizer 及 route 测试判据写清后再实现。
+
+3. [一般] route 的 owner 输入契约仍不可机械实现。design.md:283 要求“确认请求来自本地 owner mutation 边界”、缺失时 403 `OWNER_REQUIRED`，T-45 也要求覆盖 owner；但现有 execution routes 的 request/body/header 没有 owner credential/actor 字段，`readExecutionJson` 只解析 JSON，UI fetch 也不携带可验证 owner 身份。仅凭调用 `/merge` 或 Origin 不能区分 product UI owner 与其他本地调用者。请指定沿用的实际认证/边界机制及缺失/伪造判定，或明确本地单用户模型下 route 本身即 owner 边界并删除不可达的 403 分支；同时把测试如何构造 owner/no-owner 写入 T-45。当前任务还同时承担该新边界、route/service/UI、全 fault/recovery 链，待前两项协议闭合后应重新确认能否保持一个 TDD 任务。
+
+# 技术设计 评审 (第 24 轮)
+
+- 日期: 2026-07-31
+- 评审方式: subagent
+- 结论: 通过
+- 用户确认: auto-approved 2026-07-31
+
+## Findings
+
+无。第 23 轮三项 findings 均已闭合：
+
+1. capability 已明确为 operation/action acquire 前无副作用、可安全重复的 preflight；低层失败保持 operation/action/journal=0，production service 以唯一 completed 422 拒绝 receipt 收口，并补齐 same-operation 并发、receipt commit 前崩溃、unique insert/CAS 失手重读与重放语义，D-5、异常矩阵和 T-45 判据一致。
+2. recovery 已明确选择既有 read barrier/helper 协议：只沿用原 journal、merge action 与 receipt，不新增 automatic recover route、`kind=recover` receipt 或 `merge_recover` action；T-45 收窄为同一 merge 调用进入 manual recovery 后经现有 `/recovery/resolve` 的公开可达性，T-46 与覆盖索引同步修正，任务粒度恢复为 route/service/UI 接线的一次 TDD。
+3. owner 契约已明确为本地单用户模型下 merge route 本身即与现有 execution mutation routes 相同的 owner mutation 边界，不新增 credential/header/actor 字段，并删除不可构造的 403 `OWNER_REQUIRED` 分支及对应测试要求。

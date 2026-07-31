@@ -504,7 +504,7 @@ export function ExecutionReview({
 }: {
   execution: ExecutionDto;
   onExecutionChanged: (execution: ExecutionDto) => void;
-  onMerge: () => void;
+  onMerge: (stagedHash: string) => void;
 }) {
   const [detail, setDetail] = useState<ExecutionDetail | null>(null);
   const [detailError, setDetailError] = useState<string | null>(null);
@@ -792,7 +792,12 @@ export function ExecutionReview({
                 && execution.status === "staged"
                 && requiredFresh
                 && !readError ? (
-                  <button onClick={onMerge} type="button">自动合入当前变更</button>
+                  <button
+                    onClick={() => onMerge(detail.staged!.stagedHash)}
+                    type="button"
+                  >
+                    自动合入当前变更
+                  </button>
                 ) : null}
                 {detail.staged.classification === "approval_required" ? (
                   stagedApproval ? (

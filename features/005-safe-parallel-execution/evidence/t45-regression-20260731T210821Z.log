@@ -1,0 +1,24 @@
+# hf-gate-run
+# label: t45-regression
+# command: npm.cmd test -- tests/merge-journal-prepare.test.ts tests/merge-recovery.test.ts tests/merge-external-writer.test.ts tests/execution-recovery-ui.test.tsx
+# started: 2026-07-31T21:08:21+00:00
+
+> collaboration-cockpit@0.1.0 test
+> vitest run tests/merge-journal-prepare.test.ts tests/merge-recovery.test.ts tests/merge-external-writer.test.ts tests/execution-recovery-ui.test.tsx
+
+
+ RUN  v4.1.10 D:/cool-ai
+
+(node:14104) ExperimentalWarning: SQLite is an experimental feature and might change at any time
+(Use `node --trace-warnings ...` to show where the warning was created)
+(node:10588) ExperimentalWarning: SQLite is an experimental feature and might change at any time
+(Use `node --trace-warnings ...` to show where the warning was created)
+(node:11428) ExperimentalWarning: SQLite is an experimental feature and might change at any time
+(Use `node --trace-warnings ...` to show where the warning was created)
+
+ Test Files  4 passed (4)
+      Tests  27 passed (27)
+   Start at  05:08:23
+   Duration  19.38s (transform 1.12s, setup 2.02s, import 1.86s, tests 29.78s, environment 8.34s)
+
+# exit: 0

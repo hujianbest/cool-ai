@@ -251,3 +251,139 @@ describe("T-28 desktop ExecutionCards", () => {
     expect(within(second).getByRole("button", { name: "刷新 Task B" })).toBeEnabled();
   });
 });
+
+describe("T-45 merge wiring", () => {
+  it("uses a dedicated merge operation and never sends staged merge through advance", async () => {
+    const user = userEvent.setup();
+    const current = execution("execution-a", "staged");
+    const requests: Array<{ body: Record<string, unknown>; path: string }> = [];
+    let manualRecovery = false;
+    installFetch([current], (url, init) => {
+      if (url.pathname === "/api/executions/execution-a") {
+        const hash = "a".repeat(64);
+        return Response.json({
+          counts: {
+            approvals: 0,
+            artifacts: 0,
+            events: 0,
+            mergeFiles: 1,
+            stagedBlockers: 0,
+            stagedObservations: 1,
+            validations: 1,
+          },
+          execution: manualRecovery
+            ? execution("execution-a", "conflicted", {
+                manualRecoveryRequired: true,
+                reasonCode: "MANUAL_RECOVERY_REQUIRED",
+                version: 4,
+              })
+            : current,
+          frozen: {
+            agentVersion: 1,
+            baselineManifestHash: hash,
+            contextHash: hash,
+            memoryHash: hash,
+            missionVersion: 1,
+            permissionsHash: hash,
+            policyHash: hash,
+            policyRevisionId: "policy",
+            policyVersion: 1,
+            providerVersion: 1,
+            rosterHash: hash,
+            skillsHash: hash,
+            taskVersion: 1,
+          },
+          recovery: manualRecovery
+            ? {
+                allowedResolutions: ["recovered_old", "recovered_new", "abandon"],
+                journalStatus: "manual_recovery",
+                mismatchPhase: "apply_or_rollback",
+                observedManifestHash: "c".repeat(64),
+                oldManifestHash: "d".repeat(64),
+                postManifestHash: "e".repeat(64),
+                required: true,
+              }
+            : {
+                allowedResolutions: [],
+                journalStatus: null,
+                mismatchPhase: null,
+                observedManifestHash: null,
+                oldManifestHash: null,
+                postManifestHash: null,
+                required: false,
+              },
+          staged: {
+            blockReasons: [],
+            blockerCount: 0,
+            blockerCounts: {},
+            classification: "auto_eligible",
+            id: "staged-a",
+            mergeFileCount: 1,
+            mergeFinalBytes: 6,
+            observedFinalBytes: 6,
+            observedPathCount: 1,
+            stagedHash: "b".repeat(64),
+          },
+        });
+      }
+      if (
+        url.pathname.endsWith("/events")
+        || url.pathname.endsWith("/approvals")
+        || url.pathname.endsWith("/artifacts")
+        || url.pathname.endsWith("/observations")
+        || url.pathname.endsWith("/blockers")
+      ) {
+        return Response.json({ items: [], nextCursor: null });
+      }
+      if (url.pathname.endsWith("/recovery/files")) {
+        return Response.json({ items: [], nextCursor: null });
+      }
+      if (url.pathname.endsWith("/validations")) {
+        const hash = "a".repeat(64);
+        return Response.json({
+          items: [{
+            afterLastWrite: true,
+            exitCode: 0,
+            finishedAt: "2026-08-01T04:00:00.000Z",
+            id: "validation-a",
+            policyEntryId: "required-a",
+            required: true,
+            stderr: { bytes: 0, sha256: hash, truncated: false },
+            stdout: { bytes: 0, sha256: hash, truncated: false },
+            succeeded: true,
+          }],
+          nextCursor: null,
+        });
+      }
+      if (init?.method === "POST") {
+        requests.push({
+          body: JSON.parse(String(init.body)) as Record<string, unknown>,
+          path: url.pathname,
+        });
+        manualRecovery = true;
+        return Response.json(
+          { error: { code: "MANUAL_RECOVERY_REQUIRED", message: "external writer" } },
+          { status: 409 },
+        );
+      }
+      return undefined;
+    });
+
+    render(createElement(ExecutionPanel, { projectId: PROJECT_ID }));
+    const card = await screen.findByRole("region", { name: "Task A" });
+    await user.click(await within(card).findByRole("tab", { name: "变更" }));
+    await user.click(await within(card).findByRole("button", { name: "自动合入当前变更" }));
+
+    await waitFor(() => expect(requests).toHaveLength(1));
+    expect(requests[0]?.path).toBe("/api/executions/execution-a/merge");
+    expect(requests[0]?.body).toMatchObject({
+      expectedVersion: 3,
+      stagedHash: "b".repeat(64),
+    });
+    expect(requests[0]?.body.operationId).toMatch(
+      /^[0-9a-f]{8}-[0-9a-f]{4}-4[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/u,
+    );
+    expect(await within(card).findByRole("region", { name: "需要人工恢复" }))
+      .toBeInTheDocument();
+  });
+});

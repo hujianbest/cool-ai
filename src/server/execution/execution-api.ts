@@ -18,6 +18,43 @@ export async function readExecutionJson(
   }
 }
 
+export async function readBoundedExecutionJson(
+  request: Request,
+  maximumBytes = 128 * 1024,
+): Promise<{ ok: true; value: unknown } | { ok: false; response: Response }> {
+  const declared = Number(request.headers.get("content-length"));
+  if (Number.isFinite(declared) && declared > maximumBytes) {
+    return {
+      ok: false,
+      response: Response.json(
+        { error: { code: "INVALID_INPUT", message: "Request body exceeds its limit." } },
+        { status: 400 },
+      ),
+    };
+  }
+  try {
+    const text = await request.text();
+    if (Buffer.byteLength(text, "utf8") > maximumBytes) {
+      return {
+        ok: false,
+        response: Response.json(
+          { error: { code: "INVALID_INPUT", message: "Request body exceeds its limit." } },
+          { status: 400 },
+        ),
+      };
+    }
+    return { ok: true, value: JSON.parse(text) as unknown };
+  } catch {
+    return {
+      ok: false,
+      response: Response.json(
+        { error: { code: "INVALID_JSON", message: "Request body must be valid JSON." } },
+        { status: 400 },
+      ),
+    };
+  }
+}
+
 export function executionErrorResponse(error: unknown, route: string): Response {
   if (error instanceof ExecutionError) {
     const message = error.httpStatus === 400

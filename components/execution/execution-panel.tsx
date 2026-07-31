@@ -28,6 +28,7 @@ import {
   advanceExecutionResponseSchema,
   executionControlResponseSchema,
   executionDtoSchema,
+  mergeExecutionResponseSchema,
 } from "@/src/shared/execution-contracts";
 import type { MissionState, WorkItem } from "@/src/shared/project-context-contracts";
 
@@ -153,7 +154,7 @@ function ExecutionCard({
   onAdvanceRetry: () => void;
   onControl: (action: ControlAction) => void;
   onExecutionChanged: (execution: ExecutionDto) => void;
-  onMerge: () => void;
+  onMerge: (stagedHash: string) => void;
   onRefresh: () => void;
 }) {
   const controls = availableControls(execution);
@@ -332,6 +333,8 @@ export function ExecutionPanel({
   const advanceInFlightRef = useRef(new Set<string>());
   const advanceOperationRef = useRef(new Map<string, string>());
   const advanceAbortRef = useRef(new Map<string, AbortController>());
+  const mergeInFlightRef = useRef(new Set<string>());
+  const mergeOperationRef = useRef(new Map<string, string>());
 
   const closeMobileExecution = useCallback(() => setMobileExecutionId(null), []);
   const mobileModalOptions = useMemo(() => ({
@@ -507,6 +510,59 @@ export function ExecutionPanel({
       }
     }
   }, [updateExecution]);
+
+  const mergeExecution = useCallback(async (
+    execution: ExecutionDto,
+    stagedHash: string,
+  ) => {
+    if (mergeInFlightRef.current.has(execution.id)) return;
+    const operationId = mergeOperationRef.current.get(execution.id) ?? newOperationId();
+    mergeOperationRef.current.set(execution.id, operationId);
+    mergeInFlightRef.current.add(execution.id);
+    setCardStates((current) => ({
+      ...current,
+      [execution.id]: { ...current[execution.id], advanceError: undefined },
+    }));
+    try {
+      const response = await fetch(`/api/executions/${execution.id}/merge`, {
+        body: JSON.stringify({
+          expectedVersion: execution.version,
+          operationId,
+          stagedHash,
+        }),
+        headers: { "content-type": "application/json" },
+        method: "POST",
+      });
+      const payload = (await response.json()) as unknown;
+      if (!response.ok) {
+        const code = (payload as Partial<ApiError>).error?.code;
+        if (code === "MANUAL_RECOVERY_REQUIRED") {
+          await refreshExecution(execution);
+        }
+        throw new ApiDisplayError(
+          apiErrorCopy(payload as Partial<ApiError>, "无法合入此执行，请重试。"),
+        );
+      }
+      const parsed = mergeExecutionResponseSchema.safeParse(payload);
+      if (!parsed.success) {
+        throw new ApiDisplayError("合入响应无效，请刷新后重试。");
+      }
+      mergeOperationRef.current.delete(execution.id);
+      if (mountedRef.current) updateExecution(parsed.data.execution);
+    } catch (cause: unknown) {
+      if (mountedRef.current) {
+        setCardStates((current) => ({
+          ...current,
+          [execution.id]: {
+            ...current[execution.id],
+            advanceError: caughtApiErrorCopy(cause, "无法合入此执行，请重试。"),
+          },
+        }));
+      }
+    } finally {
+      mergeInFlightRef.current.delete(execution.id);
+    }
+  }, [refreshExecution, updateExecution]);
 
   useEffect(() => {
     let active = true;
@@ -858,7 +914,7 @@ export function ExecutionPanel({
                       }}
                       onControl={(action) => void controlExecution(execution, action)}
                       onExecutionChanged={updateExecution}
-                      onMerge={() => void advanceExecution(execution)}
+                      onMerge={(stagedHash) => void mergeExecution(execution, stagedHash)}
                       onRefresh={() => void refreshExecution(execution)}
                     />
                   ))}
@@ -883,7 +939,7 @@ export function ExecutionPanel({
               }}
               onControl={(action) => void controlExecution(execution, action)}
               onExecutionChanged={updateExecution}
-              onMerge={() => void advanceExecution(execution)}
+              onMerge={(stagedHash) => void mergeExecution(execution, stagedHash)}
               onRefresh={() => void refreshExecution(execution)}
             />
           ))}

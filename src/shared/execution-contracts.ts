@@ -156,6 +156,24 @@ export const advanceExecutionResponseSchema = z.object({
   }).strict()).max(10),
 }).strict();
 
+export const mergeExecutionInputSchema = z.object({
+  operationId: z.string().uuid(),
+  expectedVersion: z.number().int().positive(),
+  stagedHash: z.string().regex(/^[0-9a-f]{64}$/u),
+}).strict();
+
+export const mergeExecutionResponseSchema = z.object({
+  execution: executionDtoSchema,
+  result: z.object({
+    createdAt: z.string(),
+    executionId: z.string().min(1),
+    id: z.string().min(1),
+    mergeJournalId: z.string().min(1),
+    stagedResultId: z.string().min(1),
+    status: z.literal("awaiting_review"),
+  }).strict(),
+}).strict();
+
 export const executionControlInputSchema = z.object({
   operationId: z.string().uuid(),
   action: z.enum(["pause", "continue", "retry", "stop"]),
@@ -232,6 +250,8 @@ export type ExecutionEventType = z.infer<typeof executionEventTypeSchema>;
 export type ExecutionListResponse = z.infer<typeof executionListResponseSchema>;
 export type AdvanceExecutionInput = z.infer<typeof advanceExecutionInputSchema>;
 export type AdvanceExecutionResponse = z.infer<typeof advanceExecutionResponseSchema>;
+export type MergeExecutionInput = z.infer<typeof mergeExecutionInputSchema>;
+export type MergeExecutionResponse = z.infer<typeof mergeExecutionResponseSchema>;
 export type ExecutionControlInput = z.infer<typeof executionControlInputSchema>;
 export type ExecutionControlResponse = z.infer<typeof executionControlResponseSchema>;
 export type ExecutionApprovalDto = z.infer<typeof executionApprovalDtoSchema>;

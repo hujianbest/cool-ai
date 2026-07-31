@@ -1,0 +1,522 @@
+# hf-gate-run
+# label: t45-red
+# command: npm.cmd test -- tests/execution-merge-route.test.ts tests/execution-cards-ui.test.tsx
+# started: 2026-07-31T21:01:17+00:00
+
+> collaboration-cockpit@0.1.0 test
+> vitest run tests/execution-merge-route.test.ts tests/execution-cards-ui.test.tsx
+
+
+ RUN  v4.1.10 D:/cool-ai
+
+(node:2352) ExperimentalWarning: SQLite is an experimental feature and might change at any time
+(Use `node --trace-warnings ...` to show where the warning was created)
+ ❯ tests/execution-cards-ui.test.tsx (6 tests | 1 failed) 1554ms
+     × uses a dedicated merge operation and never sends staged merge through advance 1057ms
+ ❯ tests/execution-merge-route.test.ts (1 test | 1 failed) 2457ms
+     × merges a real staged execution reached only through public production routes 2455ms
+
+⎯⎯⎯⎯⎯⎯⎯ Failed Tests 2 ⎯⎯⎯⎯⎯⎯⎯
+
+ FAIL  tests/execution-cards-ui.test.tsx > T-45 merge wiring > uses a dedicated merge operation and never sends staged merge through advance
+TestingLibraryElementError: Unable to find role="button" and name "自动合入当前变更"
+
+Ignored nodes: comments, script, style
+[36m<section[39m
+  [33maria-labelledby[39m=[32m"execution-execution-a-title"[39m
+  [33mclass[39m=[32m"run-detail execution-card"[39m
+  [33mdata-accent[39m=[32m"sage"[39m
+  [33mrole[39m=[32m"region"[39m
+[36m>[39m
+  [36m<div[39m
+    [33mclass[39m=[32m"panel-heading"[39m
+  [36m>[39m
+    [36m<div>[39m
+      [36m<p[39m
+        [33mclass[39m=[32m"eyebrow"[39m
+      [36m>[39m
+        [0mA[0m
+      [36m</p>[39m
+      [36m<p>[39m
+        [0mAlpha[0m
+      [36m</p>[39m
+      [36m<h3[39m
+        [33mid[39m=[32m"execution-execution-a-title"[39m
+        [33mtabindex[39m=[32m"-1"[39m
+      [36m>[39m
+        [0mTask A[0m
+      [36m</h3>[39m
+    [36m</div>[39m
+    [36m<span[39m
+      [33mclass[39m=[32m"status-label status-staged"[39m
+    [36m>[39m
+      [0m变更待审阅[0m
+    [36m</span>[39m
+  [36m</div>[39m
+  [36m<p[39m
+    [33mrole[39m=[32m"status"[39m
+  [36m>[39m
+    [0m当前没有进行中的动作[0m
+  [36m</p>[39m
+  [36m<div[39m
+    [33mclass[39m=[32m"execution-progress-list"[39m
+  [36m>[39m
+    [36m<div[39m
+      [33mclass[39m=[32m"execution-progress"[39m
+    [36m>[39m
+      [36m<span>[39m
+        [0m业务回合[0m
+        [0m [0m
+        [0m4[0m
+        [0m/[0m
+        [0m20[0m
+      [36m</span>[39m
+      [36m<progress[39m
+        [33maria-label[39m=[32m"业务回合进度"[39m
+        [33maria-valuemax[39m=[32m"20"[39m
+        [33maria-valuemin[39m=[32m"0"[39m
+        [33maria-valuenow[39m=[32m"4"[39m
+        [33mmax[39m=[32m"20"[39m
+        [33mvalue[39m=[32m"4"[39m
+      [36m/>[39m
+    [36m</div>[39m
+    [36m<div[39m
+      [33mclass[39m=[32m"execution-progress"[39m
+    [36m>[39m
+      [36m<span>[39m
+        [0m工具调用[0m
+        [0m [0m
+        [0m7[0m
+        [0m/[0m
+        [0m40[0m
+      [36m</span>[39m
+      [36m<progress[39m
+        [33maria-label[39m=[32m"工具调用进度"[39m
+        [33maria-valuemax[39m=[32m"40"[39m
+        [33maria-valuemin[39m=[32m"0"[39m
+        [33maria-valuenow[39m=[32m"7"[39m
+        [33mmax[39m=[32m"40"[39m
+        [33mvalue[39m=[32m"7"[39m
+      [36m/>[39m
+    [36m</div>[39m
+    [36m<div[39m
+      [33mclass[39m=[32m"execution-progress"[39m
+    [36m>[39m
+      [36m<span>[39m
+        [0mToken [0m
+        [0m [0m
+        [0m900[0m
+        [0m/[0m
+        [0m2000[0m
+      [36m</span>[39m
+      [36m<progress[39m
+        [33maria-label[39m=[32m"Token 进度"[39m
+        [33maria-valuemax[39m=[32m"2000"[39m
+        [33maria-valuemin[39m=[32m"0"[39m
+        [33maria-valuenow[39m=[32m"900"[39m
+        [33mmax[39m=[32m"2000"[39m
+        [33mvalue[39m=[32m"900"[39m
+      [36m/>[39m
+    [36m</div>[39m
+  [36m</div>[39m
+  [36m<div[39m
+    [33mclass[39m=[32m"execution-review stack"[39m
+  [36m>[39m
+    [36m<div[39m
+      [33maria-label[39m=[32m"执行审阅"[39m
+      [33mclass[39m=[32m"execution-review-tabs"[39m
+      [33mrole[39m=[32m"tablist"[39m
+    [36m>[39m
+      [36m<button[39m
+        [33maria-controls[39m=[32m"execution-execution-a-timeline"[39m
+        [33maria-selected[39m=[32m"false"[39m
+        [33mid[39m=[32m"execution-execution-a-timeline-tab"[39m
+        [33mrole[39m=[32m"tab"[39m
+        [33mtabindex[39m=[32m"-1"[39m
+        [33mtype[39m=[32m"button"[39m
+      [36m>[39m
+        [0m时间线[0m
+      [36m</button>[39m
+      [36m<button[39m
+        [33maria-controls[39m=[32m"execution-execution-a-validation"[39m
+        [33maria-selected[39m=[32m"false"[39m
+        [33mid[39m=[32m"execution-execution-a-validation-tab"[39m
+        [33mrole[39m=[32m"tab"[39m
+        [33mtabindex[39m=[32m"-1"[39m
+        [33mtype[39m=[32m"button"[39m
+      [36m>[39m
+        [0m验证[0m
+      [36m</button>[39m
+      [36m<button[39m
+        [33maria-controls[39m=[32m"execution-execution-a-changes"[39m
+        [33maria-selected[39m=[32m"true"[39m
+        [33mid[39m=[32m"execution-execution-a-changes-tab"[39m
+        [33mrole[39m=[32m"tab"[39m
+        [33mtabindex[39m=[32m"0"[39m
+        [33mtype[39m=[32m"button"[39m
+      [36m>[39m
+        [0m变更[0m
+      [36m</button>[39m
+    [36m</div>[39m
+    [36m<section[39m
+      [33maria-labelledby[39m=[32m"execution-execution-a-changes-tab"[39m
+      [33mid[39m=[32m"execution-execution-a-changes"[39m
+      [33mrole[39m=[32m"tabpanel"[39m
+    [36m>[39m
+      [36m<h4[39m
+        [33mtabindex[39m=[32m"-1"[39m
+      [36m>[39m
+        [0m变更审阅[0m
+      [36m</h4>[39m
+      [36m<div[39m
+        [33mclass[39m=[32m"execution-staged-summary stack"[39m
+      [36m>[39m
+        [36m<p>[39m
+          [0m观察到 [0m
+          [0m1[0m
+          [0m 个路径 · [0m
+          [0m6[0m
+          [0m bytes[0m
+        [36m</p>[39m
+        [36m<p>[39m
+          [0m可合入边界 [0m
+          [0m1[0m
+          [0m 个文件 · [0m
+          [0m6[0m
+          [0m bytes[0m
+        [36m</p>[39m
+        [36m<p>[39m
+          [0mstaged hash：[0m
+          [0mbbbbbbbbbbbb[0m
+        [36m</p>[39m
+        [36m<p>[39m
+          [0m必需验证：[0m
+          [0m没有必需验证政策[0m
+        [36m</p>[39m
+        [36m<p>[39m
+          [0m政策 hash：[0m
+          [0maaaaaaaaaaaa[0m
+          [0m · 修订 #[0m
+          [0m1[0m
+        [36m</p>[39m
+        [36m<p>[39m
+          [0m风险与边界：[0m
+          [0m边界内且具备自动合入资格[0m
+        [36m</p>[39m
+      [36m</div>[39m
+      [36m<div[39m
+        [33mclass[39m=[32m"execution-review-actions"[39m
+      [36m/>[39m
+      [36m<h5>[39m
+        [0m观察（[0m
+        [0m1[0m
+        [0m）[0m
+      [36m</h5>[39m
+      [36m<p>[39m
+        [0m没有 staged 观察。[0m
+      [36m</p>[39m
+      [36m<ol[39m
+        [33mclass[39m=[32m"execution-review-list"[39m
+      [36m/>[39m
+      [36m<h5>[39m
+        [0m阻断（[0m
+        [0m0[0m
+        [0m）[0m
+      [36m</h5>[39m
+      [36m<p>[39m
+        [0m没有 staged 阻断。[0m
+      [36m</p>[39m
+      [36m<ol[39m
+        [33mclass[39m=[32m"execution-review-list"[39m
+      [36m/>[39m
+    [36m</section>[39m
+  [36m</div>[39m
+  [36m<div[39m
+    [33mclass[39m=[32m"execution-card-controls"[39m
+  [36m>[39m
+    [36m<button[39m
+      [33mstyle[39m=[32m"min-height: var(--control-min);"[39m
+      [33mtype[39m=[32m"button"[39m
+    [36m>[39m
+      [0m停止[0m
+      [0m [0m
+      [0mTask A[0m
+    [36m</button>[39m
+    [36m<button[39m
+      [33mstyle[39m=[32m"min-height: var(--control-min);"[39m
+      [33mtype[39m=[32m"button"[39m
+    [36m>[39m
+      [0m刷新 [0m
+      [0mTask A[0m
+    [36m</button>[39m
+  [36m</div>[39m
+[36m</section>[39m
+
+Ignored nodes: comments, script, style
+[36m<section[39m
+  [33maria-labelledby[39m=[32m"execution-execution-a-title"[39m
+  [33mclass[39m=[32m"run-detail execution-card"[39m
+  [33mdata-accent[39m=[32m"sage"[39m
+  [33mrole[39m=[32m"region"[39m
+[36m>[39m
+  [36m<div[39m
+    [33mclass[39m=[32m"panel-heading"[39m
+  [36m>[39m
+    [36m<div>[39m
+      [36m<p[39m
+        [33mclass[39m=[32m"eyebrow"[39m
+      [36m>[39m
+        [0mA[0m
+      [36m</p>[39m
+      [36m<p>[39m
+        [0mAlpha[0m
+      [36m</p>[39m
+      [36m<h3[39m
+        [33mid[39m=[32m"execution-execution-a-title"[39m
+        [33mtabindex[39m=[32m"-1"[39m
+      [36m>[39m
+        [0mTask A[0m
+      [36m</h3>[39m
+    [36m</div>[39m
+    [36m<span[39m
+      [33mclass[39m=[32m"status-label status-staged"[39m
+    [36m>[39m
+      [0m变更待审阅[0m
+    [36m</span>[39m
+  [36m</div>[39m
+  [36m<p[39m
+    [33mrole[39m=[32m"status"[39m
+  [36m>[39m
+    [0m当前没有进行中的动作[0m
+  [36m</p>[39m
+  [36m<div[39m
+    [33mclass[39m=[32m"execution-progress-list"[39m
+  [36m>[39m
+    [36m<div[39m
+      [33mclass[39m=[32m"execution-progress"[39m
+    [36m>[39m
+      [36m<span>[39m
+        [0m业务回合[0m
+        [0m [0m
+        [0m4[0m
+        [0m/[0m
+        [0m20[0m
+      [36m</span>[39m
+      [36m<progress[39m
+        [33maria-label[39m=[32m"业务回合进度"[39m
+        [33maria-valuemax[39m=[32m"20"[39m
+        [33maria-valuemin[39m=[32m"0"[39m
+        [33maria-valuenow[39m=[32m"4"[39m
+        [33mmax[39m=[32m"20"[39m
+        [33mvalue[39m=[32m"4"[39m
+      [36m/>[39m
+    [36m</div>[39m
+    [36m<div[39m
+      [33mclass[39m=[32m"execution-progress"[39m
+    [36m>[39m
+      [36m<span>[39m
+        [0m工具调用[0m
+        [0m [0m
+        [0m7[0m
+        [0m/[0m
+        [0m40[0m
+      [36m</span>[39m
+      [36m<progress[39m
+        [33maria-label[39m=[32m"工具调用进度"[39m
+        [33maria-valuemax[39m=[32m"40"[39m
+        [33maria-valuemin[39m=[32m"0"[39m
+        [33maria-valuenow[39m=[32m"7"[39m
+        [33mmax[39m=[32m"40"[39m
+        [33mvalue[39m=[32m"7"[39m
+      [36m/>[39m
+    [36m</div>[39m
+    [36m<div[39m
+      [33mclass[39m=[32m"execution-progress"[39m
+    [36m>[39m
+      [36m<span>[39m
+        [0mToken [0m
+        [0m [0m
+        [0m900[0m
+        [0m/[0m
+        [0m2000[0m
+      [36m</span>[39m
+      [36m<progress[39m
+        [33maria-label[39m=[32m"Token 进度"[39m
+        [33maria-valuemax[39m=[32m"2000"[39m
+        [33maria-valuemin[39m=[32m"0"[39m
+        [33maria-valuenow[39m=[32m"900"[39m
+        [33mmax[39m=[32m"2000"[39m
+        [33mvalue[39m=[32m"900"[39m
+      [36m/>[39m
+    [36m</div>[39m
+  [36m</div>[39m
+  [36m<div[39m
+    [33mclass[39m=[32m"execution-review stack"[39m
+  [36m>[39m
+    [36m<div[39m
+      [33maria-label[39m=[32m"执行审阅"[39m
+      [33mclass[39m=[32m"execution-review-tabs"[39m
+      [33mrole[39m=[32m"tablist"[39m
+    [36m>[39m
+      [36m<button[39m
+        [33maria-controls[39m=[32m"execution-execution-a-timeline"[39m
+        [33maria-selected[39m=[32m"false"[39m
+        [33mid[39m=[32m"execution-execution-a-timeline-tab"[39m
+        [33mrole[39m=[32m"tab"[39m
+        [33mtabindex[39m=[32m"-1"[39m
+        [33mtype[39m=[32m"button"[39m
+      [36m>[39m
+        [0m时间线[0m
+      [36m</button>[39m
+      [36m<button[39m
+        [33maria-controls[39m=[32m"execution-execution-a-validation"[39m
+        [33maria-selected[39m=[32m"false"[39m
+        [33mid[39m=[32m"execution-execution-a-validation-tab"[39m
+        [33mrole[39m=[32m"tab"[39m
+        [33mtabindex[39m=[32m"-1"[39m
+        [33mtype[39m=[32m"button"[39m
+      [36m>[39m
+        [0m验证[0m
+      [36m</button>[39m
+      [36m<button[39m
+        [33maria-controls[39m=[32m"execution-execution-a-changes"[39m
+        [33maria-selected[39m=[32m"true"[39m
+        [33mid[39m=[32m"execution-execution-a-changes-tab"[39m
+        [33mrole[39m=[32m"tab"[39m
+        [33mtabindex[39m=[32m"0"[39m
+        [33mtype[39m=[32m"button"[39m
+      [36m>[39m
+        [0m变更[0m
+      [36m</button>[39m
+    [36m</div>[39m
+    [36m<section[39m
+      [33maria-labelledby[39m=[32m"execution-execution-a-changes-tab"[39m
+      [33mid[39m=[32m"execution-execution-a-changes"[39m
+      [33mrole[39m=[32m"tabpanel"[39m
+    [36m>[39m
+      [36m<h4[39m
+        [33mtabindex[39m=[32m"-1"[39m
+      [36m>[39m
+        [0m变更审阅[0m
+      [36m</h4>[39m
+      [36m<div[39m
+        [33mclass[39m=[32m"execution-staged-summary stack"[39m
+      [36m>[39m
+        [36m<p>[39m
+          [0m观察到 [0m
+          [0m1[0m
+          [0m 个路径 · [0m
+          [0m6[0m
+          [0m bytes[0m
+        [36m</p>[39m
+        [36m<p>[39m
+          [0m可合入边界 [0m
+          [0m1[0m
+          [0m 个文件 · [0m
+          [0m6[0m
+          [0m bytes[0m
+        [36m</p>[39m
+        [36m<p>[39m
+          [0mstaged hash：[0m
+          [0mbbbbbbbbbbbb[0m
+        [36m</p>[39m
+        [36m<p>[39m
+          [0m必需验证：[0m
+          [0m没有必需验证政策[0m
+        [36m</p>[39m
+        [36m<p>[39m
+          [0m政策 hash：[0m
+          [0maaaaaaaaaaaa[0m
+          [0m · 修订 #[0m
+          [0m1[0m
+        [36m</p>[39m
+        [36m<p>[39m
+          [0m风险与边界：[0m
+          [0m边界内且具备自动合入资格[0m
+        [36m</p>[39m
+      [36m</div>[39m
+      [36m<div[39m
+        [33mclass[39m=[32m"execution-review-actions"[39m
+      [36m/>[39m
+      [36m<h5>[39m
+        [0m观察（[0m
+        [0m1[0m
+        [0m）[0m
+      [36m</h5>[39m
+      [36m<p>[39m
+        [0m没有 staged 观察。[0m
+      [36m</p>[39m
+      [36m<ol[39m
+        [33mclass[39m=[32m"execution-review-list"[39m
+      [36m/>[39m
+      [36m<h5>[39m
+        [0m阻断（[0m
+        [0m0[0m
+        [0m）[0m
+      [36m</h5>[39m
+      [36m<p>[39m
+        [0m没有 staged 阻断。[0m
+      [36m</p>[39m
+      [36m<ol[39m
+        [33mclass[39m=[32m"execution-review-list"[39m
+      [36m/>[39m
+    [36m</section>[39m
+  [36m</div>[39m
+  [36m<div[39m
+    [33mclass[39m=[32m"execution-card-controls"[39m
+  [36m>[39m
+    [36m<button[39m
+      [33mstyle[39m=[32m"min-height: var(--control-min);"[39m
+      [33mtype[39m=[32m"button"[39m
+    [36m>[39m
+      [0m停止[0m
+      [0m [0m
+      [0mTask A[0m
+    [36m</button>[39m
+    [36m<button[39m
+      [33mstyle[39m=[32m"min-height: var(--control-min);"[39m
+      [33mtype[39m=[32m"button"[39m
+    [36m>[39m
+      [0m刷新 [0m
+      [0mTask A[0m
+    [36m</button>[39m
+  [36m</div>[39m
+[36m</section>[39m
+ ❯ waitForWrapper node_modules/@testing-library/dom/dist/wait-for.js:163:27
+ ❯ node_modules/@testing-library/dom/dist/query-helpers.js:86:33
+ ❯ tests/execution-cards-ui.test.tsx:335:41
+    333|     const card = await screen.findByRole("region", { name: "Task A" });
+    334|     await user.click(await within(card).findByRole("tab", { name: "变更"…
+    335|     await user.click(await within(card).findByRole("button", { name: "…
+       |                                         ^
+    336|
+    337|     await waitFor(() => expect(requests).toHaveLength(1));
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[1/2]⎯
+
+ FAIL  tests/execution-merge-route.test.ts > T-45 production merge route > merges a real staged execution reached only through public production routes
+AssertionError: expected 404 to be 200 // Object.is equality
+
+- Expected
++ Received
+
+- 200
++ 404
+
+ ❯ tests/execution-merge-route.test.ts:331:29
+    329|     });
+    330|
+    331|     expect(response.status).toBe(200);
+       |                             ^
+    332|     expect(await response.json()).toMatchObject({
+    333|       execution: { id: staged.executionId, status: "merged" },
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[2/2]⎯
+
+
+ Test Files  2 failed (2)
+      Tests  2 failed | 5 passed (7)
+   Start at  05:01:18
+   Duration  5.25s (transform 769ms, setup 889ms, import 671ms, tests 4.01s, environment 3.73s)
+
+# exit: 1
