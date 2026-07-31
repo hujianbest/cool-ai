@@ -69,9 +69,31 @@ start API 每个请求只接受一个 `workItemId`、只创建一个execution/at
 
 - 方案 A: Git 项目用 worktree、非 Git 用复制。Git 项目创建快，但 `.git` 文件指向 canonical 的 Git 元数据，命令仍可能改变共享 refs/index；两种实现具有不同边界，Git LFS/submodule/sparse checkout 还会引入链接和外部对象。
 - 方案 B: 所有项目都用同一“普通文件快照复制”，Git 元数据只参与项目识别而不复制。边界一致、manifest 可复现、canonical Git 状态不被 sandbox 命令触碰；代价是磁盘和启动时间更高，并且被排除的依赖缓存需由项目已有自包含验证或 owner 明确批准的 sandbox-scoped 安装补齐。
-- 选择: B。sandbox 根默认为 Windows `%LOCALAPPDATA%\CoolAI\executions`，POSIX `${XDG_STATE_HOME:-$HOME/.local/state}/cool-ai/executions`；测试必须显式注入临时根。启动时 `realpath` execution root 与 canonical root，若任一包含另一方即失败。目录为 `<root>/<projectId>/<executionId>/<attemptNo>/sandbox`，merge journal/backup 与其同级，绝不位于 canonical。
+- 选择: B。首版 sandbox 根为 Windows `%LOCALAPPDATA%\CoolAI\executions`；测试必须显式注入临时根。启动时用 verified root handle 的 normalized final path 比较 execution root 与 canonical root，若任一包含另一方即失败。目录为 `<root>/<projectId>/<executionId>/<attemptNo>/sandbox`，merge journal/backup 与其同级，绝不位于 canonical。其他平台的默认根与 adapter 留给后续切片。
 
-快照只复制普通目录与普通文件。`SandboxFsAdapter` 必须提供 `openRootDirectory`、`openChildDirectoryNoFollow`、`openFileNoFollow`、`readFromHandle`、`identity(handle)`、`attributes(handle)`、`list(handle)` 和 `finalPath(handle)`；POSIX 以 directory fd + `openat(O_NOFOLLOW)`/`fstat` 实现，Windows 以 `CreateFileW(FILE_FLAG_OPEN_REPARSE_POINT|FILE_FLAG_BACKUP_SEMANTICS)`、`GetFileInformationByHandleEx` 和 `GetFinalPathNameByHandleW` 的固定 native adapter 实现。不得用先按字符串 `lstat` 再普通 `copyFile(path)` 代替。任一平台缺少这些原语、adapter加载失败或不能取得 file id/reparse attributes/final path时整个 attempt `SANDBOX_UNVERIFIABLE`，失败关闭。
+native binding 实现选择与首版支持矩阵：
+
+- 方案 A: 仓库自带 Node-API C++ addon。API 可完全定制，但会把 MSVC/Xcode/GCC + node-gyp 编译链变成普通安装和 CI 的硬前置，当前仓库没有 native build 基础。
+- 方案 B: 使用 server-only Koffi FFI（包管理器安装当前兼容版本并由 Next `serverExternalPackages` 外置）直接绑定固定 OS API；TypeScript 层只暴露 D-2 的 `SandboxFsAdapter`，不让任意函数名/地址来自模型或用户输入。优点是使用预构建 native runtime、无需仓库自建 ABI；缺点是必须精确声明平台 struct/handle 生命周期并做真实平台测试。
+- 选择: B，并按 A-60 将首版支持矩阵收窄为 Windows 10+/Server 2016+ x64、Node x64、NTFS/ReFS 本地卷；Linux/macOS/其他 arch/fs 在 adapter capability check 即 `SANDBOX_UNVERIFIABLE`，本切片不宣称 POSIX 支持。production build 后必须运行 native load smoke。
+
+Windows primitive 与 ownership（所有函数名、info class、flags 固定在 server-only 模块）：
+
+| Adapter 能力 | 固定 native primitive / 约束 |
+|---|---|
+| root open | `CreateFileW` absolute canonical root，`FILE_READ_ATTRIBUTES|FILE_READ_DATA|FILE_LIST_DIRECTORY|FILE_WRITE_ATTRIBUTES|FILE_ADD_FILE|DELETE`，share=`READ|WRITE|DELETE`，`OPEN_EXISTING`，flags=`FILE_FLAG_OPEN_REPARSE_POINT|FILE_FLAG_BACKUP_SEMANTICS`; root 自身必须 ordinary directory、非 reparse |
+| child directory open | `NtCreateFile` + verified parent + relative name；access=`FILE_LIST_DIRECTORY|FILE_READ_ATTRIBUTES|SYNCHRONIZE`，share=`READ|WRITE|DELETE`，disposition=`FILE_OPEN`，options=`FILE_DIRECTORY_FILE|FILE_OPEN_REPARSE_POINT|FILE_SYNCHRONOUS_IO_NONALERT`，object=`OBJ_CASE_INSENSITIVE` |
+| existing file read open | `NtCreateFile` + verified parent + relative name；access=`FILE_READ_DATA|FILE_READ_ATTRIBUTES|SYNCHRONIZE`，share=`READ|WRITE|DELETE`，disposition=`FILE_OPEN`，options=`FILE_NON_DIRECTORY_FILE|FILE_OPEN_REPARSE_POINT|FILE_SYNCHRONOUS_IO_NONALERT`，object=`OBJ_CASE_INSENSITIVE` |
+| owned temp create | `NtCreateFile` + verified parent + generated relative name；access=`FILE_READ_DATA|FILE_WRITE_DATA|FILE_READ_ATTRIBUTES|FILE_WRITE_ATTRIBUTES|DELETE|SYNCHRONIZE`，share=`0`，disposition=`FILE_CREATE`，options=`FILE_NON_DIRECTORY_FILE|FILE_OPEN_REPARSE_POINT|FILE_SYNCHRONOUS_IO_NONALERT`，object=`OBJ_CASE_INSENSITIVE`；禁止 absolute name |
+| list | `NtQueryDirectoryFile(FileIdBothDirectoryInformation, RestartScan)` 从 directory HANDLE 分页；逐 entry 校验 `FileAttributes`、64-bit file id、UTF-16 name 长度/NFC，buffer offset/record bounds 任一异常失败关闭 |
+| identity/attributes/final path | `GetFileInformationByHandleEx(FileIdInfo/FileBasicInfo/FileStandardInfo)` + `GetFinalPathNameByHandleW(FILE_NAME_NORMALIZED|VOLUME_NAME_DOS)`；去 `\\?\` 后按 Windows volume/case 规则确认仍在 root；volume serial+128-bit file id 组成 identity |
+| read/write/flush | `ReadFile`/`WriteFile` 循环处理 short transfer；`FlushFileBuffers` 对文件及可刷新的目录 handle，返回值/bytes/last-error 全检查 |
+| relative rename/replace/delete | `NtSetInformationFile(FileRenameInformationEx)`，`RootDirectory=verified parent`，flags 固定为 `FILE_RENAME_FLAG_REPLACE_IF_EXISTS|FILE_RENAME_FLAG_POSIX_SEMANTICS`；删除用 `FileDispositionInformationEx` 固定 `FILE_DISPOSITION_FLAG_DELETE|FILE_DISPOSITION_FLAG_POSIX_SEMANTICS`；每步前后重开并核对 identity/hash，API 返回不确定即 native failure |
+| close | 每个成功 handle 唯一 owner，`CloseHandle` 恰一次；目录枚举不转移 ownership。close 失败在尚未 canonical 写入时失败；journal 已开始后按 native failure matrix 进入 barrier/manual recovery |
+
+Koffi ABI descriptor 固定断言 x64 pointer=8、`HANDLE/ULONG_PTR=8`，并逐 struct 声明 size/offset（`UNICODE_STRING`、`OBJECT_ATTRIBUTES`、`IO_STATUS_BLOCK`、`FILE_ID_INFO`、`FILE_BASIC_INFO`、`FILE_STANDARD_INFO`、`FILE_ID_BOTH_DIR_INFORMATION`、rename/disposition info）；加载时以当前进程 arch/Windows version 与 `GetFileInformationByHandleEx` 实测校验。任何 symbol、ABI、struct、NTSTATUS/Win32 result、file id、reparse attributes、final path、flush/rename/delete/close 结果不可验证即 native failure，禁止回退到 path-level `lstat/realpath/open`。
+
+快照只复制普通目录与普通文件。`SandboxFsAdapter` 必须提供 `openRootDirectory`、`openChildDirectoryNoFollow`、`openFileNoFollow`、`readFromHandle`、`identity(handle)`、`attributes(handle)`、`list(handle)` 和 `finalPath(handle)`，首版唯一实现是上表 Windows x64 adapter。不得用先按字符串 `lstat` 再普通 `copyFile(path)` 代替。Windows/Node/volume capability、adapter 加载、ABI、file id、reparse attributes 或 final path 任一不满足即整个 attempt `SANDBOX_UNVERIFIABLE`；其他 OS/arch/fs 同样失败关闭，POSIX adapter 留给后续切片。
 
 固定排除:
 
@@ -86,6 +108,54 @@ start API 每个请求只接受一个 `workItemId`、只创建一个execution/at
 3. 每个纳入文件只从父 directory handle no-follow打开；记录 pre identity/attributes/size，确认普通文件和final path；从该 handle流式读取并同时写 `.building-<actionId>`、累计实际读取 bytes 和SHA-256。实际累计超过2147483648立即失败；EOF后再次取 source identity/attributes/size，要求与pre完全相同且读取bytes=size，再重新确认所有祖先 directory handle identity未变化。
 4. 每完成一个目录，重新核对该目录 identity和父目录中同名entry identity；walk结束再核对 root及全部仍打开的ancestor identities。任何预扫后/open前替换、read中替换、父目录rename/reparse、short/long read或属性变化都中断action，清理整个building目录，不保留部分sandbox。
 5. 对building树以相同handle规则重读并生成manifest；与复制过程中记录的每文件bytes/hash逐项相等后，fsync文件/目录并原子rename为`sandbox`。成功才把attempt置ready并完成start receipt；失败/lease过期把execution置paused、`resume_target='queued'`，清理能证明归属该action的building目录。
+
+生产 `start` route 必须使用默认 sandbox executor 把上述 preflight/snapshot 接入持久 action 协议。现有 `Promise<never>` 占位契约替换为：
+
+```ts
+type SandboxExecutionInput = {
+  databasePath:string; projectId:string; executionId:string; attemptId:string;
+  actionId:string; operationId:string; requestHash:string; leaseToken:string;
+  canonicalRoot:string; executionRoot:string; sandboxRoot:string;
+  overallDeadlineAt:string;
+};
+type SandboxExecutionOutcome =
+  | {kind:"completed"}
+  | {kind:"failed";code:string;httpStatus:number};
+type SandboxExecutor = (input:SandboxExecutionInput)=>Promise<SandboxExecutionOutcome>;
+```
+
+`startExecution` 的准备事务从已验证 project row 取得 `canonicalRoot=workspace_path`，action acquire 后把返回的 lease token 与上述全部 identity/root/deadline 传给 executor。`sandboxExecutor()` 默认返回 `createProductionSandboxExecutor()`（内部组合平台 `SandboxFsAdapter`、`preflightSandbox`、`buildSandboxSnapshot` 与 action heartbeat）；`setSandboxExecutorForTests` 只能覆盖 fault boundary，清空 override 后仍回到生产默认，不能成为 happy-path 唯一实现。
+
+executor 完成 verified snapshot 后，以 `projectId+executionId+attemptId+actionId+operationId+leaseToken` CAS 在同一事务写 baseline/sandbox manifest、attempt `preparing→ready`、sandbox action `succeeded` 和 start receipt `completed(201)`；四项成功事实全有或全无。executor 只返回 outcome，不自行构造公开 DTO；`startExecution` 返回前重新打开数据库并只通过 completed receipt 构造响应，`completed` outcome 却无 completed receipt 是 `MERGE_INVARIANT_FAILED`。失败按下表收口：
+
+| 故障/竞态 | 唯一持久结果与重放 oracle |
+|---|---|
+| link/reparse/special 在 preflight/复制/rename 前被拒且 cleanup 已确认 | attempt=`interrupted`，action=`failed(error=SPECIAL_FILE_REJECTED)`，execution=`paused,resume_target=queued`，receipt=completed 422；building/sandbox 不存在，canonical hash 不变 |
+| item/byte/file 上限在 rename 前命中且 cleanup 已确认 | attempt=`interrupted`，action=`failed(error=SANDBOX_LIMIT_EXCEEDED)`，execution=`paused,resume_target=queued`，receipt=completed 413；building/sandbox 不存在，canonical hash 不变 |
+| sandbox 900s overall deadline 命中且 cleanup 已确认 | attempt/action=`interrupted(error=SANDBOX_BUILD_DEADLINE_EXCEEDED)`，execution=`paused,resume_target=queued`，receipt=completed 504；building/sandbox 不存在，canonical hash 不变 |
+| 普通复制 I/O 失败且 cleanup 已确认 | attempt=`interrupted`，action=`failed(error=INTERNAL_ERROR)`，execution=`paused,resume_target=queued`，receipt=completed 500；building/sandbox 不存在，canonical hash 不变 |
+| adapter/identity/final-path 不可验证 | attempt/action/execution=`failed(error=SANDBOX_UNVERIFIABLE)`，receipt=completed 422；不得暴露 ready/201，canonical hash 不变 |
+| 任一失败后 owned building/sandbox cleanup 无法确认 | attempt/action/execution=`failed(error=INTERNAL_ERROR)`，receipt=completed 500；保留对象只读供诊断，不得暴露 ready/201，canonical hash 不变 |
+| verified sandbox rename 后、收口事务前退出，或四项写入间注入事务失败 | 四项成功事实全无；重开后 lease reconcile 令 attempt/action=`interrupted(error=SANDBOX_ACTION_INTERRUPTED)`、execution=`paused,resume_target=queued`、receipt=completed 409，并 conditional 清理仍属该 action 的 sandbox/building；canonical hash 不变 |
+| 收口 commit 后响应丢失 | 四项成功事实全有；same operation 重放返回首次 completed 201，不再执行 snapshot；不同 body 同 operation 返回 conflict |
+| reconcile 与 late finalizer 竞态 | 二者以 lease/status CAS 只有一个成功；reconcile 胜时 late finalizer 写入0且不得恢复 ready/201，finalizer 胜时 replay 为 completed 201 |
+| 同 operation 并发 start | live child 只启动一次 snapshot，另一请求返回 in-progress；完成后重放首次结果；不同 operation 的两个合格 task 各有不同 execution/attempt/sandbox |
+
+native failure 按发生阶段唯一收口：
+
+| 阶段 | 持久状态 / HTTP / 文件结果 |
+|---|---|
+| sandbox build | 复用上表 `SANDBOX_UNVERIFIABLE` 422；无法确认 cleanup 时 execution/attempt/action=`failed`，不完成 ready/201 |
+| file list/read（零写） | tool/action=`failed(error=SANDBOX_UNVERIFIABLE)`，execution=`paused,resume_target=running`，receipt=completed 422；sandbox/canonical 零写 |
+| file write owned temp 创建前，或 temp 尚可由 identity/hash conditional cleanup | tool/action=`failed(error=SANDBOX_UNVERIFIABLE)`，execution=`paused,resume_target=running`，receipt=completed 422；目标保持旧 identity/hash，owned temp 已删除 |
+| file write 已 replace 但 post identity/hash/finalPath 无法确认，或 owned cleanup 无法确认 | tool/action/execution=`failed(error=SANDBOX_UNVERIFIABLE)`，receipt=completed 422；attempt 不可 stage，保留当前 sandbox 供诊断，canonical 零写 |
+| stage compute | action=`failed(error=SANDBOX_UNVERIFIABLE)`，execution=`paused,resume_target=running`，receipt=completed 422；不插 staged facts |
+| merge capability check 在 journal/首次 canonical 写前失败 | 不创建 journal，merge action/receipt completed 422 `SANDBOX_UNVERIFIABLE`，execution 保持 staged，canonical hash 不变 |
+| journal 已创建后任一 native load/call/ABI/identity/finalPath/read/write/flush/rename/delete/close 结果不可验证 | 立即停止全部自动写；journal=`manual_recovery`、execution=`conflicted,manual_recovery_required=1`、merge/recover action=`failed(error=MANUAL_RECOVERY_REQUIRED)`、receipt=completed 409；保持 read barrier，不自动 rollback/roll-forward，任务结果不存在或在 barrier 内补偿删除 |
+| manual resolution verify 期间 native failure | journal/execution 保持 manual recovery，resolution action=`failed(error=SANDBOX_UNVERIFIABLE)`、receipt=completed 422；canonical 零写 |
+| resolution 成功后的 owned cleanup native failure | resolution/merged/stopped 结果不回退；不再写 canonical，只把无法验证对象计入 `uncleanedOwnedPaths` |
+
+上述各阶段都注入 FFI throw、NTSTATUS/Win32 failure、short/malformed struct、identity/finalPath 缺失、flush/rename/close 不确定与 late finalizer；canonical writer 阶段检测后 external/current bytes 覆盖次数必须为0。
 
 manifest 只使用字节事实，不含 mtime/权限：
 
@@ -868,7 +938,7 @@ start body只有一个`workItemId`。UI双选时按选择顺序创建两个独�
 TOCTOU:
 
 1. 从已验证sandbox root directory handle逐段`openChildDirectoryNoFollow`；每一步比较父list entry identity、child identity/attributes/finalPath，并保留祖先handle至动作结束。不一致失败。
-2. POSIX adapter使用directory fd+`openat(O_NOFOLLOW)`/`fstat`；Windows adapter使用`CreateFileW(FILE_FLAG_OPEN_REPARSE_POINT|FILE_FLAG_BACKUP_SEMANTICS)`并直接从该handle取attributes/file id/final path。任一primitive/identity不可用即`SANDBOX_UNVERIFIABLE`，失败关闭；符合A-53且不宣称hostile OS sandbox。
+2. Windows x64 adapter 使用上表 root `CreateFileW` 与 child/file `NtCreateFile(RootDirectory=parent)` 链，并直接从 handle 取 attributes/file id/final path；任一 primitive/identity 不可用即 `SANDBOX_UNVERIFIABLE`。其他 OS/arch/fs 在 capability check 失败关闭；符合 A-53 且不宣称 hostile OS sandbox。
 3. read从verified file handle读取，前后比较identity/attributes/size和全部祖先directory identity，读取bytes/size/hash一致才返回。
 4. write只从verified parent handle在该目录创建随机owned temp `wx`，写/fsync/hash；replace前再次验证parent、target expected identity/hash，atomic rename；之后重开核验post identity/hash并再次验证parent。任何race失败，且只conditional删除identity/hash仍等于owned temp的对象。
 5. list只从directory handle列举，逐项用no-follow handle确认type/identity；结束时重验directory/祖先identity。稳定按UTF-8 name bytes排序，最多1000并给`truncated/totalObserved`，不读取第1001项正文。
@@ -1120,7 +1190,7 @@ diff使用LF展示但hash/merge保留原始bytes；每observation diff≤256KiB�
 ## 10. 测试策略
 
 - 迁移: 真实临时SQLite，v4→v5完整/漂移/故障/23表/22 index/6 trigger/FK；initial empty revision；policy revision/entry/audit UPDATE/DELETE拒绝与project delete cascade。
-- 文件系统: `mkdtemp` 创建真实 canonical/execution roots；普通文件、空文件、UTF-8/BOM/NUL/invalid、symlink/junction/reparse（平台支持即跑，否则明确平台 skip）、FIFO/socket（POSIX）、设备名、大小/条目边界、write race和manifest determinism。mock FS只用于注入不可达分支，不替代真实测试。
+- 文件系统: Windows x64/NTFS-ReFS 上用临时目录创建真实 canonical/execution roots；覆盖普通文件、空文件、UTF-8/BOM/NUL/invalid、junction/reparse、设备名、大小/条目边界、write race和manifest determinism。其他 OS/arch/fs 测 capability fail-closed；mock FS只用于注入不可达分支，不替代当前支持平台的真实测试。
 - 进程: 真实 child fixture 创建孙进程、写 stdout/stderr、hang、尝试 env读取和sandbox内改动；验证 direct args、minimal env、120s fake-clock单测+短真实 timeout、tree kill、截断/redaction、无法确认终止注入。
 - Provider: 本地OpenAI-compatible server；同model child primary+repair call_index 1/2、各90s不可续deadline、30s action heartbeat、usage与delay/late竞态。
 - 并发/恢复: UI两次独立start；parent/ordered child；heartbeat恰在expiry前后与reconcile/finalize三方竞态；overall deadline不延；D-5全fault/race和三resolution。
@@ -1207,7 +1277,14 @@ manual recovery警示明确“检测到平台外写入；平台已停止自动�
 - [x] T-30 交付manual recovery与窄屏可访问surface (覆盖: FR-2, FR-9, FR-12, FR-14, NFR-1, NFR-3, NFR-5) — 判据: `npm test -- tests/execution-recovery-ui.test.tsx tests/execution-accessibility.test.tsx`先红后绿；普通动作全禁、manifest/path分页、三resolution二次确认/变化错误/焦点、单surface trap/inert/Escape/restore、44px/AA/非仅颜色通过
 - [x] T-31 收口真实FS/process/provider/并发/崩溃安全集成套件 (覆盖: FR-1..FR-13, NFR-1, NFR-2, NFR-3, NFR-4) — 判据: `npm test -- tests/execution-security-integration.test.ts tests/merge-fault-injection.test.ts tests/execution-pagination-limits.test.ts`先红后绿；sandbox独立15m/business首次running15m/heartbeat race、provider90/process120、17-chunk multibyte、101+/100k observations、merge/secret scan通过
 - [x] T-32 修复真实 provider 双 Agent 并发时 model-call 未终态化 (覆盖: FR-3, FR-10, FR-11, NFR-1, NFR-4) — 判据: `npm test -- tests/execution-orchestrator.test.ts`先红后绿；两个不同 Agent execution 经真实本地 OpenAI-compatible HTTP 并发成功与 provider/解析失败路径均在有界时间内完成，每条 `execution_model_calls` 唯一进入合法终态且 `finished_at` 非空，`calling` 残留为 0，action/operation 状态一致；在 HTTP 返回后、终态 UPDATE/提交前后注入故障并重开数据库或等待 lease reconcile，旧 call 唯一转 `interrupted`、可信 usage 不补记，显式重试使用新 call 且不静默重放旧外部请求
-- [ ] T-33 收口只经公开行为的真实 browser smoke harness (覆盖: FR-1, FR-2, FR-3, FR-8, FR-9, FR-11, FR-14, NFR-1, NFR-4, NFR-5) — 判据: `npm test -- tests/execution-browser-smoke.test.ts`先红后绿；smoke 不拦截 start/advance/stage/merge/recovery 路由、不直接写业务 SQLite 或复制 canonical 文件来合成状态，双 execution 从 start 经真实 provider、工具/验证、stage 到至少一次 merge 只走产品公开 API；stale/conflict/manual recovery 由公开行为或专用故障注入触发；provider 健康探针不计入 execution 并发断言
-- [ ] T-34 运行S-5 desktop+narrow smoke/demo，仅验证前序已实现行为 (覆盖: FR-1..FR-14, NFR-1..NFR-5) — 判据: 本任务不得新增或修改product code/test行为；README、`npm test`、`npm run build`、`npm run smoke:execution`通过，并留真实provider双Agent不相交合入、重复/边界/standing+one-shot、stale/conflict/manual recovery及desktop/narrow证据
+- [x] T-33 建立 Windows x64 Koffi ABI loader 与 fail-closed capability (覆盖: FR-4, FR-8, FR-9, NFR-2, NFR-3) — 判据: `npm test -- tests/windows-native-loader.test.ts`先红后绿；安装 Koffi 并配置 Next external，固定 symbol/info-class/flags，验证 OS/arch/fs 与全部 struct size/offset，root handle identity/attributes/finalPath/close 真实通过；symbol/ABI/struct/unsupported platform/native load/close 任一异常唯一返回 `SANDBOX_UNVERIFIABLE`，production build 后 native load smoke 通过
+- [ ] T-34 实现 Windows handle-relative 只读 traversal/list/read (覆盖: FR-4, FR-5, FR-8, NFR-1, NFR-2, NFR-3) — 判据: `npm test -- tests/windows-native-read-adapter.test.ts`先红后绿；`NtCreateFile` relative child/file open、`NtQueryDirectoryFile` list、`ReadFile` short-read loop、祖先 identity/finalPath 重检和 ownership/close 通过；junction/reparse/special、parent/file replace/rename、malformed native buffer 均失败关闭且 secret bytes 读取0
+- [ ] T-35 实现 Windows handle-relative temp/write/flush/rename/delete (覆盖: FR-5, FR-8, FR-9, NFR-1, NFR-2, NFR-3) — 判据: `npm test -- tests/windows-native-write-adapter.test.ts`先红后绿；verified parent 下 exclusive temp、short-write loop、file/directory flush、relative atomic replace/delete、pre/post identity/hash 与 conditional cleanup 通过；每个 native fault/race 只改预期对象，外部/secret bytes 覆盖0
+- [ ] T-36 将 verified adapter 接入 sandbox snapshot (覆盖: FR-4, FR-5, FR-8, FR-10, FR-11, NFR-1, NFR-2, NFR-4) — 判据: `npm test -- tests/sandbox-preflight.test.ts tests/sandbox-snapshot.test.ts`先红后绿；删除 snapshot 的 path-level `lstat/realpath/open` 和 `O_NOFOLLOW ?? 0` fallback，复制、manifest、race、100k/2GiB、cleanup 全部只经 verified handle，native failure 按矩阵收口
+- [ ] T-37 将 verified adapter 接入 file list/read/write/stage (覆盖: FR-3, FR-4, FR-5, FR-7, FR-8, FR-11, NFR-1, NFR-2, NFR-3, NFR-4) — 判据: `npm test -- tests/execution-list-tool.test.ts tests/execution-read-tool.test.ts tests/execution-write-tool.test.ts tests/execution-staging.test.ts`先红后绿；删除 Node path fallback，四类 action 复用同一 handle chain，race/identity/finalPath/native failure 的精确 action/execution/receipt 状态通过
+- [ ] T-38 将 verified adapter 接入 merge/recovery/manual resolution (覆盖: FR-8, FR-9, FR-11, NFR-1, NFR-2, NFR-4) — 判据: `npm test -- tests/merge-journal-prepare.test.ts tests/merge-recovery.test.ts tests/merge-fault-injection.test.ts tests/merge-external-writer.test.ts`先红后绿；首次 canonical 写前 capability failure 零 journal/零写，journal 后任一 native 不确定进入 manual barrier，conditional apply/rollback/roll-forward/cleanup 全经 handle，external bytes 覆盖0、任务结果提交0
+- [ ] T-39 接通生产默认 sandbox executor 与 start receipt 收口 (覆盖: FR-1, FR-2, FR-4, FR-5, FR-8, FR-10, FR-11, NFR-1, NFR-2, NFR-4) — 判据: `npm test -- tests/execution-sandbox-orchestrator.test.ts`先红后绿；不调用 `setSandboxExecutorForTests`，公开 start route 对真实临时 SQLite/canonical/execution root 返回201，verified snapshot 文件存在且 canonical 零修改，attempt=`ready`、sandbox action=`succeeded`、start receipt=`completed`、manifest一致；逐项覆盖 D-2 fault/concurrency oracle，断言四项成功事实全有或全无、snapshot执行次数、精确状态/HTTP/清理结果与 canonical hash
+- [ ] T-40 收口只经公开行为的真实 browser smoke harness (覆盖: FR-1, FR-2, FR-3, FR-8, FR-9, FR-11, FR-14, NFR-1, NFR-4, NFR-5) — 判据: `npm test -- tests/execution-browser-smoke.test.ts`先红后绿；smoke 不拦截 start/advance/stage/merge/recovery 路由、不直接写业务 SQLite 或复制 canonical 文件来合成状态，双 execution 从 start 经真实 provider、工具/验证、stage 到至少一次 merge 只走产品公开 API；stale/conflict/manual recovery 由公开行为或专用故障注入触发；provider 健康探针不计入 execution 并发断言
+- [ ] T-41 运行S-5 desktop+narrow smoke/demo，仅验证前序已实现行为 (覆盖: FR-1..FR-14, NFR-1..NFR-5) — 判据: 本任务不得新增或修改product code/test行为；README、`npm test`、`npm run build`、`npm run smoke:execution`通过，并留真实provider双Agent不相交合入、重复/边界/standing+one-shot、stale/conflict/manual recovery及desktop/narrow证据
 
-任务覆盖索引：FR-1→T-2/3/17/20/27/28/31/33–34；FR-2→T-1/2/5/16/22–26/28/30–31/33–34；FR-3→T-8–10/12/14–19/28/31–34；FR-4→T-6–10/16/31/34；FR-5→T-6/7/10/16/31/34；FR-6→T-11–13/16/19/25/27/29/31/34；FR-7→T-19/20/26/29/31/34；FR-8→T-7/11/15/18–23/29/31/33–34；FR-9→T-19–23/25/29/30–31/33–34；FR-10→T-1/5/6/8–14/17/19/24/26/28/31–32/34；FR-11→T-1/2/4/5/7/8/10/13/14/16/18/21–26/31–34；FR-12→T-4/5/18/20/23–25/28/30–31/34；FR-13→T-1/4/5/9/11–15/18/22–26/29/31/34；FR-14→T-2/11/27–30/33–34。NFR-1→T-1–3/5/7/10/16–24/28/30–34；NFR-2→T-6–17/19/21/26/29/31/34；NFR-3→T-6/8–15/25/27/29/30–31/34；NFR-4→T-1/2/4/5/7–9/11–18/20–26/31–34；NFR-5→T-2/27–30/33–34。
+任务覆盖索引：FR-1→T-2/3/17/20/27/28/31/39–41；FR-2→T-1/2/5/16/22–26/28/30–31/39–41；FR-3→T-8–10/12/14–19/28/31–32/37/40–41；FR-4→T-6–10/16/31/33–34/36–37/39/41；FR-5→T-6/7/10/16/31/34–37/39/41；FR-6→T-11–13/16/19/25/27/29/31/41；FR-7→T-19/20/26/29/31/37/41；FR-8→T-7/11/15/18–23/29/31/33–41；FR-9→T-19–23/25/29/30–31/33/35/38/40–41；FR-10→T-1/5/6/8–14/17/19/24/26/28/31–32/36/39/41；FR-11→T-1/2/4/5/7/8/10/13/14/16/18/21–26/31/36–41；FR-12→T-4/5/18/20/23–25/28/30–31/41；FR-13→T-1/4/5/9/11–15/18/22–26/29/31/41；FR-14→T-2/11/27–30/40–41。NFR-1→T-1–3/5/7/10/16–24/28/30–41；NFR-2→T-6–17/19/21/26/29/31/33–39/41；NFR-3→T-6/8–15/25/27/29/30–35/37/41；NFR-4→T-1/2/4/5/7–9/11–18/20–26/31/36–41；NFR-5→T-2/27–30/40–41。
