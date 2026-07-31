@@ -3,15 +3,18 @@ import { existsSync, mkdirSync, mkdtempSync, readFileSync, rmSync, writeFileSync
 import type { DatabaseSync } from "node:sqlite";
 import { tmpdir } from "node:os";
 import { dirname, join } from "node:path";
-import { afterEach, beforeEach, describe, expect, it } from "vitest";
+import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
+
+vi.mock("server-only", () => ({}));
 
 import { openDatabase } from "@/src/server/db";
 import { preflightSandbox, type SandboxPreflightResult } from "@/src/server/execution/sandbox-preflight";
+import { createWindowsNativeReadAdapter } from "@/src/server/execution/windows-native-read-adapter";
 
 type SnapshotModule = typeof import("@/src/server/execution/sandbox-snapshot") & {
   cleanupOwnedSandbox(input: {
     expectedRootIdentity: string;
-    platform?: typeof import("@/src/server/execution/sandbox-snapshot")["nodeSandboxSnapshotAdapter"];
+    platform?: ReturnType<typeof createWindowsNativeReadAdapter>;
     sandboxRoot: string;
   }): Promise<boolean>;
 };
@@ -83,6 +86,28 @@ async function manifest(exclusions: string[] = []): Promise<SandboxPreflightResu
 }
 
 describe("verified-handle sandbox snapshot", () => {
+  it("fails closed through the verified adapter without reopening source paths", async () => {
+    write("README.md", "hello\n");
+    const preflight = await manifest();
+    let rootOpenCount = 0;
+
+    await expect(snapshot.buildSandboxSnapshot({
+      preflight,
+      sandboxRoot,
+      sourceRoot: workspace,
+      platform: {
+        openRootDirectory() {
+          rootOpenCount += 1;
+          throw new Error("native adapter unavailable");
+        },
+      } as never,
+    })).rejects.toMatchObject({ code: "SANDBOX_UNVERIFIABLE" });
+
+    expect(rootOpenCount).toBe(1);
+    expect(existsSync(sandboxRoot)).toBe(false);
+    expect(existsSync(`${sandboxRoot}.building`)).toBe(false);
+  });
+
   it("copies a real preflight manifest through verified handles with stable hashes", async () => {
     write("README.md", "hello\n");
     write("src/index.ts", "export const answer = 42;\n");
@@ -109,6 +134,22 @@ describe("verified-handle sandbox snapshot", () => {
     expect(result.manifestHash).toMatch(/^[0-9a-f]{64}$/);
     expect(phases).toContain("source-opened");
     expect(phases.at(-1)).toBe("sandbox-renamed");
+  });
+
+  it("verifies the copied manifest without counting excluded source entries", async () => {
+    write(".env", "TOKEN=secret");
+    write("src/index.ts", "export const safe = true;\n");
+    const preflight = await manifest();
+
+    const result = await snapshot.buildSandboxSnapshot({
+      preflight,
+      sandboxRoot,
+      sourceRoot: workspace,
+    });
+
+    expect(preflight.itemCount).toBeGreaterThan(preflight.entries.length);
+    expect(result.files.map((file) => file.path)).toEqual(["src/index.ts"]);
+    expect(existsSync(join(sandboxRoot, ".env"))).toBe(false);
   });
 
   it("fails closed and removes the whole sandbox when a source identity changes", async () => {
@@ -159,7 +200,7 @@ describe("verified-handle sandbox snapshot", () => {
   it("rejects link, reparse, special, parent-chain, and after-read identity races", async () => {
     write("nested/file.txt", "ordinary");
     const preflight = await manifest();
-    const base = snapshot.nodeSandboxSnapshotAdapter;
+    const base = createWindowsNativeReadAdapter();
     for (const kind of ["link", "reparse", "special"] as const) {
       await expect(snapshot.buildSandboxSnapshot({
         preflight,
@@ -167,9 +208,15 @@ describe("verified-handle sandbox snapshot", () => {
         sourceRoot: workspace,
         platform: {
           ...base,
-          async inspectHandle(handle) {
-            const identity = await base.inspectHandle(handle);
-            return { ...identity, kind };
+          attributes(handle) {
+            const attributes = base.attributes(
+              handle as Parameters<typeof base.attributes>[0],
+            );
+            return {
+              ...attributes,
+              directory: kind === "special" ? true : attributes.directory,
+              reparsePoint: kind !== "special",
+            };
           },
         },
       })).rejects.toMatchObject({ code: "SANDBOX_SOURCE_MISMATCH" });
@@ -245,8 +292,15 @@ describe("durable sandbox action lifecycle", () => {
     let database = seedSandboxAction({ actionId: "expired-action", deadlineModifier: "-1 second", operationId: "00000000-0000-4000-8000-000000000702", status: "running" });
     mkdirSync(sandboxRoot, { recursive: true });
     writeFileSync(join(sandboxRoot, "partial"), "owned");
-    const identity = await snapshot.nodeSandboxSnapshotAdapter.inspectPath(sandboxRoot);
-    expect(await snapshot.cleanupOwnedSandbox({ expectedRootIdentity: identity.identity!, sandboxRoot })).toBe(true);
+    const adapter = createWindowsNativeReadAdapter();
+    const handle = adapter.openRootDirectory(sandboxRoot);
+    const identity = adapter.identity(handle);
+    adapter.close(handle);
+    expect(await snapshot.cleanupOwnedSandbox({
+      expectedRootIdentity: `${identity.volumeSerialNumber}:${identity.fileId}`,
+      platform: adapter,
+      sandboxRoot,
+    })).toBe(true);
     database.prepare(`UPDATE execution_actions SET overall_deadline_at=strftime('%Y-%m-%dT%H:%M:%fZ','now','-1 second'),lease_expires_at=strftime('%Y-%m-%dT%H:%M:%fZ','now','-1 second') WHERE id='expired-action'`).run();
     expect(actions.reconcileSandboxBuildAction(database, {
       actionId: "expired-action", body: { outcome: "paused" }, cleanupConfirmed: true, httpStatus: 409, projectId: "snapshot-project", reason: "SANDBOX_BUILD_DEADLINE_EXCEEDED",

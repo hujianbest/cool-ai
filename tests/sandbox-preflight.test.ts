@@ -7,7 +7,9 @@ import {
 } from "node:fs";
 import { tmpdir } from "node:os";
 import { join, resolve } from "node:path";
-import { afterEach, beforeEach, describe, expect, it } from "vitest";
+import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
+
+vi.mock("server-only", () => ({}));
 
 type EntryKind = "directory" | "file" | "link" | "reparse" | "special";
 
@@ -31,6 +33,16 @@ type PreflightOptions = {
   };
   iterateDirectory?: (path: string) => AsyncIterable<ListedEntry>;
   managedSandboxRoot: string;
+  platform?: {
+    attributes(handle: unknown): unknown;
+    close(handle: unknown): unknown;
+    finalPath(handle: unknown): unknown;
+    identity(handle: unknown): unknown;
+    list(handle: unknown): unknown;
+    openChildDirectoryNoFollow(parent: unknown, name: string): unknown;
+    openFileNoFollow(parent: unknown, name: string): unknown;
+    openRootDirectory(path: string): unknown;
+  };
   workspaceKind?: "git" | "nonGit";
 };
 
@@ -89,38 +101,64 @@ async function expectCode(promise: Promise<unknown>, code: string): Promise<void
 function syntheticOptions(
   entries: number,
   sizeAt: (index: number) => number,
-): Pick<PreflightOptions, "identityAdapter" | "iterateDirectory"> {
+): Pick<PreflightOptions, "platform"> {
+  type Handle = { path: string };
   return {
-    identityAdapter: {
-      async inspect(path) {
-        const relative = path.slice(canonicalRoot.length + 1).replaceAll("\\", "/");
-        if (!relative) {
-          return {
-            finalPath: canonicalRoot,
-            identity: "root-identity",
-            kind: "directory",
-            size: 0,
-          };
-        }
-        const index = Number(relative.slice("entry-".length));
-        return {
-          finalPath: path,
-          identity: `file-${index}`,
-          kind: "file",
-          size: sizeAt(index),
-        };
+    platform: {
+      attributes(handle) {
+        const path = (handle as Handle).path;
+        const root = path === canonicalRoot || path === managedSandboxRoot;
+        const index = Number(path.slice(path.lastIndexOf("entry-") + "entry-".length));
+        return { directory: root, reparsePoint: false, size: root ? 0 : sizeAt(index) };
       },
-    },
-    async *iterateDirectory(path) {
-      if (path !== canonicalRoot) return;
-      for (let index = entries - 1; index >= 0; index -= 1) {
-        yield { kindHint: "file", name: `entry-${index}` };
-      }
+      close() {},
+      finalPath(handle) { return (handle as Handle).path; },
+      identity(handle) {
+        const path = (handle as Handle).path;
+        if (path === canonicalRoot) return "root-identity";
+        if (path === managedSandboxRoot) return "managed-root-identity";
+        return `file-${Number(path.slice(path.lastIndexOf("entry-") + "entry-".length))}`;
+      },
+      list(handle) {
+        if ((handle as Handle).path !== canonicalRoot) return [];
+        return Array.from({ length: entries }, (_, index) => {
+          const sourceIndex = entries - index - 1;
+          return {
+            attributes: { directory: false, reparsePoint: false },
+            identity: `file-${sourceIndex}`,
+            name: `entry-${sourceIndex}`,
+            size: sizeAt(sourceIndex),
+          };
+        });
+      },
+      openChildDirectoryNoFollow() { throw new Error("no synthetic directories"); },
+      openFileNoFollow(parent, name) {
+        return { path: join((parent as Handle).path, name) };
+      },
+      openRootDirectory(path) { return { path }; },
     },
   };
 }
 
 describe("sandbox preflight", () => {
+  it("fails closed through the verified-handle adapter instead of using a path fallback", async () => {
+    write("ordinary.txt", "ordinary");
+    let rootOpenCount = 0;
+
+    await expectCode(preflight.preflightSandbox({
+      canonicalRoot,
+      managedSandboxRoot,
+      platform: {
+        openRootDirectory() {
+          rootOpenCount += 1;
+          throw new Error("native adapter unavailable");
+        },
+      } as never,
+    }), "SANDBOX_UNVERIFIABLE");
+
+    expect(rootOpenCount).toBe(1);
+  });
+
   it.each(["git", "nonGit"] as const)(
     "uses the same ordinary snapshot rules for %s workspaces without Git metadata",
     async (workspaceKind) => {
@@ -281,61 +319,24 @@ describe("sandbox preflight", () => {
     );
   });
 
-  it.each(["link", "reparse", "special"] as const)(
-    "rejects adapter-proven %s entries",
-    async (kind) => {
-      write("unsafe");
-      await expectCode(preflight.preflightSandbox({
-        canonicalRoot,
-        identityAdapter: {
-          async inspect(path) {
-            if (path === canonicalRoot) {
-              return {
-                finalPath: canonicalRoot,
-                identity: "root",
-                kind: "directory",
-                size: 0,
-              };
-            }
-            return { finalPath: path, identity: "unsafe", kind, size: 0 };
-          },
-        },
-        managedSandboxRoot,
-      }), "SPECIAL_FILE_REJECTED");
-    },
-  );
-
-  it.each([
-    ["identity", { finalPath: "path", identity: null }],
-    ["final path", { finalPath: null, identity: "identity" }],
-  ] as const)("fails closed when the adapter cannot prove %s", async (_label, missing) => {
-    write("ordinary.txt");
+  it("rejects an adapter-listed reparse entry before relative open", async () => {
+    const synthetic = syntheticOptions(1, () => 0);
+    const platform = synthetic.platform!;
+    const originalList = platform.list;
+    platform.list = (handle) => {
+      const entries = originalList(handle) as Array<{
+        attributes: { directory: boolean; reparsePoint: boolean };
+      }>;
+      return entries.map((entry) => ({
+        ...entry,
+        attributes: { ...entry.attributes, reparsePoint: true },
+      }));
+    };
     await expectCode(preflight.preflightSandbox({
       canonicalRoot,
-      identityAdapter: {
-        async inspect(path) {
-          return {
-            finalPath: missing.finalPath === null ? null : path,
-            identity: missing.identity,
-            kind: path === canonicalRoot ? "directory" : "file",
-            size: 1,
-          };
-        },
-      },
       managedSandboxRoot,
-    }), "SANDBOX_UNVERIFIABLE");
-  });
-
-  it("fails closed when the platform identity adapter throws", async () => {
-    await expectCode(preflight.preflightSandbox({
-      canonicalRoot,
-      identityAdapter: {
-        async inspect() {
-          throw new Error("native adapter unavailable");
-        },
-      },
-      managedSandboxRoot,
-    }), "SANDBOX_UNVERIFIABLE");
+      platform,
+    }), "SPECIAL_FILE_REJECTED");
   });
 
   it.each([

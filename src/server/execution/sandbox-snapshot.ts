@@ -1,32 +1,24 @@
 ﻿import { createHash, randomUUID } from "node:crypto";
-import { constants } from "node:fs";
+import { createWriteStream } from "node:fs";
 import {
   mkdir,
-  open,
   rename,
   rm,
-  stat,
 } from "node:fs/promises";
-import type { FileHandle } from "node:fs/promises";
 import { dirname, join, resolve, sep } from "node:path";
+import { once } from "node:events";
 
 import {
   SANDBOX_MAX_BYTES,
   SANDBOX_MAX_ENTRIES,
-  nodeSandboxIdentityAdapter,
-  type SandboxEntryKind,
+  createDefaultSandboxFsAdapter,
+  type SandboxFsAdapter,
+  type SandboxListedEntry,
   type SandboxPreflightEntry,
   type SandboxPreflightResult,
-  type SandboxProvenIdentity,
 } from "@/src/server/execution/sandbox-preflight";
 
-export type SandboxSnapshotHandle = FileHandle;
-
-export type SandboxSnapshotPlatformAdapter = {
-  inspectHandle(handle: SandboxSnapshotHandle): Promise<SandboxProvenIdentity>;
-  inspectPath(path: string): Promise<SandboxProvenIdentity>;
-  openNoFollow(path: string): Promise<SandboxSnapshotHandle>;
-};
+export type SandboxSnapshotPlatformAdapter = SandboxFsAdapter;
 
 export type SandboxSnapshotPhase =
   | "parents-verified"
@@ -60,7 +52,8 @@ export class SandboxSnapshotError extends Error {
     public readonly code:
       | "SANDBOX_DESTINATION_EXISTS"
       | "SANDBOX_LIMIT_EXCEEDED"
-      | "SANDBOX_SOURCE_MISMATCH",
+      | "SANDBOX_SOURCE_MISMATCH"
+      | "SANDBOX_UNVERIFIABLE",
     message: string,
   ) {
     super(message);
@@ -68,77 +61,81 @@ export class SandboxSnapshotError extends Error {
   }
 }
 
-function identityFromStats(stats: Awaited<ReturnType<FileHandle["stat"]>>): SandboxProvenIdentity {
-  let kind: SandboxEntryKind;
-  if (stats.isDirectory()) kind = "directory";
-  else if (stats.isFile()) kind = "file";
-  else if (stats.isSymbolicLink()) kind = "link";
-  else kind = "special";
-  const dev = typeof stats.dev === "bigint" ? stats.dev : BigInt(stats.dev);
-  const ino = typeof stats.ino === "bigint" ? stats.ino : BigInt(stats.ino);
-  return {
-    finalPath: null,
-    identity: ino === 0n ? null : `${dev}:${ino}`,
-    kind,
-    size: kind === "file" ? Number(stats.size) : 0,
-  };
-}
-
-export const nodeSandboxSnapshotAdapter: SandboxSnapshotPlatformAdapter = {
-  async inspectHandle(handle) {
-    return identityFromStats(await handle.stat({ bigint: true }));
-  },
-  inspectPath(path) {
-    return nodeSandboxIdentityAdapter.inspect(path);
-  },
-  async openNoFollow(path) {
-    const noFollow = typeof constants.O_NOFOLLOW === "number" ? constants.O_NOFOLLOW : 0;
-    return open(path, constants.O_RDONLY | noFollow);
-  },
-};
-
 function mismatch(message: string): never {
   throw new SandboxSnapshotError("SANDBOX_SOURCE_MISMATCH", message);
 }
 
-function assertOrdinary(
-  actual: SandboxProvenIdentity,
-  expected: { identity: string; kind: "directory" | "file"; size: number },
-  label: string,
-): void {
+function unverifiable(message: string): never {
+  throw new SandboxSnapshotError("SANDBOX_UNVERIFIABLE", message);
+}
+
+function identityKey(identity: unknown): string {
+  if (typeof identity === "string" && identity.length > 0) return identity;
   if (
-    actual.kind !== expected.kind
-    || actual.identity !== expected.identity
-    || (expected.kind === "file" && actual.size !== expected.size)
+    identity
+    && typeof identity === "object"
+    && typeof (identity as { fileId?: unknown }).fileId === "string"
+    && typeof (identity as { volumeSerialNumber?: unknown }).volumeSerialNumber === "string"
   ) {
-    mismatch(`${label} changed after preflight.`);
+    const value = identity as { fileId: string; volumeSerialNumber: string };
+    if (value.fileId && value.volumeSerialNumber) {
+      return `${value.volumeSerialNumber}:${value.fileId}`;
+    }
   }
+  return unverifiable("The verified adapter returned an invalid identity.");
+}
+
+function comparablePath(path: string): string {
+  const normalized = resolve(path).replace(/[\\/]+$/, "");
+  return process.platform === "win32"
+    ? normalized.toLocaleLowerCase("en-US")
+    : normalized;
+}
+
+function isWithinRoot(path: string, root: string): boolean {
+  const child = comparablePath(path);
+  const ancestor = comparablePath(root);
+  return child === ancestor || child.startsWith(`${ancestor}${sep}`);
+}
+
+async function adapterCall<T>(message: string, action: () => T | Promise<T>): Promise<T> {
+  try {
+    return await action();
+  } catch (error) {
+    if (error instanceof SandboxSnapshotError) throw error;
+    return unverifiable(message);
+  }
+}
+
+async function closeHandle(platform: SandboxFsAdapter, handle: unknown): Promise<void> {
+  await adapterCall("A verified handle could not be closed.", () => platform.close(handle));
+}
+
+async function inspectHandle(
+  platform: SandboxFsAdapter,
+  handle: unknown,
+  kind: "directory" | "file",
+  rootFinalPath: string,
+): Promise<{ finalPath: string; identity: string; size: number }> {
+  return adapterCall("A verified handle could not be inspected.", async () => {
+    const attributes = await platform.attributes(handle);
+    const finalPath = await platform.finalPath(handle);
+    const identity = identityKey(await platform.identity(handle));
+    if (
+      attributes.reparsePoint
+      || attributes.directory !== (kind === "directory")
+      || !Number.isSafeInteger(attributes.size)
+      || attributes.size < 0
+      || !isWithinRoot(finalPath, rootFinalPath)
+    ) {
+      mismatch("A verified source object is no longer ordinary or inside its root.");
+    }
+    return { finalPath, identity, size: kind === "file" ? attributes.size : 0 };
+  });
 }
 
 function nativeRelative(relativePath: string): string {
   return relativePath.split("/").join(sep);
-}
-
-async function doesExist(path: string): Promise<boolean> {
-  try {
-    await stat(path);
-    return true;
-  } catch (error) {
-    if ((error as NodeJS.ErrnoException).code === "ENOENT") return false;
-    throw error;
-  }
-}
-
-async function syncDirectory(path: string): Promise<void> {
-  let handle: FileHandle | undefined;
-  try {
-    handle = await open(path, constants.O_RDONLY);
-    await handle.sync();
-  } catch (error) {
-    if (process.platform !== "win32") throw error;
-  } finally {
-    await handle?.close().catch(() => undefined);
-  }
 }
 
 function expectedIdentityMap(preflight: SandboxPreflightResult) {
@@ -153,35 +150,77 @@ function expectedIdentityMap(preflight: SandboxPreflightResult) {
   return expected;
 }
 
-function parentPaths(path: string): string[] {
-  const parts = path.split("/");
-  const parents = [""];
-  for (let index = 1; index < parts.length; index += 1) {
-    parents.push(parts.slice(0, index).join("/"));
-  }
-  return parents;
+function listedIdentity(entry: SandboxListedEntry): string {
+  if (entry.attributes.reparsePoint) mismatch("A listed source entry became a reparse point.");
+  return identityKey(entry.identity);
 }
 
-async function verifyParentChain(
-  sourceRoot: string,
-  relativePath: string,
-  expected: Map<string, SandboxPreflightEntry>,
-  platform: SandboxSnapshotPlatformAdapter,
-): Promise<void> {
-  for (const parent of parentPaths(relativePath)) {
-    const identity = expected.get(parent);
-    if (!identity || identity.kind !== "directory") {
-      mismatch("The preflight manifest is missing a parent directory identity.");
+async function openVerifiedPath(input: {
+  expected: Map<string, SandboxPreflightEntry>;
+  platform: SandboxFsAdapter;
+  relativePath: string;
+  rootHandle: unknown;
+  rootFinalPath: string;
+}): Promise<{ handles: unknown[]; target: unknown }> {
+  const { expected, platform, relativePath, rootHandle, rootFinalPath } = input;
+  const handles: unknown[] = [];
+  let parent = rootHandle;
+  let currentPath = "";
+  try {
+    const segments = relativePath.split("/").filter(Boolean);
+    for (let index = 0; index < segments.length; index += 1) {
+      const name = segments[index]!;
+      const path = currentPath ? `${currentPath}/${name}` : name;
+      const manifestEntry = expected.get(path);
+      if (!manifestEntry) mismatch("The preflight manifest is missing a source entry.");
+      const listed = await adapterCall(
+        "A verified source parent could not be listed.",
+        () => platform.list(parent),
+      );
+      const directoryEntry = listed.find((entry) => entry.name === name);
+      if (!directoryEntry || listedIdentity(directoryEntry) !== manifestEntry.identity) {
+        mismatch("A source entry changed between preflight and snapshot.");
+      }
+      const isTarget = index === segments.length - 1;
+      const kind = isTarget ? manifestEntry.kind : "directory";
+      let child: unknown;
+      child = await adapterCall(
+        "A source entry could not be opened relative to its verified parent.",
+        () => kind === "directory"
+          ? platform.openChildDirectoryNoFollow(parent, name)
+          : platform.openFileNoFollow(parent, name),
+      );
+      handles.push(child);
+      const actual = await inspectHandle(platform, child, kind, rootFinalPath);
+      if (
+        actual.identity !== manifestEntry.identity
+        || (kind === "file" && actual.size !== manifestEntry.size)
+      ) {
+        mismatch("A source entry changed after relative open.");
+      }
+      parent = child;
+      currentPath = path;
     }
-    const absolute = parent ? join(sourceRoot, nativeRelative(parent)) : sourceRoot;
-    let actual: SandboxProvenIdentity;
-    try {
-      actual = await platform.inspectPath(absolute);
-    } catch {
-      return mismatch("A source parent could not be inspected.");
+    return { handles, target: parent };
+  } catch (error) {
+    for (const handle of handles.reverse()) {
+      await closeHandle(platform, handle).catch(() => undefined);
     }
-    assertOrdinary(actual, identity, "A source parent");
+    throw error;
   }
+}
+
+async function closePathHandles(platform: SandboxFsAdapter, handles: unknown[]): Promise<void> {
+  let failure: unknown;
+  while (handles.length > 0) {
+    const handle = handles.pop()!;
+    try {
+      await closeHandle(platform, handle);
+    } catch (error) {
+      failure ??= error;
+    }
+  }
+  if (failure) throw failure;
 }
 
 async function runHook(
@@ -192,75 +231,169 @@ async function runHook(
   await hooks?.onPhase?.(phase, path);
 }
 
-async function copyVerifiedFile(input: {
-  buildingRoot: string;
+async function writeVerifiedSource(input: {
+  destinationPath: string;
   entry: SandboxPreflightEntry;
   expected: Map<string, SandboxPreflightEntry>;
   hooks?: SandboxSnapshotHooks;
-  platform: SandboxSnapshotPlatformAdapter;
-  sourceRoot: string;
+  platform: SandboxFsAdapter;
+  rootHandle: unknown;
+  rootFinalPath: string;
 }): Promise<SandboxSnapshotFile> {
-  const { buildingRoot, entry, expected, hooks, platform, sourceRoot } = input;
-  const sourcePath = join(sourceRoot, nativeRelative(entry.path));
-  const destinationPath = join(buildingRoot, nativeRelative(entry.path));
-  const temporaryPath = `${destinationPath}.tmp-${randomUUID()}`;
-
-  await verifyParentChain(sourceRoot, entry.path, expected, platform);
+  const { destinationPath, entry, expected, hooks, platform, rootHandle, rootFinalPath } = input;
+  if (!platform.readFromHandle) unverifiable("The verified adapter cannot read from handles.");
   await runHook(hooks, "parents-verified", entry.path);
-  const before = await platform.inspectPath(sourcePath).catch(() => null);
-  if (!before) mismatch("A source file disappeared before open.");
-  assertOrdinary(before, entry, "A source file");
   await runHook(hooks, "before-source-open", entry.path);
-
-  let source: SandboxSnapshotHandle | undefined;
-  let destination: FileHandle | undefined;
+  const opened = await openVerifiedPath({
+    expected,
+    platform,
+    relativePath: entry.path,
+    rootFinalPath,
+    rootHandle,
+  });
+  await runHook(hooks, "source-opened", entry.path);
+  const temporaryPath = `${destinationPath}.tmp-${randomUUID()}`;
+  let stream: ReturnType<typeof createWriteStream> | undefined;
   try {
-    source = await platform.openNoFollow(sourcePath).catch(() => undefined);
-    if (!source) mismatch("A source file could not be opened without following links.");
-    const opened = await platform.inspectHandle(source).catch(() => null);
-    if (!opened) mismatch("An opened source handle could not be inspected.");
-    assertOrdinary(opened, entry, "An opened source handle");
-    await verifyParentChain(sourceRoot, entry.path, expected, platform);
-    await runHook(hooks, "source-opened", entry.path);
-
     await mkdir(dirname(destinationPath), { recursive: true });
-    destination = await open(temporaryPath, constants.O_CREAT | constants.O_EXCL | constants.O_WRONLY, 0o600);
+    stream = createWriteStream(temporaryPath, { flags: "wx", mode: 0o600 });
+    await once(stream, "open");
     const digest = createHash("sha256");
-    const buffer = Buffer.allocUnsafe(64 * 1024);
     let total = 0;
     while (true) {
-      const { bytesRead } = await source.read(buffer, 0, buffer.length, null);
-      if (bytesRead === 0) break;
-      total += bytesRead;
+      const bytes = await adapterCall(
+        "ReadFile failed while copying the verified source handle.",
+        () => platform.readFromHandle!(opened.target, 64 * 1024),
+      );
+      if (bytes.byteLength === 0) break;
+      total += bytes.byteLength;
       if (total > entry.size || total > SANDBOX_MAX_BYTES) {
         mismatch("A source file exceeded its preflight size.");
       }
-      const chunk = buffer.subarray(0, bytesRead);
-      digest.update(chunk);
-      await destination.write(chunk);
+      digest.update(bytes);
+      if (!stream.write(bytes)) await once(stream, "drain");
     }
+    stream.end();
+    await once(stream, "close");
+    stream = undefined;
     await runHook(hooks, "source-read", entry.path);
     if (total !== entry.size) mismatch("A source file size changed while reading.");
-
-    const handleAfter = await platform.inspectHandle(source).catch(() => null);
-    const pathAfter = await platform.inspectPath(sourcePath).catch(() => null);
-    if (!handleAfter || !pathAfter) mismatch("A source identity became unverifiable after read.");
-    assertOrdinary(handleAfter, entry, "The opened source handle");
-    assertOrdinary(pathAfter, entry, "The source path");
-    await verifyParentChain(sourceRoot, entry.path, expected, platform);
+    const after = await inspectHandle(platform, opened.target, "file", rootFinalPath);
+    if (after.identity !== entry.identity || after.size !== entry.size) {
+      mismatch("A source file changed while being copied.");
+    }
     await runHook(hooks, "source-reverified", entry.path);
-
-    await destination.sync();
-    await destination.close();
-    destination = undefined;
+    await closePathHandles(platform, opened.handles);
     await rename(temporaryPath, destinationPath);
-    await syncDirectory(dirname(destinationPath));
     await runHook(hooks, "destination-synced", entry.path);
     return { hash: digest.digest("hex"), path: entry.path, size: total };
   } finally {
-    await source?.close().catch(() => undefined);
-    await destination?.close().catch(() => undefined);
+    stream?.destroy();
+    await closePathHandles(platform, opened.handles).catch(() => undefined);
     await rm(temporaryPath, { force: true }).catch(() => undefined);
+  }
+}
+
+async function verifyBuildingManifest(input: {
+  expectedEntryCount: number;
+  expectedFiles: SandboxSnapshotFile[];
+  platform: SandboxFsAdapter;
+  rootPath: string;
+  totalBytes: number;
+}): Promise<void> {
+  const { expectedEntryCount, expectedFiles, platform, rootPath, totalBytes } = input;
+  let rootHandle: unknown;
+  try {
+    rootHandle = await platform.openRootDirectory(rootPath);
+  } catch {
+    return unverifiable("The building root could not be opened for manifest verification.");
+  }
+  const rootFinalPath = await adapterCall(
+    "The building root final path is unavailable.",
+    () => platform.finalPath(rootHandle),
+  );
+  const manifestEntries = new Map<string, SandboxPreflightEntry>();
+  manifestEntries.set("", {
+    identity: identityKey(await platform.identity(rootHandle)),
+    kind: "directory",
+    path: "",
+    size: 0,
+  });
+  let observedItems = 0;
+  let observedBytes = 0;
+
+  async function walk(handle: unknown, relativeDirectory: string): Promise<void> {
+    const entries = await adapterCall(
+      "The building manifest could not be listed.",
+      () => platform.list(handle),
+    );
+    for (const entry of entries) {
+      observedItems += 1;
+      if (observedItems > expectedEntryCount || entry.attributes.reparsePoint) {
+        mismatch("The building manifest contains an unexpected entry.");
+      }
+      const path = relativeDirectory ? `${relativeDirectory}/${entry.name}` : entry.name;
+      manifestEntries.set(path, {
+        identity: identityKey(entry.identity),
+        kind: entry.attributes.directory ? "directory" : "file",
+        path,
+        size: entry.attributes.directory ? 0 : entry.size,
+      });
+      if (entry.attributes.directory) {
+        const child = await adapterCall(
+          "A building directory could not be opened relative to its parent.",
+          () => platform.openChildDirectoryNoFollow(handle, entry.name),
+        );
+        try {
+          await walk(child, path);
+        } finally {
+          await closeHandle(platform, child);
+        }
+      }
+    }
+  }
+
+  try {
+    await walk(rootHandle, "");
+    const expected = new Map(expectedFiles.map((file) => [file.path, file]));
+    for (const file of expectedFiles) {
+      const opened = await openVerifiedPath({
+        expected: manifestEntries,
+        platform,
+        relativePath: file.path,
+        rootFinalPath,
+        rootHandle,
+      });
+      try {
+        const digest = createHash("sha256");
+        let size = 0;
+        while (true) {
+          const bytes = await adapterCall(
+            "The building file could not be read through its verified handle.",
+            () => platform.readFromHandle!(opened.target, 64 * 1024),
+          );
+          if (bytes.byteLength === 0) break;
+          size += bytes.byteLength;
+          digest.update(bytes);
+        }
+        if (size !== file.size || digest.digest("hex") !== file.hash) {
+          mismatch("The copied file does not match its verified source bytes.");
+        }
+        observedBytes += size;
+        expected.delete(file.path);
+      } finally {
+        await closePathHandles(platform, opened.handles);
+      }
+    }
+    if (
+      observedItems !== expectedEntryCount
+      || observedBytes !== totalBytes
+      || expected.size !== 0
+    ) {
+      mismatch("The building manifest does not match the preflight manifest.");
+    }
+  } finally {
+    await closeHandle(platform, rootHandle);
   }
 }
 
@@ -281,35 +414,66 @@ export async function buildSandboxSnapshot(input: {
   ) {
     throw new SandboxSnapshotError("SANDBOX_LIMIT_EXCEEDED", "The preflight manifest exceeds sandbox limits.");
   }
-  if (await doesExist(sandboxRoot) || await doesExist(buildingRoot)) {
-    throw new SandboxSnapshotError("SANDBOX_DESTINATION_EXISTS", "The sandbox destination already exists.");
+  const platform = input.platform ?? await createDefaultSandboxFsAdapter();
+  let sourceHandle: unknown;
+  try {
+    sourceHandle = await platform.openRootDirectory(sourceRoot);
+  } catch {
+    return unverifiable("The source root could not be opened through the verified adapter.");
+  }
+  const rootFinalPath = await adapterCall(
+    "The source root final path is unavailable.",
+    () => platform.finalPath(sourceHandle),
+  );
+  const rootIdentity = identityKey(await adapterCall(
+    "The source root identity is unavailable.",
+    () => platform.identity(sourceHandle),
+  ));
+  if (rootIdentity !== input.preflight.rootIdentity) {
+    await closeHandle(platform, sourceHandle);
+    mismatch("The source root changed after preflight.");
   }
 
   const expected = expectedIdentityMap(input.preflight);
-  const platform = input.platform ?? nodeSandboxSnapshotAdapter;
   let ownedBuilding = false;
   let ownedSandbox = false;
   try {
     await mkdir(dirname(buildingRoot), { recursive: true });
-    await mkdir(buildingRoot, { recursive: false });
+    try {
+      await mkdir(buildingRoot, { recursive: false });
+    } catch (error) {
+      if ((error as NodeJS.ErrnoException).code === "EEXIST") {
+        throw new SandboxSnapshotError(
+          "SANDBOX_DESTINATION_EXISTS",
+          "The sandbox destination already exists.",
+        );
+      }
+      throw error;
+    }
     ownedBuilding = true;
     const files: SandboxSnapshotFile[] = [];
     let totalBytes = 0;
     for (const entry of input.preflight.entries) {
       if (entry.kind === "directory") {
-        await verifyParentChain(sourceRoot, entry.path, expected, platform);
-        const actual = await platform.inspectPath(join(sourceRoot, nativeRelative(entry.path)));
-        assertOrdinary(actual, entry, "A source directory");
+        const opened = await openVerifiedPath({
+          expected,
+          platform,
+          relativePath: entry.path,
+          rootFinalPath,
+          rootHandle: sourceHandle,
+        });
+        await closePathHandles(platform, opened.handles);
         await mkdir(join(buildingRoot, nativeRelative(entry.path)), { recursive: false });
         continue;
       }
-      const file = await copyVerifiedFile({
-        buildingRoot,
+      const file = await writeVerifiedSource({
+        destinationPath: join(buildingRoot, nativeRelative(entry.path)),
         entry,
         expected,
         hooks: input.hooks,
         platform,
-        sourceRoot,
+        rootFinalPath,
+        rootHandle: sourceHandle,
       });
       totalBytes += file.size;
       if (totalBytes > SANDBOX_MAX_BYTES) {
@@ -320,12 +484,16 @@ export async function buildSandboxSnapshot(input: {
     if (totalBytes !== input.preflight.totalBytes) {
       mismatch("Snapshot bytes do not match the preflight manifest.");
     }
-    await syncDirectory(buildingRoot);
-    await mkdir(dirname(sandboxRoot), { recursive: true });
+    await verifyBuildingManifest({
+      expectedEntryCount: input.preflight.entries.length,
+      expectedFiles: files,
+      platform,
+      rootPath: buildingRoot,
+      totalBytes,
+    });
     await rename(buildingRoot, sandboxRoot);
     ownedBuilding = false;
     ownedSandbox = true;
-    await syncDirectory(dirname(sandboxRoot));
     await runHook(input.hooks, "sandbox-renamed");
     const manifestHash = createHash("sha256")
       .update(JSON.stringify({ files, itemCount: input.preflight.itemCount, totalBytes }))
@@ -342,6 +510,8 @@ export async function buildSandboxSnapshot(input: {
     if (ownedSandbox) await rm(sandboxRoot, { force: true, recursive: true }).catch(() => undefined);
     if (error instanceof SandboxSnapshotError) throw error;
     throw new SandboxSnapshotError("SANDBOX_SOURCE_MISMATCH", "Sandbox snapshot verification failed.");
+  } finally {
+    await closeHandle(platform, sourceHandle);
   }
 }
 
@@ -351,14 +521,22 @@ export async function cleanupOwnedSandbox(input: {
   sandboxRoot: string;
 }): Promise<boolean> {
   const sandboxRoot = resolve(input.sandboxRoot);
-  const platform = input.platform ?? nodeSandboxSnapshotAdapter;
-  if (!(await doesExist(sandboxRoot))) return true;
-  const before = await platform.inspectPath(sandboxRoot).catch(() => null);
-  if (
-    !before
-    || before.kind !== "directory"
-    || before.identity !== input.expectedRootIdentity
-  ) return false;
+  const platform = input.platform ?? await createDefaultSandboxFsAdapter();
+  let rootHandle: unknown;
+  try {
+    rootHandle = await platform.openRootDirectory(sandboxRoot);
+  } catch {
+    return false;
+  }
+  try {
+    if (identityKey(await platform.identity(rootHandle)) !== input.expectedRootIdentity) {
+      return false;
+    }
+  } catch {
+    return false;
+  } finally {
+    await closeHandle(platform, rootHandle).catch(() => undefined);
+  }
 
   const quarantine = `${sandboxRoot}.cleanup-${randomUUID()}`;
   try {
@@ -366,21 +544,20 @@ export async function cleanupOwnedSandbox(input: {
   } catch {
     return false;
   }
-  const moved = await platform.inspectPath(quarantine).catch(() => null);
-  if (
-    !moved
-    || moved.kind !== "directory"
-    || moved.identity !== input.expectedRootIdentity
-  ) {
-    if (!(await doesExist(sandboxRoot))) {
-      await rename(quarantine, sandboxRoot).catch(() => undefined);
-    }
-    return false;
-  }
+  let movedHandle: unknown;
   try {
+    movedHandle = await platform.openRootDirectory(quarantine);
+    if (identityKey(await platform.identity(movedHandle)) !== input.expectedRootIdentity) {
+      await closeHandle(platform, movedHandle).catch(() => undefined);
+      await rename(quarantine, sandboxRoot).catch(() => undefined);
+      return false;
+    }
+    await closeHandle(platform, movedHandle);
     await rm(quarantine, { force: true, recursive: true });
     return true;
   } catch {
+    await closeHandle(platform, movedHandle).catch(() => undefined);
+    await rename(quarantine, sandboxRoot).catch(() => undefined);
     return false;
   }
 }
@@ -392,5 +569,3 @@ export function sandboxDeadlineState(startedAtMs: number, nowMs: number): "expir
 export function sandboxLeaseExpiry(nowMs: number, overallDeadlineMs: number): number {
   return Math.min(nowMs + 120_000, overallDeadlineMs);
 }
-
-

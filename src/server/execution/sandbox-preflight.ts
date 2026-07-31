@@ -1,4 +1,3 @@
-import { lstat, opendir, realpath } from "node:fs/promises";
 import { isAbsolute, relative, resolve, sep } from "node:path";
 
 export const SANDBOX_MAX_ENTRIES = 100_000;
@@ -12,8 +11,13 @@ export type SandboxEntryKind =
   | "special";
 
 export type SandboxListedEntry = {
-  kindHint?: SandboxEntryKind;
+  attributes: {
+    directory: boolean;
+    reparsePoint: boolean;
+  };
+  identity: unknown;
   name: string;
+  size: number;
 };
 
 export type SandboxProvenIdentity = {
@@ -23,16 +27,29 @@ export type SandboxProvenIdentity = {
   size: number;
 };
 
-export type SandboxPlatformIdentityAdapter = {
-  inspect(path: string): Promise<SandboxProvenIdentity>;
+type Awaitable<T> = T | Promise<T>;
+
+export type SandboxFsAdapter = {
+  attributes(handle: unknown): Awaitable<{
+    directory: boolean;
+    reparsePoint: boolean;
+    size: number;
+  }>;
+  close(handle: unknown): Awaitable<void>;
+  finalPath(handle: unknown): Awaitable<string>;
+  identity(handle: unknown): Awaitable<unknown>;
+  list(handle: unknown): Awaitable<SandboxListedEntry[]>;
+  openChildDirectoryNoFollow(parent: unknown, name: string): Awaitable<unknown>;
+  openFileNoFollow(parent: unknown, name: string): Awaitable<unknown>;
+  openRootDirectory(path: string): Awaitable<unknown>;
+  readFromHandle?(handle: unknown, maximumBytes: number): Awaitable<Uint8Array>;
 };
 
 export type SandboxPreflightOptions = {
   canonicalRoot: string;
   configuredExclusions?: string[];
-  identityAdapter?: SandboxPlatformIdentityAdapter;
-  iterateDirectory?: (path: string) => AsyncIterable<SandboxListedEntry>;
   managedSandboxRoot: string;
+  platform?: SandboxFsAdapter;
   workspaceKind?: "git" | "nonGit";
 };
 
@@ -119,85 +136,66 @@ function isFixedExcluded(kind: SandboxEntryKind, name: string): boolean {
   return EXCLUDED_SECRET_SUFFIXES.some((suffix) => name.endsWith(suffix));
 }
 
-async function* nodeDirectoryIterator(path: string): AsyncIterable<SandboxListedEntry> {
-  const directory = await opendir(path);
-  for await (const entry of directory) {
-    let kindHint: SandboxEntryKind = "special";
-    if (entry.isDirectory()) kindHint = "directory";
-    else if (entry.isFile()) kindHint = "file";
-    else if (entry.isSymbolicLink()) kindHint = "link";
-    yield { kindHint, name: entry.name };
+function identityKey(identity: unknown): string {
+  if (typeof identity === "string" && identity.length > 0) return identity;
+  if (
+    identity
+    && typeof identity === "object"
+    && typeof (identity as { fileId?: unknown }).fileId === "string"
+    && typeof (identity as { volumeSerialNumber?: unknown }).volumeSerialNumber === "string"
+  ) {
+    const value = identity as { fileId: string; volumeSerialNumber: string };
+    if (value.fileId.length > 0 && value.volumeSerialNumber.length > 0) {
+      return `${value.volumeSerialNumber}:${value.fileId}`;
+    }
+  }
+  return failUnverifiable("The platform adapter returned an invalid identity.");
+}
+
+export async function createDefaultSandboxFsAdapter(): Promise<SandboxFsAdapter> {
+  try {
+    const native = await import("@/src/server/execution/windows-native-read-adapter");
+    return native.createWindowsNativeReadAdapter();
+  } catch {
+    return failUnverifiable("The Windows verified-handle adapter is unavailable.");
   }
 }
 
-export const nodeSandboxIdentityAdapter: SandboxPlatformIdentityAdapter = {
-  async inspect(path) {
-    let stats;
-    try {
-      stats = await lstat(path, { bigint: true });
-    } catch {
-      return { finalPath: null, identity: null, kind: "special", size: 0 };
-    }
+async function closeVerified(adapter: SandboxFsAdapter, handle: unknown): Promise<void> {
+  try {
+    await adapter.close(handle);
+  } catch {
+    failUnverifiable("A verified handle could not be closed.");
+  }
+}
 
-    let kind: SandboxEntryKind;
-    if (stats.isSymbolicLink()) kind = "link";
-    else if (stats.isDirectory()) kind = "directory";
-    else if (stats.isFile()) kind = "file";
-    else kind = "special";
-
-    if (kind === "link" || kind === "special") {
-      return {
-        finalPath: null,
-        identity: `${stats.dev}:${stats.ino}`,
-        kind,
-        size: 0,
-      };
+async function proveHandle(
+  adapter: SandboxFsAdapter,
+  handle: unknown,
+  expectedKind: "directory" | "file",
+): Promise<SandboxProvenIdentity & { kind: "directory" | "file" }> {
+  try {
+    const attributes = await adapter.attributes(handle);
+    const finalPath = await adapter.finalPath(handle);
+    const identity = identityKey(await adapter.identity(handle));
+    if (
+      attributes.reparsePoint
+      || attributes.directory !== (expectedKind === "directory")
+      || !Number.isSafeInteger(attributes.size)
+      || attributes.size < 0
+      || !isAbsolute(finalPath)
+    ) {
+      failUnverifiable("The verified handle is not an ordinary object.");
     }
-
-    let finalPath: string;
-    try {
-      finalPath = await realpath(path);
-    } catch {
-      return { finalPath: null, identity: null, kind, size: Number(stats.size) };
-    }
-    const identity = stats.ino === 0n ? null : `${stats.dev}:${stats.ino}`;
     return {
       finalPath,
       identity,
-      kind,
-      size: kind === "file" ? Number(stats.size) : 0,
+      kind: expectedKind,
+      size: expectedKind === "file" ? attributes.size : 0,
     };
-  },
-};
-
-async function proveRoot(path: string, adapter: SandboxPlatformIdentityAdapter) {
-  const identity = await inspectWithAdapter(adapter, path);
-  if (
-    identity.kind !== "directory"
-    || !identity.identity
-    || !identity.finalPath
-  ) {
-    failUnverifiable("The canonical root cannot be proven as an ordinary directory.");
-  }
-  return identity;
-}
-
-async function inspectWithAdapter(
-  adapter: SandboxPlatformIdentityAdapter,
-  path: string,
-): Promise<SandboxProvenIdentity> {
-  try {
-    return await adapter.inspect(path);
-  } catch {
-    return failUnverifiable("The platform identity adapter is unavailable.");
-  }
-}
-
-async function realRoot(path: string, label: string): Promise<string> {
-  try {
-    return await realpath(path);
-  } catch {
-    return failUnverifiable(`${label} cannot be resolved.`);
+  } catch (error) {
+    if (error instanceof SandboxPreflightError) throw error;
+    return failUnverifiable("The verified handle identity is unavailable.");
   }
 }
 
@@ -223,24 +221,34 @@ export async function preflightSandbox(
   }
 
   const walkRoot = resolve(options.canonicalRoot);
-  const canonicalRoot = await realRoot(walkRoot, "Canonical root");
-  const managedSandboxRoot = await realRoot(
-    options.managedSandboxRoot,
-    "Managed sandbox root",
-  );
-  if (
-    isSameOrDescendant(canonicalRoot, managedSandboxRoot)
-    || isSameOrDescendant(managedSandboxRoot, canonicalRoot)
-  ) {
-    throw new SandboxPreflightError(
-      "SANDBOX_ROOT_INTERSECTION",
-      "Canonical and managed sandbox roots must not intersect.",
-    );
+  const adapter = options.platform ?? await createDefaultSandboxFsAdapter();
+  let rootHandle: unknown;
+  let managedHandle: unknown;
+  try {
+    rootHandle = await adapter.openRootDirectory(walkRoot);
+    managedHandle = await adapter.openRootDirectory(resolve(options.managedSandboxRoot));
+  } catch {
+    return failUnverifiable("A sandbox root could not be opened through verified handles.");
   }
-
-  const adapter = options.identityAdapter ?? nodeSandboxIdentityAdapter;
-  const iterator = options.iterateDirectory ?? nodeDirectoryIterator;
-  const provenRoot = await proveRoot(walkRoot, adapter);
+  let provenRoot: SandboxProvenIdentity;
+  try {
+    provenRoot = await proveHandle(adapter, rootHandle, "directory");
+    const provenManagedRoot = await proveHandle(adapter, managedHandle, "directory");
+    if (
+      isSameOrDescendant(provenRoot.finalPath!, provenManagedRoot.finalPath!)
+      || isSameOrDescendant(provenManagedRoot.finalPath!, provenRoot.finalPath!)
+    ) {
+      throw new SandboxPreflightError(
+        "SANDBOX_ROOT_INTERSECTION",
+        "Canonical and managed sandbox roots must not intersect.",
+      );
+    }
+  } catch (error) {
+    await closeVerified(adapter, managedHandle).catch(() => undefined);
+    await closeVerified(adapter, rootHandle).catch(() => undefined);
+    throw error;
+  }
+  await closeVerified(adapter, managedHandle);
 
   const configuredExclusions = configuredExclusionKeys(
     options.configuredExclusions ?? [],
@@ -251,8 +259,18 @@ export async function preflightSandbox(
   let itemCount = 0;
   let totalBytes = 0;
 
-  async function walk(directoryPath: string): Promise<void> {
-    for await (const listed of iterator(directoryPath)) {
+  async function walk(
+    directoryHandle: unknown,
+    directoryPath: string,
+    relativeDirectory: string,
+  ): Promise<void> {
+    let listedEntries: SandboxListedEntry[];
+    try {
+      listedEntries = await adapter.list(directoryHandle);
+    } catch {
+      return failUnverifiable("A directory could not be listed through its verified handle.");
+    }
+    for (const listed of listedEntries) {
       itemCount += 1;
       if (itemCount > SANDBOX_MAX_ENTRIES) {
         throw new SandboxPreflightError(
@@ -273,38 +291,52 @@ export async function preflightSandbox(
         continue;
       }
 
-      if (
-        listed.kindHint
-        && isFixedExcluded(listed.kindHint, listed.name)
-      ) {
+      const listedKind: SandboxEntryKind = listed.attributes.reparsePoint
+        ? "reparse"
+        : listed.attributes.directory
+          ? "directory"
+          : "file";
+      if (isFixedExcluded(listedKind, listed.name)) {
         excludedCount += 1;
         continue;
       }
-
-      const identity = await inspectWithAdapter(adapter, absolutePath);
-      if (identity.kind !== "directory" && identity.kind !== "file") {
+      if (listed.attributes.reparsePoint) {
         throw new SandboxPreflightError(
           "SPECIAL_FILE_REJECTED",
           "Sandbox preflight accepts only ordinary files and directories.",
         );
       }
-      if (
-        !identity.identity
-        || !identity.finalPath
-        || !Number.isSafeInteger(identity.size)
-        || identity.size < 0
-      ) {
-        failUnverifiable("The platform adapter could not prove an entry identity.");
+
+      let entryHandle: unknown;
+      try {
+        entryHandle = listed.attributes.directory
+          ? await adapter.openChildDirectoryNoFollow(directoryHandle, listed.name)
+          : await adapter.openFileNoFollow(directoryHandle, listed.name);
+      } catch {
+        return failUnverifiable("An entry could not be opened relative to its verified parent.");
       }
-      if (!isWithinRoot(identity.finalPath, provenRoot.finalPath!)) {
-        failUnverifiable("An entry final path escaped the canonical root.");
-      }
-      if (isFixedExcluded(identity.kind, listed.name)) {
-        excludedCount += 1;
-        continue;
+      let identity: SandboxProvenIdentity & { kind: "directory" | "file" };
+      try {
+        identity = await proveHandle(
+          adapter,
+          entryHandle,
+          listed.attributes.directory ? "directory" : "file",
+        );
+        if (
+          identity.identity !== identityKey(listed.identity)
+          || (identity.kind === "file" && identity.size !== listed.size)
+          || !isWithinRoot(identity.finalPath!, provenRoot.finalPath!)
+        ) {
+          failUnverifiable("An entry changed between verified list and relative open.");
+        }
+      } catch (error) {
+        await closeVerified(adapter, entryHandle).catch(() => undefined);
+        throw error;
       }
 
-      const relativePath = relativePathFromRoot(walkRoot, absolutePath);
+      const relativePath = relativeDirectory
+        ? `${relativeDirectory}/${listed.name.normalize("NFC")}`
+        : listed.name.normalize("NFC");
       const pathKey = process.platform === "win32"
         ? relativePath.toLocaleLowerCase("en-US")
         : relativePath;
@@ -323,23 +355,43 @@ export async function preflightSandbox(
         }
       }
       entries.push({
-        identity: identity.identity,
+        identity: identity.identity!,
         kind: identity.kind,
         path: relativePath,
         size: identity.kind === "file" ? identity.size : 0,
       });
-      if (identity.kind === "directory") await walk(absolutePath);
+      if (identity.kind === "directory") {
+        await walk(entryHandle, absolutePath, relativePath);
+      }
+      const after = await proveHandle(adapter, entryHandle, identity.kind);
+      if (
+        after.identity !== identity.identity
+        || after.finalPath!.toLocaleLowerCase("en-US")
+          !== identity.finalPath!.toLocaleLowerCase("en-US")
+      ) {
+        await closeVerified(adapter, entryHandle).catch(() => undefined);
+        failUnverifiable("A retained verified entry changed during preflight.");
+      }
+      await closeVerified(adapter, entryHandle);
+    }
+    const retained = await proveHandle(adapter, directoryHandle, "directory");
+    if (!isWithinRoot(retained.finalPath!, provenRoot.finalPath!)) {
+      failUnverifiable("A retained directory escaped the canonical root.");
     }
   }
 
-  await walk(walkRoot);
-  entries.sort((left, right) =>
-    Buffer.from(left.path, "utf8").compare(Buffer.from(right.path, "utf8")));
-  return {
-    entries,
-    excludedCount,
-    itemCount,
-    rootIdentity: provenRoot.identity!,
-    totalBytes,
-  };
+  try {
+    await walk(rootHandle, walkRoot, "");
+    entries.sort((left, right) =>
+      Buffer.from(left.path, "utf8").compare(Buffer.from(right.path, "utf8")));
+    return {
+      entries,
+      excludedCount,
+      itemCount,
+      rootIdentity: provenRoot.identity!,
+      totalBytes,
+    };
+  } finally {
+    await closeVerified(adapter, rootHandle);
+  }
 }
