@@ -1,0 +1,45 @@
+# hf-gate-run
+# label: t44-red
+# command: npm.cmd test -- tests/command-request.test.ts tests/execution-orchestrator.test.ts tests/execution-approvals.test.ts
+# started: 2026-07-31T20:31:57+00:00
+
+> collaboration-cockpit@0.1.0 test
+> vitest run tests/command-request.test.ts tests/execution-orchestrator.test.ts tests/execution-approvals.test.ts
+
+
+ RUN  v4.1.10 D:/cool-ai
+
+(node:4472) ExperimentalWarning: SQLite is an experimental feature and might change at any time
+(Use `node --trace-warnings ...` to show where the warning was created)
+(node:9100) ExperimentalWarning: SQLite is an experimental feature and might change at any time
+(Use `node --trace-warnings ...` to show where the warning was created)
+(node:5320) ExperimentalWarning: SQLite is an experimental feature and might change at any time
+(Use `node --trace-warnings ...` to show where the warning was created)
+ ❯ tests/execution-orchestrator.test.ts (10 tests | 1 failed) 6952ms
+     × binds a production one-shot request to the current manifest through approve and advance 671ms
+
+⎯⎯⎯⎯⎯⎯⎯ Failed Tests 1 ⎯⎯⎯⎯⎯⎯⎯
+
+ FAIL  tests/execution-orchestrator.test.ts > client-driven execution advance orchestration > binds a production one-shot request to the current manifest through approve and advance
+ExecutionError: Approved command is unavailable.
+ ❯ src/server/execution/execution-approval-service.ts:641:13
+    639|     } | undefined;
+    640|     if (!approval) {
+    641|       throw new ExecutionError(
+       |             ^
+    642|         "APPROVAL_STATE_CONFLICT",
+    643|         409,
+ ❯ transaction src/server/execution/execution-approval-service.ts:67:20
+ ❯ consumeApprovedCommand src/server/execution/execution-approval-service.ts:583:19
+ ❯ Module.advanceExecution src/server/execution/action-orchestrator.ts:1487:24
+ ❯ tests/execution-orchestrator.test.ts:764:36
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[1/1]⎯
+
+
+ Test Files  1 failed | 2 passed (3)
+      Tests  1 failed | 33 passed (34)
+   Start at  04:31:59
+   Duration  10.03s (transform 960ms, setup 1.41s, import 964ms, tests 15.16s, environment 5.69s)
+
+# exit: 1

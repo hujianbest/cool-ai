@@ -472,6 +472,25 @@ describe("execution approvals", () => {
     expect(row("execution_approvals", "id=?", APPROVAL_ID).status).toBe("expired");
   });
 
+  it("expires an approved command when the manifest changes before public advance", async () => {
+    await decide("approve");
+    database.prepare(`
+      UPDATE execution_attempts SET sandbox_manifest_hash=? WHERE id=?
+    `).run("7".repeat(64), ATTEMPT_ID);
+
+    await expect(advance.advanceExecution(
+      databasePath,
+      EXECUTION_ID,
+      { expectedVersion: 2, operationId: operationId() },
+      { fileAdapter: {} },
+    )).rejects.toMatchObject({ code: "APPROVAL_STALE" });
+    expect(row("execution_approvals", "id=?", APPROVAL_ID).status).toBe("expired");
+    expect(database.prepare(`
+      SELECT count(*) AS count FROM execution_actions WHERE kind='command'
+    `).get()).toEqual({ count: 0 });
+    expect(existsSync(join(directory, "one-shot-spawned.txt"))).toBe(false);
+  });
+
   it("keeps standing policy execution as a distinct audit source without an approval row", () => {
     database.prepare("DELETE FROM execution_approvals").run();
     database.prepare("DELETE FROM execution_tool_calls").run();

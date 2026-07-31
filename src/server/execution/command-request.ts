@@ -25,7 +25,6 @@ type CommandRequestInput = {
   deniedResponseBody?: unknown;
   executionId?: string;
   expectedVersion: number;
-  inputHash: string;
   operationId: string;
   operationRequestHash?: string;
   policyContext: CommandPolicyContext;
@@ -98,7 +97,6 @@ function validateInput(input: CommandRequestInput): void {
     || typeof input.operationId !== "string"
     || !Number.isInteger(input.expectedVersion)
     || input.expectedVersion < 1
-    || !validHash(input.inputHash)
     || !validHash(input.contextHash)
     || !command
     || typeof command.executable !== "string"
@@ -256,6 +254,13 @@ export function requestExecutionCommand(input: CommandRequestInput): CommandRequ
     if (row.contextHash !== input.contextHash) {
       throw new CommandRequestError("STALE_EXECUTION", "Command context hash is stale.");
     }
+    if (!row.sandboxManifestHash || !validHash(row.sandboxManifestHash)) {
+      throw new CommandRequestError(
+        "SANDBOX_UNVERIFIABLE",
+        "The current sandbox manifest is unavailable.",
+        row.executionVersion,
+      );
+    }
     const openApproval = input.database.prepare(`
       SELECT 1 FROM execution_approvals
       WHERE execution_id=? AND status IN ('pending','approved')
@@ -297,7 +302,6 @@ export function requestExecutionCommand(input: CommandRequestInput): CommandRequ
       executable: command.executable,
       executableIdentity: command.executableIdentity,
       expectedEffect: command.expectedEffect,
-      inputHash: input.inputHash,
       kind: "command_request",
       parseResult: classification.parseResult,
       policySource,
@@ -316,7 +320,7 @@ export function requestExecutionCommand(input: CommandRequestInput): CommandRequ
       executable: command.executable,
       executableIdentity: command.executableIdentity,
       expectedEffect: command.expectedEffect,
-      inputHash: input.inputHash,
+      inputHash: row.sandboxManifestHash,
       policySource,
       riskReasons: classification.riskReasons,
       type: "command" as const,
@@ -488,7 +492,7 @@ export function requestExecutionCommand(input: CommandRequestInput): CommandRequ
       row.attemptId,
       toolCallId,
       requestHash,
-      input.inputHash,
+      row.sandboxManifestHash,
       JSON.stringify(approvalRequest),
     );
     const updated = input.database.prepare(`

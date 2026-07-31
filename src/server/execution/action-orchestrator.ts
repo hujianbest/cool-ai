@@ -897,14 +897,6 @@ async function runCommandRequest(
     deniedResponseBody: deniedBody,
     executionId,
     expectedVersion: row.version,
-    inputHash: canonicalRequestHash({
-      actionId: pending.actionId,
-      executionId,
-      frozenInputHash: (database.prepare(
-        "SELECT frozen_context_hash AS value FROM execution_attempts WHERE id=?",
-      ).get(row.attemptId) as { value: string }).value,
-      kind: "model_command",
-    }),
     operationId,
     operationRequestHash,
     policyContext: {

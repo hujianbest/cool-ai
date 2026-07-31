@@ -34,7 +34,6 @@ type CommandRequestModule = {
     contextHash: string;
     database: DatabaseSync;
     expectedVersion: number;
-    inputHash: string;
     operationId: string;
     policyContext: CommandPolicyContext;
     projectId: string;
@@ -47,7 +46,7 @@ const ATTEMPT_ID = "command-attempt";
 const POLICY_ID = "command-policy";
 const EXECUTABLE = "C:/verified/node.exe";
 const IDENTITY = "a".repeat(64);
-const INPUT_HASH = "b".repeat(64);
+const MANIFEST_HASH = "b".repeat(64);
 const CONTEXT_HASH = "c".repeat(64);
 const POLICY_HASH = "d".repeat(64);
 const NOW = "2026-07-30T04:00:00.000Z";
@@ -123,7 +122,7 @@ describe("command request classification and durable facts", () => {
         executable: command.executable,
         executableIdentity: command.executableIdentity,
         expectedEffect: command.expectedEffect,
-        inputHash: INPUT_HASH,
+        inputHash: MANIFEST_HASH,
         policySource: {
           hash: POLICY_HASH,
           revisionId: POLICY_ID,
@@ -159,7 +158,7 @@ describe("command request classification and durable facts", () => {
                public_request_json AS publicRequest
         FROM execution_approvals
       `).get()).toMatchObject({
-        inputHash: INPUT_HASH,
+        inputHash: MANIFEST_HASH,
         requestHash: result.requestHash,
         status: "pending",
       });
@@ -186,7 +185,7 @@ describe("command request classification and durable facts", () => {
         contextHash: CONTEXT_HASH,
         executable: command.executable,
         expectedEffect: command.expectedEffect,
-        inputHash: INPUT_HASH,
+        inputHash: MANIFEST_HASH,
         policySource: {
           hash: POLICY_HASH,
           revisionId: POLICY_ID,
@@ -195,6 +194,87 @@ describe("command request classification and durable facts", () => {
         requestHash: result.requestHash,
         workdir: command.workdir,
       });
+    } finally {
+      database.close();
+    }
+  });
+
+  it("reads the cached manifest atomically and excludes it from the canonical command hash", () => {
+    const firstManifest = "1".repeat(64);
+    const secondManifest = "2".repeat(64);
+    const first = seedDatabase({
+      canExecute: true,
+      manifestHash: firstManifest,
+      standing: false,
+    });
+    let firstRequestHash: string;
+    try {
+      const result = request(first, standardCommand());
+      firstRequestHash = result.requestHash;
+      expect(first.prepare(`
+        SELECT approval.input_hash AS inputHash,
+               tool.before_sandbox_hash AS beforeHash
+        FROM execution_approvals approval
+        JOIN execution_tool_calls tool ON tool.id=approval.tool_call_id
+      `).get()).toEqual({
+        beforeHash: firstManifest,
+        inputHash: firstManifest,
+      });
+    } finally {
+      first.close();
+    }
+
+    rmSync(databasePath, { force: true });
+    const second = seedDatabase({
+      canExecute: true,
+      manifestHash: secondManifest,
+      standing: false,
+    });
+    try {
+      const result = request(second, standardCommand());
+      expect(result.requestHash).toBe(firstRequestHash);
+      expect(result.requestHash).not.toBe(secondManifest);
+      expect(second.prepare(`
+        SELECT approval.input_hash AS inputHash,
+               tool.before_sandbox_hash AS beforeHash
+        FROM execution_approvals approval
+        JOIN execution_tool_calls tool ON tool.id=approval.tool_call_id
+      `).get()).toEqual({
+        beforeHash: secondManifest,
+        inputHash: secondManifest,
+      });
+    } finally {
+      second.close();
+    }
+  });
+
+  it("rolls back every waiting fact when approval insertion fails", () => {
+    const database = seedDatabase({ canExecute: true, standing: false });
+    try {
+      database.exec(`
+        CREATE TRIGGER fail_command_approval
+        BEFORE INSERT ON execution_approvals
+        BEGIN
+          SELECT RAISE(ABORT, 'injected approval failure');
+        END;
+      `);
+
+      expect(() => request(database, standardCommand())).toThrow("injected approval failure");
+      expect(database.prepare(`
+        SELECT
+          (SELECT count(*) FROM execution_operations) AS operations,
+          (SELECT count(*) FROM execution_tool_calls) AS tools,
+          (SELECT count(*) FROM execution_approvals) AS approvals,
+          (SELECT count(*) FROM execution_events) AS events
+      `).get()).toEqual({
+        approvals: 0,
+        events: 0,
+        operations: 0,
+        tools: 0,
+      });
+      expect(database.prepare(`
+        SELECT status,version,tool_call_count AS toolCount FROM executions
+      `).get()).toEqual({ status: "running", toolCount: 0, version: 1 });
     } finally {
       database.close();
     }
@@ -330,15 +410,19 @@ function request(
     contextHash: CONTEXT_HASH,
     database,
     expectedVersion,
-    inputHash: INPUT_HASH,
     operationId: operationId(),
     policyContext: POLICY_CONTEXT,
     projectId: PROJECT_ID,
   });
 }
 
-function seedDatabase(input: { canExecute: boolean; standing: boolean }): DatabaseSync {
+function seedDatabase(input: {
+  canExecute: boolean;
+  manifestHash?: string;
+  standing: boolean;
+}): DatabaseSync {
   const database = openDatabase(databasePath);
+  const manifestHash = input.manifestHash ?? MANIFEST_HASH;
   const policyEntry = input.standing
     ? {
         args: ["test", "--runInBand"],
@@ -418,7 +502,8 @@ function seedDatabase(input: { canExecute: boolean; standing: boolean }): Databa
       started_at,finished_at
     ) VALUES (
       '${ATTEMPT_ID}','${PROJECT_ID}','${EXECUTION_ID}',1,'acting',
-      '${POLICY_CONTEXT.sandboxRoot}',NULL,NULL,NULL,'{}','{}','${CONTEXT_HASH}',
+      '${POLICY_CONTEXT.sandboxRoot}',NULL,'${manifestHash}','${manifestHash}',
+      '{}','{}','${CONTEXT_HASH}',
       '${POLICY_ID}',1,'${POLICY_HASH}','${NOW}',NULL
     );
   `);

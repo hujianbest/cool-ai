@@ -82,3 +82,24 @@
 
 - one-shot 因果链已完全映射到真实 v5 列：`approval.input_hash = tool.before_sandbox_hash = attempt.sandbox_manifest_hash`，action 仅直接持有共同 `request_hash`，并通过 `tool.action_id`、复合 identity、operation/action-index/lease 间接绑定；§10 与 T-43 的 tamper 集同步改为现有字段，明确不改 DDL，任务可在既定 TDD 边界内实现。
 - §5.2 已为 success、nonzero、已确认终止 timeout、spawn/run、终止不确定、pre/post manifest、persist、owner pause/stop、lease/deadline reconcile 与 late finalizer 分别给出唯一 action/receipt HTTP+code、execution/resume/reason、attempt/tool、manifest/validation 结果；§6.4 与 §8 已统一，continue/retry 语义明确，T-43 及覆盖索引已补 FR-10/NFR-2。
+
+# 技术设计 评审 (第 21 轮)
+
+- 日期: 2026-07-31
+- 评审方式: subagent
+- 结论: 需修改
+
+## Findings
+
+- [严重] `design.md` §3.3 command request、§5.2 command request hash/snapshot 与 T-44：`request_hash` 排除 manifest、`approval.input_hash = tool.before_sandbox_hash = current attempt.sandbox_manifest_hash` 的字段语义已经正确，但生产事务/CAS 路径要求在“现有 command action lease”内先做 verified refresh，而真实 `action-orchestrator` 的 pending command 只来自已经终态且无 lease 的 model action；进入 `runCommandRequest` 时尚无 command action/parent pending receipt，one-shot 分支直到 refresh 后的 `requestExecutionCommand` 事务也只创建 completed advance receipt、`action_id=NULL` 的 tool 与 approval，不存在可供 refresh acquire/heartbeat/reconcile 的 action。当前设计既未定义 refresh 前如何原子创建 request-phase parent/action、该 action 使用哪个 kind/request hash/overall deadline，也未定义 refresh 失败、崩溃、同 operation 并发与 CAS 失手时 action/receipt 的唯一终态；若复用随后 consume 才创建的 command action则时序不可能，若新增 request action又需说明它为何不占用 `tool.action_id` 以及如何不被当作一次命令执行。因而 T-44 的公开生产链 RED/GREEN 仍需实现者发明持久协议，无法在一次 TDD 内按现有判据完成。应明确选择并写全协议：要么在 refresh 前以现有 v5 kind 建立独立 request-phase parent/action并给出 acquire→refresh→单事务 terminal action+tool+approval+events+waiting execution+receipt 的全分支 CAS/replay/reconcile矩阵；要么明确 verified refresh 是可安全重复的无 action 只读步骤，删除“action lease/heartbeat”要求并说明崩溃及同 operation 并发如何由事务内 receipt/CAS 唯一收口。相应让 T-44 从公开 `advanceExecution` 覆盖 refresh 期间崩溃/并发/replay且断言无 running action/pending receipt；若保留 action lease/deadline，还应补 FR-10/NFR-2 到 T-44 及覆盖索引。T-45/T-46 顺延和其余覆盖索引已正确，不构成额外 finding。
+
+# 技术设计 评审 (第 22 轮)
+
+- 日期: 2026-07-31
+- 评审方式: subagent
+- 结论: 通过
+- 用户确认: auto-approved 2026-07-31
+
+## Findings
+
+无。第 21 轮 finding 已闭合：one-shot request 已明确选择无 action 的短事务协议，不做 FS refresh、不创建 lease/heartbeat/reconcile；manifest input 直接取事务内 current attempt 的缓存 hash，receipt/tool/approval/events/waiting execution 全有或全无，并补齐并发、崩溃、重放、事务注入与重开后的公开链 TDD 判据。standing exact 仍独立创建真实 command action，T-44 无需新增 FR-10/NFR-2 覆盖。

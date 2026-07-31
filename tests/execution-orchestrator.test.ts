@@ -1,4 +1,4 @@
-import { mkdtempSync, rmSync } from "node:fs";
+import { mkdtempSync, readFileSync, rmSync } from "node:fs";
 import { createServer, type Server } from "node:http";
 import type { AddressInfo } from "node:net";
 import { tmpdir } from "node:os";
@@ -66,6 +66,19 @@ type AdvanceModule = {
   ): Promise<{ body: Record<string, unknown>; status: number }>;
 };
 
+type ApprovalModule = {
+  decideExecutionApproval(
+    databasePath: string,
+    executionId: string,
+    approvalId: string,
+    input: {
+      action: "approve";
+      expectedVersion: number;
+      operationId: string;
+    },
+  ): Promise<{ body: Record<string, unknown>; status: number }>;
+};
+
 const PROJECT_ID = "orchestrator-project";
 const EXECUTION_ID = "execution-a";
 const SECOND_EXECUTION_ID = "execution-b";
@@ -79,6 +92,7 @@ let directory: string;
 let databasePath: string;
 let database: DatabaseSync;
 let advance: AdvanceModule;
+let approvals: ApprovalModule;
 let adapter: ReadOnlyAdapter;
 let servers: Server[];
 
@@ -264,6 +278,9 @@ beforeEach(async () => {
   const load = modules["../src/server/execution/action-orchestrator.ts"];
   expect(load, "T-16 action orchestrator must exist").toBeTypeOf("function");
   advance = await load();
+  approvals = await import(
+    "@/src/server/execution/execution-approval-service"
+  ) as ApprovalModule;
 });
 
 afterEach(() => {
@@ -681,6 +698,100 @@ describe("client-driven execution advance orchestration", () => {
     `).get(operationId(33))).toEqual({ kind: "stage_compute", status: "failed" });
     expect(database.prepare("SELECT count(*) AS count FROM execution_staged_results").get())
       .toEqual({ count: 0 });
+  });
+
+  it("binds a production one-shot request to the current manifest through approve and advance", async () => {
+    const markerPath = join(directory, "production-one-shot.txt");
+    const commandOperationId = operationId(41);
+    database.prepare(`
+      UPDATE execution_attempts SET sandbox_root=? WHERE execution_id=?
+    `).run(directory, EXECUTION_ID);
+    vi.stubGlobal("fetch", vi.fn().mockResolvedValueOnce(providerResponse({
+      args: [
+        "-e",
+        `require("node:fs").appendFileSync(${JSON.stringify(markerPath)}, "spawned\\n")`,
+      ],
+      executable: process.execPath,
+      expectedEffect: "Record one production one-shot spawn.",
+      type: "command",
+      workdir: ".",
+    })));
+
+    await advance.advanceExecution(
+      databasePath,
+      EXECUTION_ID,
+      { expectedVersion: 1, operationId: operationId(40) },
+      { fileAdapter: adapter },
+    );
+    const requestVersion = Number((database.prepare(
+      "SELECT version FROM executions WHERE id=?",
+    ).get(EXECUTION_ID) as { version: number }).version);
+    const [requested, replayedRequest] = await Promise.all([
+      advance.advanceExecution(
+        databasePath,
+        EXECUTION_ID,
+        { expectedVersion: requestVersion, operationId: commandOperationId },
+        { fileAdapter: adapter },
+      ),
+      advance.advanceExecution(
+        databasePath,
+        EXECUTION_ID,
+        { expectedVersion: requestVersion, operationId: commandOperationId },
+        { fileAdapter: adapter },
+      ),
+    ]);
+    expect(requested.status).toBe(200);
+    expect(replayedRequest).toEqual(requested);
+    const approval = database.prepare(`
+      SELECT approval.id,approval.input_hash AS inputHash,
+             approval.request_hash AS requestHash,
+             tool.before_sandbox_hash AS beforeHash,
+             attempt.sandbox_manifest_hash AS manifestHash
+      FROM execution_approvals approval
+      JOIN execution_tool_calls tool ON tool.id=approval.tool_call_id
+      JOIN execution_attempts attempt ON attempt.id=approval.attempt_id
+      WHERE approval.execution_id=?
+    `).get(EXECUTION_ID) as {
+      beforeHash: string;
+      id: string;
+      inputHash: string;
+      manifestHash: string;
+      requestHash: string;
+    };
+
+    await approvals.decideExecutionApproval(
+      databasePath,
+      EXECUTION_ID,
+      approval.id,
+      {
+        action: "approve",
+        expectedVersion: requestVersion + 1,
+        operationId: operationId(42),
+      },
+    );
+    const executeOperationId = operationId(43);
+    const executed = await advance.advanceExecution(
+      databasePath,
+      EXECUTION_ID,
+      { expectedVersion: requestVersion + 2, operationId: executeOperationId },
+      { fileAdapter: adapter },
+    );
+
+    expect(executed.status).toBe(200);
+    expect(approval.inputHash).toBe(approval.manifestHash);
+    expect(approval.beforeHash).toBe(approval.manifestHash);
+    expect(approval.requestHash).not.toBe(approval.manifestHash);
+    expect(database.prepare(`
+      SELECT count(*) AS count FROM execution_actions
+      WHERE operation_id=? AND kind='command'
+    `).get(executeOperationId)).toEqual({ count: 1 });
+    await expect(advance.advanceExecution(
+      databasePath,
+      EXECUTION_ID,
+      { expectedVersion: requestVersion + 2, operationId: executeOperationId },
+      { fileAdapter: adapter },
+    )).resolves.toEqual(executed);
+    expect(readFileSync(markerPath, "utf8")).toBe("spawned\n");
   });
 
   it("discards a provider result that arrives after execution control invalidates its lease", async () => {
