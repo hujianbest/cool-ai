@@ -1,0 +1,18 @@
+# hf-gate-run
+# label: t35-regression
+# command: cmd.exe /d /s /c npm.cmd test -- tests/windows-native-loader.test.ts tests/windows-native-read-adapter.test.ts && npx.cmd tsc --noEmit
+# started: 2026-07-31T16:49:18+00:00
+
+> collaboration-cockpit@0.1.0 test
+> vitest run tests/windows-native-loader.test.ts tests/windows-native-read-adapter.test.ts
+
+
+ RUN  v4.1.10 D:/cool-ai
+
+
+ Test Files  2 passed (2)
+      Tests  10 passed (10)
+   Start at  00:49:19
+   Duration  2.73s (transform 204ms, setup 877ms, import 105ms, tests 181ms, environment 3.68s)
+
+# exit: 0
