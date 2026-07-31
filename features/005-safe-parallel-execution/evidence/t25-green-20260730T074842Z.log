@@ -1,0 +1,160 @@
+# hf-gate-run
+# label: t25-green
+# command: cmd /c npm test -- tests/execution-approvals.test.ts
+# started: 2026-07-30T07:48:42+00:00
+
+> collaboration-cockpit@0.1.0 test
+> vitest run tests/execution-approvals.test.ts
+
+
+ RUN  v4.1.10 D:/cool-ai
+
+(node:17168) ExperimentalWarning: SQLite is an experimental feature and might change at any time
+(Use `node --trace-warnings ...` to show where the warning was created)
+ ❯ tests/execution-approvals.test.ts (12 tests | 11 failed) 3708ms
+     × approves an exact command once and atomically consumes it into one command action 486ms
+     × reject permanently invalidates the request and pauses for exact running resume 281ms
+     × replace permanently invalidates the request and pauses for exact running resume 291ms
+     × revokes an approved request before consumption and cannot revoke consumed authorization 282ms
+     × persists same-operation success/failure receipts and rejects different input or stale versions 286ms
+     × expires and denies approval after execution attempt changes 290ms
+     × expires and denies approval after attempt context changes 296ms
+     × expires and denies approval after sandbox input changes 296ms
+     × expires and denies approval after command tuple changes 295ms
+     × creates a distinct exact staged approval and denies tamper, conflict, stale, and terminal use 306ms
+     × exposes the owner-only mutation route with strict input 322ms
+
+⎯⎯⎯⎯⎯⎯ Failed Tests 11 ⎯⎯⎯⎯⎯⎯⎯
+
+ FAIL  tests/execution-approvals.test.ts > execution approvals > approves an exact command once and atomically consumes it into one command action
+SchemaMigrationError: Database version 5 schema is invalid.
+ ❯ migrateDatabase src/server/migrations.ts:1342:13
+    1340|     const validation = validateV5(database);
+    1341|     if (validation) {
+    1342|       throw new SchemaMigrationError(validation, "Database version 5 s…
+       |             ^
+    1343|     }
+    1344|   }
+ ❯ openDatabase src/server/db.ts:14:5
+ ❯ Module.decideExecutionApproval src/server/execution/execution-approval-service.ts:362:20
+ ❯ decide tests/execution-approvals.test.ts:209:20
+ ❯ tests/execution-approvals.test.ts:239:28
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[1/11]⎯
+
+ FAIL  tests/execution-approvals.test.ts > execution approvals > reject permanently invalidates the request and pauses for exact running resume
+ FAIL  tests/execution-approvals.test.ts > execution approvals > replace permanently invalidates the request and pauses for exact running resume
+SchemaMigrationError: Database version 5 schema is invalid.
+ ❯ migrateDatabase src/server/migrations.ts:1342:13
+    1340|     const validation = validateV5(database);
+    1341|     if (validation) {
+    1342|       throw new SchemaMigrationError(validation, "Database version 5 s…
+       |             ^
+    1343|     }
+    1344|   }
+ ❯ openDatabase src/server/db.ts:14:5
+ ❯ Module.decideExecutionApproval src/server/execution/execution-approval-service.ts:362:20
+ ❯ decide tests/execution-approvals.test.ts:209:20
+ ❯ tests/execution-approvals.test.ts:292:26
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[2/11]⎯
+
+ FAIL  tests/execution-approvals.test.ts > execution approvals > revokes an approved request before consumption and cannot revoke consumed authorization
+SchemaMigrationError: Database version 5 schema is invalid.
+ ❯ migrateDatabase src/server/migrations.ts:1342:13
+    1340|     const validation = validateV5(database);
+    1341|     if (validation) {
+    1342|       throw new SchemaMigrationError(validation, "Database version 5 s…
+       |             ^
+    1343|     }
+    1344|   }
+ ❯ openDatabase src/server/db.ts:14:5
+ ❯ Module.decideExecutionApproval src/server/execution/execution-approval-service.ts:362:20
+ ❯ decide tests/execution-approvals.test.ts:209:20
+ ❯ tests/execution-approvals.test.ts:308:11
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[3/11]⎯
+
+ FAIL  tests/execution-approvals.test.ts > execution approvals > persists same-operation success/failure receipts and rejects different input or stale versions
+SchemaMigrationError: Database version 5 schema is invalid.
+ ❯ migrateDatabase src/server/migrations.ts:1342:13
+    1340|     const validation = validateV5(database);
+    1341|     if (validation) {
+    1342|       throw new SchemaMigrationError(validation, "Database version 5 s…
+       |             ^
+    1343|     }
+    1344|   }
+ ❯ openDatabase src/server/db.ts:14:5
+ ❯ Module.decideExecutionApproval src/server/execution/execution-approval-service.ts:362:20
+ ❯ decide tests/execution-approvals.test.ts:209:20
+ ❯ tests/execution-approvals.test.ts:330:25
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[4/11]⎯
+
+ FAIL  tests/execution-approvals.test.ts > execution approvals > expires and denies approval after execution attempt changes
+ FAIL  tests/execution-approvals.test.ts > execution approvals > expires and denies approval after attempt context changes
+ FAIL  tests/execution-approvals.test.ts > execution approvals > expires and denies approval after sandbox input changes
+ FAIL  tests/execution-approvals.test.ts > execution approvals > expires and denies approval after command tuple changes
+AssertionError: expected SchemaMigrationError: Database version 5 … { code: '…' } to match object { code: 'APPROVAL_STALE' }
+(1 matching property omitted from actual)
+
+- Expected
++ Received
+
+- {
+-   "code": "APPROVAL_STALE",
++ SchemaMigrationError {
++   "code": "SCHEMA_DATA_INVALID",
+  }
+
+ ❯ tests/execution-approvals.test.ts:367:36
+    365|   ])("expires and denies approval after %s changes", async (_label, ta…
+    366|     tamper();
+    367|     await expect(decide("approve")).rejects.toMatchObject({ code: "APP…
+       |                                    ^
+    368|     expect(row("execution_approvals", "id=?", APPROVAL_ID).status).toB…
+    369|   });
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[5/11]⎯
+
+ FAIL  tests/execution-approvals.test.ts > execution approvals > creates a distinct exact staged approval and denies tamper, conflict, stale, and terminal use
+SchemaMigrationError: Database version 5 schema is invalid.
+ ❯ migrateDatabase src/server/migrations.ts:1342:13
+    1340|     const validation = validateV5(database);
+    1341|     if (validation) {
+    1342|       throw new SchemaMigrationError(validation, "Database version 5 s…
+       |             ^
+    1343|     }
+    1344|   }
+ ❯ openDatabase src/server/db.ts:14:5
+ ❯ Module.decideExecutionApproval src/server/execution/execution-approval-service.ts:362:20
+ ❯ tests/execution-approvals.test.ts:430:36
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[6/11]⎯
+
+ FAIL  tests/execution-approvals.test.ts > execution approvals > exposes the owner-only mutation route with strict input
+AssertionError: expected 503 to be 200 // Object.is equality
+
+- Expected
++ Received
+
+- 200
++ 503
+
+ ❯ tests/execution-approvals.test.ts:473:29
+    471|       { params: Promise.resolve({ approvalId: APPROVAL_ID, executionId…
+    472|     );
+    473|     expect(response.status).toBe(200);
+       |                             ^
+    474|     expect(await response.json()).toMatchObject({
+    475|       approval: { status: "approved" },
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[7/11]⎯
+
+
+ Test Files  1 failed (1)
+      Tests  11 failed | 1 passed (12)
+   Start at  15:48:43
+   Duration  5.84s (transform 262ms, setup 336ms, import 114ms, tests 3.71s, environment 1.42s)
+
+# exit: 1

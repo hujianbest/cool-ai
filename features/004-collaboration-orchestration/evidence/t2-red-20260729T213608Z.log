@@ -1,0 +1,216 @@
+# hf-gate-run
+# label: t2-red
+# command: cmd /c npm test -- tests/migrations-v4.test.ts
+# started: 2026-07-29T21:36:08+00:00
+
+> collaboration-cockpit@0.1.0 test
+> vitest run tests/migrations-v4.test.ts
+
+
+ RUN  v4.1.10 D:/cool-ai
+
+(node:8936) ExperimentalWarning: SQLite is an experimental feature and might change at any time
+(Use `node --trace-warnings ...` to show where the warning was created)
+ ❯ tests/migrations-v4.test.ts (13 tests | 8 failed) 1870ms
+     × migrates only a complete v3 schema 418ms
+     × rejects 'column drift' in v4 without repair 83ms
+     × rejects 'foreign-key drift' in v4 without repair 99ms
+     × rejects 'CHECK drift' in v4 without repair 92ms
+     × rejects 'active-run partial unique index drift' in v4 without repair 94ms
+     × rejects 'calling-attempt partial unique index …' in v4 without repair 96ms
+     × rejects 'open-decision partial unique index dr…' in v4 without repair 84ms
+     × rejects 'project-message unique index drift' in v4 without repair 91ms
+
+⎯⎯⎯⎯⎯⎯⎯ Failed Tests 8 ⎯⎯⎯⎯⎯⎯⎯
+
+ FAIL  tests/migrations-v4.test.ts > SQLite v4 collaboration migration > migrates only a complete v3 schema
+AssertionError: expected undefined to deeply equal ObjectContaining{…}
+
+- Expected:
+ObjectContaining {
+  "code": "SCHEMA_DRIFT",
+  "message": StringNotContaining "C:\\Users\\ADMINI~1\\AppData\\Local\\Temp\\2\\cockpit-v4-migration-96FaSN\\cockpit.sqlite",
+}
+
++ Received:
+undefined
+
+ ❯ expectSchemaDrift tests/migrations-v4.test.ts:178:17
+    176|     database?.close();
+    177|   }
+    178|   expect(error).toEqual(
+       |                 ^
+    179|     expect.objectContaining({ code: "SCHEMA_DRIFT", message: expect.no…
+    180|   );
+ ❯ tests/migrations-v4.test.ts:213:5
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[1/8]⎯
+
+ FAIL  tests/migrations-v4.test.ts > SQLite v4 collaboration migration > rejects 'column drift' in v4 without repair
+AssertionError: expected undefined to deeply equal ObjectContaining{…}
+
+- Expected:
+ObjectContaining {
+  "code": "SCHEMA_DRIFT",
+  "message": StringNotContaining "C:\\Users\\ADMINI~1\\AppData\\Local\\Temp\\2\\cockpit-v4-migration-HkwLDq\\cockpit.sqlite",
+}
+
++ Received:
+undefined
+
+ ❯ expectSchemaDrift tests/migrations-v4.test.ts:178:17
+    176|     database?.close();
+    177|   }
+    178|   expect(error).toEqual(
+       |                 ^
+    179|     expect.objectContaining({ code: "SCHEMA_DRIFT", message: expect.no…
+    180|   );
+ ❯ tests/migrations-v4.test.ts:455:5
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[2/8]⎯
+
+ FAIL  tests/migrations-v4.test.ts > SQLite v4 collaboration migration > rejects 'foreign-key drift' in v4 without repair
+AssertionError: expected undefined to deeply equal ObjectContaining{…}
+
+- Expected:
+ObjectContaining {
+  "code": "SCHEMA_DRIFT",
+  "message": StringNotContaining "C:\\Users\\ADMINI~1\\AppData\\Local\\Temp\\2\\cockpit-v4-migration-NgTmoI\\cockpit.sqlite",
+}
+
++ Received:
+undefined
+
+ ❯ expectSchemaDrift tests/migrations-v4.test.ts:178:17
+    176|     database?.close();
+    177|   }
+    178|   expect(error).toEqual(
+       |                 ^
+    179|     expect.objectContaining({ code: "SCHEMA_DRIFT", message: expect.no…
+    180|   );
+ ❯ tests/migrations-v4.test.ts:455:5
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[3/8]⎯
+
+ FAIL  tests/migrations-v4.test.ts > SQLite v4 collaboration migration > rejects 'CHECK drift' in v4 without repair
+AssertionError: expected undefined to deeply equal ObjectContaining{…}
+
+- Expected:
+ObjectContaining {
+  "code": "SCHEMA_DRIFT",
+  "message": StringNotContaining "C:\\Users\\ADMINI~1\\AppData\\Local\\Temp\\2\\cockpit-v4-migration-iUS3OU\\cockpit.sqlite",
+}
+
++ Received:
+undefined
+
+ ❯ expectSchemaDrift tests/migrations-v4.test.ts:178:17
+    176|     database?.close();
+    177|   }
+    178|   expect(error).toEqual(
+       |                 ^
+    179|     expect.objectContaining({ code: "SCHEMA_DRIFT", message: expect.no…
+    180|   );
+ ❯ tests/migrations-v4.test.ts:455:5
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[4/8]⎯
+
+ FAIL  tests/migrations-v4.test.ts > SQLite v4 collaboration migration > rejects 'active-run partial unique index drift' in v4 without repair
+AssertionError: expected undefined to deeply equal ObjectContaining{…}
+
+- Expected:
+ObjectContaining {
+  "code": "SCHEMA_DRIFT",
+  "message": StringNotContaining "C:\\Users\\ADMINI~1\\AppData\\Local\\Temp\\2\\cockpit-v4-migration-IqEqlf\\cockpit.sqlite",
+}
+
++ Received:
+undefined
+
+ ❯ expectSchemaDrift tests/migrations-v4.test.ts:178:17
+    176|     database?.close();
+    177|   }
+    178|   expect(error).toEqual(
+       |                 ^
+    179|     expect.objectContaining({ code: "SCHEMA_DRIFT", message: expect.no…
+    180|   );
+ ❯ tests/migrations-v4.test.ts:455:5
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[5/8]⎯
+
+ FAIL  tests/migrations-v4.test.ts > SQLite v4 collaboration migration > rejects 'calling-attempt partial unique index …' in v4 without repair
+AssertionError: expected undefined to deeply equal ObjectContaining{…}
+
+- Expected:
+ObjectContaining {
+  "code": "SCHEMA_DRIFT",
+  "message": StringNotContaining "C:\\Users\\ADMINI~1\\AppData\\Local\\Temp\\2\\cockpit-v4-migration-UM25Bc\\cockpit.sqlite",
+}
+
++ Received:
+undefined
+
+ ❯ expectSchemaDrift tests/migrations-v4.test.ts:178:17
+    176|     database?.close();
+    177|   }
+    178|   expect(error).toEqual(
+       |                 ^
+    179|     expect.objectContaining({ code: "SCHEMA_DRIFT", message: expect.no…
+    180|   );
+ ❯ tests/migrations-v4.test.ts:455:5
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[6/8]⎯
+
+ FAIL  tests/migrations-v4.test.ts > SQLite v4 collaboration migration > rejects 'open-decision partial unique index dr…' in v4 without repair
+AssertionError: expected undefined to deeply equal ObjectContaining{…}
+
+- Expected:
+ObjectContaining {
+  "code": "SCHEMA_DRIFT",
+  "message": StringNotContaining "C:\\Users\\ADMINI~1\\AppData\\Local\\Temp\\2\\cockpit-v4-migration-PHsf6K\\cockpit.sqlite",
+}
+
++ Received:
+undefined
+
+ ❯ expectSchemaDrift tests/migrations-v4.test.ts:178:17
+    176|     database?.close();
+    177|   }
+    178|   expect(error).toEqual(
+       |                 ^
+    179|     expect.objectContaining({ code: "SCHEMA_DRIFT", message: expect.no…
+    180|   );
+ ❯ tests/migrations-v4.test.ts:455:5
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[7/8]⎯
+
+ FAIL  tests/migrations-v4.test.ts > SQLite v4 collaboration migration > rejects 'project-message unique index drift' in v4 without repair
+AssertionError: expected undefined to deeply equal ObjectContaining{…}
+
+- Expected:
+ObjectContaining {
+  "code": "SCHEMA_DRIFT",
+  "message": StringNotContaining "C:\\Users\\ADMINI~1\\AppData\\Local\\Temp\\2\\cockpit-v4-migration-vD6nvO\\cockpit.sqlite",
+}
+
++ Received:
+undefined
+
+ ❯ expectSchemaDrift tests/migrations-v4.test.ts:178:17
+    176|     database?.close();
+    177|   }
+    178|   expect(error).toEqual(
+       |                 ^
+    179|     expect.objectContaining({ code: "SCHEMA_DRIFT", message: expect.no…
+    180|   );
+ ❯ tests/migrations-v4.test.ts:455:5
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[8/8]⎯
+
+
+ Test Files  1 failed (1)
+      Tests  8 failed | 5 passed (13)
+   Start at  05:36:09
+   Duration  4.00s (transform 78ms, setup 336ms, import 65ms, tests 1.87s, environment 1.46s)
+
+# exit: 1

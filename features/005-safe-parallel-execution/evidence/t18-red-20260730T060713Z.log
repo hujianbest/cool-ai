@@ -1,0 +1,42 @@
+# hf-gate-run
+# label: t18-red
+# command: cmd /c npm test -- tests/execution-stale-context.test.ts
+# started: 2026-07-30T06:07:13+00:00
+
+> collaboration-cockpit@0.1.0 test
+> vitest run tests/execution-stale-context.test.ts
+
+
+ RUN  v4.1.10 D:/cool-ai
+
+(node:11156) ExperimentalWarning: SQLite is an experimental feature and might change at any time
+(Use `node --trace-warnings ...` to show where the warning was created)
+ ❯ tests/execution-stale-context.test.ts (1 test | 1 failed) 682ms
+     × atomically stales before a model action when task input changes 680ms
+
+⎯⎯⎯⎯⎯⎯⎯ Failed Tests 1 ⎯⎯⎯⎯⎯⎯⎯
+
+ FAIL  tests/execution-stale-context.test.ts > execution frozen-input staleness > atomically stales before a model action when task input changes
+TypeError: Cannot read properties of undefined (reading 'status')
+ ❯ callOpenAiChat src/server/collaboration/openai-chat-client.ts:239:18
+    237|         context,
+    238|         "provider_failed",
+    239|         response.status,
+       |                  ^
+    240|       );
+    241|     }
+ ❯ executeCall src/server/execution/execution-structured-repair.ts:217:18
+ ❯ executeStructuredExecutionAction src/server/execution/execution-structured-repair.ts:327:21
+ ❯ runModel src/server/execution/action-orchestrator.ts:439:18
+ ❯ Module.advanceExecution src/server/execution/action-orchestrator.ts:826:14
+ ❯ tests/execution-stale-context.test.ts:204:20
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[1/1]⎯
+
+
+ Test Files  1 failed (1)
+      Tests  1 failed (1)
+   Start at  14:07:14
+   Duration  2.80s (transform 309ms, setup 338ms, import 113ms, tests 682ms, environment 1.41s)
+
+# exit: 1

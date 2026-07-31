@@ -1,0 +1,59 @@
+# hf-gate-run
+# label: review-build
+# command: cmd /c npm run build
+# started: 2026-07-29T15:52:08+00:00
+
+> collaboration-cockpit@0.1.0 build
+> next build --webpack
+
+⚠ Attempted to load @next/swc-win32-x64-msvc, but an error occurred: \\?\D:\cool-ai\node_modules\@next\swc-win32-x64-msvc\next-swc.win32-x64-msvc.node is not a valid Win32 application.
+\\?\D:\cool-ai\node_modules\@next\swc-win32-x64-msvc\next-swc.win32-x64-msvc.node
+  Skipping creating a lockfile at D:\cool-ai\.next\lock because we're using WASM bindings
+▲ Next.js 16.2.12 (webpack)
+
+  Creating an optimized production build ...
+⚠ Attempted to load @next/swc-win32-x64-msvc, but an error occurred: \\?\D:\cool-ai\node_modules\@next\swc-win32-x64-msvc\next-swc.win32-x64-msvc.node is not a valid Win32 application.
+\\?\D:\cool-ai\node_modules\@next\swc-win32-x64-msvc\next-swc.win32-x64-msvc.node
+⚠ Attempted to load @next/swc-win32-x64-msvc, but an error occurred: \\?\D:\cool-ai\node_modules\@next\swc-win32-x64-msvc\next-swc.win32-x64-msvc.node is not a valid Win32 application.
+\\?\D:\cool-ai\node_modules\@next\swc-win32-x64-msvc\next-swc.win32-x64-msvc.node
+⚠ Attempted to load @next/swc-win32-x64-msvc, but an error occurred: \\?\D:\cool-ai\node_modules\@next\swc-win32-x64-msvc\next-swc.win32-x64-msvc.node is not a valid Win32 application.
+\\?\D:\cool-ai\node_modules\@next\swc-win32-x64-msvc\next-swc.win32-x64-msvc.node
+✓ Compiled successfully in 1927ms
+  Running TypeScript ...
+⚠ Attempted to load @next/swc-win32-x64-msvc, but an error occurred: \\?\D:\cool-ai\node_modules\@next\swc-win32-x64-msvc\next-swc.win32-x64-msvc.node is not a valid Win32 application.
+\\?\D:\cool-ai\node_modules\@next\swc-win32-x64-msvc\next-swc.win32-x64-msvc.node
+  Finished TypeScript in 3.3s ...
+  Collecting page data using 7 workers ...
+(node:10268) ExperimentalWarning: SQLite is an experimental feature and might change at any time
+(Use `node --trace-warnings ...` to show where the warning was created)
+(node:9996) ExperimentalWarning: SQLite is an experimental feature and might change at any time
+(Use `node --trace-warnings ...` to show where the warning was created)
+(node:7300) ExperimentalWarning: SQLite is an experimental feature and might change at any time
+(Use `node --trace-warnings ...` to show where the warning was created)
+(node:10252) ExperimentalWarning: SQLite is an experimental feature and might change at any time
+(Use `node --trace-warnings ...` to show where the warning was created)
+  Generating static pages using 7 workers (0/4) ...
+⚠ Attempted to load @next/swc-win32-x64-msvc, but an error occurred: \\?\D:\cool-ai\node_modules\@next\swc-win32-x64-msvc\next-swc.win32-x64-msvc.node is not a valid Win32 application.
+\\?\D:\cool-ai\node_modules\@next\swc-win32-x64-msvc\next-swc.win32-x64-msvc.node
+(node:7876) ExperimentalWarning: SQLite is an experimental feature and might change at any time
+(Use `node --trace-warnings ...` to show where the warning was created)
+  Generating static pages using 7 workers (1/4) 
+  Generating static pages using 7 workers (2/4) 
+  Generating static pages using 7 workers (3/4) 
+✓ Generating static pages using 7 workers (4/4) in 282ms
+  Finalizing page optimization ...
+  Collecting build traces ...
+
+Route (app)
+┌ ○ /
+├ ○ /_not-found
+├ ƒ /api/projects
+├ ƒ /api/projects/[projectId]/tasks
+├ ƒ /api/tasks/[taskId]/execute
+└ ƒ /api/tasks/[taskId]/start
+
+
+○  (Static)   prerendered as static content
+ƒ  (Dynamic)  server-rendered on demand
+
+# exit: 0

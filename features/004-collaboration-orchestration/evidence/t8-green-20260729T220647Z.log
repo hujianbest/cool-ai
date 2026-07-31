@@ -1,0 +1,39 @@
+# hf-gate-run
+# label: t8-green
+# command: cmd /c npm test -- tests/agent-turn-schema.test.ts tests/structured-repair.test.ts
+# started: 2026-07-29T22:06:47+00:00
+
+> collaboration-cockpit@0.1.0 test
+> vitest run tests/agent-turn-schema.test.ts tests/structured-repair.test.ts
+
+
+ RUN  v4.1.10 D:/cool-ai
+
+ ❯ tests/structured-repair.test.ts (4 tests | 1 failed) 156ms
+     × makes exactly one repair after an invalid primary and exposes both results and usage 11ms
+
+⎯⎯⎯⎯⎯⎯⎯ Failed Tests 1 ⎯⎯⎯⎯⎯⎯⎯
+
+ FAIL  tests/structured-repair.test.ts > structured output repair > makes exactly one repair after an invalid primary and exposes both results and usage
+AssertionError: expected '[{"role":"system","content":"Return o…' to contain '{"message":"invalid primary","project…'
+
+Expected: "{"message":"invalid primary","projectLeak":"no"}"
+Received: "[{"role":"system","content":"Return one strict JSON object and no surrounding prose.\nTop level: {\"message\":string(1..20000 graphemes),\"tasks\":ProposedTask[0..20],\"claim\":null|ExistingClaim|ProposedClaim,\"disposition\":Disposition}.\nProposedTask: {\"clientKey\":string(1..64, /^[A-Za-z0-9_-]+$/),\"title\":string(1..160 graphemes),\"description\":string(0..5000 graphemes),\"dependsOnKeys\":clientKey[0..20]}.\nExistingClaim: {\"source\":\"existing\",\"workItemId\":non-empty string}.\nProposedClaim: {\"source\":\"proposed\",\"clientKey\":clientKey}.\nDisposition is exactly one of {\"type\":\"handoff\",\"targetAgentId\":non-empty string,\"summary\":string(1..5000 graphemes),\"reason\":string(1..5000 graphemes)}, {\"type\":\"decision_request\",\"question\":string(1..1000 graphemes),\"options\":unique trimmed string[2..8], each 1..500 graphemes}, or {\"type\":\"plan_ready\"}.\nFor decision_request, tasks must be [] and claim must be null.\nUnknown keys are forbidden at every object level."},{"role":"user","content":"The following response was invalid.\nRewrite only this content to satisfy the schema exactly:\n{\"message\":\"invalid primary\",\"projectLeak\":\"no\"}"}]"
+
+ ❯ tests/structured-repair.test.ts:135:36
+    133|     expect(repairRequest.messages).toHaveLength(2);
+    134|     const serializedRepairPrompt = JSON.stringify(repairRequest.messag…
+    135|     expect(serializedRepairPrompt).toContain(invalidContent);
+       |                                    ^
+    136|     expect(serializedRepairPrompt).toMatch(/strict|schema|JSON/i);
+    137|     expect(serializedRepairPrompt).toMatch(/message/);
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[1/1]⎯
+
+
+ Test Files  1 failed | 1 passed (2)
+      Tests  1 failed | 9 passed (10)
+   Start at  06:06:49
+   Duration  2.35s (transform 140ms, setup 746ms, import 92ms, tests 351ms, environment 2.96s)
+
+# exit: 1

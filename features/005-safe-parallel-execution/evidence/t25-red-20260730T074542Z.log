@@ -1,0 +1,42 @@
+# hf-gate-run
+# label: t25-red
+# command: cmd /c npm test -- tests/execution-approvals.test.ts
+# started: 2026-07-30T07:45:42+00:00
+
+> collaboration-cockpit@0.1.0 test
+> vitest run tests/execution-approvals.test.ts
+
+
+ RUN  v4.1.10 D:/cool-ai
+
+ ❯ tests/execution-approvals.test.ts (0 test)
+
+⎯⎯⎯⎯⎯⎯ Failed Suites 1 ⎯⎯⎯⎯⎯⎯⎯
+
+ FAIL  tests/execution-approvals.test.ts [ tests/execution-approvals.test.ts ]
+Error: Failed to resolve import "@/app/api/executions/[executionId]/approvals/[approvalId]/route" from "tests/execution-approvals.test.ts". Does the file exist?
+  Plugin: vite:import-analysis
+  File: D:/cool-ai/tests/execution-approvals.test.ts:459:6
+  374 |  	it("exposes the owner-only mutation route with strict input", async () => {
+  375 |  		vi.stubEnv("COCKPIT_DB_PATH", databasePath);
+  376 |  		const route = await import("@/app/api/executions/[executionId]/approvals/[approvalId]/route");
+      |                               ^
+  377 |  		const response = await route.POST(new Request("http://localhost/api/executions/x/approvals/y", {
+  378 |  			body: JSON.stringify({
+ ❯ TransformPluginContext._formatLog node_modules/vite/dist/node/chunks/node.js:30416:39
+ ❯ TransformPluginContext.error node_modules/vite/dist/node/chunks/node.js:30413:14
+ ❯ normalizeUrl node_modules/vite/dist/node/chunks/node.js:27438:18
+ ❯ node_modules/vite/dist/node/chunks/node.js:27506:30
+ ❯ TransformPluginContext.transform node_modules/vite/dist/node/chunks/node.js:27474:4
+ ❯ EnvironmentPluginContainer.transform node_modules/vite/dist/node/chunks/node.js:30201:14
+ ❯ loadAndTransform node_modules/vite/dist/node/chunks/node.js:20124:26
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[1/1]⎯
+
+
+ Test Files  1 failed (1)
+      Tests  no tests
+   Start at  15:45:44
+   Duration  2.10s (transform 26ms, setup 334ms, import 0ms, tests 0ms, environment 1.42s)
+
+# exit: 1

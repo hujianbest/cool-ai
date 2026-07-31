@@ -1,0 +1,972 @@
+# hf-gate-run
+# label: t11-green
+# command: cmd /c npm test -- tests/memory-panel.test.tsx tests/context-preview.test.tsx tests/context-accessibility.test.tsx
+# started: 2026-07-29T19:46:22+00:00
+
+> collaboration-cockpit@0.1.0 test
+> vitest run tests/memory-panel.test.tsx tests/context-preview.test.tsx tests/context-accessibility.test.tsx
+
+
+ RUN  v4.1.10 D:/cool-ai
+
+ ❯ tests/context-preview.test.tsx (2 tests | 1 failed) 248ms
+     × renders readable shared/current sections, structured details and member-identical shared visibility 37ms
+ ❯ tests/context-accessibility.test.tsx (2 tests | 1 failed) 337ms
+     × integrates tabs in the single narrow context modal without exposing background interaction 112ms
+ ❯ tests/memory-panel.test.tsx (2 tests | 1 failed) 1276ms
+     × creates sourced memory, labels artifact references, supersedes active entries and displays history 1013ms
+
+⎯⎯⎯⎯⎯⎯⎯ Failed Tests 3 ⎯⎯⎯⎯⎯⎯⎯
+
+ FAIL  tests/context-accessibility.test.tsx > context navigation accessibility > integrates tabs in the single narrow context modal without exposing background interaction
+AssertionError: expected '* {\r\n  box-sizing: border-box;\r\n}…' to match /\.project-context-tabs\s*\{[^}]*gap:…/s
+
+- Expected:
+/\.project-context-tabs\s*\{[^}]*gap:\s*var\(--space-2\)/s
+
++ Received:
+"* {
+  box-sizing: border-box;
+}
+
+body {
+  margin: 0;
+  overflow-x: hidden;
+  background: var(--canvas);
+  color: var(--text);
+  font: var(--text-md) var(--font-sans);
+}
+
+[hidden] {
+  display: none !important;
+}
+
+.sr-only {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  overflow: hidden;
+  clip-path: inset(50%);
+  white-space: nowrap;
+}
+
+button,
+input,
+select,
+textarea {
+  min-height: var(--control-min);
+  border: none;
+  border-radius: var(--radius-sm);
+  padding: var(--space-2) var(--space-3);
+  background: var(--surface);
+  color: var(--text);
+  font: inherit;
+}
+
+button {
+  cursor: pointer;
+}
+
+button:hover {
+  background: var(--surface-muted);
+}
+
+button:disabled,
+input:disabled,
+select:disabled,
+textarea:disabled {
+  background: var(--surface-muted);
+  color: var(--text-muted);
+  cursor: not-allowed;
+}
+
+button:focus-visible,
+input:focus-visible,
+select:focus-visible,
+textarea:focus-visible,
+a:focus-visible {
+  outline: none;
+  box-shadow: var(--focus-ring);
+}
+
+textarea {
+  min-height: calc(var(--control-min) * 2);
+  resize: vertical;
+}
+
+a {
+  color: var(--text);
+}
+
+code {
+  overflow-wrap: anywhere;
+  font-family: var(--font-mono);
+}
+
+h1,
+h2,
+h3,
+p {
+  margin: 0;
+}
+
+h1 {
+  font: var(--text-xl) var(--font-sans);
+}
+
+h2 {
+  font: var(--text-lg) var(--font-sans);
+}
+
+h3 {
+  font: var(--text-md) var(--font-sans);
+}
+
+ul,
+ol {
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.collaboration-cockpit {
+  display: grid;
+  grid-template-columns: var(--sidebar-width) minmax(var(--content-min), 1fr) var(--context-width);
+  background: var(--canvas);
+}
+
+.mobile-toolbar,
+.drawer-close {
+  display: none;
+}
+
+.cockpit-sidebar,
+.cockpit-context {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-6);
+  padding: var(--space-6);
+  background: var(--surface);
+  box-shadow: var(--shadow-panel);
+}
+
+.modal-surface {
+  display: flex;
+  position: fixed;
+  z-index: 5;
+  inset: var(--space-6);
+  flex-direction: column;
+  gap: var(--space-4);
+  overflow-y: auto;
+  border-radius: var(--radius-md);
+  padding: var(--space-6);
+  background: var(--surface);
+  box-shadow: var(--shadow-panel);
+}
+
+.cockpit-flow {
+  display: flex;
+  min-width: var(--content-min);
+  flex-direction: column;
+  gap: var(--space-6);
+  padding: var(--space-8);
+}
+
+.mission-board,
+.mission-status,
+.task-summary {
+  min-width: 0;
+}
+
+.mission-board-grid {
+  display: grid;
+  min-width: 0;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  gap: var(--space-3);
+}
+
+.mission-summary,
+.mission-form,
+.work-item-form,
+.mission-status {
+  border-radius: var(--radius-md);
+  padding: var(--space-4);
+  background: var(--surface);
+  box-shadow: var(--shadow-panel);
+}
+
+.mission-status h4,
+.mission-status p {
+  overflow-wrap: anywhere;
+}
+
+.product-identity,
+.agent-identity,
+.panel-heading,
+.event-row,
+.context-status {
+  display: flex;
+  align-items: center;
+  gap: var(--space-3);
+}
+
+.product-mark,
+.agent-mark {
+  display: grid;
+  min-height: var(--control-min);
+  min-width: var(--control-min);
+  place-items: center;
+  border-radius: var(--radius-md);
+  background: var(--accent);
+  color: var(--surface);
+}
+
+.agent-mark {
+  background: var(--agent-warm);
+}
+
+.eyebrow,
+.muted,
+.context-label {
+  color: var(--text-muted);
+  font: var(--text-sm) var(--font-sans);
+}
+
+.stack,
+.project-list,
+.resource-tabs,
+.timeline,
+.task-summary,
+.context-body {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-3);
+}
+
+.resource-tabs {
+  display: flex;
+}
+
+.project-context-tabs,
+.memory-type-options {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--space-2);
+}
+
+.project-context-tabs button[aria-selected=\"true\"] {
+  background: var(--accent);
+  color: var(--surface);
+}
+
+.context-preview-section,
+.memory-form {
+  min-width: 0;
+  border-radius: var(--radius-md);
+  padding: var(--space-4);
+  background: var(--surface-muted);
+}
+
+.structured-snapshot {
+  max-width: 100%;
+  overflow: auto;
+  border-radius: var(--radius-sm);
+  padding: var(--space-3);
+  background: var(--surface-muted);
+  font-family: var(--font-mono);
+  white-space: pre-wrap;
+  overflow-wrap: anywhere;
+}
+
+.resource-tabs button[aria-selected=\"true\"] {
+  background: var(--accent);
+  color: var(--surface);
+}
+
+.check-row {
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+}
+
+.check-row input {
+  min-width: var(--control-min);
+}
+
+.form-row {
+  display: flex;
+  align-items: end;
+  gap: var(--space-2);
+}
+
+.form-field {
+  display: flex;
+  flex: 1;
+  flex-direction: column;
+  gap: var(--space-1);
+}
+
+.project-list button,
+.project-list a {
+  display: block;
+  min-height: var(--control-min);
+  border-radius: var(--radius-sm);
+  padding: var(--space-2) var(--space-3);
+  text-align: start;
+}
+
+.project-list button[aria-current=\"page\"],
+.project-list a[aria-current=\"page\"] {
+  background: var(--accent);
+  color: var(--surface);
+}
+
+.composer,
+.timeline,
+.task-summary,
+.context-body,
+.state-message {
+  border-radius: var(--radius-md);
+  padding: var(--space-4);
+  background: var(--surface);
+  box-shadow: var(--shadow-panel);
+}
+
+.timeline-item {
+  display: flex;
+  align-items: start;
+  gap: var(--space-3);
+  border-radius: var(--radius-sm);
+  padding: var(--space-3);
+  background: var(--surface-muted);
+}
+
+.status-label {
+  border-radius: var(--radius-sm);
+  padding: var(--space-1) var(--space-2);
+  background: var(--surface);
+  font: var(--text-xs) var(--font-sans);
+}
+
+.status-queued {
+  color: var(--warning);
+}
+
+.status-running {
+  color: var(--accent);
+}
+
+.status-completed {
+  color: var(--success);
+}
+
+.status-failed,
+.error-text {
+  color: var(--danger);
+}
+
+.context-status {
+  color: var(--text-muted);
+}
+
+/* agent-configuration */
+fieldset {
+  min-width: 0;
+  margin: 0;
+  border: var(--border-width) solid var(--border);
+  border-radius: var(--radius-sm);
+  padding: var(--space-3);
+}
+
+legend {
+  padding-inline: var(--space-1);
+}
+
+.agent-avatar {
+  display: grid;
+  min-height: var(--control-min);
+  min-width: var(--control-min);
+  place-items: center;
+  border-radius: var(--radius-md);
+  color: var(--agent-sage-fg);
+  background: var(--agent-sage-bg);
+}
+
+[data-accent=\"sage\"] .agent-avatar {
+  color: var(--agent-sage-fg);
+  background: var(--agent-sage-bg);
+}
+
+[data-accent=\"terracotta\"] .agent-avatar {
+  color: var(--agent-terracotta-fg);
+  background: var(--agent-terracotta-bg);
+}
+
+[data-accent=\"gold\"] .agent-avatar {
+  color: var(--agent-gold-fg);
+  background: var(--agent-gold-bg);
+}
+
+[data-accent=\"slate\"] .agent-avatar {
+  color: var(--agent-slate-fg);
+  background: var(--agent-slate-bg);
+}
+
+[data-accent=\"rose\"] .agent-avatar {
+  color: var(--agent-rose-fg);
+  background: var(--agent-rose-bg);
+}
+
+[data-accent=\"olive\"] .agent-avatar {
+  color: var(--agent-olive-fg);
+  background: var(--agent-olive-bg);
+}
+"
+
+ ❯ tests/context-accessibility.test.tsx:136:17
+    134|
+    135|     const css = readFileSync(join(process.cwd(), "app", "cockpit.css")…
+    136|     expect(css).toMatch(
+       |                 ^
+    137|       /\.project-context-tabs\s*\{[^}]*gap:\s*var\(--space-2\)/s,
+    138|     );
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[1/3]⎯
+
+ FAIL  tests/context-preview.test.tsx > Context Preview > renders readable shared/current sections, structured details and member-identical shared visibility
+TestingLibraryElementError: Unable to find an element with the text: Plan. This could be because the text is broken up by multiple elements. In this case, you can provide a function for your text matcher to make your matcher more flexible.
+
+Ignored nodes: comments, script, style
+[36m<section[39m
+  [33maria-label[39m=[32m"共享项目上下文"[39m
+  [33mclass[39m=[32m"stack context-preview-section"[39m
+  [33mrole[39m=[32m"region"[39m
+[36m>[39m
+  [36m<h3>[39m
+    [0mLaunch[0m
+  [36m</h3>[39m
+  [36m<p>[39m
+    [0m工作区：[0m
+    [36m<code>[39m
+      [0mD:\workspace[0m
+    [36m</code>[39m
+  [36m</p>[39m
+  [36m<section[39m
+    [33mclass[39m=[32m"stack"[39m
+  [36m>[39m
+    [36m<h4>[39m
+      [0m平等名册[0m
+    [36m</h4>[39m
+    [36m<ul[39m
+      [33mclass[39m=[32m"stack"[39m
+    [36m>[39m
+      [36m<li>[39m
+        [0mAlpha[0m
+        [0m · [0m
+        [0m规划[0m
+        [0m · [0m
+        [0mmodel-a[0m
+        [0m · 技能：[0m
+        [0mPlan[0m
+        [0m · 权限：[0m
+        [0m读取[0m
+      [36m</li>[39m
+      [36m<li>[39m
+        [0mBeta[0m
+        [0m · [0m
+        [0m实现[0m
+        [0m · [0m
+        [0mmodel-b[0m
+        [0m · 技能：[0m
+        [0mBuild[0m
+        [0m · 权限：[0m
+        [0m读取、写入、命令[0m
+      [36m</li>[39m
+    [36m</ul>[39m
+  [36m</section>[39m
+  [36m<section[39m
+    [33mclass[39m=[32m"stack"[39m
+  [36m>[39m
+    [36m<h4>[39m
+      [0m使命[0m
+    [36m</h4>[39m
+    [36m<p>[39m
+      [0mShip[0m
+    [36m</p>[39m
+    [36m<p>[39m
+      [0mDeliver[0m
+    [36m</p>[39m
+  [36m</section>[39m
+  [36m<section[39m
+    [33mclass[39m=[32m"stack"[39m
+  [36m>[39m
+    [36m<h4>[39m
+      [0m任务[0m
+    [36m</h4>[39m
+    [36m<ul[39m
+      [33mclass[39m=[32m"stack"[39m
+    [36m>[39m
+      [36m<li>[39m
+        [0mPlan[0m
+        [0m · [0m
+        [0mtodo[0m
+      [36m</li>[39m
+    [36m</ul>[39m
+  [36m</section>[39m
+  [36m<section[39m
+    [33mclass[39m=[32m"stack"[39m
+  [36m>[39m
+    [36m<h4>[39m
+      [0mActive 记忆[0m
+    [36m</h4>[39m
+    [36m<ul[39m
+      [33mclass[39m=[32m"stack"[39m
+    [36m>[39m
+      [36m<li>[39m
+        [0mShared fact[0m
+        [0m · 来源：[0m
+        [0mowner_input[0m
+        [0m /[0m
+        [0m [0m
+        [0mOwner[0m
+      [36m</li>[39m
+    [36m</ul>[39m
+  [36m</section>[39m
+[36m</section>[39m
+ ❯ Object.getElementError node_modules/@testing-library/dom/dist/config.js:37:19
+ ❯ node_modules/@testing-library/dom/dist/query-helpers.js:76:38
+ ❯ node_modules/@testing-library/dom/dist/query-helpers.js:52:17
+ ❯ node_modules/@testing-library/dom/dist/query-helpers.js:95:19
+ ❯ tests/context-preview.test.tsx:189:27
+    187|     expect(within(shared).getByText("Launch")).toBeInTheDocument();
+    188|     expect(within(shared).getByText("Ship")).toBeInTheDocument();
+    189|     expect(within(shared).getByText("Plan")).toBeInTheDocument();
+       |                           ^
+    190|     expect(within(shared).getByText("Shared fact")).toBeInTheDocument(…
+    191|     const sharedBefore = shared.textContent;
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[2/3]⎯
+
+ FAIL  tests/memory-panel.test.tsx > Shared Memory panel > creates sourced memory, labels artifact references, supersedes active entries and displays history
+TestingLibraryElementError: Found multiple elements with the text: Current goal
+
+Here are the matching elements:
+
+Ignored nodes: comments, script, style
+[36m<option[39m
+  [33mvalue[39m=[32m"memory-active"[39m
+[36m>[39m
+  [0mCurrent goal[0m
+[36m</option>[39m
+
+Ignored nodes: comments, script, style
+[36m<h3[39m
+  [33mtabindex[39m=[32m"-1"[39m
+[36m>[39m
+  [0mCurrent goal[0m
+[36m</h3>[39m
+
+(If this is intentional, then use the `*AllBy*` variant of the query (like `queryAllByText`, `getAllByText`, or `findAllByText`)).
+
+Ignored nodes: comments, script, style
+[36m<body>[39m
+  [36m<div>[39m
+    [36m<section[39m
+      [33maria-labelledby[39m=[32m"memory-title-project-1"[39m
+      [33mclass[39m=[32m"stack"[39m
+    [36m>[39m
+      [36m<h2[39m
+        [33mid[39m=[32m"memory-title-project-1"[39m
+      [36m>[39m
+        [0m共享记忆[0m
+      [36m</h2>[39m
+      [36m<form[39m
+        [33mclass[39m=[32m"stack memory-form"[39m
+      [36m>[39m
+        [36m<fieldset>[39m
+          [36m<legend>[39m
+            [0m记忆类型[0m
+          [36m</legend>[39m
+          [36m<div[39m
+            [33mclass[39m=[32m"memory-type-options"[39m
+          [36m>[39m
+            [36m<label[39m
+              [33mclass[39m=[32m"check-row"[39m
+            [36m>[39m
+              [36m<input[39m
+                [33mchecked[39m=[32m""[39m
+                [33mname[39m=[32m"memory-type-project-1"[39m
+                [33mtype[39m=[32m"radio"[39m
+                [33mvalue[39m=[32m"goal"[39m
+              [36m/>[39m
+              [36m<span>[39m
+                [0m目标[0m
+              [36m</span>[39m
+            [36m</label>[39m
+            [36m<label[39m
+              [33mclass[39m=[32m"check-row"[39m
+            [36m>[39m
+              [36m<input[39m
+                [33mname[39m=[32m"memory-type-project-1"[39m
+                [33mtype[39m=[32m"radio"[39m
+                [33mvalue[39m=[32m"decision"[39m
+              [36m/>[39m
+              [36m<span>[39m
+                [0m决策[0m
+              [36m</span>[39m
+            [36m</label>[39m
+            [36m<label[39m
+              [33mclass[39m=[32m"check-row"[39m
+            [36m>[39m
+              [36m<input[39m
+                [33mname[39m=[32m"memory-type-project-1"[39m
+                [33mtype[39m=[32m"radio"[39m
+                [33mvalue[39m=[32m"fact"[39m
+              [36m/>[39m
+              [36m<span>[39m
+                [0m事实[0m
+              [36m</span>[39m
+            [36m</label>[39m
+            [36m<label[39m
+              [33mclass[39m=[32m"check-row"[39m
+            [36m>[39m
+              [36m<input[39m
+                [33mname[39m=[32m"memory-type-project-1"[39m
+                [33mtype[39m=[32m"radio"[39m
+                [33mvalue[39m=[32m"artifact"[39m
+              [36m/>[39m
+              [36m<span>[39m
+                [0m产物[0m
+              [36m</span>[39m
+            [36m</label>[39m
+          [36m</div>[39m
+        [36m</fieldset>[39m
+        [36m<div[39m
+          [33mclass[39m=[32m"form-field"[39m
+        [36m>[39m
+          [36m<label[39m
+            [33mfor[39m=[32m"memory-content-project-1"[39m
+          [36m>[39m
+            [0m记忆正文[0m
+          [36m</label>[39m
+          [36m<textarea[39m
+            [33mid[39m=[32m"memory-content-project-1"[39m
+          [36m/>[39m
+        [36m</div>[39m
+        [36m<div[39m
+          [33mclass[39m=[32m"form-field"[39m
+        [36m>[39m
+          [36m<label[39m
+            [33mfor[39m=[32m"memory-source-type-project-1"[39m
+          [36m>[39m
+            [0m来源类型[0m
+          [36m</label>[39m
+          [36m<select[39m
+            [33mid[39m=[32m"memory-source-type-project-1"[39m
+          [36m>[39m
+            [36m<option[39m
+              [33mvalue[39m=[32m"owner_input"[39m
+            [36m>[39m
+              [0mOwner 输入[0m
+            [36m</option>[39m
+            [36m<option[39m
+              [33mvalue[39m=[32m"work_item"[39m
+            [36m>[39m
+              [0m任务[0m
+            [36m</option>[39m
+            [36m<option[39m
+              [33mvalue[39m=[32m"artifact_path"[39m
+            [36m>[39m
+              [0m产物路径[0m
+            [36m</option>[39m
+          [36m</select>[39m
+        [36m</div>[39m
+        [36m<div[39m
+          [33mclass[39m=[32m"form-field"[39m
+        [36m>[39m
+          [36m<label[39m
+            [33mfor[39m=[32m"memory-source-ref-project-1"[39m
+          [36m>[39m
+            [0m来源引用[0m
+          [36m</label>[39m
+          [36m<input[39m
+            [33mid[39m=[32m"memory-source-ref-project-1"[39m
+            [33mvalue[39m=[32m""[39m
+          [36m/>[39m
+        [36m</div>[39m
+        [36m<div[39m
+          [33mclass[39m=[32m"form-field"[39m
+        [36m>[39m
+          [36m<label[39m
+            [33mfor[39m=[32m"memory-supersede-project-1"[39m
+          [36m>[39m
+            [0m取代旧记忆[0m
+          [36m</label>[39m
+          [36m<select[39m
+            [33mid[39m=[32m"memory-supersede-project-1"[39m
+          [36m>[39m
+            [36m<option[39m
+              [33mvalue[39m=[32m""[39m
+            [36m>[39m
+              [0m不取代[0m
+            [36m</option>[39m
+            [36m<option[39m
+              [33mvalue[39m=[32m"memory-active"[39m
+            [36m>[39m
+              [0mCurrent goal[0m
+            [36m</option>[39m
+          [36m</select>[39m
+        [36m</div>[39m
+        [36m<button[39m
+          [33mtype[39m=[32m"submit"[39m
+        [36m>[39m
+          [0m保存记忆[0m
+        [36m</button>[39m
+      [36m</form>[39m
+      [36m<button[39m
+        [33mtype[39m=[32m"button"[39m
+      [36m>[39m
+        [0m查看历史记忆[0m
+      [36m</button>[39m
+      [36m<ul[39m
+        [33maria-label[39m=[32m"Active 共享记忆"[39m
+        [33mclass[39m=[32m"stack memory-list"[39m
+      [36m>[39m
+        [36m<li[39m
+          [33mclass[39m=[32m"task-summary stack"[39m
+        [36m>[39m
+          [36m<h3[39m
+            [33mtabindex[39m=[32m"-1"[39m
+          [36m>[39m
+            [0mCurrent goal[0m
+          [36m</h3>[39m
+          [36m<p>[39m
+            [0m目标[0m
+            [0m ·[0m
+            [0m [0m
+            [0mOwner 输入[0m
+            [0m · [0m
+            [0mOwner[0m
+          [36m</p>[39m
+          [36m<p>[39m
+            [0m创建者：owner[0m
+          [36m</p>[39m
+          [36m<p>[39m
+            [0mActive[0m
+          [36m</p>[39m
+        [36m</li>[39m
+      [36m</ul>[39m
+    [36m</section>[39m
+  [36m</div>[39m
+[36m</body>[39m
+
+Ignored nodes: comments, script, style
+[36m<body>[39m
+  [36m<div>[39m
+    [36m<section[39m
+      [33maria-labelledby[39m=[32m"memory-title-project-1"[39m
+      [33mclass[39m=[32m"stack"[39m
+    [36m>[39m
+      [36m<h2[39m
+        [33mid[39m=[32m"memory-title-project-1"[39m
+      [36m>[39m
+        [0m共享记忆[0m
+      [36m</h2>[39m
+      [36m<form[39m
+        [33mclass[39m=[32m"stack memory-form"[39m
+      [36m>[39m
+        [36m<fieldset>[39m
+          [36m<legend>[39m
+            [0m记忆类型[0m
+          [36m</legend>[39m
+          [36m<div[39m
+            [33mclass[39m=[32m"memory-type-options"[39m
+          [36m>[39m
+            [36m<label[39m
+              [33mclass[39m=[32m"check-row"[39m
+            [36m>[39m
+              [36m<input[39m
+                [33mchecked[39m=[32m""[39m
+                [33mname[39m=[32m"memory-type-project-1"[39m
+                [33mtype[39m=[32m"radio"[39m
+                [33mvalue[39m=[32m"goal"[39m
+              [36m/>[39m
+              [36m<span>[39m
+                [0m目标[0m
+              [36m</span>[39m
+            [36m</label>[39m
+            [36m<label[39m
+              [33mclass[39m=[32m"check-row"[39m
+            [36m>[39m
+              [36m<input[39m
+                [33mname[39m=[32m"memory-type-project-1"[39m
+                [33mtype[39m=[32m"radio"[39m
+                [33mvalue[39m=[32m"decision"[39m
+              [36m/>[39m
+              [36m<span>[39m
+                [0m决策[0m
+              [36m</span>[39m
+            [36m</label>[39m
+            [36m<label[39m
+              [33mclass[39m=[32m"check-row"[39m
+            [36m>[39m
+              [36m<input[39m
+                [33mname[39m=[32m"memory-type-project-1"[39m
+                [33mtype[39m=[32m"radio"[39m
+                [33mvalue[39m=[32m"fact"[39m
+              [36m/>[39m
+              [36m<span>[39m
+                [0m事实[0m
+              [36m</span>[39m
+            [36m</label>[39m
+            [36m<label[39m
+              [33mclass[39m=[32m"check-row"[39m
+            [36m>[39m
+              [36m<input[39m
+                [33mname[39m=[32m"memory-type-project-1"[39m
+                [33mtype[39m=[32m"radio"[39m
+                [33mvalue[39m=[32m"artifact"[39m
+              [36m/>[39m
+              [36m<span>[39m
+                [0m产物[0m
+              [36m</span>[39m
+            [36m</label>[39m
+          [36m</div>[39m
+        [36m</fieldset>[39m
+        [36m<div[39m
+          [33mclass[39m=[32m"form-field"[39m
+        [36m>[39m
+          [36m<label[39m
+            [33mfor[39m=[32m"memory-content-project-1"[39m
+          [36m>[39m
+            [0m记忆正文[0m
+          [36m</label>[39m
+          [36m<textarea[39m
+            [33mid[39m=[32m"memory-content-project-1"[39m
+          [36m/>[39m
+        [36m</div>[39m
+        [36m<div[39m
+          [33mclass[39m=[32m"form-field"[39m
+        [36m>[39m
+          [36m<label[39m
+            [33mfor[39m=[32m"memory-source-type-project-1"[39m
+          [36m>[39m
+            [0m来源类型[0m
+          [36m</label>[39m
+          [36m<select[39m
+            [33mid[39m=[32m"memory-source-type-project-1"[39m
+          [36m>[39m
+            [36m<option[39m
+              [33mvalue[39m=[32m"owner_input"[39m
+            [36m>[39m
+              [0mOwner 输入[0m
+            [36m</option>[39m
+            [36m<option[39m
+              [33mvalue[39m=[32m"work_item"[39m
+            [36m>[39m
+              [0m任务[0m
+            [36m</option>[39m
+            [36m<option[39m
+              [33mvalue[39m=[32m"artifact_path"[39m
+            [36m>[39m
+              [0m产物路径[0m
+            [36m</option>[39m
+          [36m</select>[39m
+        [36m</div>[39m
+        [36m<div[39m
+          [33mclass[39m=[32m"form-field"[39m
+        [36m>[39m
+          [36m<label[39m
+            [33mfor[39m=[32m"memory-source-ref-project-1"[39m
+          [36m>[39m
+            [0m来源引用[0m
+          [36m</label>[39m
+          [36m<input[39m
+            [33mid[39m=[32m"memory-source-ref-project-1"[39m
+            [33mvalue[39m=[32m""[39m
+          [36m/>[39m
+        [36m</div>[39m
+        [36m<div[39m
+          [33mclass[39m=[32m"form-field"[39m
+        [36m>[39m
+          [36m<label[39m
+            [33mfor[39m=[32m"memory-supersede-project-1"[39m
+          [36m>[39m
+            [0m取代旧记忆[0m
+          [36m</label>[39m
+          [36m<select[39m
+            [33mid[39m=[32m"memory-supersede-project-1"[39m
+          [36m>[39m
+            [36m<option[39m
+              [33mvalue[39m=[32m""[39m
+            [36m>[39m
+              [0m不取代[0m
+            [36m</option>[39m
+            [36m<option[39m
+              [33mvalue[39m=[32m"memory-active"[39m
+            [36m>[39m
+              [0mCurrent goal[0m
+            [36m</option>[39m
+          [36m</select>[39m
+        [36m</div>[39m
+        [36m<button[39m
+          [33mtype[39m=[32m"submit"[39m
+        [36m>[39m
+          [0m保存记忆[0m
+        [36m</button>[39m
+      [36m</form>[39m
+      [36m<button[39m
+        [33mtype[39m=[32m"button"[39m
+      [36m>[39m
+        [0m查看历史记忆[0m
+      [36m</button>[39m
+      [36m<ul[39m
+        [33maria-label[39m=[32m"Active 共享记忆"[39m
+        [33mclass[39m=[32m"stack memory-list"[39m
+      [36m>[39m
+        [36m<li[39m
+          [33mclass[39m=[32m"task-summary stack"[39m
+        [36m>[39m
+          [36m<h3[39m
+            [33mtabindex[39m=[32m"-1"[39m
+          [36m>[39m
+            [0mCurrent goal[0m
+          [36m</h3>[39m
+          [36m<p>[39m
+            [0m目标[0m
+            [0m ·[0m
+            [0m [0m
+            [0mOwner 输入[0m
+            [0m · [0m
+            [0mOwner[0m
+          [36m</p>[39m
+          [36m<p>[39m
+            [0m创建者：owner[0m
+          [36m</p>[39m
+          [36m<p>[39m
+            [0mActive[0m
+          [36m</p>[39m
+        [36m</li>[39m
+      [36m</ul>[39m
+    [36m</section>[39m
+  [36m</div>[39m
+[36m</body>[39m
+ ❯ waitForWrapper node_modules/@testing-library/dom/dist/wait-for.js:163:27
+ ❯ node_modules/@testing-library/dom/dist/query-helpers.js:86:33
+ ❯ tests/memory-panel.test.tsx:117:18
+    115|     const user = userEvent.setup();
+    116|     render(<MemoryPanel projectId="project-1" />);
+    117|     await screen.findByText("Current goal");
+       |                  ^
+    118|
+    119|     await user.selectOptions(screen.getByLabelText("来源类型"), "artifact_…
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[3/3]⎯
+
+
+ Test Files  3 failed (3)
+      Tests  3 failed | 3 passed (6)
+   Start at  03:46:24
+   Duration  3.99s (transform 327ms, setup 1.67s, import 715ms, tests 1.86s, environment 5.06s)
+
+# exit: 1

@@ -1,0 +1,24 @@
+# hf-gate-run
+# label: t32-green
+# command: npm.cmd run smoke:execution
+# started: 2026-07-30T15:13:09+00:00
+
+> collaboration-cockpit@0.1.0 smoke:execution
+> node tests/execution-browser-smoke.mjs
+
+(node:12800) ExperimentalWarning: SQLite is an experimental feature and might change at any time
+(Use `node --trace-warnings ...` to show where the warning was created)
+file:///D:/cool-ai/tests/execution-browser-smoke.mjs:496
+      `).run(operationId, projectId, runId, createHash("sha256").update(operationId).digest("hex"), now, now);
+         ^
+
+Error: database is locked
+    at seedPlannedTasks (file:///D:/cool-ai/tests/execution-browser-smoke.mjs:496:10)
+    at file:///D:/cool-ai/tests/execution-browser-smoke.mjs:733:3 {
+  code: 'ERR_SQLITE_ERROR',
+  errcode: 5,
+  errstr: 'database is locked'
+}
+
+Node.js v24.14.0
+# exit: 1

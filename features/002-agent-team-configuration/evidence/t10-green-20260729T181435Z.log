@@ -1,0 +1,20 @@
+# hf-gate-run
+# label: t10-green
+# command: cmd /c npm test -- tests/migrations.test.ts tests/team-mobile-paths.test.tsx tests/team-field-errors.test.tsx tests/api-error-sanitization.test.ts tests/provider-panel.test.tsx tests/skill-panel.test.tsx tests/agent-panel.test.tsx tests/team-accessibility.test.tsx tests/team-smoke-contract.test.ts
+# started: 2026-07-29T18:14:35+00:00
+
+> collaboration-cockpit@0.1.0 test
+> vitest run tests/migrations.test.ts tests/team-mobile-paths.test.tsx tests/team-field-errors.test.tsx tests/api-error-sanitization.test.ts tests/provider-panel.test.tsx tests/skill-panel.test.tsx tests/agent-panel.test.tsx tests/team-accessibility.test.tsx tests/team-smoke-contract.test.ts
+
+
+ RUN  v4.1.10 D:/cool-ai
+
+(node:6716) ExperimentalWarning: SQLite is an experimental feature and might change at any time
+(Use `node --trace-warnings ...` to show where the warning was created)
+
+ Test Files  9 passed (9)
+      Tests  33 passed (33)
+   Start at  02:14:36
+   Duration  6.29s (transform 479ms, setup 4.17s, import 1.69s, tests 8.47s, environment 17.49s)
+
+# exit: 0

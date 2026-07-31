@@ -1,0 +1,18 @@
+# hf-gate-run
+# label: t24-green
+# command: cmd.exe /d /s /c npm test -- tests/collaboration-smoke-contract.test.ts
+# started: 2026-07-29T23:58:49+00:00
+
+> collaboration-cockpit@0.1.0 test
+> vitest run tests/collaboration-smoke-contract.test.ts
+
+
+ RUN  v4.1.10 D:/cool-ai
+
+
+ Test Files  1 passed (1)
+      Tests  2 passed (2)
+   Start at  07:58:50
+   Duration  2.11s (transform 41ms, setup 334ms, import 20ms, tests 65ms, environment 1.42s)
+
+# exit: 0

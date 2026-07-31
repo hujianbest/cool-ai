@@ -1,0 +1,348 @@
+# hf-gate-run
+# label: t4-red
+# command: cmd /c npm test
+# started: 2026-07-29T15:12:29+00:00
+
+> collaboration-cockpit@0.1.0 test
+> vitest run
+
+
+ RUN  v4.1.10 D:/cool-ai
+
+ ❯ tests/visual-tokens.test.ts (3 tests | 3 failed) 13ms
+     × defines the approved cockpit token source 9ms
+     × uses named tokens for desktop layout and 44px controls 1ms
+     × keeps raw visual values out of component styles 1ms
+(node:8388) ExperimentalWarning: SQLite is an experimental feature and might change at any time
+(Use `node --trace-warnings ...` to show where the warning was created)
+(node:15552) ExperimentalWarning: SQLite is an experimental feature and might change at any time
+(Use `node --trace-warnings ...` to show where the warning was created)
+(node:9568) ExperimentalWarning: SQLite is an experimental feature and might change at any time
+(Use `node --trace-warnings ...` to show where the warning was created)
+ ❯ tests/cockpit-layout.test.tsx (1 test | 1 failed) 1044ms
+     × presents project navigation, task flow, and current context from real data 1042ms
+(node:14372) ExperimentalWarning: SQLite is an experimental feature and might change at any time
+(Use `node --trace-warnings ...` to show where the warning was created)
+
+⎯⎯⎯⎯⎯⎯⎯ Failed Tests 4 ⎯⎯⎯⎯⎯⎯⎯
+
+ FAIL  tests/cockpit-layout.test.tsx > desktop collaboration cockpit > presents project navigation, task flow, and current context from real data
+TestingLibraryElementError: Unable to find an element by: [data-testid="collaboration-cockpit"]
+
+Ignored nodes: comments, script, style
+[36m<body>[39m
+  [36m<div>[39m
+    [36m<section[39m
+      [33maria-labelledby[39m=[32m"projects-title"[39m
+    [36m>[39m
+      [36m<h1[39m
+        [33mid[39m=[32m"projects-title"[39m
+      [36m>[39m
+        [0mProjects[0m
+      [36m</h1>[39m
+      [36m<form>[39m
+        [36m<label[39m
+          [33mfor[39m=[32m"project-name"[39m
+        [36m>[39m
+          [0mProject name[0m
+        [36m</label>[39m
+        [36m<input[39m
+          [33mid[39m=[32m"project-name"[39m
+          [33mname[39m=[32m"name"[39m
+          [33mvalue[39m=[32m""[39m
+        [36m/>[39m
+        [36m<button[39m
+          [33mtype[39m=[32m"submit"[39m
+        [36m>[39m
+          [0mCreate project[0m
+        [36m</button>[39m
+      [36m</form>[39m
+      [36m<nav[39m
+        [33maria-label[39m=[32m"Projects"[39m
+      [36m>[39m
+        [36m<ul>[39m
+          [36m<li>[39m
+            [36m<button[39m
+              [33maria-current[39m=[32m"page"[39m
+              [33mtype[39m=[32m"button"[39m
+            [36m>[39m
+              [0mLaunch plan[0m
+            [36m</button>[39m
+          [36m</li>[39m
+        [36m</ul>[39m
+      [36m</nav>[39m
+    [36m</section>[39m
+    [36m<section[39m
+      [33maria-labelledby[39m=[32m"tasks-title"[39m
+    [36m>[39m
+      [36m<h2[39m
+        [33mid[39m=[32m"tasks-title"[39m
+      [36m>[39m
+        [0mTask activity[0m
+      [36m</h2>[39m
+      [36m<form>[39m
+        [36m<label[39m
+          [33mfor[39m=[32m"task-goal"[39m
+        [36m>[39m
+          [0mTask goal[0m
+        [36m</label>[39m
+        [36m<input[39m
+          [33mid[39m=[32m"task-goal"[39m
+          [33mname[39m=[32m"goal"[39m
+          [33mvalue[39m=[32m""[39m
+        [36m/>[39m
+        [36m<button[39m
+          [33mdisabled[39m=[32m""[39m
+          [33mtype[39m=[32m"submit"[39m
+        [36m>[39m
+          [0mRun task[0m
+        [36m</button>[39m
+      [36m</form>[39m
+      [36m<ol[39m
+        [33maria-label[39m=[32m"Task events"[39m
+      [36m>[39m
+        [36m<li>[39m
+          [36m<span>[39m
+            [0mqueued[0m
+          [36m</span>[39m
+          [0m [0m
+          [36m<span>[39m
+            [0mTask queued.[0m
+          [36m</span>[39m
+        [36m</li>[39m
+        [36m<li>[39m
+          [36m<span>[39m
+            [0mrunning[0m
+          [36m</span>[39m
+          [0m [0m
+          [36m<span>[39m
+            [0mTask started.[0m
+          [36m</span>[39m
+        [36m</li>[39m
+        [36m<li>[39m
+          [36m<span>[39m
+            [0mcompleted[0m
+          [36m</span>[39m
+          [0m [0m
+          [36m<span>[39m
+            [0mTask completed.[0m
+          [36m</span>[39m
+        [36m</li>[39m
+      [36m</ol>[39m
+      [36m<article>[39m
+        [36m<h3>[39m
+          [0mPrepare launch notes[0m
+        [36m</h3>[39m
+        [36m<p>[39m
+          [0mStatus: [0m
+          [0mcompleted[0m
+        [36m</p>[39m
+        [36m<p>[39m
+          [0mLaunch notes ready.[0m
+        [36m</p>[39m
+      [36m</article>[39m
+      [36m<p[39m
+        [33maria-live[39m=[32m"polite"[39m
+      [36m>[39m
+        [0mLatest task status: completed[0m
+      [36m</p>[39m
+    [36m</section>[39m
+  [36m</div>[39m
+[36m</body>[39m
+
+Ignored nodes: comments, script, style
+[36m<body>[39m
+  [36m<div>[39m
+    [36m<section[39m
+      [33maria-labelledby[39m=[32m"projects-title"[39m
+    [36m>[39m
+      [36m<h1[39m
+        [33mid[39m=[32m"projects-title"[39m
+      [36m>[39m
+        [0mProjects[0m
+      [36m</h1>[39m
+      [36m<form>[39m
+        [36m<label[39m
+          [33mfor[39m=[32m"project-name"[39m
+        [36m>[39m
+          [0mProject name[0m
+        [36m</label>[39m
+        [36m<input[39m
+          [33mid[39m=[32m"project-name"[39m
+          [33mname[39m=[32m"name"[39m
+          [33mvalue[39m=[32m""[39m
+        [36m/>[39m
+        [36m<button[39m
+          [33mtype[39m=[32m"submit"[39m
+        [36m>[39m
+          [0mCreate project[0m
+        [36m</button>[39m
+      [36m</form>[39m
+      [36m<nav[39m
+        [33maria-label[39m=[32m"Projects"[39m
+      [36m>[39m
+        [36m<ul>[39m
+          [36m<li>[39m
+            [36m<button[39m
+              [33maria-current[39m=[32m"page"[39m
+              [33mtype[39m=[32m"button"[39m
+            [36m>[39m
+              [0mLaunch plan[0m
+            [36m</button>[39m
+          [36m</li>[39m
+        [36m</ul>[39m
+      [36m</nav>[39m
+    [36m</section>[39m
+    [36m<section[39m
+      [33maria-labelledby[39m=[32m"tasks-title"[39m
+    [36m>[39m
+      [36m<h2[39m
+        [33mid[39m=[32m"tasks-title"[39m
+      [36m>[39m
+        [0mTask activity[0m
+      [36m</h2>[39m
+      [36m<form>[39m
+        [36m<label[39m
+          [33mfor[39m=[32m"task-goal"[39m
+        [36m>[39m
+          [0mTask goal[0m
+        [36m</label>[39m
+        [36m<input[39m
+          [33mid[39m=[32m"task-goal"[39m
+          [33mname[39m=[32m"goal"[39m
+          [33mvalue[39m=[32m""[39m
+        [36m/>[39m
+        [36m<button[39m
+          [33mdisabled[39m=[32m""[39m
+          [33mtype[39m=[32m"submit"[39m
+        [36m>[39m
+          [0mRun task[0m
+        [36m</button>[39m
+      [36m</form>[39m
+      [36m<ol[39m
+        [33maria-label[39m=[32m"Task events"[39m
+      [36m>[39m
+        [36m<li>[39m
+          [36m<span>[39m
+            [0mqueued[0m
+          [36m</span>[39m
+          [0m [0m
+          [36m<span>[39m
+            [0mTask queued.[0m
+          [36m</span>[39m
+        [36m</li>[39m
+        [36m<li>[39m
+          [36m<span>[39m
+            [0mrunning[0m
+          [36m</span>[39m
+          [0m [0m
+          [36m<span>[39m
+            [0mTask started.[0m
+          [36m</span>[39m
+        [36m</li>[39m
+        [36m<li>[39m
+          [36m<span>[39m
+            [0mcompleted[0m
+          [36m</span>[39m
+          [0m [0m
+          [36m<span>[39m
+            [0mTask completed.[0m
+          [36m</span>[39m
+        [36m</li>[39m
+      [36m</ol>[39m
+      [36m<article>[39m
+        [36m<h3>[39m
+          [0mPrepare launch notes[0m
+        [36m</h3>[39m
+        [36m<p>[39m
+          [0mStatus: [0m
+          [0mcompleted[0m
+        [36m</p>[39m
+        [36m<p>[39m
+          [0mLaunch notes ready.[0m
+        [36m</p>[39m
+      [36m</article>[39m
+      [36m<p[39m
+        [33maria-live[39m=[32m"polite"[39m
+      [36m>[39m
+        [0mLatest task status: completed[0m
+      [36m</p>[39m
+    [36m</section>[39m
+  [36m</div>[39m
+[36m</body>[39m
+ ❯ waitForWrapper node_modules/@testing-library/dom/dist/wait-for.js:163:27
+ ❯ node_modules/@testing-library/dom/dist/query-helpers.js:86:33
+ ❯ tests/cockpit-layout.test.tsx:73:34
+     71|     render(<ProjectPanel />);
+     72|
+     73|     const cockpit = await screen.findByTestId("collaboration-cockpit");
+       |                                  ^
+     74|     const navigation = within(cockpit).getByRole("complementary", {
+     75|       name: "Project navigation",
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[1/4]⎯
+
+ FAIL  tests/visual-tokens.test.ts > visual token discipline > defines the approved cockpit token source
+AssertionError: expected false to be true // Object.is equality
+
+- Expected
++ Received
+
+- true
++ false
+
+ ❯ tests/visual-tokens.test.ts:11:35
+      9| describe("visual token discipline", () => {
+     10|   it("defines the approved cockpit token source", () => {
+     11|     expect(existsSync(tokenPath)).toBe(true);
+       |                                   ^
+     12|     const tokens = existsSync(tokenPath) ? readFileSync(tokenPath, "ut…
+     13|
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[2/4]⎯
+
+ FAIL  tests/visual-tokens.test.ts > visual token discipline > uses named tokens for desktop layout and 44px controls
+AssertionError: expected false to be true // Object.is equality
+
+- Expected
++ Received
+
+- true
++ false
+
+ ❯ tests/visual-tokens.test.ts:43:37
+     41|
+     42|   it("uses named tokens for desktop layout and 44px controls", () => {
+     43|     expect(existsSync(cockpitPath)).toBe(true);
+       |                                     ^
+     44|     const css = existsSync(cockpitPath) ? readFileSync(cockpitPath, "u…
+     45|
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[3/4]⎯
+
+ FAIL  tests/visual-tokens.test.ts > visual token discipline > keeps raw visual values out of component styles
+AssertionError: expected false to be true // Object.is equality
+
+- Expected
++ Received
+
+- true
++ false
+
+ ❯ tests/visual-tokens.test.ts:55:37
+     53|
+     54|   it("keeps raw visual values out of component styles", () => {
+     55|     expect(existsSync(cockpitPath)).toBe(true);
+       |                                     ^
+     56|     const css = existsSync(cockpitPath) ? readFileSync(cockpitPath, "u…
+     57|     const componentSource = [
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[4/4]⎯
+
+
+ Test Files  2 failed | 6 passed (8)
+      Tests  4 failed | 25 passed (29)
+   Start at  23:12:30
+   Duration  5.26s (transform 458ms, setup 3.90s, import 872ms, tests 2.91s, environment 15.68s)
+
+# exit: 1

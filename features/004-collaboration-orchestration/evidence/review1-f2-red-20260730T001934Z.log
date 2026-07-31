@@ -1,0 +1,50 @@
+# hf-gate-run
+# label: review1-f2-red
+# command: npm.cmd test -- tests/collaboration-recovery.api.test.ts
+# started: 2026-07-30T00:19:34+00:00
+
+> collaboration-cockpit@0.1.0 test
+> vitest run tests/collaboration-recovery.api.test.ts
+
+
+ RUN  v4.1.10 D:/cool-ai
+
+(node:13924) ExperimentalWarning: SQLite is an experimental feature and might change at any time
+(Use `node --trace-warnings ...` to show where the warning was created)
+ ❯ tests/collaboration-recovery.api.test.ts (4 tests | 1 failed) 1809ms
+     × rejects reusing an advance operation id at the recover endpoint 346ms
+
+⎯⎯⎯⎯⎯⎯⎯ Failed Tests 1 ⎯⎯⎯⎯⎯⎯⎯
+
+ FAIL  tests/collaboration-recovery.api.test.ts > collaboration recovery API triggers > rejects reusing an advance operation id at the recover endpoint
+AssertionError: expected { error: { …(2) } } to deeply equal { error: { …(2) } }
+
+- Expected
++ Received
+
+  {
+    "error": {
+-     "code": "OPERATION_CONFLICT",
+-     "message": "Operation id was already used for different input.",
++     "code": "OPERATION_IN_PROGRESS",
++     "message": "Operation is still in progress.",
+    },
+  }
+
+ ❯ tests/collaboration-recovery.api.test.ts:273:34
+    271|
+    272|     expect(response.status).toBe(409);
+    273|     await expect(response.json()).resolves.toEqual({
+       |                                  ^
+    274|       error: {
+    275|         code: "OPERATION_CONFLICT",
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[1/1]⎯
+
+
+ Test Files  1 failed (1)
+      Tests  1 failed | 3 passed (4)
+   Start at  08:19:35
+   Duration  4.14s (transform 245ms, setup 341ms, import 315ms, tests 1.81s, environment 1.41s)
+
+# exit: 1

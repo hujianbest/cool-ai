@@ -1,0 +1,69 @@
+# hf-gate-run
+# label: t6-red
+# command: cmd /c npm test -- tests/sandbox-preflight.test.ts
+# started: 2026-07-30T03:22:02+00:00
+
+> collaboration-cockpit@0.1.0 test
+> vitest run tests/sandbox-preflight.test.ts
+
+
+ RUN  v4.1.10 D:/cool-ai
+
+ ❯ tests/sandbox-preflight.test.ts (18 tests | 18 failed) 96ms
+     × uses the same ordinary snapshot rules for git workspaces without Git metadata 14ms
+     × uses the same ordinary snapshot rules for nonGit workspaces without Git metadata 6ms
+     × rejects either direction of canonical and managed-root intersection 5ms
+     × excludes exact configured sensitive paths while retaining normal source names 5ms
+     × applies fixed managed and credential rules without excluding .env.example 5ms
+     × enumerates only ordinary files and directories in deterministic UTF-8 relative order 5ms
+     × rejects a real symbolic link before traversing or reading its target 5ms
+     × rejects adapter-proven link entries 4ms
+     × rejects adapter-proven reparse entries 4ms
+     × rejects adapter-proven special entries 4ms
+     × fails closed when the adapter cannot prove identity 4ms
+     × fails closed when the adapter cannot prove final path 4ms
+     × enforces the 100000 entry boundary at limit-1 4ms
+     × enforces the 100000 entry boundary at limit 4ms
+     × enforces the 100000 entry boundary at limit+1 4ms
+     × enforces the 2 GiB byte boundary at limit-1 4ms
+     × enforces the 2 GiB byte boundary at limit 5ms
+     × enforces the 2 GiB byte boundary at limit+1 5ms
+
+⎯⎯⎯⎯⎯⎯ Failed Tests 18 ⎯⎯⎯⎯⎯⎯⎯
+
+ FAIL  tests/sandbox-preflight.test.ts > sandbox preflight > uses the same ordinary snapshot rules for git workspaces without Git metadata
+ FAIL  tests/sandbox-preflight.test.ts > sandbox preflight > uses the same ordinary snapshot rules for nonGit workspaces without Git metadata
+ FAIL  tests/sandbox-preflight.test.ts > sandbox preflight > rejects either direction of canonical and managed-root intersection
+ FAIL  tests/sandbox-preflight.test.ts > sandbox preflight > excludes exact configured sensitive paths while retaining normal source names
+ FAIL  tests/sandbox-preflight.test.ts > sandbox preflight > applies fixed managed and credential rules without excluding .env.example
+ FAIL  tests/sandbox-preflight.test.ts > sandbox preflight > enumerates only ordinary files and directories in deterministic UTF-8 relative order
+ FAIL  tests/sandbox-preflight.test.ts > sandbox preflight > rejects a real symbolic link before traversing or reading its target
+ FAIL  tests/sandbox-preflight.test.ts > sandbox preflight > rejects adapter-proven link entries
+ FAIL  tests/sandbox-preflight.test.ts > sandbox preflight > rejects adapter-proven reparse entries
+ FAIL  tests/sandbox-preflight.test.ts > sandbox preflight > rejects adapter-proven special entries
+ FAIL  tests/sandbox-preflight.test.ts > sandbox preflight > fails closed when the adapter cannot prove identity
+ FAIL  tests/sandbox-preflight.test.ts > sandbox preflight > fails closed when the adapter cannot prove final path
+ FAIL  tests/sandbox-preflight.test.ts > sandbox preflight > enforces the 100000 entry boundary at limit-1
+ FAIL  tests/sandbox-preflight.test.ts > sandbox preflight > enforces the 100000 entry boundary at limit
+ FAIL  tests/sandbox-preflight.test.ts > sandbox preflight > enforces the 100000 entry boundary at limit+1
+ FAIL  tests/sandbox-preflight.test.ts > sandbox preflight > enforces the 2 GiB byte boundary at limit-1
+ FAIL  tests/sandbox-preflight.test.ts > sandbox preflight > enforces the 2 GiB byte boundary at limit
+ FAIL  tests/sandbox-preflight.test.ts > sandbox preflight > enforces the 2 GiB byte boundary at limit+1
+AssertionError: The sandbox preflight boundary is unavailable.
+ ❯ tests/sandbox-preflight.test.ts:69:12
+     67|     preflight = await import(/* @vite-ignore */ moduleId) as Preflight…
+     68|   } catch {
+     69|     expect.fail("The sandbox preflight boundary is unavailable.");
+       |            ^
+     70|   }
+     71| });
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[1/18]⎯
+
+
+ Test Files  1 failed (1)
+      Tests  18 failed (18)
+   Start at  11:22:03
+   Duration  2.15s (transform 53ms, setup 343ms, import 35ms, tests 96ms, environment 1.42s)
+
+# exit: 1

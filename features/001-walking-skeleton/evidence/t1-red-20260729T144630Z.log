@@ -1,0 +1,335 @@
+# hf-gate-run
+# label: t1-red
+# command: cmd /c npm test
+# started: 2026-07-29T14:46:30+00:00
+
+> collaboration-cockpit@0.1.0 test
+> vitest run
+
+
+ RUN  v4.1.10 D:/cool-ai
+
+ ❯ tests/projects.service.test.ts (2 tests | 2 failed) 15ms
+     × creates and reloads a trimmed project from SQLite 11ms
+     × rejects an empty project name without persisting 3ms
+ ❯ tests/projects.api.test.ts (2 tests | 2 failed) 19ms
+     × creates a project and returns it from the collection 14ms
+     × returns the stable empty-name error contract 3ms
+Not implemented: HTMLFormElement's requestSubmit() method
+Not implemented: HTMLFormElement's requestSubmit() method
+ ❯ tests/project-panel.test.tsx (3 tests | 3 failed) 1292ms
+     × loads existing projects 50ms
+     × creates and displays a project 1203ms
+     × shows validation and request errors while preserving input 37ms
+
+⎯⎯⎯⎯⎯⎯⎯ Failed Tests 7 ⎯⎯⎯⎯⎯⎯⎯
+
+ FAIL  tests/project-panel.test.tsx > ProjectPanel > loads existing projects
+TestingLibraryElementError: Unable to find an element with the text: Loading projects…. This could be because the text is broken up by multiple elements. In this case, you can provide a function for your text matcher to make your matcher more flexible.
+
+Ignored nodes: comments, script, style
+[36m<body>[39m
+  [36m<div>[39m
+    [36m<section[39m
+      [33maria-labelledby[39m=[32m"projects-title"[39m
+    [36m>[39m
+      [36m<h1[39m
+        [33mid[39m=[32m"projects-title"[39m
+      [36m>[39m
+        [0mProjects[0m
+      [36m</h1>[39m
+      [36m<form>[39m
+        [36m<label[39m
+          [33mfor[39m=[32m"project-name"[39m
+        [36m>[39m
+          [0mProject name[0m
+        [36m</label>[39m
+        [36m<input[39m
+          [33mid[39m=[32m"project-name"[39m
+          [33mname[39m=[32m"name"[39m
+        [36m/>[39m
+        [36m<button[39m
+          [33mtype[39m=[32m"submit"[39m
+        [36m>[39m
+          [0mCreate project[0m
+        [36m</button>[39m
+      [36m</form>[39m
+      [36m<p>[39m
+        [0mNo projects yet.[0m
+      [36m</p>[39m
+    [36m</section>[39m
+  [36m</div>[39m
+[36m</body>[39m
+ ❯ Object.getElementError node_modules/@testing-library/dom/dist/config.js:37:19
+ ❯ node_modules/@testing-library/dom/dist/query-helpers.js:76:38
+ ❯ node_modules/@testing-library/dom/dist/query-helpers.js:52:17
+ ❯ node_modules/@testing-library/dom/dist/query-helpers.js:95:19
+ ❯ tests/project-panel.test.tsx:24:19
+     22|     render(<ProjectPanel />);
+     23|
+     24|     expect(screen.getByText("Loading projects…")).toBeInTheDocument();
+       |                   ^
+     25|     expect(await screen.findByText("Existing project")).toBeInTheDocum…
+     26|   });
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[1/7]⎯
+
+ FAIL  tests/project-panel.test.tsx > ProjectPanel > creates and displays a project
+TestingLibraryElementError: Unable to find an element with the text: Launch plan. This could be because the text is broken up by multiple elements. In this case, you can provide a function for your text matcher to make your matcher more flexible.
+
+Ignored nodes: comments, script, style
+[36m<body>[39m
+  [36m<div>[39m
+    [36m<section[39m
+      [33maria-labelledby[39m=[32m"projects-title"[39m
+    [36m>[39m
+      [36m<h1[39m
+        [33mid[39m=[32m"projects-title"[39m
+      [36m>[39m
+        [0mProjects[0m
+      [36m</h1>[39m
+      [36m<form>[39m
+        [36m<label[39m
+          [33mfor[39m=[32m"project-name"[39m
+        [36m>[39m
+          [0mProject name[0m
+        [36m</label>[39m
+        [36m<input[39m
+          [33mid[39m=[32m"project-name"[39m
+          [33mname[39m=[32m"name"[39m
+        [36m/>[39m
+        [36m<button[39m
+          [33mtype[39m=[32m"submit"[39m
+        [36m>[39m
+          [0mCreate project[0m
+        [36m</button>[39m
+      [36m</form>[39m
+      [36m<p>[39m
+        [0mNo projects yet.[0m
+      [36m</p>[39m
+    [36m</section>[39m
+  [36m</div>[39m
+[36m</body>[39m
+
+Ignored nodes: comments, script, style
+[36m<body>[39m
+  [36m<div>[39m
+    [36m<section[39m
+      [33maria-labelledby[39m=[32m"projects-title"[39m
+    [36m>[39m
+      [36m<h1[39m
+        [33mid[39m=[32m"projects-title"[39m
+      [36m>[39m
+        [0mProjects[0m
+      [36m</h1>[39m
+      [36m<form>[39m
+        [36m<label[39m
+          [33mfor[39m=[32m"project-name"[39m
+        [36m>[39m
+          [0mProject name[0m
+        [36m</label>[39m
+        [36m<input[39m
+          [33mid[39m=[32m"project-name"[39m
+          [33mname[39m=[32m"name"[39m
+        [36m/>[39m
+        [36m<button[39m
+          [33mtype[39m=[32m"submit"[39m
+        [36m>[39m
+          [0mCreate project[0m
+        [36m</button>[39m
+      [36m</form>[39m
+      [36m<p>[39m
+        [0mNo projects yet.[0m
+      [36m</p>[39m
+    [36m</section>[39m
+  [36m</div>[39m
+[36m</body>[39m
+ ❯ waitForWrapper node_modules/@testing-library/dom/dist/wait-for.js:163:27
+ ❯ node_modules/@testing-library/dom/dist/query-helpers.js:86:33
+ ❯ tests/project-panel.test.tsx:48:25
+     46|     await user.click(screen.getByRole("button", { name: "Create projec…
+     47|
+     48|     expect(await screen.findByText("Launch plan")).toBeInTheDocument();
+       |                         ^
+     49|     expect(fetchMock).toHaveBeenLastCalledWith(
+     50|       "/api/projects",
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[2/7]⎯
+
+ FAIL  tests/project-panel.test.tsx > ProjectPanel > shows validation and request errors while preserving input
+TestingLibraryElementError: Unable to find an accessible element with the role "alert"
+
+Here are the accessible roles:
+
+  region:
+
+  Name "Projects":
+  [36m<section[39m
+    [33maria-labelledby[39m=[32m"projects-title"[39m
+  [36m/>[39m
+
+  --------------------------------------------------
+  heading:
+
+  Name "Projects":
+  [36m<h1[39m
+    [33mid[39m=[32m"projects-title"[39m
+  [36m/>[39m
+
+  --------------------------------------------------
+  textbox:
+
+  Name "Project name":
+  [36m<input[39m
+    [33mid[39m=[32m"project-name"[39m
+    [33mname[39m=[32m"name"[39m
+  [36m/>[39m
+
+  --------------------------------------------------
+  button:
+
+  Name "Create project":
+  [36m<button[39m
+    [33mtype[39m=[32m"submit"[39m
+  [36m/>[39m
+
+  --------------------------------------------------
+  paragraph:
+
+  Name "":
+  [36m<p />[39m
+
+  --------------------------------------------------
+
+Ignored nodes: comments, script, style
+[36m<body>[39m
+  [36m<div>[39m
+    [36m<section[39m
+      [33maria-labelledby[39m=[32m"projects-title"[39m
+    [36m>[39m
+      [36m<h1[39m
+        [33mid[39m=[32m"projects-title"[39m
+      [36m>[39m
+        [0mProjects[0m
+      [36m</h1>[39m
+      [36m<form>[39m
+        [36m<label[39m
+          [33mfor[39m=[32m"project-name"[39m
+        [36m>[39m
+          [0mProject name[0m
+        [36m</label>[39m
+        [36m<input[39m
+          [33mid[39m=[32m"project-name"[39m
+          [33mname[39m=[32m"name"[39m
+        [36m/>[39m
+        [36m<button[39m
+          [33mtype[39m=[32m"submit"[39m
+        [36m>[39m
+          [0mCreate project[0m
+        [36m</button>[39m
+      [36m</form>[39m
+      [36m<p>[39m
+        [0mNo projects yet.[0m
+      [36m</p>[39m
+    [36m</section>[39m
+  [36m</div>[39m
+[36m</body>[39m
+ ❯ Object.getElementError node_modules/@testing-library/dom/dist/config.js:37:19
+ ❯ node_modules/@testing-library/dom/dist/query-helpers.js:76:38
+ ❯ node_modules/@testing-library/dom/dist/query-helpers.js:52:17
+ ❯ node_modules/@testing-library/dom/dist/query-helpers.js:95:19
+ ❯ tests/project-panel.test.tsx:74:19
+     72|     await screen.findByText("No projects yet.");
+     73|     await user.click(screen.getByRole("button", { name: "Create projec…
+     74|     expect(screen.getByRole("alert")).toHaveTextContent("Project name …
+       |                   ^
+     75|
+     76|     await user.type(screen.getByLabelText("Project name"), "Launch pla…
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[3/7]⎯
+
+ FAIL  tests/projects.api.test.ts > /api/projects > creates a project and returns it from the collection
+AssertionError: expected 501 to be 201 // Object.is equality
+
+- Expected
++ Received
+
+- 201
++ 501
+
+ ❯ tests/projects.api.test.ts:30:29
+     28|     );
+     29|
+     30|     expect(response.status).toBe(201);
+       |                             ^
+     31|     const { project } = await response.json();
+     32|     expect(project).toMatchObject({ name: "Launch plan" });
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[4/7]⎯
+
+ FAIL  tests/projects.api.test.ts > /api/projects > returns the stable empty-name error contract
+AssertionError: expected 501 to be 400 // Object.is equality
+
+- Expected
++ Received
+
+- 400
++ 501
+
+ ❯ tests/projects.api.test.ts:47:29
+     45|     );
+     46|
+     47|     expect(response.status).toBe(400);
+       |                             ^
+     48|     await expect(response.json()).resolves.toEqual({
+     49|       error: {
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[5/7]⎯
+
+ FAIL  tests/projects.service.test.ts > project service > creates and reloads a trimmed project from SQLite
+AssertionError: expected undefined to match object { name: 'Launch plan' }
+
+- Expected:
+{
+  "name": "Launch plan",
+}
+
++ Received:
+undefined
+
+ ❯ tests/projects.service.test.ts:29:21
+     27|     const reloaded = listProjects(path);
+     28|
+     29|     expect(created).toMatchObject({ name: "Launch plan" });
+       |                     ^
+     30|     expect(created.id).toEqual(expect.any(String));
+     31|     expect(reloaded).toEqual([created]);
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[6/7]⎯
+
+ FAIL  tests/projects.service.test.ts > project service > rejects an empty project name without persisting
+AssertionError: expected [Function] to throw an error
+
+- Expected:
+null
+
++ Received:
+undefined
+
+ ❯ tests/projects.service.test.ts:37:46
+     35|     const path = databasePath();
+     36|
+     37|     expect(() => createProject("   ", path)).toThrowError("Project nam…
+       |                                              ^
+     38|     expect(listProjects(path)).toEqual([]);
+     39|   });
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[7/7]⎯
+
+
+ Test Files  3 failed (3)
+      Tests  7 failed (7)
+   Start at  22:46:31
+   Duration  3.75s (transform 162ms, setup 1.20s, import 240ms, tests 1.33s, environment 4.80s)
+
+# exit: 1

@@ -1,0 +1,56 @@
+# hf-gate-run
+# label: t23-green
+# command: npm.cmd test -- tests/merge-external-writer.test.ts
+# started: 2026-07-30T07:23:55+00:00
+
+> collaboration-cockpit@0.1.0 test
+> vitest run tests/merge-external-writer.test.ts
+
+
+ RUN  v4.1.10 D:/cool-ai
+
+(node:15788) ExperimentalWarning: SQLite is an experimental feature and might change at any time
+(Use `node --trace-warnings ...` to show where the warning was created)
+ ❯ tests/merge-external-writer.test.ts (5 tests | 1 failed) 2859ms
+     × resolves exact old/new manifests and replays each operation exactly 401ms
+
+⎯⎯⎯⎯⎯⎯⎯ Failed Tests 1 ⎯⎯⎯⎯⎯⎯⎯
+
+ FAIL  tests/merge-external-writer.test.ts > external-writer merge recovery > resolves exact old/new manifests and replays each operation exactly
+AssertionError: expected 409 to be 200 // Object.is equality
+
+- Expected
++ Received
+
+- 200
++ 409
+
+ ❯ tests/merge-external-writer.test.ts:192:28
+    190|       const replay = await mergeModule.resolveManualRecovery(input);
+    191|       expect(replay).toEqual(first);
+    192|       expect(first.status).toBe(200);
+       |                            ^
+    193|       expect(manualState(fixture.database)).toMatchObject(action === "…
+    194|         ? { executionStatus: "conflicted", journalStatus: "resolved_ol…
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[1/2]⎯
+
+ FAIL  tests/merge-external-writer.test.ts > external-writer merge recovery > resolves exact old/new manifests and replays each operation exactly
+Error: EPERM, Permission denied: \\?\C:\Users\ADMINI~1\AppData\Local\Temp\2\cool-ai-writer-recovered_old-1MGd7z '\\?\C:\Users\ADMINI~1\AppData\Local\Temp\2\cool-ai-writer-recovered_old-1MGd7z'
+ ❯ tests/merge-external-writer.test.ts:86:39
+     84|
+     85| afterEach(() => {
+     86|   for (const root of roots.splice(0)) rmSync(root, { force: true, recu…
+       |                                       ^
+     87| });
+     88|
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[2/2]⎯
+
+
+ Test Files  1 failed (1)
+      Tests  1 failed | 4 passed (5)
+   Start at  15:23:56
+   Duration  4.97s (transform 209ms, setup 337ms, import 97ms, tests 2.86s, environment 1.41s)
+
+# exit: 1

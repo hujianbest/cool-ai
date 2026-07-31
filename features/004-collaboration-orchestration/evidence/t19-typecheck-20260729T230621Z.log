@@ -1,0 +1,25 @@
+# hf-gate-run
+# label: t19-typecheck
+# command: npx.cmd tsc --noEmit
+# started: 2026-07-29T23:06:21+00:00
+src/server/collaboration/action-committer.ts(390,79): error TS2339: Property 'clientKey' does not exist on type '{ source: "existing"; workItemId: string; } | { source: "proposed"; clientKey: string; }'.
+  Property 'clientKey' does not exist on type '{ source: "existing"; workItemId: string; }'.
+src/server/collaboration/run-service.ts(1266,5): error TS2322: Type '{ mentionMemberStatus: string | null; id: string; sequence: number; content: string; createdAt: string; mentionAgentId: string | null; mentionDisplayName: string | null; authorType: "owner" | "agent"; authorAgentId: string | null; authorDisplayName: string; runId: string | null; }[]' is not assignable to type 'ProjectMessage[]'.
+  Type '{ mentionMemberStatus: string | null; id: string; sequence: number; content: string; createdAt: string; mentionAgentId: string | null; mentionDisplayName: string | null; authorType: "owner" | "agent"; authorAgentId: string | null; authorDisplayName: string; runId: string | null; }' is not assignable to type 'ProjectMessage'.
+    Types of property 'mentionMemberStatus' are incompatible.
+      Type 'string | null' is not assignable to type '"current" | "left" | null'.
+        Type 'string' is not assignable to type '"current" | "left" | null'.
+src/server/collaboration/turn-orchestrator.ts(932,69): error TS2339: Property 'id' does not exist on type 'never'.
+tests/agent-task-actions.test.ts(496,48): error TS2322: Type '{ readonly clientKey: "same"; readonly title: "One"; readonly description: ""; readonly dependsOnKeys: readonly []; } | { readonly clientKey: "same"; readonly title: "Two"; readonly description: ""; readonly dependsOnKeys: readonly []; } | ... 5 more ... | { ...; }' is not assignable to type 'ProposedTask'.
+  Type '{ readonly clientKey: "same"; readonly title: "One"; readonly description: ""; readonly dependsOnKeys: readonly []; }' is not assignable to type 'ProposedTask'.
+    Types of property 'dependsOnKeys' are incompatible.
+      The type 'readonly []' is 'readonly' and cannot be assigned to the mutable type 'string[]'.
+tests/handoff-plan-ready.test.ts(387,54): error TS2345: Argument of type '(_case: string, target: string, summary: string, reason: string | undefined) => void' is not assignable to parameter of type '(...args: [string, string, string, string] | [string, string, string]) => Awaitable<void>'.
+  Types of parameters '_case' and 'args' are incompatible.
+    Type '[string, string, string, string] | [string, string, string]' is not assignable to type '[_case: string, target: string, summary: string, reason: string | undefined]'.
+      Type '[string, string, string]' is not assignable to type '[_case: string, target: string, summary: string, reason: string | undefined]'.
+        Source has 3 element(s) but target requires 4.
+tests/handoff-plan-ready.test.ts(392,11): error TS2322: Type 'string | undefined' is not assignable to type 'string'.
+  Type 'undefined' is not assignable to type 'string'.
+tests/turn-finalize.test.ts(422,31): error TS2345: Argument of type 'unknown' is not assignable to parameter of type 'SQLInputValue'.
+# exit: 2

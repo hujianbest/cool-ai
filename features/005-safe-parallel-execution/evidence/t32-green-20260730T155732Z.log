@@ -1,0 +1,27 @@
+# hf-gate-run
+# label: t32-green
+# command: npm.cmd run smoke:execution
+# started: 2026-07-30T15:57:32+00:00
+
+> collaboration-cockpit@0.1.0 smoke:execution
+> node tests/execution-browser-smoke.mjs
+
+(node:14376) ExperimentalWarning: SQLite is an experimental feature and might change at any time
+(Use `node --trace-warnings ...` to show where the warning was created)
+file:///D:/cool-ai/tests/execution-browser-smoke.mjs:241
+      throw new Error(`Execution app exited before readiness.\n${serverOutput}`);
+            ^
+
+Error: Execution app exited before readiness.
+▲ Next.js 16.2.12
+- Local:         http://127.0.0.1:18338
+- Network:       http://127.0.0.1:18338
+✓ Ready in 374ms
+SyntaxError: Unexpected non-whitespace character after JSON at position 32 (line 3 column 4)
+    at JSON.parse (<anonymous>)
+
+    at waitForApp (file:///D:/cool-ai/tests/execution-browser-smoke.mjs:241:13)
+    at async file:///D:/cool-ai/tests/execution-browser-smoke.mjs:948:3
+
+Node.js v24.14.0
+# exit: 1

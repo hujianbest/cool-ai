@@ -1,0 +1,1147 @@
+# hf-gate-run
+# label: t23-green
+# command: npm.cmd test -- ./tests/collaboration-accessibility.test.tsx
+# started: 2026-07-29T23:41:29+00:00
+
+> collaboration-cockpit@0.1.0 test
+> vitest run ./tests/collaboration-accessibility.test.tsx
+
+
+ RUN  v4.1.10 D:/cool-ai
+
+ ❯ tests/collaboration-accessibility.test.tsx (4 tests | 1 failed) 865ms
+     × uses one tabbed mobile surface for chat, board, and run detail while preserving desktop 586ms
+
+⎯⎯⎯⎯⎯⎯⎯ Failed Tests 1 ⎯⎯⎯⎯⎯⎯⎯
+
+ FAIL  tests/collaboration-accessibility.test.tsx > narrow collaboration cockpit accessibility > uses one tabbed mobile surface for chat, board, and run detail while preserving desktop
+TestingLibraryElementError: Unable to find an accessible element with the role "region" and name "运行控制"
+
+Here are the accessible roles:
+
+  toolbar:
+
+  Name "驾驶舱面板":
+  [36m<div[39m
+    [33maria-label[39m=[32m"驾驶舱面板"[39m
+    [33mclass[39m=[32m"mobile-toolbar"[39m
+    [33mrole[39m=[32m"toolbar"[39m
+  [36m/>[39m
+
+  --------------------------------------------------
+  button:
+
+  Name "打开项目导航":
+  [36m<button[39m
+    [33maria-controls[39m=[32m"project-navigation-drawer"[39m
+    [33maria-expanded[39m=[32m"false"[39m
+    [33maria-label[39m=[32m"打开项目导航"[39m
+    [33mtype[39m=[32m"button"[39m
+  [36m/>[39m
+
+  Name "打开编辑":
+  [36m<button[39m
+    [33maria-controls[39m=[32m"task-editor-surface"[39m
+    [33maria-expanded[39m=[32m"false"[39m
+    [33maria-label[39m=[32m"打开编辑"[39m
+    [33mtype[39m=[32m"button"[39m
+  [36m/>[39m
+
+  Name "打开当前任务上下文":
+  [36m<button[39m
+    [33maria-controls[39m=[32m"task-context-drawer"[39m
+    [33maria-expanded[39m=[32m"false"[39m
+    [33maria-label[39m=[32m"打开当前任务上下文"[39m
+    [33mtype[39m=[32m"button"[39m
+  [36m/>[39m
+
+  Name "关闭项目导航":
+  [36m<button[39m
+    [33maria-label[39m=[32m"关闭项目导航"[39m
+    [33mclass[39m=[32m"drawer-close"[39m
+    [33mtabindex[39m=[32m"-1"[39m
+    [33mtype[39m=[32m"button"[39m
+  [36m/>[39m
+
+  Name "创建项目":
+  [36m<button[39m
+    [33mtype[39m=[32m"submit"[39m
+  [36m/>[39m
+
+  Name "Launch plan":
+  [36m<button[39m
+    [33maria-current[39m=[32m"page"[39m
+    [33mtype[39m=[32m"button"[39m
+  [36m/>[39m
+
+  Name "绑定工作区":
+  [36m<button[39m
+    [33mtype[39m=[32m"submit"[39m
+  [36m/>[39m
+
+  Name "关闭任务编辑":
+  [36m<button[39m
+    [33maria-label[39m=[32m"关闭任务编辑"[39m
+    [33mclass[39m=[32m"drawer-close"[39m
+    [33mdata-dialog-close[39m=[32m"true"[39m
+    [33mtabindex[39m=[32m"-1"[39m
+    [33mtype[39m=[32m"button"[39m
+  [36m/>[39m
+
+  Name "运行任务":
+  [36m<button[39m
+    [33mdisabled[39m=[32m""[39m
+    [33mtype[39m=[32m"submit"[39m
+  [36m/>[39m
+
+  Name "关闭当前任务上下文":
+  [36m<button[39m
+    [33maria-label[39m=[32m"关闭当前任务上下文"[39m
+    [33mclass[39m=[32m"drawer-close"[39m
+    [33mdata-dialog-close[39m=[32m"true"[39m
+    [33mtabindex[39m=[32m"-1"[39m
+    [33mtype[39m=[32m"button"[39m
+  [36m/>[39m
+
+  Name "保存记忆":
+  [36m<button[39m
+    [33mtype[39m=[32m"submit"[39m
+  [36m/>[39m
+
+  Name "查看历史记忆":
+  [36m<button[39m
+    [33mdisabled[39m=[32m""[39m
+    [33mtype[39m=[32m"button"[39m
+  [36m/>[39m
+
+  --------------------------------------------------
+  complementary:
+
+  Name "项目导航":
+  [36m<aside[39m
+    [33maria-label[39m=[32m"项目导航"[39m
+    [33mclass[39m=[32m"cockpit-sidebar"[39m
+    [33mdata-open[39m=[32m"false"[39m
+    [33mdata-testid[39m=[32m"project-surface"[39m
+    [33mid[39m=[32m"project-navigation-drawer"[39m
+  [36m/>[39m
+
+  Name "当前任务上下文":
+  [36m<aside[39m
+    [33maria-label[39m=[32m"当前任务上下文"[39m
+    [33mclass[39m=[32m"cockpit-context"[39m
+    [33mdata-open[39m=[32m"false"[39m
+    [33mdata-testid[39m=[32m"context-surface"[39m
+    [33mid[39m=[32m"task-context-drawer"[39m
+  [36m/>[39m
+
+  --------------------------------------------------
+  paragraph:
+
+  Name "":
+  [36m<p[39m
+    [33mclass[39m=[32m"eyebrow"[39m
+  [36m/>[39m
+
+  Name "":
+  [36m<p[39m
+    [33maria-busy[39m=[32m"true"[39m
+    [33mclass[39m=[32m"muted"[39m
+  [36m/>[39m
+
+  Name "":
+  [36m<p[39m
+    [33maria-busy[39m=[32m"true"[39m
+    [33mclass[39m=[32m"muted"[39m
+  [36m/>[39m
+
+  Name "":
+  [36m<p[39m
+    [33mclass[39m=[32m"eyebrow"[39m
+  [36m/>[39m
+
+  Name "":
+  [36m<p[39m
+    [33mclass[39m=[32m"eyebrow"[39m
+  [36m/>[39m
+
+  Name "":
+  [36m<p[39m
+    [33maria-busy[39m=[32m"true"[39m
+    [33mclass[39m=[32m"state-message"[39m
+  [36m/>[39m
+
+  Name "":
+  [36m<p[39m
+    [33maria-busy[39m=[32m"true"[39m
+    [33mclass[39m=[32m"state-message"[39m
+  [36m/>[39m
+
+  Name "":
+  [36m<p[39m
+    [33mclass[39m=[32m"state-message"[39m
+  [36m/>[39m
+
+  Name "":
+  [36m<p[39m
+    [33mclass[39m=[32m"eyebrow"[39m
+  [36m/>[39m
+
+  Name "":
+  [36m<p[39m
+    [33maria-busy[39m=[32m"true"[39m
+    [33mclass[39m=[32m"state-message"[39m
+  [36m/>[39m
+
+  --------------------------------------------------
+  heading:
+
+  Name "Cool AI":
+  [36m<h1 />[39m
+
+  Name "项目":
+  [36m<h2[39m
+    [33mid[39m=[32m"projects-title"[39m
+  [36m/>[39m
+
+  Name "项目设置":
+  [36m<h2[39m
+    [33mid[39m=[32m"project-setup-title-project-1"[39m
+  [36m/>[39m
+
+  Name "本地工作区":
+  [36m<h3[39m
+    [33mid[39m=[32m"workspace-title-project-1"[39m
+  [36m/>[39m
+
+  Name "项目成员":
+  [36m<h3[39m
+    [33mid[39m=[32m"members-title-project-1"[39m
+  [36m/>[39m
+
+  Name "Launch plan":
+  [36m<h2[39m
+    [33mid[39m=[32m"tasks-title"[39m
+    [33mtabindex[39m=[32m"-1"[39m
+  [36m/>[39m
+
+  Name "项目群聊":
+  [36m<h3[39m
+    [33mid[39m=[32m"collaboration-title"[39m
+  [36m/>[39m
+
+  Name "使命看板":
+  [36m<h2[39m
+    [33mid[39m=[32m"mission-board-title-project-1"[39m
+  [36m/>[39m
+
+  Name "项目上下文":
+  [36m<h2 />[39m
+
+  Name "共享记忆":
+  [36m<h2[39m
+    [33mid[39m=[32m"memory-title-project-1"[39m
+  [36m/>[39m
+
+  --------------------------------------------------
+  navigation:
+
+  Name "主导航":
+  [36m<nav[39m
+    [33maria-label[39m=[32m"主导航"[39m
+  [36m/>[39m
+
+  Name "项目":
+  [36m<nav[39m
+    [33maria-label[39m=[32m"项目"[39m
+  [36m/>[39m
+
+  --------------------------------------------------
+  list:
+
+  Name "":
+  [36m<ul[39m
+    [33mclass[39m=[32m"project-list"[39m
+  [36m/>[39m
+
+  Name "":
+  [36m<ul[39m
+    [33mclass[39m=[32m"project-list"[39m
+  [36m/>[39m
+
+  --------------------------------------------------
+  listitem:
+
+  Name "":
+  [36m<li />[39m
+
+  Name "":
+  [36m<li />[39m
+
+  Name "":
+  [36m<li />[39m
+
+  --------------------------------------------------
+  link:
+
+  Name "工作":
+  [36m<a[39m
+    [33maria-current[39m=[32m"page"[39m
+    [33mhref[39m=[32m"/"[39m
+  [36m/>[39m
+
+  Name "团队":
+  [36m<a[39m
+    [33mhref[39m=[32m"/team"[39m
+  [36m/>[39m
+
+  --------------------------------------------------
+  region:
+
+  Name "项目":
+  [36m<section[39m
+    [33maria-labelledby[39m=[32m"projects-title"[39m
+    [33mclass[39m=[32m"stack"[39m
+  [36m/>[39m
+
+  Name "项目设置":
+  [36m<section[39m
+    [33maria-labelledby[39m=[32m"project-setup-title-project-1"[39m
+    [33mclass[39m=[32m"stack project-setup"[39m
+  [36m/>[39m
+
+  Name "本地工作区":
+  [36m<section[39m
+    [33maria-labelledby[39m=[32m"workspace-title-project-1"[39m
+    [33mclass[39m=[32m"stack"[39m
+  [36m/>[39m
+
+  Name "项目成员":
+  [36m<section[39m
+    [33maria-labelledby[39m=[32m"members-title-project-1"[39m
+    [33mclass[39m=[32m"stack"[39m
+  [36m/>[39m
+
+  Name "项目群聊":
+  [36m<section[39m
+    [33maria-labelledby[39m=[32m"collaboration-title"[39m
+    [33mclass[39m=[32m"stack"[39m
+  [36m/>[39m
+
+  Name "使命看板":
+  [36m<section[39m
+    [33maria-labelledby[39m=[32m"mission-board-title-project-1"[39m
+    [33mclass[39m=[32m"stack mission-board"[39m
+    [33mid[39m=[32m"mission-board"[39m
+  [36m/>[39m
+
+  Name "共享记忆":
+  [36m<section[39m
+    [33maria-labelledby[39m=[32m"memory-title-project-1"[39m
+    [33mclass[39m=[32m"stack"[39m
+  [36m/>[39m
+
+  --------------------------------------------------
+  textbox:
+
+  Name "项目名称":
+  [36m<input[39m
+    [33mid[39m=[32m"project-name"[39m
+    [33mname[39m=[32m"name"[39m
+    [33mvalue[39m=[32m""[39m
+  [36m/>[39m
+
+  Name "本地工作区路径":
+  [36m<input[39m
+    [33mid[39m=[32m"workspace-path-project-1"[39m
+    [33mname[39m=[32m"workspacePath"[39m
+    [33mvalue[39m=[32m""[39m
+  [36m/>[39m
+
+  Name "任务目标":
+  [36m<input[39m
+    [33mid[39m=[32m"task-goal"[39m
+    [33mname[39m=[32m"goal"[39m
+    [33mvalue[39m=[32m""[39m
+  [36m/>[39m
+
+  Name "记忆正文":
+  [36m<textarea[39m
+    [33mid[39m=[32m"memory-content-project-1"[39m
+  [36m/>[39m
+
+  Name "来源引用":
+  [36m<input[39m
+    [33mid[39m=[32m"memory-source-ref-project-1"[39m
+    [33mvalue[39m=[32m""[39m
+  [36m/>[39m
+
+  --------------------------------------------------
+  main:
+
+  Name "任务事件流":
+  [36m<main[39m
+    [33maria-label[39m=[32m"任务事件流"[39m
+    [33mclass[39m=[32m"cockpit-flow"[39m
+    [33mdata-open[39m=[32m"false"[39m
+    [33mdata-testid[39m=[32m"editor-surface"[39m
+    [33mid[39m=[32m"task-editor-surface"[39m
+  [36m/>[39m
+
+  --------------------------------------------------
+  status:
+
+  Name "":
+  [36m<p[39m
+    [33maria-atomic[39m=[32m"true"[39m
+    [33maria-live[39m=[32m"polite"[39m
+    [33mclass[39m=[32m"muted"[39m
+    [33mrole[39m=[32m"status"[39m
+  [36m/>[39m
+
+  --------------------------------------------------
+  tablist:
+
+  Name "项目上下文资源":
+  [36m<div[39m
+    [33maria-label[39m=[32m"项目上下文资源"[39m
+    [33mclass[39m=[32m"project-context-tabs"[39m
+    [33mrole[39m=[32m"tablist"[39m
+  [36m/>[39m
+
+  --------------------------------------------------
+  tab:
+
+  Name "共享记忆":
+  [36m<button[39m
+    [33maria-controls[39m=[32m"project-context-memory-project-1"[39m
+    [33maria-selected[39m=[32m"true"[39m
+    [33mid[39m=[32m"project-context-tab-memory-project-1"[39m
+    [33mrole[39m=[32m"tab"[39m
+    [33mtabindex[39m=[32m"0"[39m
+    [33mtype[39m=[32m"button"[39m
+  [36m/>[39m
+
+  Name "上下文预览":
+  [36m<button[39m
+    [33maria-controls[39m=[32m"project-context-context-project-1"[39m
+    [33maria-selected[39m=[32m"false"[39m
+    [33mid[39m=[32m"project-context-tab-context-project-1"[39m
+    [33mrole[39m=[32m"tab"[39m
+    [33mtabindex[39m=[32m"-1"[39m
+    [33mtype[39m=[32m"button"[39m
+  [36m/>[39m
+
+  Name "骨架运行":
+  [36m<button[39m
+    [33maria-controls[39m=[32m"project-context-skeleton-project-1"[39m
+    [33maria-selected[39m=[32m"false"[39m
+    [33mid[39m=[32m"project-context-tab-skeleton-project-1"[39m
+    [33mrole[39m=[32m"tab"[39m
+    [33mtabindex[39m=[32m"-1"[39m
+    [33mtype[39m=[32m"button"[39m
+  [36m/>[39m
+
+  --------------------------------------------------
+  tabpanel:
+
+  Name "共享记忆":
+  [36m<div[39m
+    [33maria-labelledby[39m=[32m"project-context-tab-memory-project-1"[39m
+    [33mid[39m=[32m"project-context-memory-project-1"[39m
+    [33mrole[39m=[32m"tabpanel"[39m
+  [36m/>[39m
+
+  --------------------------------------------------
+  group:
+
+  Name "记忆类型":
+  [36m<fieldset />[39m
+
+  --------------------------------------------------
+  radio:
+
+  Name "目标":
+  [36m<input[39m
+    [33mchecked[39m=[32m""[39m
+    [33mname[39m=[32m"memory-type-project-1"[39m
+    [33mtype[39m=[32m"radio"[39m
+    [33mvalue[39m=[32m"goal"[39m
+  [36m/>[39m
+
+  Name "决策":
+  [36m<input[39m
+    [33mname[39m=[32m"memory-type-project-1"[39m
+    [33mtype[39m=[32m"radio"[39m
+    [33mvalue[39m=[32m"decision"[39m
+  [36m/>[39m
+
+  Name "事实":
+  [36m<input[39m
+    [33mname[39m=[32m"memory-type-project-1"[39m
+    [33mtype[39m=[32m"radio"[39m
+    [33mvalue[39m=[32m"fact"[39m
+  [36m/>[39m
+
+  Name "产物":
+  [36m<input[39m
+    [33mname[39m=[32m"memory-type-project-1"[39m
+    [33mtype[39m=[32m"radio"[39m
+    [33mvalue[39m=[32m"artifact"[39m
+  [36m/>[39m
+
+  --------------------------------------------------
+  combobox:
+
+  Name "来源类型":
+  [36m<select[39m
+    [33mid[39m=[32m"memory-source-type-project-1"[39m
+  [36m/>[39m
+
+  Name "取代旧记忆":
+  [36m<select[39m
+    [33mid[39m=[32m"memory-supersede-project-1"[39m
+  [36m/>[39m
+
+  --------------------------------------------------
+  option:
+
+  Name "Owner 输入":
+  [36m<option[39m
+    [33mvalue[39m=[32m"owner_input"[39m
+  [36m/>[39m
+
+  Name "任务":
+  [36m<option[39m
+    [33mvalue[39m=[32m"work_item"[39m
+  [36m/>[39m
+
+  Name "产物路径":
+  [36m<option[39m
+    [33mvalue[39m=[32m"artifact_path"[39m
+  [36m/>[39m
+
+  Name "不取代":
+  [36m<option[39m
+    [33mvalue[39m=[32m""[39m
+  [36m/>[39m
+
+  --------------------------------------------------
+
+Ignored nodes: comments, script, style
+[36m<body[39m
+  [33mstyle[39m=[32m""[39m
+[36m>[39m
+  [36m<div />[39m
+  [36m<div>[39m
+    [36m<div[39m
+      [33mclass[39m=[32m"collaboration-cockpit"[39m
+      [33mdata-testid[39m=[32m"collaboration-cockpit"[39m
+    [36m>[39m
+      [36m<div[39m
+        [33maria-label[39m=[32m"驾驶舱面板"[39m
+        [33mclass[39m=[32m"mobile-toolbar"[39m
+        [33mrole[39m=[32m"toolbar"[39m
+      [36m>[39m
+        [36m<button[39m
+          [33maria-controls[39m=[32m"project-navigation-drawer"[39m
+          [33maria-expanded[39m=[32m"false"[39m
+          [33maria-label[39m=[32m"打开项目导航"[39m
+          [33mtype[39m=[32m"button"[39m
+        [36m>[39m
+          [0m项目[0m
+        [36m</button>[39m
+        [36m<button[39m
+          [33maria-controls[39m=[32m"task-editor-surface"[39m
+          [33maria-expanded[39m=[32m"false"[39m
+          [33maria-label[39m=[32m"打开编辑"[39m
+          [33mtype[39m=[32m"button"[39m
+        [36m>[39m
+          [0m编辑[0m
+        [36m</button>[39m
+        [36m<button[39m
+          [33maria-controls[39m=[32m"task-context-drawer"[39m
+          [33maria-expanded[39m=[32m"false"[39m
+          [33maria-label[39m=[32m"打开当前任务上下文"[39m
+          [33mtype[39m=[32m"button"[39m
+        [36m>[39m
+          [0m上下文[0m
+        [36m</button>[39m
+      [36m</div>[39m
+      [36m<aside[39m
+        [33maria-label[39m=[32m"项目导航"[39m
+        [33mclass[39m=[32m"cockpit-sidebar"[39m
+        [33mdata-open[39m=[32m"false"[39m
+        [33mdata-testid[39m=[32m"project-surface"[39m
+        [33mid[39m=[32m"project-navigation-drawer"[39m
+      [36m>[39m
+        [36m<span[39m
+          [33mclass[39m=[32m"sr-only"[39m
+          [33mid[39m=[32m"project-navigation-label"[39m
+        [36m>[39m
+          [0m项目导航[0m
+        [36m</span>[39m
+        [36m<button[39m
+          [33maria-label[39m=[32m"关闭项目导航"[39m
+          [33mclass[39m=[32m"drawer-close"[39m
+          [33mtabindex[39m=[32m"-1"[39m
+          [33mtype[39m=[32m"button"[39m
+        [36m>[39m
+          [0m关闭[0m
+        [36m</button>[39m
+        [36m<div[39m
+          [33mclass[39m=[32m"product-identity"[39m
+        [36m>[39m
+          [36m<span[39m
+            [33maria-hidden[39m=[32m"true"[39m
+            [33mclass[39m=[32m"product-mark"[39m
+          [36m>[39m
+            [0mC[0m
+          [36m</span>[39m
+          [36m<div>[39m
+            [36m<p[39m
+              [33mclass[39m=[32m"eyebrow"[39m
+            [36m>[39m
+              [0m协作驾驶舱[0m
+            [36m</p>[39m
+            [36m<h1>[39m
+              [0mCool AI[0m
+            [36m</h1>[39m
+          [36m</div>[39m
+        [36m</div>[39m
+        [36m<nav[39m
+          [33maria-label[39m=[32m"主导航"[39m
+        [36m>[39m
+          [36m<ul[39m
+            [33mclass[39m=[32m"project-list"[39m
+          [36m>[39m
+            [36m<li>[39m
+              [36m<a[39m
+                [33maria-current[39m=[32m"page"[39m
+                [33mhref[39m=[32m"/"[39m
+              [36m>[39m
+                [0m工作[0m
+              [36m</a>[39m
+            [36m</li>[39m
+            [36m<li>[39m
+              [36m<a[39m
+                [33mhref[39m=[32m"/team"[39m
+              [36m>[39m
+                [0m团队[0m
+              [36m</a>[39m
+            [36m</li>[39m
+          [36m</ul>[39m
+        [36m</nav>[39m
+        [36m<section[39m
+          [33maria-labelledby[39m=[32m"projects-title"[39m
+          [33mclass[39m=[32m"stack"[39m
+        [36m>[39m
+          [36m<h2[39m
+            [33mid[39m=[32m"projects-title"[39m
+          [36m>[39m
+            [0m项目[0m
+          [36m</h2>[39m
+          [36m<form[39m
+            [33mclass[39m=[32m"stack"[39m
+          [36m>[39m
+            [36m<div[39m
+              [33mclass[39m=[32m"form-field"[39m
+            [36m>[39m
+              [36m<label[39m
+                [33mfor[39m=[32m"project-name"[39m
+              [36m>[39m
+                [0m项目名称[0m
+              [36m</label>[39m
+              [36m<input[39m
+                [33mid[39m=[32m"project-name"[39m
+                [33mname[39m=[32m"name"[39m
+                [33mvalue[39m=[32m""[39m
+              [36m/>[39m
+            [36m</div>[39m
+            [36m<button[39m
+              [33mtype[39m=[32m"submit"[39m
+            [36m>[39m
+              [0m创建项目[0m
+            [36m</button>[39m
+          [36m</form>[39m
+          [36m<nav[39m
+            [33maria-label[39m=[32m"项目"[39m
+          [36m>[39m
+            [36m<ul[39m
+              [33mclass[39m=[32m"project-list"[39m
+            [36m>[39m
+              [36m<li>[39m
+                [36m<button[39m
+                  [33maria-current[39m=[32m"page"[39m
+                  [33mtype[39m=[32m"button"[39m
+                [36m>[39m
+                  [0mLaunch plan[0m
+                [36m</button>[39m
+              [36m</li>[39m
+            [36m</ul>[39m
+          [36m</nav>[39m
+        [36m</section>[39m
+        [36m<section[39m
+          [33maria-labelledby[39m=[32m"project-setup-title-project-1"[39m
+          [33mclass[39m=[32m"stack project-setup"[39m
+        [36m>[39m
+          [36m<h2[39m
+            [33mid[39m=[32m"project-setup-title-project-1"[39m
+          [36m>[39m
+            [0m项目设置[0m
+          [36m</h2>[39m
+          [36m<section[39m
+            [33maria-labelledby[39m=[32m"workspace-title-project-1"[39m
+            [33mclass[39m=[32m"stack"[39m
+          [36m>[39m
+            [36m<div>[39m
+              [36m<div[39m
+                [33mclass[39m=[32m"stack"[39m
+              [36m>[39m
+                [36m<h3[39m
+                  [33mid[39m=[32m"workspace-title-project-1"[39m
+                [36m>[39m
+                  [0m本地工作区[0m
+                [36m</h3>[39m
+                [36m<p[39m
+                  [33maria-busy[39m=[32m"true"[39m
+                  [33mclass[39m=[32m"muted"[39m
+                [36m>[39m
+                  [0m正在加载工作区…[0m
+                [36m</p>[39m
+                [36m<form[39m
+                  [33mclass[39m=[32m"stack"[39m
+                [36m>[39m
+                  [36m<div[39m
+                    [33mclass[39m=[32m"form-field"[39m
+                  [36m>[39m
+                    [36m<label[39m
+                      [33mfor[39m=[32m"workspace-path-project-1"[39m
+                    [36m>[39m
+                      [0m本地工作区路径[0m
+                    [36m</label>[39m
+                    [36m<input[39m
+                      [33mid[39m=[32m"workspace-path-project-1"[39m
+                      [33mname[39m=[32m"workspacePath"[39m
+                      [33mvalue[39m=[32m""[39m
+                    [36m/>[39m
+                  [36m</div>[39m
+                  [36m<button[39m
+                    [33mtype[39m=[32m"submit"[39m
+                  [36m>[39m
+                    [0m绑定工作区[0m
+                  [36m</button>[39m
+                [36m</form>[39m
+              [36m</div>[39m
+            [36m</div>[39m
+          [36m</section>[39m
+          [36m<section[39m
+            [33maria-labelledby[39m=[32m"members-title-project-1"[39m
+            [33mclass[39m=[32m"stack"[39m
+          [36m>[39m
+            [36m<h3[39m
+              [33mid[39m=[32m"members-title-project-1"[39m
+            [36m>[39m
+              [0m项目成员[0m
+            [36m</h3>[39m
+            [36m<p[39m
+              [33maria-busy[39m=[32m"true"[39m
+              [33mclass[39m=[32m"muted"[39m
+            [36m>[39m
+              [0m正在加载项目成员…[0m
+            [36m</p>[39m
+          [36m</section>[39m
+        [36m</section>[39m
+      [36m</aside>[39m
+      [36m<main[39m
+        [33maria-label[39m=[32m"任务事件流"[39m
+        [33mclass[39m=[32m"cockpit-flow"[39m
+        [33mdata-open[39m=[32m"false"[39m
+        [33mdata-testid[39m=[32m"editor-surface"[39m
+        [33mid[39m=[32m"task-editor-surface"[39m
+      [36m>[39m
+        [36m<span[39m
+          [33mclass[39m=[32m"sr-only"[39m
+          [33mid[39m=[32m"task-editor-label"[39m
+        [36m>[39m
+          [0m任务编辑[0m
+        [36m</span>[39m
+        [36m<button[39m
+          [33maria-label[39m=[32m"关闭任务编辑"[39m
+          [33mclass[39m=[32m"drawer-close"[39m
+          [33mdata-dialog-close[39m=[32m"true"[39m
+          [33mtabindex[39m=[32m"-1"[39m
+          [33mtype[39m=[32m"button"[39m
+        [36m>[39m
+          [0m关闭[0m
+        [36m</button>[39m
+        [36m<div[39m
+          [33mclass[39m=[32m"panel-heading"[39m
+        [36m>[39m
+          [36m<span[39m
+            [33maria-hidden[39m=[32m"true"[39m
+            [33mclass[39m=[32m"agent-mark"[39m
+          [36m>[39m
+            [0mA[0m
+          [36m</span>[39m
+          [36m<div>[39m
+            [36m<p[39m
+              [33mclass[39m=[32m"eyebrow"[39m
+            [36m>[39m
+              [0m确定性示例 Agent[0m
+            [36m</p>[39m
+            [36m<h2[39m
+              [33mid[39m=[32m"tasks-title"[39m
+              [33mtabindex[39m=[32m"-1"[39m
+            [36m>[39m
+              [0mLaunch plan[0m
+            [36m</h2>[39m
+          [36m</div>[39m
+        [36m</div>[39m
+        [36m<section[39m
+          [33maria-labelledby[39m=[32m"collaboration-title"[39m
+          [33mclass[39m=[32m"stack"[39m
+        [36m>[39m
+          [36m<div[39m
+            [33mclass[39m=[32m"panel-heading"[39m
+          [36m>[39m
+            [36m<div>[39m
+              [36m<p[39m
+                [33mclass[39m=[32m"eyebrow"[39m
+              [36m>[39m
+                [0m平等协作[0m
+              [36m</p>[39m
+              [36m<h3[39m
+                [33mid[39m=[32m"collaboration-title"[39m
+              [36m>[39m
+                [0m项目群聊[0m
+              [36m</h3>[39m
+            [36m</div>[39m
+          [36m</div>[39m
+          [36m<p[39m
+            [33maria-busy[39m=[32m"true"[39m
+            [33mclass[39m=[32m"state-message"[39m
+          [36m>[39m
+            [0m正在加载项目群聊…[0m
+          [36m</p>[39m
+        [36m</section>[39m
+        [36m<section[39m
+          [33maria-labelledby[39m=[32m"mission-board-title-project-1"[39m
+          [33mclass[39m=[32m"stack mission-board"[39m
+          [33mid[39m=[32m"mission-board"[39m
+        [36m>[39m
+          [36m<h2[39m
+            [33mid[39m=[32m"mission-board-title-project-1"[39m
+          [36m>[39m
+            [0m使命看板[0m
+          [36m</h2>[39m
+          [36m<p[39m
+            [33maria-busy[39m=[32m"true"[39m
+            [33mclass[39m=[32m"state-message"[39m
+          [36m>[39m
+            [0m正在加载使命看板…[0m
+          [36m</p>[39m
+        [36m</section>[39m
+        [36m<form[39m
+          [33mclass[39m=[32m"composer"[39m
+        [36m>[39m
+          [36m<div[39m
+            [33mclass[39m=[32m"form-row"[39m
+          [36m>[39m
+            [36m<div[39m
+              [33mclass[39m=[32m"form-field"[39m
+            [36m>[39m
+              [36m<label[39m
+                [33mfor[39m=[32m"task-goal"[39m
+              [36m>[39m
+                [0m任务目标[0m
+              [36m</label>[39m
+              [36m<input[39m
+                [33mid[39m=[32m"task-goal"[39m
+                [33mname[39m=[32m"goal"[39m
+                [33mvalue[39m=[32m""[39m
+              [36m/>[39m
+            [36m</div>[39m
+            [36m<button[39m
+              [33mdisabled[39m=[32m""[39m
+              [33mtype[39m=[32m"submit"[39m
+            [36m>[39m
+              [0m运行任务[0m
+            [36m</button>[39m
+          [36m</div>[39m
+        [36m</form>[39m
+        [36m<p[39m
+          [33mclass[39m=[32m"state-message"[39m
+        [36m>[39m
+          [0m暂无任务。输入目标即可运行示例 Agent。[0m
+        [36m</p>[39m
+        [36m<p[39m
+          [33maria-atomic[39m=[32m"true"[39m
+          [33maria-live[39m=[32m"polite"[39m
+          [33mclass[39m=[32m"muted"[39m
+          [33mrole[39m=[32m"status"[39m
+        [36m/>[39m
+      [36m</main>[39m
+      [36m<aside[39m
+        [33maria-label[39m=[32m"当前任务上下文"[39m
+        [33mclass[39m=[32m"cockpit-context"[39m
+        [33mdata-open[39m=[32m"false"[39m
+        [33mdata-testid[39m=[32m"context-surface"[39m
+        [33mid[39m=[32m"task-context-drawer"[39m
+      [36m>[39m
+        [36m<span[39m
+          [33mclass[39m=[32m"sr-only"[39m
+          [33mid[39m=[32m"task-context-label"[39m
+        [36m>[39m
+          [0m当前任务上下文[0m
+        [36m</span>[39m
+        [36m<button[39m
+          [33maria-label[39m=[32m"关闭当前任务上下文"[39m
+          [33mclass[39m=[32m"drawer-close"[39m
+          [33mdata-dialog-close[39m=[32m"true"[39m
+          [33mtabindex[39m=[32m"-1"[39m
+          [33mtype[39m=[32m"button"[39m
+        [36m>[39m
+          [0m关闭[0m
+        [36m</button>[39m
+        [36m<div>[39m
+          [36m<p[39m
+            [33mclass[39m=[32m"eyebrow"[39m
+          [36m>[39m
+            [0m项目资源[0m
+          [36m</p>[39m
+          [36m<h2>[39m
+            [0m项目上下文[0m
+          [36m</h2>[39m
+        [36m</div>[39m
+        [36m<div[39m
+          [33mclass[39m=[32m"stack project-context-panel"[39m
+        [36m>[39m
+          [36m<div[39m
+            [33maria-label[39m=[32m"项目上下文资源"[39m
+            [33mclass[39m=[32m"project-context-tabs"[39m
+            [33mrole[39m=[32m"tablist"[39m
+          [36m>[39m
+            [36m<button[39m
+              [33maria-controls[39m=[32m"project-context-memory-project-1"[39m
+              [33maria-selected[39m=[32m"true"[39m
+              [33mid[39m=[32m"project-context-tab-memory-project-1"[39m
+              [33mrole[39m=[32m"tab"[39m
+              [33mtabindex[39m=[32m"0"[39m
+              [33mtype[39m=[32m"button"[39m
+            [36m>[39m
+              [0m共享记忆[0m
+            [36m</button>[39m
+            [36m<button[39m
+              [33maria-controls[39m=[32m"project-context-context-project-1"[39m
+              [33maria-selected[39m=[32m"false"[39m
+              [33mid[39m=[32m"project-context-tab-context-project-1"[39m
+              [33mrole[39m=[32m"tab"[39m
+              [33mtabindex[39m=[32m"-1"[39m
+              [33mtype[39m=[32m"button"[39m
+            [36m>[39m
+              [0m上下文预览[0m
+            [36m</button>[39m
+            [36m<button[39m
+              [33maria-controls[39m=[32m"project-context-skeleton-project-1"[39m
+              [33maria-selected[39m=[32m"false"[39m
+              [33mid[39m=[32m"project-context-tab-skeleton-project-1"[39m
+              [33mrole[39m=[32m"tab"[39m
+              [33mtabindex[39m=[32m"-1"[39m
+              [33mtype[39m=[32m"button"[39m
+            [36m>[39m
+              [0m骨架运行[0m
+            [36m</button>[39m
+          [36m</div>[39m
+          [36m<div[39m
+            [33maria-labelledby[39m=[32m"project-context-tab-memory-project-1"[39m
+            [33mid[39m=[32m"project-context-memory-project-1"[39m
+            [33mrole[39m=[32m"tabpanel"[39m
+          [36m>[39m
+            [36m<section[39m
+              [33maria-labelledby[39m=[32m"memory-title-project-1"[39m
+              [33mclass[39m=[32m"stack"[39m
+            [36m>[39m
+              [36m<h2[39m
+                [33mid[39m=[32m"memory-title-project-1"[39m
+              [36m>[39m
+                [0m共享记忆[0m
+              [36m</h2>[39m
+              [36m<form[39m
+                [33mclass[39m=[32m"stack memory-form"[39m
+              [36m>[39m
+                [36m<fieldset>[39m
+                  [36m<legend>[39m
+                    [0m记忆类型[0m
+                  [36m</legend>[39m
+                  [36m<div[39m
+                    [33mclass[39m=[32m"memory-type-options"[39m
+                  [36m>[39m
+                    [36m<label[39m
+                      [33mclass[39m=[32m"check-row"[39m
+                    [36m>[39m
+                      [36m<input[39m
+                        [33mchecked[39m=[32m""[39m
+                        [33mname[39m=[32m"memory-type-project-1"[39m
+                        [33mtype[39m=[32m"radio"[39m
+                        [33mvalue[39m=[32m"goal"[39m
+                      [36m/>[39m
+                      [36m<span>[39m
+                        [0m目标[0m
+                      [36m</span>[39m
+                    [36m</label>[39m
+                    [36m<label[39m
+                      [33mclass[39m=[32m"check-row"[39m
+                    [36m>[39m
+                      [36m<input[39m
+                        [33mname[39m=[32m"memory-type-project-1"[39m
+                        [33mtype[39m=[32m"radio"[39m
+                        [33mvalue[39m=[32m"decision"[39m
+                      [36m/>[39m
+                      [36m<span>[39m
+                        [0m决策[0m
+                      [36m</span>[39m
+                    [36m</label>[39m
+                    [36m<label[39m
+                      [33mclass[39m=[32m"check-row"[39m
+                    [36m>[39m
+                      [36m<input[39m
+                        [33mname[39m=[32m"memory-type-project-1"[39m
+                        [33mtype[39m=[32m"radio"[39m
+                        [33mvalue[39m=[32m"fact"[39m
+                      [36m/>[39m
+                      [36m<span>[39m
+                        [0m事实[0m
+                      [36m</span>[39m
+                    [36m</label>[39m
+                    [36m<label[39m
+                      [33mclass[39m=[32m"check-row"[39m
+                    [36m>[39m
+                      [36m<input[39m
+                        [33mname[39m=[32m"memory-type-project-1"[39m
+                        [33mtype[39m=[32m"radio"[39m
+                        [33mvalue[39m=[32m"artifact"[39m
+                      [36m/>[39m
+                      [36m<span>[39m
+                        [0m产物[0m
+                      [36m</span>[39m
+                    [36m</label>[39m
+                  [36m</div>[39m
+                [36m</fieldset>[39m
+                [36m<div[39m
+                  [33mclass[39m=[32m"form-field"[39m
+                [36m>[39m
+                  [36m<label[39m
+                    [33mfor[39m=[32m"memory-content-project-1"[39m
+                  [36m>[39m
+                    [0m记忆正文[0m
+                  [36m</label>[39m
+                  [36m<textarea[39m
+                    [33mid[39m=[32m"memory-content-project-1"[39m
+                  [36m/>[39m
+                [36m</div>[39m
+                [36m<div[39m
+                  [33mclass[39m=[32m"form-field"[39m
+                [36m>[39m
+                  [36m<label[39m
+                    [33mfor[39m=[32m"memory-source-type-project-1"[39m
+                  [36m>[39m
+                    [0m来源类型[0m
+                  [36m</label>[39m
+                  [36m<select[39m
+                    [33mid[39m=[32m"memory-source-type-project-1"[39m
+                  [36m>[39m
+                    [36m<option[39m
+                      [33mvalue[39m=[32m"owner_input"[39m
+                    [36m>[39m
+                      [0mOwner 输入[0m
+                    [36m</option>[39m
+                    [36m<option[39m
+                      [33mvalue[39m=[32m"work_item"[39m
+                    [36m>[39m
+                      [0m任务[0m
+                    [36m</option>[39m
+                    [36m<option[39m
+                      [33mvalue[39m=[32m"artifact_path"[39m
+                    [36m>[39m
+                      [0m产物路径[0m
+                    [36m</option>[39m
+                  [36m</select>[39m
+                [36m</div>[39m
+                [36m<div[39m
+                  [33mclass[39m=[32m"form-field"[39m
+                [36m>[39m
+                  [36m<label[39m
+                    [33mfor[39m=[32m"memory-source-ref-project-1"[39m
+                  [36m>[39m
+                    [0m来源引用[0m
+                  [36m</label>[39m
+                  [36m<input[39m
+                    [33mid[39m=[32m"memory-source-ref-project-1"[39m
+                    [33mvalue[39m=[32m""[39m
+                  [36m/>[39m
+                [36m</div>[39m
+                [36m<div[39m
+                  [33mclass[39m=[32m"form-field"[39m
+                [36m>[39m
+                  [36m<label[39m
+                    [33mfor[39m=[32m"memory-supersede-project-1"[39m
+                  [36m>[39m
+                    [0m取代旧记忆[0m
+                  [36m</label>[39m
+                  [36m<select[39m
+                    [33mid[39m=[32m"memory-supersede-project-1"[39m
+                  [36m>[39m
+                    [36m<option[39m
+                      [33mvalue[39m=[32m""[39m
+                    [36m>[39m
+                      [0m不取代[0m
+                    [36m</option>[39m
+                  [36m</select>[39m
+                [36m</div>[39m
+                [36m<button[39m
+                  [33mtype[39m=[32m"submit"[39m
+                [36m>[39m
+                  [0m保存记忆[0m
+                [36m</button>[39m
+              [36m</form>[39m
+              [36m<button[39m
+                [33mdisabled[39m=[32m""[39m
+                [33mtype[39m=[32m"button"[39m
+              [36m>[39m
+                [0m查看历史记忆[0m
+              [36m</button>[39m
+              [36m<p[39m
+                [33maria-busy[39m=[32m"true"[39m
+                [33mclass[39m=[32m"state-message"[39m
+              [36m>[39m
+                [0m正在加载共享记忆…[0m
+              [36m</p>[39m
+            [36m</section>[39m
+          [36m</div>[39m
+        [36m</div>[39m
+      [36m</aside>[39m
+    [36m</div>[39m
+  [36m</div>[39m
+[36m</body>[39m
+ ❯ Object.getElementError node_modules/@testing-library/dom/dist/config.js:37:19
+ ❯ node_modules/@testing-library/dom/dist/query-helpers.js:76:38
+ ❯ node_modules/@testing-library/dom/dist/query-helpers.js:52:17
+ ❯ node_modules/@testing-library/dom/dist/query-helpers.js:95:19
+ ❯ tests/collaboration-accessibility.test.tsx:221:19
+    219|     expect(await screen.findByRole("heading", { name: "项目群聊" })).toBeV…
+    220|     expect(screen.getByRole("heading", { name: "使命看板" })).toBeVisible(…
+    221|     expect(screen.getByRole("region", { name: "运行控制" })).toBeVisible();
+       |                   ^
+    222|     expect(screen.queryByRole("tablist", { name: "协作视图" })).toBeNull();
+    223|   });
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[1/1]⎯
+
+
+ Test Files  1 failed (1)
+      Tests  1 failed | 3 passed (4)
+   Start at  07:41:30
+   Duration  3.24s (transform 230ms, setup 334ms, import 366ms, tests 865ms, environment 1.42s)
+
+# exit: 1

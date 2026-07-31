@@ -1,0 +1,230 @@
+# hf-gate-run
+# label: t2-red
+# command: cmd /c npm test -- tests/migrations.test.ts
+# started: 2026-07-29T16:53:36+00:00
+
+> collaboration-cockpit@0.1.0 test
+> vitest run tests/migrations.test.ts
+
+
+ RUN  v4.1.10 D:/cool-ai
+
+(node:17348) ExperimentalWarning: SQLite is an experimental feature and might change at any time
+(Use `node --trace-warnings ...` to show where the warning was created)
+ ❯ tests/migrations.test.ts (7 tests | 7 failed) 390ms
+     × migrates an empty v0 database through v1 to the complete v2 schema 46ms
+     × adopts a real S-1 legacy v0 database and preserves its data and foreign keys 66ms
+     × upgrades a valid v1 database and accepts a valid v2 database 57ms
+     × reopens a migrated database idempotently without changing persisted rows 46ms
+     × rejects incomplete and drifted legacy v0 schemas without repairing them 38ms
+     × rejects schemas newer than the application 70ms
+     × rolls back a failed v1 to v2 migration and closes the failed connection 65ms
+
+⎯⎯⎯⎯⎯⎯⎯ Failed Tests 7 ⎯⎯⎯⎯⎯⎯⎯
+
+ FAIL  tests/migrations.test.ts > database migrations > migrates an empty v0 database through v1 to the complete v2 schema
+AssertionError: expected +0 to be 2 // Object.is equality
+
+- Expected
++ Received
+
+- 2
++ 0
+
+ ❯ tests/migrations.test.ts:137:35
+    135|     const database = openDatabase(databasePath());
+    136|
+    137|     expect(userVersion(database)).toBe(2);
+       |                                   ^
+    138|     expect(tableNames(database)).toEqual([
+    139|       "agent_skills",
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[1/14]⎯
+
+ FAIL  tests/migrations.test.ts > database migrations > migrates an empty v0 database through v1 to the complete v2 schema
+Error: EPERM, Permission denied: \\?\C:\Users\ADMINI~1\AppData\Local\Temp\2\cockpit-migrations-RTbneP '\\?\C:\Users\ADMINI~1\AppData\Local\Temp\2\cockpit-migrations-RTbneP'
+ ❯ tests/migrations.test.ts:129:5
+    127| afterEach(() => {
+    128|   for (const directory of temporaryDirectories.splice(0)) {
+    129|     rmSync(directory, { force: true, recursive: true });
+       |     ^
+    130|   }
+    131| });
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[2/14]⎯
+
+ FAIL  tests/migrations.test.ts > database migrations > adopts a real S-1 legacy v0 database and preserves its data and foreign keys
+AssertionError: expected +0 to be 2 // Object.is equality
+
+- Expected
++ Received
+
+- 2
++ 0
+
+ ❯ tests/migrations.test.ts:168:35
+    166|     const database = openDatabase(path);
+    167|
+    168|     expect(userVersion(database)).toBe(2);
+       |                                   ^
+    169|     expect(database.prepare("SELECT name FROM projects").all()).toEqua…
+    170|     expect(database.prepare("SELECT goal FROM task_runs").all()).toEqu…
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[3/14]⎯
+
+ FAIL  tests/migrations.test.ts > database migrations > adopts a real S-1 legacy v0 database and preserves its data and foreign keys
+Error: EPERM, Permission denied: \\?\C:\Users\ADMINI~1\AppData\Local\Temp\2\cockpit-migrations-24SoBx '\\?\C:\Users\ADMINI~1\AppData\Local\Temp\2\cockpit-migrations-24SoBx'
+ ❯ tests/migrations.test.ts:129:5
+    127| afterEach(() => {
+    128|   for (const directory of temporaryDirectories.splice(0)) {
+    129|     rmSync(directory, { force: true, recursive: true });
+       |     ^
+    130|   }
+    131| });
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[4/14]⎯
+
+ FAIL  tests/migrations.test.ts > database migrations > upgrades a valid v1 database and accepts a valid v2 database
+AssertionError: expected 1 to be 2 // Object.is equality
+
+- Expected
++ Received
+
+- 2
++ 1
+
+ ❯ tests/migrations.test.ts:191:35
+    189|
+    190|     const upgraded = openDatabase(v1Path);
+    191|     expect(userVersion(upgraded)).toBe(2);
+       |                                   ^
+    192|     expect(tableNames(upgraded)).toContain("agent_skills");
+    193|     upgraded.close();
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[5/14]⎯
+
+ FAIL  tests/migrations.test.ts > database migrations > upgrades a valid v1 database and accepts a valid v2 database
+Error: EPERM, Permission denied: \\?\C:\Users\ADMINI~1\AppData\Local\Temp\2\cockpit-migrations-JXQY3N '\\?\C:\Users\ADMINI~1\AppData\Local\Temp\2\cockpit-migrations-JXQY3N'
+ ❯ tests/migrations.test.ts:129:5
+    127| afterEach(() => {
+    128|   for (const directory of temporaryDirectories.splice(0)) {
+    129|     rmSync(directory, { force: true, recursive: true });
+       |     ^
+    130|   }
+    131| });
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[6/14]⎯
+
+ FAIL  tests/migrations.test.ts > database migrations > reopens a migrated database idempotently without changing persisted rows
+AssertionError: expected +0 to be 2 // Object.is equality
+
+- Expected
++ Received
+
+- 2
++ 0
+
+ ❯ tests/migrations.test.ts:215:33
+    213|
+    214|     const second = openDatabase(path);
+    215|     expect(userVersion(second)).toBe(2);
+       |                                 ^
+    216|     expect(second.prepare("SELECT name FROM skills").all()).toEqual([{…
+    217|     second.close();
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[7/14]⎯
+
+ FAIL  tests/migrations.test.ts > database migrations > reopens a migrated database idempotently without changing persisted rows
+Error: EPERM, Permission denied: \\?\C:\Users\ADMINI~1\AppData\Local\Temp\2\cockpit-migrations-3aalpS '\\?\C:\Users\ADMINI~1\AppData\Local\Temp\2\cockpit-migrations-3aalpS'
+ ❯ tests/migrations.test.ts:129:5
+    127| afterEach(() => {
+    128|   for (const directory of temporaryDirectories.splice(0)) {
+    129|     rmSync(directory, { force: true, recursive: true });
+       |     ^
+    130|   }
+    131| });
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[8/14]⎯
+
+ FAIL  tests/migrations.test.ts > database migrations > rejects incomplete and drifted legacy v0 schemas without repairing them
+AssertionError: expected function to throw an error, but it didn't
+ ❯ expectSchemaError tests/migrations.test.ts:122:36
+    120|
+    121| function expectSchemaError(path: string, code: string): void {
+    122|   expect(() => openDatabase(path)).toThrowError(
+       |                                    ^
+    123|     expect.objectContaining({ code, message: expect.not.stringContaini…
+    124|   );
+ ❯ tests/migrations.test.ts:238:5
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[9/14]⎯
+
+ FAIL  tests/migrations.test.ts > database migrations > rejects incomplete and drifted legacy v0 schemas without repairing them
+Error: EPERM, Permission denied: \\?\C:\Users\ADMINI~1\AppData\Local\Temp\2\cockpit-migrations-7bD7ry '\\?\C:\Users\ADMINI~1\AppData\Local\Temp\2\cockpit-migrations-7bD7ry'
+ ❯ tests/migrations.test.ts:129:5
+    127| afterEach(() => {
+    128|   for (const directory of temporaryDirectories.splice(0)) {
+    129|     rmSync(directory, { force: true, recursive: true });
+       |     ^
+    130|   }
+    131| });
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[10/14]⎯
+
+ FAIL  tests/migrations.test.ts > database migrations > rejects schemas newer than the application
+AssertionError: expected function to throw an error, but it didn't
+ ❯ expectSchemaError tests/migrations.test.ts:122:36
+    120|
+    121| function expectSchemaError(path: string, code: string): void {
+    122|   expect(() => openDatabase(path)).toThrowError(
+       |                                    ^
+    123|     expect.objectContaining({ code, message: expect.not.stringContaini…
+    124|   );
+ ❯ tests/migrations.test.ts:277:5
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[11/14]⎯
+
+ FAIL  tests/migrations.test.ts > database migrations > rejects schemas newer than the application
+Error: EPERM, Permission denied: \\?\C:\Users\ADMINI~1\AppData\Local\Temp\2\cockpit-migrations-aKGnXm '\\?\C:\Users\ADMINI~1\AppData\Local\Temp\2\cockpit-migrations-aKGnXm'
+ ❯ tests/migrations.test.ts:129:5
+    127| afterEach(() => {
+    128|   for (const directory of temporaryDirectories.splice(0)) {
+    129|     rmSync(directory, { force: true, recursive: true });
+       |     ^
+    130|   }
+    131| });
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[12/14]⎯
+
+ FAIL  tests/migrations.test.ts > database migrations > rolls back a failed v1 to v2 migration and closes the failed connection
+AssertionError: expected function to throw an error, but it didn't
+ ❯ expectSchemaError tests/migrations.test.ts:122:36
+    120|
+    121| function expectSchemaError(path: string, code: string): void {
+    122|   expect(() => openDatabase(path)).toThrowError(
+       |                                    ^
+    123|     expect.objectContaining({ code, message: expect.not.stringContaini…
+    124|   );
+ ❯ tests/migrations.test.ts:289:5
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[13/14]⎯
+
+ FAIL  tests/migrations.test.ts > database migrations > rolls back a failed v1 to v2 migration and closes the failed connection
+Error: EPERM, Permission denied: \\?\C:\Users\ADMINI~1\AppData\Local\Temp\2\cockpit-migrations-gNYtNl '\\?\C:\Users\ADMINI~1\AppData\Local\Temp\2\cockpit-migrations-gNYtNl'
+ ❯ tests/migrations.test.ts:129:5
+    127| afterEach(() => {
+    128|   for (const directory of temporaryDirectories.splice(0)) {
+    129|     rmSync(directory, { force: true, recursive: true });
+       |     ^
+    130|   }
+    131| });
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[14/14]⎯
+
+
+ Test Files  1 failed (1)
+      Tests  7 failed (7)
+   Start at  00:53:37
+   Duration  2.49s (transform 63ms, setup 353ms, import 46ms, tests 390ms, environment 1.43s)
+
+# exit: 1

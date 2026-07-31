@@ -1,0 +1,42 @@
+# hf-gate-run
+# label: t20-regression
+# command: npm.cmd test -- tests/collaboration-slice.test.tsx tests/accessibility.test.tsx tests/cockpit-mobile-integration.test.tsx tests/cockpit-layout.test.tsx
+# started: 2026-07-29T23:13:07+00:00
+
+> collaboration-cockpit@0.1.0 test
+> vitest run tests/collaboration-slice.test.tsx tests/accessibility.test.tsx tests/cockpit-mobile-integration.test.tsx tests/cockpit-layout.test.tsx
+
+
+ RUN  v4.1.10 D:/cool-ai
+
+(node:15392) ExperimentalWarning: SQLite is an experimental feature and might change at any time
+(Use `node --trace-warnings ...` to show where the warning was created)
+ ❯ tests/collaboration-slice.test.tsx (4 tests | 1 failed) 2166ms
+     × renders route-backed loading, empty, and recoverable error states 434ms
+
+⎯⎯⎯⎯⎯⎯⎯ Failed Tests 1 ⎯⎯⎯⎯⎯⎯⎯
+
+ FAIL  tests/collaboration-slice.test.tsx > collaboration T-1 vertical slice > renders route-backed loading, empty, and recoverable error states
+Error: expect(element).toHaveTextContent()
+
+Expected element to have text content:
+  无法加载项目群聊
+Received:
+  服务暂时不可用，请稍后重试。
+ ❯ tests/collaboration-slice.test.tsx:287:46
+    285|     const user = userEvent.setup();
+    286|     render(createElement(Panel, { projectId: "project-1" }));
+    287|     expect(await screen.findByRole("alert")).toHaveTextContent("无法加载项目…
+       |                                              ^
+    288|     await user.click(screen.getByRole("button", { name: "重试加载群聊" }));
+    289|     expect(await screen.findByText("尚无协作消息。")).toBeInTheDocument();
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[1/1]⎯
+
+
+ Test Files  1 failed | 3 passed (4)
+      Tests  1 failed | 11 passed (12)
+   Start at  07:13:08
+   Duration  4.81s (transform 954ms, setup 1.74s, import 1.37s, tests 4.08s, environment 6.72s)
+
+# exit: 1

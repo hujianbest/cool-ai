@@ -1,0 +1,18 @@
+# hf-gate-run
+# label: t24-smoke
+# command: cmd.exe /d /s /c npm run smoke:collaboration
+# started: 2026-07-30T00:08:23+00:00
+
+> collaboration-cockpit@0.1.0 smoke:collaboration
+> node tests/collaboration-browser-smoke.mjs
+
+(node:11304) ExperimentalWarning: SQLite is an experimental feature and might change at any time
+(Use `node --trace-warnings ...` to show where the warning was created)
+RECOVERY PASS: refresh and process restart restored planned run
+OUTBOUND ALLOWLIST PASS: 1 models + 4 chat requests used only expected routes and fields
+PRIVATE SEPARATION PASS: primary requests contained current private instructions only; repair contained neither
+SECURITY SCAN PASS: key/Authorization/master/cipher/token/raw body/CoT occurrences=0 across product API, DOM, logs, and evidence-facing data
+BROWSER PASS: providers=1 agents=2 projects=1 memberships=2 missions=1 workItems=1 attempts=3 modelCalls=4 turns=3 decisions=1 messages=6 events=23
+DESKTOP SCREENSHOT: D:\cool-ai\features\004-collaboration-orchestration\evidence\demo-collaboration-desktop.png
+NARROW SCREENSHOT: D:\cool-ai\features\004-collaboration-orchestration\evidence\demo-collaboration-narrow.png
+# exit: 0

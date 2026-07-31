@@ -1,0 +1,36 @@
+# hf-gate-run
+# label: t7-green
+# command: npm.cmd test -- tests/sandbox-snapshot.test.ts
+# started: 2026-07-30T03:34:47+00:00
+
+> collaboration-cockpit@0.1.0 test
+> vitest run tests/sandbox-snapshot.test.ts
+
+
+ RUN  v4.1.10 D:/cool-ai
+
+ ❯ tests/sandbox-snapshot.test.ts (5 tests | 1 failed) 95ms
+     × copies a real preflight manifest through verified handles with stable hashes 42ms
+
+⎯⎯⎯⎯⎯⎯⎯ Failed Tests 1 ⎯⎯⎯⎯⎯⎯⎯
+
+ FAIL  tests/sandbox-snapshot.test.ts > verified-handle sandbox snapshot > copies a real preflight manifest through verified handles with stable hashes
+SandboxSnapshotError: Sandbox snapshot verification failed.
+ ❯ Module.buildSandboxSnapshot src/server/execution/sandbox-snapshot.ts:342:11
+    340|     if (ownedSandbox) await rm(sandboxRoot, { force: true, recursive: …
+    341|     if (error instanceof SandboxSnapshotError) throw error;
+    342|     throw new SandboxSnapshotError("SANDBOX_SOURCE_MISMATCH", "Sandbox…
+       |           ^
+    343|   }
+    344| }
+ ❯ tests/sandbox-snapshot.test.ts:60:20
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[1/1]⎯
+
+
+ Test Files  1 failed (1)
+      Tests  1 failed | 4 passed (5)
+   Start at  11:34:48
+   Duration  2.17s (transform 81ms, setup 348ms, import 46ms, tests 95ms, environment 1.41s)
+
+# exit: 1

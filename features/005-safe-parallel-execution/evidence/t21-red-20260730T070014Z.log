@@ -1,0 +1,132 @@
+# hf-gate-run
+# label: t21-red
+# command: cmd /c npm test -- tests/merge-journal-prepare.test.ts
+# started: 2026-07-30T07:00:14+00:00
+
+> collaboration-cockpit@0.1.0 test
+> vitest run tests/merge-journal-prepare.test.ts
+
+
+ RUN  v4.1.10 D:/cool-ai
+
+(node:8200) ExperimentalWarning: SQLite is an experimental feature and might change at any time
+(Use `node --trace-warnings ...` to show where the warning was created)
+ ❯ tests/merge-journal-prepare.test.ts (4 tests | 4 failed) 945ms
+     × durably prepares full manifests and applies modified/added paths in stable order 248ms
+     × conditionally rolls every prepare/apply fault back to all-old 239ms
+     × never overwrites an external mismatch during conditional rollback 224ms
+     × rechecks staged eligibility and holds one unresolved merge lock per project 233ms
+
+⎯⎯⎯⎯⎯⎯⎯ Failed Tests 4 ⎯⎯⎯⎯⎯⎯⎯
+
+ FAIL  tests/merge-journal-prepare.test.ts > merge journal prepare and conditional apply > durably prepares full manifests and applies modified/added paths in stable order
+Error: CHECK constraint failed: sandbox_manifest_hash IS NULL OR (length(sandbox_manifest_hash)=64 AND sandbox_manifest_hash NOT GLOB '*[^0-9a-f]*')
+ ❯ seedDatabase tests/merge-journal-prepare.test.ts:291:12
+    289|   const escapedWorkspace = paths.workspaceRoot.replaceAll("'", "''");
+    290|   const escapedSandbox = paths.sandboxRoot.replaceAll("'", "''");
+    291|   database.exec(`
+       |            ^
+    292|     INSERT INTO projects (id,name,created_at,workspace_path,workspace_…
+    293|     VALUES ('${PROJECT_ID}','Merge','${NOW}','${escapedWorkspace}','${…
+ ❯ createFixture tests/merge-journal-prepare.test.ts:266:3
+ ❯ tests/merge-journal-prepare.test.ts:80:21
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[1/8]⎯
+
+ FAIL  tests/merge-journal-prepare.test.ts > merge journal prepare and conditional apply > durably prepares full manifests and applies modified/added paths in stable order
+Error: EPERM, Permission denied: \\?\C:\Users\ADMINI~1\AppData\Local\Temp\2\cool-ai-merge-happy-gdSS9c '\\?\C:\Users\ADMINI~1\AppData\Local\Temp\2\cool-ai-merge-happy-gdSS9c'
+ ❯ tests/merge-journal-prepare.test.ts:74:5
+     72| afterEach(() => {
+     73|   for (const directory of directories.splice(0)) {
+     74|     rmSync(directory, { force: true, recursive: true });
+       |     ^
+     75|   }
+     76| });
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[2/8]⎯
+
+ FAIL  tests/merge-journal-prepare.test.ts > merge journal prepare and conditional apply > conditionally rolls every prepare/apply fault back to all-old
+Error: CHECK constraint failed: sandbox_manifest_hash IS NULL OR (length(sandbox_manifest_hash)=64 AND sandbox_manifest_hash NOT GLOB '*[^0-9a-f]*')
+ ❯ seedDatabase tests/merge-journal-prepare.test.ts:291:12
+    289|   const escapedWorkspace = paths.workspaceRoot.replaceAll("'", "''");
+    290|   const escapedSandbox = paths.sandboxRoot.replaceAll("'", "''");
+    291|   database.exec(`
+       |            ^
+    292|     INSERT INTO projects (id,name,created_at,workspace_path,workspace_…
+    293|     VALUES ('${PROJECT_ID}','Merge','${NOW}','${escapedWorkspace}','${…
+ ❯ createFixture tests/merge-journal-prepare.test.ts:266:3
+ ❯ tests/merge-journal-prepare.test.ts:177:23
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[3/8]⎯
+
+ FAIL  tests/merge-journal-prepare.test.ts > merge journal prepare and conditional apply > conditionally rolls every prepare/apply fault back to all-old
+Error: EPERM, Permission denied: \\?\C:\Users\ADMINI~1\AppData\Local\Temp\2\cool-ai-merge-before_prepare-7RHI33 '\\?\C:\Users\ADMINI~1\AppData\Local\Temp\2\cool-ai-merge-before_prepare-7RHI33'
+ ❯ tests/merge-journal-prepare.test.ts:74:5
+     72| afterEach(() => {
+     73|   for (const directory of directories.splice(0)) {
+     74|     rmSync(directory, { force: true, recursive: true });
+       |     ^
+     75|   }
+     76| });
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[4/8]⎯
+
+ FAIL  tests/merge-journal-prepare.test.ts > merge journal prepare and conditional apply > never overwrites an external mismatch during conditional rollback
+Error: CHECK constraint failed: sandbox_manifest_hash IS NULL OR (length(sandbox_manifest_hash)=64 AND sandbox_manifest_hash NOT GLOB '*[^0-9a-f]*')
+ ❯ seedDatabase tests/merge-journal-prepare.test.ts:291:12
+    289|   const escapedWorkspace = paths.workspaceRoot.replaceAll("'", "''");
+    290|   const escapedSandbox = paths.sandboxRoot.replaceAll("'", "''");
+    291|   database.exec(`
+       |            ^
+    292|     INSERT INTO projects (id,name,created_at,workspace_path,workspace_…
+    293|     VALUES ('${PROJECT_ID}','Merge','${NOW}','${escapedWorkspace}','${…
+ ❯ createFixture tests/merge-journal-prepare.test.ts:266:3
+ ❯ tests/merge-journal-prepare.test.ts:196:21
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[5/8]⎯
+
+ FAIL  tests/merge-journal-prepare.test.ts > merge journal prepare and conditional apply > never overwrites an external mismatch during conditional rollback
+Error: EPERM, Permission denied: \\?\C:\Users\ADMINI~1\AppData\Local\Temp\2\cool-ai-merge-happy-hHQkA0 '\\?\C:\Users\ADMINI~1\AppData\Local\Temp\2\cool-ai-merge-happy-hHQkA0'
+ ❯ tests/merge-journal-prepare.test.ts:74:5
+     72| afterEach(() => {
+     73|   for (const directory of directories.splice(0)) {
+     74|     rmSync(directory, { force: true, recursive: true });
+       |     ^
+     75|   }
+     76| });
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[6/8]⎯
+
+ FAIL  tests/merge-journal-prepare.test.ts > merge journal prepare and conditional apply > rechecks staged eligibility and holds one unresolved merge lock per project
+Error: CHECK constraint failed: sandbox_manifest_hash IS NULL OR (length(sandbox_manifest_hash)=64 AND sandbox_manifest_hash NOT GLOB '*[^0-9a-f]*')
+ ❯ seedDatabase tests/merge-journal-prepare.test.ts:291:12
+    289|   const escapedWorkspace = paths.workspaceRoot.replaceAll("'", "''");
+    290|   const escapedSandbox = paths.sandboxRoot.replaceAll("'", "''");
+    291|   database.exec(`
+       |            ^
+    292|     INSERT INTO projects (id,name,created_at,workspace_path,workspace_…
+    293|     VALUES ('${PROJECT_ID}','Merge','${NOW}','${escapedWorkspace}','${…
+ ❯ createFixture tests/merge-journal-prepare.test.ts:266:3
+ ❯ tests/merge-journal-prepare.test.ts:221:21
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[7/8]⎯
+
+ FAIL  tests/merge-journal-prepare.test.ts > merge journal prepare and conditional apply > rechecks staged eligibility and holds one unresolved merge lock per project
+Error: EPERM, Permission denied: \\?\C:\Users\ADMINI~1\AppData\Local\Temp\2\cool-ai-merge-happy-VodhQg '\\?\C:\Users\ADMINI~1\AppData\Local\Temp\2\cool-ai-merge-happy-VodhQg'
+ ❯ tests/merge-journal-prepare.test.ts:74:5
+     72| afterEach(() => {
+     73|   for (const directory of directories.splice(0)) {
+     74|     rmSync(directory, { force: true, recursive: true });
+       |     ^
+     75|   }
+     76| });
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[8/8]⎯
+
+
+ Test Files  1 failed (1)
+      Tests  4 failed (4)
+   Start at  15:00:15
+   Duration  3.19s (transform 124ms, setup 391ms, import 107ms, tests 945ms, environment 1.46s)
+
+# exit: 1

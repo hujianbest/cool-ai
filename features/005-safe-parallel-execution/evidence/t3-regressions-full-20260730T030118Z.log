@@ -1,0 +1,1206 @@
+# hf-gate-run
+# label: t3-regressions-full
+# command: cmd /c npm test
+# started: 2026-07-30T03:01:18+00:00
+
+> collaboration-cockpit@0.1.0 test
+> vitest run
+
+
+ RUN  v4.1.10 D:/cool-ai
+
+(node:8640) ExperimentalWarning: SQLite is an experimental feature and might change at any time
+(Use `node --trace-warnings ...` to show where the warning was created)
+(node:6896) ExperimentalWarning: SQLite is an experimental feature and might change at any time
+(Use `node --trace-warnings ...` to show where the warning was created)
+(node:16344) ExperimentalWarning: SQLite is an experimental feature and might change at any time
+(Use `node --trace-warnings ...` to show where the warning was created)
+(node:8468) ExperimentalWarning: SQLite is an experimental feature and might change at any time
+(Use `node --trace-warnings ...` to show where the warning was created)
+(node:17128) ExperimentalWarning: SQLite is an experimental feature and might change at any time
+(Use `node --trace-warnings ...` to show where the warning was created)
+(node:17332) ExperimentalWarning: SQLite is an experimental feature and might change at any time
+(Use `node --trace-warnings ...` to show where the warning was created)
+ ❯ tests/collaboration-accessibility.test.tsx (4 tests | 3 failed) 668ms
+     × uses one tabbed mobile surface for chat, board, and run detail while preserving desktop 392ms
+     × supports a keyboard-only decision and control path with text status 123ms
+     × gives stop confirmation sole modal ownership, traps focus, and restores it on Escape 149ms
+ ❯ tests/workspace-slice.test.tsx (1 test | 1 failed) 850ms
+     × validates a real directory, persists its canonical path, and reloads it 848ms
+(node:12596) ExperimentalWarning: SQLite is an experimental feature and might change at any time
+(Use `node --trace-warnings ...` to show where the warning was created)
+(node:8564) ExperimentalWarning: SQLite is an experimental feature and might change at any time
+(Use `node --trace-warnings ...` to show where the warning was created)
+(node:15660) ExperimentalWarning: SQLite is an experimental feature and might change at any time
+(Use `node --trace-warnings ...` to show where the warning was created)
+(node:13508) ExperimentalWarning: SQLite is an experimental feature and might change at any time
+(Use `node --trace-warnings ...` to show where the warning was created)
+(node:15036) ExperimentalWarning: SQLite is an experimental feature and might change at any time
+(Use `node --trace-warnings ...` to show where the warning was created)
+(node:14948) ExperimentalWarning: SQLite is an experimental feature and might change at any time
+(Use `node --trace-warnings ...` to show where the warning was created)
+(node:13700) ExperimentalWarning: SQLite is an experimental feature and might change at any time
+(Use `node --trace-warnings ...` to show where the warning was created)
+(node:14180) ExperimentalWarning: SQLite is an experimental feature and might change at any time
+(Use `node --trace-warnings ...` to show where the warning was created)
+(node:9272) ExperimentalWarning: SQLite is an experimental feature and might change at any time
+(Use `node --trace-warnings ...` to show where the warning was created)
+(node:16964) ExperimentalWarning: SQLite is an experimental feature and might change at any time
+(Use `node --trace-warnings ...` to show where the warning was created)
+(node:17364) ExperimentalWarning: SQLite is an experimental feature and might change at any time
+(Use `node --trace-warnings ...` to show where the warning was created)
+(node:13272) ExperimentalWarning: SQLite is an experimental feature and might change at any time
+(Use `node --trace-warnings ...` to show where the warning was created)
+(node:15612) ExperimentalWarning: SQLite is an experimental feature and might change at any time
+(Use `node --trace-warnings ...` to show where the warning was created)
+(node:13308) ExperimentalWarning: SQLite is an experimental feature and might change at any time
+(Use `node --trace-warnings ...` to show where the warning was created)
+(node:6016) ExperimentalWarning: SQLite is an experimental feature and might change at any time
+(Use `node --trace-warnings ...` to show where the warning was created)
+(node:15316) ExperimentalWarning: SQLite is an experimental feature and might change at any time
+(Use `node --trace-warnings ...` to show where the warning was created)
+(node:7764) ExperimentalWarning: SQLite is an experimental feature and might change at any time
+(Use `node --trace-warnings ...` to show where the warning was created)
+(node:8648) ExperimentalWarning: SQLite is an experimental feature and might change at any time
+(Use `node --trace-warnings ...` to show where the warning was created)
+(node:7624) ExperimentalWarning: SQLite is an experimental feature and might change at any time
+(Use `node --trace-warnings ...` to show where the warning was created)
+(node:15552) ExperimentalWarning: SQLite is an experimental feature and might change at any time
+(Use `node --trace-warnings ...` to show where the warning was created)
+(node:13608) ExperimentalWarning: SQLite is an experimental feature and might change at any time
+(Use `node --trace-warnings ...` to show where the warning was created)
+(node:10692) ExperimentalWarning: SQLite is an experimental feature and might change at any time
+(Use `node --trace-warnings ...` to show where the warning was created)
+(node:17076) ExperimentalWarning: SQLite is an experimental feature and might change at any time
+(Use `node --trace-warnings ...` to show where the warning was created)
+(node:10736) ExperimentalWarning: SQLite is an experimental feature and might change at any time
+(Use `node --trace-warnings ...` to show where the warning was created)
+(node:12248) ExperimentalWarning: SQLite is an experimental feature and might change at any time
+(Use `node --trace-warnings ...` to show where the warning was created)
+(node:5156) ExperimentalWarning: SQLite is an experimental feature and might change at any time
+(Use `node --trace-warnings ...` to show where the warning was created)
+(node:5968) ExperimentalWarning: SQLite is an experimental feature and might change at any time
+(Use `node --trace-warnings ...` to show where the warning was created)
+(node:16348) ExperimentalWarning: SQLite is an experimental feature and might change at any time
+(Use `node --trace-warnings ...` to show where the warning was created)
+(node:13664) ExperimentalWarning: SQLite is an experimental feature and might change at any time
+(Use `node --trace-warnings ...` to show where the warning was created)
+(node:5588) ExperimentalWarning: SQLite is an experimental feature and might change at any time
+(Use `node --trace-warnings ...` to show where the warning was created)
+(node:5272) ExperimentalWarning: SQLite is an experimental feature and might change at any time
+(Use `node --trace-warnings ...` to show where the warning was created)
+(node:16056) ExperimentalWarning: SQLite is an experimental feature and might change at any time
+(Use `node --trace-warnings ...` to show where the warning was created)
+(node:16688) ExperimentalWarning: SQLite is an experimental feature and might change at any time
+(Use `node --trace-warnings ...` to show where the warning was created)
+(node:8824) ExperimentalWarning: SQLite is an experimental feature and might change at any time
+(Use `node --trace-warnings ...` to show where the warning was created)
+(node:11752) ExperimentalWarning: SQLite is an experimental feature and might change at any time
+(Use `node --trace-warnings ...` to show where the warning was created)
+(node:9612) ExperimentalWarning: SQLite is an experimental feature and might change at any time
+(Use `node --trace-warnings ...` to show where the warning was created)
+(node:7740) ExperimentalWarning: SQLite is an experimental feature and might change at any time
+(Use `node --trace-warnings ...` to show where the warning was created)
+(node:15088) ExperimentalWarning: SQLite is an experimental feature and might change at any time
+(Use `node --trace-warnings ...` to show where the warning was created)
+(node:12284) ExperimentalWarning: SQLite is an experimental feature and might change at any time
+(Use `node --trace-warnings ...` to show where the warning was created)
+(node:17008) ExperimentalWarning: SQLite is an experimental feature and might change at any time
+(Use `node --trace-warnings ...` to show where the warning was created)
+(node:15420) ExperimentalWarning: SQLite is an experimental feature and might change at any time
+(Use `node --trace-warnings ...` to show where the warning was created)
+(node:4032) ExperimentalWarning: SQLite is an experimental feature and might change at any time
+(Use `node --trace-warnings ...` to show where the warning was created)
+
+⎯⎯⎯⎯⎯⎯⎯ Failed Tests 4 ⎯⎯⎯⎯⎯⎯⎯
+
+ FAIL  tests/collaboration-accessibility.test.tsx > narrow collaboration cockpit accessibility > uses one tabbed mobile surface for chat, board, and run detail while preserving desktop
+TestingLibraryElementError: Unable to find an accessible element with the role "region" and name "运行控制"
+
+Here are the accessible roles:
+
+  button:
+
+  Name "关闭任务编辑":
+  [36m<button[39m
+    [33maria-label[39m=[32m"关闭任务编辑"[39m
+    [33mclass[39m=[32m"drawer-close"[39m
+    [33mdata-dialog-close[39m=[32m"true"[39m
+    [33mtabindex[39m=[32m"0"[39m
+    [33mtype[39m=[32m"button"[39m
+  [36m/>[39m
+
+  --------------------------------------------------paragraph:
+
+  Name "":
+  [36m<p[39m
+    [33mclass[39m=[32m"eyebrow"[39m
+  [36m/>[39m
+
+  --------------------------------------------------
+  heading:
+
+  Name "Launch plan":
+  [36m<h2[39m
+    [33mid[39m=[32m"tasks-title"[39m
+    [33mtabindex[39m=[32m"-1"[39m
+  [36m/>[39m
+
+  --------------------------------------------------tablist:
+
+  Name "协作视图":
+  [36m<div[39m
+    [33maria-label[39m=[32m"协作视图"[39m
+    [33mclass[39m=[32m"collaboration-mobile-tabs"[39m
+    [33mrole[39m=[32m"tablist"[39m
+  [36m/>[39m
+
+  --------------------------------------------------
+  tab:
+
+  Name "群聊":
+  [36m<button[39m
+    [33maria-controls[39m=[32m"collaboration-chat-panel"[39m
+    [33maria-selected[39m=[32m"false"[39m
+    [33mid[39m=[32m"collaboration-chat-tab"[39m
+    [33mrole[39m=[32m"tab"[39m
+    [33mtabindex[39m=[32m"-1"[39m
+    [33mtype[39m=[32m"button"[39m
+  [36m/>[39m
+
+  Name "看板":
+  [36m<button[39m
+    [33maria-controls[39m=[32m"collaboration-board-panel"[39m
+    [33maria-selected[39m=[32m"false"[39m
+    [33mid[39m=[32m"collaboration-board-tab"[39m
+    [33mrole[39m=[32m"tab"[39m
+    [33mtabindex[39m=[32m"-1"[39m
+    [33mtype[39m=[32m"button"[39m
+  [36m/>[39m
+
+  Name "运行详情":
+  [36m<button[39m
+    [33maria-controls[39m=[32m"collaboration-run-panel"[39m
+    [33maria-selected[39m=[32m"true"[39m
+    [33mid[39m=[32m"collaboration-run-tab"[39m
+    [33mrole[39m=[32m"tab"[39m
+    [33mtabindex[39m=[32m"0"[39m
+    [33mtype[39m=[32m"button"[39m
+  [36m/>[39m
+
+  --------------------------------------------------tabpanel:
+
+  Name "运行详情":
+  [36m<section[39m
+    [33maria-labelledby[39m=[32m"collaboration-run-tab"[39m
+    [33mclass[39m=[32m"collaboration-mobile-surface"[39m
+    [33mid[39m=[32m"collaboration-run-panel"[39m
+    [33mrole[39m=[32m"tabpanel"[39m
+  [36m/>[39m
+
+  --------------------------------------------------
+  region:
+
+  Name "运行详情":
+  [36m<section[39m
+    [33maria-labelledby[39m=[32m"executions-title-project-1"[39m
+    [33mclass[39m=[32m"stack"[39m
+  [36m/>[39m
+
+  --------------------------------------------------
+  paragraph:
+
+  Name "":
+  [36m<p[39m
+    [33mclass[39m=[32m"eyebrow"[39m
+  [36m/>[39m
+
+  --------------------------------------------------
+  heading:
+
+  Name "运行详情":
+  [36m<h3[39m
+    [33mid[39m=[32m"executions-title-project-1"[39m
+  [36m/>[39m
+
+  --------------------------------------------------
+  button:
+
+  Name "刷新执行":
+  [36m<button[39m
+    [33mstyle[39m=[32m"min-height: var(--control-min);"[39m
+    [33mtype[39m=[32m"button"[39m
+  [36m/>[39m
+
+  Name "重试加载执行":
+  [36m<button[39m
+    [33mstyle[39m=[32m"min-height: var(--control-min);"[39m
+    [33mtype[39m=[32m"button"[39m
+  [36m/>[39m
+
+  --------------------------------------------------
+  alert:
+
+  Name "":
+  [36m<p[39m
+    [33mclass[39m=[32m"error-text"[39m
+    [33mrole[39m=[32m"alert"[39m
+  [36m/>[39m
+
+  --------------------------------------------------
+
+Ignored nodes: comments, script, style
+[36m<main[39m
+  [33maria-labelledby[39m=[32m"task-editor-label"[39m
+  [33maria-modal[39m=[32m"true"[39m
+  [33mclass[39m=[32m"cockpit-flow"[39m
+  [33mdata-open[39m=[32m"true"[39m
+  [33mdata-testid[39m=[32m"editor-surface"[39m
+  [33mid[39m=[32m"task-editor-surface"[39m
+  [33mrole[39m=[32m"dialog"[39m
+[36m>[39m
+  [36m<span[39m
+    [33mclass[39m=[32m"sr-only"[39m
+    [33mid[39m=[32m"task-editor-label"[39m
+  [36m>[39m
+    [0m任务编辑[0m
+  [36m</span>[39m
+  [36m<button[39m
+    [33maria-label[39m=[32m"关闭任务编辑"[39m
+    [33mclass[39m=[32m"drawer-close"[39m
+    [33mdata-dialog-close[39m=[32m"true"[39m
+    [33mtabindex[39m=[32m"0"[39m
+    [33mtype[39m=[32m"button"[39m
+  [36m>[39m
+    [0m关闭[0m
+  [36m</button>[39m
+  [36m<div[39m
+    [33mclass[39m=[32m"panel-heading"[39m
+  [36m>[39m
+    [36m<span[39m
+      [33maria-hidden[39m=[32m"true"[39m
+      [33mclass[39m=[32m"agent-mark"[39m
+    [36m>[39m
+      [0mA[0m
+    [36m</span>[39m
+    [36m<div>[39m
+      [36m<p[39m
+        [33mclass[39m=[32m"eyebrow"[39m
+      [36m>[39m
+        [0m确定性示例 Agent[0m
+      [36m</p>[39m
+      [36m<h2[39m
+        [33mid[39m=[32m"tasks-title"[39m
+        [33mtabindex[39m=[32m"-1"[39m
+      [36m>[39m
+        [0mLaunch plan[0m
+      [36m</h2>[39m
+    [36m</div>[39m
+  [36m</div>[39m
+  [36m<div[39m
+    [33maria-label[39m=[32m"协作视图"[39m
+    [33mclass[39m=[32m"collaboration-mobile-tabs"[39m
+    [33mrole[39m=[32m"tablist"[39m
+  [36m>[39m
+    [36m<button[39m
+      [33maria-controls[39m=[32m"collaboration-chat-panel"[39m
+      [33maria-selected[39m=[32m"false"[39m
+      [33mid[39m=[32m"collaboration-chat-tab"[39m
+      [33mrole[39m=[32m"tab"[39m
+      [33mtabindex[39m=[32m"-1"[39m
+      [33mtype[39m=[32m"button"[39m
+    [36m>[39m
+      [0m群聊[0m
+    [36m</button>[39m
+    [36m<button[39m
+      [33maria-controls[39m=[32m"collaboration-board-panel"[39m
+      [33maria-selected[39m=[32m"false"[39m
+      [33mid[39m=[32m"collaboration-board-tab"[39m
+      [33mrole[39m=[32m"tab"[39m
+      [33mtabindex[39m=[32m"-1"[39m
+      [33mtype[39m=[32m"button"[39m
+    [36m>[39m
+      [0m看板[0m
+    [36m</button>[39m
+    [36m<button[39m
+      [33maria-controls[39m=[32m"collaboration-run-panel"[39m
+      [33maria-selected[39m=[32m"true"[39m
+      [33mid[39m=[32m"collaboration-run-tab"[39m
+      [33mrole[39m=[32m"tab"[39m
+      [33mtabindex[39m=[32m"0"[39m
+      [33mtype[39m=[32m"button"[39m
+    [36m>[39m
+      [0m运行详情[0m
+    [36m</button>[39m
+  [36m</div>[39m
+  [36m<section[39m
+    [33maria-labelledby[39m=[32m"collaboration-run-tab"[39m
+    [33mclass[39m=[32m"collaboration-mobile-surface"[39m
+    [33mid[39m=[32m"collaboration-run-panel"[39m
+    [33mrole[39m=[32m"tabpanel"[39m
+  [36m>[39m
+    [36m<section[39m
+      [33maria-labelledby[39m=[32m"executions-title-project-1"[39m
+      [33mclass[39m=[32m"stack"[39m
+    [36m>[39m
+      [36m<div[39m
+        [33mclass[39m=[32m"panel-heading"[39m
+      [36m>[39m
+        [36m<div>[39m
+          [36m<p[39m
+            [33mclass[39m=[32m"eyebrow"[39m
+          [36m>[39m
+            [0m项目执行[0m
+          [36m</p>[39m
+          [36m<h3[39m
+            [33mid[39m=[32m"executions-title-project-1"[39m
+          [36m>[39m
+            [0m运行详情[0m
+          [36m</h3>[39m
+        [36m</div>[39m
+        [36m<button[39m
+          [33mstyle[39m=[32m"min-height: var(--control-min);"[39m
+          [33mtype[39m=[32m"button"[39m
+        [36m>[39m
+          [0m刷新执行[0m
+        [36m</button>[39m
+      [36m</div>[39m
+      [36m<div[39m
+        [33mclass[39m=[32m"state-message"[39m
+      [36m>[39m
+        [36m<p[39m
+          [33mclass[39m=[32m"error-text"[39m
+          [33mrole[39m=[32m"alert"[39m
+        [36m>[39m
+          [0m无法加载执行，请稍后重试。[0m
+        [36m</p>[39m
+        [36m<button[39m
+          [33mstyle[39m=[32m"min-height: var(--control-min);"[39m
+          [33mtype[39m=[32m"button"[39m
+        [36m>[39m
+          [0m重试加载执行[0m
+        [36m</button>[39m
+      [36m</div>[39m
+    [36m</section>[39m
+  [36m</section>[39m
+[36m</main>[39m
+ ❯ Object.getElementError node_modules/@testing-library/dom/dist/config.js:37:19
+ ❯ node_modules/@testing-library/dom/dist/query-helpers.js:76:38
+ ❯ node_modules/@testing-library/dom/dist/query-helpers.js:52:17
+ ❯ node_modules/@testing-library/dom/dist/query-helpers.js:95:19
+ ❯ tests/collaboration-accessibility.test.tsx:212:27
+    210|     await user.keyboard("{End}");
+    211|     expect(runTab).toHaveFocus();
+    212|     expect(within(editor).getByRole("region", { name: "运行控制" })).toBeV…
+       |                           ^
+    213|     expect(within(editor).queryByLabelText("发送给项目群聊")).toBeNull();
+    214|
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[1/4]⎯
+
+ FAIL  tests/collaboration-accessibility.test.tsx > narrow collaboration cockpit accessibility > supports a keyboard-only decision and control path with text status
+TestingLibraryElementError: Unable to find an accessible element with the role "radio" and name "Ship now"
+
+Here are the accessible roles:
+
+  button:
+
+  Name "关闭任务编辑":
+  [36m<button[39m
+    [33maria-label[39m=[32m"关闭任务编辑"[39m
+    [33mclass[39m=[32m"drawer-close"[39m
+    [33mdata-dialog-close[39m=[32m"true"[39m
+    [33mtabindex[39m=[32m"0"[39m
+    [33mtype[39m=[32m"button"[39m
+  [36m/>[39m
+
+  --------------------------------------------------paragraph:
+
+  Name "":
+  [36m<p[39m
+    [33mclass[39m=[32m"eyebrow"[39m
+  [36m/>[39m
+
+  --------------------------------------------------
+  heading:
+
+  Name "Launch plan":
+  [36m<h2[39m
+    [33mid[39m=[32m"tasks-title"[39m
+    [33mtabindex[39m=[32m"-1"[39m
+  [36m/>[39m
+
+  --------------------------------------------------tablist:
+
+  Name "协作视图":
+  [36m<div[39m
+    [33maria-label[39m=[32m"协作视图"[39m
+    [33mclass[39m=[32m"collaboration-mobile-tabs"[39m
+    [33mrole[39m=[32m"tablist"[39m
+  [36m/>[39m
+
+  --------------------------------------------------
+  tab:
+
+  Name "群聊":
+  [36m<button[39m
+    [33maria-controls[39m=[32m"collaboration-chat-panel"[39m
+    [33maria-selected[39m=[32m"false"[39m
+    [33mid[39m=[32m"collaboration-chat-tab"[39m
+    [33mrole[39m=[32m"tab"[39m
+    [33mtabindex[39m=[32m"-1"[39m
+    [33mtype[39m=[32m"button"[39m
+  [36m/>[39m
+
+  Name "看板":
+  [36m<button[39m
+    [33maria-controls[39m=[32m"collaboration-board-panel"[39m
+    [33maria-selected[39m=[32m"false"[39m
+    [33mid[39m=[32m"collaboration-board-tab"[39m
+    [33mrole[39m=[32m"tab"[39m
+    [33mtabindex[39m=[32m"-1"[39m
+    [33mtype[39m=[32m"button"[39m
+  [36m/>[39m
+
+  Name "运行详情":
+  [36m<button[39m
+    [33maria-controls[39m=[32m"collaboration-run-panel"[39m
+    [33maria-selected[39m=[32m"true"[39m
+    [33mid[39m=[32m"collaboration-run-tab"[39m
+    [33mrole[39m=[32m"tab"[39m
+    [33mtabindex[39m=[32m"0"[39m
+    [33mtype[39m=[32m"button"[39m
+  [36m/>[39m
+
+  --------------------------------------------------tabpanel:
+
+  Name "运行详情":
+  [36m<section[39m
+    [33maria-labelledby[39m=[32m"collaboration-run-tab"[39m
+    [33mclass[39m=[32m"collaboration-mobile-surface"[39m
+    [33mid[39m=[32m"collaboration-run-panel"[39m
+    [33mrole[39m=[32m"tabpanel"[39m
+  [36m/>[39m
+
+  --------------------------------------------------
+  region:
+
+  Name "运行详情":
+  [36m<section[39m
+    [33maria-labelledby[39m=[32m"executions-title-project-1"[39m
+    [33mclass[39m=[32m"stack"[39m
+  [36m/>[39m
+
+  --------------------------------------------------
+  paragraph:
+
+  Name "":
+  [36m<p[39m
+    [33mclass[39m=[32m"eyebrow"[39m
+  [36m/>[39m
+
+  --------------------------------------------------
+  heading:
+
+  Name "运行详情":
+  [36m<h3[39m
+    [33mid[39m=[32m"executions-title-project-1"[39m
+  [36m/>[39m
+
+  --------------------------------------------------
+  button:
+
+  Name "刷新执行":
+  [36m<button[39m
+    [33mstyle[39m=[32m"min-height: var(--control-min);"[39m
+    [33mtype[39m=[32m"button"[39m
+  [36m/>[39m
+
+  Name "重试加载执行":
+  [36m<button[39m
+    [33mstyle[39m=[32m"min-height: var(--control-min);"[39m
+    [33mtype[39m=[32m"button"[39m
+  [36m/>[39m
+
+  --------------------------------------------------
+  alert:
+
+  Name "":
+  [36m<p[39m
+    [33mclass[39m=[32m"error-text"[39m
+    [33mrole[39m=[32m"alert"[39m
+  [36m/>[39m
+
+  --------------------------------------------------
+
+Ignored nodes: comments, script, style
+[36m<main[39m
+  [33maria-labelledby[39m=[32m"task-editor-label"[39m
+  [33maria-modal[39m=[32m"true"[39m
+  [33mclass[39m=[32m"cockpit-flow"[39m
+  [33mdata-open[39m=[32m"true"[39m
+  [33mdata-testid[39m=[32m"editor-surface"[39m
+  [33mid[39m=[32m"task-editor-surface"[39m
+  [33mrole[39m=[32m"dialog"[39m
+[36m>[39m
+  [36m<span[39m
+    [33mclass[39m=[32m"sr-only"[39m
+    [33mid[39m=[32m"task-editor-label"[39m
+  [36m>[39m
+    [0m任务编辑[0m
+  [36m</span>[39m
+  [36m<button[39m
+    [33maria-label[39m=[32m"关闭任务编辑"[39m
+    [33mclass[39m=[32m"drawer-close"[39m
+    [33mdata-dialog-close[39m=[32m"true"[39m
+    [33mtabindex[39m=[32m"0"[39m
+    [33mtype[39m=[32m"button"[39m
+  [36m>[39m
+    [0m关闭[0m
+  [36m</button>[39m
+  [36m<div[39m
+    [33mclass[39m=[32m"panel-heading"[39m
+  [36m>[39m
+    [36m<span[39m
+      [33maria-hidden[39m=[32m"true"[39m
+      [33mclass[39m=[32m"agent-mark"[39m
+    [36m>[39m
+      [0mA[0m
+    [36m</span>[39m
+    [36m<div>[39m
+      [36m<p[39m
+        [33mclass[39m=[32m"eyebrow"[39m
+      [36m>[39m
+        [0m确定性示例 Agent[0m
+      [36m</p>[39m
+      [36m<h2[39m
+        [33mid[39m=[32m"tasks-title"[39m
+        [33mtabindex[39m=[32m"-1"[39m
+      [36m>[39m
+        [0mLaunch plan[0m
+      [36m</h2>[39m
+    [36m</div>[39m
+  [36m</div>[39m
+  [36m<div[39m
+    [33maria-label[39m=[32m"协作视图"[39m
+    [33mclass[39m=[32m"collaboration-mobile-tabs"[39m
+    [33mrole[39m=[32m"tablist"[39m
+  [36m>[39m
+    [36m<button[39m
+      [33maria-controls[39m=[32m"collaboration-chat-panel"[39m
+      [33maria-selected[39m=[32m"false"[39m
+      [33mid[39m=[32m"collaboration-chat-tab"[39m
+      [33mrole[39m=[32m"tab"[39m
+      [33mtabindex[39m=[32m"-1"[39m
+      [33mtype[39m=[32m"button"[39m
+    [36m>[39m
+      [0m群聊[0m
+    [36m</button>[39m
+    [36m<button[39m
+      [33maria-controls[39m=[32m"collaboration-board-panel"[39m
+      [33maria-selected[39m=[32m"false"[39m
+      [33mid[39m=[32m"collaboration-board-tab"[39m
+      [33mrole[39m=[32m"tab"[39m
+      [33mtabindex[39m=[32m"-1"[39m
+      [33mtype[39m=[32m"button"[39m
+    [36m>[39m
+      [0m看板[0m
+    [36m</button>[39m
+    [36m<button[39m
+      [33maria-controls[39m=[32m"collaboration-run-panel"[39m
+      [33maria-selected[39m=[32m"true"[39m
+      [33mid[39m=[32m"collaboration-run-tab"[39m
+      [33mrole[39m=[32m"tab"[39m
+      [33mtabindex[39m=[32m"0"[39m
+      [33mtype[39m=[32m"button"[39m
+    [36m>[39m
+      [0m运行详情[0m
+    [36m</button>[39m
+  [36m</div>[39m
+  [36m<section[39m
+    [33maria-labelledby[39m=[32m"collaboration-run-tab"[39m
+    [33mclass[39m=[32m"collaboration-mobile-surface"[39m
+    [33mid[39m=[32m"collaboration-run-panel"[39m
+    [33mrole[39m=[32m"tabpanel"[39m
+  [36m>[39m
+    [36m<section[39m
+      [33maria-labelledby[39m=[32m"executions-title-project-1"[39m
+      [33mclass[39m=[32m"stack"[39m
+    [36m>[39m
+      [36m<div[39m
+        [33mclass[39m=[32m"panel-heading"[39m
+      [36m>[39m
+        [36m<div>[39m
+          [36m<p[39m
+            [33mclass[39m=[32m"eyebrow"[39m
+          [36m>[39m
+            [0m项目执行[0m
+          [36m</p>[39m
+          [36m<h3[39m
+            [33mid[39m=[32m"executions-title-project-1"[39m
+          [36m>[39m
+            [0m运行详情[0m
+          [36m</h3>[39m
+        [36m</div>[39m
+        [36m<button[39m
+          [33mstyle[39m=[32m"min-height: var(--control-min);"[39m
+          [33mtype[39m=[32m"button"[39m
+        [36m>[39m
+          [0m刷新执行[0m
+        [36m</button>[39m
+      [36m</div>[39m
+      [36m<div[39m
+        [33mclass[39m=[32m"state-message"[39m
+      [36m>[39m
+        [36m<p[39m
+          [33mclass[39m=[32m"error-text"[39m
+          [33mrole[39m=[32m"alert"[39m
+        [36m>[39m
+          [0m无法加载执行，请稍后重试。[0m
+        [36m</p>[39m
+        [36m<button[39m
+          [33mstyle[39m=[32m"min-height: var(--control-min);"[39m
+          [33mtype[39m=[32m"button"[39m
+        [36m>[39m
+          [0m重试加载执行[0m
+        [36m</button>[39m
+      [36m</div>[39m
+    [36m</section>[39m
+  [36m</section>[39m
+[36m</main>[39m
+ ❯ Object.getElementError node_modules/@testing-library/dom/dist/config.js:37:19
+ ❯ node_modules/@testing-library/dom/dist/query-helpers.js:76:38
+ ❯ node_modules/@testing-library/dom/dist/query-helpers.js:52:17
+ ❯ node_modules/@testing-library/dom/dist/query-helpers.js:95:19
+ ❯ tests/collaboration-accessibility.test.tsx:236:35
+    234|     runTab.focus();
+    235|     await user.keyboard("{Enter}");
+    236|     const option = within(editor).getByRole("radio", { name: "Ship now…
+       |                                   ^
+    237|     option.focus();
+    238|     await user.keyboard(" ");
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[2/4]⎯
+
+ FAIL  tests/collaboration-accessibility.test.tsx > narrow collaboration cockpit accessibility > gives stop confirmation sole modal ownership, traps focus, and restores it on Escape
+TestingLibraryElementError: Unable to find an accessible element with the role "button" and name "停止"
+
+Here are the accessible roles:
+
+  button:
+
+  Name "关闭任务编辑":
+  [36m<button[39m
+    [33maria-label[39m=[32m"关闭任务编辑"[39m
+    [33mclass[39m=[32m"drawer-close"[39m
+    [33mdata-dialog-close[39m=[32m"true"[39m
+    [33mtabindex[39m=[32m"0"[39m
+    [33mtype[39m=[32m"button"[39m
+  [36m/>[39m
+
+  --------------------------------------------------paragraph:
+
+  Name "":
+  [36m<p[39m
+    [33mclass[39m=[32m"eyebrow"[39m
+  [36m/>[39m
+
+  --------------------------------------------------
+  heading:
+
+  Name "Launch plan":
+  [36m<h2[39m
+    [33mid[39m=[32m"tasks-title"[39m
+    [33mtabindex[39m=[32m"-1"[39m
+  [36m/>[39m
+
+  --------------------------------------------------tablist:
+
+  Name "协作视图":
+  [36m<div[39m
+    [33maria-label[39m=[32m"协作视图"[39m
+    [33mclass[39m=[32m"collaboration-mobile-tabs"[39m
+    [33mrole[39m=[32m"tablist"[39m
+  [36m/>[39m
+
+  --------------------------------------------------
+  tab:
+
+  Name "群聊":
+  [36m<button[39m
+    [33maria-controls[39m=[32m"collaboration-chat-panel"[39m
+    [33maria-selected[39m=[32m"false"[39m
+    [33mid[39m=[32m"collaboration-chat-tab"[39m
+    [33mrole[39m=[32m"tab"[39m
+    [33mtabindex[39m=[32m"-1"[39m
+    [33mtype[39m=[32m"button"[39m
+  [36m/>[39m
+
+  Name "看板":
+  [36m<button[39m
+    [33maria-controls[39m=[32m"collaboration-board-panel"[39m
+    [33maria-selected[39m=[32m"false"[39m
+    [33mid[39m=[32m"collaboration-board-tab"[39m
+    [33mrole[39m=[32m"tab"[39m
+    [33mtabindex[39m=[32m"-1"[39m
+    [33mtype[39m=[32m"button"[39m
+  [36m/>[39m
+
+  Name "运行详情":
+  [36m<button[39m
+    [33maria-controls[39m=[32m"collaboration-run-panel"[39m
+    [33maria-selected[39m=[32m"true"[39m
+    [33mid[39m=[32m"collaboration-run-tab"[39m
+    [33mrole[39m=[32m"tab"[39m
+    [33mtabindex[39m=[32m"0"[39m
+    [33mtype[39m=[32m"button"[39m
+  [36m/>[39m
+
+  --------------------------------------------------tabpanel:
+
+  Name "运行详情":
+  [36m<section[39m
+    [33maria-labelledby[39m=[32m"collaboration-run-tab"[39m
+    [33mclass[39m=[32m"collaboration-mobile-surface"[39m
+    [33mid[39m=[32m"collaboration-run-panel"[39m
+    [33mrole[39m=[32m"tabpanel"[39m
+  [36m/>[39m
+
+  --------------------------------------------------
+  region:
+
+  Name "运行详情":
+  [36m<section[39m
+    [33maria-labelledby[39m=[32m"executions-title-project-1"[39m
+    [33mclass[39m=[32m"stack"[39m
+  [36m/>[39m
+
+  --------------------------------------------------
+  paragraph:
+
+  Name "":
+  [36m<p[39m
+    [33mclass[39m=[32m"eyebrow"[39m
+  [36m/>[39m
+
+  --------------------------------------------------
+  heading:
+
+  Name "运行详情":
+  [36m<h3[39m
+    [33mid[39m=[32m"executions-title-project-1"[39m
+  [36m/>[39m
+
+  --------------------------------------------------
+  button:
+
+  Name "刷新执行":
+  [36m<button[39m
+    [33mstyle[39m=[32m"min-height: var(--control-min);"[39m
+    [33mtype[39m=[32m"button"[39m
+  [36m/>[39m
+
+  Name "重试加载执行":
+  [36m<button[39m
+    [33mstyle[39m=[32m"min-height: var(--control-min);"[39m
+    [33mtype[39m=[32m"button"[39m
+  [36m/>[39m
+
+  --------------------------------------------------
+  alert:
+
+  Name "":
+  [36m<p[39m
+    [33mclass[39m=[32m"error-text"[39m
+    [33mrole[39m=[32m"alert"[39m
+  [36m/>[39m
+
+  --------------------------------------------------
+
+Ignored nodes: comments, script, style
+[36m<main[39m
+  [33maria-labelledby[39m=[32m"task-editor-label"[39m
+  [33maria-modal[39m=[32m"true"[39m
+  [33mclass[39m=[32m"cockpit-flow"[39m
+  [33mdata-open[39m=[32m"true"[39m
+  [33mdata-testid[39m=[32m"editor-surface"[39m
+  [33mid[39m=[32m"task-editor-surface"[39m
+  [33mrole[39m=[32m"dialog"[39m
+[36m>[39m
+  [36m<span[39m
+    [33mclass[39m=[32m"sr-only"[39m
+    [33mid[39m=[32m"task-editor-label"[39m
+  [36m>[39m
+    [0m任务编辑[0m
+  [36m</span>[39m
+  [36m<button[39m
+    [33maria-label[39m=[32m"关闭任务编辑"[39m
+    [33mclass[39m=[32m"drawer-close"[39m
+    [33mdata-dialog-close[39m=[32m"true"[39m
+    [33mtabindex[39m=[32m"0"[39m
+    [33mtype[39m=[32m"button"[39m
+  [36m>[39m
+    [0m关闭[0m
+  [36m</button>[39m
+  [36m<div[39m
+    [33mclass[39m=[32m"panel-heading"[39m
+  [36m>[39m
+    [36m<span[39m
+      [33maria-hidden[39m=[32m"true"[39m
+      [33mclass[39m=[32m"agent-mark"[39m
+    [36m>[39m
+      [0mA[0m
+    [36m</span>[39m
+    [36m<div>[39m
+      [36m<p[39m
+        [33mclass[39m=[32m"eyebrow"[39m
+      [36m>[39m
+        [0m确定性示例 Agent[0m
+      [36m</p>[39m
+      [36m<h2[39m
+        [33mid[39m=[32m"tasks-title"[39m
+        [33mtabindex[39m=[32m"-1"[39m
+      [36m>[39m
+        [0mLaunch plan[0m
+      [36m</h2>[39m
+    [36m</div>[39m
+  [36m</div>[39m
+  [36m<div[39m
+    [33maria-label[39m=[32m"协作视图"[39m
+    [33mclass[39m=[32m"collaboration-mobile-tabs"[39m
+    [33mrole[39m=[32m"tablist"[39m
+  [36m>[39m
+    [36m<button[39m
+      [33maria-controls[39m=[32m"collaboration-chat-panel"[39m
+      [33maria-selected[39m=[32m"false"[39m
+      [33mid[39m=[32m"collaboration-chat-tab"[39m
+      [33mrole[39m=[32m"tab"[39m
+      [33mtabindex[39m=[32m"-1"[39m
+      [33mtype[39m=[32m"button"[39m
+    [36m>[39m
+      [0m群聊[0m
+    [36m</button>[39m
+    [36m<button[39m
+      [33maria-controls[39m=[32m"collaboration-board-panel"[39m
+      [33maria-selected[39m=[32m"false"[39m
+      [33mid[39m=[32m"collaboration-board-tab"[39m
+      [33mrole[39m=[32m"tab"[39m
+      [33mtabindex[39m=[32m"-1"[39m
+      [33mtype[39m=[32m"button"[39m
+    [36m>[39m
+      [0m看板[0m
+    [36m</button>[39m
+    [36m<button[39m
+      [33maria-controls[39m=[32m"collaboration-run-panel"[39m
+      [33maria-selected[39m=[32m"true"[39m
+      [33mid[39m=[32m"collaboration-run-tab"[39m
+      [33mrole[39m=[32m"tab"[39m
+      [33mtabindex[39m=[32m"0"[39m
+      [33mtype[39m=[32m"button"[39m
+    [36m>[39m
+      [0m运行详情[0m
+    [36m</button>[39m
+  [36m</div>[39m
+  [36m<section[39m
+    [33maria-labelledby[39m=[32m"collaboration-run-tab"[39m
+    [33mclass[39m=[32m"collaboration-mobile-surface"[39m
+    [33mid[39m=[32m"collaboration-run-panel"[39m
+    [33mrole[39m=[32m"tabpanel"[39m
+  [36m>[39m
+    [36m<section[39m
+      [33maria-labelledby[39m=[32m"executions-title-project-1"[39m
+      [33mclass[39m=[32m"stack"[39m
+    [36m>[39m
+      [36m<div[39m
+        [33mclass[39m=[32m"panel-heading"[39m
+      [36m>[39m
+        [36m<div>[39m
+          [36m<p[39m
+            [33mclass[39m=[32m"eyebrow"[39m
+          [36m>[39m
+            [0m项目执行[0m
+          [36m</p>[39m
+          [36m<h3[39m
+            [33mid[39m=[32m"executions-title-project-1"[39m
+          [36m>[39m
+            [0m运行详情[0m
+          [36m</h3>[39m
+        [36m</div>[39m
+        [36m<button[39m
+          [33mstyle[39m=[32m"min-height: var(--control-min);"[39m
+          [33mtype[39m=[32m"button"[39m
+        [36m>[39m
+          [0m刷新执行[0m
+        [36m</button>[39m
+      [36m</div>[39m
+      [36m<div[39m
+        [33mclass[39m=[32m"state-message"[39m
+      [36m>[39m
+        [36m<p[39m
+          [33mclass[39m=[32m"error-text"[39m
+          [33mrole[39m=[32m"alert"[39m
+        [36m>[39m
+          [0m无法加载执行，请稍后重试。[0m
+        [36m</p>[39m
+        [36m<button[39m
+          [33mstyle[39m=[32m"min-height: var(--control-min);"[39m
+          [33mtype[39m=[32m"button"[39m
+        [36m>[39m
+          [0m重试加载执行[0m
+        [36m</button>[39m
+      [36m</div>[39m
+    [36m</section>[39m
+  [36m</section>[39m
+[36m</main>[39m
+ ❯ Object.getElementError node_modules/@testing-library/dom/dist/config.js:37:19
+ ❯ node_modules/@testing-library/dom/dist/query-helpers.js:76:38
+ ❯ node_modules/@testing-library/dom/dist/query-helpers.js:52:17
+ ❯ node_modules/@testing-library/dom/dist/query-helpers.js:95:19
+ ❯ tests/collaboration-accessibility.test.tsx:255:33
+    253|     const editor = screen.getByRole("dialog", { name: "任务编辑" });
+    254|     await user.click(within(editor).getByRole("tab", { name: "运行详情" })…
+    255|     const stop = within(editor).getByRole("button", { name: "停止" });
+       |                                 ^
+    256|     stop.focus();
+    257|     await user.keyboard("{Enter}");
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[3/4]⎯
+
+ FAIL  tests/workspace-slice.test.tsx > workspace binding vertical slice > validates a real directory, persists its canonical path, and reloads it
+TestingLibraryElementError: Found multiple elements with the role "alert"
+
+Here are the matching elements:
+
+Ignored nodes: comments, script, style
+[36m<p[39m
+  [33mclass[39m=[32m"error-text"[39m
+  [33mid[39m=[32m"workspace-error-51a12d55-8fbe-4041-9b48-fb5963c8e0bb"[39m
+  [33mrole[39m=[32m"alert"[39m
+[36m>[39m
+  [0m请输入绝对目录路径。[0m
+[36m</p>[39m
+
+Ignored nodes: comments, script, style
+[36m<p[39m
+  [33mclass[39m=[32m"error-text"[39m
+  [33mrole[39m=[32m"alert"[39m
+[36m>[39m
+  [0m无法加载执行，请稍后重试。[0m
+[36m</p>[39m
+
+(If this is intentional, then use the `*AllBy*` variant of the query (like `queryAllByText`, `getAllByText`, or `findAllByText`)).
+
+Ignored nodes: comments, script, style
+[36m<body>[39m
+  [36m<div>[39m
+    [36m<div[39m
+      [33mclass[39m=[32m"collaboration-cockpit"[39m
+      [33mdata-testid[39m=[32m"collaboration-cockpit"[39m
+    [36m>[39m
+      [36m<div[39m
+        [33maria-label[39m=[32m"驾驶舱面板"[39m
+        [33mclass[39m=[32m"mobile-toolbar"[39m
+        [33mrole[39m=[32m"toolbar"[39m
+      [36m>[39m
+        [36m<button[39m
+          [33maria-controls[39m=[32m"project-navigation-drawer"[39m
+          [33maria-expanded[39m=[32m"false"[39m
+          [33maria-label[39m=[32m"打开项目导航"[39m
+          [33mtype[39m=[32m"button"[39m
+        [36m>[39m
+          [0m项目[0m
+        [36m</button>[39m
+        [36m<button[39m
+          [33maria-controls[39m=[32m"task-editor-surface"[39m
+          [33maria-expanded[39m=[32m"false"[39m
+          [33maria-label[39m=[32m"打开编辑"[39m
+          [33mtype[39m=[32m"button"[39m
+        [36m>[39m
+          [0m编辑[0m
+        [36m</button>[39m
+        [36m<button[39m
+          [33maria-controls[39m=[32m"task-context-drawer"[39m
+          [33maria-expanded[39m=[32m"false"[39m
+          [33maria-label[39m=[32m"打开当前任务上下文"[39m
+          [33mtype[39m=[32m"button"[39m
+        [36m>[39m
+          [0m上下文[0m
+        [36m</button>[39m
+      [36m</div>[39m
+      [36m<aside[39m
+        [33maria-label[39m=[32m"项目导航"[39m
+        [33mclass[39m=[32m"cockpit-sidebar"[39m
+        [33mdata-open[39m=[32m"false"[39m
+        [33mdata-testid[39m=[32m"project-surface"[39m
+        [33mid[39m=[32m"project-navigation-drawer"[39m
+      [36m>[39m
+        [36m<span[39m
+          [33mclass[39m=[32m"sr-only"[39m
+          [33mid[39m=[32m"project-navigation-label"[39m
+        [36m>[39m
+          [0m项目导航[0m
+        [36m</span>[39m
+        [36m<button[39m
+          [33maria-label[39m=[32m"关闭项目导航"[39m
+          [33mclass[39m=[32m"drawer-close"[39m
+          [33mtabindex[39m=[32m"-1"[39m
+          [33mtype[39m=[32m"button"[39m
+        [36m>[39m
+          [0m关闭[0m
+        [36m</button>[39m
+        [36m<div[39m
+          [33mclass[39m=[32m"product-identity"[39m
+        [36m>[39m
+          [36m<span[39m
+            [33maria-hidden[39m=[32m"true"[39m
+            [33mclass[39m=[32m"product-mark"[39m
+          [36m>[39m
+            [0mC[0m
+          [36m</span>[39m
+          [36m<div>[39m
+            [36m<p[39m
+              [33mclass[39m=[32m"eyebrow"[39m
+            [36m>[39m
+              [0m协作驾驶舱[0m
+            [36m</p>[39m
+            [36m<h1>[39m
+              [0mCool AI[0m
+            [36m</h1>[39m
+          [36m</div>[39m
+        [36m</div>[39m
+        [36m<nav[39m
+          [33maria-label[39m=[32m"主导航"[39m
+        [36m>[39m
+          [36m<ul[39m
+            [33mclass[39m=[32m"project-list"[39m
+          [36m>[39m
+            [36m<li>[39m
+              [36m<a[39m
+                [33maria-current[39m=[32m"page"[39m
+                [33mhref[39m=[32m"/"[39m
+              [36m>[39m
+                [0m工作[0m
+              [36m</a>[39m
+            [36m</li>[39m
+            [36m<li>[39m
+              [36m<a[39m
+                [33mhref[39m=[32m"/team"[39m
+              [36m>[39m
+                [0m团队[0m
+              [36m</a>[39m
+            [36m</li>[39m
+          [36m</ul>[39m
+        [36m</nav>[39m
+        [36m<section[39m
+          [33maria-labelledby[39m=[32m"projects-title"[39m
+          [33mclass[39m=[32m"stack"[39m
+        [36m>[39m
+          [36m<h2[39m
+            [33mid[39m=[32m"projects-title"[39m
+          [36m>[39m
+            [0m项目[0m
+          [36m</h2>[39m
+          [36m<form[39m
+            [33mclass[39m=[32m"stack"[39m
+          [36m>[39m
+            [36m<div[39m
+              [33mclass[39m=[32m"form-field"[39m
+            [36m>[39m
+              [36m<label[39m
+                [33mfor[39m=[32m"project-name"[39m
+              [36m>[39m
+                [0m项目名称[0m
+              [36m</label>[39m
+              [36m<input[39m
+                [33mid[39m=[32m"project-name"[39m
+                [33mname[39m=[32m"name"[39m
+                [33mvalue[39m=[32m""[39m
+              [36m/>[39m
+            [36m</div>[39m
+            [36m<button[39m
+              [33mtype[39m=[32m"submit"[39m
+            [36m>[39m
+              [0m创建项目[0m
+            [36m</button>[39m
+          [36m</form>[39m
+          [36m<nav[39m
+            [33maria-label[39m=[32m"项目"[39m
+          [36m>[39m
+            [36m<ul[39m
+              [33mclass[39m=[32m"project-list"[39m
+            [36m>[39m
+              [36m<li>[39m
+                [36m<button[39m
+                  [33maria-current[39m=[32m"page"[39m
+                  [33mtype[39m=[32m"button"[39m
+                [36m>[39m
+                  [0mWorkspace project[0m
+                [36m</button>[39m
+              [36m</li>[39m
+            [36m</ul>[39m
+          [36m</nav>[39m
+        [36m</section>[39m
+        [36m<section[39m
+          [33maria-labelledby[39m=[32m"project-setup-title-51a12d55-8fbe-4041-9b48-fb5963c8e0bb"[39m
+          [33mclass[39m=[32m"stack project-setup"[39m
+        [36m>[39m
+          [36m<h2[39m
+            [33mid[39m=[32m"project-setup-title-51a12d55-8fbe-4041-9b48-fb5963c8e0bb"[39m
+          [36m>[39m
+            [0m项目设置[0m
+          [36m</h2>[39m
+          [36m<section[39m
+            [33maria-labelledby[39m=[32m"workspace-title-51a12d55-8fbe-4041-9b48-fb5963c8e0bb"[39m
+            [33mclass[39m=[32m"stack"[39m
+          [36m>[39m
+            [36m<div>[39m
+              [36m<div[39m
+                [33mclass[39m=[32m"stack"[39m
+              [36m>[39m
+                [36m<h3[39m
+                  [33mid[39m=[32m"workspace-title-51a12d55-8fbe-4041-9b48-fb5963c8e0bb"[39m
+                [36m>[39m
+                  [0m本地工作区[0m
+                [36m</h3>[39m
+                [36m<p[39m
+                  [33mclass[39m=[32m"muted"[39m
+                [36m>[39m
+                  [0m尚未绑定本地工作区。[0m
+                [36m</p>[39m
+                [36m<form[39m
+                  [33mclass[39m=[32m"stack"[39m
+                [36m>[39m
+                  [36m<div[39m
+                    [33mclass[39m=[32m"form-field"[39m
+                  [36m>[39m
+                    [36m<label[39m
+                      [33mfor[39m=[32m"workspace-path-51a12d55-8fbe-4041-9b48-fb5963c8e0bb"[39m
+                    [36m>[39m
+                      [0m本地工作区路径[0m
+                    [36m</label>[39m
+                    [36m<input[39m
+                      [33maria-describedby[39m=[32m"workspace-error-51a12d55-8fbe-4041-9b48-fb5963c8e0bb"[39m
+                      [33mid[39m=[32m"workspace-path-51a12d55-8fbe-4041-9b48-fb5963c8e0bb"[39m
+          ...
+ ❯ Object.getElementError node_modules/@testing-library/dom/dist/config.js:37:19
+ ❯ getElementError node_modules/@testing-library/dom/dist/query-helpers.js:20:35
+ ❯ getMultipleElementsFoundError node_modules/@testing-library/dom/dist/query-helpers.js:23:10
+ ❯ node_modules/@testing-library/dom/dist/query-helpers.js:55:13
+ ❯ node_modules/@testing-library/dom/dist/query-helpers.js:95:19
+ ❯ tests/workspace-slice.test.tsx:104:19
+    102|     await user.type(screen.getByLabelText("本地工作区路径"), "relative/path");
+    103|     await user.click(screen.getByRole("button", { name: "绑定工作区" }));
+    104|     expect(screen.getByRole("alert")).toHaveTextContent("请输入绝对目录路径。");
+       |                   ^
+    105|     expect(
+    106|       fetchMock.mock.calls.filter(
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[4/4]⎯
+
+
+ Test Files  2 failed | 80 passed (82)
+      Tests  4 failed | 445 passed (449)
+   Start at  11:01:20
+   Duration  66.24s (transform 4.24s, setup 37.13s, import 12.93s, tests 214.10s, environment 162.28s)
+
+# exit: 1

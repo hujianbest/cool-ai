@@ -1,0 +1,163 @@
+# hf-gate-run
+# label: t28-green
+# command: npm.cmd test -- tests/execution-cards-ui.test.tsx
+# started: 2026-07-30T14:00:56+00:00
+
+> collaboration-cockpit@0.1.0 test
+> vitest run tests/execution-cards-ui.test.tsx
+
+
+ RUN  v4.1.10 D:/cool-ai
+
+ ❯ tests/execution-cards-ui.test.tsx (4 tests | 1 failed) 494ms
+     × renders at most two independent cards with action, progress, blocker, controls, and token-backed accessibility 262ms
+
+⎯⎯⎯⎯⎯⎯⎯ Failed Tests 1 ⎯⎯⎯⎯⎯⎯⎯
+
+ FAIL  tests/execution-cards-ui.test.tsx > T-28 desktop ExecutionCards > renders at most two independent cards with action, progress, blocker, controls, and token-backed accessibility
+TestingLibraryElementError: Unable to find an element with the text: PROVIDER_TIMEOUT. This could be because the text is broken up by multiple elements. In this case, you can provide a function for your text matcher to make your matcher more flexible.
+
+Ignored nodes: comments, script, style
+[36m<section[39m
+  [33maria-labelledby[39m=[32m"execution-execution-a-title"[39m
+  [33mclass[39m=[32m"run-detail execution-card"[39m
+  [33mdata-accent[39m=[32m"sage"[39m
+  [33mrole[39m=[32m"region"[39m
+[36m>[39m
+  [36m<div[39m
+    [33mclass[39m=[32m"panel-heading"[39m
+  [36m>[39m
+    [36m<div>[39m
+      [36m<p[39m
+        [33mclass[39m=[32m"eyebrow"[39m
+      [36m>[39m
+        [0mA[0m
+      [36m</p>[39m
+      [36m<p>[39m
+        [0mAlpha[0m
+      [36m</p>[39m
+      [36m<h3[39m
+        [33mid[39m=[32m"execution-execution-a-title"[39m
+        [33mtabindex[39m=[32m"-1"[39m
+      [36m>[39m
+        [0mTask A[0m
+      [36m</h3>[39m
+    [36m</div>[39m
+    [36m<span[39m
+      [33mclass[39m=[32m"status-label status-paused"[39m
+    [36m>[39m
+      [0m已暂停[0m
+    [36m</span>[39m
+  [36m</div>[39m
+  [36m<p[39m
+    [33mrole[39m=[32m"status"[39m
+  [36m>[39m
+    [0m正在运行命令[0m
+  [36m</p>[39m
+  [36m<p[39m
+    [33mclass[39m=[32m"error-text"[39m
+  [36m>[39m
+    [0m阻断原因：[0m
+    [0mPROVIDER_TIMEOUT[0m
+  [36m</p>[39m
+  [36m<div[39m
+    [33mclass[39m=[32m"execution-progress-list"[39m
+  [36m>[39m
+    [36m<div[39m
+      [33mclass[39m=[32m"execution-progress"[39m
+    [36m>[39m
+      [36m<span>[39m
+        [0m业务回合[0m
+        [0m [0m
+        [0m4[0m
+        [0m/[0m
+        [0m20[0m
+      [36m</span>[39m
+      [36m<progress[39m
+        [33maria-label[39m=[32m"业务回合进度"[39m
+        [33mmax[39m=[32m"20"[39m
+        [33mvalue[39m=[32m"4"[39m
+      [36m/>[39m
+    [36m</div>[39m
+    [36m<div[39m
+      [33mclass[39m=[32m"execution-progress"[39m
+    [36m>[39m
+      [36m<span>[39m
+        [0m工具调用[0m
+        [0m [0m
+        [0m7[0m
+        [0m/[0m
+        [0m40[0m
+      [36m</span>[39m
+      [36m<progress[39m
+        [33maria-label[39m=[32m"工具调用进度"[39m
+        [33mmax[39m=[32m"40"[39m
+        [33mvalue[39m=[32m"7"[39m
+      [36m/>[39m
+    [36m</div>[39m
+    [36m<div[39m
+      [33mclass[39m=[32m"execution-progress"[39m
+    [36m>[39m
+      [36m<span>[39m
+        [0mToken [0m
+        [0m [0m
+        [0m900[0m
+        [0m/[0m
+        [0m2000[0m
+      [36m</span>[39m
+      [36m<progress[39m
+        [33maria-label[39m=[32m"Token 进度"[39m
+        [33mmax[39m=[32m"2000"[39m
+        [33mvalue[39m=[32m"900"[39m
+      [36m/>[39m
+    [36m</div>[39m
+  [36m</div>[39m
+  [36m<div[39m
+    [33mclass[39m=[32m"execution-card-controls"[39m
+  [36m>[39m
+    [36m<button[39m
+      [33mstyle[39m=[32m"min-height: var(--control-min);"[39m
+      [33mtype[39m=[32m"button"[39m
+    [36m>[39m
+      [0m继续[0m
+      [0m [0m
+      [0mTask A[0m
+    [36m</button>[39m
+    [36m<button[39m
+      [33mstyle[39m=[32m"min-height: var(--control-min);"[39m
+      [33mtype[39m=[32m"button"[39m
+    [36m>[39m
+      [0m停止[0m
+      [0m [0m
+      [0mTask A[0m
+    [36m</button>[39m
+    [36m<button[39m
+      [33mstyle[39m=[32m"min-height: var(--control-min);"[39m
+      [33mtype[39m=[32m"button"[39m
+    [36m>[39m
+      [0m刷新 [0m
+      [0mTask A[0m
+    [36m</button>[39m
+  [36m</div>[39m
+[36m</section>[39m
+ ❯ Object.getElementError node_modules/@testing-library/dom/dist/config.js:37:19
+ ❯ node_modules/@testing-library/dom/dist/query-helpers.js:76:38
+ ❯ node_modules/@testing-library/dom/dist/query-helpers.js:52:17
+ ❯ node_modules/@testing-library/dom/dist/query-helpers.js:95:19
+ ❯ tests/execution-cards-ui.test.tsx:117:25
+    115|     expect(within(card).getByText("已暂停")).toBeInTheDocument();
+    116|     expect(within(card).getByText("正在运行命令")).toBeInTheDocument();
+    117|     expect(within(card).getByText("PROVIDER_TIMEOUT")).toBeInTheDocume…
+       |                         ^
+    118|     expect(within(card).getByRole("progressbar", { name: "业务回合进度" })).…
+    119|     expect(within(card).getByRole("progressbar", { name: "工具调用进度" })).…
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[1/1]⎯
+
+
+ Test Files  1 failed (1)
+      Tests  1 failed | 3 passed (4)
+   Start at  22:00:58
+   Duration  3.95s (transform 145ms, setup 506ms, import 476ms, tests 494ms, environment 2.14s)
+
+# exit: 1

@@ -1,0 +1,26 @@
+# hf-gate-run
+# label: t32-green
+# command: npm.cmd run smoke:execution
+# started: 2026-07-30T15:07:42+00:00
+
+> collaboration-cockpit@0.1.0 smoke:execution
+> node tests/execution-browser-smoke.mjs
+
+(node:15344) ExperimentalWarning: SQLite is an experimental feature and might change at any time
+(Use `node --trace-warnings ...` to show where the warning was created)
+node:internal/modules/run_main:107
+    triggerUncaughtException(
+    ^
+
+locator.focus: Timeout 30000ms exceeded.
+Call log:
+  - waiting for getByRole('tab', { name: '运行详情' })
+
+    at openRunTab (D:\cool-ai\tests\execution-browser-smoke.mjs:610:16)
+    at D:\cool-ai\tests\execution-browser-smoke.mjs:733:9 {
+  log: [ "  - waiting for getByRole('tab', { name: '运行详情' })" ],
+  name: 'TimeoutError'
+}
+
+Node.js v24.14.0
+# exit: 1

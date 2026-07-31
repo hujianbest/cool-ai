@@ -1,0 +1,142 @@
+# hf-gate-run
+# label: t3-red
+# command: cmd /c npm test -- tests/collaboration-operations.test.ts tests/project-chat.api.test.ts
+# started: 2026-07-29T21:42:08+00:00
+
+> collaboration-cockpit@0.1.0 test
+> vitest run tests/collaboration-operations.test.ts tests/project-chat.api.test.ts
+
+
+ RUN  v4.1.10 D:/cool-ai
+
+(node:5712) ExperimentalWarning: SQLite is an experimental feature and might change at any time
+(Use `node --trace-warnings ...` to show where the warning was created)
+(node:852) ExperimentalWarning: SQLite is an experimental feature and might change at any time
+(Use `node --trace-warnings ...` to show where the warning was created)
+ ❯ tests/collaboration-operations.test.ts (5 tests | 2 failed) 1224ms
+     × persists and exactly replays mapped domain errors 309ms
+     × provides fixed client copy for every T-3 collaboration error 4ms
+ ❯ tests/project-chat.api.test.ts (6 tests | 5 failed) 1368ms
+     × stores a project message with no active run without creating one 176ms
+     × appends a project message to the active run and deduplicates it 240ms
+     × rejects a reused project-message operation id with different content 147ms
+     × does not revive a planned run when posting a project message 260ms
+     × does not revive a stopped run when posting a project message 247ms
+
+⎯⎯⎯⎯⎯⎯⎯ Failed Tests 7 ⎯⎯⎯⎯⎯⎯⎯
+
+ FAIL  tests/collaboration-operations.test.ts > generalized collaboration operation receipts > persists and exactly replays mapped domain errors
+AssertionError: expected 201 to be 409 // Object.is equality
+
+- Expected
++ Received
+
+- 409
++ 201
+
+ ❯ tests/collaboration-operations.test.ts:206:27
+    204|
+    205|     expect(first.status).toBe(409);
+    206|     expect(replay.status).toBe(first.status);
+       |                           ^
+    207|     await expect(replay.json()).resolves.toEqual(firstBody);
+    208|     expect(firstBody).toEqual({
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[1/7]⎯
+
+ FAIL  tests/collaboration-operations.test.ts > generalized collaboration operation receipts > provides fixed client copy for every T-3 collaboration error
+AssertionError: expected '请求失败，请稍后重试。' to be '该操作标识已用于其他请求，请重新提交。' // Object.is equality
+
+Expected: "该操作标识已用于其他请求，请重新提交。"
+Received: "请求失败，请稍后重试。"
+
+ ❯ tests/collaboration-operations.test.ts:218:85
+    216|
+    217|   it("provides fixed client copy for every T-3 collaboration error", (…
+    218|     expect(apiErrorCopy({ error: { code: "OPERATION_CONFLICT", message…
+       |                                                                                     ^
+    219|       "该操作标识已用于其他请求，请重新提交。",
+    220|     );
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[2/7]⎯
+
+ FAIL  tests/project-chat.api.test.ts > project chat API terminal semantics > stores a project message with no active run without creating one
+AssertionError: messages route must exist: expected undefined to be type of 'function'
+
+Expected: "function"
+Received: "undefined"
+
+ ❯ route tests/project-chat.api.test.ts:26:44
+     24|   const key = `../app/api/projects/[projectId]/${path}/route.ts`;
+     25|   const load = routeModules[key];
+     26|   expect(load, `${path} route must exist`).toBeTypeOf("function");
+       |                                            ^
+     27|   return load();
+     28| }
+ ❯ post tests/project-chat.api.test.ts:83:17
+ ❯ tests/project-chat.api.test.ts:116:28
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[3/7]⎯
+
+ FAIL  tests/project-chat.api.test.ts > project chat API terminal semantics > appends a project message to the active run and deduplicates it
+AssertionError: messages route must exist: expected undefined to be type of 'function'
+
+Expected: "function"
+Received: "undefined"
+
+ ❯ route tests/project-chat.api.test.ts:26:44
+     24|   const key = `../app/api/projects/[projectId]/${path}/route.ts`;
+     25|   const load = routeModules[key];
+     26|   expect(load, `${path} route must exist`).toBeTypeOf("function");
+       |                                            ^
+     27|   return load();
+     28| }
+ ❯ post tests/project-chat.api.test.ts:83:17
+ ❯ tests/project-chat.api.test.ts:145:25
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[4/7]⎯
+
+ FAIL  tests/project-chat.api.test.ts > project chat API terminal semantics > rejects a reused project-message operation id with different content
+AssertionError: messages route must exist: expected undefined to be type of 'function'
+
+Expected: "function"
+Received: "undefined"
+
+ ❯ route tests/project-chat.api.test.ts:26:44
+     24|   const key = `../app/api/projects/[projectId]/${path}/route.ts`;
+     25|   const load = routeModules[key];
+     26|   expect(load, `${path} route must exist`).toBeTypeOf("function");
+       |                                            ^
+     27|   return load();
+     28| }
+ ❯ post tests/project-chat.api.test.ts:83:17
+ ❯ tests/project-chat.api.test.ts:161:11
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[5/7]⎯
+
+ FAIL  tests/project-chat.api.test.ts > project chat API terminal semantics > does not revive a planned run when posting a project message
+ FAIL  tests/project-chat.api.test.ts > project chat API terminal semantics > does not revive a stopped run when posting a project message
+AssertionError: messages route must exist: expected undefined to be type of 'function'
+
+Expected: "function"
+Received: "undefined"
+
+ ❯ route tests/project-chat.api.test.ts:26:44
+     24|   const key = `../app/api/projects/[projectId]/${path}/route.ts`;
+     25|   const load = routeModules[key];
+     26|   expect(load, `${path} route must exist`).toBeTypeOf("function");
+       |                                            ^
+     27|   return load();
+     28| }
+ ❯ post tests/project-chat.api.test.ts:83:17
+ ❯ tests/project-chat.api.test.ts:188:30
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[6/7]⎯
+
+
+ Test Files  2 failed (2)
+      Tests  7 failed | 4 passed (11)
+   Start at  05:42:09
+   Duration  3.57s (transform 195ms, setup 735ms, import 158ms, tests 2.59s, environment 2.99s)
+
+# exit: 1

@@ -1,0 +1,18 @@
+# hf-gate-run
+# label: t29-regressions
+# command: cmd /c npm test -- tests/execution-review-ui.test.tsx tests/execution-cards-ui.test.tsx tests/visual-tokens.test.ts
+# started: 2026-07-30T14:18:59+00:00
+
+> collaboration-cockpit@0.1.0 test
+> vitest run tests/execution-review-ui.test.tsx tests/execution-cards-ui.test.tsx tests/visual-tokens.test.ts
+
+
+ RUN  v4.1.10 D:/cool-ai
+
+
+ Test Files  3 passed (3)
+      Tests  15 passed (15)
+   Start at  22:19:01
+   Duration  4.10s (transform 396ms, setup 1.46s, import 988ms, tests 1.40s, environment 5.89s)
+
+# exit: 0

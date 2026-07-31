@@ -1,0 +1,174 @@
+# hf-gate-run
+# label: t17-red
+# command: npm.cmd test -- tests/owner-handoff-plan-races.test.ts
+# started: 2026-07-29T22:53:33+00:00
+
+> collaboration-cockpit@0.1.0 test
+> vitest run tests/owner-handoff-plan-races.test.ts
+
+
+ RUN  v4.1.10 D:/cool-ai
+
+(node:13248) ExperimentalWarning: SQLite is an experimental feature and might change at any time
+(Use `node --trace-warnings ...` to show where the warning was created)
+ ❯ tests/owner-handoff-plan-races.test.ts (8 tests | 6 failed) 7617ms
+     × persists stable sequence, keeps the model target for ordinary pending chat, and consumes only the acquired prompt window 588ms
+     × uses the latest pending mention by stable sequence even when ordinary chat follows it 675ms
+     × delays planned for ordinary pending chat, keeps the current Agent, and preserves task/message actions 587ms
+     × keeps running and selects the latest mentioned current member 657ms
+     × consumes exactly the 30 acquired owner message IDs and leaves excluded and post-acquire messages pending 3161ms
+     × respects the 60000-character whole-message window when marking acquired owner IDs consumed 981ms
+
+⎯⎯⎯⎯⎯⎯⎯ Failed Tests 6 ⎯⎯⎯⎯⎯⎯⎯
+
+ FAIL  tests/owner-handoff-plan-races.test.ts > calling owner messages and handoff > persists stable sequence, keeps the model target for ordinary pending chat, and consumes only the acquired prompt window
+AssertionError: expected null to be '2026-07-30T05:00:00.000Z' // Object.is equality
+
+- Expected:
+"2026-07-30T05:00:00.000Z"
+
++ Received:
+null
+
+ ❯ tests/owner-handoff-plan-races.test.ts:268:89
+    266|     });
+    267|     const messages = messageConsumption();
+    268|     expect(messages.find(({ sequence }) => sequence === included.seque…
+       |                                                                                         ^
+    269|     expect(messages.find(({ sequence }) => sequence === pending.sequen…
+    270|
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[1/6]⎯
+
+ FAIL  tests/owner-handoff-plan-races.test.ts > calling owner messages and handoff > uses the latest pending mention by stable sequence even when ordinary chat follows it
+AssertionError: expected { affectedRows: 1, …(2) } to match object { Object (body, status) }
+(9 matching properties omitted from actual)
+
+- Expected
++ Received
+
+  {
+    "body": {
+      "run": {
+-       "currentAgentId": "agent-owner-c",
++       "currentAgentId": "agent-owner-b",
+        "status": "running",
+      },
+    },
+    "status": 200,
+  }
+
+ ❯ tests/owner-handoff-plan-races.test.ts:301:22
+    299|
+    300|     expect(firstMention.sequence).toBeLessThan(latestMention.sequence);
+    301|     expect(response).toMatchObject({
+       |                      ^
+    302|       body: { run: { currentAgentId: AGENT_C, status: "running" } },
+    303|       status: 200,
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[2/6]⎯
+
+ FAIL  tests/owner-handoff-plan-races.test.ts > calling owner messages and plan_ready > delays planned for ordinary pending chat, keeps the current Agent, and preserves task/message actions
+AssertionError: expected { affectedRows: 1, …(2) } to match object { body: { …(2) }, status: 200 }
+(7 matching properties omitted from actual)
+
+- Expected
++ Received
+
+@@ -2,10 +2,10 @@
+    "body": {
+      "attemptStatus": "committed",
+      "run": {
+        "currentAgentId": "agent-owner-b",
+        "roundCount": 2,
+-       "status": "running",
++       "status": "planned",
+      },
+    },
+    "status": 200,
+  }
+
+ ❯ tests/owner-handoff-plan-races.test.ts:346:22
+    344|     );
+    345|
+    346|     expect(response).toMatchObject({
+       |                      ^
+    347|       body: {
+    348|         attemptStatus: "committed",
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[3/6]⎯
+
+ FAIL  tests/owner-handoff-plan-races.test.ts > calling owner messages and plan_ready > keeps running and selects the latest mentioned current member
+AssertionError: expected { affectedRows: 1, …(2) } to match object { Object (body, status) }
+(9 matching properties omitted from actual)
+
+- Expected
++ Received
+
+  {
+    "body": {
+      "run": {
+-       "currentAgentId": "agent-owner-c",
+-       "status": "running",
++       "currentAgentId": "agent-owner-b",
++       "status": "planned",
+      },
+    },
+    "status": 200,
+  }
+
+ ❯ tests/owner-handoff-plan-races.test.ts:408:22
+    406|     );
+    407|
+    408|     expect(response).toMatchObject({
+       |                      ^
+    409|       body: { run: { currentAgentId: AGENT_C, status: "running" } },
+    410|       status: 200,
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[4/6]⎯
+
+ FAIL  tests/owner-handoff-plan-races.test.ts > owner prompt-window consumption > consumes exactly the 30 acquired owner message IDs and leaves excluded and post-acquire messages pending
+AssertionError: expected [] to have a length of 30 but got +0
+
+- Expected
++ Received
+
+- 30
++ 0
+
+ ❯ tests/owner-handoff-plan-races.test.ts:429:75
+    427|
+    428|     const ownerMessages = messageConsumption().filter(({ authorType })…
+    429|     expect(ownerMessages.filter(({ consumedAt }) => consumedAt !== nul…
+       |                                                                           ^
+    430|     expect(ownerMessages.slice(0, 2).every(({ consumedAt }) => consume…
+    431|     expect(
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[5/6]⎯
+
+ FAIL  tests/owner-handoff-plan-races.test.ts > owner prompt-window consumption > respects the 60000-character whole-message window when marking acquired owner IDs consumed
+AssertionError: expected null to be '2026-07-30T05:00:00.000Z' // Object.is equality
+
+- Expected:
+"2026-07-30T05:00:00.000Z"
+
++ Received:
+null
+
+ ❯ tests/owner-handoff-plan-races.test.ts:454:9
+    452|       expect(
+    453|         consumption.find(({ sequence }) => sequence === included.seque…
+    454|       ).toBe(NOW);
+       |         ^
+    455|     }
+    456|   });
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[6/6]⎯
+
+
+ Test Files  1 failed (1)
+      Tests  6 failed | 2 passed (8)
+   Start at  06:53:34
+   Duration  10.11s (transform 353ms, setup 342ms, import 379ms, tests 7.62s, environment 1.51s)
+
+# exit: 1

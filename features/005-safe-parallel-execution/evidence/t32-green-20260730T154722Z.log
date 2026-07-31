@@ -1,0 +1,47 @@
+# hf-gate-run
+# label: t32-green
+# command: npm.cmd run smoke:execution
+# started: 2026-07-30T15:47:22+00:00
+
+> collaboration-cockpit@0.1.0 smoke:execution
+> node tests/execution-browser-smoke.mjs
+
+(node:10508) ExperimentalWarning: SQLite is an experimental feature and might change at any time
+(Use `node --trace-warnings ...` to show where the warning was created)
+node:internal/process/promises:394
+    triggerUncaughtException(err, true /* fromPromise */);
+    ^
+
+route.fetch: Timeout 30000ms exceeded.
+Call log:
+  - → POST http://127.0.0.1:28806/api/executions/b38076fc-9090-4459-9e02-93996fefbc32/advance
+    - user-agent: Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) HeadlessChrome/149.0.0.0 Safari/537.36
+    - accept: */*
+    - accept-encoding: gzip,deflate,br
+    - origin: http://127.0.0.1:28806
+    - referer: http://127.0.0.1:28806/
+    - content-type: application/json
+    - sec-ch-ua: "Google Chrome";v="149", "Chromium";v="149", "Not)A;Brand";v="24"
+    - sec-ch-ua-mobile: ?0
+    - sec-ch-ua-platform: "Windows"
+    - content-length: 74
+
+    at D:\cool-ai\tests\execution-browser-smoke.mjs:1043:34 {
+  log: [
+    '  - → POST http://127.0.0.1:28806/api/executions/b38076fc-9090-4459-9e02-93996fefbc32/advance',
+    '    - user-agent: Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) HeadlessChrome/149.0.0.0 Safari/537.36',
+    '    - accept: */*',
+    '    - accept-encoding: gzip,deflate,br',
+    '    - origin: http://127.0.0.1:28806',
+    '    - referer: http://127.0.0.1:28806/',
+    '    - content-type: application/json',
+    '    - sec-ch-ua: "Google Chrome";v="149", "Chromium";v="149", "Not)A;Brand";v="24"',
+    '    - sec-ch-ua-mobile: ?0',
+    '    - sec-ch-ua-platform: "Windows"',
+    '    - content-length: 74'
+  ],
+  name: 'TimeoutError'
+}
+
+Node.js v24.14.0
+# exit: 1

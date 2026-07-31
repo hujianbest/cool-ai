@@ -1,0 +1,565 @@
+# hf-gate-run
+# label: t3-red
+# command: cmd /c npm test
+# started: 2026-07-29T15:03:49+00:00
+
+> collaboration-cockpit@0.1.0 test
+> vitest run
+
+
+ RUN  v4.1.10 D:/cool-ai
+
+(node:160) ExperimentalWarning: SQLite is an experimental feature and might change at any time
+(Use `node --trace-warnings ...` to show where the warning was created)
+(node:12704) ExperimentalWarning: SQLite is an experimental feature and might change at any time
+(Use `node --trace-warnings ...` to show where the warning was created)
+(node:13292) ExperimentalWarning: SQLite is an experimental feature and might change at any time
+(Use `node --trace-warnings ...` to show where the warning was created)
+(node:10928) ExperimentalWarning: SQLite is an experimental feature and might change at any time
+(Use `node --trace-warnings ...` to show where the warning was created)
+ ❯ tests/task-flow.test.tsx (5 tests | 5 failed) 5064ms
+     × shows loading, then restores persisted task events and result 1036ms
+     × shows an actionable empty state when the project has no tasks 1005ms
+     × calls create, start, and execute in order while rendering each persisted state 1007ms
+     × offers retry after a load error 1007ms
+     × renders a persisted failed event and preserves the goal after execution fails 1006ms
+
+⎯⎯⎯⎯⎯⎯⎯ Failed Tests 5 ⎯⎯⎯⎯⎯⎯⎯
+
+ FAIL  tests/task-flow.test.tsx > task event flow > shows loading, then restores persisted task events and result
+TestingLibraryElementError: Unable to find an element with the text: Loading task history…. This could be because the text is broken up by multiple elements. In this case, you can provide a function for your text matcher to make your matcher more flexible.
+
+Ignored nodes: comments, script, style
+[36m<body>[39m
+  [36m<div>[39m
+    [36m<section[39m
+      [33maria-labelledby[39m=[32m"projects-title"[39m
+    [36m>[39m
+      [36m<h1[39m
+        [33mid[39m=[32m"projects-title"[39m
+      [36m>[39m
+        [0mProjects[0m
+      [36m</h1>[39m
+      [36m<form>[39m
+        [36m<label[39m
+          [33mfor[39m=[32m"project-name"[39m
+        [36m>[39m
+          [0mProject name[0m
+        [36m</label>[39m
+        [36m<input[39m
+          [33mid[39m=[32m"project-name"[39m
+          [33mname[39m=[32m"name"[39m
+          [33mvalue[39m=[32m""[39m
+        [36m/>[39m
+        [36m<button[39m
+          [33mtype[39m=[32m"submit"[39m
+        [36m>[39m
+          [0mCreate project[0m
+        [36m</button>[39m
+      [36m</form>[39m
+      [36m<nav[39m
+        [33maria-label[39m=[32m"Projects"[39m
+      [36m>[39m
+        [36m<ul>[39m
+          [36m<li>[39m
+            [36m<button[39m
+              [33maria-current[39m=[32m"page"[39m
+              [33mtype[39m=[32m"button"[39m
+            [36m>[39m
+              [0mLaunch plan[0m
+            [36m</button>[39m
+          [36m</li>[39m
+        [36m</ul>[39m
+      [36m</nav>[39m
+    [36m</section>[39m
+  [36m</div>[39m
+[36m</body>[39m
+
+Ignored nodes: comments, script, style
+[36m<body>[39m
+  [36m<div>[39m
+    [36m<section[39m
+      [33maria-labelledby[39m=[32m"projects-title"[39m
+    [36m>[39m
+      [36m<h1[39m
+        [33mid[39m=[32m"projects-title"[39m
+      [36m>[39m
+        [0mProjects[0m
+      [36m</h1>[39m
+      [36m<form>[39m
+        [36m<label[39m
+          [33mfor[39m=[32m"project-name"[39m
+        [36m>[39m
+          [0mProject name[0m
+        [36m</label>[39m
+        [36m<input[39m
+          [33mid[39m=[32m"project-name"[39m
+          [33mname[39m=[32m"name"[39m
+          [33mvalue[39m=[32m""[39m
+        [36m/>[39m
+        [36m<button[39m
+          [33mtype[39m=[32m"submit"[39m
+        [36m>[39m
+          [0mCreate project[0m
+        [36m</button>[39m
+      [36m</form>[39m
+      [36m<nav[39m
+        [33maria-label[39m=[32m"Projects"[39m
+      [36m>[39m
+        [36m<ul>[39m
+          [36m<li>[39m
+            [36m<button[39m
+              [33maria-current[39m=[32m"page"[39m
+              [33mtype[39m=[32m"button"[39m
+            [36m>[39m
+              [0mLaunch plan[0m
+            [36m</button>[39m
+          [36m</li>[39m
+        [36m</ul>[39m
+      [36m</nav>[39m
+    [36m</section>[39m
+  [36m</div>[39m
+[36m</body>[39m
+ ❯ waitForWrapper node_modules/@testing-library/dom/dist/wait-for.js:163:27
+ ❯ node_modules/@testing-library/dom/dist/query-helpers.js:86:33
+ ❯ tests/task-flow.test.tsx:64:25
+     62|     render(<ProjectPanel />);
+     63|
+     64|     expect(await screen.findByText("Loading task history…")).toBeInThe…
+       |                         ^
+     65|     loaded.resolve(
+     66|       Response.json({
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[1/5]⎯
+
+ FAIL  tests/task-flow.test.tsx > task event flow > shows an actionable empty state when the project has no tasks
+TestingLibraryElementError: Unable to find an element with the text: No tasks yet. Enter a goal to run the example Agent.. This could be because the text is broken up by multiple elements. In this case, you can provide a function for your text matcher to make your matcher more flexible.
+
+Ignored nodes: comments, script, style
+[36m<body>[39m
+  [36m<div>[39m
+    [36m<section[39m
+      [33maria-labelledby[39m=[32m"projects-title"[39m
+    [36m>[39m
+      [36m<h1[39m
+        [33mid[39m=[32m"projects-title"[39m
+      [36m>[39m
+        [0mProjects[0m
+      [36m</h1>[39m
+      [36m<form>[39m
+        [36m<label[39m
+          [33mfor[39m=[32m"project-name"[39m
+        [36m>[39m
+          [0mProject name[0m
+        [36m</label>[39m
+        [36m<input[39m
+          [33mid[39m=[32m"project-name"[39m
+          [33mname[39m=[32m"name"[39m
+          [33mvalue[39m=[32m""[39m
+        [36m/>[39m
+        [36m<button[39m
+          [33mtype[39m=[32m"submit"[39m
+        [36m>[39m
+          [0mCreate project[0m
+        [36m</button>[39m
+      [36m</form>[39m
+      [36m<nav[39m
+        [33maria-label[39m=[32m"Projects"[39m
+      [36m>[39m
+        [36m<ul>[39m
+          [36m<li>[39m
+            [36m<button[39m
+              [33maria-current[39m=[32m"page"[39m
+              [33mtype[39m=[32m"button"[39m
+            [36m>[39m
+              [0mLaunch plan[0m
+            [36m</button>[39m
+          [36m</li>[39m
+        [36m</ul>[39m
+      [36m</nav>[39m
+    [36m</section>[39m
+  [36m</div>[39m
+[36m</body>[39m
+
+Ignored nodes: comments, script, style
+[36m<body>[39m
+  [36m<div>[39m
+    [36m<section[39m
+      [33maria-labelledby[39m=[32m"projects-title"[39m
+    [36m>[39m
+      [36m<h1[39m
+        [33mid[39m=[32m"projects-title"[39m
+      [36m>[39m
+        [0mProjects[0m
+      [36m</h1>[39m
+      [36m<form>[39m
+        [36m<label[39m
+          [33mfor[39m=[32m"project-name"[39m
+        [36m>[39m
+          [0mProject name[0m
+        [36m</label>[39m
+        [36m<input[39m
+          [33mid[39m=[32m"project-name"[39m
+          [33mname[39m=[32m"name"[39m
+          [33mvalue[39m=[32m""[39m
+        [36m/>[39m
+        [36m<button[39m
+          [33mtype[39m=[32m"submit"[39m
+        [36m>[39m
+          [0mCreate project[0m
+        [36m</button>[39m
+      [36m</form>[39m
+      [36m<nav[39m
+        [33maria-label[39m=[32m"Projects"[39m
+      [36m>[39m
+        [36m<ul>[39m
+          [36m<li>[39m
+            [36m<button[39m
+              [33maria-current[39m=[32m"page"[39m
+              [33mtype[39m=[32m"button"[39m
+            [36m>[39m
+              [0mLaunch plan[0m
+            [36m</button>[39m
+          [36m</li>[39m
+        [36m</ul>[39m
+      [36m</nav>[39m
+    [36m</section>[39m
+  [36m</div>[39m
+[36m</body>[39m
+ ❯ waitForWrapper node_modules/@testing-library/dom/dist/wait-for.js:163:27
+ ❯ node_modules/@testing-library/dom/dist/query-helpers.js:86:33
+ ❯ tests/task-flow.test.tsx:92:25
+     90|     render(<ProjectPanel />);
+     91|
+     92|     expect(await screen.findByText("No tasks yet. Enter a goal to run …
+       |                         ^
+     93|     expect(screen.getByLabelText("Task goal")).toBeEnabled();
+     94|     expect(screen.getByRole("button", { name: "Run task" })).toBeDisab…
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[2/5]⎯
+
+ FAIL  tests/task-flow.test.tsx > task event flow > calls create, start, and execute in order while rendering each persisted state
+TestingLibraryElementError: Unable to find an element with the text: No tasks yet. Enter a goal to run the example Agent.. This could be because the text is broken up by multiple elements. In this case, you can provide a function for your text matcher to make your matcher more flexible.
+
+Ignored nodes: comments, script, style
+[36m<body>[39m
+  [36m<div>[39m
+    [36m<section[39m
+      [33maria-labelledby[39m=[32m"projects-title"[39m
+    [36m>[39m
+      [36m<h1[39m
+        [33mid[39m=[32m"projects-title"[39m
+      [36m>[39m
+        [0mProjects[0m
+      [36m</h1>[39m
+      [36m<form>[39m
+        [36m<label[39m
+          [33mfor[39m=[32m"project-name"[39m
+        [36m>[39m
+          [0mProject name[0m
+        [36m</label>[39m
+        [36m<input[39m
+          [33mid[39m=[32m"project-name"[39m
+          [33mname[39m=[32m"name"[39m
+          [33mvalue[39m=[32m""[39m
+        [36m/>[39m
+        [36m<button[39m
+          [33mtype[39m=[32m"submit"[39m
+        [36m>[39m
+          [0mCreate project[0m
+        [36m</button>[39m
+      [36m</form>[39m
+      [36m<nav[39m
+        [33maria-label[39m=[32m"Projects"[39m
+      [36m>[39m
+        [36m<ul>[39m
+          [36m<li>[39m
+            [36m<button[39m
+              [33maria-current[39m=[32m"page"[39m
+              [33mtype[39m=[32m"button"[39m
+            [36m>[39m
+              [0mLaunch plan[0m
+            [36m</button>[39m
+          [36m</li>[39m
+        [36m</ul>[39m
+      [36m</nav>[39m
+    [36m</section>[39m
+  [36m</div>[39m
+[36m</body>[39m
+
+Ignored nodes: comments, script, style
+[36m<body>[39m
+  [36m<div>[39m
+    [36m<section[39m
+      [33maria-labelledby[39m=[32m"projects-title"[39m
+    [36m>[39m
+      [36m<h1[39m
+        [33mid[39m=[32m"projects-title"[39m
+      [36m>[39m
+        [0mProjects[0m
+      [36m</h1>[39m
+      [36m<form>[39m
+        [36m<label[39m
+          [33mfor[39m=[32m"project-name"[39m
+        [36m>[39m
+          [0mProject name[0m
+        [36m</label>[39m
+        [36m<input[39m
+          [33mid[39m=[32m"project-name"[39m
+          [33mname[39m=[32m"name"[39m
+          [33mvalue[39m=[32m""[39m
+        [36m/>[39m
+        [36m<button[39m
+          [33mtype[39m=[32m"submit"[39m
+        [36m>[39m
+          [0mCreate project[0m
+        [36m</button>[39m
+      [36m</form>[39m
+      [36m<nav[39m
+        [33maria-label[39m=[32m"Projects"[39m
+      [36m>[39m
+        [36m<ul>[39m
+          [36m<li>[39m
+            [36m<button[39m
+              [33maria-current[39m=[32m"page"[39m
+              [33mtype[39m=[32m"button"[39m
+            [36m>[39m
+              [0mLaunch plan[0m
+            [36m</button>[39m
+          [36m</li>[39m
+        [36m</ul>[39m
+      [36m</nav>[39m
+    [36m</section>[39m
+  [36m</div>[39m
+[36m</body>[39m
+ ❯ waitForWrapper node_modules/@testing-library/dom/dist/wait-for.js:163:27
+ ❯ node_modules/@testing-library/dom/dist/query-helpers.js:86:33
+ ❯ tests/task-flow.test.tsx:114:18
+    112|
+    113|     render(<ProjectPanel />);
+    114|     await screen.findByText("No tasks yet. Enter a goal to run the exa…
+       |                  ^
+    115|     await user.type(screen.getByLabelText("Task goal"), "Prepare launc…
+    116|     await user.click(screen.getByRole("button", { name: "Run task" }));
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[3/5]⎯
+
+ FAIL  tests/task-flow.test.tsx > task event flow > offers retry after a load error
+TestingLibraryElementError: Unable to find role="alert"
+
+Ignored nodes: comments, script, style
+[36m<body>[39m
+  [36m<div>[39m
+    [36m<section[39m
+      [33maria-labelledby[39m=[32m"projects-title"[39m
+    [36m>[39m
+      [36m<h1[39m
+        [33mid[39m=[32m"projects-title"[39m
+      [36m>[39m
+        [0mProjects[0m
+      [36m</h1>[39m
+      [36m<form>[39m
+        [36m<label[39m
+          [33mfor[39m=[32m"project-name"[39m
+        [36m>[39m
+          [0mProject name[0m
+        [36m</label>[39m
+        [36m<input[39m
+          [33mid[39m=[32m"project-name"[39m
+          [33mname[39m=[32m"name"[39m
+          [33mvalue[39m=[32m""[39m
+        [36m/>[39m
+        [36m<button[39m
+          [33mtype[39m=[32m"submit"[39m
+        [36m>[39m
+          [0mCreate project[0m
+        [36m</button>[39m
+      [36m</form>[39m
+      [36m<nav[39m
+        [33maria-label[39m=[32m"Projects"[39m
+      [36m>[39m
+        [36m<ul>[39m
+          [36m<li>[39m
+            [36m<button[39m
+              [33maria-current[39m=[32m"page"[39m
+              [33mtype[39m=[32m"button"[39m
+            [36m>[39m
+              [0mLaunch plan[0m
+            [36m</button>[39m
+          [36m</li>[39m
+        [36m</ul>[39m
+      [36m</nav>[39m
+    [36m</section>[39m
+  [36m</div>[39m
+[36m</body>[39m
+
+Ignored nodes: comments, script, style
+[36m<body>[39m
+  [36m<div>[39m
+    [36m<section[39m
+      [33maria-labelledby[39m=[32m"projects-title"[39m
+    [36m>[39m
+      [36m<h1[39m
+        [33mid[39m=[32m"projects-title"[39m
+      [36m>[39m
+        [0mProjects[0m
+      [36m</h1>[39m
+      [36m<form>[39m
+        [36m<label[39m
+          [33mfor[39m=[32m"project-name"[39m
+        [36m>[39m
+          [0mProject name[0m
+        [36m</label>[39m
+        [36m<input[39m
+          [33mid[39m=[32m"project-name"[39m
+          [33mname[39m=[32m"name"[39m
+          [33mvalue[39m=[32m""[39m
+        [36m/>[39m
+        [36m<button[39m
+          [33mtype[39m=[32m"submit"[39m
+        [36m>[39m
+          [0mCreate project[0m
+        [36m</button>[39m
+      [36m</form>[39m
+      [36m<nav[39m
+        [33maria-label[39m=[32m"Projects"[39m
+      [36m>[39m
+        [36m<ul>[39m
+          [36m<li>[39m
+            [36m<button[39m
+              [33maria-current[39m=[32m"page"[39m
+              [33mtype[39m=[32m"button"[39m
+            [36m>[39m
+              [0mLaunch plan[0m
+            [36m</button>[39m
+          [36m</li>[39m
+        [36m</ul>[39m
+      [36m</nav>[39m
+    [36m</section>[39m
+  [36m</div>[39m
+[36m</body>[39m
+ ❯ waitForWrapper node_modules/@testing-library/dom/dist/wait-for.js:163:27
+ ❯ node_modules/@testing-library/dom/dist/query-helpers.js:86:33
+ ❯ tests/task-flow.test.tsx:163:25
+    161|     render(<ProjectPanel />);
+    162|
+    163|     expect(await screen.findByRole("alert")).toHaveTextContent("Could …
+       |                         ^
+    164|     await user.click(screen.getByRole("button", { name: "Retry task hi…
+    165|     expect(await screen.findByText("No tasks yet. Enter a goal to run …
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[4/5]⎯
+
+ FAIL  tests/task-flow.test.tsx > task event flow > renders a persisted failed event and preserves the goal after execution fails
+TestingLibraryElementError: Unable to find an element with the text: No tasks yet. Enter a goal to run the example Agent.. This could be because the text is broken up by multiple elements. In this case, you can provide a function for your text matcher to make your matcher more flexible.
+
+Ignored nodes: comments, script, style
+[36m<body>[39m
+  [36m<div>[39m
+    [36m<section[39m
+      [33maria-labelledby[39m=[32m"projects-title"[39m
+    [36m>[39m
+      [36m<h1[39m
+        [33mid[39m=[32m"projects-title"[39m
+      [36m>[39m
+        [0mProjects[0m
+      [36m</h1>[39m
+      [36m<form>[39m
+        [36m<label[39m
+          [33mfor[39m=[32m"project-name"[39m
+        [36m>[39m
+          [0mProject name[0m
+        [36m</label>[39m
+        [36m<input[39m
+          [33mid[39m=[32m"project-name"[39m
+          [33mname[39m=[32m"name"[39m
+          [33mvalue[39m=[32m""[39m
+        [36m/>[39m
+        [36m<button[39m
+          [33mtype[39m=[32m"submit"[39m
+        [36m>[39m
+          [0mCreate project[0m
+        [36m</button>[39m
+      [36m</form>[39m
+      [36m<nav[39m
+        [33maria-label[39m=[32m"Projects"[39m
+      [36m>[39m
+        [36m<ul>[39m
+          [36m<li>[39m
+            [36m<button[39m
+              [33maria-current[39m=[32m"page"[39m
+              [33mtype[39m=[32m"button"[39m
+            [36m>[39m
+              [0mLaunch plan[0m
+            [36m</button>[39m
+          [36m</li>[39m
+        [36m</ul>[39m
+      [36m</nav>[39m
+    [36m</section>[39m
+  [36m</div>[39m
+[36m</body>[39m
+
+Ignored nodes: comments, script, style
+[36m<body>[39m
+  [36m<div>[39m
+    [36m<section[39m
+      [33maria-labelledby[39m=[32m"projects-title"[39m
+    [36m>[39m
+      [36m<h1[39m
+        [33mid[39m=[32m"projects-title"[39m
+      [36m>[39m
+        [0mProjects[0m
+      [36m</h1>[39m
+      [36m<form>[39m
+        [36m<label[39m
+          [33mfor[39m=[32m"project-name"[39m
+        [36m>[39m
+          [0mProject name[0m
+        [36m</label>[39m
+        [36m<input[39m
+          [33mid[39m=[32m"project-name"[39m
+          [33mname[39m=[32m"name"[39m
+          [33mvalue[39m=[32m""[39m
+        [36m/>[39m
+        [36m<button[39m
+          [33mtype[39m=[32m"submit"[39m
+        [36m>[39m
+          [0mCreate project[0m
+        [36m</button>[39m
+      [36m</form>[39m
+      [36m<nav[39m
+        [33maria-label[39m=[32m"Projects"[39m
+      [36m>[39m
+        [36m<ul>[39m
+          [36m<li>[39m
+            [36m<button[39m
+              [33maria-current[39m=[32m"page"[39m
+              [33mtype[39m=[32m"button"[39m
+            [36m>[39m
+              [0mLaunch plan[0m
+            [36m</button>[39m
+          [36m</li>[39m
+        [36m</ul>[39m
+      [36m</nav>[39m
+    [36m</section>[39m
+  [36m</div>[39m
+[36m</body>[39m
+ ❯ waitForWrapper node_modules/@testing-library/dom/dist/wait-for.js:163:27
+ ❯ node_modules/@testing-library/dom/dist/query-helpers.js:86:33
+ ❯ tests/task-flow.test.tsx:196:18
+    194|
+    195|     render(<ProjectPanel />);
+    196|     await screen.findByText("No tasks yet. Enter a goal to run the exa…
+       |                  ^
+    197|     await user.type(screen.getByLabelText("Task goal"), "Prepare launc…
+    198|     await user.click(screen.getByRole("button", { name: "Run task" }));
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[5/5]⎯
+
+
+ Test Files  1 failed | 5 passed (6)
+      Tests  5 failed | 20 passed (25)
+   Start at  23:03:50
+   Duration  7.99s (transform 514ms, setup 3.19s, import 779ms, tests 6.29s, environment 11.10s)
+
+# exit: 1

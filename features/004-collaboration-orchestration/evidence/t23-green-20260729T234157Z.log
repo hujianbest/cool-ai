@@ -1,0 +1,18 @@
+# hf-gate-run
+# label: t23-green
+# command: cmd /c npm test -- tests/collaboration-accessibility.test.tsx
+# started: 2026-07-29T23:41:57+00:00
+
+> collaboration-cockpit@0.1.0 test
+> vitest run tests/collaboration-accessibility.test.tsx
+
+
+ RUN  v4.1.10 D:/cool-ai
+
+
+ Test Files  1 passed (1)
+      Tests  4 passed (4)
+   Start at  07:41:58
+   Duration  3.37s (transform 237ms, setup 365ms, import 380ms, tests 885ms, environment 1.47s)
+
+# exit: 0

@@ -1,0 +1,123 @@
+# hf-gate-run
+# label: t19-collaboration-regression
+# command: cmd /c npm test -- tests/owner-decision-races.test.ts
+# started: 2026-07-30T06:38:37+00:00
+
+> collaboration-cockpit@0.1.0 test
+> vitest run tests/owner-decision-races.test.ts
+
+
+ RUN  v4.1.10 D:/cool-ai
+
+(node:10744) ExperimentalWarning: SQLite is an experimental feature and might change at any time
+(Use `node --trace-warnings ...` to show where the warning was created)
+ ❯ tests/owner-decision-races.test.ts (4 tests | 4 failed) 2869ms
+     × keeps ordinary and mentioned post-acquire messages queued without answering or changing requester 838ms
+     × preserves queued message and mention sequence across reopen for the next prompt after an explicit answer 762ms
+     × consumes no included or post-acquire owner messages when a decision commit fails, then replays them after retry 598ms
+     × consumes none on a discarded decision result and retains stable pending order after continue 669ms
+
+⎯⎯⎯⎯⎯⎯⎯ Failed Tests 4 ⎯⎯⎯⎯⎯⎯⎯
+
+ FAIL  tests/owner-decision-races.test.ts > calling owner messages and decision requests > keeps ordinary and mentioned post-acquire messages queued without answering or changing requester
+AssertionError: expected { affectedRows: +0, …(2) } to match object { body: { …(2) }, status: 200 }
+(8 matching properties omitted from actual)
+
+- Expected
++ Received
+
+  {
+    "body": {
+-     "attemptStatus": "committed",
++     "attemptStatus": "interrupted",
+      "run": {
+        "currentAgentId": "agent-decision-requester",
+-       "status": "waiting_owner",
++       "status": "paused",
+      },
+    },
+    "status": 200,
+  }
+
+ ❯ tests/owner-decision-races.test.ts:229:22
+    227|     const response = finalize(acquired, decision());
+    228|
+    229|     expect(response).toMatchObject({
+       |                      ^
+    230|       body: {
+    231|         attemptStatus: "committed",
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[1/4]⎯
+
+ FAIL  tests/owner-decision-races.test.ts > calling owner messages and decision requests > preserves queued message and mention sequence across reopen for the next prompt after an explicit answer
+TypeError: Cannot read properties of undefined (reading 'id')
+ ❯ tests/owner-decision-races.test.ts:267:55
+    265|
+    266|     const openDecision = persistedState().decisionRows[0];
+    267|     answerDecision(databasePath, RUN_ID, openDecision.id, {
+       |                                                       ^
+    268|       answer: "Explicit owner answer",
+    269|       expectedVersion: 1,
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[2/4]⎯
+
+ FAIL  tests/owner-decision-races.test.ts > calling owner messages and decision requests > consumes no included or post-acquire owner messages when a decision commit fails, then replays them after retry
+AssertionError: expected { affectedRows: +0, …(2) } to match object { …(2) }
+(12 matching properties omitted from actual)
+
+- Expected
++ Received
+
+  {
+    "body": {
+-     "error": {
+-       "code": "ACTION_INVALID",
++     "attemptStatus": "interrupted",
++     "run": {
++       "createdAt": "2026-07-30T06:30:00.000Z",
++       "currentAgentId": "agent-decision-requester",
++       "id": "run-owner-decision-races",
++       "pauseCategory": "interrupted",
++       "projectId": "project-owner-decision-races",
++       "roundCount": 0,
++       "status": "paused",
++       "updatedAt": "2026-07-30T06:38:43.657Z",
++       "version": 2,
+      },
+    },
+-   "status": 400,
++   "status": 200,
+  }
+
+ ❯ tests/owner-decision-races.test.ts:300:70
+    298|     const pending = ownerMessage("Pending after invalid decision", REV…
+    299|
+    300|     expect(finalize(acquired, decision(["Duplicate", "Duplicate"]))).t…
+       |                                                                      ^
+    301|       body: { error: { code: "ACTION_INVALID" } },
+    302|       status: 400,
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[3/4]⎯
+
+ FAIL  tests/owner-decision-races.test.ts > calling owner messages and decision requests > consumes none on a discarded decision result and retains stable pending order after continue
+CollaborationError: Only a running collaboration can be paused.
+ ❯ src/server/collaboration/run-service.ts:788:17
+    786|       if (input.action === "pause") {
+    787|         if (row.status !== "running") {
+    788|           throw new CollaborationError(
+       |                 ^
+    789|             "RUN_STATE_CONFLICT",
+    790|             409,
+ ❯ transaction src/server/collaboration/run-service.ts:106:20
+ ❯ controlRun src/server/collaboration/run-service.ts:732:12
+ ❯ tests/owner-decision-races.test.ts:327:5
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[4/4]⎯
+
+
+ Test Files  1 failed (1)
+      Tests  4 failed (4)
+   Start at  14:38:39
+   Duration  5.37s (transform 230ms, setup 364ms, import 365ms, tests 2.87s, environment 1.48s)
+
+# exit: 1

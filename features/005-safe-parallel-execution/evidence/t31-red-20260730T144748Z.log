@@ -1,0 +1,48 @@
+# hf-gate-run
+# label: t31-red
+# command: cmd /c npm test -- tests/execution-security-integration.test.ts tests/merge-fault-injection.test.ts tests/execution-pagination-limits.test.ts
+# started: 2026-07-30T14:47:48+00:00
+
+> collaboration-cockpit@0.1.0 test
+> vitest run tests/execution-security-integration.test.ts tests/merge-fault-injection.test.ts tests/execution-pagination-limits.test.ts
+
+
+ RUN  v4.1.10 D:/cool-ai
+
+(node:9272) ExperimentalWarning: SQLite is an experimental feature and might change at any time
+(Use `node --trace-warnings ...` to show where the warning was created)
+(node:3740) ExperimentalWarning: SQLite is an experimental feature and might change at any time
+(Use `node --trace-warnings ...` to show where the warning was created)
+(node:5540) ExperimentalWarning: SQLite is an experimental feature and might change at any time
+(Use `node --trace-warnings ...` to show where the warning was created)
+ ❯ tests/execution-security-integration.test.ts (4 tests | 1 failed) 212ms
+     × keeps two real sandboxes isolated while a real harmless process changes only one 141ms
+
+⎯⎯⎯⎯⎯⎯⎯ Failed Tests 1 ⎯⎯⎯⎯⎯⎯⎯
+
+ FAIL  tests/execution-security-integration.test.ts > execution security integration > keeps two real sandboxes isolated while a real harmless process changes only one
+AssertionError: expected { CI: '1', …(17) } to not have property "PATH"
+
+- Expected:
+undefined
+
++ Received:
+"D:\\cool-ai\\node_modules\\.bin;D:\\node_modules\\.bin;C:\\Program Files\\nodejs\\node_modules\\npm\\node_modules\\@npmcli\\run-script\\lib\\node-gyp-bin;d:\\Programs\\cursor\\resources\\app\\node_modules\\@vscode\\ripgrep\\bin;C:\\Program Files\\Python313\\Scripts\\;C:\\Program Files\\Python313\\;C:\\Windows\\system32;C:\\Windows;C:\\Windows\\System32\\Wbem;C:\\Windows\\System32\\WindowsPowerShell\\v1.0\\;C:\\Windows\\System32\\OpenSSH\\;C:\\Program Files\\Git\\cmd;C:\\Program Files\\Microsoft VS Code\\bin;C:\\Program Files\\nodejs\\;C:\\tools\\jdk-17\\jdk-17.0.19+10\\bin;C:\\tools\\maven\\apache-maven-3.9.9\\bin;C:\\Tools\\zig\\zig-x86_64-windows-0.14.1;C:\\Users\\Administrator\\AppData\\Local\\Programs\\Python\\Launcher\\;d:\\Programs\\cursor\\resources\\app\\codeBin;C:\\Users\\Administrator\\AppData\\Local\\Microsoft\\WindowsApps;d:\\Programs\\cursor\\resources\\app\\bin;C:\\Users\\Administrator\\AppData\\Roaming\\npm"
+
+ ❯ tests/execution-security-integration.test.ts:100:27
+     98|     };
+     99|     expect(resolve(child.cwd)).toBe(resolve(sandboxA));
+    100|     expect(child.env).not.toHaveProperty("PATH");
+       |                           ^
+    101|     expect(child.env).not.toHaveProperty("COCKPIT_MASTER_KEY");
+    102|   });
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[1/1]⎯
+
+
+ Test Files  1 failed | 2 passed (3)
+      Tests  1 failed | 10 passed (11)
+   Start at  22:47:49
+   Duration  11.21s (transform 692ms, setup 1.44s, import 1.29s, tests 10.21s, environment 5.77s)
+
+# exit: 1

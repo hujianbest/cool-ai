@@ -1,0 +1,35 @@
+{
+  "name": "collaboration-cockpit",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "dev": "next dev --webpack",
+    "build": "next build --webpack",
+    "test": "vitest run",
+    "smoke": "node tests/browser-smoke.mjs",
+    "smoke:team": "node tests/team-browser-smoke.mjs",
+    "smoke:context": "node tests/context-browser-smoke.mjs",
+    "smoke:collaboration": "node tests/collaboration-browser-smoke.mjs",
+    "smoke:execution": "node tests/execution-browser-smoke.mjs"
+  },
+  "dependencies": {
+    "next": "^16.2.12",
+    "react": "^19.2.8",
+    "react-dom": "^19.2.8",
+    "zod": "^4.4.3"
+  },
+  "devDependencies": {
+    "@testing-library/jest-dom": "^7.0.0",
+    "@testing-library/react": "^16.3.2",
+    "@testing-library/user-event": "^14.6.1",
+    "@types/node": "^26.1.2",
+    "@types/react": "^19.2.17",
+    "@types/react-dom": "^19.2.3",
+    "@vitejs/plugin-react": "^6.0.4",
+    "jsdom": "^29.1.1",
+    "playwright": "^1.62.0",
+    "typescript": "^6.0.3",
+    "vitest": "^4.1.10"
+  }
+}

@@ -1,0 +1,18 @@
+# hf-gate-run
+# label: t7-green
+# command: npm.cmd test -- tests/sandbox-snapshot.test.ts
+# started: 2026-07-30T03:35:17+00:00
+
+> collaboration-cockpit@0.1.0 test
+> vitest run tests/sandbox-snapshot.test.ts
+
+
+ RUN  v4.1.10 D:/cool-ai
+
+
+ Test Files  1 passed (1)
+      Tests  5 passed (5)
+   Start at  11:35:18
+   Duration  2.23s (transform 88ms, setup 343ms, import 46ms, tests 163ms, environment 1.42s)
+
+# exit: 0

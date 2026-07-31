@@ -1,0 +1,278 @@
+# hf-gate-run
+# label: t1-red
+# command: cmd /c npm test -- tests/workspace-slice.test.tsx
+# started: 2026-07-29T18:48:27+00:00
+
+> collaboration-cockpit@0.1.0 test
+> vitest run tests/workspace-slice.test.tsx
+
+
+ RUN  v4.1.10 D:/cool-ai
+
+(node:14124) ExperimentalWarning: SQLite is an experimental feature and might change at any time
+(Use `node --trace-warnings ...` to show where the warning was created)
+ ❯ tests/workspace-slice.test.tsx (1 test | 1 failed) 265ms
+     × validates a real directory, persists its canonical path, and reloads it 264ms
+
+⎯⎯⎯⎯⎯⎯⎯ Failed Tests 1 ⎯⎯⎯⎯⎯⎯⎯
+
+ FAIL  tests/workspace-slice.test.tsx > workspace binding vertical slice > validates a real directory, persists its canonical path, and reloads it
+TestingLibraryElementError: Unable to find a label with the text of: 本地工作区路径
+
+Ignored nodes: comments, script, style
+[36m<body>[39m
+  [36m<div>[39m
+    [36m<div[39m
+      [33mclass[39m=[32m"collaboration-cockpit"[39m
+      [33mdata-testid[39m=[32m"collaboration-cockpit"[39m
+    [36m>[39m
+      [36m<div[39m
+        [33maria-label[39m=[32m"驾驶舱面板"[39m
+        [33mclass[39m=[32m"mobile-toolbar"[39m
+        [33mrole[39m=[32m"toolbar"[39m
+      [36m>[39m
+        [36m<button[39m
+          [33maria-controls[39m=[32m"project-navigation-drawer"[39m
+          [33maria-expanded[39m=[32m"false"[39m
+          [33maria-label[39m=[32m"打开项目导航"[39m
+          [33mtype[39m=[32m"button"[39m
+        [36m>[39m
+          [0m项目[0m
+        [36m</button>[39m
+        [36m<button[39m
+          [33maria-controls[39m=[32m"task-context-drawer"[39m
+          [33maria-expanded[39m=[32m"false"[39m
+          [33maria-label[39m=[32m"打开当前任务上下文"[39m
+          [33mtype[39m=[32m"button"[39m
+        [36m>[39m
+          [0m上下文[0m
+        [36m</button>[39m
+      [36m</div>[39m
+      [36m<aside[39m
+        [33maria-label[39m=[32m"项目导航"[39m
+        [33mclass[39m=[32m"cockpit-sidebar"[39m
+        [33mdata-open[39m=[32m"false"[39m
+        [33mid[39m=[32m"project-navigation-drawer"[39m
+      [36m>[39m
+        [36m<button[39m
+          [33maria-label[39m=[32m"关闭项目导航"[39m
+          [33mclass[39m=[32m"drawer-close"[39m
+          [33mtabindex[39m=[32m"-1"[39m
+          [33mtype[39m=[32m"button"[39m
+        [36m>[39m
+          [0m关闭[0m
+        [36m</button>[39m
+        [36m<div[39m
+          [33mclass[39m=[32m"product-identity"[39m
+        [36m>[39m
+          [36m<span[39m
+            [33maria-hidden[39m=[32m"true"[39m
+            [33mclass[39m=[32m"product-mark"[39m
+          [36m>[39m
+            [0mC[0m
+          [36m</span>[39m
+          [36m<div>[39m
+            [36m<p[39m
+              [33mclass[39m=[32m"eyebrow"[39m
+            [36m>[39m
+              [0m协作驾驶舱[0m
+            [36m</p>[39m
+            [36m<h1>[39m
+              [0mCool AI[0m
+            [36m</h1>[39m
+          [36m</div>[39m
+        [36m</div>[39m
+        [36m<nav[39m
+          [33maria-label[39m=[32m"主导航"[39m
+        [36m>[39m
+          [36m<ul[39m
+            [33mclass[39m=[32m"project-list"[39m
+          [36m>[39m
+            [36m<li>[39m
+              [36m<a[39m
+                [33maria-current[39m=[32m"page"[39m
+                [33mhref[39m=[32m"/"[39m
+              [36m>[39m
+                [0m工作[0m
+              [36m</a>[39m
+            [36m</li>[39m
+            [36m<li>[39m
+              [36m<a[39m
+                [33mhref[39m=[32m"/team"[39m
+              [36m>[39m
+                [0m团队[0m
+              [36m</a>[39m
+            [36m</li>[39m
+          [36m</ul>[39m
+        [36m</nav>[39m
+        [36m<section[39m
+          [33maria-labelledby[39m=[32m"projects-title"[39m
+          [33mclass[39m=[32m"stack"[39m
+        [36m>[39m
+          [36m<h2[39m
+            [33mid[39m=[32m"projects-title"[39m
+          [36m>[39m
+            [0m项目[0m
+          [36m</h2>[39m
+          [36m<form[39m
+            [33mclass[39m=[32m"stack"[39m
+          [36m>[39m
+            [36m<div[39m
+              [33mclass[39m=[32m"form-field"[39m
+            [36m>[39m
+              [36m<label[39m
+                [33mfor[39m=[32m"project-name"[39m
+              [36m>[39m
+                [0m项目名称[0m
+              [36m</label>[39m
+              [36m<input[39m
+                [33mid[39m=[32m"project-name"[39m
+                [33mname[39m=[32m"name"[39m
+                [33mvalue[39m=[32m""[39m
+              [36m/>[39m
+            [36m</div>[39m
+            [36m<button[39m
+              [33mtype[39m=[32m"submit"[39m
+            [36m>[39m
+              [0m创建项目[0m
+            [36m</button>[39m
+          [36m</form>[39m
+          [36m<nav[39m
+            [33maria-label[39m=[32m"项目"[39m
+          [36m>[39m
+            [36m<ul[39m
+              [33mclass[39m=[32m"project-list"[39m
+            [36m>[39m
+              [36m<li>[39m
+                [36m<button[39m
+                  [33maria-current[39m=[32m"page"[39m
+                  [33mtype[39m=[32m"button"[39m
+                [36m>[39m
+                  [0mWorkspace project[0m
+                [36m</button>[39m
+              [36m</li>[39m
+            [36m</ul>[39m
+          [36m</nav>[39m
+        [36m</section>[39m
+      [36m</aside>[39m
+      [36m<main[39m
+        [33maria-label[39m=[32m"任务事件流"[39m
+        [33mclass[39m=[32m"cockpit-flow"[39m
+      [36m>[39m
+        [36m<div[39m
+          [33mclass[39m=[32m"panel-heading"[39m
+        [36m>[39m
+          [36m<span[39m
+            [33maria-hidden[39m=[32m"true"[39m
+            [33mclass[39m=[32m"agent-mark"[39m
+          [36m>[39m
+            [0mA[0m
+          [36m</span>[39m
+          [36m<div>[39m
+            [36m<p[39m
+              [33mclass[39m=[32m"eyebrow"[39m
+            [36m>[39m
+              [0m确定性示例 Agent[0m
+            [36m</p>[39m
+            [36m<h2[39m
+              [33mid[39m=[32m"tasks-title"[39m
+              [33mtabindex[39m=[32m"-1"[39m
+            [36m>[39m
+              [0mWorkspace project[0m
+            [36m</h2>[39m
+          [36m</div>[39m
+        [36m</div>[39m
+        [36m<form[39m
+          [33mclass[39m=[32m"composer"[39m
+        [36m>[39m
+          [36m<div[39m
+            [33mclass[39m=[32m"form-row"[39m
+          [36m>[39m
+            [36m<div[39m
+              [33mclass[39m=[32m"form-field"[39m
+            [36m>[39m
+              [36m<label[39m
+                [33mfor[39m=[32m"task-goal"[39m
+              [36m>[39m
+                [0m任务目标[0m
+              [36m</label>[39m
+              [36m<input[39m
+                [33mid[39m=[32m"task-goal"[39m
+                [33mname[39m=[32m"goal"[39m
+                [33mvalue[39m=[32m""[39m
+              [36m/>[39m
+            [36m</div>[39m
+            [36m<button[39m
+              [33mdisabled[39m=[32m""[39m
+              [33mtype[39m=[32m"submit"[39m
+            [36m>[39m
+              [0m运行任务[0m
+            [36m</button>[39m
+          [36m</div>[39m
+        [36m</form>[39m
+        [36m<p[39m
+          [33mclass[39m=[32m"state-message"[39m
+        [36m>[39m
+          [0m暂无任务。输入目标即可运行示例 Agent。[0m
+        [36m</p>[39m
+        [36m<p[39m
+          [33maria-atomic[39m=[32m"true"[39m
+          [33maria-live[39m=[32m"polite"[39m
+          [33mclass[39m=[32m"muted"[39m
+          [33mrole[39m=[32m"status"[39m
+        [36m/>[39m
+      [36m</main>[39m
+      [36m<aside[39m
+        [33maria-label[39m=[32m"当前任务上下文"[39m
+        [33mclass[39m=[32m"cockpit-context"[39m
+        [33mdata-open[39m=[32m"false"[39m
+        [33mid[39m=[32m"task-context-drawer"[39m
+      [36m>[39m
+        [36m<button[39m
+          [33maria-label[39m=[32m"关闭当前任务上下文"[39m
+          [33mclass[39m=[32m"drawer-close"[39m
+          [33mtabindex[39m=[32m"-1"[39m
+          [33mtype[39m=[32m"button"[39m
+        [36m>[39m
+          [0m关闭[0m
+        [36m</button>[39m
+        [36m<div>[39m
+          [36m<p[39m
+            [33mclass[39m=[32m"eyebrow"[39m
+          [36m>[39m
+            [0m当前工作[0m
+          [36m</p>[39m
+          [36m<h2>[39m
+            [0m当前上下文[0m
+          [36m</h2>[39m
+        [36m</div>[39m
+        [36m<p[39m
+          [33mclass[39m=[32m"state-message"[39m
+        [36m>[39m
+          [0m暂无当前任务。[0m
+        [36m</p>[39m
+      [36m</aside>[39m
+    [36m</div>[39m
+  [36m</div>[39m
+[36m</body>[39m
+ ❯ Object.getElementError node_modules/@testing-library/dom/dist/config.js:37:19
+ ❯ getAllByLabelText node_modules/@testing-library/dom/dist/queries/label-text.js:111:38
+ ❯ node_modules/@testing-library/dom/dist/query-helpers.js:52:17
+ ❯ node_modules/@testing-library/dom/dist/query-helpers.js:95:19
+ ❯ tests/workspace-slice.test.tsx:72:28
+     70|     await screen.findByRole("heading", { name: "Workspace project" });
+     71|
+     72|     await user.type(screen.getByLabelText("本地工作区路径"), "relative/path");
+       |                            ^
+     73|     await user.click(screen.getByRole("button", { name: "绑定工作区" }));
+     74|     expect(screen.getByRole("alert")).toHaveTextContent("请输入绝对目录路径。");
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[1/1]⎯
+
+
+ Test Files  1 failed (1)
+      Tests  1 failed (1)
+   Start at  02:48:28
+   Duration  2.51s (transform 122ms, setup 343ms, import 237ms, tests 265ms, environment 1.41s)
+
+# exit: 1

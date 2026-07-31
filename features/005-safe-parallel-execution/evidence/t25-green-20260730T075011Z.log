@@ -1,0 +1,40 @@
+# hf-gate-run
+# label: t25-green
+# command: cmd /c npm test -- tests/execution-approvals.test.ts -t creates a distinct exact staged approval
+# started: 2026-07-30T07:50:11+00:00
+
+> collaboration-cockpit@0.1.0 test
+> vitest run tests/execution-approvals.test.ts -t creates a distinct exact staged approval
+
+
+ RUN  v4.1.10 D:/cool-ai
+
+(node:8388) ExperimentalWarning: SQLite is an experimental feature and might change at any time
+(Use `node --trace-warnings ...` to show where the warning was created)
+ ❯ tests/execution-approvals.test.ts (12 tests | 1 failed | 11 skipped) 553ms
+     × creates a distinct exact staged approval and denies tamper, conflict, stale, and terminal use 551ms
+
+⎯⎯⎯⎯⎯⎯⎯ Failed Tests 1 ⎯⎯⎯⎯⎯⎯⎯
+
+ FAIL  tests/execution-approvals.test.ts > execution approvals > creates a distinct exact staged approval and denies tamper, conflict, stale, and terminal use
+ExecutionError: Approval facts changed.
+ ❯ src/server/execution/execution-approval-service.ts:417:21
+    415|       }
+    416|       if (!approvalIsCurrent(database, row)) {
+    417|         return fail(new ExecutionError("APPROVAL_STALE", 409, "Approva…
+       |                     ^
+    418|       }
+    419|       const expectedStatus = input.action === "revoke" ? "approved" : …
+ ❯ transaction src/server/execution/execution-approval-service.ts:67:20
+ ❯ Module.decideExecutionApproval src/server/execution/execution-approval-service.ts:370:20
+ ❯ tests/execution-approvals.test.ts:445:36
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[1/1]⎯
+
+
+ Test Files  1 failed (1)
+      Tests  1 failed | 11 skipped (12)
+   Start at  15:50:12
+   Duration  2.73s (transform 191ms, setup 347ms, import 121ms, tests 553ms, environment 1.44s)
+
+# exit: 1

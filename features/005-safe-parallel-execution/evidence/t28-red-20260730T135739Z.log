@@ -1,0 +1,6 @@
+# hf-gate-run
+# label: t28-red
+# command: npm test -- tests/execution-cards-ui.test.tsx
+# started: 2026-07-30T13:57:39+00:00
+hf-gate: 命令无法启动: [WinError 2] 系统找不到指定的文件。
+# exit: 127

@@ -1,0 +1,18 @@
+# hf-gate-run
+# label: t4-green
+# command: cmd /c npm test -- tests/provider-verifier.test.ts
+# started: 2026-07-29T17:08:16+00:00
+
+> collaboration-cockpit@0.1.0 test
+> vitest run tests/provider-verifier.test.ts
+
+
+ RUN  v4.1.10 D:/cool-ai
+
+
+ Test Files  1 passed (1)
+      Tests  13 passed (13)
+   Start at  01:08:17
+   Duration  2.35s (transform 73ms, setup 333ms, import 42ms, tests 314ms, environment 1.40s)
+
+# exit: 0

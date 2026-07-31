@@ -1,0 +1,190 @@
+# hf-gate-run
+# label: t10-red
+# command: cmd /c npm test -- tests/turn-finalize.test.ts
+# started: 2026-07-29T22:14:51+00:00
+
+> collaboration-cockpit@0.1.0 test
+> vitest run tests/turn-finalize.test.ts
+
+
+ RUN  v4.1.10 D:/cool-ai
+
+(node:5544) ExperimentalWarning: SQLite is an experimental feature and might change at any time
+(Use `node --trace-warnings ...` to show where the warning was created)
+ ❯ tests/turn-finalize.test.ts (15 tests | 15 failed) 2553ms
+     × commits only with calling status, token, live lease, running epoch, and recomputed context hash 245ms
+     × pause discards business results while retaining allowed call audit 165ms
+     × stop discards business results while retaining allowed call audit 173ms
+     × epoch discards business results while retaining allowed call audit 167ms
+     × expired discards business results while retaining allowed call audit 172ms
+     × discards on recomputed context hash mismatch and pauses the running run 166ms
+     × rejects a mismatched lease token with affected rows zero and no durable writes 170ms
+     × persists exact public provider failure, completes pending receipt, and records every call/valid usage 173ms
+     × persists exact public usage failure, completes pending receipt, and records every call/valid usage 161ms
+     × persists exact public schema failure, completes pending receipt, and records every call/valid usage 162ms
+     × rolls back a business failure, then completes the pending receipt in a short failure transaction 158ms
+     × a late finalizer after a committed terminal attempt reads the durable receipt and changes nothing 161ms
+     × a late finalizer after a failed terminal attempt reads the durable receipt and changes nothing 161ms
+     × a late finalizer after a discarded terminal attempt reads the durable receipt and changes nothing 159ms
+     × keeps the advance receipt request hash and identity unchanged 159ms
+
+⎯⎯⎯⎯⎯⎯ Failed Tests 15 ⎯⎯⎯⎯⎯⎯⎯
+
+ FAIL  tests/turn-finalize.test.ts > attempt finalize CAS > commits only with calling status, token, live lease, running epoch, and recomputed context hash
+AssertionError: T-10 finalizeAdvance must exist: expected undefined to be type of 'function'
+
+Expected: "function"
+Received: "undefined"
+
+ ❯ orchestrator tests/turn-finalize.test.ts:306:5
+    304|     implementation.finalizeAdvance,
+    305|     "T-10 finalizeAdvance must exist",
+    306|   ).toBeTypeOf("function");
+       |     ^
+    307|   return implementation as Required<OrchestratorModule>;
+    308| }
+ ❯ acquire tests/turn-finalize.test.ts:311:26
+ ❯ tests/turn-finalize.test.ts:442:5
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[1/15]⎯
+
+ FAIL  tests/turn-finalize.test.ts > attempt finalize CAS > pause discards business results while retaining allowed call audit
+ FAIL  tests/turn-finalize.test.ts > attempt finalize CAS > stop discards business results while retaining allowed call audit
+ FAIL  tests/turn-finalize.test.ts > attempt finalize CAS > epoch discards business results while retaining allowed call audit
+ FAIL  tests/turn-finalize.test.ts > attempt finalize CAS > expired discards business results while retaining allowed call audit
+AssertionError: T-10 finalizeAdvance must exist: expected undefined to be type of 'function'
+
+Expected: "function"
+Received: "undefined"
+
+ ❯ orchestrator tests/turn-finalize.test.ts:306:5
+    304|     implementation.finalizeAdvance,
+    305|     "T-10 finalizeAdvance must exist",
+    306|   ).toBeTypeOf("function");
+       |     ^
+    307|   return implementation as Required<OrchestratorModule>;
+    308| }
+ ❯ acquire tests/turn-finalize.test.ts:311:26
+ ❯ tests/turn-finalize.test.ts:476:7
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[2/15]⎯
+
+ FAIL  tests/turn-finalize.test.ts > attempt finalize CAS > discards on recomputed context hash mismatch and pauses the running run
+AssertionError: T-10 finalizeAdvance must exist: expected undefined to be type of 'function'
+
+Expected: "function"
+Received: "undefined"
+
+ ❯ orchestrator tests/turn-finalize.test.ts:306:5
+    304|     implementation.finalizeAdvance,
+    305|     "T-10 finalizeAdvance must exist",
+    306|   ).toBeTypeOf("function");
+       |     ^
+    307|   return implementation as Required<OrchestratorModule>;
+    308| }
+ ❯ acquire tests/turn-finalize.test.ts:311:26
+ ❯ tests/turn-finalize.test.ts:508:5
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[3/15]⎯
+
+ FAIL  tests/turn-finalize.test.ts > attempt finalize CAS > rejects a mismatched lease token with affected rows zero and no durable writes
+AssertionError: T-10 finalizeAdvance must exist: expected undefined to be type of 'function'
+
+Expected: "function"
+Received: "undefined"
+
+ ❯ orchestrator tests/turn-finalize.test.ts:306:5
+    304|     implementation.finalizeAdvance,
+    305|     "T-10 finalizeAdvance must exist",
+    306|   ).toBeTypeOf("function");
+       |     ^
+    307|   return implementation as Required<OrchestratorModule>;
+    308| }
+ ❯ acquire tests/turn-finalize.test.ts:311:26
+ ❯ tests/turn-finalize.test.ts:536:5
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[4/15]⎯
+
+ FAIL  tests/turn-finalize.test.ts > attempt finalize CAS > persists exact public provider failure, completes pending receipt, and records every call/valid usage
+ FAIL  tests/turn-finalize.test.ts > attempt finalize CAS > persists exact public usage failure, completes pending receipt, and records every call/valid usage
+ FAIL  tests/turn-finalize.test.ts > attempt finalize CAS > persists exact public schema failure, completes pending receipt, and records every call/valid usage
+AssertionError: T-10 finalizeAdvance must exist: expected undefined to be type of 'function'
+
+Expected: "function"
+Received: "undefined"
+
+ ❯ orchestrator tests/turn-finalize.test.ts:306:5
+    304|     implementation.finalizeAdvance,
+    305|     "T-10 finalizeAdvance must exist",
+    306|   ).toBeTypeOf("function");
+       |     ^
+    307|   return implementation as Required<OrchestratorModule>;
+    308| }
+ ❯ acquire tests/turn-finalize.test.ts:311:26
+ ❯ tests/turn-finalize.test.ts:582:7
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[5/15]⎯
+
+ FAIL  tests/turn-finalize.test.ts > attempt finalize CAS > rolls back a business failure, then completes the pending receipt in a short failure transaction
+AssertionError: T-10 finalizeAdvance must exist: expected undefined to be type of 'function'
+
+Expected: "function"
+Received: "undefined"
+
+ ❯ orchestrator tests/turn-finalize.test.ts:306:5
+    304|     implementation.finalizeAdvance,
+    305|     "T-10 finalizeAdvance must exist",
+    306|   ).toBeTypeOf("function");
+       |     ^
+    307|   return implementation as Required<OrchestratorModule>;
+    308| }
+ ❯ acquire tests/turn-finalize.test.ts:311:26
+ ❯ tests/turn-finalize.test.ts:604:5
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[6/15]⎯
+
+ FAIL  tests/turn-finalize.test.ts > attempt finalize CAS > a late finalizer after a committed terminal attempt reads the durable receipt and changes nothing
+ FAIL  tests/turn-finalize.test.ts > attempt finalize CAS > a late finalizer after a failed terminal attempt reads the durable receipt and changes nothing
+ FAIL  tests/turn-finalize.test.ts > attempt finalize CAS > a late finalizer after a discarded terminal attempt reads the durable receipt and changes nothing
+AssertionError: T-10 finalizeAdvance must exist: expected undefined to be type of 'function'
+
+Expected: "function"
+Received: "undefined"
+
+ ❯ orchestrator tests/turn-finalize.test.ts:306:5
+    304|     implementation.finalizeAdvance,
+    305|     "T-10 finalizeAdvance must exist",
+    306|   ).toBeTypeOf("function");
+       |     ^
+    307|   return implementation as Required<OrchestratorModule>;
+    308| }
+ ❯ acquire tests/turn-finalize.test.ts:311:26
+ ❯ tests/turn-finalize.test.ts:664:7
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[7/15]⎯
+
+ FAIL  tests/turn-finalize.test.ts > attempt finalize CAS > keeps the advance receipt request hash and identity unchanged
+AssertionError: T-10 finalizeAdvance must exist: expected undefined to be type of 'function'
+
+Expected: "function"
+Received: "undefined"
+
+ ❯ orchestrator tests/turn-finalize.test.ts:306:5
+    304|     implementation.finalizeAdvance,
+    305|     "T-10 finalizeAdvance must exist",
+    306|   ).toBeTypeOf("function");
+       |     ^
+    307|   return implementation as Required<OrchestratorModule>;
+    308| }
+ ❯ acquire tests/turn-finalize.test.ts:311:26
+ ❯ tests/turn-finalize.test.ts:681:5
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[8/15]⎯
+
+
+ Test Files  1 failed (1)
+      Tests  15 failed (15)
+   Start at  06:14:52
+   Duration  4.64s (transform 142ms, setup 333ms, import 100ms, tests 2.55s, environment 1.40s)
+
+# exit: 1

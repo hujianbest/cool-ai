@@ -1,0 +1,43 @@
+# hf-gate-run
+# label: t7-green
+# command: npm.cmd test -- tests/sandbox-snapshot.test.ts
+# started: 2026-07-30T03:34:59+00:00
+
+> collaboration-cockpit@0.1.0 test
+> vitest run tests/sandbox-snapshot.test.ts
+
+
+ RUN  v4.1.10 D:/cool-ai
+
+ ❯ tests/sandbox-snapshot.test.ts (5 tests | 5 failed) 44ms
+     × copies a real preflight manifest through verified handles with stable hashes 16ms
+     × fails closed and removes the whole sandbox when a source identity changes 7ms
+     × cannot import an excluded secret through a replacement race 6ms
+     × rejects link, reparse, special, parent-chain, and after-read identity races 6ms
+     × uses a fixed 900 second deadline and renewable 120 second leases 6ms
+
+⎯⎯⎯⎯⎯⎯⎯ Failed Tests 5 ⎯⎯⎯⎯⎯⎯⎯
+
+ FAIL  tests/sandbox-snapshot.test.ts > verified-handle sandbox snapshot > copies a real preflight manifest through verified handles with stable hashes
+ FAIL  tests/sandbox-snapshot.test.ts > verified-handle sandbox snapshot > fails closed and removes the whole sandbox when a source identity changes
+ FAIL  tests/sandbox-snapshot.test.ts > verified-handle sandbox snapshot > cannot import an excluded secret through a replacement race
+ FAIL  tests/sandbox-snapshot.test.ts > verified-handle sandbox snapshot > rejects link, reparse, special, parent-chain, and after-read identity races
+ FAIL  tests/sandbox-snapshot.test.ts > sandbox action timing > uses a fixed 900 second deadline and renewable 120 second leases
+AssertionError: The verified-handle sandbox snapshot boundary is unavailable.
+ ❯ tests/sandbox-snapshot.test.ts:28:12
+     26|     snapshot = await import(/* @vite-ignore */ moduleId) as SnapshotMo…
+     27|   } catch {
+     28|     expect.fail("The verified-handle sandbox snapshot boundary is unav…
+       |            ^
+     29|   }
+     30| });
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[1/5]⎯
+
+
+ Test Files  1 failed (1)
+      Tests  5 failed (5)
+   Start at  11:35:00
+   Duration  2.10s (transform 66ms, setup 339ms, import 46ms, tests 44ms, environment 1.41s)
+
+# exit: 1

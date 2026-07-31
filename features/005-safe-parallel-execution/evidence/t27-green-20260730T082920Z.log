@@ -1,0 +1,18 @@
+# hf-gate-run
+# label: t27-green
+# command: npm.cmd test -- tests/execution-start-policy-ui.test.tsx
+# started: 2026-07-30T08:29:20+00:00
+
+> collaboration-cockpit@0.1.0 test
+> vitest run tests/execution-start-policy-ui.test.tsx
+
+
+ RUN  v4.1.10 D:/cool-ai
+
+
+ Test Files  1 passed (1)
+      Tests  3 passed (3)
+   Start at  16:29:21
+   Duration  3.15s (transform 99ms, setup 342ms, import 213ms, tests 879ms, environment 1.45s)
+
+# exit: 0

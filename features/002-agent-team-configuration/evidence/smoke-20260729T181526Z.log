@@ -1,0 +1,29 @@
+# hf-gate-run
+# label: smoke
+# command: cmd /c npm run smoke:team
+# started: 2026-07-29T18:15:26+00:00
+
+> collaboration-cockpit@0.1.0 smoke:team
+> node tests/team-browser-smoke.mjs
+
+(node:6116) ExperimentalWarning: SQLite is an experimental feature and might change at any time
+(Use `node --trace-warnings ...` to show where the warning was created)
+node:internal/modules/run_main:107
+    triggerUncaughtException(
+    ^
+
+locator.evaluate: Error: strict mode violation: getByRole('button', { name: '关闭团队资源' }) resolved to 2 elements:
+    1) <button type="button" aria-label="关闭团队资源" aria-expanded="true">团队资源</button> aka locator('button').filter({ hasText: '团队资源' })
+    2) <button type="button" aria-label="关闭团队资源" class="drawer-close" data-dialog-close="true">关闭</button> aka getByText('关闭')
+
+Call log:
+  - waiting for getByRole('button', { name: '关闭团队资源' })
+
+    at selectNarrowResource (D:\cool-ai\tests\team-browser-smoke.mjs:305:10)
+    at async exerciseNarrowEditor (D:\cool-ai\tests\team-browser-smoke.mjs:317:5)
+    at async file:///D:/cool-ai/tests/team-browser-smoke.mjs:338:3 {
+  log: [ "  - waiting for getByRole('button', { name: '关闭团队资源' })" ]
+}
+
+Node.js v24.14.0
+# exit: 1

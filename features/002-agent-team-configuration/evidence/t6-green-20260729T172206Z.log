@@ -1,0 +1,18 @@
+# hf-gate-run
+# label: t6-green
+# command: cmd /c npm test -- tests/provider-panel.test.tsx
+# started: 2026-07-29T17:22:06+00:00
+
+> collaboration-cockpit@0.1.0 test
+> vitest run tests/provider-panel.test.tsx
+
+
+ RUN  v4.1.10 D:/cool-ai
+
+
+ Test Files  1 passed (1)
+      Tests  4 passed (4)
+   Start at  01:22:07
+   Duration  4.18s (transform 94ms, setup 342ms, import 242ms, tests 1.88s, environment 1.43s)
+
+# exit: 0

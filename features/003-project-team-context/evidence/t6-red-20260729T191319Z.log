@@ -1,0 +1,129 @@
+# hf-gate-run
+# label: t6-red
+# command: cmd /c npm test -- tests/work-item-dependencies.test.ts
+# started: 2026-07-29T19:13:19+00:00
+
+> collaboration-cockpit@0.1.0 test
+> vitest run tests/work-item-dependencies.test.ts
+
+
+ RUN  v4.1.10 D:/cool-ai
+
+(node:11120) ExperimentalWarning: SQLite is an experimental feature and might change at any time
+(Use `node --trace-warnings ...` to show where the warning was created)
+ ❯ tests/work-item-dependencies.test.ts (4 tests | 4 failed) 700ms
+     × creates, returns, deterministically orders, replaces, and clears same-mission dependencies 165ms
+     × rejects duplicate, missing, cross-mission, and self references without mutation 237ms
+     × evaluates the complete replacement graph and atomically rejects cycles 118ms
+     × requires done dependencies for active items and preserves T-5 transition readiness 179ms
+
+⎯⎯⎯⎯⎯⎯⎯ Failed Tests 4 ⎯⎯⎯⎯⎯⎯⎯
+
+ FAIL  tests/work-item-dependencies.test.ts > work-item dependency full replacement > creates, returns, deterministically orders, replaces, and clears same-mission dependencies
+AssertionError: expected [Function] to not throw an error but 'MissionError: Mission input is invali…' was thrown
+
+- Expected:
+undefined
+
++ Received:
+"MissionError: Mission input is invalid."
+
+ ❯ tests/work-item-dependencies.test.ts:114:12
+    112|     expect(() => {
+    113|       dependent = item(mission.id, "Dependent", [second.id, first.id]);
+    114|     }).not.toThrow();
+       |            ^
+    115|
+    116|     const expectedOrder = [first, second]
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[1/4]⎯
+
+ FAIL  tests/work-item-dependencies.test.ts > work-item dependency full replacement > rejects duplicate, missing, cross-mission, and self references without mutation
+AssertionError: expected error to match asymmetric matcher
+
+- Expected
++ Received
+
+- ObjectContaining {
+-   "code": "DEPENDENCY_SCOPE",
++ MissionError {
++   "message": "Mission input is invalid.",
++   "code": "INVALID_INPUT",
++   "httpStatus": 400,
++   "fields": [
++     {
++       "code": "invalid_format",
++       "field": "dependencyIds",
++     },
++   ],
++   "currentVersion": undefined,
++   "name": "MissionError",
+  }
+
+ ❯ expectCode tests/work-item-dependencies.test.ts:92:21
+     90|
+     91| function expectCode(operation: () => unknown, code: string): void {
+     92|   expect(operation).toThrowError(expect.objectContaining({ code }));
+       |                     ^
+     93| }
+     94|
+ ❯ tests/work-item-dependencies.test.ts:153:7
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[2/4]⎯
+
+ FAIL  tests/work-item-dependencies.test.ts > work-item dependency full replacement > evaluates the complete replacement graph and atomically rejects cycles
+MissionError: Mission input is invalid.
+ ❯ invalid src/server/mission-service.ts:82:9
+     80|
+     81| function invalid(fields: FieldError[]): never {
+     82|   throw new MissionError(
+       |         ^
+     83|     "INVALID_INPUT",
+     84|     400,
+ ❯ workItemInput src/server/mission-service.ts:111:26
+ ❯ createWorkItem src/server/mission-service.ts:339:18
+ ❯ item tests/work-item-dependencies.test.ts:35:10
+ ❯ tests/work-item-dependencies.test.ts:170:20
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[3/4]⎯
+
+ FAIL  tests/work-item-dependencies.test.ts > work-item dependency full replacement > requires done dependencies for active items and preserves T-5 transition readiness
+AssertionError: expected error to match asymmetric matcher
+
+- Expected
++ Received
+
+- ObjectContaining {
+-   "code": "DEPENDENCY_NOT_READY",
++ MissionError {
++   "message": "Mission input is invalid.",
++   "code": "INVALID_INPUT",
++   "httpStatus": 400,
++   "fields": [
++     {
++       "code": "invalid_format",
++       "field": "dependencyIds",
++     },
++   ],
++   "currentVersion": undefined,
++   "name": "MissionError",
+  }
+
+ ❯ expectCode tests/work-item-dependencies.test.ts:92:21
+     90|
+     91| function expectCode(operation: () => unknown, code: string): void {
+     92|   expect(operation).toThrowError(expect.objectContaining({ code }));
+       |                     ^
+     93| }
+     94|
+ ❯ tests/work-item-dependencies.test.ts:196:5
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[4/4]⎯
+
+
+ Test Files  1 failed (1)
+      Tests  4 failed (4)
+   Start at  03:13:21
+   Duration  2.87s (transform 96ms, setup 342ms, import 97ms, tests 700ms, environment 1.45s)
+
+# exit: 1

@@ -1,0 +1,3349 @@
+# hf-gate-run
+# label: t12-green
+# command: cmd /c npm test -- tests/accessibility.test.tsx tests/project-panel.test.tsx tests/task-flow.test.tsx tests/cockpit-layout.test.tsx tests/code-review-fixes.test.tsx tests/migrations.test.ts tests/visual-tokens.test.ts tests/workspace-slice.test.tsx
+# started: 2026-07-29T20:00:34+00:00
+
+> collaboration-cockpit@0.1.0 test
+> vitest run tests/accessibility.test.tsx tests/project-panel.test.tsx tests/task-flow.test.tsx tests/cockpit-layout.test.tsx tests/code-review-fixes.test.tsx tests/migrations.test.ts tests/visual-tokens.test.ts tests/workspace-slice.test.tsx
+
+
+ RUN  v4.1.10 D:/cool-ai
+
+(node:16344) ExperimentalWarning: SQLite is an experimental feature and might change at any time
+(Use `node --trace-warnings ...` to show where the warning was created)
+(node:10060) ExperimentalWarning: SQLite is an experimental feature and might change at any time
+(Use `node --trace-warnings ...` to show where the warning was created)
+ ❯ tests/workspace-slice.test.tsx (1 test | 1 failed) 607ms
+     × validates a real directory, persists its canonical path, and reloads it 606ms
+ ❯ tests/migrations.test.ts (8 tests | 1 failed) 959ms
+     × upgrades valid v1 and v2 databases to v3 386ms
+ ❯ tests/cockpit-layout.test.tsx (1 test | 1 failed) 1239ms
+     × presents project navigation, task flow, and current context from real data 1237ms
+stderr | tests/task-flow.test.tsx > task event flow > calls create, start, and execute in order while rendering each persisted state
+An error occurred in the <TaskPanel> component.
+
+Consider adding an error boundary to your tree to customize error handling behavior.
+Visit https://react.dev/link/error-boundaries to learn more about error boundaries.
+
+
+stderr | tests/task-flow.test.tsx > task event flow > renders a persisted failed event and preserves the goal after execution fails
+An error occurred in the <TaskPanel> component.
+
+Consider adding an error boundary to your tree to customize error handling behavior.
+Visit https://react.dev/link/error-boundaries to learn more about error boundaries.
+
+
+ ❯ tests/task-flow.test.tsx (5 tests | 4 failed) 1427ms
+     × shows loading, then restores persisted task events and result 1055ms
+     × calls create, start, and execute in order while rendering each persisted state 117ms
+     × offers retry after a load error 41ms
+     × renders a persisted failed event and preserves the goal after execution fails 29ms
+ ❯ tests/accessibility.test.tsx (4 tests | 2 failed) 1505ms
+     × moves focus into each drawer and restores it to the opener 148ms
+     × announces the restored task status through a polite status region 1016ms
+ ❯ tests/visual-tokens.test.ts (3 tests | 1 failed) 15ms
+     × keeps raw visual values out of component styles 9ms
+
+⎯⎯⎯⎯⎯⎯ Failed Tests 10 ⎯⎯⎯⎯⎯⎯⎯
+
+ FAIL  tests/accessibility.test.tsx > narrow-screen and keyboard accessibility > moves focus into each drawer and restores it to the opener
+Error: expect(element).toHaveFocus()
+
+Expected element with focus:
+  <button
+  aria-label="关闭项目导航"
+  class="drawer-close"
+  tabindex="-1"
+  type="button"
+>
+  关闭
+</button>
+Received element with focus:
+  <button
+  aria-controls="project-navigation-drawer"
+  aria-expanded="true"
+  aria-label="隐藏项目导航"
+  type="button"
+>
+  项目
+</button>
+ ❯ tests/accessibility.test.tsx:52:27
+     50|     const closeProjects = screen.getByRole("button", { name: "关闭项目导航" …
+     51|     expect(projects).toHaveAttribute("aria-expanded", "true");
+     52|     expect(closeProjects).toHaveFocus();
+       |                           ^
+     53|     await user.click(closeProjects);
+     54|     expect(projects).toHaveFocus();
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[1/10]⎯
+
+ FAIL  tests/accessibility.test.tsx > narrow-screen and keyboard accessibility > announces the restored task status through a polite status region
+TestingLibraryElementError: Unable to find an element with the text: 最新任务状态：已完成. This could be because the text is broken up by multiple elements. In this case, you can provide a function for your text matcher to make your matcher more flexible.
+
+Ignored nodes: comments, script, style
+[36m<body>[39m
+  [36m<div>[39m
+    [36m<div[39m
+      [33mclass[39m=[32m"collaboration-cockpit"[39m
+      [33mdata-testid[39m=[32m"collaboration-cockpit"[39m
+    [36m>[39m
+      [36m<div[39m
+        [33maria-label[39m=[32m"驾驶舱面板"[39m
+        [33mclass[39m=[32m"mobile-toolbar"[39m
+        [33mrole[39m=[32m"toolbar"[39m
+      [36m>[39m
+        [36m<button[39m
+          [33maria-controls[39m=[32m"project-navigation-drawer"[39m
+          [33maria-expanded[39m=[32m"false"[39m
+          [33maria-label[39m=[32m"打开项目导航"[39m
+          [33mtype[39m=[32m"button"[39m
+        [36m>[39m
+          [0m项目[0m
+        [36m</button>[39m
+        [36m<button[39m
+          [33maria-controls[39m=[32m"task-editor-surface"[39m
+          [33maria-expanded[39m=[32m"false"[39m
+          [33maria-label[39m=[32m"打开编辑"[39m
+          [33mtype[39m=[32m"button"[39m
+        [36m>[39m
+          [0m编辑[0m
+        [36m</button>[39m
+        [36m<button[39m
+          [33maria-controls[39m=[32m"task-context-drawer"[39m
+          [33maria-expanded[39m=[32m"false"[39m
+          [33maria-label[39m=[32m"打开当前任务上下文"[39m
+          [33mtype[39m=[32m"button"[39m
+        [36m>[39m
+          [0m上下文[0m
+        [36m</button>[39m
+      [36m</div>[39m
+      [36m<aside[39m
+        [33maria-label[39m=[32m"项目导航"[39m
+        [33mclass[39m=[32m"cockpit-sidebar"[39m
+        [33mdata-open[39m=[32m"false"[39m
+        [33mdata-testid[39m=[32m"project-surface"[39m
+        [33mid[39m=[32m"project-navigation-drawer"[39m
+      [36m>[39m
+        [36m<span[39m
+          [33mclass[39m=[32m"sr-only"[39m
+          [33mid[39m=[32m"project-navigation-label"[39m
+        [36m>[39m
+          [0m项目导航[0m
+        [36m</span>[39m
+        [36m<button[39m
+          [33maria-label[39m=[32m"关闭项目导航"[39m
+          [33mclass[39m=[32m"drawer-close"[39m
+          [33mtabindex[39m=[32m"-1"[39m
+          [33mtype[39m=[32m"button"[39m
+        [36m>[39m
+          [0m关闭[0m
+        [36m</button>[39m
+        [36m<div[39m
+          [33mclass[39m=[32m"product-identity"[39m
+        [36m>[39m
+          [36m<span[39m
+            [33maria-hidden[39m=[32m"true"[39m
+            [33mclass[39m=[32m"product-mark"[39m
+          [36m>[39m
+            [0mC[0m
+          [36m</span>[39m
+          [36m<div>[39m
+            [36m<p[39m
+              [33mclass[39m=[32m"eyebrow"[39m
+            [36m>[39m
+              [0m协作驾驶舱[0m
+            [36m</p>[39m
+            [36m<h1>[39m
+              [0mCool AI[0m
+            [36m</h1>[39m
+          [36m</div>[39m
+        [36m</div>[39m
+        [36m<nav[39m
+          [33maria-label[39m=[32m"主导航"[39m
+        [36m>[39m
+          [36m<ul[39m
+            [33mclass[39m=[32m"project-list"[39m
+          [36m>[39m
+            [36m<li>[39m
+              [36m<a[39m
+                [33maria-current[39m=[32m"page"[39m
+                [33mhref[39m=[32m"/"[39m
+              [36m>[39m
+                [0m工作[0m
+              [36m</a>[39m
+            [36m</li>[39m
+            [36m<li>[39m
+              [36m<a[39m
+                [33mhref[39m=[32m"/team"[39m
+              [36m>[39m
+                [0m团队[0m
+              [36m</a>[39m
+            [36m</li>[39m
+          [36m</ul>[39m
+        [36m</nav>[39m
+        [36m<section[39m
+          [33maria-labelledby[39m=[32m"projects-title"[39m
+          [33mclass[39m=[32m"stack"[39m
+        [36m>[39m
+          [36m<h2[39m
+            [33mid[39m=[32m"projects-title"[39m
+          [36m>[39m
+            [0m项目[0m
+          [36m</h2>[39m
+          [36m<form[39m
+            [33mclass[39m=[32m"stack"[39m
+          [36m>[39m
+            [36m<div[39m
+              [33mclass[39m=[32m"form-field"[39m
+            [36m>[39m
+              [36m<label[39m
+                [33mfor[39m=[32m"project-name"[39m
+              [36m>[39m
+                [0m项目名称[0m
+              [36m</label>[39m
+              [36m<input[39m
+                [33mid[39m=[32m"project-name"[39m
+                [33mname[39m=[32m"name"[39m
+                [33mvalue[39m=[32m""[39m
+              [36m/>[39m
+            [36m</div>[39m
+            [36m<button[39m
+              [33mtype[39m=[32m"submit"[39m
+            [36m>[39m
+              [0m创建项目[0m
+            [36m</button>[39m
+          [36m</form>[39m
+          [36m<nav[39m
+            [33maria-label[39m=[32m"项目"[39m
+          [36m>[39m
+            [36m<ul[39m
+              [33mclass[39m=[32m"project-list"[39m
+            [36m>[39m
+              [36m<li>[39m
+                [36m<button[39m
+                  [33maria-current[39m=[32m"page"[39m
+                  [33mtype[39m=[32m"button"[39m
+                [36m>[39m
+                  [0mLaunch plan[0m
+                [36m</button>[39m
+              [36m</li>[39m
+            [36m</ul>[39m
+          [36m</nav>[39m
+        [36m</section>[39m
+        [36m<section[39m
+          [33maria-labelledby[39m=[32m"project-setup-title-project-1"[39m
+          [33mclass[39m=[32m"stack project-setup"[39m
+        [36m>[39m
+          [36m<h2[39m
+            [33mid[39m=[32m"project-setup-title-project-1"[39m
+          [36m>[39m
+            [0m项目设置[0m
+          [36m</h2>[39m
+          [36m<section[39m
+            [33maria-labelledby[39m=[32m"workspace-title-project-1"[39m
+            [33mclass[39m=[32m"stack"[39m
+          [36m>[39m
+            [36m<div>[39m
+              [36m<div[39m
+                [33mclass[39m=[32m"stack"[39m
+              [36m>[39m
+                [36m<h3[39m
+                  [33mid[39m=[32m"workspace-title-project-1"[39m
+                [36m>[39m
+                  [0m本地工作区[0m
+                [36m</h3>[39m
+                [36m<p[39m
+                  [33mclass[39m=[32m"muted"[39m
+                [36m>[39m
+                  [0m尚未绑定本地工作区。[0m
+                [36m</p>[39m
+                [36m<form[39m
+                  [33mclass[39m=[32m"stack"[39m
+                [36m>[39m
+                  [36m<div[39m
+                    [33mclass[39m=[32m"form-field"[39m
+                  [36m>[39m
+                    [36m<label[39m
+                      [33mfor[39m=[32m"workspace-path-project-1"[39m
+                    [36m>[39m
+                      [0m本地工作区路径[0m
+                    [36m</label>[39m
+                    [36m<input[39m
+                      [33mid[39m=[32m"workspace-path-project-1"[39m
+                      [33mname[39m=[32m"workspacePath"[39m
+                      [33mvalue[39m=[32m""[39m
+                    [36m/>[39m
+                  [36m</div>[39m
+                  [36m<button[39m
+                    [33mtype[39m=[32m"submit"[39m
+                  [36m>[39m
+                    [0m绑定工作区[0m
+                  [36m</button>[39m
+                [36m</form>[39m
+              [36m</div>[39m
+            [36m</div>[39m
+          [36m</section>[39m
+          [36m<section[39m
+            [33maria-labelledby[39m=[32m"members-title-project-1"[39m
+            [33mclass[39m=[32m"stack"[39m
+          [36m>[39m
+            [36m<h3[39m
+              [33mid[39m=[32m"members-title-project-1"[39m
+            [36m>[39m
+              [0m项目成员[0m
+            [36m</h3>[39m
+            [36m<p[39m
+              [33mclass[39m=[32m"muted"[39m
+            [36m>[39m
+              [0mAgent 库为空，请先[0m
+              [36m<a[39m
+                [33mhref[39m=[32m"/team"[39m
+              [36m>[39m
+                [0m创建 Agent[0m
+              [36m</a>[39m
+              [0m。[0m
+            [36m</p>[39m
+            [36m<p[39m
+              [33mclass[39m=[32m"muted"[39m
+            [36m>[39m
+              [0m尚未组建项目成员。[0m
+            [36m</p>[39m
+          [36m</section>[39m
+        [36m</section>[39m
+      [36m</aside>[39m
+      [36m<main[39m
+        [33maria-label[39m=[32m"任务事件流"[39m
+        [33mclass[39m=[32m"cockpit-flow"[39m
+        [33mdata-open[39m=[32m"false"[39m
+        [33mdata-testid[39m=[32m"editor-surface"[39m
+        [33mid[39m=[32m"task-editor-surface"[39m
+      [36m>[39m
+        [36m<span[39m
+          [33mclass[39m=[32m"sr-only"[39m
+          [33mid[39m=[32m"task-editor-label"[39m
+        [36m>[39m
+          [0m任务编辑[0m
+        [36m</span>[39m
+        [36m<button[39m
+          [33maria-label[39m=[32m"关闭任务编辑"[39m
+          [33mclass[39m=[32m"drawer-close"[39m
+          [33mdata-dialog-close[39m=[32m"true"[39m
+          [33mtabindex[39m=[32m"-1"[39m
+          [33mtype[39m=[32m"button"[39m
+        [36m>[39m
+          [0m关闭[0m
+        [36m</button>[39m
+        [36m<div[39m
+          [33mclass[39m=[32m"panel-heading"[39m
+        [36m>[39m
+          [36m<span[39m
+            [33maria-hidden[39m=[32m"true"[39m
+            [33mclass[39m=[32m"agent-mark"[39m
+          [36m>[39m
+            [0mA[0m
+          [36m</span>[39m
+          [36m<div>[39m
+            [36m<p[39m
+              [33mclass[39m=[32m"eyebrow"[39m
+            [36m>[39m
+              [0m确定性示例 Agent[0m
+            [36m</p>[39m
+            [36m<h2[39m
+              [33mid[39m=[32m"tasks-title"[39m
+              [33mtabindex[39m=[32m"-1"[39m
+            [36m>[39m
+              [0mLaunch plan[0m
+            [36m</h2>[39m
+          [36m</div>[39m
+        [36m</div>[39m
+        [36m<section[39m
+          [33maria-labelledby[39m=[32m"mission-board-title-project-1"[39m
+          [33mclass[39m=[32m"stack mission-board"[39m
+          [33mid[39m=[32m"mission-board"[39m
+        [36m>[39m
+          [36m<h2[39m
+            [33mid[39m=[32m"mission-board-title-project-1"[39m
+          [36m>[39m
+            [0m使命看板[0m
+          [36m</h2>[39m
+          [36m<div[39m
+            [33mclass[39m=[32m"stack"[39m
+          [36m>[39m
+            [36m<p[39m
+              [33mclass[39m=[32m"state-message"[39m
+            [36m>[39m
+              [0m尚未创建使命。[0m
+            [36m</p>[39m
+            [36m<form[39m
+              [33mclass[39m=[32m"stack mission-form"[39m
+            [36m>[39m
+              [36m<div[39m
+                [33mclass[39m=[32m"form-field"[39m
+              [36m>[39m
+                [36m<label[39m
+                  [33mfor[39m=[32m"mission-title-project-1"[39m
+                [36m>[39m
+                  [0m使命标题[0m
+                [36m</label>[39m
+                [36m<input[39m
+                  [33mid[39m=[32m"mission-title-project-1"[39m
+                  [33mvalue[39m=[32m""[39m
+                [36m/>[39m
+              [36m</div>[39m
+              [36m<div[39m
+                [33mclass[39m=[32m"form-field"[39m
+              [36m>[39m
+                [36m<label[39m
+                  [33mfor[39m=[32m"mission-goal-project-1"[39m
+                [36m>[39m
+                  [0m使命目标[0m
+                [36m</label>[39m
+                [36m<textarea[39m
+                  [33mid[39m=[32m"mission-goal-project-1"[39m
+                [36m/>[39m
+              [36m</div>[39m
+              [36m<div[39m
+                [33mclass[39m=[32m"form-row"[39m
+              [36m>[39m
+                [36m<button[39m
+                  [33mtype[39m=[32m"submit"[39m
+                [36m>[39m
+                  [0m创建使命[0m
+                [36m</button>[39m
+              [36m</div>[39m
+            [36m</form>[39m
+          [36m</div>[39m
+        [36m</section>[39m
+        [36m<form[39m
+          [33mclass[39m=[32m"composer"[39m
+        [36m>[39m
+          [36m<div[39m
+            [33mclass[39m=[32m"form-row"[39m
+          [36m>[39m
+            [36m<div[39m
+              [33mclass[39m=[32m"form-field"[39m
+            [36m>[39m
+              [36m<label[39m
+                [33mfor[39m=[32m"task-goal"[39m
+              [36m>[39m
+                [0m任务目标[0m
+              [36m</label>[39m
+              [36m<input[39m
+                [33mid[39m=[32m"task-goal"[39m
+                [33mname[39m=[32m"goal"[39m
+                [33mvalue[39m=[32m""[39m
+              [36m/>[39m
+            [36m</div>[39m
+            [36m<button[39m
+              [33mdisabled[39m=[32m""[39m
+              [33mtype[39m=[32m"submit"[39m
+            [36m>[39m
+              [0m运行任务[0m
+            [36m</button>[39m
+          [36m</div>[39m
+        [36m</form>[39m
+        [36m<div[39m
+          [33mclass[39m=[32m"state-message"[39m
+        [36m>[39m
+          [36m<p[39m
+            [33mclass[39m=[32m"error-text"[39m
+            [33mrole[39m=[32m"alert"[39m
+          [36m>[39m
+            [0m无法加载任务，请稍后重试。[0m
+          [36m</p>[39m
+          [36m<button[39m
+            [33mtype[39m=[32m"button"[39m
+          [36m>[39m
+            [0m重试任务历史[0m
+          [36m</button>[39m
+        [36m</div>[39m
+        [36m<p[39m
+          [33maria-atomic[39m=[32m"true"[39m
+          [33maria-live[39m=[32m"polite"[39m
+          [33mclass[39m=[32m"muted"[39m
+          [33mrole[39m=[32m"status"[39m
+        [36m/>[39m
+      [36m</main>[39m
+      [36m<aside[39m
+        [33maria-label[39m=[32m"当前任务上下文"[39m
+        [33mclass[39m=[32m"cockpit-context"[39m
+        [33mdata-open[39m=[32m"false"[39m
+        [33mdata-testid[39m=[32m"context-surface"[39m
+        [33mid[39m=[32m"task-context-drawer"[39m
+      [36m>[39m
+        [36m<span[39m
+          [33mclass[39m=[32m"sr-only"[39m
+          [33mid[39m=[32m"task-context-label"[39m
+        [36m>[39m
+          [0m当前任务上下文[0m
+        [36m</span>[39m
+        [36m<button[39m
+          [33maria-label[39m=[32m"关闭当前任务上下文"[39m
+          [33mclass[39m=[32m"drawer-close"[39m
+          [33mdata-dialog-close[39m=[32m"true"[39m
+          [33mtabindex[39m=[32m"-1"[39m
+          [33mtype[39m=[32m"button"[39m
+        [36m>[39m
+          [0m关闭[0m
+        [36m</button>[39m
+        [36m<div>[39m
+          [36m<p[39m
+            [33mclass[39m=[32m"eyebrow"[39m
+          [36m>[39m
+            [0m项目资源[0m
+          [36m</p>[39m
+          [36m<h2>[39m
+            [0m项目上下文[0m
+          [36m</h2>[39m
+        [36m</div>[39m
+        [36m<div[39m
+          [33mclass[39m=[32m"stack project-context-panel"[39m
+        [36m>[39m
+          [36m<div[39m
+            [33maria-label[39m=[32m"项目上下文资源"[39m
+            [33mclass[39m=[32m"project-context-tabs"[39m
+            [33mrole[39m=[32m"tablist"[39m
+          [36m>[39m
+            [36m<button[39m
+              [33maria-controls[39m=[32m"project-context-memory-project-1"[39m
+              [33maria-selected[39m=[32m"true"[39m
+              [33mid[39m=[32m"project-context-tab-memory-project-1"[39m
+              [33mrole[39m=[32m"tab"[39m
+              [33mtabindex[39m=[32m"0"[39m
+              [33mtype[39m=[32m"button"[39m
+            [36m>[39m
+              [0m共享记忆[0m
+            [36m</button>[39m
+            [36m<button[39m
+              [33maria-controls[39m=[32m"project-context-context-project-1"[39m
+              [33maria-selected[39m=[32m"false"[39m
+              [33mid[39m=[32m"project-context-tab-context-project-1"[39m
+              [33mrole[39m=[32m"tab"[39m
+              [33mtabindex[39m=[32m"-1"[39m
+              [33mtype[39m=[32m"button"[39m
+            [36m>[39m
+              [0m上下文预览[0m
+            [36m</button>[39m
+            [36m<button[39m
+              [33maria-controls[39m=[32m"project-context-skeleton-project-1"[39m
+              [33maria-selected[39m=[32m"false"[39m
+              [33mid[39m=[32m"project-context-tab-skeleton-project-1"[39m
+              [33mrole[39m=[32m"tab"[39m
+              [33mtabindex[39m=[32m"-1"[39m
+              [33mtype[39m=[32m"button"[39m
+            [36m>[39m
+              [0m骨架运行[0m
+            [36m</button>[39m
+          [36m</div>[39m
+          [36m<div[39m
+            [33maria-labelledby[39m=[32m"project-context-tab-memory-project-1"[39m
+            [33mid[39m=[32m"project-context-memory-project-1"[39m
+            [33mrole[39m=[32m"tabpanel"[39m
+          [36m>[39m
+            [36m<section[39m
+              [33maria-labelledby[39m=[32m"memory-title-project-1"[39m
+              [33mclass[39m=[32m"stack"[39m
+            [36m>[39m
+              [36m<h2[39m
+                [33mid[39m=[32m"memory-title-project-1"[39m
+              [36m>[39m
+                [0m共享记忆[0m
+              [36m</h2>[39m
+              [36m<form[39m
+                [33mclass[39m=[32m"stack memory-form"[39m
+              [36m>[39m
+                [36m<fieldset>[39m
+                  [36m<legend>[39m
+                    [0m记忆类型[0m
+                  [36m</legend>[39m
+                  [36m<div[39m
+                    [33mclass[39m=[32m"memory-type-options"[39m
+                  [36m>[39m
+                    [36m<label[39m
+                      [33mclass[39m=[32m"check-row"[39m
+                    [36m>[39m
+                      [36m<input[39m
+                        [33mchecked[39m=[32m""[39m
+                        [33mname[39m=[32m"memory-type-project-1"[39m
+                        [33mtype[39m=[32m"radio"[39m
+                        [33mvalue[39m=[32m"goal"[39m
+                      [36m/>[39m
+                      [36m<span>[39m
+                        [0m目标[0m
+                      [36m</span>[39m
+                    [36m</label>[39m
+                    [36m<label[39m
+                      [33mclass[39m=[32m"check-row"[39m
+                    [36m>[39m
+                      [36m<input[39m
+                        [33mname[39m=[32m"memory-type-project-1"[39m
+                        [33mtype[39m=[32m"radio"[39m
+                        [33mvalue[39m=[32m"decision"[39m
+                      [36m/>[39m
+                      [36m<span>[39m
+                        [0m决策[0m
+                      [36m</span>[39m
+                    [36m</label>[39m
+                    [36m<label[39m
+                      [33mclass[39m=[32m"check-row"[39m
+                    [36m>[39m
+                      [36m<input[39m
+                        [33mname[39m=[32m"memory-type-project-1"[39m
+                        [33mtype[39m=[32m"radio"[39m
+                        [33mvalue[39m=[32m"fact"[39m
+                      [36m/>[39m
+                      [36m<span>[39m
+                        [0m事实[0m
+                      [36m</span>[39m
+                    [36m</label>[39m
+                    [36m<label[39m
+                      [33mclass[39m=[32m"check-row"[39m
+                    [36m>[39m
+                      [36m<input[39m
+                        [33mname[39m=[32m"memory-type-project-1"[39m
+                        [33mtype[39m=[32m"radio"[39m
+                        [33mvalue[39m=[32m"artifact"[39m
+                      [36m/>[39m
+                      [36m<span>[39m
+                        [0m产物[0m
+                      [36m</span>[39m
+                    [36m</label>[39m
+                  [36m</div>[39m
+                [36m</fieldset>[39m
+                [36m<div[39m
+                  [33mclass[39m=[32m"form-field"[39m
+                [36m>[39m
+                  [36m<label[39m
+                    [33mfor[39m=[32m"memory-content-project-1"[39m
+                  [36m>[39m
+                    [0m记忆正文[0m
+                  [36m</label>[39m
+                  [36m<textarea[39m
+                    [33maria-describedby[39m=[32m"memory-error-project-1"[39m
+                    [33mid[39m=[32m"memory-content-project-1"[39m
+                  [36m/>[39m
+                [36m</div>[39m
+                [36m<div[39m
+                  [33mclass[39m=[32m"form-field"[39m
+                [36m>[39m
+                  [36m<label[39m
+                    [33mfor[39m=[32m"memory-source-type-project-1"[39m
+                  [36m>[39m
+                    [0m来源类型[0m
+                  [36m</label>[39m
+                  [36m<select[39m
+                    [33mid[39m=[32m"memory-source-type-project-1"[39m
+                  [36m>[39m
+                    [36m<option[39m
+                      [33mvalue[39m=[32m"owner_input"[39m
+                    [36m>[39m
+                      [0mOwner 输入[0m
+                    [36m</option>[39m
+                    [36m<option[39m
+                      [33mvalue[39m=[32m"work_item"[39m
+                    [36m>[39m
+                      [0m任务[0m
+                    [36m</option>[39m
+                    [36m<option[39m
+                      [33mvalue[39m=[32m"artifact_path"[39m
+                    [36m>[39m
+                      [0m产物路径[0m
+                    [36m</option>[39m
+                  [36m</select>[39m
+                [36m</div>[39m
+                [36m<div[39m
+                  [33mclass[39m=[32m"form-field"[39m
+                [36m>[39m
+                  [36m<label[39m
+                    [33mfor[39m=[32m"memory-source-ref-project-1"[39m
+                  [36m>[39m
+                    [0m来源引用[0m
+                  [36m</label>[39m
+                  [36m<input[39m
+                    [33maria-describedby[39m=[32m"memory-error-project-1"[39m
+                    [33mid[39m=[32m"memory-source-ref-project-1"[39m
+                    [33mvalue[39m=[32m""[39m
+                  [36m/>[39m
+                [36m</div>[39m
+                [36m<div[39m
+                  [33mclass[39m=[32m"form-field"[39m
+                [36m>[39m
+                  [36m<label[39m
+                    [33mfor[39m=[32m"memory-supersede-project-1"[39m
+                  [36m>[39m
+                    [0m取代旧记忆[0m
+                  [36m</label>[39m
+                  [36m<select[39m
+                    [33mid[39m=[32m"memory-supersede-project-1"[39m
+                  [36m>[39m
+                    [36m<option[39m
+                      [33mvalue[39m=[32m""[39m
+                    [36m>[39m
+                      [0m不取代[0m
+                    [36m</option>[39m
+                  [36m</select>[39m
+                [36m</div>[39m
+                [36m<button[39m
+                  [33mtype[39m=[32m"submit"[39m
+                [36m>[39m
+                  [0m保存记忆[0m
+                [36m</button>[39m
+              [36m</form>[39m
+              [36m<div[39m
+                [33mclass[39m=[32m"state-message stack"[39m
+              [36m>[39m
+                [36m<p[39m
+                  [33mclass[39m=[32m"error-text"[39m
+                  [33mid[39m=[32m"memory-error-project-1"[39m
+                  [33mrole[39m=[32m"alert"[39m
+                [36m>[39m
+                  [0m无法加载共享记忆，请重试。[0m
+                [36m</p>[39m
+                [36m<button[39m
+                  [33mtype[39m=[32m"button"[39m
+                [36m>[39m
+                  [0m重试加载共享记忆[0m
+                [36m</button>[39m
+              [36m</div>[39m
+              [36m<button[39m
+                [33mtype[39m=[32m"button"[39m
+              [36m>[39m
+                [0m查看历史记忆[0m
+              [36m</button>[39m
+            [36m</section>[39m
+          [36m</div>[39m
+        [36m</div>[39m
+      [36m</aside>[39m
+    [36m</div>[39m
+  [36m</div>[39m
+[36m</body>[39m
+
+Ignored nodes: comments, script, style
+[36m<body>[39m
+  [36m<div>[39m
+    [36m<div[39m
+      [33mclass[39m=[32m"collaboration-cockpit"[39m
+      [33mdata-testid[39m=[32m"collaboration-cockpit"[39m
+    [36m>[39m
+      [36m<div[39m
+        [33maria-label[39m=[32m"驾驶舱面板"[39m
+        [33mclass[39m=[32m"mobile-toolbar"[39m
+        [33mrole[39m=[32m"toolbar"[39m
+      [36m>[39m
+        [36m<button[39m
+          [33maria-controls[39m=[32m"project-navigation-drawer"[39m
+          [33maria-expanded[39m=[32m"false"[39m
+          [33maria-label[39m=[32m"打开项目导航"[39m
+          [33mtype[39m=[32m"button"[39m
+        [36m>[39m
+          [0m项目[0m
+        [36m</button>[39m
+        [36m<button[39m
+          [33maria-controls[39m=[32m"task-editor-surface"[39m
+          [33maria-expanded[39m=[32m"false"[39m
+          [33maria-label[39m=[32m"打开编辑"[39m
+          [33mtype[39m=[32m"button"[39m
+        [36m>[39m
+          [0m编辑[0m
+        [36m</button>[39m
+        [36m<button[39m
+          [33maria-controls[39m=[32m"task-context-drawer"[39m
+          [33maria-expanded[39m=[32m"false"[39m
+          [33maria-label[39m=[32m"打开当前任务上下文"[39m
+          [33mtype[39m=[32m"button"[39m
+        [36m>[39m
+          [0m上下文[0m
+        [36m</button>[39m
+      [36m</div>[39m
+      [36m<aside[39m
+        [33maria-label[39m=[32m"项目导航"[39m
+        [33mclass[39m=[32m"cockpit-sidebar"[39m
+        [33mdata-open[39m=[32m"false"[39m
+        [33mdata-testid[39m=[32m"project-surface"[39m
+        [33mid[39m=[32m"project-navigation-drawer"[39m
+      [36m>[39m
+        [36m<span[39m
+          [33mclass[39m=[32m"sr-only"[39m
+          [33mid[39m=[32m"project-navigation-label"[39m
+        [36m>[39m
+          [0m项目导航[0m
+        [36m</span>[39m
+        [36m<button[39m
+          [33maria-label[39m=[32m"关闭项目导航"[39m
+          [33mclass[39m=[32m"drawer-close"[39m
+          [33mtabindex[39m=[32m"-1"[39m
+          [33mtype[39m=[32m"button"[39m
+        [36m>[39m
+          [0m关闭[0m
+        [36m</button>[39m
+        [36m<div[39m
+          [33mclass[39m=[32m"product-identity"[39m
+        [36m>[39m
+          [36m<span[39m
+            [33maria-hidden[39m=[32m"true"[39m
+            [33mclass[39m=[32m"product-mark"[39m
+          [36m>[39m
+            [0mC[0m
+          [36m</span>[39m
+          [36m<div>[39m
+            [36m<p[39m
+              [33mclass[39m=[32m"eyebrow"[39m
+            [36m>[39m
+              [0m协作驾驶舱[0m
+            [36m</p>[39m
+            [36m<h1>[39m
+              [0mCool AI[0m
+            [36m</h1>[39m
+          [36m</div>[39m
+        [36m</div>[39m
+        [36m<nav[39m
+          [33maria-label[39m=[32m"主导航"[39m
+        [36m>[39m
+          [36m<ul[39m
+            [33mclass[39m=[32m"project-list"[39m
+          [36m>[39m
+            [36m<li>[39m
+              [36m<a[39m
+                [33maria-current[39m=[32m"page"[39m
+                [33mhref[39m=[32m"/"[39m
+              [36m>[39m
+                [0m工作[0m
+              [36m</a>[39m
+            [36m</li>[39m
+            [36m<li>[39m
+              [36m<a[39m
+                [33mhref[39m=[32m"/team"[39m
+              [36m>[39m
+                [0m团队[0m
+              [36m</a>[39m
+            [36m</li>[39m
+          [36m</ul>[39m
+        [36m</nav>[39m
+        [36m<section[39m
+          [33maria-labelledby[39m=[32m"projects-title"[39m
+          [33mclass[39m=[32m"stack"[39m
+        [36m>[39m
+          [36m<h2[39m
+            [33mid[39m=[32m"projects-title"[39m
+          [36m>[39m
+            [0m项目[0m
+          [36m</h2>[39m
+          [36m<form[39m
+            [33mclass[39m=[32m"stack"[39m
+          [36m>[39m
+            [36m<div[39m
+              [33mclass[39m=[32m"form-field"[39m
+            [36m>[39m
+              [36m<label[39m
+                [33mfor[39m=[32m"project-name"[39m
+              [36m>[39m
+                [0m项目名称[0m
+              [36m</label>[39m
+              [36m<input[39m
+                [33mid[39m=[32m"project-name"[39m
+                [33mname[39m=[32m"name"[39m
+                [33mvalue[39m=[32m""[39m
+              [36m/>[39m
+            [36m</div>[39m
+            [36m<button[39m
+              [33mtype[39m=[32m"submit"[39m
+            [36m>[39m
+              [0m创建项目[0m
+            [36m</button>[39m
+          [36m</form>[39m
+          [36m<nav[39m
+            [33maria-label[39m=[32m"项目"[39m
+          [36m>[39m
+            [36m<ul[39m
+              [33mclass[39m=[32m"project-list"[39m
+            [36m>[39m
+              [36m<li>[39m
+                [36m<button[39m
+                  [33maria-current[39m=[32m"page"[39m
+                  [33mtype[39m=[32m"button"[39m
+                [36m>[39m
+                  [0mLaunch plan[0m
+                [36m</button>[39m
+              [36m</li>[39m
+            [36m</ul>[39m
+          [36m</nav>[39m
+        [36m</section>[39m
+        [36m<section[39m
+          [33maria-labelledby[39m=[32m"project-setup-title-project-1"[39m
+          [33mclass[39m=[32m"stack project-setup"[39m
+        [36m>[39m
+          [36m<h2[39m
+            [33mid[39m=[32m"project-setup-title-project-1"[39m
+          [36m>[39m
+            [0m项目设置[0m
+          [36m</h2>[39m
+          [36m<section[39m
+            [33maria-labelledby[39m=[32m"workspace-title-project-1"[39m
+            [33mclass[39m=[32m"stack"[39m
+          [36m>[39m
+            [36m<div>[39m
+              [36m<div[39m
+                [33mclass[39m=[32m"stack"[39m
+              [36m>[39m
+                [36m<h3[39m
+                  [33mid[39m=[32m"workspace-title-project-1"[39m
+                [36m>[39m
+                  [0m本地工作区[0m
+                [36m</h3>[39m
+                [36m<p[39m
+                  [33mclass[39m=[32m"muted"[39m
+                [36m>[39m
+                  [0m尚未绑定本地工作区。[0m
+                [36m</p>[39m
+                [36m<form[39m
+                  [33mclass[39m=[32m"stack"[39m
+                [36m>[39m
+                  [36m<div[39m
+                    [33mclass[39m=[32m"form-field"[39m
+                  [36m>[39m
+                    [36m<label[39m
+                      [33mfor[39m=[32m"workspace-path-project-1"[39m
+                    [36m>[39m
+                      [0m本地工作区路径[0m
+                    [36m</label>[39m
+                    [36m<input[39m
+                      [33mid[39m=[32m"workspace-path-project-1"[39m
+                      [33mname[39m=[32m"workspacePath"[39m
+                      [33mvalue[39m=[32m""[39m
+                    [36m/>[39m
+                  [36m</div>[39m
+                  [36m<button[39m
+                    [33mtype[39m=[32m"submit"[39m
+                  [36m>[39m
+                    [0m绑定工作区[0m
+                  [36m</button>[39m
+                [36m</form>[39m
+              [36m</div>[39m
+            [36m</div>[39m
+          [36m</section>[39m
+          [36m<section[39m
+            [33maria-labelledby[39m=[32m"members-title-project-1"[39m
+            [33mclass[39m=[32m"stack"[39m
+          [36m>[39m
+            [36m<h3[39m
+              [33mid[39m=[32m"members-title-project-1"[39m
+            [36m>[39m
+              [0m项目成员[0m
+            [36m</h3>[39m
+            [36m<p[39m
+              [33mclass[39m=[32m"muted"[39m
+            [36m>[39m
+              [0mAgent 库为空，请先[0m
+              [36m<a[39m
+                [33mhref[39m=[32m"/team"[39m
+              [36m>[39m
+                [0m创建 Agent[0m
+              [36m</a>[39m
+              [0m。[0m
+            [36m</p>[39m
+            [36m<p[39m
+              [33mclass[39m=[32m"muted"[39m
+            [36m>[39m
+              [0m尚未组建项目成员。[0m
+            [36m</p>[39m
+          [36m</section>[39m
+        [36m</section>[39m
+      [36m</aside>[39m
+      [36m<main[39m
+        [33maria-label[39m=[32m"任务事件流"[39m
+        [33mclass[39m=[32m"cockpit-flow"[39m
+        [33mdata-open[39m=[32m"false"[39m
+        [33mdata-testid[39m=[32m"editor-surface"[39m
+        [33mid[39m=[32m"task-editor-surface"[39m
+      [36m>[39m
+        [36m<span[39m
+          [33mclass[39m=[32m"sr-only"[39m
+          [33mid[39m=[32m"task-editor-label"[39m
+        [36m>[39m
+          [0m任务编辑[0m
+        [36m</span>[39m
+        [36m<button[39m
+          [33maria-label[39m=[32m"关闭任务编辑"[39m
+          [33mclass[39m=[32m"drawer-close"[39m
+          [33mdata-dialog-close[39m=[32m"true"[39m
+          [33mtabindex[39m=[32m"-1"[39m
+          [33mtype[39m=[32m"button"[39m
+        [36m>[39m
+          [0m关闭[0m
+        [36m</button>[39m
+        [36m<div[39m
+          [33mclass[39m=[32m"panel-heading"[39m
+        [36m>[39m
+          [36m<span[39m
+            [33maria-hidden[39m=[32m"true"[39m
+            [33mclass[39m=[32m"agent-mark"[39m
+          [36m>[39m
+            [0mA[0m
+          [36m</span>[39m
+          [36m<div>[39m
+            [36m<p[39m
+              [33mclass[39m=[32m"eyebrow"[39m
+            [36m>[39m
+              [0m确定性示例 Agent[0m
+            [36m</p>[39m
+            [36m<h2[39m
+              [33mid[39m=[32m"tasks-title"[39m
+              [33mtabindex[39m=[32m"-1"[39m
+            [36m>[39m
+              [0mLaunch plan[0m
+            [36m</h2>[39m
+          [36m</div>[39m
+        [36m</div>[39m
+        [36m<section[39m
+          [33maria-labelledby[39m=[32m"mission-board-title-project-1"[39m
+          [33mclass[39m=[32m"stack mission-board"[39m
+          [33mid[39m=[32m"mission-board"[39m
+        [36m>[39m
+          [36m<h2[39m
+            [33mid[39m=[32m"mission-board-title-project-1"[39m
+          [36m>[39m
+            [0m使命看板[0m
+          [36m</h2>[39m
+          [36m<div[39m
+            [33mclass[39m=[32m"stack"[39m
+          [36m>[39m
+            [36m<p[39m
+              [33mclass[39m=[32m"state-message"[39m
+            [36m>[39m
+              [0m尚未创建使命。[0m
+            [36m</p>[39m
+            [36m<form[39m
+              [33mclass[39m=[32m"stack mission-form"[39m
+            [36m>[39m
+              [36m<div[39m
+                [33mclass[39m=[32m"form-field"[39m
+              [36m>[39m
+                [36m<label[39m
+                  [33mfor[39m=[32m"mission-title-project-1"[39m
+                [36m>[39m
+                  [0m使命标题[0m
+                [36m</label>[39m
+                [36m<input[39m
+                  [33mid[39m=[32m"mission-title-project-1"[39m
+                  [33mvalue[39m=[32m""[39m
+                [36m/>[39m
+              [36m</div>[39m
+              [36m<div[39m
+                [33mclass[39m=[32m"form-field"[39m
+              [36m>[39m
+                [36m<label[39m
+                  [33mfor[39m=[32m"mission-goal-project-1"[39m
+                [36m>[39m
+                  [0m使命目标[0m
+                [36m</label>[39m
+                [36m<textarea[39m
+                  [33mid[39m=[32m"mission-goal-project-1"[39m
+                [36m/>[39m
+              [36m</div>[39m
+              [36m<div[39m
+                [33mclass[39m=[32m"form-row"[39m
+              [36m>[39m
+                [36m<button[39m
+                  [33mtype[39m=[32m"submit"[39m
+                [36m>[39m
+                  [0m创建使命[0m
+                [36m</button>[39m
+              [36m</div>[39m
+            [36m</form>[39m
+          [36m</div>[39m
+        [36m</section>[39m
+        [36m<form[39m
+          [33mclass[39m=[32m"composer"[39m
+        [36m>[39m
+          [36m<div[39m
+            [33mclass[39m=[32m"form-row"[39m
+          [36m>[39m
+            [36m<div[39m
+              [33mclass[39m=[32m"form-field"[39m
+            [36m>[39m
+              [36m<label[39m
+                [33mfor[39m=[32m"task-goal"[39m
+              [36m>[39m
+                [0m任务目标[0m
+              [36m</label>[39m
+              [36m<input[39m
+                [33mid[39m=[32m"task-goal"[39m
+                [33mname[39m=[32m"goal"[39m
+                [33mvalue[39m=[32m""[39m
+              [36m/>[39m
+            [36m</div>[39m
+            [36m<button[39m
+              [33mdisabled[39m=[32m""[39m
+              [33mtype[39m=[32m"submit"[39m
+            [36m>[39m
+              [0m运行任务[0m
+            [36m</button>[39m
+          [36m</div>[39m
+        [36m</form>[39m
+        [36m<div[39m
+          [33mclass[39m=[32m"state-message"[39m
+        [36m>[39m
+          [36m<p[39m
+            [33mclass[39m=[32m"error-text"[39m
+            [33mrole[39m=[32m"alert"[39m
+          [36m>[39m
+            [0m无法加载任务，请稍后重试。[0m
+          [36m</p>[39m
+          [36m<button[39m
+            [33mtype[39m=[32m"button"[39m
+          [36m>[39m
+            [0m重试任务历史[0m
+          [36m</button>[39m
+        [36m</div>[39m
+        [36m<p[39m
+          [33maria-atomic[39m=[32m"true"[39m
+          [33maria-live[39m=[32m"polite"[39m
+          [33mclass[39m=[32m"muted"[39m
+          [33mrole[39m=[32m"status"[39m
+        [36m/>[39m
+      [36m</main>[39m
+      [36m<aside[39m
+        [33maria-label[39m=[32m"当前任务上下文"[39m
+        [33mclass[39m=[32m"cockpit-context"[39m
+        [33mdata-open[39m=[32m"false"[39m
+        [33mdata-testid[39m=[32m"context-surface"[39m
+        [33mid[39m=[32m"task-context-drawer"[39m
+      [36m>[39m
+        [36m<span[39m
+          [33mclass[39m=[32m"sr-only"[39m
+          [33mid[39m=[32m"task-context-label"[39m
+        [36m>[39m
+          [0m当前任务上下文[0m
+        [36m</span>[39m
+        [36m<button[39m
+          [33maria-label[39m=[32m"关闭当前任务上下文"[39m
+          [33mclass[39m=[32m"drawer-close"[39m
+          [33mdata-dialog-close[39m=[32m"true"[39m
+          [33mtabindex[39m=[32m"-1"[39m
+          [33mtype[39m=[32m"button"[39m
+        [36m>[39m
+          [0m关闭[0m
+        [36m</button>[39m
+        [36m<div>[39m
+          [36m<p[39m
+            [33mclass[39m=[32m"eyebrow"[39m
+          [36m>[39m
+            [0m项目资源[0m
+          [36m</p>[39m
+          [36m<h2>[39m
+            [0m项目上下文[0m
+          [36m</h2>[39m
+        [36m</div>[39m
+        [36m<div[39m
+          [33mclass[39m=[32m"stack project-context-panel"[39m
+        [36m>[39m
+          [36m<div[39m
+            [33maria-label[39m=[32m"项目上下文资源"[39m
+            [33mclass[39m=[32m"project-context-tabs"[39m
+            [33mrole[39m=[32m"tablist"[39m
+          [36m>[39m
+            [36m<button[39m
+              [33maria-controls[39m=[32m"project-context-memory-project-1"[39m
+              [33maria-selected[39m=[32m"true"[39m
+              [33mid[39m=[32m"project-context-tab-memory-project-1"[39m
+              [33mrole[39m=[32m"tab"[39m
+              [33mtabindex[39m=[32m"0"[39m
+              [33mtype[39m=[32m"button"[39m
+            [36m>[39m
+              [0m共享记忆[0m
+            [36m</button>[39m
+            [36m<button[39m
+              [33maria-controls[39m=[32m"project-context-context-project-1"[39m
+              [33maria-selected[39m=[32m"false"[39m
+              [33mid[39m=[32m"project-context-tab-context-project-1"[39m
+              [33mrole[39m=[32m"tab"[39m
+              [33mtabindex[39m=[32m"-1"[39m
+              [33mtype[39m=[32m"button"[39m
+            [36m>[39m
+              [0m上下文预览[0m
+            [36m</button>[39m
+            [36m<button[39m
+              [33maria-controls[39m=[32m"project-context-skeleton-project-1"[39m
+              [33maria-selected[39m=[32m"false"[39m
+              [33mid[39m=[32m"project-context-tab-skeleton-project-1"[39m
+              [33mrole[39m=[32m"tab"[39m
+              [33mtabindex[39m=[32m"-1"[39m
+              [33mtype[39m=[32m"button"[39m
+            [36m>[39m
+              [0m骨架运行[0m
+            [36m</button>[39m
+          [36m</div>[39m
+          [36m<div[39m
+            [33maria-labelledby[39m=[32m"project-context-tab-memory-project-1"[39m
+            [33mid[39m=[32m"project-context-memory-project-1"[39m
+            [33mrole[39m=[32m"tabpanel"[39m
+          [36m>[39m
+            [36m<section[39m
+              [33maria-labelledby[39m=[32m"memory-title-project-1"[39m
+              [33mclass[39m=[32m"stack"[39m
+            [36m>[39m
+              [36m<h2[39m
+                [33mid[39m=[32m"memory-title-project-1"[39m
+              [36m>[39m
+                [0m共享记忆[0m
+              [36m</h2>[39m
+              [36m<form[39m
+                [33mclass[39m=[32m"stack memory-form"[39m
+              [36m>[39m
+                [36m<fieldset>[39m
+                  [36m<legend>[39m
+                    [0m记忆类型[0m
+                  [36m</legend>[39m
+                  [36m<div[39m
+                    [33mclass[39m=[32m"memory-type-options"[39m
+                  [36m>[39m
+                    [36m<label[39m
+                      [33mclass[39m=[32m"check-row"[39m
+                    [36m>[39m
+                      [36m<input[39m
+                        [33mchecked[39m=[32m""[39m
+                        [33mname[39m=[32m"memory-type-project-1"[39m
+                        [33mtype[39m=[32m"radio"[39m
+                        [33mvalue[39m=[32m"goal"[39m
+                      [36m/>[39m
+                      [36m<span>[39m
+                        [0m目标[0m
+                      [36m</span>[39m
+                    [36m</label>[39m
+                    [36m<label[39m
+                      [33mclass[39m=[32m"check-row"[39m
+                    [36m>[39m
+                      [36m<input[39m
+                        [33mname[39m=[32m"memory-type-project-1"[39m
+                        [33mtype[39m=[32m"radio"[39m
+                        [33mvalue[39m=[32m"decision"[39m
+                      [36m/>[39m
+                      [36m<span>[39m
+                        [0m决策[0m
+                      [36m</span>[39m
+                    [36m</label>[39m
+                    [36m<label[39m
+                      [33mclass[39m=[32m"check-row"[39m
+                    [36m>[39m
+                      [36m<input[39m
+                        [33mname[39m=[32m"memory-type-project-1"[39m
+                        [33mtype[39m=[32m"radio"[39m
+                        [33mvalue[39m=[32m"fact"[39m
+                      [36m/>[39m
+                      [36m<span>[39m
+                        [0m事实[0m
+                      [36m</span>[39m
+                    [36m</label>[39m
+                    [36m<label[39m
+                      [33mclass[39m=[32m"check-row"[39m
+                    [36m>[39m
+                      [36m<input[39m
+                        [33mname[39m=[32m"memory-type-project-1"[39m
+                        [33mtype[39m=[32m"radio"[39m
+                        [33mvalue[39m=[32m"artifact"[39m
+                      [36m/>[39m
+                      [36m<span>[39m
+                        [0m产物[0m
+                      [36m</span>[39m
+                    [36m</label>[39m
+                  [36m</div>[39m
+                [36m</fieldset>[39m
+                [36m<div[39m
+                  [33mclass[39m=[32m"form-field"[39m
+                [36m>[39m
+                  [36m<label[39m
+                    [33mfor[39m=[32m"memory-content-project-1"[39m
+                  [36m>[39m
+                    [0m记忆正文[0m
+                  [36m</label>[39m
+                  [36m<textarea[39m
+                    [33maria-describedby[39m=[32m"memory-error-project-1"[39m
+                    [33mid[39m=[32m"memory-content-project-1"[39m
+                  [36m/>[39m
+                [36m</div>[39m
+                [36m<div[39m
+                  [33mclass[39m=[32m"form-field"[39m
+                [36m>[39m
+                  [36m<label[39m
+                    [33mfor[39m=[32m"memory-source-type-project-1"[39m
+                  [36m>[39m
+                    [0m来源类型[0m
+                  [36m</label>[39m
+                  [36m<select[39m
+                    [33mid[39m=[32m"memory-source-type-project-1"[39m
+                  [36m>[39m
+                    [36m<option[39m
+                      [33mvalue[39m=[32m"owner_input"[39m
+                    [36m>[39m
+                      [0mOwner 输入[0m
+                    [36m</option>[39m
+                    [36m<option[39m
+                      [33mvalue[39m=[32m"work_item"[39m
+                    [36m>[39m
+                      [0m任务[0m
+                    [36m</option>[39m
+                    [36m<option[39m
+                      [33mvalue[39m=[32m"artifact_path"[39m
+                    [36m>[39m
+                      [0m产物路径[0m
+                    [36m</option>[39m
+                  [36m</select>[39m
+                [36m</div>[39m
+                [36m<div[39m
+                  [33mclass[39m=[32m"form-field"[39m
+                [36m>[39m
+                  [36m<label[39m
+                    [33mfor[39m=[32m"memory-source-ref-project-1"[39m
+                  [36m>[39m
+                    [0m来源引用[0m
+                  [36m</label>[39m
+                  [36m<input[39m
+                    [33maria-describedby[39m=[32m"memory-error-project-1"[39m
+                    [33mid[39m=[32m"memory-source-ref-project-1"[39m
+                    [33mvalue[39m=[32m""[39m
+                  [36m/>[39m
+                [36m</div>[39m
+                [36m<div[39m
+                  [33mclass[39m=[32m"form-field"[39m
+                [36m>[39m
+                  [36m<label[39m
+                    [33mfor[39m=[32m"memory-supersede-project-1"[39m
+                  [36m>[39m
+                    [0m取代旧记忆[0m
+                  [36m</label>[39m
+                  [36m<select[39m
+                    [33mid[39m=[32m"memory-supersede-project-1"[39m
+                  [36m>[39m
+                    [36m<option[39m
+                      [33mvalue[39m=[32m""[39m
+                    [36m>[39m
+                      [0m不取代[0m
+                    [36m</option>[39m
+                  [36m</select>[39m
+                [36m</div>[39m
+                [36m<button[39m
+                  [33mtype[39m=[32m"submit"[39m
+                [36m>[39m
+                  [0m保存记忆[0m
+                [36m</button>[39m
+              [36m</form>[39m
+              [36m<div[39m
+                [33mclass[39m=[32m"state-message stack"[39m
+              [36m>[39m
+                [36m<p[39m
+                  [33mclass[39m=[32m"error-text"[39m
+                  [33mid[39m=[32m"memory-error-project-1"[39m
+                  [33mrole[39m=[32m"alert"[39m
+                [36m>[39m
+                  [0m无法加载共享记忆，请重试。[0m
+                [36m</p>[39m
+                [36m<button[39m
+                  [33mtype[39m=[32m"button"[39m
+                [36m>[39m
+                  [0m重试加载共享记忆[0m
+                [36m</button>[39m
+              [36m</div>[39m
+              [36m<button[39m
+                [33mtype[39m=[32m"button"[39m
+              [36m>[39m
+                [0m查看历史记忆[0m
+              [36m</button>[39m
+            [36m</section>[39m
+          [36m</div>[39m
+        [36m</div>[39m
+      [36m</aside>[39m
+    [36m</div>[39m
+  [36m</div>[39m
+[36m</body>[39m
+ ❯ waitForWrapper node_modules/@testing-library/dom/dist/wait-for.js:163:27
+ ❯ node_modules/@testing-library/dom/dist/query-helpers.js:86:33
+ ❯ tests/accessibility.test.tsx:118:18
+    116|     render(<ProjectPanel />);
+    117|
+    118|     await screen.findByText("最新任务状态：已完成");
+       |                  ^
+    119|     const status = screen.getByRole("status");
+    120|     expect(status).toHaveAttribute("aria-live", "polite");
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[2/10]⎯
+
+ FAIL  tests/cockpit-layout.test.tsx > desktop collaboration cockpit > presents project navigation, task flow, and current context from real data
+TestingLibraryElementError: Unable to find an element with the text: 任务已完成。. This could be because the text is broken up by multiple elements. In this case, you can provide a function for your text matcher to make your matcher more flexible.
+
+Ignored nodes: comments, script, style
+[36m<main[39m
+  [33maria-label[39m=[32m"任务事件流"[39m
+  [33mclass[39m=[32m"cockpit-flow"[39m
+  [33mdata-open[39m=[32m"false"[39m
+  [33mdata-testid[39m=[32m"editor-surface"[39m
+  [33mid[39m=[32m"task-editor-surface"[39m
+[36m>[39m
+  [36m<span[39m
+    [33mclass[39m=[32m"sr-only"[39m
+    [33mid[39m=[32m"task-editor-label"[39m
+  [36m>[39m
+    [0m任务编辑[0m
+  [36m</span>[39m
+  [36m<button[39m
+    [33maria-label[39m=[32m"关闭任务编辑"[39m
+    [33mclass[39m=[32m"drawer-close"[39m
+    [33mdata-dialog-close[39m=[32m"true"[39m
+    [33mtabindex[39m=[32m"-1"[39m
+    [33mtype[39m=[32m"button"[39m
+  [36m>[39m
+    [0m关闭[0m
+  [36m</button>[39m
+  [36m<div[39m
+    [33mclass[39m=[32m"panel-heading"[39m
+  [36m>[39m
+    [36m<span[39m
+      [33maria-hidden[39m=[32m"true"[39m
+      [33mclass[39m=[32m"agent-mark"[39m
+    [36m>[39m
+      [0mA[0m
+    [36m</span>[39m
+    [36m<div>[39m
+      [36m<p[39m
+        [33mclass[39m=[32m"eyebrow"[39m
+      [36m>[39m
+        [0m确定性示例 Agent[0m
+      [36m</p>[39m
+      [36m<h2[39m
+        [33mid[39m=[32m"tasks-title"[39m
+        [33mtabindex[39m=[32m"-1"[39m
+      [36m>[39m
+        [0mLaunch plan[0m
+      [36m</h2>[39m
+    [36m</div>[39m
+  [36m</div>[39m
+  [36m<section[39m
+    [33maria-labelledby[39m=[32m"mission-board-title-project-1"[39m
+    [33mclass[39m=[32m"stack mission-board"[39m
+    [33mid[39m=[32m"mission-board"[39m
+  [36m>[39m
+    [36m<h2[39m
+      [33mid[39m=[32m"mission-board-title-project-1"[39m
+    [36m>[39m
+      [0m使命看板[0m
+    [36m</h2>[39m
+    [36m<div[39m
+      [33mclass[39m=[32m"stack"[39m
+    [36m>[39m
+      [36m<p[39m
+        [33mclass[39m=[32m"state-message"[39m
+      [36m>[39m
+        [0m尚未创建使命。[0m
+      [36m</p>[39m
+      [36m<form[39m
+        [33mclass[39m=[32m"stack mission-form"[39m
+      [36m>[39m
+        [36m<div[39m
+          [33mclass[39m=[32m"form-field"[39m
+        [36m>[39m
+          [36m<label[39m
+            [33mfor[39m=[32m"mission-title-project-1"[39m
+          [36m>[39m
+            [0m使命标题[0m
+          [36m</label>[39m
+          [36m<input[39m
+            [33mid[39m=[32m"mission-title-project-1"[39m
+            [33mvalue[39m=[32m""[39m
+          [36m/>[39m
+        [36m</div>[39m
+        [36m<div[39m
+          [33mclass[39m=[32m"form-field"[39m
+        [36m>[39m
+          [36m<label[39m
+            [33mfor[39m=[32m"mission-goal-project-1"[39m
+          [36m>[39m
+            [0m使命目标[0m
+          [36m</label>[39m
+          [36m<textarea[39m
+            [33mid[39m=[32m"mission-goal-project-1"[39m
+          [36m/>[39m
+        [36m</div>[39m
+        [36m<div[39m
+          [33mclass[39m=[32m"form-row"[39m
+        [36m>[39m
+          [36m<button[39m
+            [33mtype[39m=[32m"submit"[39m
+          [36m>[39m
+            [0m创建使命[0m
+          [36m</button>[39m
+        [36m</div>[39m
+      [36m</form>[39m
+    [36m</div>[39m
+  [36m</section>[39m
+  [36m<form[39m
+    [33mclass[39m=[32m"composer"[39m
+  [36m>[39m
+    [36m<div[39m
+      [33mclass[39m=[32m"form-row"[39m
+    [36m>[39m
+      [36m<div[39m
+        [33mclass[39m=[32m"form-field"[39m
+      [36m>[39m
+        [36m<label[39m
+          [33mfor[39m=[32m"task-goal"[39m
+        [36m>[39m
+          [0m任务目标[0m
+        [36m</label>[39m
+        [36m<input[39m
+          [33mid[39m=[32m"task-goal"[39m
+          [33mname[39m=[32m"goal"[39m
+          [33mvalue[39m=[32m""[39m
+        [36m/>[39m
+      [36m</div>[39m
+      [36m<button[39m
+        [33mdisabled[39m=[32m""[39m
+        [33mtype[39m=[32m"submit"[39m
+      [36m>[39m
+        [0m运行任务[0m
+      [36m</button>[39m
+    [36m</div>[39m
+  [36m</form>[39m
+  [36m<div[39m
+    [33mclass[39m=[32m"state-message"[39m
+  [36m>[39m
+    [36m<p[39m
+      [33mclass[39m=[32m"error-text"[39m
+      [33mrole[39m=[32m"alert"[39m
+    [36m>[39m
+      [0m无法加载任务，请稍后重试。[0m
+    [36m</p>[39m
+    [36m<button[39m
+      [33mtype[39m=[32m"button"[39m
+    [36m>[39m
+      [0m重试任务历史[0m
+    [36m</button>[39m
+  [36m</div>[39m
+  [36m<p[39m
+    [33maria-atomic[39m=[32m"true"[39m
+    [33maria-live[39m=[32m"polite"[39m
+    [33mclass[39m=[32m"muted"[39m
+    [33mrole[39m=[32m"status"[39m
+  [36m/>[39m
+[36m</main>[39m
+
+Ignored nodes: comments, script, style
+[36m<main[39m
+  [33maria-label[39m=[32m"任务事件流"[39m
+  [33mclass[39m=[32m"cockpit-flow"[39m
+  [33mdata-open[39m=[32m"false"[39m
+  [33mdata-testid[39m=[32m"editor-surface"[39m
+  [33mid[39m=[32m"task-editor-surface"[39m
+[36m>[39m
+  [36m<span[39m
+    [33mclass[39m=[32m"sr-only"[39m
+    [33mid[39m=[32m"task-editor-label"[39m
+  [36m>[39m
+    [0m任务编辑[0m
+  [36m</span>[39m
+  [36m<button[39m
+    [33maria-label[39m=[32m"关闭任务编辑"[39m
+    [33mclass[39m=[32m"drawer-close"[39m
+    [33mdata-dialog-close[39m=[32m"true"[39m
+    [33mtabindex[39m=[32m"-1"[39m
+    [33mtype[39m=[32m"button"[39m
+  [36m>[39m
+    [0m关闭[0m
+  [36m</button>[39m
+  [36m<div[39m
+    [33mclass[39m=[32m"panel-heading"[39m
+  [36m>[39m
+    [36m<span[39m
+      [33maria-hidden[39m=[32m"true"[39m
+      [33mclass[39m=[32m"agent-mark"[39m
+    [36m>[39m
+      [0mA[0m
+    [36m</span>[39m
+    [36m<div>[39m
+      [36m<p[39m
+        [33mclass[39m=[32m"eyebrow"[39m
+      [36m>[39m
+        [0m确定性示例 Agent[0m
+      [36m</p>[39m
+      [36m<h2[39m
+        [33mid[39m=[32m"tasks-title"[39m
+        [33mtabindex[39m=[32m"-1"[39m
+      [36m>[39m
+        [0mLaunch plan[0m
+      [36m</h2>[39m
+    [36m</div>[39m
+  [36m</div>[39m
+  [36m<section[39m
+    [33maria-labelledby[39m=[32m"mission-board-title-project-1"[39m
+    [33mclass[39m=[32m"stack mission-board"[39m
+    [33mid[39m=[32m"mission-board"[39m
+  [36m>[39m
+    [36m<h2[39m
+      [33mid[39m=[32m"mission-board-title-project-1"[39m
+    [36m>[39m
+      [0m使命看板[0m
+    [36m</h2>[39m
+    [36m<div[39m
+      [33mclass[39m=[32m"stack"[39m
+    [36m>[39m
+      [36m<p[39m
+        [33mclass[39m=[32m"state-message"[39m
+      [36m>[39m
+        [0m尚未创建使命。[0m
+      [36m</p>[39m
+      [36m<form[39m
+        [33mclass[39m=[32m"stack mission-form"[39m
+      [36m>[39m
+        [36m<div[39m
+          [33mclass[39m=[32m"form-field"[39m
+        [36m>[39m
+          [36m<label[39m
+            [33mfor[39m=[32m"mission-title-project-1"[39m
+          [36m>[39m
+            [0m使命标题[0m
+          [36m</label>[39m
+          [36m<input[39m
+            [33mid[39m=[32m"mission-title-project-1"[39m
+            [33mvalue[39m=[32m""[39m
+          [36m/>[39m
+        [36m</div>[39m
+        [36m<div[39m
+          [33mclass[39m=[32m"form-field"[39m
+        [36m>[39m
+          [36m<label[39m
+            [33mfor[39m=[32m"mission-goal-project-1"[39m
+          [36m>[39m
+            [0m使命目标[0m
+          [36m</label>[39m
+          [36m<textarea[39m
+            [33mid[39m=[32m"mission-goal-project-1"[39m
+          [36m/>[39m
+        [36m</div>[39m
+        [36m<div[39m
+          [33mclass[39m=[32m"form-row"[39m
+        [36m>[39m
+          [36m<button[39m
+            [33mtype[39m=[32m"submit"[39m
+          [36m>[39m
+            [0m创建使命[0m
+          [36m</button>[39m
+        [36m</div>[39m
+      [36m</form>[39m
+    [36m</div>[39m
+  [36m</section>[39m
+  [36m<form[39m
+    [33mclass[39m=[32m"composer"[39m
+  [36m>[39m
+    [36m<div[39m
+      [33mclass[39m=[32m"form-row"[39m
+    [36m>[39m
+      [36m<div[39m
+        [33mclass[39m=[32m"form-field"[39m
+      [36m>[39m
+        [36m<label[39m
+          [33mfor[39m=[32m"task-goal"[39m
+        [36m>[39m
+          [0m任务目标[0m
+        [36m</label>[39m
+        [36m<input[39m
+          [33mid[39m=[32m"task-goal"[39m
+          [33mname[39m=[32m"goal"[39m
+          [33mvalue[39m=[32m""[39m
+        [36m/>[39m
+      [36m</div>[39m
+      [36m<button[39m
+        [33mdisabled[39m=[32m""[39m
+        [33mtype[39m=[32m"submit"[39m
+      [36m>[39m
+        [0m运行任务[0m
+      [36m</button>[39m
+    [36m</div>[39m
+  [36m</form>[39m
+  [36m<div[39m
+    [33mclass[39m=[32m"state-message"[39m
+  [36m>[39m
+    [36m<p[39m
+      [33mclass[39m=[32m"error-text"[39m
+      [33mrole[39m=[32m"alert"[39m
+    [36m>[39m
+      [0m无法加载任务，请稍后重试。[0m
+    [36m</p>[39m
+    [36m<button[39m
+      [33mtype[39m=[32m"button"[39m
+    [36m>[39m
+      [0m重试任务历史[0m
+    [36m</button>[39m
+  [36m</div>[39m
+  [36m<p[39m
+    [33maria-atomic[39m=[32m"true"[39m
+    [33maria-live[39m=[32m"polite"[39m
+    [33mclass[39m=[32m"muted"[39m
+    [33mrole[39m=[32m"status"[39m
+  [36m/>[39m
+[36m</main>[39m
+ ❯ waitForWrapper node_modules/@testing-library/dom/dist/wait-for.js:163:27
+ ❯ node_modules/@testing-library/dom/dist/query-helpers.js:86:33
+ ❯ tests/cockpit-layout.test.tsx:85:31
+     83|       "page",
+     84|     );
+     85|     expect(await within(flow).findByText("任务已完成。")).toBeInTheDocument(…
+       |                               ^
+     86|     expect(within(flow).getByText("已完成", { selector: ".status-label" }…
+     87|     await user.click(within(context).getByRole("tab", { name: "骨架运行" }…
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[3/10]⎯
+
+ FAIL  tests/migrations.test.ts > database migrations > upgrades valid v1 and v2 databases to v3
+SchemaMigrationError: Database schema does not match version 2.
+ ❯ migrateDatabase src/server/migrations.ts:707:11
+    705|
+    706|   if (currentVersion === 2 && (!validS1(database) || !validS2(database…
+    707|     throw new SchemaMigrationError("SCHEMA_DRIFT", "Database schema do…
+       |           ^
+    708|   }
+    709|
+ ❯ openDatabase src/server/db.ts:14:5
+ ❯ tests/migrations.test.ts:202:22
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[4/10]⎯
+
+ FAIL  tests/task-flow.test.tsx > task event flow > shows loading, then restores persisted task events and result
+TestingLibraryElementError: Unable to find an element with the text: 正在加载任务历史…. This could be because the text is broken up by multiple elements. In this case, you can provide a function for your text matcher to make your matcher more flexible.
+
+Ignored nodes: comments, script, style
+[36m<body>[39m
+  [36m<div>[39m
+    [36m<div[39m
+      [33mclass[39m=[32m"collaboration-cockpit"[39m
+      [33mdata-testid[39m=[32m"collaboration-cockpit"[39m
+    [36m>[39m
+      [36m<div[39m
+        [33maria-label[39m=[32m"驾驶舱面板"[39m
+        [33mclass[39m=[32m"mobile-toolbar"[39m
+        [33mrole[39m=[32m"toolbar"[39m
+      [36m>[39m
+        [36m<button[39m
+          [33maria-controls[39m=[32m"project-navigation-drawer"[39m
+          [33maria-expanded[39m=[32m"false"[39m
+          [33maria-label[39m=[32m"打开项目导航"[39m
+          [33mtype[39m=[32m"button"[39m
+        [36m>[39m
+          [0m项目[0m
+        [36m</button>[39m
+        [36m<button[39m
+          [33maria-controls[39m=[32m"task-editor-surface"[39m
+          [33maria-expanded[39m=[32m"false"[39m
+          [33maria-label[39m=[32m"打开编辑"[39m
+          [33mtype[39m=[32m"button"[39m
+        [36m>[39m
+          [0m编辑[0m
+        [36m</button>[39m
+        [36m<button[39m
+          [33maria-controls[39m=[32m"task-context-drawer"[39m
+          [33maria-expanded[39m=[32m"false"[39m
+          [33maria-label[39m=[32m"打开当前任务上下文"[39m
+          [33mtype[39m=[32m"button"[39m
+        [36m>[39m
+          [0m上下文[0m
+        [36m</button>[39m
+      [36m</div>[39m
+      [36m<aside[39m
+        [33maria-label[39m=[32m"项目导航"[39m
+        [33mclass[39m=[32m"cockpit-sidebar"[39m
+        [33mdata-open[39m=[32m"false"[39m
+        [33mdata-testid[39m=[32m"project-surface"[39m
+        [33mid[39m=[32m"project-navigation-drawer"[39m
+      [36m>[39m
+        [36m<span[39m
+          [33mclass[39m=[32m"sr-only"[39m
+          [33mid[39m=[32m"project-navigation-label"[39m
+        [36m>[39m
+          [0m项目导航[0m
+        [36m</span>[39m
+        [36m<button[39m
+          [33maria-label[39m=[32m"关闭项目导航"[39m
+          [33mclass[39m=[32m"drawer-close"[39m
+          [33mtabindex[39m=[32m"-1"[39m
+          [33mtype[39m=[32m"button"[39m
+        [36m>[39m
+          [0m关闭[0m
+        [36m</button>[39m
+        [36m<div[39m
+          [33mclass[39m=[32m"product-identity"[39m
+        [36m>[39m
+          [36m<span[39m
+            [33maria-hidden[39m=[32m"true"[39m
+            [33mclass[39m=[32m"product-mark"[39m
+          [36m>[39m
+            [0mC[0m
+          [36m</span>[39m
+          [36m<div>[39m
+            [36m<p[39m
+              [33mclass[39m=[32m"eyebrow"[39m
+            [36m>[39m
+              [0m协作驾驶舱[0m
+            [36m</p>[39m
+            [36m<h1>[39m
+              [0mCool AI[0m
+            [36m</h1>[39m
+          [36m</div>[39m
+        [36m</div>[39m
+        [36m<nav[39m
+          [33maria-label[39m=[32m"主导航"[39m
+        [36m>[39m
+          [36m<ul[39m
+            [33mclass[39m=[32m"project-list"[39m
+          [36m>[39m
+            [36m<li>[39m
+              [36m<a[39m
+                [33maria-current[39m=[32m"page"[39m
+                [33mhref[39m=[32m"/"[39m
+              [36m>[39m
+                [0m工作[0m
+              [36m</a>[39m
+            [36m</li>[39m
+            [36m<li>[39m
+              [36m<a[39m
+                [33mhref[39m=[32m"/team"[39m
+              [36m>[39m
+                [0m团队[0m
+              [36m</a>[39m
+            [36m</li>[39m
+          [36m</ul>[39m
+        [36m</nav>[39m
+        [36m<section[39m
+          [33maria-labelledby[39m=[32m"projects-title"[39m
+          [33mclass[39m=[32m"stack"[39m
+        [36m>[39m
+          [36m<h2[39m
+            [33mid[39m=[32m"projects-title"[39m
+          [36m>[39m
+            [0m项目[0m
+          [36m</h2>[39m
+          [36m<form[39m
+            [33mclass[39m=[32m"stack"[39m
+          [36m>[39m
+            [36m<div[39m
+              [33mclass[39m=[32m"form-field"[39m
+            [36m>[39m
+              [36m<label[39m
+                [33mfor[39m=[32m"project-name"[39m
+              [36m>[39m
+                [0m项目名称[0m
+              [36m</label>[39m
+              [36m<input[39m
+                [33mid[39m=[32m"project-name"[39m
+                [33mname[39m=[32m"name"[39m
+                [33mvalue[39m=[32m""[39m
+              [36m/>[39m
+            [36m</div>[39m
+            [36m<button[39m
+              [33mtype[39m=[32m"submit"[39m
+            [36m>[39m
+              [0m创建项目[0m
+            [36m</button>[39m
+          [36m</form>[39m
+          [36m<nav[39m
+            [33maria-label[39m=[32m"项目"[39m
+          [36m>[39m
+            [36m<ul[39m
+              [33mclass[39m=[32m"project-list"[39m
+            [36m>[39m
+              [36m<li>[39m
+                [36m<button[39m
+                  [33maria-current[39m=[32m"page"[39m
+                  [33mtype[39m=[32m"button"[39m
+                [36m>[39m
+                  [0mLaunch plan[0m
+                [36m</button>[39m
+              [36m</li>[39m
+            [36m</ul>[39m
+          [36m</nav>[39m
+        [36m</section>[39m
+        [36m<section[39m
+          [33maria-labelledby[39m=[32m"project-setup-title-project-1"[39m
+          [33mclass[39m=[32m"stack project-setup"[39m
+        [36m>[39m
+          [36m<h2[39m
+            [33mid[39m=[32m"project-setup-title-project-1"[39m
+          [36m>[39m
+            [0m项目设置[0m
+          [36m</h2>[39m
+          [36m<section[39m
+            [33maria-labelledby[39m=[32m"workspace-title-project-1"[39m
+            [33mclass[39m=[32m"stack"[39m
+          [36m>[39m
+            [36m<div>[39m
+              [36m<div[39m
+                [33mclass[39m=[32m"stack"[39m
+              [36m>[39m
+                [36m<h3[39m
+                  [33mid[39m=[32m"workspace-title-project-1"[39m
+                [36m>[39m
+                  [0m本地工作区[0m
+                [36m</h3>[39m
+                [36m<p[39m
+                  [33mclass[39m=[32m"muted"[39m
+                [36m>[39m
+                  [0m尚未绑定本地工作区。[0m
+                [36m</p>[39m
+                [36m<form[39m
+                  [33mclass[39m=[32m"stack"[39m
+                [36m>[39m
+                  [36m<div[39m
+                    [33mclass[39m=[32m"form-field"[39m
+                  [36m>[39m
+                    [36m<label[39m
+                      [33mfor[39m=[32m"workspace-path-project-1"[39m
+                    [36m>[39m
+                      [0m本地工作区路径[0m
+                    [36m</label>[39m
+                    [36m<input[39m
+                      [33mid[39m=[32m"workspace-path-project-1"[39m
+                      [33mname[39m=[32m"workspacePath"[39m
+                      [33mvalue[39m=[32m""[39m
+                    [36m/>[39m
+                  [36m</div>[39m
+                  [36m<button[39m
+                    [33mtype[39m=[32m"submit"[39m
+                  [36m>[39m
+                    [0m绑定工作区[0m
+                  [36m</button>[39m
+                [36m</form>[39m
+              [36m</div>[39m
+            [36m</div>[39m
+          [36m</section>[39m
+          [36m<section[39m
+            [33maria-labelledby[39m=[32m"members-title-project-1"[39m
+            [33mclass[39m=[32m"stack"[39m
+          [36m>[39m
+            [36m<h3[39m
+              [33mid[39m=[32m"members-title-project-1"[39m
+            [36m>[39m
+              [0m项目成员[0m
+            [36m</h3>[39m
+            [36m<p[39m
+              [33mclass[39m=[32m"muted"[39m
+            [36m>[39m
+              [0mAgent 库为空，请先[0m
+              [36m<a[39m
+                [33mhref[39m=[32m"/team"[39m
+              [36m>[39m
+                [0m创建 Agent[0m
+              [36m</a>[39m
+              [0m。[0m
+            [36m</p>[39m
+            [36m<p[39m
+              [33mclass[39m=[32m"muted"[39m
+            [36m>[39m
+              [0m尚未组建项目成员。[0m
+            [36m</p>[39m
+          [36m</section>[39m
+        [36m</section>[39m
+      [36m</aside>[39m
+      [36m<main[39m
+        [33maria-label[39m=[32m"任务事件流"[39m
+        [33mclass[39m=[32m"cockpit-flow"[39m
+        [33mdata-open[39m=[32m"false"[39m
+        [33mdata-testid[39m=[32m"editor-surface"[39m
+        [33mid[39m=[32m"task-editor-surface"[39m
+      [36m>[39m
+        [36m<span[39m
+          [33mclass[39m=[32m"sr-only"[39m
+          [33mid[39m=[32m"task-editor-label"[39m
+        [36m>[39m
+          [0m任务编辑[0m
+        [36m</span>[39m
+        [36m<button[39m
+          [33maria-label[39m=[32m"关闭任务编辑"[39m
+          [33mclass[39m=[32m"drawer-close"[39m
+          [33mdata-dialog-close[39m=[32m"true"[39m
+          [33mtabindex[39m=[32m"-1"[39m
+          [33mtype[39m=[32m"button"[39m
+        [36m>[39m
+          [0m关闭[0m
+        [36m</button>[39m
+        [36m<div[39m
+          [33mclass[39m=[32m"panel-heading"[39m
+        [36m>[39m
+          [36m<span[39m
+            [33maria-hidden[39m=[32m"true"[39m
+            [33mclass[39m=[32m"agent-mark"[39m
+          [36m>[39m
+            [0mA[0m
+          [36m</span>[39m
+          [36m<div>[39m
+            [36m<p[39m
+              [33mclass[39m=[32m"eyebrow"[39m
+            [36m>[39m
+              [0m确定性示例 Agent[0m
+            [36m</p>[39m
+            [36m<h2[39m
+              [33mid[39m=[32m"tasks-title"[39m
+              [33mtabindex[39m=[32m"-1"[39m
+            [36m>[39m
+              [0mLaunch plan[0m
+            [36m</h2>[39m
+          [36m</div>[39m
+        [36m</div>[39m
+        [36m<section[39m
+          [33maria-labelledby[39m=[32m"mission-board-title-project-1"[39m
+          [33mclass[39m=[32m"stack mission-board"[39m
+          [33mid[39m=[32m"mission-board"[39m
+        [36m>[39m
+          [36m<h2[39m
+            [33mid[39m=[32m"mission-board-title-project-1"[39m
+          [36m>[39m
+            [0m使命看板[0m
+          [36m</h2>[39m
+          [36m<div[39m
+            [33mclass[39m=[32m"stack"[39m
+          [36m>[39m
+            [36m<p[39m
+              [33mclass[39m=[32m"state-message"[39m
+            [36m>[39m
+              [0m尚未创建使命。[0m
+            [36m</p>[39m
+            [36m<form[39m
+              [33mclass[39m=[32m"stack mission-form"[39m
+            [36m>[39m
+              [36m<div[39m
+                [33mclass[39m=[32m"form-field"[39m
+              [36m>[39m
+                [36m<label[39m
+                  [33mfor[39m=[32m"mission-title-project-1"[39m
+                [36m>[39m
+                  [0m使命标题[0m
+                [36m</label>[39m
+                [36m<input[39m
+                  [33mid[39m=[32m"mission-title-project-1"[39m
+                  [33mvalue[39m=[32m""[39m
+                [36m/>[39m
+              [36m</div>[39m
+              [36m<div[39m
+                [33mclass[39m=[32m"form-field"[39m
+              [36m>[39m
+                [36m<label[39m
+                  [33mfor[39m=[32m"mission-goal-project-1"[39m
+                [36m>[39m
+                  [0m使命目标[0m
+                [36m</label>[39m
+                [36m<textarea[39m
+                  [33mid[39m=[32m"mission-goal-project-1"[39m
+                [36m/>[39m
+              [36m</div>[39m
+              [36m<div[39m
+                [33mclass[39m=[32m"form-row"[39m
+              [36m>[39m
+                [36m<button[39m
+                  [33mtype[39m=[32m"submit"[39m
+                [36m>[39m
+                  [0m创建使命[0m
+                [36m</button>[39m
+              [36m</div>[39m
+            [36m</form>[39m
+          [36m</div>[39m
+        [36m</section>[39m
+        [36m<form[39m
+          [33mclass[39m=[32m"composer"[39m
+        [36m>[39m
+          [36m<div[39m
+            [33mclass[39m=[32m"form-row"[39m
+          [36m>[39m
+            [36m<div[39m
+              [33mclass[39m=[32m"form-field"[39m
+            [36m>[39m
+              [36m<label[39m
+                [33mfor[39m=[32m"task-goal"[39m
+              [36m>[39m
+                [0m任务目标[0m
+              [36m</label>[39m
+              [36m<input[39m
+                [33mid[39m=[32m"task-goal"[39m
+                [33mname[39m=[32m"goal"[39m
+                [33mvalue[39m=[32m""[39m
+              [36m/>[39m
+            [36m</div>[39m
+            [36m<button[39m
+              [33mdisabled[39m=[32m""[39m
+              [33mtype[39m=[32m"submit"[39m
+            [36m>[39m
+              [0m运行任务[0m
+            [36m</button>[39m
+          [36m</div>[39m
+        [36m</form>[39m
+        [36m<div[39m
+          [33mclass[39m=[32m"state-message"[39m
+        [36m>[39m
+          [36m<p[39m
+            [33mclass[39m=[32m"error-text"[39m
+            [33mrole[39m=[32m"alert"[39m
+          [36m>[39m
+            [0m无法加载任务，请稍后重试。[0m
+          [36m</p>[39m
+          [36m<button[39m
+            [33mtype[39m=[32m"button"[39m
+          [36m>[39m
+            [0m重试任务历史[0m
+          [36m</button>[39m
+        [36m</div>[39m
+        [36m<p[39m
+          [33maria-atomic[39m=[32m"true"[39m
+          [33maria-live[39m=[32m"polite"[39m
+          [33mclass[39m=[32m"muted"[39m
+          [33mrole[39m=[32m"status"[39m
+        [36m/>[39m
+      [36m</main>[39m
+      [36m<aside[39m
+        [33maria-label[39m=[32m"当前任务上下文"[39m
+        [33mclass[39m=[32m"cockpit-context"[39m
+        [33mdata-open[39m=[32m"false"[39m
+        [33mdata-testid[39m=[32m"context-surface"[39m
+        [33mid[39m=[32m"task-context-drawer"[39m
+      [36m>[39m
+        [36m<span[39m
+          [33mclass[39m=[32m"sr-only"[39m
+          [33mid[39m=[32m"task-context-label"[39m
+        [36m>[39m
+          [0m当前任务上下文[0m
+        [36m</span>[39m
+        [36m<button[39m
+          [33maria-label[39m=[32m"关闭当前任务上下文"[39m
+          [33mclass[39m=[32m"drawer-close"[39m
+          [33mdata-dialog-close[39m=[32m"true"[39m
+          [33mtabindex[39m=[32m"-1"[39m
+          [33mtype[39m=[32m"button"[39m
+        [36m>[39m
+          [0m关闭[0m
+        [36m</button>[39m
+        [36m<div>[39m
+          [36m<p[39m
+            [33mclass[39m=[32m"eyebrow"[39m
+          [36m>[39m
+            [0m项目资源[0m
+          [36m</p>[39m
+          [36m<h2>[39m
+            [0m项目上下文[0m
+          [36m</h2>[39m
+        [36m</div>[39m
+        [36m<div[39m
+          [33mclass[39m=[32m"stack project-context-panel"[39m
+        [36m>[39m
+          [36m<div[39m
+            [33maria-label[39m=[32m"项目上下文资源"[39m
+            [33mclass[39m=[32m"project-context-tabs"[39m
+            [33mrole[39m=[32m"tablist"[39m
+          [36m>[39m
+            [36m<button[39m
+              [33maria-controls[39m=[32m"project-context-memory-project-1"[39m
+              [33maria-selected[39m=[32m"true"[39m
+              [33mid[39m=[32m"project-context-tab-memory-project-1"[39m
+              [33mrole[39m=[32m"tab"[39m
+              [33mtabindex[39m=[32m"0"[39m
+              [33mtype[39m=[32m"button"[39m
+            [36m>[39m
+              [0m共享记忆[0m
+            [36m</button>[39m
+            [36m<button[39m
+              [33maria-controls[39m=[32m"project-context-context-project-1"[39m
+              [33maria-selected[39m=[32m"false"[39m
+              [33mid[39m=[32m"project-context-tab-context-project-1"[39m
+              [33mrole[39m=[32m"tab"[39m
+              [33mtabindex[39m=[32m"-1"[39m
+              [33mtype[39m=[32m"button"[39m
+            [36m>[39m
+              [0m上下文预览[0m
+            [36m</button>[39m
+            [36m<button[39m
+              [33maria-controls[39m=[32m"project-context-skeleton-project-1"[39m
+              [33maria-selected[39m=[32m"false"[39m
+              [33mid[39m=[32m"project-context-tab-skeleton-project-1"[39m
+              [33mrole[39m=[32m"tab"[39m
+              [33mtabindex[39m=[32m"-1"[39m
+              [33mtype[39m=[32m"button"[39m
+            [36m>[39m
+              [0m骨架运行[0m
+            [36m</button>[39m
+          [36m</div>[39m
+          [36m<div[39m
+            [33maria-labelledby[39m=[32m"project-context-tab-memory-project-1"[39m
+            [33mid[39m=[32m"project-context-memory-project-1"[39m
+            [33mrole[39m=[32m"tabpanel"[39m
+          [36m>[39m
+            [36m<section[39m
+              [33maria-labelledby[39m=[32m"memory-title-project-1"[39m
+              [33mclass[39m=[32m"stack"[39m
+            [36m>[39m
+              [36m<h2[39m
+                [33mid[39m=[32m"memory-title-project-1"[39m
+              [36m>[39m
+                [0m共享记忆[0m
+              [36m</h2>[39m
+              [36m<form[39m
+                [33mclass[39m=[32m"stack memory-form"[39m
+              [36m>[39m
+                [36m<fieldset>[39m
+                  [36m<legend>[39m
+                    [0m记忆类型[0m
+                  [36m</legend>[39m
+                  [36m<div[39m
+                    [33mclass[39m=[32m"memory-type-options"[39m
+                  [36m>[39m
+                    [36m<label[39m
+                      [33mclass[39m=[32m"check-row"[39m
+                    [36m>[39m
+                      [36m<input[39m
+                        [33mchecked[39m=[32m""[39m
+                        [33mname[39m=[32m"memory-type-project-1"[39m
+                        [33mtype[39m=[32m"radio"[39m
+                        [33mvalue[39m=[32m"goal"[39m
+                      [36m/>[39m
+                      [36m<span>[39m
+                        [0m目标[0m
+                      [36m</span>[39m
+                    [36m</label>[39m
+                    [36m<label[39m
+                      [33mclass[39m=[32m"check-row"[39m
+                    [36m>[39m
+                      [36m<input[39m
+                        [33mname[39m=[32m"memory-type-project-1"[39m
+                        [33mtype[39m=[32m"radio"[39m
+                        [33mvalue[39m=[32m"decision"[39m
+                      [36m/>[39m
+                      [36m<span>[39m
+                        [0m决策[0m
+                      [36m</span>[39m
+                    [36m</label>[39m
+                    [36m<label[39m
+                      [33mclass[39m=[32m"check-row"[39m
+                    [36m>[39m
+                      [36m<input[39m
+                        [33mname[39m=[32m"memory-type-project-1"[39m
+                        [33mtype[39m=[32m"radio"[39m
+                        [33mvalue[39m=[32m"fact"[39m
+                      [36m/>[39m
+                      [36m<span>[39m
+                        [0m事实[0m
+                      [36m</span>[39m
+                    [36m</label>[39m
+                    [36m<label[39m
+                      [33mclass[39m=[32m"check-row"[39m
+                    [36m>[39m
+                      [36m<input[39m
+                        [33mname[39m=[32m"memory-type-project-1"[39m
+                        [33mtype[39m=[32m"radio"[39m
+                        [33mvalue[39m=[32m"artifact"[39m
+                      [36m/>[39m
+                      [36m<span>[39m
+                        [0m产物[0m
+                      [36m</span>[39m
+                    [36m</label>[39m
+                  [36m</div>[39m
+                [36m</fieldset>[39m
+                [36m<div[39m
+                  [33mclass[39m=[32m"form-field"[39m
+                [36m>[39m
+                  [36m<label[39m
+                    [33mfor[39m=[32m"memory-content-project-1"[39m
+                  [36m>[39m
+                    [0m记忆正文[0m
+                  [36m</label>[39m
+                  [36m<textarea[39m
+                    [33mid[39m=[32m"memory-content-project-1"[39m
+                  [36m/>[39m
+                [36m</div>[39m
+                [36m<div[39m
+                  [33mclass[39m=[32m"form-field"[39m
+                [36m>[39m
+                  [36m<label[39m
+                    [33mfor[39m=[32m"memory-source-type-project-1"[39m
+                  [36m>[39m
+                    [0m来源类型[0m
+                  [36m</label>[39m
+                  [36m<select[39m
+                    [33mid[39m=[32m"memory-source-type-project-1"[39m
+                  [36m>[39m
+                    [36m<option[39m
+                      [33mvalue[39m=[32m"owner_input"[39m
+                    [36m>[39m
+                      [0mOwner 输入[0m
+                    [36m</option>[39m
+                    [36m<option[39m
+                      [33mvalue[39m=[32m"work_item"[39m
+                    [36m>[39m
+                      [0m任务[0m
+                    [36m</option>[39m
+                    [36m<option[39m
+                      [33mvalue[39m=[32m"artifact_path"[39m
+                    [36m>[39m
+                      [0m产物路径[0m
+                    [36m</option>[39m
+                  [36m</select>[39m
+                [36m</div>[39m
+                [36m<div[39m
+                  [33mclass[39m=[32m"form-field"[39m
+                [36m>[39m
+                  [36m<label[39m
+                    [33mfor[39m=[32m"memory-source-ref-project-1"[39m
+                  [36m>[39m
+                    [0m来源引用[0m
+                  [36m</label>[39m
+                  [36m<input[39m
+                    [33mid[39m=[32m"memory-source-ref-project-1"[39m
+                    [33mvalue[39m=[32m""[39m
+                  [36m/>[39m
+                [36m</div>[39m
+                [36m<div[39m
+                  [33mclass[39m=[32m"form-field"[39m
+                [36m>[39m
+                  [36m<label[39m
+                    [33mfor[39m=[32m"memory-supersede-project-1"[39m
+                  [36m>[39m
+                    [0m取代旧记忆[0m
+                  [36m</label>[39m
+                  [36m<select[39m
+                    [33mid[39m=[32m"memory-supersede-project-1"[39m
+                  [36m>[39m
+                    [36m<option[39m
+                      [33mvalue[39m=[32m""[39m
+                    [36m>[39m
+                      [0m不取代[0m
+                    [36m</option>[39m
+                  [36m</select>[39m
+                [36m</div>[39m
+                [36m<button[39m
+                  [33mtype[39m=[32m"submit"[39m
+                [36m>[39m
+                  [0m保存记忆[0m
+                [36m</button>[39m
+              [36m</form>[39m
+              [36m<button[39m
+                [33mdisabled[39m=[32m""[39m
+                [33mtype[39m=[32m"button"[39m
+              [36m>[39m
+                [0m查看历史记忆[0m
+              [36m</button>[39m
+              [36m<p[39m
+                [33maria-busy[39m=[32m"true"[39m
+                [33mclass[39m=[32m"state-message"[39m
+              [36m>[39m
+                [0m正在加载共享记忆…[0m
+              [36m</p>[39m
+            [36m</section>[39m
+          [36m</div>[39m
+        [36m</div>[39m
+      [36m</aside>[39m
+    [36m</div>[39m
+  [36m</div>[39m
+[36m</body>[39m
+
+Ignored nodes: comments, script, style
+[36m<body>[39m
+  [36m<div>[39m
+    [36m<div[39m
+      [33mclass[39m=[32m"collaboration-cockpit"[39m
+      [33mdata-testid[39m=[32m"collaboration-cockpit"[39m
+    [36m>[39m
+      [36m<div[39m
+        [33maria-label[39m=[32m"驾驶舱面板"[39m
+        [33mclass[39m=[32m"mobile-toolbar"[39m
+        [33mrole[39m=[32m"toolbar"[39m
+      [36m>[39m
+        [36m<button[39m
+          [33maria-controls[39m=[32m"project-navigation-drawer"[39m
+          [33maria-expanded[39m=[32m"false"[39m
+          [33maria-label[39m=[32m"打开项目导航"[39m
+          [33mtype[39m=[32m"button"[39m
+        [36m>[39m
+          [0m项目[0m
+        [36m</button>[39m
+        [36m<button[39m
+          [33maria-controls[39m=[32m"task-editor-surface"[39m
+          [33maria-expanded[39m=[32m"false"[39m
+          [33maria-label[39m=[32m"打开编辑"[39m
+          [33mtype[39m=[32m"button"[39m
+        [36m>[39m
+          [0m编辑[0m
+        [36m</button>[39m
+        [36m<button[39m
+          [33maria-controls[39m=[32m"task-context-drawer"[39m
+          [33maria-expanded[39m=[32m"false"[39m
+          [33maria-label[39m=[32m"打开当前任务上下文"[39m
+          [33mtype[39m=[32m"button"[39m
+        [36m>[39m
+          [0m上下文[0m
+        [36m</button>[39m
+      [36m</div>[39m
+      [36m<aside[39m
+        [33maria-label[39m=[32m"项目导航"[39m
+        [33mclass[39m=[32m"cockpit-sidebar"[39m
+        [33mdata-open[39m=[32m"false"[39m
+        [33mdata-testid[39m=[32m"project-surface"[39m
+        [33mid[39m=[32m"project-navigation-drawer"[39m
+      [36m>[39m
+        [36m<span[39m
+          [33mclass[39m=[32m"sr-only"[39m
+          [33mid[39m=[32m"project-navigation-label"[39m
+        [36m>[39m
+          [0m项目导航[0m
+        [36m</span>[39m
+        [36m<button[39m
+          [33maria-label[39m=[32m"关闭项目导航"[39m
+          [33mclass[39m=[32m"drawer-close"[39m
+          [33mtabindex[39m=[32m"-1"[39m
+          [33mtype[39m=[32m"button"[39m
+        [36m>[39m
+          [0m关闭[0m
+        [36m</button>[39m
+        [36m<div[39m
+          [33mclass[39m=[32m"product-identity"[39m
+        [36m>[39m
+          [36m<span[39m
+            [33maria-hidden[39m=[32m"true"[39m
+            [33mclass[39m=[32m"product-mark"[39m
+          [36m>[39m
+            [0mC[0m
+          [36m</span>[39m
+          [36m<div>[39m
+            [36m<p[39m
+              [33mclass[39m=[32m"eyebrow"[39m
+            [36m>[39m
+              [0m协作驾驶舱[0m
+            [36m</p>[39m
+            [36m<h1>[39m
+              [0mCool AI[0m
+            [36m</h1>[39m
+          [36m</div>[39m
+        [36m</div>[39m
+        [36m<nav[39m
+          [33maria-label[39m=[32m"主导航"[39m
+        [36m>[39m
+          [36m<ul[39m
+            [33mclass[39m=[32m"project-list"[39m
+          [36m>[39m
+            [36m<li>[39m
+              [36m<a[39m
+                [33maria-current[39m=[32m"page"[39m
+                [33mhref[39m=[32m"/"[39m
+              [36m>[39m
+                [0m工作[0m
+              [36m</a>[39m
+            [36m</li>[39m
+            [36m<li>[39m
+              [36m<a[39m
+                [33mhref[39m=[32m"/team"[39m
+              [36m>[39m
+                [0m团队[0m
+              [36m</a>[39m
+            [36m</li>[39m
+          [36m</ul>[39m
+        [36m</nav>[39m
+        [36m<section[39m
+          [33maria-labelledby[39m=[32m"projects-title"[39m
+          [33mclass[39m=[32m"stack"[39m
+        [36m>[39m
+          [36m<h2[39m
+            [33mid[39m=[32m"projects-title"[39m
+          [36m>[39m
+            [0m项目[0m
+          [36m</h2>[39m
+          [36m<form[39m
+            [33mclass[39m=[32m"stack"[39m
+          [36m>[39m
+            [36m<div[39m
+              [33mclass[39m=[32m"form-field"[39m
+            [36m>[39m
+              [36m<label[39m
+                [33mfor[39m=[32m"project-name"[39m
+              [36m>[39m
+                [0m项目名称[0m
+              [36m</label>[39m
+              [36m<input[39m
+                [33mid[39m=[32m"project-name"[39m
+                [33mname[39m=[32m"name"[39m
+                [33mvalue[39m=[32m""[39m
+              [36m/>[39m
+            [36m</div>[39m
+            [36m<button[39m
+              [33mtype[39m=[32m"submit"[39m
+            [36m>[39m
+              [0m创建项目[0m
+            [36m</button>[39m
+          [36m</form>[39m
+          [36m<nav[39m
+            [33maria-label[39m=[32m"项目"[39m
+          [36m>[39m
+            [36m<ul[39m
+              [33mclass[39m=[32m"project-list"[39m
+            [36m>[39m
+              [36m<li>[39m
+                [36m<button[39m
+                  [33maria-current[39m=[32m"page"[39m
+                  [33mtype[39m=[32m"button"[39m
+                [36m>[39m
+                  [0mLaunch plan[0m
+                [36m</button>[39m
+              [36m</li>[39m
+            [36m</ul>[39m
+          [36m</nav>[39m
+        [36m</section>[39m
+        [36m<section[39m
+          [33maria-labelledby[39m=[32m"project-setup-title-project-1"[39m
+          [33mclass[39m=[32m"stack project-setup"[39m
+        [36m>[39m
+          [36m<h2[39m
+            [33mid[39m=[32m"project-setup-title-project-1"[39m
+          [36m>[39m
+            [0m项目设置[0m
+          [36m</h2>[39m
+          [36m<section[39m
+            [33maria-labelledby[39m=[32m"workspace-title-project-1"[39m
+            [33mclass[39m=[32m"stack"[39m
+          [36m>[39m
+            [36m<div>[39m
+              [36m<div[39m
+                [33mclass[39m=[32m"stack"[39m
+              [36m>[39m
+                [36m<h3[39m
+                  [33mid[39m=[32m"workspace-title-project-1"[39m
+                [36m>[39m
+                  [0m本地工作区[0m
+                [36m</h3>[39m
+                [36m<p[39m
+                  [33mclass[39m=[32m"muted"[39m
+                [36m>[39m
+                  [0m尚未绑定本地工作区。[0m
+                [36m</p>[39m
+                [36m<form[39m
+                  [33mclass[39m=[32m"stack"[39m
+                [36m>[39m
+                  [36m<div[39m
+                    [33mclass[39m=[32m"form-field"[39m
+                  [36m>[39m
+                    [36m<label[39m
+                      [33mfor[39m=[32m"workspace-path-project-1"[39m
+                    [36m>[39m
+                      [0m本地工作区路径[0m
+                    [36m</label>[39m
+                    [36m<input[39m
+                      [33mid[39m=[32m"workspace-path-project-1"[39m
+                      [33mname[39m=[32m"workspacePath"[39m
+                      [33mvalue[39m=[32m""[39m
+                    [36m/>[39m
+                  [36m</div>[39m
+                  [36m<button[39m
+                    [33mtype[39m=[32m"submit"[39m
+                  [36m>[39m
+                    [0m绑定工作区[0m
+                  [36m</button>[39m
+                [36m</form>[39m
+              [36m</div>[39m
+            [36m</div>[39m
+          [36m</section>[39m
+          [36m<section[39m
+            [33maria-labelledby[39m=[32m"members-title-project-1"[39m
+            [33mclass[39m=[32m"stack"[39m
+          [36m>[39m
+            [36m<h3[39m
+              [33mid[39m=[32m"members-title-project-1"[39m
+            [36m>[39m
+              [0m项目成员[0m
+            [36m</h3>[39m
+            [36m<p[39m
+              [33mclass[39m=[32m"muted"[39m
+            [36m>[39m
+              [0mAgent 库为空，请先[0m
+              [36m<a[39m
+                [33mhref[39m=[32m"/team"[39m
+              [36m>[39m
+                [0m创建 Agent[0m
+              [36m</a>[39m
+              [0m。[0m
+            [36m</p>[39m
+            [36m<p[39m
+              [33mclass[39m=[32m"muted"[39m
+            [36m>[39m
+              [0m尚未组建项目成员。[0m
+            [36m</p>[39m
+          [36m</section>[39m
+        [36m</section>[39m
+      [36m</aside>[39m
+      [36m<main[39m
+        [33maria-label[39m=[32m"任务事件流"[39m
+        [33mclass[39m=[32m"cockpit-flow"[39m
+        [33mdata-open[39m=[32m"false"[39m
+        [33mdata-testid[39m=[32m"editor-surface"[39m
+        [33mid[39m=[32m"task-editor-surface"[39m
+      [36m>[39m
+        [36m<span[39m
+          [33mclass[39m=[32m"sr-only"[39m
+          [33mid[39m=[32m"task-editor-label"[39m
+        [36m>[39m
+          [0m任务编辑[0m
+        [36m</span>[39m
+        [36m<button[39m
+          [33maria-label[39m=[32m"关闭任务编辑"[39m
+          [33mclass[39m=[32m"drawer-close"[39m
+          [33mdata-dialog-close[39m=[32m"true"[39m
+          [33mtabindex[39m=[32m"-1"[39m
+          [33mtype[39m=[32m"button"[39m
+        [36m>[39m
+          [0m关闭[0m
+        [36m</button>[39m
+        [36m<div[39m
+          [33mclass[39m=[32m"panel-heading"[39m
+        [36m>[39m
+          [36m<span[39m
+            [33maria-hidden[39m=[32m"true"[39m
+            [33mclass[39m=[32m"agent-mark"[39m
+          [36m>[39m
+            [0mA[0m
+          [36m</span>[39m
+          [36m<div>[39m
+            [36m<p[39m
+              [33mclass[39m=[32m"eyebrow"[39m
+            [36m>[39m
+              [0m确定性示例 Agent[0m
+            [36m</p>[39m
+            [36m<h2[39m
+              [33mid[39m=[32m"tasks-title"[39m
+              [33mtabindex[39m=[32m"-1"[39m
+            [36m>[39m
+              [0mLaunch plan[0m
+            [36m</h2>[39m
+          [36m</div>[39m
+        [36m</div>[39m
+        [36m<section[39m
+          [33maria-labelledby[39m=[32m"mission-board-title-project-1"[39m
+          [33mclass[39m=[32m"stack mission-board"[39m
+          [33mid[39m=[32m"mission-board"[39m
+        [36m>[39m
+          [36m<h2[39m
+            [33mid[39m=[32m"mission-board-title-project-1"[39m
+          [36m>[39m
+            [0m使命看板[0m
+          [36m</h2>[39m
+          [36m<div[39m
+            [33mclass[39m=[32m"stack"[39m
+          [36m>[39m
+            [36m<p[39m
+              [33mclass[39m=[32m"state-message"[39m
+            [36m>[39m
+              [0m尚未创建使命。[0m
+            [36m</p>[39m
+            [36m<form[39m
+              [33mclass[39m=[32m"stack mission-form"[39m
+            [36m>[39m
+              [36m<div[39m
+                [33mclass[39m=[32m"form-field"[39m
+              [36m>[39m
+                [36m<label[39m
+                  [33mfor[39m=[32m"mission-title-project-1"[39m
+                [36m>[39m
+                  [0m使命标题[0m
+                [36m</label>[39m
+                [36m<input[39m
+                  [33mid[39m=[32m"mission-title-project-1"[39m
+                  [33mvalue[39m=[32m""[39m
+                [36m/>[39m
+              [36m</div>[39m
+              [36m<div[39m
+                [33mclass[39m=[32m"form-field"[39m
+              [36m>[39m
+                [36m<label[39m
+                  [33mfor[39m=[32m"mission-goal-project-1"[39m
+                [36m>[39m
+                  [0m使命目标[0m
+                [36m</label>[39m
+                [36m<textarea[39m
+                  [33mid[39m=[32m"mission-goal-project-1"[39m
+                [36m/>[39m
+              [36m</div>[39m
+              [36m<div[39m
+                [33mclass[39m=[32m"form-row"[39m
+              [36m>[39m
+                [36m<button[39m
+                  [33mtype[39m=[32m"submit"[39m
+                [36m>[39m
+                  [0m创建使命[0m
+                [36m</button>[39m
+              [36m</div>[39m
+            [36m</form>[39m
+          [36m</div>[39m
+        [36m</section>[39m
+        [36m<form[39m
+          [33mclass[39m=[32m"composer"[39m
+        [36m>[39m
+          [36m<div[39m
+            [33mclass[39m=[32m"form-row"[39m
+          [36m>[39m
+            [36m<div[39m
+              [33mclass[39m=[32m"form-field"[39m
+            [36m>[39m
+              [36m<label[39m
+                [33mfor[39m=[32m"task-goal"[39m
+              [36m>[39m
+                [0m任务目标[0m
+              [36m</label>[39m
+              [36m<input[39m
+                [33mid[39m=[32m"task-goal"[39m
+                [33mname[39m=[32m"goal"[39m
+                [33mvalue[39m=[32m""[39m
+              [36m/>[39m
+            [36m</div>[39m
+            [36m<button[39m
+              [33mdisabled[39m=[32m""[39m
+              [33mtype[39m=[32m"submit"[39m
+            [36m>[39m
+              [0m运行任务[0m
+            [36m</button>[39m
+          [36m</div>[39m
+        [36m</form>[39m
+        [36m<div[39m
+          [33mclass[39m=[32m"state-message"[39m
+        [36m>[39m
+          [36m<p[39m
+            [33mclass[39m=[32m"error-text"[39m
+            [33mrole[39m=[32m"alert"[39m
+          [36m>[39m
+            [0m无法加载任务，请稍后重试。[0m
+          [36m</p>[39m
+          [36m<button[39m
+            [33mtype[39m=[32m"button"[39m
+          [36m>[39m
+            [0m重试任务历史[0m
+          [36m</button>[39m
+        [36m</div>[39m
+        [36m<p[39m
+          [33maria-atomic[39m=[32m"true"[39m
+          [33maria-live[39m=[32m"polite"[39m
+          [33mclass[39m=[32m"muted"[39m
+          [33mrole[39m=[32m"status"[39m
+        [36m/>[39m
+      [36m</main>[39m
+      [36m<aside[39m
+        [33maria-label[39m=[32m"当前任务上下文"[39m
+        [33mclass[39m=[32m"cockpit-context"[39m
+        [33mdata-open[39m=[32m"false"[39m
+        [33mdata-testid[39m=[32m"context-surface"[39m
+        [33mid[39m=[32m"task-context-drawer"[39m
+      [36m>[39m
+        [36m<span[39m
+          [33mclass[39m=[32m"sr-only"[39m
+          [33mid[39m=[32m"task-context-label"[39m
+        [36m>[39m
+          [0m当前任务上下文[0m
+        [36m</span>[39m
+        [36m<button[39m
+          [33maria-label[39m=[32m"关闭当前任务上下文"[39m
+          [33mclass[39m=[32m"drawer-close"[39m
+          [33mdata-dialog-close[39m=[32m"true"[39m
+          [33mtabindex[39m=[32m"-1"[39m
+          [33mtype[39m=[32m"button"[39m
+        [36m>[39m
+          [0m关闭[0m
+        [36m</button>[39m
+        [36m<div>[39m
+          [36m<p[39m
+            [33mclass[39m=[32m"eyebrow"[39m
+          [36m>[39m
+            [0m项目资源[0m
+          [36m</p>[39m
+          [36m<h2>[39m
+            [0m项目上下文[0m
+          [36m</h2>[39m
+        [36m</div>[39m
+        [36m<div[39m
+          [33mclass[39m=[32m"stack project-context-panel"[39m
+        [36m>[39m
+          [36m<div[39m
+            [33maria-label[39m=[32m"项目上下文资源"[39m
+            [33mclass[39m=[32m"project-context-tabs"[39m
+            [33mrole[39m=[32m"tablist"[39m
+          [36m>[39m
+            [36m<button[39m
+              [33maria-controls[39m=[32m"project-context-memory-project-1"[39m
+              [33maria-selected[39m=[32m"true"[39m
+              [33mid[39m=[32m"project-context-tab-memory-project-1"[39m
+              [33mrole[39m=[32m"tab"[39m
+              [33mtabindex[39m=[32m"0"[39m
+              [33mtype[39m=[32m"button"[39m
+            [36m>[39m
+              [0m共享记忆[0m
+            [36m</button>[39m
+            [36m<button[39m
+              [33maria-controls[39m=[32m"project-context-context-project-1"[39m
+              [33maria-selected[39m=[32m"false"[39m
+              [33mid[39m=[32m"project-context-tab-context-project-1"[39m
+              [33mrole[39m=[32m"tab"[39m
+              [33mtabindex[39m=[32m"-1"[39m
+              [33mtype[39m=[32m"button"[39m
+            [36m>[39m
+              [0m上下文预览[0m
+            [36m</button>[39m
+            [36m<button[39m
+              [33maria-controls[39m=[32m"project-context-skeleton-project-1"[39m
+              [33maria-selected[39m=[32m"false"[39m
+              [33mid[39m=[32m"project-context-tab-skeleton-project-1"[39m
+              [33mrole[39m=[32m"tab"[39m
+              [33mtabindex[39m=[32m"-1"[39m
+              [33mtype[39m=[32m"button"[39m
+            [36m>[39m
+              [0m骨架运行[0m
+            [36m</button>[39m
+          [36m</div>[39m
+          [36m<div[39m
+            [33maria-labelledby[39m=[32m"project-context-tab-memory-project-1"[39m
+            [33mid[39m=[32m"project-context-memory-project-1"[39m
+            [33mrole[39m=[32m"tabpanel"[39m
+          [36m>[39m
+            [36m<section[39m
+              [33maria-labelledby[39m=[32m"memory-title-project-1"[39m
+              [33mclass[39m=[32m"stack"[39m
+            [36m>[39m
+              [36m<h2[39m
+                [33mid[39m=[32m"memory-title-project-1"[39m
+              [36m>[39m
+                [0m共享记忆[0m
+              [36m</h2>[39m
+              [36m<form[39m
+                [33mclass[39m=[32m"stack memory-form"[39m
+              [36m>[39m
+                [36m<fieldset>[39m
+                  [36m<legend>[39m
+                    [0m记忆类型[0m
+                  [36m</legend>[39m
+                  [36m<div[39m
+                    [33mclass[39m=[32m"memory-type-options"[39m
+                  [36m>[39m
+                    [36m<label[39m
+                      [33mclass[39m=[32m"check-row"[39m
+                    [36m>[39m
+                      [36m<input[39m
+                        [33mchecked[39m=[32m""[39m
+                        [33mname[39m=[32m"memory-type-project-1"[39m
+                        [33mtype[39m=[32m"radio"[39m
+                        [33mvalue[39m=[32m"goal"[39m
+                      [36m/>[39m
+                      [36m<span>[39m
+                        [0m目标[0m
+                      [36m</span>[39m
+                    [36m</label>[39m
+                    [36m<label[39m
+                      [33mclass[39m=[32m"check-row"[39m
+                    [36m>[39m
+                      [36m<input[39m
+                        [33mname[39m=[32m"memory-type-project-1"[39m
+                        [33mtype[39m=[32m"radio"[39m
+                        [33mvalue[39m=[32m"decision"[39m
+                      [36m/>[39m
+                      [36m<span>[39m
+                        [0m决策[0m
+                      [36m</span>[39m
+                    [36m</label>[39m
+                    [36m<label[39m
+                      [33mclass[39m=[32m"check-row"[39m
+                    [36m>[39m
+                      [36m<input[39m
+                        [33mname[39m=[32m"memory-type-project-1"[39m
+                        [33mtype[39m=[32m"radio"[39m
+                        [33mvalue[39m=[32m"fact"[39m
+                      [36m/>[39m
+                      [36m<span>[39m
+                        [0m事实[0m
+                      [36m</span>[39m
+                    [36m</label>[39m
+                    [36m<label[39m
+                      [33mclass[39m=[32m"check-row"[39m
+                    [36m>[39m
+                      [36m<input[39m
+                        [33mname[39m=[32m"memory-type-project-1"[39m
+                        [33mtype[39m=[32m"radio"[39m
+                        [33mvalue[39m=[32m"artifact"[39m
+                      [36m/>[39m
+                      [36m<span>[39m
+                        [0m产物[0m
+                      [36m</span>[39m
+                    [36m</label>[39m
+                  [36m</div>[39m
+                [36m</fieldset>[39m
+                [36m<div[39m
+                  [33mclass[39m=[32m"form-field"[39m
+                [36m>[39m
+                  [36m<label[39m
+                    [33mfor[39m=[32m"memory-content-project-1"[39m
+                  [36m>[39m
+                    [0m记忆正文[0m
+                  [36m</label>[39m
+                  [36m<textarea[39m
+                    [33mid[39m=[32m"memory-content-project-1"[39m
+                  [36m/>[39m
+                [36m</div>[39m
+                [36m<div[39m
+                  [33mclass[39m=[32m"form-field"[39m
+                [36m>[39m
+                  [36m<label[39m
+                    [33mfor[39m=[32m"memory-source-type-project-1"[39m
+                  [36m>[39m
+                    [0m来源类型[0m
+                  [36m</label>[39m
+                  [36m<select[39m
+                    [33mid[39m=[32m"memory-source-type-project-1"[39m
+                  [36m>[39m
+                    [36m<option[39m
+                      [33mvalue[39m=[32m"owner_input"[39m
+                    [36m>[39m
+                      [0mOwner 输入[0m
+                    [36m</option>[39m
+                    [36m<option[39m
+                      [33mvalue[39m=[32m"work_item"[39m
+                    [36m>[39m
+                      [0m任务[0m
+                    [36m</option>[39m
+                    [36m<option[39m
+                      [33mvalue[39m=[32m"artifact_path"[39m
+                    [36m>[39m
+                      [0m产物路径[0m
+                    [36m</option>[39m
+                  [36m</select>[39m
+                [36m</div>[39m
+                [36m<div[39m
+                  [33mclass[39m=[32m"form-field"[39m
+                [36m>[39m
+                  [36m<label[39m
+                    [33mfor[39m=[32m"memory-source-ref-project-1"[39m
+                  [36m>[39m
+                    [0m来源引用[0m
+                  [36m</label>[39m
+                  [36m<input[39m
+                    [33mid[39m=[32m"memory-source-ref-project-1"[39m
+                    [33mvalue[39m=[32m""[39m
+                  [36m/>[39m
+                [36m</div>[39m
+                [36m<div[39m
+                  [33mclass[39m=[32m"form-field"[39m
+                [36m>[39m
+                  [36m<label[39m
+                    [33mfor[39m=[32m"memory-supersede-project-1"[39m
+                  [36m>[39m
+                    [0m取代旧记忆[0m
+                  [36m</label>[39m
+                  [36m<select[39m
+                    [33mid[39m=[32m"memory-supersede-project-1"[39m
+                  [36m>[39m
+                    [36m<option[39m
+                      [33mvalue[39m=[32m""[39m
+                    [36m>[39m
+                      [0m不取代[0m
+                    [36m</option>[39m
+                  [36m</select>[39m
+                [36m</div>[39m
+                [36m<button[39m
+                  [33mtype[39m=[32m"submit"[39m
+                [36m>[39m
+                  [0m保存记忆[0m
+                [36m</button>[39m
+              [36m</form>[39m
+              [36m<button[39m
+                [33mdisabled[39m=[32m""[39m
+                [33mtype[39m=[32m"button"[39m
+              [36m>[39m
+                [0m查看历史记忆[0m
+              [36m</button>[39m
+              [36m<p[39m
+                [33maria-busy[39m=[32m"true"[39m
+                [33mclass[39m=[32m"state-message"[39m
+              [36m>[39m
+                [0m正在加载共享记忆…[0m
+              [36m</p>[39m
+            [36m</section>[39m
+          [36m</div>[39m
+        [36m</div>[39m
+      [36m</aside>[39m
+    [36m</div>[39m
+  [36m</div>[39m
+[36m</body>[39m
+ ❯ waitForWrapper node_modules/@testing-library/dom/dist/wait-for.js:163:27
+ ❯ node_modules/@testing-library/dom/dist/query-helpers.js:86:33
+ ❯ tests/task-flow.test.tsx:65:25
+     63|     render(<ProjectPanel />);
+     64|
+     65|     expect(await screen.findByText("正在加载任务历史…")).toBeInTheDocument();
+       |                         ^
+     66|     loaded.resolve(
+     67|       Response.json({
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[5/10]⎯
+
+ FAIL  tests/task-flow.test.tsx > task event flow > calls create, start, and execute in order while rendering each persisted state
+TestingLibraryElementError: Unable to find an accessible element with the role "button" and name "运行任务"
+
+There are no accessible roles. But there might be some inaccessible roles. If you wish to access them, then set the `hidden` option to `true`. Learn more about this here: https://testing-library.com/docs/dom-testing-library/api-queries#byrole
+
+Ignored nodes: comments, script, style
+[36m<body>[39m
+  [36m<div />[39m
+[36m</body>[39m
+ ❯ Object.getElementError node_modules/@testing-library/dom/dist/config.js:37:19
+ ❯ node_modules/@testing-library/dom/dist/query-helpers.js:76:38
+ ❯ node_modules/@testing-library/dom/dist/query-helpers.js:52:17
+ ❯ node_modules/@testing-library/dom/dist/query-helpers.js:95:19
+ ❯ tests/task-flow.test.tsx:117:29
+    115|     await screen.findByText("暂无任务。输入目标即可运行示例 Agent。");
+    116|     await user.type(screen.getByLabelText("任务目标"), "Prepare launch not…
+    117|     await user.click(screen.getByRole("button", { name: "运行任务" }));
+       |                             ^
+    118|
+    119|     expect(await screen.findByText("任务已排队。")).toBeInTheDocument();
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[6/10]⎯
+
+ FAIL  tests/task-flow.test.tsx > task event flow > offers retry after a load error
+Error: expect(element).toHaveTextContent()
+
+Expected element to have text content:
+  服务暂时不可用，请稍后重试。
+Received:
+  无法加载共享记忆，请重试。
+ ❯ tests/task-flow.test.tsx:166:46
+    164|     render(<ProjectPanel />);
+    165|
+    166|     expect(await screen.findByRole("alert")).toHaveTextContent("服务暂时不可…
+       |                                              ^
+    167|     await user.click(screen.getByRole("button", { name: "重试任务历史" }));
+    168|     expect(await screen.findByText("暂无任务。输入目标即可运行示例 Agent。")).toBeInTh…
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[7/10]⎯
+
+ FAIL  tests/task-flow.test.tsx > task event flow > renders a persisted failed event and preserves the goal after execution fails
+TestingLibraryElementError: Unable to find a label with the text of: 任务目标
+
+Ignored nodes: comments, script, style
+[36m<body>[39m
+  [36m<div />[39m
+[36m</body>[39m
+ ❯ Object.getElementError node_modules/@testing-library/dom/dist/config.js:37:19
+ ❯ getAllByLabelText node_modules/@testing-library/dom/dist/queries/label-text.js:111:38
+ ❯ node_modules/@testing-library/dom/dist/query-helpers.js:52:17
+ ❯ node_modules/@testing-library/dom/dist/query-helpers.js:95:19
+ ❯ tests/task-flow.test.tsx:197:28
+    195|     render(<ProjectPanel />);
+    196|     await screen.findByText("暂无任务。输入目标即可运行示例 Agent。");
+    197|     await user.type(screen.getByLabelText("任务目标"), "Prepare launch not…
+       |                            ^
+    198|     await user.click(screen.getByRole("button", { name: "运行任务" }));
+    199|
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[8/10]⎯
+
+ FAIL  tests/visual-tokens.test.ts > visual token discipline > keeps raw visual values out of component styles
+AssertionError: Raw visual value is not tokenized: grid-template-columns: repeat(4, minmax(0, 1fr));: expected false to be true // Object.is equality
+
+- Expected
++ Received
+
+- true
++ false
+
+ ❯ tests/visual-tokens.test.ts:72:9
+     70|         value.includes("var(") || /^(?:0|auto|none|inherit)$/.test(val…
+     71|         `Raw visual value is not tokenized: ${match[0].trim()}`,
+     72|       ).toBe(true);
+       |         ^
+     73|     }
+     74|   });
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[9/10]⎯
+
+ FAIL  tests/workspace-slice.test.tsx > workspace binding vertical slice > validates a real directory, persists its canonical path, and reloads it
+TestingLibraryElementError: Found multiple elements with the role "alert"
+
+Here are the matching elements:
+
+Ignored nodes: comments, script, style
+[36m<p[39m
+  [33mclass[39m=[32m"error-text"[39m
+  [33mid[39m=[32m"workspace-error-4c090528-ad23-4e1d-8a88-f0cb7cb70b01"[39m
+  [33mrole[39m=[32m"alert"[39m
+[36m>[39m
+  [0m请输入绝对目录路径。[0m
+[36m</p>[39m
+
+Ignored nodes: comments, script, style
+[36m<p[39m
+  [33mclass[39m=[32m"error-text"[39m
+  [33mid[39m=[32m"memory-error-4c090528-ad23-4e1d-8a88-f0cb7cb70b01"[39m
+  [33mrole[39m=[32m"alert"[39m
+[36m>[39m
+  [0m无法加载共享记忆，请重试。[0m
+[36m</p>[39m
+
+(If this is intentional, then use the `*AllBy*` variant of the query (like `queryAllByText`, `getAllByText`, or `findAllByText`)).
+
+Ignored nodes: comments, script, style
+[36m<body>[39m
+  [36m<div>[39m
+    [36m<div[39m
+      [33mclass[39m=[32m"collaboration-cockpit"[39m
+      [33mdata-testid[39m=[32m"collaboration-cockpit"[39m
+    [36m>[39m
+      [36m<div[39m
+        [33maria-label[39m=[32m"驾驶舱面板"[39m
+        [33mclass[39m=[32m"mobile-toolbar"[39m
+        [33mrole[39m=[32m"toolbar"[39m
+      [36m>[39m
+        [36m<button[39m
+          [33maria-controls[39m=[32m"project-navigation-drawer"[39m
+          [33maria-expanded[39m=[32m"false"[39m
+          [33maria-label[39m=[32m"打开项目导航"[39m
+          [33mtype[39m=[32m"button"[39m
+        [36m>[39m
+          [0m项目[0m
+        [36m</button>[39m
+        [36m<button[39m
+          [33maria-controls[39m=[32m"task-editor-surface"[39m
+          [33maria-expanded[39m=[32m"false"[39m
+          [33maria-label[39m=[32m"打开编辑"[39m
+          [33mtype[39m=[32m"button"[39m
+        [36m>[39m
+          [0m编辑[0m
+        [36m</button>[39m
+        [36m<button[39m
+          [33maria-controls[39m=[32m"task-context-drawer"[39m
+          [33maria-expanded[39m=[32m"false"[39m
+          [33maria-label[39m=[32m"打开当前任务上下文"[39m
+          [33mtype[39m=[32m"button"[39m
+        [36m>[39m
+          [0m上下文[0m
+        [36m</button>[39m
+      [36m</div>[39m
+      [36m<aside[39m
+        [33maria-label[39m=[32m"项目导航"[39m
+        [33mclass[39m=[32m"cockpit-sidebar"[39m
+        [33mdata-open[39m=[32m"false"[39m
+        [33mdata-testid[39m=[32m"project-surface"[39m
+        [33mid[39m=[32m"project-navigation-drawer"[39m
+      [36m>[39m
+        [36m<span[39m
+          [33mclass[39m=[32m"sr-only"[39m
+          [33mid[39m=[32m"project-navigation-label"[39m
+        [36m>[39m
+          [0m项目导航[0m
+        [36m</span>[39m
+        [36m<button[39m
+          [33maria-label[39m=[32m"关闭项目导航"[39m
+          [33mclass[39m=[32m"drawer-close"[39m
+          [33mtabindex[39m=[32m"-1"[39m
+          [33mtype[39m=[32m"button"[39m
+        [36m>[39m
+          [0m关闭[0m
+        [36m</button>[39m
+        [36m<div[39m
+          [33mclass[39m=[32m"product-identity"[39m
+        [36m>[39m
+          [36m<span[39m
+            [33maria-hidden[39m=[32m"true"[39m
+            [33mclass[39m=[32m"product-mark"[39m
+          [36m>[39m
+            [0mC[0m
+          [36m</span>[39m
+          [36m<div>[39m
+            [36m<p[39m
+              [33mclass[39m=[32m"eyebrow"[39m
+            [36m>[39m
+              [0m协作驾驶舱[0m
+            [36m</p>[39m
+            [36m<h1>[39m
+              [0mCool AI[0m
+            [36m</h1>[39m
+          [36m</div>[39m
+        [36m</div>[39m
+        [36m<nav[39m
+          [33maria-label[39m=[32m"主导航"[39m
+        [36m>[39m
+          [36m<ul[39m
+            [33mclass[39m=[32m"project-list"[39m
+          [36m>[39m
+            [36m<li>[39m
+              [36m<a[39m
+                [33maria-current[39m=[32m"page"[39m
+                [33mhref[39m=[32m"/"[39m
+              [36m>[39m
+                [0m工作[0m
+              [36m</a>[39m
+            [36m</li>[39m
+            [36m<li>[39m
+              [36m<a[39m
+                [33mhref[39m=[32m"/team"[39m
+              [36m>[39m
+                [0m团队[0m
+              [36m</a>[39m
+            [36m</li>[39m
+          [36m</ul>[39m
+        [36m</nav>[39m
+        [36m<section[39m
+          [33maria-labelledby[39m=[32m"projects-title"[39m
+          [33mclass[39m=[32m"stack"[39m
+        [36m>[39m
+          [36m<h2[39m
+            [33mid[39m=[32m"projects-title"[39m
+          [36m>[39m
+            [0m项目[0m
+          [36m</h2>[39m
+          [36m<form[39m
+            [33mclass[39m=[32m"stack"[39m
+          [36m>[39m
+            [36m<div[39m
+              [33mclass[39m=[32m"form-field"[39m
+            [36m>[39m
+              [36m<label[39m
+                [33mfor[39m=[32m"project-name"[39m
+              [36m>[39m
+                [0m项目名称[0m
+              [36m</label>[39m
+              [36m<input[39m
+                [33mid[39m=[32m"project-name"[39m
+                [33mname[39m=[32m"name"[39m
+                [33mvalue[39m=[32m""[39m
+              [36m/>[39m
+            [36m</div>[39m
+            [36m<button[39m
+              [33mtype[39m=[32m"submit"[39m
+            [36m>[39m
+              [0m创建项目[0m
+            [36m</button>[39m
+          [36m</form>[39m
+          [36m<nav[39m
+            [33maria-label[39m=[32m"项目"[39m
+          [36m>[39m
+            [36m<ul[39m
+              [33mclass[39m=[32m"project-list"[39m
+            [36m>[39m
+              [36m<li>[39m
+                [36m<button[39m
+                  [33maria-current[39m=[32m"page"[39m
+                  [33mtype[39m=[32m"button"[39m
+                [36m>[39m
+                  [0mWorkspace project[0m
+                [36m</button>[39m
+              [36m</li>[39m
+            [36m</ul>[39m
+          [36m</nav>[39m
+        [36m</section>[39m
+        [36m<section[39m
+          [33maria-labelledby[39m=[32m"project-setup-title-4c090528-ad23-4e1d-8a88-f0cb7cb70b01"[39m
+          [33mclass[39m=[32m"stack project-setup"[39m
+        [36m>[39m
+          [36m<h2[39m
+            [33mid[39m=[32m"project-setup-title-4c090528-ad23-4e1d-8a88-f0cb7cb70b01"[39m
+          [36m>[39m
+            [0m项目设置[0m
+          [36m</h2>[39m
+          [36m<section[39m
+            [33maria-labelledby[39m=[32m"workspace-title-4c090528-ad23-4e1d-8a88-f0cb7cb70b01"[39m
+            [33mclass[39m=[32m"stack"[39m
+          [36m>[39m
+            [36m<div>[39m
+              [36m<div[39m
+                [33mclass[39m=[32m"stack"[39m
+              [36m>[39m
+                [36m<h3[39m
+                  [33mid[39m=[32m"workspace-title-4c090528-ad23-4e1d-8a88-f0cb7cb70b01"[39m
+                [36m>[39m
+                  [0m本地工作区[0m
+                [36m</h3>[39m
+                [36m<p[39m
+                  [33mclass[39m=[32m"muted"[39m
+                [36m>[39m
+                  [0m尚未绑定本地工作区。[0m
+                [36m</p>[39m
+                [36m<form[39m
+                  [33mclass[39m=[32m"stack"[39m
+                [36m>[39m
+                  [36m<div[39m
+                    [33mclass[39m=[32m"form-field"[39m
+                  [36m>[39m
+                    [36m<label[39m
+                      [33mfor[39m=[32m"workspace-path-4c090528-ad23-4e1d-8a88-f0cb7cb70b01"[39m
+                    [36m>[39m
+                      [0m本地工作区路径[0m
+                    [36m</label>[39m
+                    [36m<input[39m
+                      [33maria-describedby[39m=[32m"workspace-error-4c090528-ad23-4e1d-8a88-f0cb7cb70b01"[39m
+                      [33mid[39m=[32m"workspace-path-4c090528-ad23-4e1d-8a88-f0cb7cb70b01"[39m
+          ...
+ ❯ Object.getElementError node_modules/@testing-library/dom/dist/config.js:37:19
+ ❯ getElementError node_modules/@testing-library/dom/dist/query-helpers.js:20:35
+ ❯ getMultipleElementsFoundError node_modules/@testing-library/dom/dist/query-helpers.js:23:10
+ ❯ node_modules/@testing-library/dom/dist/query-helpers.js:55:13
+ ❯ node_modules/@testing-library/dom/dist/query-helpers.js:95:19
+ ❯ tests/workspace-slice.test.tsx:87:19
+     85|     await user.type(screen.getByLabelText("本地工作区路径"), "relative/path");
+     86|     await user.click(screen.getByRole("button", { name: "绑定工作区" }));
+     87|     expect(screen.getByRole("alert")).toHaveTextContent("请输入绝对目录路径。");
+       |                   ^
+     88|     expect(
+     89|       fetchMock.mock.calls.filter(
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[10/10]⎯
+
+⎯⎯⎯⎯⎯⎯ Unhandled Errors ⎯⎯⎯⎯⎯⎯
+
+Vitest caught 2 unhandled errors during the test run.
+This might cause false positive tests. Resolve unhandled errors to make sure your tests are not affected.
+
+⎯⎯⎯⎯⎯ Uncaught Exception ⎯⎯⎯⎯⎯
+TypeError: Cannot read properties of undefined (reading 'at')
+ ❯ TaskPanel components/task-panel.tsx:187:28
+    185|   }
+    186|
+    187|   const latestTask = tasks.at(-1);
+       |                            ^
+    188|
+    189|   return (
+ ❯ Object.react_stack_bottom_frame node_modules/react-dom/cjs/react-dom-client.development.js:25904:20
+ ❯ renderWithHooks node_modules/react-dom/cjs/react-dom-client.development.js:7662:22
+ ❯ updateFunctionComponent node_modules/react-dom/cjs/react-dom-client.development.js:10166:19
+ ❯ beginWork node_modules/react-dom/cjs/react-dom-client.development.js:11778:18
+ ❯ runWithFiberInDEV node_modules/react-dom/cjs/react-dom-client.development.js:874:13
+ ❯ performUnitOfWork node_modules/react-dom/cjs/react-dom-client.development.js:17641:22
+ ❯ workLoopSync node_modules/react-dom/cjs/react-dom-client.development.js:17469:41
+ ❯ renderRootSync node_modules/react-dom/cjs/react-dom-client.development.js:17450:11
+ ❯ performWorkOnRoot node_modules/react-dom/cjs/react-dom-client.development.js:16583:35
+
+This error originated in "tests/task-flow.test.tsx" test file. It doesn't mean the error was thrown inside the file itself, but while it was running.
+The latest test that might've caused the error is "calls create, start, and execute in order while rendering each persisted state". It might mean one of the following:
+- The error was thrown, while Vitest was running this test.
+- If the error occurred after the test had been completed, this was the last documented test before it was thrown.
+
+⎯⎯⎯⎯⎯ Uncaught Exception ⎯⎯⎯⎯⎯
+TypeError: Cannot read properties of undefined (reading 'at')
+ ❯ TaskPanel components/task-panel.tsx:187:28
+    185|   }
+    186|
+    187|   const latestTask = tasks.at(-1);
+       |                            ^
+    188|
+    189|   return (
+ ❯ Object.react_stack_bottom_frame node_modules/react-dom/cjs/react-dom-client.development.js:25904:20
+ ❯ renderWithHooks node_modules/react-dom/cjs/react-dom-client.development.js:7662:22
+ ❯ updateFunctionComponent node_modules/react-dom/cjs/react-dom-client.development.js:10166:19
+ ❯ beginWork node_modules/react-dom/cjs/react-dom-client.development.js:11778:18
+ ❯ runWithFiberInDEV node_modules/react-dom/cjs/react-dom-client.development.js:874:13
+ ❯ performUnitOfWork node_modules/react-dom/cjs/react-dom-client.development.js:17641:22
+ ❯ workLoopSync node_modules/react-dom/cjs/react-dom-client.development.js:17469:41
+ ❯ renderRootSync node_modules/react-dom/cjs/react-dom-client.development.js:17450:11
+ ❯ performWorkOnRoot node_modules/react-dom/cjs/react-dom-client.development.js:16583:35
+
+This error originated in "tests/task-flow.test.tsx" test file. It doesn't mean the error was thrown inside the file itself, but while it was running.
+The latest test that might've caused the error is "renders a persisted failed event and preserves the goal after execution fails". It might mean one of the following:
+- The error was thrown, while Vitest was running this test.
+- If the error occurred after the test had been completed, this was the last documented test before it was thrown.
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯
+
+
+ Test Files  6 failed | 2 passed (8)
+      Tests  10 failed | 19 passed (29)
+     Errors  2 errors
+   Start at  04:00:35
+   Duration  5.93s (transform 856ms, setup 3.94s, import 2.38s, tests 7.08s, environment 15.45s)
+
+# exit: 1

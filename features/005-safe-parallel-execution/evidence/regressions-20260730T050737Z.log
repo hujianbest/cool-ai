@@ -1,0 +1,285 @@
+# hf-gate-run
+# label: regressions
+# command: cmd /c npm test -- --maxWorkers=1
+# started: 2026-07-30T05:07:37+00:00
+
+> collaboration-cockpit@0.1.0 test
+> vitest run --maxWorkers=1
+
+
+ RUN  v4.1.10 D:/cool-ai
+
+(node:16692) ExperimentalWarning: SQLite is an experimental feature and might change at any time
+(Use `node --trace-warnings ...` to show where the warning was created)
+(node:1712) ExperimentalWarning: SQLite is an experimental feature and might change at any time
+(Use `node --trace-warnings ...` to show where the warning was created)
+(node:13724) ExperimentalWarning: SQLite is an experimental feature and might change at any time
+(Use `node --trace-warnings ...` to show where the warning was created)
+ ❯ tests/owner-handoff-plan-races.test.ts (8 tests | 5 failed) 8420ms
+     × persists stable sequence, keeps the model target for ordinary pending chat, and consumes only the acquired prompt window 585ms
+     × uses the latest pending mention by stable sequence even when ordinary chat follows it 744ms
+     × delays planned for ordinary pending chat, keeps the current Agent, and preserves task/message actions 657ms
+     × keeps running and selects the latest mentioned current member 745ms
+     × consumes exactly the 30 acquired owner message IDs and leaves excluded and post-acquire messages pending 3511ms
+(node:17160) ExperimentalWarning: SQLite is an experimental feature and might change at any time
+(Use `node --trace-warnings ...` to show where the warning was created)
+(node:6012) ExperimentalWarning: SQLite is an experimental feature and might change at any time
+(Use `node --trace-warnings ...` to show where the warning was created)
+(node:11956) ExperimentalWarning: SQLite is an experimental feature and might change at any time
+(Use `node --trace-warnings ...` to show where the warning was created)
+(node:9996) ExperimentalWarning: SQLite is an experimental feature and might change at any time
+(Use `node --trace-warnings ...` to show where the warning was created)
+(node:14816) ExperimentalWarning: SQLite is an experimental feature and might change at any time
+(Use `node --trace-warnings ...` to show where the warning was created)
+(node:16680) ExperimentalWarning: SQLite is an experimental feature and might change at any time
+(Use `node --trace-warnings ...` to show where the warning was created)
+(node:16828) ExperimentalWarning: SQLite is an experimental feature and might change at any time
+(Use `node --trace-warnings ...` to show where the warning was created)
+(node:17332) ExperimentalWarning: SQLite is an experimental feature and might change at any time
+(Use `node --trace-warnings ...` to show where the warning was created)
+(node:11640) ExperimentalWarning: SQLite is an experimental feature and might change at any time
+(Use `node --trace-warnings ...` to show where the warning was created)
+(node:16864) ExperimentalWarning: SQLite is an experimental feature and might change at any time
+(Use `node --trace-warnings ...` to show where the warning was created)
+(node:16500) ExperimentalWarning: SQLite is an experimental feature and might change at any time
+(Use `node --trace-warnings ...` to show where the warning was created)
+(node:14948) ExperimentalWarning: SQLite is an experimental feature and might change at any time
+(Use `node --trace-warnings ...` to show where the warning was created)
+(node:4212) ExperimentalWarning: SQLite is an experimental feature and might change at any time
+(Use `node --trace-warnings ...` to show where the warning was created)
+(node:11620) ExperimentalWarning: SQLite is an experimental feature and might change at any time
+(Use `node --trace-warnings ...` to show where the warning was created)
+(node:12896) ExperimentalWarning: SQLite is an experimental feature and might change at any time
+(Use `node --trace-warnings ...` to show where the warning was created)
+(node:15416) ExperimentalWarning: SQLite is an experimental feature and might change at any time
+(Use `node --trace-warnings ...` to show where the warning was created)
+(node:17016) ExperimentalWarning: SQLite is an experimental feature and might change at any time
+(Use `node --trace-warnings ...` to show where the warning was created)
+(node:4192) ExperimentalWarning: SQLite is an experimental feature and might change at any time
+(Use `node --trace-warnings ...` to show where the warning was created)
+(node:10376) ExperimentalWarning: SQLite is an experimental feature and might change at any time
+(Use `node --trace-warnings ...` to show where the warning was created)
+(node:6348) ExperimentalWarning: SQLite is an experimental feature and might change at any time
+(Use `node --trace-warnings ...` to show where the warning was created)
+(node:2200) ExperimentalWarning: SQLite is an experimental feature and might change at any time
+(Use `node --trace-warnings ...` to show where the warning was created)
+(node:5672) ExperimentalWarning: SQLite is an experimental feature and might change at any time
+(Use `node --trace-warnings ...` to show where the warning was created)
+(node:2260) ExperimentalWarning: SQLite is an experimental feature and might change at any time
+(Use `node --trace-warnings ...` to show where the warning was created)
+(node:356) ExperimentalWarning: SQLite is an experimental feature and might change at any time
+(Use `node --trace-warnings ...` to show where the warning was created)
+(node:4600) ExperimentalWarning: SQLite is an experimental feature and might change at any time
+(Use `node --trace-warnings ...` to show where the warning was created)
+(node:7372) ExperimentalWarning: SQLite is an experimental feature and might change at any time
+(Use `node --trace-warnings ...` to show where the warning was created)
+(node:11868) ExperimentalWarning: SQLite is an experimental feature and might change at any time
+(Use `node --trace-warnings ...` to show where the warning was created)
+(node:4472) ExperimentalWarning: SQLite is an experimental feature and might change at any time
+(Use `node --trace-warnings ...` to show where the warning was created)
+(node:2808) ExperimentalWarning: SQLite is an experimental feature and might change at any time
+(Use `node --trace-warnings ...` to show where the warning was created)
+(node:8588) ExperimentalWarning: SQLite is an experimental feature and might change at any time
+(Use `node --trace-warnings ...` to show where the warning was created)
+(node:11012) ExperimentalWarning: SQLite is an experimental feature and might change at any time
+(Use `node --trace-warnings ...` to show where the warning was created)
+(node:14372) ExperimentalWarning: SQLite is an experimental feature and might change at any time
+(Use `node --trace-warnings ...` to show where the warning was created)
+(node:14528) ExperimentalWarning: SQLite is an experimental feature and might change at any time
+(Use `node --trace-warnings ...` to show where the warning was created)
+(node:17208) ExperimentalWarning: SQLite is an experimental feature and might change at any time
+(Use `node --trace-warnings ...` to show where the warning was created)
+(node:1156) ExperimentalWarning: SQLite is an experimental feature and might change at any time
+(Use `node --trace-warnings ...` to show where the warning was created)
+(node:13316) ExperimentalWarning: SQLite is an experimental feature and might change at any time
+(Use `node --trace-warnings ...` to show where the warning was created)
+(node:5156) ExperimentalWarning: SQLite is an experimental feature and might change at any time
+(Use `node --trace-warnings ...` to show where the warning was created)
+(node:8208) ExperimentalWarning: SQLite is an experimental feature and might change at any time
+(Use `node --trace-warnings ...` to show where the warning was created)
+(node:12764) ExperimentalWarning: SQLite is an experimental feature and might change at any time
+(Use `node --trace-warnings ...` to show where the warning was created)
+(node:4076) ExperimentalWarning: SQLite is an experimental feature and might change at any time
+(Use `node --trace-warnings ...` to show where the warning was created)
+(node:9284) ExperimentalWarning: SQLite is an experimental feature and might change at any time
+(Use `node --trace-warnings ...` to show where the warning was created)
+(node:16492) ExperimentalWarning: SQLite is an experimental feature and might change at any time
+(Use `node --trace-warnings ...` to show where the warning was created)
+(node:16872) ExperimentalWarning: SQLite is an experimental feature and might change at any time
+(Use `node --trace-warnings ...` to show where the warning was created)
+(node:14904) ExperimentalWarning: SQLite is an experimental feature and might change at any time
+(Use `node --trace-warnings ...` to show where the warning was created)
+(node:15864) ExperimentalWarning: SQLite is an experimental feature and might change at any time
+(Use `node --trace-warnings ...` to show where the warning was created)
+(node:16516) ExperimentalWarning: SQLite is an experimental feature and might change at any time
+(Use `node --trace-warnings ...` to show where the warning was created)
+(node:12600) ExperimentalWarning: SQLite is an experimental feature and might change at any time
+(Use `node --trace-warnings ...` to show where the warning was created)
+(node:3884) ExperimentalWarning: SQLite is an experimental feature and might change at any time
+(Use `node --trace-warnings ...` to show where the warning was created)
+(node:13828) ExperimentalWarning: SQLite is an experimental feature and might change at any time
+(Use `node --trace-warnings ...` to show where the warning was created)
+(node:8588) ExperimentalWarning: SQLite is an experimental feature and might change at any time
+(Use `node --trace-warnings ...` to show where the warning was created)
+(node:15348) ExperimentalWarning: SQLite is an experimental feature and might change at any time
+(Use `node --trace-warnings ...` to show where the warning was created)
+(node:9212) ExperimentalWarning: SQLite is an experimental feature and might change at any time
+(Use `node --trace-warnings ...` to show where the warning was created)
+(node:8196) ExperimentalWarning: SQLite is an experimental feature and might change at any time
+(Use `node --trace-warnings ...` to show where the warning was created)
+(node:13816) ExperimentalWarning: SQLite is an experimental feature and might change at any time
+(Use `node --trace-warnings ...` to show where the warning was created)
+(node:10828) ExperimentalWarning: SQLite is an experimental feature and might change at any time
+(Use `node --trace-warnings ...` to show where the warning was created)
+
+⎯⎯⎯⎯⎯⎯⎯ Failed Tests 5 ⎯⎯⎯⎯⎯⎯⎯
+
+ FAIL  tests/owner-handoff-plan-races.test.ts > calling owner messages and handoff > persists stable sequence, keeps the model target for ordinary pending chat, and consumes only the acquired prompt window
+AssertionError: expected { affectedRows: +0, …(2) } to match object { body: { …(2) }, status: 200 }
+(7 matching properties omitted from actual)
+
+- Expected
++ Received
+
+  {
+    "body": {
+-     "attemptStatus": "committed",
++     "attemptStatus": "interrupted",
+      "run": {
+-       "currentAgentId": "agent-owner-b",
+-       "roundCount": 1,
+-       "status": "running",
++       "currentAgentId": "agent-owner-a",
++       "roundCount": 0,
++       "status": "paused",
+      },
+    },
+    "status": 200,
+  }
+
+ ❯ tests/owner-handoff-plan-races.test.ts:260:22
+    258|
+    259|     expect([included.sequence, pending.sequence]).toEqual([1, 2]);
+    260|     expect(response).toMatchObject({
+       |                      ^
+    261|       body: {
+    262|         attemptStatus: "committed",
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[1/5]⎯
+
+ FAIL  tests/owner-handoff-plan-races.test.ts > calling owner messages and handoff > uses the latest pending mention by stable sequence even when ordinary chat follows it
+AssertionError: expected { affectedRows: +0, …(2) } to match object { Object (body, status) }
+(9 matching properties omitted from actual)
+
+- Expected
++ Received
+
+  {
+    "body": {
+      "run": {
+-       "currentAgentId": "agent-owner-c",
+-       "status": "running",
++       "currentAgentId": "agent-owner-a",
++       "status": "paused",
+      },
+    },
+    "status": 200,
+  }
+
+ ❯ tests/owner-handoff-plan-races.test.ts:301:22
+    299|
+    300|     expect(firstMention.sequence).toBeLessThan(latestMention.sequence);
+    301|     expect(response).toMatchObject({
+       |                      ^
+    302|       body: { run: { currentAgentId: AGENT_C, status: "running" } },
+    303|       status: 200,
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[2/5]⎯
+
+ FAIL  tests/owner-handoff-plan-races.test.ts > calling owner messages and plan_ready > delays planned for ordinary pending chat, keeps the current Agent, and preserves task/message actions
+AssertionError: expected { affectedRows: +0, …(2) } to match object { body: { …(2) }, status: 200 }
+(7 matching properties omitted from actual)
+
+- Expected
++ Received
+
+  {
+    "body": {
+-     "attemptStatus": "committed",
++     "attemptStatus": "interrupted",
+      "run": {
+        "currentAgentId": "agent-owner-b",
+-       "roundCount": 2,
+-       "status": "running",
++       "roundCount": 1,
++       "status": "paused",
+      },
+    },
+    "status": 200,
+  }
+
+ ❯ tests/owner-handoff-plan-races.test.ts:346:22
+    344|     );
+    345|
+    346|     expect(response).toMatchObject({
+       |                      ^
+    347|       body: {
+    348|         attemptStatus: "committed",
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[3/5]⎯
+
+ FAIL  tests/owner-handoff-plan-races.test.ts > calling owner messages and plan_ready > keeps running and selects the latest mentioned current member
+AssertionError: expected { affectedRows: +0, …(2) } to match object { Object (body, status) }
+(9 matching properties omitted from actual)
+
+- Expected
++ Received
+
+  {
+    "body": {
+      "run": {
+-       "currentAgentId": "agent-owner-c",
+-       "status": "running",
++       "currentAgentId": "agent-owner-b",
++       "status": "paused",
+      },
+    },
+    "status": 200,
+  }
+
+ ❯ tests/owner-handoff-plan-races.test.ts:408:22
+    406|     );
+    407|
+    408|     expect(response).toMatchObject({
+       |                      ^
+    409|       body: { run: { currentAgentId: AGENT_C, status: "running" } },
+    410|       status: 200,
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[4/5]⎯
+
+ FAIL  tests/owner-handoff-plan-races.test.ts > owner prompt-window consumption > consumes exactly the 30 acquired owner message IDs and leaves excluded and post-acquire messages pending
+AssertionError: expected [] to have a length of 30 but got +0
+
+- Expected
++ Received
+
+- 30
++ 0
+
+ ❯ tests/owner-handoff-plan-races.test.ts:429:75
+    427|
+    428|     const ownerMessages = messageConsumption().filter(({ authorType })…
+    429|     expect(ownerMessages.filter(({ consumedAt }) => consumedAt !== nul…
+       |                                                                           ^
+    430|     expect(ownerMessages.slice(0, 2).every(({ consumedAt }) => consume…
+    431|     expect(
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[5/5]⎯
+
+
+ Test Files  1 failed | 94 passed (95)
+      Tests  5 failed | 593 passed (598)
+   Start at  13:07:39
+   Duration  389.68s (transform 2.46s, setup 29.61s, import 9.41s, tests 190.57s, environment 135.45s)
+
+# exit: 1

@@ -1,0 +1,18 @@
+# hf-gate-run
+# label: t20-green
+# command: npm.cmd test -- tests/collaboration-chat.test.tsx
+# started: 2026-07-29T23:12:54+00:00
+
+> collaboration-cockpit@0.1.0 test
+> vitest run tests/collaboration-chat.test.tsx
+
+
+ RUN  v4.1.10 D:/cool-ai
+
+
+ Test Files  1 passed (1)
+      Tests  6 passed (6)
+   Start at  07:12:56
+   Duration  2.84s (transform 78ms, setup 341ms, import 181ms, tests 611ms, environment 1.45s)
+
+# exit: 0

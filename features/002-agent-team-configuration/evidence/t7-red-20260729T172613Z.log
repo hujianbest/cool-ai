@@ -1,0 +1,1089 @@
+# hf-gate-run
+# label: t7-red
+# command: cmd /c npm test -- tests/skills.service.test.ts tests/skills.api.test.ts tests/skill-panel.test.tsx
+# started: 2026-07-29T17:26:13+00:00
+
+> collaboration-cockpit@0.1.0 test
+> vitest run tests/skills.service.test.ts tests/skills.api.test.ts tests/skill-panel.test.tsx
+
+
+ RUN  v4.1.10 D:/cool-ai
+
+(node:9516) ExperimentalWarning: SQLite is an experimental feature and might change at any time
+(Use `node --trace-warnings ...` to show where the warning was created)
+(node:2952) ExperimentalWarning: SQLite is an experimental feature and might change at any time
+(Use `node --trace-warnings ...` to show where the warning was created)
+ ❯ tests/skills.service.test.ts (8 tests | 8 failed) 32ms
+     × trims valid fields and preserves instruction text literally 11ms
+     × rejects invalid field bounds without persisting 6ms
+     × rejects invalid field bounds without persisting 2ms
+     × rejects invalid field bounds without persisting 2ms
+     × rejects invalid field bounds without persisting 2ms
+     × rejects invalid field bounds without persisting 2ms
+     × fully replaces a skill, increments version and rejects stale or missing updates 2ms
+     × lists deterministically by creation time and then id 3ms
+ ❯ tests/skills.api.test.ts (2 tests | 2 failed) 15ms
+     × creates, lists and fully replaces a skill through stable contracts 11ms
+     × returns field errors, full-replace errors, not-found and version conflicts 2ms
+ ❯ tests/skill-panel.test.tsx (3 tests | 3 failed) 327ms
+     × shows loading, focused error, retry and empty states 176ms
+     × edits with full replacement, pure-text rendering and success focus 99ms
+     × preserves a failed draft and supports a keyboard-only create path 50ms
+
+⎯⎯⎯⎯⎯⎯ Failed Tests 13 ⎯⎯⎯⎯⎯⎯⎯
+
+ FAIL  tests/skill-panel.test.tsx > Skill panel > shows loading, focused error, retry and empty states
+Error: expect(element).toHaveTextContent()
+
+Expected element to have text content:
+  暂时无法加载技能，请稍后重试。
+Received:
+  无法加载技能，请稍后重试。
+ ❯ tests/skill-panel.test.tsx:59:19
+     57|     });
+     58|     const alert = await screen.findByRole("alert");
+     59|     expect(alert).toHaveTextContent("暂时无法加载技能，请稍后重试。");
+       |                   ^
+     60|     expect(alert).toHaveFocus();
+     61|     await user.click(screen.getByRole("button", { name: "重试加载技能" }));
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[1/13]⎯
+
+ FAIL  tests/skill-panel.test.tsx > Skill panel > edits with full replacement, pure-text rendering and success focus
+TestingLibraryElementError: Unable to find an accessible element with the role "button" and name "编辑 Planning"
+
+Here are the accessible roles:
+
+  complementary:
+
+  Name "团队导航":
+  [36m<aside[39m
+    [33maria-label[39m=[32m"团队导航"[39m
+    [33mclass[39m=[32m"cockpit-sidebar"[39m
+  [36m/>[39m
+
+  Name "创建技能":
+  [36m<aside[39m
+    [33maria-labelledby[39m=[32m"skill-editor-title"[39m
+    [33mclass[39m=[32m"cockpit-context"[39m
+  [36m/>[39m
+
+  --------------------------------------------------
+  paragraph:
+
+  Name "":
+  [36m<p[39m
+    [33mclass[39m=[32m"eyebrow"[39m
+  [36m/>[39m
+
+  Name "":
+  [36m<p[39m
+    [33mclass[39m=[32m"eyebrow"[39m
+  [36m/>[39m
+
+  Name "":
+  [36m<p />[39m
+
+  Name "":
+  [36m<p />[39m
+
+  Name "":
+  [36m<p[39m
+    [33mclass[39m=[32m"eyebrow"[39m
+  [36m/>[39m
+
+  --------------------------------------------------
+  heading:
+
+  Name "Cool AI":
+  [36m<h1 />[39m
+
+  Name "技能":
+  [36m<h2 />[39m
+
+  Name "Planning":
+  [36m<h3 />[39m
+
+  Name "创建技能":
+  [36m<h2[39m
+    [33mid[39m=[32m"skill-editor-title"[39m
+  [36m/>[39m
+
+  --------------------------------------------------
+  navigation:
+
+  Name "主导航":
+  [36m<nav[39m
+    [33maria-label[39m=[32m"主导航"[39m
+  [36m/>[39m
+
+  --------------------------------------------------
+  list:
+
+  Name "":
+  [36m<ul[39m
+    [33mclass[39m=[32m"project-list"[39m
+  [36m/>[39m
+
+  Name "":
+  [36m<ul[39m
+    [33mclass[39m=[32m"timeline"[39m
+  [36m/>[39m
+
+  --------------------------------------------------
+  listitem:
+
+  Name "":
+  [36m<li />[39m
+
+  Name "":
+  [36m<li />[39m
+
+  Name "":
+  [36m<li[39m
+    [33mclass[39m=[32m"timeline-item"[39m
+  [36m/>[39m
+
+  --------------------------------------------------
+  link:
+
+  Name "工作":
+  [36m<a[39m
+    [33mhref[39m=[32m"/"[39m
+  [36m/>[39m
+
+  Name "团队":
+  [36m<a[39m
+    [33maria-current[39m=[32m"page"[39m
+    [33mhref[39m=[32m"/team"[39m
+  [36m/>[39m
+
+  --------------------------------------------------
+  tablist:
+
+  Name "团队资源":
+  [36m<div[39m
+    [33maria-label[39m=[32m"团队资源"[39m
+    [33mclass[39m=[32m"resource-tabs"[39m
+    [33mrole[39m=[32m"tablist"[39m
+  [36m/>[39m
+
+  --------------------------------------------------
+  tab:
+
+  Name "技能":
+  [36m<button[39m
+    [33maria-controls[39m=[32m"skill-resource-panel"[39m
+    [33maria-selected[39m=[32m"true"[39m
+    [33mid[39m=[32m"skill-resource-tab"[39m
+    [33mrole[39m=[32m"tab"[39m
+    [33mtabindex[39m=[32m"0"[39m
+    [33mtype[39m=[32m"button"[39m
+  [36m/>[39m
+
+  Name "模型服务":
+  [36m<button[39m
+    [33maria-controls[39m=[32m"provider-resource-panel"[39m
+    [33maria-selected[39m=[32m"false"[39m
+    [33mid[39m=[32m"provider-resource-tab"[39m
+    [33mrole[39m=[32m"tab"[39m
+    [33mtabindex[39m=[32m"-1"[39m
+    [33mtype[39m=[32m"button"[39m
+  [36m/>[39m
+
+  --------------------------------------------------
+  tabpanel:
+
+  Name "技能":
+  [36m<main[39m
+    [33maria-labelledby[39m=[32m"skill-resource-tab"[39m
+    [33mclass[39m=[32m"cockpit-flow"[39m
+    [33mid[39m=[32m"skill-resource-panel"[39m
+    [33mrole[39m=[32m"tabpanel"[39m
+  [36m/>[39m
+
+  --------------------------------------------------
+  banner:
+
+  Name "":
+  [36m<header[39m
+    [33mclass[39m=[32m"stack"[39m
+  [36m/>[39m
+
+  --------------------------------------------------
+  article:
+
+  Name "":
+  [36m<article[39m
+    [33mclass[39m=[32m"stack"[39m
+  [36m/>[39m
+
+  --------------------------------------------------
+  textbox:
+
+  Name "技能名称":
+  [36m<input[39m
+    [33mid[39m=[32m"skill-name"[39m
+    [33mmaxlength[39m=[32m"80"[39m
+    [33mrequired[39m=[32m""[39m
+    [33mvalue[39m=[32m""[39m
+  [36m/>[39m
+
+  Name "技能说明":
+  [36m<textarea[39m
+    [33mid[39m=[32m"skill-description"[39m
+    [33mmaxlength[39m=[32m"280"[39m
+  [36m/>[39m
+
+  Name "指令正文":
+  [36m<textarea[39m
+    [33mid[39m=[32m"skill-instructions"[39m
+    [33mmaxlength[39m=[32m"20000"[39m
+    [33mrequired[39m=[32m""[39m
+  [36m/>[39m
+
+  --------------------------------------------------
+  button:
+
+  Name "创建技能":
+  [36m<button[39m
+    [33mtype[39m=[32m"submit"[39m
+  [36m/>[39m
+
+  --------------------------------------------------
+
+Ignored nodes: comments, script, style
+[36m<body>[39m
+  [36m<div>[39m
+    [36m<div[39m
+      [33mclass[39m=[32m"collaboration-cockpit"[39m
+    [36m>[39m
+      [36m<aside[39m
+        [33maria-label[39m=[32m"团队导航"[39m
+        [33mclass[39m=[32m"cockpit-sidebar"[39m
+      [36m>[39m
+        [36m<div[39m
+          [33mclass[39m=[32m"product-identity"[39m
+        [36m>[39m
+          [36m<span[39m
+            [33maria-hidden[39m=[32m"true"[39m
+            [33mclass[39m=[32m"product-mark"[39m
+          [36m>[39m
+            [0mC[0m
+          [36m</span>[39m
+          [36m<div>[39m
+            [36m<p[39m
+              [33mclass[39m=[32m"eyebrow"[39m
+            [36m>[39m
+              [0m协作驾驶舱[0m
+            [36m</p>[39m
+            [36m<h1>[39m
+              [0mCool AI[0m
+            [36m</h1>[39m
+          [36m</div>[39m
+        [36m</div>[39m
+        [36m<nav[39m
+          [33maria-label[39m=[32m"主导航"[39m
+        [36m>[39m
+          [36m<ul[39m
+            [33mclass[39m=[32m"project-list"[39m
+          [36m>[39m
+            [36m<li>[39m
+              [36m<a[39m
+                [33mhref[39m=[32m"/"[39m
+              [36m>[39m
+                [0m工作[0m
+              [36m</a>[39m
+            [36m</li>[39m
+            [36m<li>[39m
+              [36m<a[39m
+                [33maria-current[39m=[32m"page"[39m
+                [33mhref[39m=[32m"/team"[39m
+              [36m>[39m
+                [0m团队[0m
+              [36m</a>[39m
+            [36m</li>[39m
+          [36m</ul>[39m
+        [36m</nav>[39m
+        [36m<div[39m
+          [33maria-label[39m=[32m"团队资源"[39m
+          [33mclass[39m=[32m"resource-tabs"[39m
+          [33mrole[39m=[32m"tablist"[39m
+        [36m>[39m
+          [36m<button[39m
+            [33maria-controls[39m=[32m"skill-resource-panel"[39m
+            [33maria-selected[39m=[32m"true"[39m
+            [33mid[39m=[32m"skill-resource-tab"[39m
+            [33mrole[39m=[32m"tab"[39m
+            [33mtabindex[39m=[32m"0"[39m
+            [33mtype[39m=[32m"button"[39m
+          [36m>[39m
+            [0m技能[0m
+          [36m</button>[39m
+          [36m<button[39m
+            [33maria-controls[39m=[32m"provider-resource-panel"[39m
+            [33maria-selected[39m=[32m"false"[39m
+            [33mid[39m=[32m"provider-resource-tab"[39m
+            [33mrole[39m=[32m"tab"[39m
+            [33mtabindex[39m=[32m"-1"[39m
+            [33mtype[39m=[32m"button"[39m
+          [36m>[39m
+            [0m模型服务[0m
+          [36m</button>[39m
+        [36m</div>[39m
+      [36m</aside>[39m
+      [36m<main[39m
+        [33maria-labelledby[39m=[32m"skill-resource-tab"[39m
+        [33mclass[39m=[32m"cockpit-flow"[39m
+        [33mid[39m=[32m"skill-resource-panel"[39m
+        [33mrole[39m=[32m"tabpanel"[39m
+      [36m>[39m
+        [36m<header[39m
+          [33mclass[39m=[32m"stack"[39m
+        [36m>[39m
+          [36m<p[39m
+            [33mclass[39m=[32m"eyebrow"[39m
+          [36m>[39m
+            [0m团队资源[0m
+          [36m</p>[39m
+          [36m<h2>[39m
+            [0m技能[0m
+          [36m</h2>[39m
+        [36m</header>[39m
+        [36m<ul[39m
+          [33mclass[39m=[32m"timeline"[39m
+        [36m>[39m
+          [36m<li[39m
+            [33mclass[39m=[32m"timeline-item"[39m
+          [36m>[39m
+            [36m<article[39m
+              [33mclass[39m=[32m"stack"[39m
+            [36m>[39m
+              [36m<h3>[39m
+                [0mPlanning[0m
+              [36m</h3>[39m
+              [36m<p>[39m
+                [0mNotes[0m
+              [36m</p>[39m
+              [36m<div[39m
+                [33mclass[39m=[32m"muted"[39m
+              [36m>[39m
+                [36m<p>[39m
+                  [0m&lt;strong&gt;literal text&lt;/strong&gt;[0m
+                [36m</p>[39m
+              [36m</div>[39m
+            [36m</article>[39m
+          [36m</li>[39m
+        [36m</ul>[39m
+      [36m</main>[39m
+      [36m<aside[39m
+        [33maria-labelledby[39m=[32m"skill-editor-title"[39m
+        [33mclass[39m=[32m"cockpit-context"[39m
+      [36m>[39m
+        [36m<div[39m
+          [33mclass[39m=[32m"stack"[39m
+        [36m>[39m
+          [36m<p[39m
+            [33mclass[39m=[32m"eyebrow"[39m
+          [36m>[39m
+            [0m文本技能[0m
+          [36m</p>[39m
+          [36m<h2[39m
+            [33mid[39m=[32m"skill-editor-title"[39m
+          [36m>[39m
+            [0m创建技能[0m
+          [36m</h2>[39m
+        [36m</div>[39m
+        [36m<form[39m
+          [33mclass[39m=[32m"stack"[39m
+        [36m>[39m
+          [36m<div[39m
+            [33mclass[39m=[32m"form-field"[39m
+          [36m>[39m
+            [36m<label[39m
+              [33mfor[39m=[32m"skill-name"[39m
+            [36m>[39m
+              [0m技能名称[0m
+            [36m</label>[39m
+            [36m<input[39m
+              [33mid[39m=[32m"skill-name"[39m
+              [33mmaxlength[39m=[32m"80"[39m
+              [33mrequired[39m=[32m""[39m
+              [33mvalue[39m=[32m""[39m
+            [36m/>[39m
+          [36m</div>[39m
+          [36m<div[39m
+            [33mclass[39m=[32m"form-field"[39m
+          [36m>[39m
+            [36m<label[39m
+              [33mfor[39m=[32m"skill-description"[39m
+            [36m>[39m
+              [0m技能说明[0m
+            [36m</label>[39m
+            [36m<textarea[39m
+              [33mid[39m=[32m"skill-description"[39m
+              [33mmaxlength[39m=[32m"280"[39m
+            [36m/>[39m
+          [36m</div>[39m
+          [36m<div[39m
+            [33mclass[39m=[32m"form-field"[39m
+          [36m>[39m
+            [36m<label[39m
+              [33mfor[39m=[32m"skill-instructions"[39m
+            [36m>[39m
+              [0m指令正文[0m
+            [36m</label>[39m
+            [36m<textarea[39m
+              [33mid[39m=[32m"skill-instructions"[39m
+              [33mmaxlength[39m=[32m"20000"[39m
+              [33mrequired[39m=[32m""[39m
+            [36m/>[39m
+          [36m</div>[39m
+          [36m<button[39m
+            [33mtype[39m=[32m"submit"[39m
+          [36m>[39m
+            [0m创建技能[0m
+          [36m</button>[39m
+        [36m</form>[39m
+      [36m</aside>[39m
+    [36m</div>[39m
+  [36m</div>[39m
+[36m</body>[39m
+ ❯ Object.getElementError node_modules/@testing-library/dom/dist/config.js:37:19
+ ❯ node_modules/@testing-library/dom/dist/query-helpers.js:76:38
+ ❯ node_modules/@testing-library/dom/dist/query-helpers.js:52:17
+ ❯ node_modules/@testing-library/dom/dist/query-helpers.js:95:19
+ ❯ tests/skill-panel.test.tsx:85:29
+     83|     expect(await screen.findByText("<strong>literal text</strong>")).t…
+     84|     expect(document.querySelector("strong")).toBeNull();
+     85|     await user.click(screen.getByRole("button", { name: "编辑 Planning" …
+       |                             ^
+     86|     expect(screen.getByLabelText("技能名称")).toHaveValue("Planning");
+     87|     expect(screen.getByLabelText("技能说明")).toHaveValue("Notes");
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[2/13]⎯
+
+ FAIL  tests/skill-panel.test.tsx > Skill panel > preserves a failed draft and supports a keyboard-only create path
+TestingLibraryElementError: Unable to find an accessible element with the role "button" and name "创建新技能"
+
+Here are the accessible roles:
+
+  complementary:
+
+  Name "团队导航":
+  [36m<aside[39m
+    [33maria-label[39m=[32m"团队导航"[39m
+    [33mclass[39m=[32m"cockpit-sidebar"[39m
+  [36m/>[39m
+
+  Name "创建技能":
+  [36m<aside[39m
+    [33maria-labelledby[39m=[32m"skill-editor-title"[39m
+    [33mclass[39m=[32m"cockpit-context"[39m
+  [36m/>[39m
+
+  --------------------------------------------------
+  paragraph:
+
+  Name "":
+  [36m<p[39m
+    [33mclass[39m=[32m"eyebrow"[39m
+  [36m/>[39m
+
+  Name "":
+  [36m<p[39m
+    [33mclass[39m=[32m"eyebrow"[39m
+  [36m/>[39m
+
+  Name "":
+  [36m<p[39m
+    [33mclass[39m=[32m"muted"[39m
+  [36m/>[39m
+
+  Name "":
+  [36m<p[39m
+    [33mclass[39m=[32m"eyebrow"[39m
+  [36m/>[39m
+
+  --------------------------------------------------
+  heading:
+
+  Name "Cool AI":
+  [36m<h1 />[39m
+
+  Name "技能":
+  [36m<h2 />[39m
+
+  Name "创建技能":
+  [36m<h2[39m
+    [33mid[39m=[32m"skill-editor-title"[39m
+  [36m/>[39m
+
+  --------------------------------------------------
+  navigation:
+
+  Name "主导航":
+  [36m<nav[39m
+    [33maria-label[39m=[32m"主导航"[39m
+  [36m/>[39m
+
+  --------------------------------------------------
+  list:
+
+  Name "":
+  [36m<ul[39m
+    [33mclass[39m=[32m"project-list"[39m
+  [36m/>[39m
+
+  --------------------------------------------------
+  listitem:
+
+  Name "":
+  [36m<li />[39m
+
+  Name "":
+  [36m<li />[39m
+
+  --------------------------------------------------
+  link:
+
+  Name "工作":
+  [36m<a[39m
+    [33mhref[39m=[32m"/"[39m
+  [36m/>[39m
+
+  Name "团队":
+  [36m<a[39m
+    [33maria-current[39m=[32m"page"[39m
+    [33mhref[39m=[32m"/team"[39m
+  [36m/>[39m
+
+  --------------------------------------------------
+  tablist:
+
+  Name "团队资源":
+  [36m<div[39m
+    [33maria-label[39m=[32m"团队资源"[39m
+    [33mclass[39m=[32m"resource-tabs"[39m
+    [33mrole[39m=[32m"tablist"[39m
+  [36m/>[39m
+
+  --------------------------------------------------
+  tab:
+
+  Name "技能":
+  [36m<button[39m
+    [33maria-controls[39m=[32m"skill-resource-panel"[39m
+    [33maria-selected[39m=[32m"true"[39m
+    [33mid[39m=[32m"skill-resource-tab"[39m
+    [33mrole[39m=[32m"tab"[39m
+    [33mtabindex[39m=[32m"0"[39m
+    [33mtype[39m=[32m"button"[39m
+  [36m/>[39m
+
+  Name "模型服务":
+  [36m<button[39m
+    [33maria-controls[39m=[32m"provider-resource-panel"[39m
+    [33maria-selected[39m=[32m"false"[39m
+    [33mid[39m=[32m"provider-resource-tab"[39m
+    [33mrole[39m=[32m"tab"[39m
+    [33mtabindex[39m=[32m"-1"[39m
+    [33mtype[39m=[32m"button"[39m
+  [36m/>[39m
+
+  --------------------------------------------------
+  tabpanel:
+
+  Name "技能":
+  [36m<main[39m
+    [33maria-labelledby[39m=[32m"skill-resource-tab"[39m
+    [33mclass[39m=[32m"cockpit-flow"[39m
+    [33mid[39m=[32m"skill-resource-panel"[39m
+    [33mrole[39m=[32m"tabpanel"[39m
+  [36m/>[39m
+
+  --------------------------------------------------
+  banner:
+
+  Name "":
+  [36m<header[39m
+    [33mclass[39m=[32m"stack"[39m
+  [36m/>[39m
+
+  --------------------------------------------------
+  textbox:
+
+  Name "技能名称":
+  [36m<input[39m
+    [33mid[39m=[32m"skill-name"[39m
+    [33mmaxlength[39m=[32m"80"[39m
+    [33mrequired[39m=[32m""[39m
+    [33mvalue[39m=[32m""[39m
+  [36m/>[39m
+
+  Name "技能说明":
+  [36m<textarea[39m
+    [33mid[39m=[32m"skill-description"[39m
+    [33mmaxlength[39m=[32m"280"[39m
+  [36m/>[39m
+
+  Name "指令正文":
+  [36m<textarea[39m
+    [33mid[39m=[32m"skill-instructions"[39m
+    [33mmaxlength[39m=[32m"20000"[39m
+    [33mrequired[39m=[32m""[39m
+  [36m/>[39m
+
+  --------------------------------------------------
+  button:
+
+  Name "创建技能":
+  [36m<button[39m
+    [33mtype[39m=[32m"submit"[39m
+  [36m/>[39m
+
+  --------------------------------------------------
+
+Ignored nodes: comments, script, style
+[36m<body>[39m
+  [36m<div>[39m
+    [36m<div[39m
+      [33mclass[39m=[32m"collaboration-cockpit"[39m
+    [36m>[39m
+      [36m<aside[39m
+        [33maria-label[39m=[32m"团队导航"[39m
+        [33mclass[39m=[32m"cockpit-sidebar"[39m
+      [36m>[39m
+        [36m<div[39m
+          [33mclass[39m=[32m"product-identity"[39m
+        [36m>[39m
+          [36m<span[39m
+            [33maria-hidden[39m=[32m"true"[39m
+            [33mclass[39m=[32m"product-mark"[39m
+          [36m>[39m
+            [0mC[0m
+          [36m</span>[39m
+          [36m<div>[39m
+            [36m<p[39m
+              [33mclass[39m=[32m"eyebrow"[39m
+            [36m>[39m
+              [0m协作驾驶舱[0m
+            [36m</p>[39m
+            [36m<h1>[39m
+              [0mCool AI[0m
+            [36m</h1>[39m
+          [36m</div>[39m
+        [36m</div>[39m
+        [36m<nav[39m
+          [33maria-label[39m=[32m"主导航"[39m
+        [36m>[39m
+          [36m<ul[39m
+            [33mclass[39m=[32m"project-list"[39m
+          [36m>[39m
+            [36m<li>[39m
+              [36m<a[39m
+                [33mhref[39m=[32m"/"[39m
+              [36m>[39m
+                [0m工作[0m
+              [36m</a>[39m
+            [36m</li>[39m
+            [36m<li>[39m
+              [36m<a[39m
+                [33maria-current[39m=[32m"page"[39m
+                [33mhref[39m=[32m"/team"[39m
+              [36m>[39m
+                [0m团队[0m
+              [36m</a>[39m
+            [36m</li>[39m
+          [36m</ul>[39m
+        [36m</nav>[39m
+        [36m<div[39m
+          [33maria-label[39m=[32m"团队资源"[39m
+          [33mclass[39m=[32m"resource-tabs"[39m
+          [33mrole[39m=[32m"tablist"[39m
+        [36m>[39m
+          [36m<button[39m
+            [33maria-controls[39m=[32m"skill-resource-panel"[39m
+            [33maria-selected[39m=[32m"true"[39m
+            [33mid[39m=[32m"skill-resource-tab"[39m
+            [33mrole[39m=[32m"tab"[39m
+            [33mtabindex[39m=[32m"0"[39m
+            [33mtype[39m=[32m"button"[39m
+          [36m>[39m
+            [0m技能[0m
+          [36m</button>[39m
+          [36m<button[39m
+            [33maria-controls[39m=[32m"provider-resource-panel"[39m
+            [33maria-selected[39m=[32m"false"[39m
+            [33mid[39m=[32m"provider-resource-tab"[39m
+            [33mrole[39m=[32m"tab"[39m
+            [33mtabindex[39m=[32m"-1"[39m
+            [33mtype[39m=[32m"button"[39m
+          [36m>[39m
+            [0m模型服务[0m
+          [36m</button>[39m
+        [36m</div>[39m
+      [36m</aside>[39m
+      [36m<main[39m
+        [33maria-labelledby[39m=[32m"skill-resource-tab"[39m
+        [33mclass[39m=[32m"cockpit-flow"[39m
+        [33mid[39m=[32m"skill-resource-panel"[39m
+        [33mrole[39m=[32m"tabpanel"[39m
+      [36m>[39m
+        [36m<header[39m
+          [33mclass[39m=[32m"stack"[39m
+        [36m>[39m
+          [36m<p[39m
+            [33mclass[39m=[32m"eyebrow"[39m
+          [36m>[39m
+            [0m团队资源[0m
+          [36m</p>[39m
+          [36m<h2>[39m
+            [0m技能[0m
+          [36m</h2>[39m
+        [36m</header>[39m
+        [36m<p[39m
+          [33mclass[39m=[32m"muted"[39m
+        [36m>[39m
+          [0m暂无技能。[0m
+        [36m</p>[39m
+      [36m</main>[39m
+      [36m<aside[39m
+        [33maria-labelledby[39m=[32m"skill-editor-title"[39m
+        [33mclass[39m=[32m"cockpit-context"[39m
+      [36m>[39m
+        [36m<div[39m
+          [33mclass[39m=[32m"stack"[39m
+        [36m>[39m
+          [36m<p[39m
+            [33mclass[39m=[32m"eyebrow"[39m
+          [36m>[39m
+            [0m文本技能[0m
+          [36m</p>[39m
+          [36m<h2[39m
+            [33mid[39m=[32m"skill-editor-title"[39m
+          [36m>[39m
+            [0m创建技能[0m
+          [36m</h2>[39m
+        [36m</div>[39m
+        [36m<form[39m
+          [33mclass[39m=[32m"stack"[39m
+        [36m>[39m
+          [36m<div[39m
+            [33mclass[39m=[32m"form-field"[39m
+          [36m>[39m
+            [36m<label[39m
+              [33mfor[39m=[32m"skill-name"[39m
+            [36m>[39m
+              [0m技能名称[0m
+            [36m</label>[39m
+            [36m<input[39m
+              [33mid[39m=[32m"skill-name"[39m
+              [33mmaxlength[39m=[32m"80"[39m
+              [33mrequired[39m=[32m""[39m
+              [33mvalue[39m=[32m""[39m
+            [36m/>[39m
+          [36m</div>[39m
+          [36m<div[39m
+            [33mclass[39m=[32m"form-field"[39m
+          [36m>[39m
+            [36m<label[39m
+              [33mfor[39m=[32m"skill-description"[39m
+            [36m>[39m
+              [0m技能说明[0m
+            [36m</label>[39m
+            [36m<textarea[39m
+              [33mid[39m=[32m"skill-description"[39m
+              [33mmaxlength[39m=[32m"280"[39m
+            [36m/>[39m
+          [36m</div>[39m
+          [36m<div[39m
+            [33mclass[39m=[32m"form-field"[39m
+          [36m>[39m
+            [36m<label[39m
+              [33mfor[39m=[32m"skill-instructions"[39m
+            [36m>[39m
+              [0m指令正文[0m
+            [36m</label>[39m
+            [36m<textarea[39m
+              [33mid[39m=[32m"skill-instructions"[39m
+              [33mmaxlength[39m=[32m"20000"[39m
+              [33mrequired[39m=[32m""[39m
+            [36m/>[39m
+          [36m</div>[39m
+          [36m<button[39m
+            [33mtype[39m=[32m"submit"[39m
+          [36m>[39m
+            [0m创建技能[0m
+          [36m</button>[39m
+        [36m</form>[39m
+      [36m</aside>[39m
+    [36m</div>[39m
+  [36m</div>[39m
+[36m</body>[39m
+ ❯ Object.getElementError node_modules/@testing-library/dom/dist/config.js:37:19
+ ❯ node_modules/@testing-library/dom/dist/query-helpers.js:76:38
+ ❯ node_modules/@testing-library/dom/dist/query-helpers.js:52:17
+ ❯ node_modules/@testing-library/dom/dist/query-helpers.js:95:19
+ ❯ tests/skill-panel.test.tsx:130:29
+    128|     await screen.findByText("暂无技能。");
+    129|
+    130|     await user.click(screen.getByRole("button", { name: "创建新技能" }));
+       |                             ^
+    131|     expect(screen.getByLabelText("技能名称")).toHaveFocus();
+    132|     await user.type(screen.getByLabelText("技能名称"), "Builder");
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[3/13]⎯
+
+ FAIL  tests/skills.api.test.ts > skill API > creates, lists and fully replaces a skill through stable contracts
+AssertionError: the versioned skill PATCH route must exist: expected undefined to be type of 'function'
+
+Expected: "function"
+Received: "undefined"
+
+ ❯ loadItemRoute tests/skills.api.test.ts:20:62
+     18| async function loadItemRoute(): Promise<ItemRoute> {
+     19|   const load = itemRoutes["../app/api/skills/[skillId]/route.ts"];
+     20|   expect(load, "the versioned skill PATCH route must exist").toBeTypeO…
+       |                                                              ^
+     21|   return load();
+     22| }
+ ❯ tests/skills.api.test.ts:44:29
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[4/13]⎯
+
+ FAIL  tests/skills.api.test.ts > skill API > returns field errors, full-replace errors, not-found and version conflicts
+AssertionError: the versioned skill PATCH route must exist: expected undefined to be type of 'function'
+
+Expected: "function"
+Received: "undefined"
+
+ ❯ loadItemRoute tests/skills.api.test.ts:20:62
+     18| async function loadItemRoute(): Promise<ItemRoute> {
+     19|   const load = itemRoutes["../app/api/skills/[skillId]/route.ts"];
+     20|   expect(load, "the versioned skill PATCH route must exist").toBeTypeO…
+       |                                                              ^
+     21|   return load();
+     22| }
+ ❯ tests/skills.api.test.ts:82:29
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[5/13]⎯
+
+ FAIL  tests/skills.service.test.ts > skill service > trims valid fields and preserves instruction text literally
+AssertionError: skill service must support versioned updates: expected undefined to be type of 'function'
+
+Expected: "function"
+Received: "undefined"
+
+ ❯ service tests/skills.service.test.ts:32:81
+     30| function service(): SkillService {
+     31|   const candidate = skillServiceModule as SkillService;
+     32|   expect(candidate.updateSkill, "skill service must support versioned …
+       |                                                                                 ^
+     33|     "function",
+     34|   );
+ ❯ tests/skills.service.test.ts:61:21
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[6/13]⎯
+
+ FAIL  tests/skills.service.test.ts > skill service > rejects invalid field bounds without persisting
+AssertionError: expected error to match asymmetric matcher
+
+- Expected
++ Received
+
+- ObjectContaining {
+-   "code": "INVALID_INPUT",
+-   "fields": ArrayContaining [
+-     {
+-       "code": "required",
+-       "field": "name",
+-     },
+-   ],
++ AssertionError {
++   "message": "skill service must support versioned updates: expected undefined to be type of 'function'",
++   "actual": "undefined",
++   "expected": "function",
++   "showDiff": true,
++   "operator": "strictEqual",
+  }
+
+ ❯ tests/skills.service.test.ts:88:54
+     86|     const path = databasePath();
+     87|
+     88|     expect(() => service().createSkill(input, path)).toThrowError(
+       |                                                      ^
+     89|       expect.objectContaining({
+     90|         code: "INVALID_INPUT",
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[7/13]⎯
+
+ FAIL  tests/skills.service.test.ts > skill service > rejects invalid field bounds without persisting
+AssertionError: expected error to match asymmetric matcher
+
+- Expected
++ Received
+
+- ObjectContaining {
+-   "code": "INVALID_INPUT",
+-   "fields": ArrayContaining [
+-     {
+-       "code": "required",
+-       "field": "instructions",
+-     },
+-   ],
++ AssertionError {
++   "message": "skill service must support versioned updates: expected undefined to be type of 'function'",
++   "actual": "undefined",
++   "expected": "function",
++   "showDiff": true,
++   "operator": "strictEqual",
+  }
+
+ ❯ tests/skills.service.test.ts:88:54
+     86|     const path = databasePath();
+     87|
+     88|     expect(() => service().createSkill(input, path)).toThrowError(
+       |                                                      ^
+     89|       expect.objectContaining({
+     90|         code: "INVALID_INPUT",
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[8/13]⎯
+
+ FAIL  tests/skills.service.test.ts > skill service > rejects invalid field bounds without persisting
+AssertionError: expected error to match asymmetric matcher
+
+- Expected
++ Received
+
+- ObjectContaining {
+-   "code": "INVALID_INPUT",
+-   "fields": ArrayContaining [
+-     {
+-       "code": "too_long",
+-       "field": "name",
+-     },
+-   ],
++ AssertionError {
++   "message": "skill service must support versioned updates: expected undefined to be type of 'function'",
++   "actual": "undefined",
++   "expected": "function",
++   "showDiff": true,
++   "operator": "strictEqual",
+  }
+
+ ❯ tests/skills.service.test.ts:88:54
+     86|     const path = databasePath();
+     87|
+     88|     expect(() => service().createSkill(input, path)).toThrowError(
+       |                                                      ^
+     89|       expect.objectContaining({
+     90|         code: "INVALID_INPUT",
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[9/13]⎯
+
+ FAIL  tests/skills.service.test.ts > skill service > rejects invalid field bounds without persisting
+AssertionError: expected error to match asymmetric matcher
+
+- Expected
++ Received
+
+- ObjectContaining {
+-   "code": "INVALID_INPUT",
+-   "fields": ArrayContaining [
+-     {
+-       "code": "too_long",
+-       "field": "description",
+-     },
+-   ],
++ AssertionError {
++   "message": "skill service must support versioned updates: expected undefined to be type of 'function'",
++   "actual": "undefined",
++   "expected": "function",
++   "showDiff": true,
++   "operator": "strictEqual",
+  }
+
+ ❯ tests/skills.service.test.ts:88:54
+     86|     const path = databasePath();
+     87|
+     88|     expect(() => service().createSkill(input, path)).toThrowError(
+       |                                                      ^
+     89|       expect.objectContaining({
+     90|         code: "INVALID_INPUT",
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[10/13]⎯
+
+ FAIL  tests/skills.service.test.ts > skill service > rejects invalid field bounds without persisting
+AssertionError: expected error to match asymmetric matcher
+
+- Expected
++ Received
+
+- ObjectContaining {
+-   "code": "INVALID_INPUT",
+-   "fields": ArrayContaining [
+-     {
+-       "code": "too_long",
+-       "field": "instructions",
+-     },
+-   ],
++ AssertionError {
++   "message": "skill service must support versioned updates: expected undefined to be type of 'function'",
++   "actual": "undefined",
++   "expected": "function",
++   "showDiff": true,
++   "operator": "strictEqual",
+  }
+
+ ❯ tests/skills.service.test.ts:88:54
+     86|     const path = databasePath();
+     87|
+     88|     expect(() => service().createSkill(input, path)).toThrowError(
+       |                                                      ^
+     89|       expect.objectContaining({
+     90|         code: "INVALID_INPUT",
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[11/13]⎯
+
+ FAIL  tests/skills.service.test.ts > skill service > fully replaces a skill, increments version and rejects stale or missing updates
+AssertionError: skill service must support versioned updates: expected undefined to be type of 'function'
+
+Expected: "function"
+Received: "undefined"
+
+ ❯ service tests/skills.service.test.ts:32:81
+     30| function service(): SkillService {
+     31|   const candidate = skillServiceModule as SkillService;
+     32|   expect(candidate.updateSkill, "skill service must support versioned …
+       |                                                                                 ^
+     33|     "function",
+     34|   );
+ ❯ tests/skills.service.test.ts:99:21
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[12/13]⎯
+
+ FAIL  tests/skills.service.test.ts > skill service > lists deterministically by creation time and then id
+AssertionError: skill service must support versioned updates: expected undefined to be type of 'function'
+
+Expected: "function"
+Received: "undefined"
+
+ ❯ service tests/skills.service.test.ts:32:81
+     30| function service(): SkillService {
+     31|   const candidate = skillServiceModule as SkillService;
+     32|   expect(candidate.updateSkill, "skill service must support versioned …
+       |                                                                                 ^
+     33|     "function",
+     34|   );
+ ❯ tests/skills.service.test.ts:151:19
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[13/13]⎯
+
+
+ Test Files  3 failed (3)
+      Tests  13 failed (13)
+   Start at  01:26:14
+   Duration  2.74s (transform 228ms, setup 1.14s, import 484ms, tests 375ms, environment 4.60s)
+
+# exit: 1

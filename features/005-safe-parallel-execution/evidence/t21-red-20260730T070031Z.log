@@ -1,0 +1,92 @@
+# hf-gate-run
+# label: t21-red
+# command: cmd /c npm test -- tests/merge-journal-prepare.test.ts
+# started: 2026-07-30T07:00:31+00:00
+
+> collaboration-cockpit@0.1.0 test
+> vitest run tests/merge-journal-prepare.test.ts
+
+
+ RUN  v4.1.10 D:/cool-ai
+
+(node:17176) ExperimentalWarning: SQLite is an experimental feature and might change at any time
+(Use `node --trace-warnings ...` to show where the warning was created)
+ ❯ tests/merge-journal-prepare.test.ts (4 tests | 4 failed) 1419ms
+     × durably prepares full manifests and applies modified/added paths in stable order 322ms
+     × conditionally rolls every prepare/apply fault back to all-old 500ms
+     × never overwrites an external mismatch during conditional rollback 307ms
+     × rechecks staged eligibility and holds one unresolved merge lock per project 288ms
+
+⎯⎯⎯⎯⎯⎯⎯ Failed Tests 4 ⎯⎯⎯⎯⎯⎯⎯
+
+ FAIL  tests/merge-journal-prepare.test.ts > merge journal prepare and conditional apply > durably prepares full manifests and applies modified/added paths in stable order
+Error: T-21 merge journal prepare is not implemented.
+ ❯ Module.executeMergePrepare src/server/execution/merge-journal-service.ts:34:9
+     32|   postManifestHash: string;
+     33| }> {
+     34|   throw new Error("T-21 merge journal prepare is not implemented.");
+       |         ^
+     35| }
+     36|
+ ❯ tests/merge-journal-prepare.test.ts:83:40
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[1/4]⎯
+
+ FAIL  tests/merge-journal-prepare.test.ts > merge journal prepare and conditional apply > conditionally rolls every prepare/apply fault back to all-old
+AssertionError: expected [Function] to throw error including 'fault:before_prepare' but got 'T-21 merge journal prepare is not imp…'
+
+Expected: "fault:before_prepare"
+Received: "T-21 merge journal prepare is not implemented."
+
+ ❯ tests/merge-journal-prepare.test.ts:186:12
+    184|             },
+    185|           },
+    186|         })).rejects.toThrow(`fault:${point}`);
+       |            ^
+    187|         expect(readFileSync(join(fixture.workspaceRoot, "src/a.txt"), …
+    188|         expect(existsSync(join(fixture.workspaceRoot, "src/z.txt"))).t…
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[2/4]⎯
+
+ FAIL  tests/merge-journal-prepare.test.ts > merge journal prepare and conditional apply > never overwrites an external mismatch during conditional rollback
+AssertionError: expected Error: T-21 merge journal prepare is not … to match object { code: 'MERGE_RECOVERY_REQUIRED' }
+
+- Expected
++ Received
+
+- {
+-   "code": "MERGE_RECOVERY_REQUIRED",
++ Error {
++   "message": "T-21 merge journal prepare is not implemented.",
+  }
+
+ ❯ tests/merge-journal-prepare.test.ts:208:10
+    206|           },
+    207|         },
+    208|       })).rejects.toMatchObject({ code: "MERGE_RECOVERY_REQUIRED" });
+       |          ^
+    209|       expect(await readFile(join(fixture.workspaceRoot, "src/a.txt"), …
+    210|         .toBe("external-writer");
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[3/4]⎯
+
+ FAIL  tests/merge-journal-prepare.test.ts > merge journal prepare and conditional apply > rechecks staged eligibility and holds one unresolved merge lock per project
+Error: T-21 merge journal prepare is not implemented.
+ ❯ Module.executeMergePrepare src/server/execution/merge-journal-service.ts:34:9
+     32|   postManifestHash: string;
+     33| }> {
+     34|   throw new Error("T-21 merge journal prepare is not implemented.");
+       |         ^
+     35| }
+     36|
+ ❯ tests/merge-journal-prepare.test.ts:223:25
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[4/4]⎯
+
+
+ Test Files  1 failed (1)
+      Tests  4 failed (4)
+   Start at  15:00:32
+   Duration  3.53s (transform 119ms, setup 335ms, import 105ms, tests 1.42s, environment 1.41s)
+
+# exit: 1

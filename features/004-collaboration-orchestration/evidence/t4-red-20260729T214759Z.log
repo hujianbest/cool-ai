@@ -1,0 +1,123 @@
+# hf-gate-run
+# label: t4-red
+# command: cmd /c npm test -- tests/collaboration-controls.service.test.ts
+# started: 2026-07-29T21:47:59+00:00
+
+> collaboration-cockpit@0.1.0 test
+> vitest run tests/collaboration-controls.service.test.ts
+
+
+ RUN  v4.1.10 D:/cool-ai
+
+(node:17328) ExperimentalWarning: SQLite is an experimental feature and might change at any time
+(Use `node --trace-warnings ...` to show where the warning was created)
+ ❯ tests/collaboration-controls.service.test.ts (7 tests | 7 failed) 1697ms
+     × pauses and continues only a manual pause while incrementing version and epoch 243ms
+     × requires retry for provider and internal failures and rechecks provider readiness 254ms
+     × blocks budget retry until the configured token boundary is raised 315ms
+     × keeps a planned run terminal for every control action 237ms
+     × keeps a stopped run terminal for every control action 255ms
+     × enforces expectedVersion and exactly replays a completed operation 200ms
+     × allows only one concurrent expectedVersion CAS winner 191ms
+
+⎯⎯⎯⎯⎯⎯⎯ Failed Tests 7 ⎯⎯⎯⎯⎯⎯⎯
+
+ FAIL  tests/collaboration-controls.service.test.ts > collaboration run control service > pauses and continues only a manual pause while incrementing version and epoch
+AssertionError: T-4 controlRun service must exist: expected undefined to be type of 'function'
+
+Expected: "function"
+Received: "undefined"
+
+ ❯ control tests/collaboration-controls.service.test.ts:48:63
+     46| function control(input: ControlInput): ControlResult {
+     47|   const implementation = (runService as unknown as { controlRun?: Cont…
+     48|   expect(implementation, "T-4 controlRun service must exist").toBeType…
+       |                                                               ^
+     49|   return implementation!(databasePath, runId, input);
+     50| }
+ ❯ tests/collaboration-controls.service.test.ts:185:20
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[1/7]⎯
+
+ FAIL  tests/collaboration-controls.service.test.ts > collaboration run control service > requires retry for provider and internal failures and rechecks provider readiness
+AssertionError: expected AssertionError: T-4 controlRun service mu… { …(4) } to be an instance of CollaborationError
+ ❯ expectCode tests/collaboration-controls.service.test.ts:145:19
+    143|     throw new Error(`Expected ${code}`);
+    144|   } catch (error) {
+    145|     expect(error).toBeInstanceOf(CollaborationError);
+       |                   ^
+    146|     expect(error).toMatchObject({
+    147|       code,
+ ❯ tests/collaboration-controls.service.test.ts:220:5
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[2/7]⎯
+
+ FAIL  tests/collaboration-controls.service.test.ts > collaboration run control service > blocks budget retry until the configured token boundary is raised
+AssertionError: expected AssertionError: T-4 controlRun service mu… { …(4) } to be an instance of CollaborationError
+ ❯ expectCode tests/collaboration-controls.service.test.ts:145:19
+    143|     throw new Error(`Expected ${code}`);
+    144|   } catch (error) {
+    145|     expect(error).toBeInstanceOf(CollaborationError);
+       |                   ^
+    146|     expect(error).toMatchObject({
+    147|       code,
+ ❯ tests/collaboration-controls.service.test.ts:283:5
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[3/7]⎯
+
+ FAIL  tests/collaboration-controls.service.test.ts > collaboration run control service > keeps a planned run terminal for every control action
+ FAIL  tests/collaboration-controls.service.test.ts > collaboration run control service > keeps a stopped run terminal for every control action
+AssertionError: expected AssertionError: T-4 controlRun service mu… { …(4) } to be an instance of CollaborationError
+ ❯ expectCode tests/collaboration-controls.service.test.ts:145:19
+    143|     throw new Error(`Expected ${code}`);
+    144|   } catch (error) {
+    145|     expect(error).toBeInstanceOf(CollaborationError);
+       |                   ^
+    146|     expect(error).toMatchObject({
+    147|       code,
+ ❯ tests/collaboration-controls.service.test.ts:310:9
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[4/7]⎯
+
+ FAIL  tests/collaboration-controls.service.test.ts > collaboration run control service > enforces expectedVersion and exactly replays a completed operation
+AssertionError: T-4 controlRun service must exist: expected undefined to be type of 'function'
+
+Expected: "function"
+Received: "undefined"
+
+ ❯ control tests/collaboration-controls.service.test.ts:48:63
+     46| function control(input: ControlInput): ControlResult {
+     47|   const implementation = (runService as unknown as { controlRun?: Cont…
+     48|   expect(implementation, "T-4 controlRun service must exist").toBeType…
+       |                                                               ^
+     49|   return implementation!(databasePath, runId, input);
+     50| }
+ ❯ tests/collaboration-controls.service.test.ts:330:19
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[5/7]⎯
+
+ FAIL  tests/collaboration-controls.service.test.ts > collaboration run control API > allows only one concurrent expectedVersion CAS winner
+AssertionError: T-4 run control route must exist: expected undefined to be type of 'function'
+
+Expected: "function"
+Received: "undefined"
+
+ ❯ route tests/collaboration-controls.service.test.ts:155:52
+    153| async function route(): Promise<ControlRoute> {
+    154|   const load = routeModules["../app/api/runs/[runId]/control/route.ts"…
+    155|   expect(load, "T-4 run control route must exist").toBeTypeOf("functio…
+       |                                                    ^
+    156|   return load!();
+    157| }
+ ❯ post tests/collaboration-controls.service.test.ts:160:17
+ ❯ tests/collaboration-controls.service.test.ts:355:7
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[6/7]⎯
+
+
+ Test Files  1 failed (1)
+      Tests  7 failed (7)
+   Start at  05:48:00
+   Duration  3.86s (transform 121ms, setup 388ms, import 111ms, tests 1.70s, environment 1.40s)
+
+# exit: 1

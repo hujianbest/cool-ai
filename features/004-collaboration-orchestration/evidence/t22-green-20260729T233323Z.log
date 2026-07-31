@@ -1,0 +1,18 @@
+# hf-gate-run
+# label: t22-green
+# command: npm.cmd test -- tests/collaboration-controls.test.tsx
+# started: 2026-07-29T23:33:23+00:00
+
+> collaboration-cockpit@0.1.0 test
+> vitest run tests/collaboration-controls.test.tsx
+
+
+ RUN  v4.1.10 D:/cool-ai
+
+
+ Test Files  1 passed (1)
+      Tests  11 passed (11)
+   Start at  07:33:24
+   Duration  3.08s (transform 102ms, setup 340ms, import 215ms, tests 866ms, environment 1.40s)
+
+# exit: 0

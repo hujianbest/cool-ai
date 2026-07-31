@@ -1,0 +1,27 @@
+# hf-gate-run
+# label: smoke
+# command: cmd /c npm run smoke
+# started: 2026-07-29T15:45:42+00:00
+
+> collaboration-cockpit@0.1.0 smoke
+> node tests/browser-smoke.mjs
+
+node:internal/modules/run_main:107
+    triggerUncaughtException(
+    ^
+
+AssertionError [ERR_ASSERTION]: narrow viewport must not overflow horizontally: {"clientWidth":390,"scrollWidth":480,"offenders":[{"className":"cockpit-flow","right":480,"tagName":"MAIN"},{"className":"panel-heading","right":448,"tagName":"DIV"},{"className":"composer","right":448,"tagName":"FORM"},{"className":"form-row","right":432,"tagName":"DIV"},{"className":"form-field","right":432,"tagName":"DIV"},{"className":"","right":432,"tagName":"LABEL"},{"className":"","right":432,"tagName":"INPUT"},{"className":"","right":432,"tagName":"BUTTON"},{"className":"timeline","right":448,"tagName":"OL"},{"className":"timeline-item","right":432,"tagName":"LI"}]}
+
+false !== true
+
+    at file:///D:/cool-ai/tests/browser-smoke.mjs:145:10 {
+  generatedMessage: false,
+  code: 'ERR_ASSERTION',
+  actual: false,
+  expected: true,
+  operator: 'strictEqual',
+  diff: 'simple'
+}
+
+Node.js v24.14.0
+# exit: 1

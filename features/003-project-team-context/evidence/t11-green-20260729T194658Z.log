@@ -1,0 +1,140 @@
+# hf-gate-run
+# label: t11-green
+# command: cmd /c npm test -- tests/memory-panel.test.tsx tests/context-preview.test.tsx tests/context-accessibility.test.tsx
+# started: 2026-07-29T19:46:58+00:00
+
+> collaboration-cockpit@0.1.0 test
+> vitest run tests/memory-panel.test.tsx tests/context-preview.test.tsx tests/context-accessibility.test.tsx
+
+
+ RUN  v4.1.10 D:/cool-ai
+
+ ❯ tests/context-preview.test.tsx (2 tests | 1 failed) 278ms
+     × renders readable shared/current sections, structured details and member-identical shared visibility 43ms
+
+⎯⎯⎯⎯⎯⎯⎯ Failed Tests 1 ⎯⎯⎯⎯⎯⎯⎯
+
+ FAIL  tests/context-preview.test.tsx > Context Preview > renders readable shared/current sections, structured details and member-identical shared visibility
+TestingLibraryElementError: Unable to find an element with the text: Shared fact. This could be because the text is broken up by multiple elements. In this case, you can provide a function for your text matcher to make your matcher more flexible.
+
+Ignored nodes: comments, script, style
+[36m<section[39m
+  [33maria-label[39m=[32m"共享项目上下文"[39m
+  [33mclass[39m=[32m"stack context-preview-section"[39m
+  [33mrole[39m=[32m"region"[39m
+[36m>[39m
+  [36m<h3>[39m
+    [0mLaunch[0m
+  [36m</h3>[39m
+  [36m<p>[39m
+    [0m工作区：[0m
+    [36m<code>[39m
+      [0mD:\workspace[0m
+    [36m</code>[39m
+  [36m</p>[39m
+  [36m<section[39m
+    [33mclass[39m=[32m"stack"[39m
+  [36m>[39m
+    [36m<h4>[39m
+      [0m平等名册[0m
+    [36m</h4>[39m
+    [36m<ul[39m
+      [33maria-label[39m=[32m"共享成员名册"[39m
+      [33mclass[39m=[32m"stack"[39m
+    [36m>[39m
+      [36m<li>[39m
+        [0mAlpha[0m
+        [0m · [0m
+        [0m规划[0m
+        [0m · [0m
+        [0mmodel-a[0m
+        [0m · 技能：[0m
+        [0mPlan[0m
+        [0m · 权限：[0m
+        [0m读取[0m
+      [36m</li>[39m
+      [36m<li>[39m
+        [0mBeta[0m
+        [0m · [0m
+        [0m实现[0m
+        [0m · [0m
+        [0mmodel-b[0m
+        [0m · 技能：[0m
+        [0mBuild[0m
+        [0m · 权限：[0m
+        [0m读取、写入、命令[0m
+      [36m</li>[39m
+    [36m</ul>[39m
+  [36m</section>[39m
+  [36m<section[39m
+    [33mclass[39m=[32m"stack"[39m
+  [36m>[39m
+    [36m<h4>[39m
+      [0m使命[0m
+    [36m</h4>[39m
+    [36m<p>[39m
+      [0mShip[0m
+    [36m</p>[39m
+    [36m<p>[39m
+      [0mDeliver[0m
+    [36m</p>[39m
+  [36m</section>[39m
+  [36m<section[39m
+    [33mclass[39m=[32m"stack"[39m
+  [36m>[39m
+    [36m<h4>[39m
+      [0m任务[0m
+    [36m</h4>[39m
+    [36m<ul[39m
+      [33maria-label[39m=[32m"共享任务"[39m
+      [33mclass[39m=[32m"stack"[39m
+    [36m>[39m
+      [36m<li>[39m
+        [0mPlan[0m
+        [0m · [0m
+        [0mtodo[0m
+      [36m</li>[39m
+    [36m</ul>[39m
+  [36m</section>[39m
+  [36m<section[39m
+    [33mclass[39m=[32m"stack"[39m
+  [36m>[39m
+    [36m<h4>[39m
+      [0mActive 记忆[0m
+    [36m</h4>[39m
+    [36m<ul[39m
+      [33maria-label[39m=[32m"共享 Active 记忆"[39m
+      [33mclass[39m=[32m"stack"[39m
+    [36m>[39m
+      [36m<li>[39m
+        [0mShared fact[0m
+        [0m · 来源：[0m
+        [0mowner_input[0m
+        [0m /[0m
+        [0m [0m
+        [0mOwner[0m
+      [36m</li>[39m
+    [36m</ul>[39m
+  [36m</section>[39m
+[36m</section>[39m
+ ❯ Object.getElementError node_modules/@testing-library/dom/dist/config.js:37:19
+ ❯ node_modules/@testing-library/dom/dist/query-helpers.js:76:38
+ ❯ node_modules/@testing-library/dom/dist/query-helpers.js:52:17
+ ❯ node_modules/@testing-library/dom/dist/query-helpers.js:95:19
+ ❯ tests/context-preview.test.tsx:194:27
+    192|       ),
+    193|     ).toBeInTheDocument();
+    194|     expect(within(shared).getByText("Shared fact")).toBeInTheDocument(…
+       |                           ^
+    195|     const sharedBefore = shared.textContent;
+    196|     expect(screen.getByText("Alpha private prompt")).toBeInTheDocument…
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[1/1]⎯
+
+
+ Test Files  1 failed | 2 passed (3)
+      Tests  1 failed | 5 passed (6)
+   Start at  03:46:59
+   Duration  2.99s (transform 375ms, setup 1.17s, import 732ms, tests 1.22s, environment 4.63s)
+
+# exit: 1

@@ -1,0 +1,106 @@
+# hf-gate-run
+# label: t17-red
+# command: cmd /c npm test -- tests/execution-usage-budget.test.ts
+# started: 2026-07-30T05:56:49+00:00
+
+> collaboration-cockpit@0.1.0 test
+> vitest run tests/execution-usage-budget.test.ts
+
+
+ RUN  v4.1.10 D:/cool-ai
+
+(node:10900) ExperimentalWarning: SQLite is an experimental feature and might change at any time
+(Use `node --trace-warnings ...` to show where the warning was created)
+ ❯ tests/execution-usage-budget.test.ts (4 tests | 3 failed) 2544ms
+     × aggregates S-4 primary plus S-5 primary/repair and pauses after crossing without a tool 816ms
+     × does no HTTP or action when trusted same-Agent usage is already at max 387ms
+     × enforces exact round, tool, and wall-clock prechecks while keeping Agents independent 434ms
+
+⎯⎯⎯⎯⎯⎯⎯ Failed Tests 3 ⎯⎯⎯⎯⎯⎯⎯
+
+ FAIL  tests/execution-usage-budget.test.ts > shared execution usage and business budgets > aggregates S-4 primary plus S-5 primary/repair and pauses after crossing without a tool
+AssertionError: expected 200 to be 409 // Object.is equality
+
+- Expected
++ Received
+
+- 409
++ 200
+
+ ❯ tests/execution-usage-budget.test.ts:238:27
+    236|
+    237|     const result = await run(EXECUTION_ID, 1, 1);
+    238|     expect(result.status).toBe(409);
+       |                           ^
+    239|     expect(database.prepare(`
+    240|       SELECT status,reason_code AS reasonCode,business_round_count AS …
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[1/3]⎯
+
+ FAIL  tests/execution-usage-budget.test.ts > shared execution usage and business budgets > does no HTTP or action when trusted same-Agent usage is already at max
+TypeError: Cannot read properties of undefined (reading 'status')
+ ❯ callOpenAiChat src/server/collaboration/openai-chat-client.ts:239:18
+    237|         context,
+    238|         "provider_failed",
+    239|         response.status,
+       |                  ^
+    240|       );
+    241|     }
+ ❯ executeCall src/server/execution/execution-structured-repair.ts:212:18
+ ❯ executeStructuredExecutionAction src/server/execution/execution-structured-repair.ts:322:21
+ ❯ runModel src/server/execution/action-orchestrator.ts:366:18
+ ❯ Module.advanceExecution src/server/execution/action-orchestrator.ts:736:14
+ ❯ tests/execution-usage-budget.test.ts:264:20
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[2/3]⎯
+
+ FAIL  tests/execution-usage-budget.test.ts > shared execution usage and business budgets > enforces exact round, tool, and wall-clock prechecks while keeping Agents independent
+AssertionError: expected "vi.fn()" to not be called at all, but actually been called 1 times
+
+Received:
+
+  1st vi.fn() call:
+
+    Array [
+      "https://provider.example/v1/chat/completions",
+      Object {
+        "body": "{"model":"model","messages":[{"role":"system","content":"You are executing one frozen project task in an auditable sandbox.\nReturn one strict JSON object and no surrounding prose.\nTop level: {\"summary\":string(1..2000),\"action\":Action}.\nAction is exactly one of {\"type\":\"list\",\"path\":string(1..4096 UTF-8 bytes)}, {\"type\":\"read\",\"path\":string(1..4096 UTF-8 bytes)}, {\"type\":\"write\",\"path\":string(1..4096 UTF-8 bytes),\"content\":UTF-8 text(0..1048576 bytes, no NUL),\"expectedHash\":null|lowercase SHA-256}, {\"type\":\"command\",\"executable\":string(1..4096 UTF-8 bytes),\"args\":string[0..64] (each 0..4096 UTF-8 bytes, total <=32768 UTF-8 bytes),\"workdir\":string(1..4096 UTF-8 bytes),\"expectedEffect\":string(1..2000)}, or {\"type\":\"staged\"}.\nsummary and expectedEffect must contain visible non-whitespace text.\nUnknown keys are forbidden at every object level.\nUse only the supplied relative sandbox paths and the declared tools.\nReturn visible conclusions only. Never reveal or invent hidden chain-of-thought."},{"role":"system","content":"{\"currentAgent\":{\"id\":\"agent-a\",\"name\":\"agent-a\",\"permissions\":{\"execute\":true,\"read\":true,\"write\":true},\"role\":\"Builder\",\"skills\":[],\"systemPrompt\":\"private\"},\"scope\":\"current-agent-private-configuration\"}"},{"role":"system","content":"{\"contextHash\":\"4d715ab8ddac877222e3af31c91b2d2776de8b51b95ef9183555f2591021c5f2\",\"frozen\":{\"dependencies\":[],\"manifests\":{\"baseline\":{\"fileCount\":1,\"hash\":\"aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa\",\"totalBytes\":1},\"sandbox\":{\"fileCount\":1,\"hash\":\"aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa\",\"totalBytes\":1}},\"members\":[{\"accentToken\":\"sage\",\"agentId\":\"agent-a\",\"avatarText\":\"A\",\"name\":\"agent-a\",\"permissions\":{\"execute\":true,\"read\":true,\"write\":true},\"role\":\"Builder\",\"skillNames\":[]}],\"mission\":{\"goal\":\"Ship\",\"id\":\"mission\",\"title\":\"Mission\",\"version\":1},\"publicCollaboration\":[],\"publicSummaries\":[],\"sharedContext\":[],\"task\":{\"assigneeAgentId\":\"agent-a\",\"description\":\"Work\",\"id\":\"work-a\",\"status\":\"in_progress\",\"title\":\"work-a\",\"version\":1},\"validationPolicy\":{\"classifierVersion\":1,\"entries\":[],\"policyHash\":\"4f53cda18c2baa0c0354bb5f9a3ecbe5ed12ab4d8e11ba873c2f11161202b945\",\"revisionId\":\"policy\",\"version\":1}},\"scope\":\"frozen-public-execution-context\"}"},{"role":"user","content":"{\"scope\":\"prior-typed-tool-results\",\"summary\":{\"bytes\":78,\"entries\":[],\"includedCount\":0,\"omittedCount\":0,\"truncated\":false}}"}],"response_format":{"type":"json_object"}}",
+        "headers": Object {
+          "Accept": "application/json",
+          "Authorization": "Bearer provider-secret",
+          "Content-Type": "application/json",
+        },
+        "method": "POST",
+        "redirect": "manual",
+        "signal": AbortSignal {
+          Symbol(kEvents): Map {},
+          Symbol(events.maxEventTargetListeners): 0,
+          Symbol(events.maxEventTargetListenersWarned): false,
+          Symbol(kHandlers): Map {},
+          Symbol(kAborted): false,
+          Symbol(kReason): undefined,
+          Symbol(kComposite): false,
+        },
+      },
+    ]
+
+
+Number of calls: 1
+
+ ❯ tests/execution-usage-budget.test.ts:311:27
+    309|     vi.stubGlobal("fetch", fetchMock);
+    310|     await run(EXECUTION_ID, 1, 20);
+    311|     expect(fetchMock).not.toHaveBeenCalled();
+       |                           ^
+    312|     expect(database.prepare("SELECT reason_code AS reasonCode FROM exe…
+    313|       .get(EXECUTION_ID)).toEqual({ reasonCode: "BUSINESS_ROUND_LIMIT"…
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[3/3]⎯
+
+
+ Test Files  1 failed (1)
+      Tests  3 failed | 1 passed (4)
+   Start at  13:56:50
+   Duration  4.69s (transform 308ms, setup 342ms, import 117ms, tests 2.54s, environment 1.42s)
+
+# exit: 1

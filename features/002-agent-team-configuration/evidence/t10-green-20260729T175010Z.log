@@ -1,0 +1,73 @@
+# hf-gate-run
+# label: t10-green
+# command: cmd /c npm test
+# started: 2026-07-29T17:50:10+00:00
+
+> collaboration-cockpit@0.1.0 test
+> vitest run
+
+
+ RUN  v4.1.10 D:/cool-ai
+
+(node:4120) ExperimentalWarning: SQLite is an experimental feature and might change at any time
+(Use `node --trace-warnings ...` to show where the warning was created)
+(node:7808) ExperimentalWarning: SQLite is an experimental feature and might change at any time
+(Use `node --trace-warnings ...` to show where the warning was created)
+(node:5968) ExperimentalWarning: SQLite is an experimental feature and might change at any time
+(Use `node --trace-warnings ...` to show where the warning was created)
+(node:8648) ExperimentalWarning: SQLite is an experimental feature and might change at any time
+(Use `node --trace-warnings ...` to show where the warning was created)
+(node:5376) ExperimentalWarning: SQLite is an experimental feature and might change at any time
+(Use `node --trace-warnings ...` to show where the warning was created)
+(node:14392) ExperimentalWarning: SQLite is an experimental feature and might change at any time
+(Use `node --trace-warnings ...` to show where the warning was created)
+ ❯ tests/accessibility.test.tsx (4 tests | 1 failed) 446ms
+     × places drawer controls before the primary form in keyboard order 63ms
+(node:14828) ExperimentalWarning: SQLite is an experimental feature and might change at any time
+(Use `node --trace-warnings ...` to show where the warning was created)
+(node:4796) ExperimentalWarning: SQLite is an experimental feature and might change at any time
+(Use `node --trace-warnings ...` to show where the warning was created)
+(node:4936) ExperimentalWarning: SQLite is an experimental feature and might change at any time
+(Use `node --trace-warnings ...` to show where the warning was created)
+(node:16404) ExperimentalWarning: SQLite is an experimental feature and might change at any time
+(Use `node --trace-warnings ...` to show where the warning was created)
+(node:5328) ExperimentalWarning: SQLite is an experimental feature and might change at any time
+(Use `node --trace-warnings ...` to show where the warning was created)
+(node:3932) ExperimentalWarning: SQLite is an experimental feature and might change at any time
+(Use `node --trace-warnings ...` to show where the warning was created)
+
+⎯⎯⎯⎯⎯⎯⎯ Failed Tests 1 ⎯⎯⎯⎯⎯⎯⎯
+
+ FAIL  tests/accessibility.test.tsx > narrow-screen and keyboard accessibility > places drawer controls before the primary form in keyboard order
+Error: expect(element).toHaveFocus()
+
+Expected element with focus:
+  <input
+  id="project-name"
+  name="name"
+  value=""
+/>
+Received element with focus:
+  <a
+  aria-current="page"
+  href="/"
+>
+  工作
+</a>
+ ❯ tests/accessibility.test.tsx:77:43
+     75|     expect(screen.getByRole("button", { name: "打开当前任务上下文" })).toHaveFo…
+     76|     await user.tab();
+     77|     expect(screen.getByLabelText("项目名称")).toHaveFocus();
+       |                                           ^
+     78|   });
+     79|
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[1/1]⎯
+
+
+ Test Files  1 failed | 27 passed (28)
+      Tests  1 failed | 138 passed (139)
+   Start at  01:50:11
+   Duration  14.35s (transform 1.36s, setup 12.56s, import 4.04s, tests 15.09s, environment 55.42s)
+
+# exit: 1

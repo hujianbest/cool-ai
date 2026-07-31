@@ -1,0 +1,57 @@
+# hf-gate-run
+# label: t7-red
+# command: npm.cmd test -- tests/sandbox-snapshot.test.ts
+# started: 2026-07-30T03:36:09+00:00
+
+> collaboration-cockpit@0.1.0 test
+> vitest run tests/sandbox-snapshot.test.ts
+
+
+ RUN  v4.1.10 D:/cool-ai
+
+(node:10508) ExperimentalWarning: SQLite is an experimental feature and might change at any time
+(Use `node --trace-warnings ...` to show where the warning was created)
+ ❯ tests/sandbox-snapshot.test.ts (8 tests | 3 failed) 1089ms
+     × keeps the business clock NULL across a healthy heartbeat after 120 seconds 307ms
+     × reconciles a restarted expired build to paused only after owned cleanup 233ms
+     × fails closed without deleting a replacement sandbox when ownership is uncertain 228ms
+
+⎯⎯⎯⎯⎯⎯⎯ Failed Tests 3 ⎯⎯⎯⎯⎯⎯⎯
+
+ FAIL  tests/sandbox-snapshot.test.ts > durable sandbox action lifecycle > keeps the business clock NULL across a healthy heartbeat after 120 seconds
+SchemaMigrationError: Database version 5 schema is invalid.
+ ❯ migrateDatabase src/server/migrations.ts:1342:13
+    1340|     const validation = validateV5(database);
+    1341|     if (validation) {
+    1342|       throw new SchemaMigrationError(validation, "Database version 5 s…
+       |             ^
+    1343|     }
+    1344|   }
+ ❯ openDatabase src/server/db.ts:14:5
+ ❯ tests/sandbox-snapshot.test.ts:229:22
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[1/3]⎯
+
+ FAIL  tests/sandbox-snapshot.test.ts > durable sandbox action lifecycle > reconciles a restarted expired build to paused only after owned cleanup
+Error: CHECK constraint failed: (status='running' AND lease_token IS NOT NULL AND lease_expires_at IS NOT NULL) OR (status<>'running' AND lease_token IS NULL AND lease_expires_at IS NULL)
+ ❯ seedSandboxAction tests/sandbox-snapshot.test.ts:220:475
+
+ ❯ tests/sandbox-snapshot.test.ts:242:5
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[2/3]⎯
+
+ FAIL  tests/sandbox-snapshot.test.ts > durable sandbox action lifecycle > fails closed without deleting a replacement sandbox when ownership is uncertain
+Error: CHECK constraint failed: (status='running' AND lease_token IS NOT NULL AND lease_expires_at IS NOT NULL) OR (status<>'running' AND lease_token IS NULL AND lease_expires_at IS NULL)
+ ❯ seedSandboxAction tests/sandbox-snapshot.test.ts:220:475
+
+ ❯ tests/sandbox-snapshot.test.ts:261:5
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[3/3]⎯
+
+
+ Test Files  1 failed (1)
+      Tests  3 failed | 5 passed (8)
+   Start at  11:36:10
+   Duration  3.21s (transform 183ms, setup 331ms, import 117ms, tests 1.09s, environment 1.40s)
+
+# exit: 1

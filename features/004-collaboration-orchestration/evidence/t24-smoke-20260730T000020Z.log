@@ -1,0 +1,34 @@
+# hf-gate-run
+# label: t24-smoke
+# command: cmd.exe /d /s /c npm run smoke:collaboration
+# started: 2026-07-30T00:00:20+00:00
+
+> collaboration-cockpit@0.1.0 smoke:collaboration
+> node tests/collaboration-browser-smoke.mjs
+
+(node:15504) ExperimentalWarning: SQLite is an experimental feature and might change at any time
+(Use `node --trace-warnings ...` to show where the warning was created)
+RECOVERY PASS: refresh and process restart restored planned run
+OUTBOUND ALLOWLIST PASS: 1 models + 4 chat requests used only expected routes and fields
+PRIVATE SEPARATION PASS: primary requests contained current private instructions only; repair contained neither
+node:internal/modules/run_main:107
+    triggerUncaughtException(
+    ^
+
+AssertionError [ERR_ASSERTION]: Expected values to be strictly equal:
++ actual - expected
+
++ 'todo'
+- 'in_progress'
+
+    at file:///D:/cool-ai/tests/collaboration-browser-smoke.mjs:679:10 {
+  generatedMessage: true,
+  code: 'ERR_ASSERTION',
+  actual: 'todo',
+  expected: 'in_progress',
+  operator: 'strictEqual',
+  diff: 'simple'
+}
+
+Node.js v24.14.0
+# exit: 1

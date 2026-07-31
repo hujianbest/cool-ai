@@ -1,0 +1,18 @@
+# hf-gate-run
+# label: t15-green
+# command: cmd /c npm test -- tests/execution-prompt.test.ts
+# started: 2026-07-30T05:35:38+00:00
+
+> collaboration-cockpit@0.1.0 test
+> vitest run tests/execution-prompt.test.ts
+
+
+ RUN  v4.1.10 D:/cool-ai
+
+
+ Test Files  1 passed (1)
+      Tests  4 passed (4)
+   Start at  13:35:40
+   Duration  4.47s (transform 108ms, setup 705ms, import 44ms, tests 316ms, environment 2.94s)
+
+# exit: 0

@@ -1,0 +1,1424 @@
+# hf-gate-run
+# label: t29-green
+# command: cmd /c npm test -- tests/execution-review-ui.test.tsx
+# started: 2026-07-30T14:13:22+00:00
+
+> collaboration-cockpit@0.1.0 test
+> vitest run tests/execution-review-ui.test.tsx
+
+
+ RUN  v4.1.10 D:/cool-ai
+
+ ❯ tests/execution-review-ui.test.tsx (7 tests | 7 failed) 477ms
+     × uses an arrow-key tablist and independently paginates timeline summaries 243ms
+     × lazy-loads validation stdout one chunk at a time, shows metadata, and preserves read data on error 45ms
+     × loads artifacts and text diffs incrementally while independently reaching observation and blocker item 101 37ms
+     × shows exact one-shot command approval details and supports approve, reject, revoke, and replace states 35ms
+     × never presents auto merge for blocked review state and keeps staged-hash approval separate 40ms
+     × never presents auto merge for stale review state and keeps staged-hash approval separate 40ms
+     × never presents auto merge for conflicted review state and keeps staged-hash approval separate 35ms
+
+⎯⎯⎯⎯⎯⎯⎯ Failed Tests 7 ⎯⎯⎯⎯⎯⎯⎯
+
+ FAIL  tests/execution-review-ui.test.tsx > T-29 execution review UI > uses an arrow-key tablist and independently paginates timeline summaries
+TestingLibraryElementError: Unable to find an accessible element with the role "tab"
+
+Here are the accessible roles:
+
+  paragraph:
+
+  Name "":
+  [36m<p[39m
+    [33mclass[39m=[32m"eyebrow"[39m
+  [36m/>[39m
+
+  Name "":
+  [36m<p />[39m
+
+  --------------------------------------------------
+  heading:
+
+  Name "Task A":
+  [36m<h3[39m
+    [33mid[39m=[32m"execution-execution-a-title"[39m
+    [33mtabindex[39m=[32m"-1"[39m
+  [36m/>[39m
+
+  --------------------------------------------------status:
+
+  Name "":
+  [36m<p[39m
+    [33mrole[39m=[32m"status"[39m
+  [36m/>[39m
+
+  --------------------------------------------------progressbar:
+
+  Name "业务回合进度":
+  [36m<progress[39m
+    [33maria-label[39m=[32m"业务回合进度"[39m
+    [33maria-valuemax[39m=[32m"20"[39m
+    [33maria-valuemin[39m=[32m"0"[39m
+    [33maria-valuenow[39m=[32m"4"[39m
+    [33mmax[39m=[32m"20"[39m
+    [33mvalue[39m=[32m"4"[39m
+  [36m/>[39m
+
+  Name "工具调用进度":
+  [36m<progress[39m
+    [33maria-label[39m=[32m"工具调用进度"[39m
+    [33maria-valuemax[39m=[32m"40"[39m
+    [33maria-valuemin[39m=[32m"0"[39m
+    [33maria-valuenow[39m=[32m"7"[39m
+    [33mmax[39m=[32m"40"[39m
+    [33mvalue[39m=[32m"7"[39m
+  [36m/>[39m
+
+  Name "Token 进度":
+  [36m<progress[39m
+    [33maria-label[39m=[32m"Token 进度"[39m
+    [33maria-valuemax[39m=[32m"2000"[39m
+    [33maria-valuemin[39m=[32m"0"[39m
+    [33maria-valuenow[39m=[32m"900"[39m
+    [33mmax[39m=[32m"2000"[39m
+    [33mvalue[39m=[32m"900"[39m
+  [36m/>[39m
+
+  --------------------------------------------------paragraph:
+
+  Name "":
+  [36m<p[39m
+    [33maria-busy[39m=[32m"true"[39m
+  [36m/>[39m
+
+  --------------------------------------------------button:
+
+  Name "停止 Task A":
+  [36m<button[39m
+    [33mstyle[39m=[32m"min-height: var(--control-min);"[39m
+    [33mtype[39m=[32m"button"[39m
+  [36m/>[39m
+
+  Name "刷新 Task A":
+  [36m<button[39m
+    [33mstyle[39m=[32m"min-height: var(--control-min);"[39m
+    [33mtype[39m=[32m"button"[39m
+  [36m/>[39m
+
+  --------------------------------------------------
+
+Ignored nodes: comments, script, style
+[36m<section[39m
+  [33maria-labelledby[39m=[32m"execution-execution-a-title"[39m
+  [33mclass[39m=[32m"run-detail execution-card"[39m
+  [33mdata-accent[39m=[32m"sage"[39m
+  [33mrole[39m=[32m"region"[39m
+[36m>[39m
+  [36m<div[39m
+    [33mclass[39m=[32m"panel-heading"[39m
+  [36m>[39m
+    [36m<div>[39m
+      [36m<p[39m
+        [33mclass[39m=[32m"eyebrow"[39m
+      [36m>[39m
+        [0mA[0m
+      [36m</p>[39m
+      [36m<p>[39m
+        [0mAlpha[0m
+      [36m</p>[39m
+      [36m<h3[39m
+        [33mid[39m=[32m"execution-execution-a-title"[39m
+        [33mtabindex[39m=[32m"-1"[39m
+      [36m>[39m
+        [0mTask A[0m
+      [36m</h3>[39m
+    [36m</div>[39m
+    [36m<span[39m
+      [33mclass[39m=[32m"status-label status-staged"[39m
+    [36m>[39m
+      [0m变更待审阅[0m
+    [36m</span>[39m
+  [36m</div>[39m
+  [36m<p[39m
+    [33mrole[39m=[32m"status"[39m
+  [36m>[39m
+    [0m当前没有进行中的动作[0m
+  [36m</p>[39m
+  [36m<div[39m
+    [33mclass[39m=[32m"execution-progress-list"[39m
+  [36m>[39m
+    [36m<div[39m
+      [33mclass[39m=[32m"execution-progress"[39m
+    [36m>[39m
+      [36m<span>[39m
+        [0m业务回合[0m
+        [0m [0m
+        [0m4[0m
+        [0m/[0m
+        [0m20[0m
+      [36m</span>[39m
+      [36m<progress[39m
+        [33maria-label[39m=[32m"业务回合进度"[39m
+        [33maria-valuemax[39m=[32m"20"[39m
+        [33maria-valuemin[39m=[32m"0"[39m
+        [33maria-valuenow[39m=[32m"4"[39m
+        [33mmax[39m=[32m"20"[39m
+        [33mvalue[39m=[32m"4"[39m
+      [36m/>[39m
+    [36m</div>[39m
+    [36m<div[39m
+      [33mclass[39m=[32m"execution-progress"[39m
+    [36m>[39m
+      [36m<span>[39m
+        [0m工具调用[0m
+        [0m [0m
+        [0m7[0m
+        [0m/[0m
+        [0m40[0m
+      [36m</span>[39m
+      [36m<progress[39m
+        [33maria-label[39m=[32m"工具调用进度"[39m
+        [33maria-valuemax[39m=[32m"40"[39m
+        [33maria-valuemin[39m=[32m"0"[39m
+        [33maria-valuenow[39m=[32m"7"[39m
+        [33mmax[39m=[32m"40"[39m
+        [33mvalue[39m=[32m"7"[39m
+      [36m/>[39m
+    [36m</div>[39m
+    [36m<div[39m
+      [33mclass[39m=[32m"execution-progress"[39m
+    [36m>[39m
+      [36m<span>[39m
+        [0mToken [0m
+        [0m [0m
+        [0m900[0m
+        [0m/[0m
+        [0m2000[0m
+      [36m</span>[39m
+      [36m<progress[39m
+        [33maria-label[39m=[32m"Token 进度"[39m
+        [33maria-valuemax[39m=[32m"2000"[39m
+        [33maria-valuemin[39m=[32m"0"[39m
+        [33maria-valuenow[39m=[32m"900"[39m
+        [33mmax[39m=[32m"2000"[39m
+        [33mvalue[39m=[32m"900"[39m
+      [36m/>[39m
+    [36m</div>[39m
+  [36m</div>[39m
+  [36m<p[39m
+    [33maria-busy[39m=[32m"true"[39m
+  [36m>[39m
+    [0m正在加载执行审阅…[0m
+  [36m</p>[39m
+  [36m<div[39m
+    [33mclass[39m=[32m"execution-card-controls"[39m
+  [36m>[39m
+    [36m<button[39m
+      [33mstyle[39m=[32m"min-height: var(--control-min);"[39m
+      [33mtype[39m=[32m"button"[39m
+    [36m>[39m
+      [0m停止[0m
+      [0m [0m
+      [0mTask A[0m
+    [36m</button>[39m
+    [36m<button[39m
+      [33mstyle[39m=[32m"min-height: var(--control-min);"[39m
+      [33mtype[39m=[32m"button"[39m
+    [36m>[39m
+      [0m刷新 [0m
+      [0mTask A[0m
+    [36m</button>[39m
+  [36m</div>[39m
+[36m</section>[39m
+ ❯ Object.getElementError node_modules/@testing-library/dom/dist/config.js:37:19
+ ❯ node_modules/@testing-library/dom/dist/query-helpers.js:76:38
+ ❯ node_modules/@testing-library/dom/dist/query-helpers.js:109:15
+ ❯ tests/execution-review-ui.test.tsx:182:31
+    180|     render(createElement(ExecutionPanel, { projectId: PROJECT_ID }));
+    181|     const card = await screen.findByRole("region", { name: "Task A" });
+    182|     const tabs = within(card).getAllByRole("tab");
+       |                               ^
+    183|     expect(tabs.map((tab) => tab.textContent)).toEqual(["时间线", "验证", "…
+    184|     expect(tabs[0]).toHaveAttribute("aria-selected", "true");
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[1/7]⎯
+
+ FAIL  tests/execution-review-ui.test.tsx > T-29 execution review UI > lazy-loads validation stdout one chunk at a time, shows metadata, and preserves read data on error
+TestingLibraryElementError: Unable to find an accessible element with the role "tab" and name "验证"
+
+Here are the accessible roles:
+
+  paragraph:
+
+  Name "":
+  [36m<p[39m
+    [33mclass[39m=[32m"eyebrow"[39m
+  [36m/>[39m
+
+  Name "":
+  [36m<p />[39m
+
+  --------------------------------------------------
+  heading:
+
+  Name "Task A":
+  [36m<h3[39m
+    [33mid[39m=[32m"execution-execution-a-title"[39m
+    [33mtabindex[39m=[32m"-1"[39m
+  [36m/>[39m
+
+  --------------------------------------------------status:
+
+  Name "":
+  [36m<p[39m
+    [33mrole[39m=[32m"status"[39m
+  [36m/>[39m
+
+  --------------------------------------------------progressbar:
+
+  Name "业务回合进度":
+  [36m<progress[39m
+    [33maria-label[39m=[32m"业务回合进度"[39m
+    [33maria-valuemax[39m=[32m"20"[39m
+    [33maria-valuemin[39m=[32m"0"[39m
+    [33maria-valuenow[39m=[32m"4"[39m
+    [33mmax[39m=[32m"20"[39m
+    [33mvalue[39m=[32m"4"[39m
+  [36m/>[39m
+
+  Name "工具调用进度":
+  [36m<progress[39m
+    [33maria-label[39m=[32m"工具调用进度"[39m
+    [33maria-valuemax[39m=[32m"40"[39m
+    [33maria-valuemin[39m=[32m"0"[39m
+    [33maria-valuenow[39m=[32m"7"[39m
+    [33mmax[39m=[32m"40"[39m
+    [33mvalue[39m=[32m"7"[39m
+  [36m/>[39m
+
+  Name "Token 进度":
+  [36m<progress[39m
+    [33maria-label[39m=[32m"Token 进度"[39m
+    [33maria-valuemax[39m=[32m"2000"[39m
+    [33maria-valuemin[39m=[32m"0"[39m
+    [33maria-valuenow[39m=[32m"900"[39m
+    [33mmax[39m=[32m"2000"[39m
+    [33mvalue[39m=[32m"900"[39m
+  [36m/>[39m
+
+  --------------------------------------------------paragraph:
+
+  Name "":
+  [36m<p[39m
+    [33maria-busy[39m=[32m"true"[39m
+  [36m/>[39m
+
+  --------------------------------------------------button:
+
+  Name "停止 Task A":
+  [36m<button[39m
+    [33mstyle[39m=[32m"min-height: var(--control-min);"[39m
+    [33mtype[39m=[32m"button"[39m
+  [36m/>[39m
+
+  Name "刷新 Task A":
+  [36m<button[39m
+    [33mstyle[39m=[32m"min-height: var(--control-min);"[39m
+    [33mtype[39m=[32m"button"[39m
+  [36m/>[39m
+
+  --------------------------------------------------
+
+Ignored nodes: comments, script, style
+[36m<section[39m
+  [33maria-labelledby[39m=[32m"execution-execution-a-title"[39m
+  [33mclass[39m=[32m"run-detail execution-card"[39m
+  [33mdata-accent[39m=[32m"sage"[39m
+  [33mrole[39m=[32m"region"[39m
+[36m>[39m
+  [36m<div[39m
+    [33mclass[39m=[32m"panel-heading"[39m
+  [36m>[39m
+    [36m<div>[39m
+      [36m<p[39m
+        [33mclass[39m=[32m"eyebrow"[39m
+      [36m>[39m
+        [0mA[0m
+      [36m</p>[39m
+      [36m<p>[39m
+        [0mAlpha[0m
+      [36m</p>[39m
+      [36m<h3[39m
+        [33mid[39m=[32m"execution-execution-a-title"[39m
+        [33mtabindex[39m=[32m"-1"[39m
+      [36m>[39m
+        [0mTask A[0m
+      [36m</h3>[39m
+    [36m</div>[39m
+    [36m<span[39m
+      [33mclass[39m=[32m"status-label status-staged"[39m
+    [36m>[39m
+      [0m变更待审阅[0m
+    [36m</span>[39m
+  [36m</div>[39m
+  [36m<p[39m
+    [33mrole[39m=[32m"status"[39m
+  [36m>[39m
+    [0m当前没有进行中的动作[0m
+  [36m</p>[39m
+  [36m<div[39m
+    [33mclass[39m=[32m"execution-progress-list"[39m
+  [36m>[39m
+    [36m<div[39m
+      [33mclass[39m=[32m"execution-progress"[39m
+    [36m>[39m
+      [36m<span>[39m
+        [0m业务回合[0m
+        [0m [0m
+        [0m4[0m
+        [0m/[0m
+        [0m20[0m
+      [36m</span>[39m
+      [36m<progress[39m
+        [33maria-label[39m=[32m"业务回合进度"[39m
+        [33maria-valuemax[39m=[32m"20"[39m
+        [33maria-valuemin[39m=[32m"0"[39m
+        [33maria-valuenow[39m=[32m"4"[39m
+        [33mmax[39m=[32m"20"[39m
+        [33mvalue[39m=[32m"4"[39m
+      [36m/>[39m
+    [36m</div>[39m
+    [36m<div[39m
+      [33mclass[39m=[32m"execution-progress"[39m
+    [36m>[39m
+      [36m<span>[39m
+        [0m工具调用[0m
+        [0m [0m
+        [0m7[0m
+        [0m/[0m
+        [0m40[0m
+      [36m</span>[39m
+      [36m<progress[39m
+        [33maria-label[39m=[32m"工具调用进度"[39m
+        [33maria-valuemax[39m=[32m"40"[39m
+        [33maria-valuemin[39m=[32m"0"[39m
+        [33maria-valuenow[39m=[32m"7"[39m
+        [33mmax[39m=[32m"40"[39m
+        [33mvalue[39m=[32m"7"[39m
+      [36m/>[39m
+    [36m</div>[39m
+    [36m<div[39m
+      [33mclass[39m=[32m"execution-progress"[39m
+    [36m>[39m
+      [36m<span>[39m
+        [0mToken [0m
+        [0m [0m
+        [0m900[0m
+        [0m/[0m
+        [0m2000[0m
+      [36m</span>[39m
+      [36m<progress[39m
+        [33maria-label[39m=[32m"Token 进度"[39m
+        [33maria-valuemax[39m=[32m"2000"[39m
+        [33maria-valuemin[39m=[32m"0"[39m
+        [33maria-valuenow[39m=[32m"900"[39m
+        [33mmax[39m=[32m"2000"[39m
+        [33mvalue[39m=[32m"900"[39m
+      [36m/>[39m
+    [36m</div>[39m
+  [36m</div>[39m
+  [36m<p[39m
+    [33maria-busy[39m=[32m"true"[39m
+  [36m>[39m
+    [0m正在加载执行审阅…[0m
+  [36m</p>[39m
+  [36m<div[39m
+    [33mclass[39m=[32m"execution-card-controls"[39m
+  [36m>[39m
+    [36m<button[39m
+      [33mstyle[39m=[32m"min-height: var(--control-min);"[39m
+      [33mtype[39m=[32m"button"[39m
+    [36m>[39m
+      [0m停止[0m
+      [0m [0m
+      [0mTask A[0m
+    [36m</button>[39m
+    [36m<button[39m
+      [33mstyle[39m=[32m"min-height: var(--control-min);"[39m
+      [33mtype[39m=[32m"button"[39m
+    [36m>[39m
+      [0m刷新 [0m
+      [0mTask A[0m
+    [36m</button>[39m
+  [36m</div>[39m
+[36m</section>[39m
+ ❯ Object.getElementError node_modules/@testing-library/dom/dist/config.js:37:19
+ ❯ node_modules/@testing-library/dom/dist/query-helpers.js:76:38
+ ❯ node_modules/@testing-library/dom/dist/query-helpers.js:52:17
+ ❯ node_modules/@testing-library/dom/dist/query-helpers.js:95:19
+ ❯ tests/execution-review-ui.test.tsx:245:35
+    243|     render(createElement(ExecutionPanel, { projectId: PROJECT_ID }));
+    244|     const card = await screen.findByRole("region", { name: "Task A" });
+    245|     await user.click(within(card).getByRole("tab", { name: "验证" }));
+       |                                   ^
+    246|     expect(await within(card).findByText(/1048576 bytes/)).toBeInTheDo…
+    247|     expect(within(card).getByText(/已截断/)).toBeInTheDocument();
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[2/7]⎯
+
+ FAIL  tests/execution-review-ui.test.tsx > T-29 execution review UI > loads artifacts and text diffs incrementally while independently reaching observation and blocker item 101
+TestingLibraryElementError: Unable to find an accessible element with the role "tab" and name "验证"
+
+Here are the accessible roles:
+
+  paragraph:
+
+  Name "":
+  [36m<p[39m
+    [33mclass[39m=[32m"eyebrow"[39m
+  [36m/>[39m
+
+  Name "":
+  [36m<p />[39m
+
+  --------------------------------------------------
+  heading:
+
+  Name "Task A":
+  [36m<h3[39m
+    [33mid[39m=[32m"execution-execution-a-title"[39m
+    [33mtabindex[39m=[32m"-1"[39m
+  [36m/>[39m
+
+  --------------------------------------------------status:
+
+  Name "":
+  [36m<p[39m
+    [33mrole[39m=[32m"status"[39m
+  [36m/>[39m
+
+  --------------------------------------------------progressbar:
+
+  Name "业务回合进度":
+  [36m<progress[39m
+    [33maria-label[39m=[32m"业务回合进度"[39m
+    [33maria-valuemax[39m=[32m"20"[39m
+    [33maria-valuemin[39m=[32m"0"[39m
+    [33maria-valuenow[39m=[32m"4"[39m
+    [33mmax[39m=[32m"20"[39m
+    [33mvalue[39m=[32m"4"[39m
+  [36m/>[39m
+
+  Name "工具调用进度":
+  [36m<progress[39m
+    [33maria-label[39m=[32m"工具调用进度"[39m
+    [33maria-valuemax[39m=[32m"40"[39m
+    [33maria-valuemin[39m=[32m"0"[39m
+    [33maria-valuenow[39m=[32m"7"[39m
+    [33mmax[39m=[32m"40"[39m
+    [33mvalue[39m=[32m"7"[39m
+  [36m/>[39m
+
+  Name "Token 进度":
+  [36m<progress[39m
+    [33maria-label[39m=[32m"Token 进度"[39m
+    [33maria-valuemax[39m=[32m"2000"[39m
+    [33maria-valuemin[39m=[32m"0"[39m
+    [33maria-valuenow[39m=[32m"900"[39m
+    [33mmax[39m=[32m"2000"[39m
+    [33mvalue[39m=[32m"900"[39m
+  [36m/>[39m
+
+  --------------------------------------------------paragraph:
+
+  Name "":
+  [36m<p[39m
+    [33maria-busy[39m=[32m"true"[39m
+  [36m/>[39m
+
+  --------------------------------------------------button:
+
+  Name "停止 Task A":
+  [36m<button[39m
+    [33mstyle[39m=[32m"min-height: var(--control-min);"[39m
+    [33mtype[39m=[32m"button"[39m
+  [36m/>[39m
+
+  Name "刷新 Task A":
+  [36m<button[39m
+    [33mstyle[39m=[32m"min-height: var(--control-min);"[39m
+    [33mtype[39m=[32m"button"[39m
+  [36m/>[39m
+
+  --------------------------------------------------
+
+Ignored nodes: comments, script, style
+[36m<section[39m
+  [33maria-labelledby[39m=[32m"execution-execution-a-title"[39m
+  [33mclass[39m=[32m"run-detail execution-card"[39m
+  [33mdata-accent[39m=[32m"sage"[39m
+  [33mrole[39m=[32m"region"[39m
+[36m>[39m
+  [36m<div[39m
+    [33mclass[39m=[32m"panel-heading"[39m
+  [36m>[39m
+    [36m<div>[39m
+      [36m<p[39m
+        [33mclass[39m=[32m"eyebrow"[39m
+      [36m>[39m
+        [0mA[0m
+      [36m</p>[39m
+      [36m<p>[39m
+        [0mAlpha[0m
+      [36m</p>[39m
+      [36m<h3[39m
+        [33mid[39m=[32m"execution-execution-a-title"[39m
+        [33mtabindex[39m=[32m"-1"[39m
+      [36m>[39m
+        [0mTask A[0m
+      [36m</h3>[39m
+    [36m</div>[39m
+    [36m<span[39m
+      [33mclass[39m=[32m"status-label status-staged"[39m
+    [36m>[39m
+      [0m变更待审阅[0m
+    [36m</span>[39m
+  [36m</div>[39m
+  [36m<p[39m
+    [33mrole[39m=[32m"status"[39m
+  [36m>[39m
+    [0m当前没有进行中的动作[0m
+  [36m</p>[39m
+  [36m<div[39m
+    [33mclass[39m=[32m"execution-progress-list"[39m
+  [36m>[39m
+    [36m<div[39m
+      [33mclass[39m=[32m"execution-progress"[39m
+    [36m>[39m
+      [36m<span>[39m
+        [0m业务回合[0m
+        [0m [0m
+        [0m4[0m
+        [0m/[0m
+        [0m20[0m
+      [36m</span>[39m
+      [36m<progress[39m
+        [33maria-label[39m=[32m"业务回合进度"[39m
+        [33maria-valuemax[39m=[32m"20"[39m
+        [33maria-valuemin[39m=[32m"0"[39m
+        [33maria-valuenow[39m=[32m"4"[39m
+        [33mmax[39m=[32m"20"[39m
+        [33mvalue[39m=[32m"4"[39m
+      [36m/>[39m
+    [36m</div>[39m
+    [36m<div[39m
+      [33mclass[39m=[32m"execution-progress"[39m
+    [36m>[39m
+      [36m<span>[39m
+        [0m工具调用[0m
+        [0m [0m
+        [0m7[0m
+        [0m/[0m
+        [0m40[0m
+      [36m</span>[39m
+      [36m<progress[39m
+        [33maria-label[39m=[32m"工具调用进度"[39m
+        [33maria-valuemax[39m=[32m"40"[39m
+        [33maria-valuemin[39m=[32m"0"[39m
+        [33maria-valuenow[39m=[32m"7"[39m
+        [33mmax[39m=[32m"40"[39m
+        [33mvalue[39m=[32m"7"[39m
+      [36m/>[39m
+    [36m</div>[39m
+    [36m<div[39m
+      [33mclass[39m=[32m"execution-progress"[39m
+    [36m>[39m
+      [36m<span>[39m
+        [0mToken [0m
+        [0m [0m
+        [0m900[0m
+        [0m/[0m
+        [0m2000[0m
+      [36m</span>[39m
+      [36m<progress[39m
+        [33maria-label[39m=[32m"Token 进度"[39m
+        [33maria-valuemax[39m=[32m"2000"[39m
+        [33maria-valuemin[39m=[32m"0"[39m
+        [33maria-valuenow[39m=[32m"900"[39m
+        [33mmax[39m=[32m"2000"[39m
+        [33mvalue[39m=[32m"900"[39m
+      [36m/>[39m
+    [36m</div>[39m
+  [36m</div>[39m
+  [36m<p[39m
+    [33maria-busy[39m=[32m"true"[39m
+  [36m>[39m
+    [0m正在加载执行审阅…[0m
+  [36m</p>[39m
+  [36m<div[39m
+    [33mclass[39m=[32m"execution-card-controls"[39m
+  [36m>[39m
+    [36m<button[39m
+      [33mstyle[39m=[32m"min-height: var(--control-min);"[39m
+      [33mtype[39m=[32m"button"[39m
+    [36m>[39m
+      [0m停止[0m
+      [0m [0m
+      [0mTask A[0m
+    [36m</button>[39m
+    [36m<button[39m
+      [33mstyle[39m=[32m"min-height: var(--control-min);"[39m
+      [33mtype[39m=[32m"button"[39m
+    [36m>[39m
+      [0m刷新 [0m
+      [0mTask A[0m
+    [36m</button>[39m
+  [36m</div>[39m
+[36m</section>[39m
+ ❯ Object.getElementError node_modules/@testing-library/dom/dist/config.js:37:19
+ ❯ node_modules/@testing-library/dom/dist/query-helpers.js:76:38
+ ❯ node_modules/@testing-library/dom/dist/query-helpers.js:52:17
+ ❯ node_modules/@testing-library/dom/dist/query-helpers.js:95:19
+ ❯ tests/execution-review-ui.test.tsx:335:35
+    333|     render(createElement(ExecutionPanel, { projectId: PROJECT_ID }));
+    334|     const card = await screen.findByRole("region", { name: "Task A" });
+    335|     await user.click(within(card).getByRole("tab", { name: "验证" }));
+       |                                   ^
+    336|     await user.click(await within(card).findByRole("button", { name: "…
+    337|     expect(await within(card).findByText("artifact!")).toBeInTheDocume…
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[3/7]⎯
+
+ FAIL  tests/execution-review-ui.test.tsx > T-29 execution review UI > shows exact one-shot command approval details and supports approve, reject, revoke, and replace states
+Error: expect(element).toHaveTextContent()
+
+Expected element to have text content:
+  工作目录：.
+Received:
+  命令一次性审批审批状态：等待决定方式：一次性，仅此 attempt 2request hash：bbbbbbbbbbbbinput hash：aaaaaaaaaaaa可执行文件C:\Program Files\node.exe参数test--runInBand工作目录.预期效果run required tests权限execute风险unknown_non_path此 guardrail 不是 hostile OS sandbox。获批的本地程序仍可能产生平台无法隔离的本机、网络、进程或服务副作用。批准命令拒绝替换请求
+ ❯ tests/execution-review-ui.test.tsx:422:20
+    420|     expect(dialog).toHaveTextContent("test");
+    421|     expect(dialog).toHaveTextContent("--runInBand");
+    422|     expect(dialog).toHaveTextContent("工作目录：.");
+       |                    ^
+    423|     expect(dialog).toHaveTextContent("权限：execute");
+    424|     expect(dialog).toHaveTextContent("风险：unknown_non_path");
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[4/7]⎯
+
+ FAIL  tests/execution-review-ui.test.tsx > T-29 execution review UI > never presents auto merge for blocked review state and keeps staged-hash approval separate
+TestingLibraryElementError: Unable to find an accessible element with the role "tab" and name "变更"
+
+Here are the accessible roles:
+
+  paragraph:
+
+  Name "":
+  [36m<p[39m
+    [33mclass[39m=[32m"eyebrow"[39m
+  [36m/>[39m
+
+  Name "":
+  [36m<p />[39m
+
+  --------------------------------------------------
+  heading:
+
+  Name "Task A":
+  [36m<h3[39m
+    [33mid[39m=[32m"execution-execution-a-title"[39m
+    [33mtabindex[39m=[32m"-1"[39m
+  [36m/>[39m
+
+  --------------------------------------------------status:
+
+  Name "":
+  [36m<p[39m
+    [33mrole[39m=[32m"status"[39m
+  [36m/>[39m
+
+  --------------------------------------------------progressbar:
+
+  Name "业务回合进度":
+  [36m<progress[39m
+    [33maria-label[39m=[32m"业务回合进度"[39m
+    [33maria-valuemax[39m=[32m"20"[39m
+    [33maria-valuemin[39m=[32m"0"[39m
+    [33maria-valuenow[39m=[32m"4"[39m
+    [33mmax[39m=[32m"20"[39m
+    [33mvalue[39m=[32m"4"[39m
+  [36m/>[39m
+
+  Name "工具调用进度":
+  [36m<progress[39m
+    [33maria-label[39m=[32m"工具调用进度"[39m
+    [33maria-valuemax[39m=[32m"40"[39m
+    [33maria-valuemin[39m=[32m"0"[39m
+    [33maria-valuenow[39m=[32m"7"[39m
+    [33mmax[39m=[32m"40"[39m
+    [33mvalue[39m=[32m"7"[39m
+  [36m/>[39m
+
+  Name "Token 进度":
+  [36m<progress[39m
+    [33maria-label[39m=[32m"Token 进度"[39m
+    [33maria-valuemax[39m=[32m"2000"[39m
+    [33maria-valuemin[39m=[32m"0"[39m
+    [33maria-valuenow[39m=[32m"900"[39m
+    [33mmax[39m=[32m"2000"[39m
+    [33mvalue[39m=[32m"900"[39m
+  [36m/>[39m
+
+  --------------------------------------------------paragraph:
+
+  Name "":
+  [36m<p[39m
+    [33maria-busy[39m=[32m"true"[39m
+  [36m/>[39m
+
+  --------------------------------------------------button:
+
+  Name "停止 Task A":
+  [36m<button[39m
+    [33mstyle[39m=[32m"min-height: var(--control-min);"[39m
+    [33mtype[39m=[32m"button"[39m
+  [36m/>[39m
+
+  Name "刷新 Task A":
+  [36m<button[39m
+    [33mstyle[39m=[32m"min-height: var(--control-min);"[39m
+    [33mtype[39m=[32m"button"[39m
+  [36m/>[39m
+
+  --------------------------------------------------
+
+Ignored nodes: comments, script, style
+[36m<section[39m
+  [33maria-labelledby[39m=[32m"execution-execution-a-title"[39m
+  [33mclass[39m=[32m"run-detail execution-card"[39m
+  [33mdata-accent[39m=[32m"sage"[39m
+  [33mrole[39m=[32m"region"[39m
+[36m>[39m
+  [36m<div[39m
+    [33mclass[39m=[32m"panel-heading"[39m
+  [36m>[39m
+    [36m<div>[39m
+      [36m<p[39m
+        [33mclass[39m=[32m"eyebrow"[39m
+      [36m>[39m
+        [0mA[0m
+      [36m</p>[39m
+      [36m<p>[39m
+        [0mAlpha[0m
+      [36m</p>[39m
+      [36m<h3[39m
+        [33mid[39m=[32m"execution-execution-a-title"[39m
+        [33mtabindex[39m=[32m"-1"[39m
+      [36m>[39m
+        [0mTask A[0m
+      [36m</h3>[39m
+    [36m</div>[39m
+    [36m<span[39m
+      [33mclass[39m=[32m"status-label status-staged"[39m
+    [36m>[39m
+      [0m变更待审阅[0m
+    [36m</span>[39m
+  [36m</div>[39m
+  [36m<p[39m
+    [33mrole[39m=[32m"status"[39m
+  [36m>[39m
+    [0m当前没有进行中的动作[0m
+  [36m</p>[39m
+  [36m<div[39m
+    [33mclass[39m=[32m"execution-progress-list"[39m
+  [36m>[39m
+    [36m<div[39m
+      [33mclass[39m=[32m"execution-progress"[39m
+    [36m>[39m
+      [36m<span>[39m
+        [0m业务回合[0m
+        [0m [0m
+        [0m4[0m
+        [0m/[0m
+        [0m20[0m
+      [36m</span>[39m
+      [36m<progress[39m
+        [33maria-label[39m=[32m"业务回合进度"[39m
+        [33maria-valuemax[39m=[32m"20"[39m
+        [33maria-valuemin[39m=[32m"0"[39m
+        [33maria-valuenow[39m=[32m"4"[39m
+        [33mmax[39m=[32m"20"[39m
+        [33mvalue[39m=[32m"4"[39m
+      [36m/>[39m
+    [36m</div>[39m
+    [36m<div[39m
+      [33mclass[39m=[32m"execution-progress"[39m
+    [36m>[39m
+      [36m<span>[39m
+        [0m工具调用[0m
+        [0m [0m
+        [0m7[0m
+        [0m/[0m
+        [0m40[0m
+      [36m</span>[39m
+      [36m<progress[39m
+        [33maria-label[39m=[32m"工具调用进度"[39m
+        [33maria-valuemax[39m=[32m"40"[39m
+        [33maria-valuemin[39m=[32m"0"[39m
+        [33maria-valuenow[39m=[32m"7"[39m
+        [33mmax[39m=[32m"40"[39m
+        [33mvalue[39m=[32m"7"[39m
+      [36m/>[39m
+    [36m</div>[39m
+    [36m<div[39m
+      [33mclass[39m=[32m"execution-progress"[39m
+    [36m>[39m
+      [36m<span>[39m
+        [0mToken [0m
+        [0m [0m
+        [0m900[0m
+        [0m/[0m
+        [0m2000[0m
+      [36m</span>[39m
+      [36m<progress[39m
+        [33maria-label[39m=[32m"Token 进度"[39m
+        [33maria-valuemax[39m=[32m"2000"[39m
+        [33maria-valuemin[39m=[32m"0"[39m
+        [33maria-valuenow[39m=[32m"900"[39m
+        [33mmax[39m=[32m"2000"[39m
+        [33mvalue[39m=[32m"900"[39m
+      [36m/>[39m
+    [36m</div>[39m
+  [36m</div>[39m
+  [36m<p[39m
+    [33maria-busy[39m=[32m"true"[39m
+  [36m>[39m
+    [0m正在加载执行审阅…[0m
+  [36m</p>[39m
+  [36m<div[39m
+    [33mclass[39m=[32m"execution-card-controls"[39m
+  [36m>[39m
+    [36m<button[39m
+      [33mstyle[39m=[32m"min-height: var(--control-min);"[39m
+      [33mtype[39m=[32m"button"[39m
+    [36m>[39m
+      [0m停止[0m
+      [0m [0m
+      [0mTask A[0m
+    [36m</button>[39m
+    [36m<button[39m
+      [33mstyle[39m=[32m"min-height: var(--control-min);"[39m
+      [33mtype[39m=[32m"button"[39m
+    [36m>[39m
+      [0m刷新 [0m
+      [0mTask A[0m
+    [36m</button>[39m
+  [36m</div>[39m
+[36m</section>[39m
+ ❯ Object.getElementError node_modules/@testing-library/dom/dist/config.js:37:19
+ ❯ node_modules/@testing-library/dom/dist/query-helpers.js:76:38
+ ❯ node_modules/@testing-library/dom/dist/query-helpers.js:52:17
+ ❯ node_modules/@testing-library/dom/dist/query-helpers.js:95:19
+ ❯ tests/execution-review-ui.test.tsx:453:42
+    451|       render(createElement(ExecutionPanel, { projectId: PROJECT_ID }));
+    452|       const card = await screen.findByRole("region", { name: "Task A" …
+    453|       await userEvent.click(within(card).getByRole("tab", { name: "变更"…
+       |                                          ^
+    454|       await within(card).findByText(new RegExp(STAGED_HASH.slice(0, 12…
+    455|       expect(within(card).queryByRole("button", { name: /自动合入/ })).not…
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[5/7]⎯
+
+ FAIL  tests/execution-review-ui.test.tsx > T-29 execution review UI > never presents auto merge for stale review state and keeps staged-hash approval separate
+TestingLibraryElementError: Unable to find an accessible element with the role "tab" and name "变更"
+
+Here are the accessible roles:
+
+  paragraph:
+
+  Name "":
+  [36m<p[39m
+    [33mclass[39m=[32m"eyebrow"[39m
+  [36m/>[39m
+
+  Name "":
+  [36m<p />[39m
+
+  --------------------------------------------------
+  heading:
+
+  Name "Task A":
+  [36m<h3[39m
+    [33mid[39m=[32m"execution-execution-a-title"[39m
+    [33mtabindex[39m=[32m"-1"[39m
+  [36m/>[39m
+
+  --------------------------------------------------status:
+
+  Name "":
+  [36m<p[39m
+    [33mrole[39m=[32m"status"[39m
+  [36m/>[39m
+
+  --------------------------------------------------paragraph:
+
+  Name "":
+  [36m<p[39m
+    [33mclass[39m=[32m"error-text"[39m
+  [36m/>[39m
+
+  --------------------------------------------------progressbar:
+
+  Name "业务回合进度":
+  [36m<progress[39m
+    [33maria-label[39m=[32m"业务回合进度"[39m
+    [33maria-valuemax[39m=[32m"20"[39m
+    [33maria-valuemin[39m=[32m"0"[39m
+    [33maria-valuenow[39m=[32m"4"[39m
+    [33mmax[39m=[32m"20"[39m
+    [33mvalue[39m=[32m"4"[39m
+  [36m/>[39m
+
+  Name "工具调用进度":
+  [36m<progress[39m
+    [33maria-label[39m=[32m"工具调用进度"[39m
+    [33maria-valuemax[39m=[32m"40"[39m
+    [33maria-valuemin[39m=[32m"0"[39m
+    [33maria-valuenow[39m=[32m"7"[39m
+    [33mmax[39m=[32m"40"[39m
+    [33mvalue[39m=[32m"7"[39m
+  [36m/>[39m
+
+  Name "Token 进度":
+  [36m<progress[39m
+    [33maria-label[39m=[32m"Token 进度"[39m
+    [33maria-valuemax[39m=[32m"2000"[39m
+    [33maria-valuemin[39m=[32m"0"[39m
+    [33maria-valuenow[39m=[32m"900"[39m
+    [33mmax[39m=[32m"2000"[39m
+    [33mvalue[39m=[32m"900"[39m
+  [36m/>[39m
+
+  --------------------------------------------------paragraph:
+
+  Name "":
+  [36m<p[39m
+    [33maria-busy[39m=[32m"true"[39m
+  [36m/>[39m
+
+  --------------------------------------------------button:
+
+  Name "重试 Task A":
+  [36m<button[39m
+    [33mstyle[39m=[32m"min-height: var(--control-min);"[39m
+    [33mtype[39m=[32m"button"[39m
+  [36m/>[39m
+
+  Name "停止 Task A":
+  [36m<button[39m
+    [33mstyle[39m=[32m"min-height: var(--control-min);"[39m
+    [33mtype[39m=[32m"button"[39m
+  [36m/>[39m
+
+  Name "刷新 Task A":
+  [36m<button[39m
+    [33mstyle[39m=[32m"min-height: var(--control-min);"[39m
+    [33mtype[39m=[32m"button"[39m
+  [36m/>[39m
+
+  --------------------------------------------------
+
+Ignored nodes: comments, script, style
+[36m<section[39m
+  [33maria-labelledby[39m=[32m"execution-execution-a-title"[39m
+  [33mclass[39m=[32m"run-detail execution-card"[39m
+  [33mdata-accent[39m=[32m"sage"[39m
+  [33mrole[39m=[32m"region"[39m
+[36m>[39m
+  [36m<div[39m
+    [33mclass[39m=[32m"panel-heading"[39m
+  [36m>[39m
+    [36m<div>[39m
+      [36m<p[39m
+        [33mclass[39m=[32m"eyebrow"[39m
+      [36m>[39m
+        [0mA[0m
+      [36m</p>[39m
+      [36m<p>[39m
+        [0mAlpha[0m
+      [36m</p>[39m
+      [36m<h3[39m
+        [33mid[39m=[32m"execution-execution-a-title"[39m
+        [33mtabindex[39m=[32m"-1"[39m
+      [36m>[39m
+        [0mTask A[0m
+      [36m</h3>[39m
+    [36m</div>[39m
+    [36m<span[39m
+      [33mclass[39m=[32m"status-label status-stale"[39m
+    [36m>[39m
+      [0m上下文已过期[0m
+    [36m</span>[39m
+  [36m</div>[39m
+  [36m<p[39m
+    [33mrole[39m=[32m"status"[39m
+  [36m>[39m
+    [0m当前没有进行中的动作[0m
+  [36m</p>[39m
+  [36m<p[39m
+    [33mclass[39m=[32m"error-text"[39m
+  [36m>[39m
+    [0m阻断原因：[0m
+    [0mSTAGED_CONTEXT_STALE[0m
+  [36m</p>[39m
+  [36m<div[39m
+    [33mclass[39m=[32m"execution-progress-list"[39m
+  [36m>[39m
+    [36m<div[39m
+      [33mclass[39m=[32m"execution-progress"[39m
+    [36m>[39m
+      [36m<span>[39m
+        [0m业务回合[0m
+        [0m [0m
+        [0m4[0m
+        [0m/[0m
+        [0m20[0m
+      [36m</span>[39m
+      [36m<progress[39m
+        [33maria-label[39m=[32m"业务回合进度"[39m
+        [33maria-valuemax[39m=[32m"20"[39m
+        [33maria-valuemin[39m=[32m"0"[39m
+        [33maria-valuenow[39m=[32m"4"[39m
+        [33mmax[39m=[32m"20"[39m
+        [33mvalue[39m=[32m"4"[39m
+      [36m/>[39m
+    [36m</div>[39m
+    [36m<div[39m
+      [33mclass[39m=[32m"execution-progress"[39m
+    [36m>[39m
+      [36m<span>[39m
+        [0m工具调用[0m
+        [0m [0m
+        [0m7[0m
+        [0m/[0m
+        [0m40[0m
+      [36m</span>[39m
+      [36m<progress[39m
+        [33maria-label[39m=[32m"工具调用进度"[39m
+        [33maria-valuemax[39m=[32m"40"[39m
+        [33maria-valuemin[39m=[32m"0"[39m
+        [33maria-valuenow[39m=[32m"7"[39m
+        [33mmax[39m=[32m"40"[39m
+        [33mvalue[39m=[32m"7"[39m
+      [36m/>[39m
+    [36m</div>[39m
+    [36m<div[39m
+      [33mclass[39m=[32m"execution-progress"[39m
+    [36m>[39m
+      [36m<span>[39m
+        [0mToken [0m
+        [0m [0m
+        [0m900[0m
+        [0m/[0m
+        [0m2000[0m
+      [36m</span>[39m
+      [36m<progress[39m
+        [33maria-label[39m=[32m"Token 进度"[39m
+        [33maria-valuemax[39m=[32m"2000"[39m
+        [33maria-valuemin[39m=[32m"0"[39m
+        [33maria-valuenow[39m=[32m"900"[39m
+        [33mmax[39m=[32m"2000"[39m
+        [33mvalue[39m=[32m"900"[39m
+      [36m/>[39m
+    [36m</div>[39m
+  [36m</div>[39m
+  [36m<p[39m
+    [33maria-busy[39m=[32m"true"[39m
+  [36m>[39m
+    [0m正在加载执行审阅…[0m
+  [36m</p>[39m
+  [36m<div[39m
+    [33mclass[39m=[32m"execution-card-controls"[39m
+  [36m>[39m
+    [36m<button[39m
+      [33mstyle[39m=[32m"min-height: var(--control-min);"[39m
+      [33mtype[39m=[32m"button"[39m
+    [36m>[39m
+      [0m重试[0m
+      [0m [0m
+      [0mTask A[0m
+    [36m</button>[39m
+    [36m<button[39m
+      [33mstyle[39m=[32m"min-height: var(--control-min);"[39m
+      [33mtype[39m=[32m"button"[39m
+    [36m>[39m
+      [0m停止[0m
+      [0m [0m
+      [0mTask A[0m
+    [36m</button>[39m
+    [36m<button[39m
+      [33mstyle[39m=[32m"min-height: var(--control-min);"[39m
+      [33mtype[39m=[32m"button"[39m
+    [36m>[39m
+      [0m刷新 [0m
+      [0mTask A[0m
+    [36m</button>[39m
+  [36m</div>[39m
+[36m</section>[39m
+ ❯ Object.getElementError node_modules/@testing-library/dom/dist/config.js:37:19
+ ❯ node_modules/@testing-library/dom/dist/query-helpers.js:76:38
+ ❯ node_modules/@testing-library/dom/dist/query-helpers.js:52:17
+ ❯ node_modules/@testing-library/dom/dist/query-helpers.js:95:19
+ ❯ tests/execution-review-ui.test.tsx:453:42
+    451|       render(createElement(ExecutionPanel, { projectId: PROJECT_ID }));
+    452|       const card = await screen.findByRole("region", { name: "Task A" …
+    453|       await userEvent.click(within(card).getByRole("tab", { name: "变更"…
+       |                                          ^
+    454|       await within(card).findByText(new RegExp(STAGED_HASH.slice(0, 12…
+    455|       expect(within(card).queryByRole("button", { name: /自动合入/ })).not…
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[6/7]⎯
+
+ FAIL  tests/execution-review-ui.test.tsx > T-29 execution review UI > never presents auto merge for conflicted review state and keeps staged-hash approval separate
+TestingLibraryElementError: Unable to find an accessible element with the role "tab" and name "变更"
+
+Here are the accessible roles:
+
+  paragraph:
+
+  Name "":
+  [36m<p[39m
+    [33mclass[39m=[32m"eyebrow"[39m
+  [36m/>[39m
+
+  Name "":
+  [36m<p />[39m
+
+  --------------------------------------------------
+  heading:
+
+  Name "Task A":
+  [36m<h3[39m
+    [33mid[39m=[32m"execution-execution-a-title"[39m
+    [33mtabindex[39m=[32m"-1"[39m
+  [36m/>[39m
+
+  --------------------------------------------------status:
+
+  Name "":
+  [36m<p[39m
+    [33mrole[39m=[32m"status"[39m
+  [36m/>[39m
+
+  --------------------------------------------------progressbar:
+
+  Name "业务回合进度":
+  [36m<progress[39m
+    [33maria-label[39m=[32m"业务回合进度"[39m
+    [33maria-valuemax[39m=[32m"20"[39m
+    [33maria-valuemin[39m=[32m"0"[39m
+    [33maria-valuenow[39m=[32m"4"[39m
+    [33mmax[39m=[32m"20"[39m
+    [33mvalue[39m=[32m"4"[39m
+  [36m/>[39m
+
+  Name "工具调用进度":
+  [36m<progress[39m
+    [33maria-label[39m=[32m"工具调用进度"[39m
+    [33maria-valuemax[39m=[32m"40"[39m
+    [33maria-valuemin[39m=[32m"0"[39m
+    [33maria-valuenow[39m=[32m"7"[39m
+    [33mmax[39m=[32m"40"[39m
+    [33mvalue[39m=[32m"7"[39m
+  [36m/>[39m
+
+  Name "Token 进度":
+  [36m<progress[39m
+    [33maria-label[39m=[32m"Token 进度"[39m
+    [33maria-valuemax[39m=[32m"2000"[39m
+    [33maria-valuemin[39m=[32m"0"[39m
+    [33maria-valuenow[39m=[32m"900"[39m
+    [33mmax[39m=[32m"2000"[39m
+    [33mvalue[39m=[32m"900"[39m
+  [36m/>[39m
+
+  --------------------------------------------------paragraph:
+
+  Name "":
+  [36m<p[39m
+    [33maria-busy[39m=[32m"true"[39m
+  [36m/>[39m
+
+  --------------------------------------------------button:
+
+  Name "重试 Task A":
+  [36m<button[39m
+    [33mstyle[39m=[32m"min-height: var(--control-min);"[39m
+    [33mtype[39m=[32m"button"[39m
+  [36m/>[39m
+
+  Name "停止 Task A":
+  [36m<button[39m
+    [33mstyle[39m=[32m"min-height: var(--control-min);"[39m
+    [33mtype[39m=[32m"button"[39m
+  [36m/>[39m
+
+  Name "刷新 Task A":
+  [36m<button[39m
+    [33mstyle[39m=[32m"min-height: var(--control-min);"[39m
+    [33mtype[39m=[32m"button"[39m
+  [36m/>[39m
+
+  --------------------------------------------------
+
+Ignored nodes: comments, script, style
+[36m<section[39m
+  [33maria-labelledby[39m=[32m"execution-execution-a-title"[39m
+  [33mclass[39m=[32m"run-detail execution-card"[39m
+  [33mdata-accent[39m=[32m"sage"[39m
+  [33mrole[39m=[32m"region"[39m
+[36m>[39m
+  [36m<div[39m
+    [33mclass[39m=[32m"panel-heading"[39m
+  [36m>[39m
+    [36m<div>[39m
+      [36m<p[39m
+        [33mclass[39m=[32m"eyebrow"[39m
+      [36m>[39m
+        [0mA[0m
+      [36m</p>[39m
+      [36m<p>[39m
+        [0mAlpha[0m
+      [36m</p>[39m
+      [36m<h3[39m
+        [33mid[39m=[32m"execution-execution-a-title"[39m
+        [33mtabindex[39m=[32m"-1"[39m
+      [36m>[39m
+        [0mTask A[0m
+      [36m</h3>[39m
+    [36m</div>[39m
+    [36m<span[39m
+      [33mclass[39m=[32m"status-label status-conflicted"[39m
+    [36m>[39m
+      [0m存在冲突[0m
+    [36m</span>[39m
+  [36m</div>[39m
+  [36m<p[39m
+    [33mrole[39m=[32m"status"[39m
+  [36m>[39m
+    [0m当前没有进行中的动作[0m
+  [36m</p>[39m
+  [36m<div[39m
+    [33mclass[39m=[32m"execution-progress-list"[39m
+  [36m>[39m
+    [36m<div[39m
+      [33mclass[39m=[32m"execution-progress"[39m
+    [36m>[39m
+      [36m<span>[39m
+        [0m业务回合[0m
+        [0m [0m
+        [0m4[0m
+        [0m/[0m
+        [0m20[0m
+      [36m</span>[39m
+      [36m<progress[39m
+        [33maria-label[39m=[32m"业务回合进度"[39m
+        [33maria-valuemax[39m=[32m"20"[39m
+        [33maria-valuemin[39m=[32m"0"[39m
+        [33maria-valuenow[39m=[32m"4"[39m
+        [33mmax[39m=[32m"20"[39m
+        [33mvalue[39m=[32m"4"[39m
+      [36m/>[39m
+    [36m</div>[39m
+    [36m<div[39m
+      [33mclass[39m=[32m"execution-progress"[39m
+    [36m>[39m
+      [36m<span>[39m
+        [0m工具调用[0m
+        [0m [0m
+        [0m7[0m
+        [0m/[0m
+        [0m40[0m
+      [36m</span>[39m
+      [36m<progress[39m
+        [33maria-label[39m=[32m"工具调用进度"[39m
+        [33maria-valuemax[39m=[32m"40"[39m
+        [33maria-valuemin[39m=[32m"0"[39m
+        [33maria-valuenow[39m=[32m"7"[39m
+        [33mmax[39m=[32m"40"[39m
+        [33mvalue[39m=[32m"7"[39m
+      [36m/>[39m
+    [36m</div>[39m
+    [36m<div[39m
+      [33mclass[39m=[32m"execution-progress"[39m
+    [36m>[39m
+      [36m<span>[39m
+        [0mToken [0m
+        [0m [0m
+        [0m900[0m
+        [0m/[0m
+        [0m2000[0m
+      [36m</span>[39m
+      [36m<progress[39m
+        [33maria-label[39m=[32m"Token 进度"[39m
+        [33maria-valuemax[39m=[32m"2000"[39m
+        [33maria-valuemin[39m=[32m"0"[39m
+        [33maria-valuenow[39m=[32m"900"[39m
+        [33mmax[39m=[32m"2000"[39m
+        [33mvalue[39m=[32m"900"[39m
+      [36m/>[39m
+    [36m</div>[39m
+  [36m</div>[39m
+  [36m<p[39m
+    [33maria-busy[39m=[32m"true"[39m
+  [36m>[39m
+    [0m正在加载执行审阅…[0m
+  [36m</p>[39m
+  [36m<div[39m
+    [33mclass[39m=[32m"execution-card-controls"[39m
+  [36m>[39m
+    [36m<button[39m
+      [33mstyle[39m=[32m"min-height: var(--control-min);"[39m
+      [33mtype[39m=[32m"button"[39m
+    [36m>[39m
+      [0m重试[0m
+      [0m [0m
+      [0mTask A[0m
+    [36m</button>[39m
+    [36m<button[39m
+      [33mstyle[39m=[32m"min-height: var(--control-min);"[39m
+      [33mtype[39m=[32m"button"[39m
+    [36m>[39m
+      [0m停止[0m
+      [0m [0m
+      [0mTask A[0m
+    [36m</button>[39m
+    [36m<button[39m
+      [33mstyle[39m=[32m"min-height: var(--control-min);"[39m
+      [33mtype[39m=[32m"button"[39m
+    [36m>[39m
+      [0m刷新 [0m
+      [0mTask A[0m
+    [36m</button>[39m
+  [36m</div>[39m
+[36m</section>[39m
+ ❯ Object.getElementError node_modules/@testing-library/dom/dist/config.js:37:19
+ ❯ node_modules/@testing-library/dom/dist/query-helpers.js:76:38
+ ❯ node_modules/@testing-library/dom/dist/query-helpers.js:52:17
+ ❯ node_modules/@testing-library/dom/dist/query-helpers.js:95:19
+ ❯ tests/execution-review-ui.test.tsx:453:42
+    451|       render(createElement(ExecutionPanel, { projectId: PROJECT_ID }));
+    452|       const card = await screen.findByRole("region", { name: "Task A" …
+    453|       await userEvent.click(within(card).getByRole("tab", { name: "变更"…
+       |                                          ^
+    454|       await within(card).findByText(new RegExp(STAGED_HASH.slice(0, 12…
+    455|       expect(within(card).queryByRole("button", { name: /自动合入/ })).not…
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[7/7]⎯
+
+
+ Test Files  1 failed (1)
+      Tests  7 failed (7)
+   Start at  22:13:23
+   Duration  3.64s (transform 166ms, setup 439ms, import 468ms, tests 477ms, environment 1.94s)
+
+# exit: 1

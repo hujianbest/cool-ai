@@ -1,0 +1,205 @@
+# hf-gate-run
+# label: t5-red
+# command: cmd /c npm test -- tests/providers.service.test.ts tests/providers.api.test.ts
+# started: 2026-07-29T17:13:46+00:00
+
+> collaboration-cockpit@0.1.0 test
+> vitest run tests/providers.service.test.ts tests/providers.api.test.ts
+
+
+ RUN  v4.1.10 D:/cool-ai
+
+(node:876) ExperimentalWarning: SQLite is an experimental feature and might change at any time
+(Use `node --trace-warnings ...` to show where the warning was created)
+ ❯ tests/providers.service.test.ts (6 tests | 6 failed) 28ms
+     × verifies, creates and lists a normalized provider without exposing plaintext 14ms
+     × enforces create union legality and requires a matching create token 3ms
+     × allows retain name-only updates without a token and preserves credential generation 2ms
+     × requires verification for retain connection changes and rejects stale versions and tokens 2ms
+     × replaces credentials atomically and invalidates stale tokens 2ms
+     × reports unavailable/corrupt keys and permits expected-version replace recovery 2ms
+ ❯ tests/providers.api.test.ts (4 tests | 4 failed) 25ms
+     × verifies, creates and lists a provider without returning the API key 16ms
+     × supports token-free name-only PATCH and rejects path-id mismatch 3ms
+     × returns stable errors for illegal unions, missing tokens and stale concurrency state 2ms
+     × sanitizes verifier failures and logs without URL, key, token, body or raw Error 2ms
+
+⎯⎯⎯⎯⎯⎯ Failed Tests 10 ⎯⎯⎯⎯⎯⎯⎯
+
+ FAIL  tests/providers.api.test.ts > provider API > verifies, creates and lists a provider without returning the API key
+AssertionError: provider collection routes must exist: expected undefined to be type of 'function'
+
+Expected: "function"
+Received: "undefined"
+
+ ❯ loadRoutes tests/providers.api.test.ts:41:67
+     39|   const loadVerify = verifyRoutes["../app/api/providers/verify/route.t…
+     40|   const loadItem = itemRoutes["../app/api/providers/[providerId]/route…
+     41|   expect(loadCollection, "provider collection routes must exist").toBe…
+       |                                                                   ^
+     42|   expect(loadVerify, "provider verification route must exist").toBeTyp…
+     43|   expect(loadItem, "provider item route must exist").toBeTypeOf("funct…
+ ❯ tests/providers.api.test.ts:91:26
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[1/10]⎯
+
+ FAIL  tests/providers.api.test.ts > provider API > supports token-free name-only PATCH and rejects path-id mismatch
+AssertionError: provider collection routes must exist: expected undefined to be type of 'function'
+
+Expected: "function"
+Received: "undefined"
+
+ ❯ loadRoutes tests/providers.api.test.ts:41:67
+     39|   const loadVerify = verifyRoutes["../app/api/providers/verify/route.t…
+     40|   const loadItem = itemRoutes["../app/api/providers/[providerId]/route…
+     41|   expect(loadCollection, "provider collection routes must exist").toBe…
+       |                                                                   ^
+     42|   expect(loadVerify, "provider verification route must exist").toBeTyp…
+     43|   expect(loadItem, "provider item route must exist").toBeTypeOf("funct…
+ ❯ tests/providers.api.test.ts:127:26
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[2/10]⎯
+
+ FAIL  tests/providers.api.test.ts > provider API > returns stable errors for illegal unions, missing tokens and stale concurrency state
+AssertionError: provider collection routes must exist: expected undefined to be type of 'function'
+
+Expected: "function"
+Received: "undefined"
+
+ ❯ loadRoutes tests/providers.api.test.ts:41:67
+     39|   const loadVerify = verifyRoutes["../app/api/providers/verify/route.t…
+     40|   const loadItem = itemRoutes["../app/api/providers/[providerId]/route…
+     41|   expect(loadCollection, "provider collection routes must exist").toBe…
+       |                                                                   ^
+     42|   expect(loadVerify, "provider verification route must exist").toBeTyp…
+     43|   expect(loadItem, "provider item route must exist").toBeTypeOf("funct…
+ ❯ tests/providers.api.test.ts:170:26
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[3/10]⎯
+
+ FAIL  tests/providers.api.test.ts > provider API > sanitizes verifier failures and logs without URL, key, token, body or raw Error
+AssertionError: provider collection routes must exist: expected undefined to be type of 'function'
+
+Expected: "function"
+Received: "undefined"
+
+ ❯ loadRoutes tests/providers.api.test.ts:41:67
+     39|   const loadVerify = verifyRoutes["../app/api/providers/verify/route.t…
+     40|   const loadItem = itemRoutes["../app/api/providers/[providerId]/route…
+     41|   expect(loadCollection, "provider collection routes must exist").toBe…
+       |                                                                   ^
+     42|   expect(loadVerify, "provider verification route must exist").toBeTyp…
+     43|   expect(loadItem, "provider item route must exist").toBeTypeOf("funct…
+ ❯ tests/providers.api.test.ts:245:26
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[4/10]⎯
+
+ FAIL  tests/providers.service.test.ts > provider service > verifies, creates and lists a normalized provider without exposing plaintext
+AssertionError: the provider persistence service must exist: expected undefined to be type of 'function'
+
+Expected: "function"
+Received: "undefined"
+
+ ❯ loadService tests/providers.service.test.ts:76:63
+     74| async function loadService(): Promise<ProviderServiceModule> {
+     75|   const load = serviceModules["../src/server/provider-service.ts"];
+     76|   expect(load, "the provider persistence service must exist").toBeType…
+       |                                                               ^
+     77|   return load();
+     78| }
+ ❯ tests/providers.service.test.ts:124:27
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[5/10]⎯
+
+ FAIL  tests/providers.service.test.ts > provider service > enforces create union legality and requires a matching create token
+AssertionError: the provider persistence service must exist: expected undefined to be type of 'function'
+
+Expected: "function"
+Received: "undefined"
+
+ ❯ loadService tests/providers.service.test.ts:76:63
+     74| async function loadService(): Promise<ProviderServiceModule> {
+     75|   const load = serviceModules["../src/server/provider-service.ts"];
+     76|   expect(load, "the provider persistence service must exist").toBeType…
+       |                                                               ^
+     77|   return load();
+     78| }
+ ❯ tests/providers.service.test.ts:156:27
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[6/10]⎯
+
+ FAIL  tests/providers.service.test.ts > provider service > allows retain name-only updates without a token and preserves credential generation
+AssertionError: the provider persistence service must exist: expected undefined to be type of 'function'
+
+Expected: "function"
+Received: "undefined"
+
+ ❯ loadService tests/providers.service.test.ts:76:63
+     74| async function loadService(): Promise<ProviderServiceModule> {
+     75|   const load = serviceModules["../src/server/provider-service.ts"];
+     76|   expect(load, "the provider persistence service must exist").toBeType…
+       |                                                               ^
+     77|   return load();
+     78| }
+ ❯ tests/providers.service.test.ts:183:27
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[7/10]⎯
+
+ FAIL  tests/providers.service.test.ts > provider service > requires verification for retain connection changes and rejects stale versions and tokens
+AssertionError: the provider persistence service must exist: expected undefined to be type of 'function'
+
+Expected: "function"
+Received: "undefined"
+
+ ❯ loadService tests/providers.service.test.ts:76:63
+     74| async function loadService(): Promise<ProviderServiceModule> {
+     75|   const load = serviceModules["../src/server/provider-service.ts"];
+     76|   expect(load, "the provider persistence service must exist").toBeType…
+       |                                                               ^
+     77|   return load();
+     78| }
+ ❯ tests/providers.service.test.ts:206:27
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[8/10]⎯
+
+ FAIL  tests/providers.service.test.ts > provider service > replaces credentials atomically and invalidates stale tokens
+AssertionError: the provider persistence service must exist: expected undefined to be type of 'function'
+
+Expected: "function"
+Received: "undefined"
+
+ ❯ loadService tests/providers.service.test.ts:76:63
+     74| async function loadService(): Promise<ProviderServiceModule> {
+     75|   const load = serviceModules["../src/server/provider-service.ts"];
+     76|   expect(load, "the provider persistence service must exist").toBeType…
+       |                                                               ^
+     77|   return load();
+     78| }
+ ❯ tests/providers.service.test.ts:267:27
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[9/10]⎯
+
+ FAIL  tests/providers.service.test.ts > provider service > reports unavailable/corrupt keys and permits expected-version replace recovery
+AssertionError: the provider persistence service must exist: expected undefined to be type of 'function'
+
+Expected: "function"
+Received: "undefined"
+
+ ❯ loadService tests/providers.service.test.ts:76:63
+     74| async function loadService(): Promise<ProviderServiceModule> {
+     75|   const load = serviceModules["../src/server/provider-service.ts"];
+     76|   expect(load, "the provider persistence service must exist").toBeType…
+       |                                                               ^
+     77|   return load();
+     78| }
+ ❯ tests/providers.service.test.ts:303:27
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[10/10]⎯
+
+
+ Test Files  2 failed (2)
+      Tests  10 failed (10)
+   Start at  01:13:47
+   Duration  2.23s (transform 122ms, setup 717ms, import 93ms, tests 53ms, environment 2.97s)
+
+# exit: 1

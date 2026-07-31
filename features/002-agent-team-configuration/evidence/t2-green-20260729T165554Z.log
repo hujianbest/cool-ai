@@ -1,0 +1,20 @@
+# hf-gate-run
+# label: t2-green
+# command: cmd /c npm test -- tests/migrations.test.ts
+# started: 2026-07-29T16:55:54+00:00
+
+> collaboration-cockpit@0.1.0 test
+> vitest run tests/migrations.test.ts
+
+
+ RUN  v4.1.10 D:/cool-ai
+
+(node:16468) ExperimentalWarning: SQLite is an experimental feature and might change at any time
+(Use `node --trace-warnings ...` to show where the warning was created)
+
+ Test Files  1 passed (1)
+      Tests  7 passed (7)
+   Start at  00:55:55
+   Duration  2.51s (transform 66ms, setup 333ms, import 50ms, tests 468ms, environment 1.40s)
+
+# exit: 0

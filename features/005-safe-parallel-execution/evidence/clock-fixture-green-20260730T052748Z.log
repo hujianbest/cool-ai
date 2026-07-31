@@ -1,0 +1,20 @@
+# hf-gate-run
+# label: clock-fixture-green
+# command: cmd /c npm test -- tests/owner-handoff-plan-races.test.ts --maxWorkers=1
+# started: 2026-07-30T05:27:48+00:00
+
+> collaboration-cockpit@0.1.0 test
+> vitest run tests/owner-handoff-plan-races.test.ts --maxWorkers=1
+
+
+ RUN  v4.1.10 D:/cool-ai
+
+(node:11464) ExperimentalWarning: SQLite is an experimental feature and might change at any time
+(Use `node --trace-warnings ...` to show where the warning was created)
+
+ Test Files  1 passed (1)
+      Tests  8 passed (8)
+   Start at  13:27:49
+   Duration  11.55s (transform 240ms, setup 341ms, import 379ms, tests 9.16s, environment 1.41s)
+
+# exit: 0

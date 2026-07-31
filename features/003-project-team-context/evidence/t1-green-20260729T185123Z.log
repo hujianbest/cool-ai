@@ -1,0 +1,20 @@
+# hf-gate-run
+# label: t1-green
+# command: cmd /c npm test -- tests/workspace-slice.test.tsx
+# started: 2026-07-29T18:51:23+00:00
+
+> collaboration-cockpit@0.1.0 test
+> vitest run tests/workspace-slice.test.tsx
+
+
+ RUN  v4.1.10 D:/cool-ai
+
+(node:9724) ExperimentalWarning: SQLite is an experimental feature and might change at any time
+(Use `node --trace-warnings ...` to show where the warning was created)
+
+ Test Files  1 passed (1)
+      Tests  1 passed (1)
+   Start at  02:51:24
+   Duration  3.02s (transform 153ms, setup 338ms, import 244ms, tests 772ms, environment 1.41s)
+
+# exit: 0

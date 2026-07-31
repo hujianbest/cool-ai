@@ -1,0 +1,18 @@
+# hf-gate-run
+# label: t30-green
+# command: cmd /c npm test -- tests/execution-recovery-ui.test.tsx tests/execution-accessibility.test.tsx
+# started: 2026-07-30T14:36:30+00:00
+
+> collaboration-cockpit@0.1.0 test
+> vitest run tests/execution-recovery-ui.test.tsx tests/execution-accessibility.test.tsx
+
+
+ RUN  v4.1.10 D:/cool-ai
+
+
+ Test Files  2 passed (2)
+      Tests  7 passed (7)
+   Start at  22:36:31
+   Duration  3.74s (transform 405ms, setup 904ms, import 1.01s, tests 932ms, environment 3.75s)
+
+# exit: 0

@@ -1,0 +1,687 @@
+# hf-gate-run
+# label: t28-green
+# command: npm.cmd test -- tests/execution-cards-ui.test.tsx
+# started: 2026-07-30T14:02:30+00:00
+
+> collaboration-cockpit@0.1.0 test
+> vitest run tests/execution-cards-ui.test.tsx
+
+
+ RUN  v4.1.10 D:/cool-ai
+
+ ❯ tests/execution-cards-ui.test.tsx (5 tests | 1 failed) 1588ms
+     × keeps one card usable when the other card control and refresh fail 1065ms
+
+⎯⎯⎯⎯⎯⎯⎯ Failed Tests 1 ⎯⎯⎯⎯⎯⎯⎯
+
+ FAIL  tests/execution-cards-ui.test.tsx > T-28 desktop ExecutionCards > keeps one card usable when the other card control and refresh fail
+TestingLibraryElementError: Unable to find an element with the text: 执行状态已变化，请刷新后重试。. This could be because the text is broken up by multiple elements. In this case, you can provide a function for your text matcher to make your matcher more flexible.
+
+Ignored nodes: comments, script, style
+[36m<body>[39m
+  [36m<div>[39m
+    [36m<section[39m
+      [33maria-labelledby[39m=[32m"executions-title-project-execution-cards"[39m
+      [33mclass[39m=[32m"stack"[39m
+    [36m>[39m
+      [36m<div[39m
+        [33mclass[39m=[32m"panel-heading"[39m
+      [36m>[39m
+        [36m<div>[39m
+          [36m<p[39m
+            [33mclass[39m=[32m"eyebrow"[39m
+          [36m>[39m
+            [0m项目执行[0m
+          [36m</p>[39m
+          [36m<h3[39m
+            [33mid[39m=[32m"executions-title-project-execution-cards"[39m
+          [36m>[39m
+            [0m运行详情[0m
+          [36m</h3>[39m
+        [36m</div>[39m
+        [36m<button[39m
+          [33mstyle[39m=[32m"min-height: var(--control-min);"[39m
+          [33mtype[39m=[32m"button"[39m
+        [36m>[39m
+          [0m刷新执行[0m
+        [36m</button>[39m
+      [36m</div>[39m
+      [36m<section[39m
+        [33maria-labelledby[39m=[32m"execution-picker-project-execution-cards"[39m
+        [33mclass[39m=[32m"stack"[39m
+      [36m>[39m
+        [36m<h4[39m
+          [33mid[39m=[32m"execution-picker-project-execution-cards"[39m
+        [36m>[39m
+          [0m选择并执行[0m
+        [36m</h4>[39m
+        [36m<p>[39m
+          [0m没有符合条件的进行中任务。[0m
+        [36m</p>[39m
+      [36m</section>[39m
+      [36m<button[39m
+        [33maria-expanded[39m=[32m"false"[39m
+        [33mstyle[39m=[32m"min-height: var(--control-min);"[39m
+        [33mtype[39m=[32m"button"[39m
+      [36m>[39m
+        [0m管理验证政策[0m
+      [36m</button>[39m
+      [36m<div[39m
+        [33mclass[39m=[32m"run-details"[39m
+      [36m>[39m
+        [36m<section[39m
+          [33maria-labelledby[39m=[32m"execution-execution-a-title"[39m
+          [33mclass[39m=[32m"run-detail execution-card"[39m
+          [33mdata-accent[39m=[32m"sage"[39m
+          [33mrole[39m=[32m"region"[39m
+        [36m>[39m
+          [36m<div[39m
+            [33mclass[39m=[32m"panel-heading"[39m
+          [36m>[39m
+            [36m<div>[39m
+              [36m<p[39m
+                [33mclass[39m=[32m"eyebrow"[39m
+              [36m>[39m
+                [0mA[0m
+              [36m</p>[39m
+              [36m<p>[39m
+                [0mAlpha[0m
+              [36m</p>[39m
+              [36m<h3[39m
+                [33mid[39m=[32m"execution-execution-a-title"[39m
+                [33mtabindex[39m=[32m"-1"[39m
+              [36m>[39m
+                [0mTask A[0m
+              [36m</h3>[39m
+            [36m</div>[39m
+            [36m<span[39m
+              [33mclass[39m=[32m"status-label status-paused"[39m
+            [36m>[39m
+              [0m已暂停[0m
+            [36m</span>[39m
+          [36m</div>[39m
+          [36m<p[39m
+            [33mrole[39m=[32m"status"[39m
+          [36m>[39m
+            [0m当前没有进行中的动作[0m
+          [36m</p>[39m
+          [36m<p[39m
+            [33mclass[39m=[32m"error-text"[39m
+          [36m>[39m
+            [0m阻断原因：[0m
+            [0mPROVIDER_TIMEOUT[0m
+          [36m</p>[39m
+          [36m<div[39m
+            [33mclass[39m=[32m"execution-progress-list"[39m
+          [36m>[39m
+            [36m<div[39m
+              [33mclass[39m=[32m"execution-progress"[39m
+            [36m>[39m
+              [36m<span>[39m
+                [0m业务回合[0m
+                [0m [0m
+                [0m4[0m
+                [0m/[0m
+                [0m20[0m
+              [36m</span>[39m
+              [36m<progress[39m
+                [33maria-label[39m=[32m"业务回合进度"[39m
+                [33maria-valuemax[39m=[32m"20"[39m
+                [33maria-valuemin[39m=[32m"0"[39m
+                [33maria-valuenow[39m=[32m"4"[39m
+                [33mmax[39m=[32m"20"[39m
+                [33mvalue[39m=[32m"4"[39m
+              [36m/>[39m
+            [36m</div>[39m
+            [36m<div[39m
+              [33mclass[39m=[32m"execution-progress"[39m
+            [36m>[39m
+              [36m<span>[39m
+                [0m工具调用[0m
+                [0m [0m
+                [0m7[0m
+                [0m/[0m
+                [0m40[0m
+              [36m</span>[39m
+              [36m<progress[39m
+                [33maria-label[39m=[32m"工具调用进度"[39m
+                [33maria-valuemax[39m=[32m"40"[39m
+                [33maria-valuemin[39m=[32m"0"[39m
+                [33maria-valuenow[39m=[32m"7"[39m
+                [33mmax[39m=[32m"40"[39m
+                [33mvalue[39m=[32m"7"[39m
+              [36m/>[39m
+            [36m</div>[39m
+            [36m<div[39m
+              [33mclass[39m=[32m"execution-progress"[39m
+            [36m>[39m
+              [36m<span>[39m
+                [0mToken [0m
+                [0m [0m
+                [0m900[0m
+                [0m/[0m
+                [0m2000[0m
+              [36m</span>[39m
+              [36m<progress[39m
+                [33maria-label[39m=[32m"Token 进度"[39m
+                [33maria-valuemax[39m=[32m"2000"[39m
+                [33maria-valuemin[39m=[32m"0"[39m
+                [33maria-valuenow[39m=[32m"900"[39m
+                [33mmax[39m=[32m"2000"[39m
+                [33mvalue[39m=[32m"900"[39m
+              [36m/>[39m
+            [36m</div>[39m
+          [36m</div>[39m
+          [36m<p[39m
+            [33mclass[39m=[32m"error-text"[39m
+            [33mrole[39m=[32m"alert"[39m
+          [36m>[39m
+            [0m无法执行控制操作，请重试。[0m
+          [36m</p>[39m
+          [36m<div[39m
+            [33mclass[39m=[32m"execution-card-controls"[39m
+          [36m>[39m
+            [36m<button[39m
+              [33mstyle[39m=[32m"min-height: var(--control-min);"[39m
+              [33mtype[39m=[32m"button"[39m
+            [36m>[39m
+              [0m继续[0m
+              [0m [0m
+              [0mTask A[0m
+            [36m</button>[39m
+            [36m<button[39m
+              [33mstyle[39m=[32m"min-height: var(--control-min);"[39m
+              [33mtype[39m=[32m"button"[39m
+            [36m>[39m
+              [0m停止[0m
+              [0m [0m
+              [0mTask A[0m
+            [36m</button>[39m
+            [36m<button[39m
+              [33mstyle[39m=[32m"min-height: var(--control-min);"[39m
+              [33mtype[39m=[32m"button"[39m
+            [36m>[39m
+              [0m刷新 [0m
+              [0mTask A[0m
+            [36m</button>[39m
+          [36m</div>[39m
+        [36m</section>[39m
+        [36m<section[39m
+          [33maria-labelledby[39m=[32m"execution-execution-b-title"[39m
+          [33mclass[39m=[32m"run-detail execution-card"[39m
+          [33mdata-accent[39m=[32m"clay"[39m
+          [33mrole[39m=[32m"region"[39m
+        [36m>[39m
+          [36m<div[39m
+            [33mclass[39m=[32m"panel-heading"[39m
+          [36m>[39m
+            [36m<div>[39m
+              [36m<p[39m
+                [33mclass[39m=[32m"eyebrow"[39m
+              [36m>[39m
+                [0mB[0m
+              [36m</p>[39m
+              [36m<p>[39m
+                [0mBeta[0m
+              [36m</p>[39m
+              [36m<h3[39m
+                [33mid[39m=[32m"execution-execution-b-title"[39m
+                [33mtabindex[39m=[32m"-1"[39m
+              [36m>[39m
+                [0mTask B[0m
+              [36m</h3>[39m
+            [36m</div>[39m
+            [36m<span[39m
+              [33mclass[39m=[32m"status-label status-paused"[39m
+            [36m>[39m
+              [0m已暂停[0m
+            [36m</span>[39m
+          [36m</div>[39m
+          [36m<p[39m
+            [33mrole[39m=[32m"status"[39m
+          [36m>[39m
+            [0m当前没有进行中的动作[0m
+          [36m</p>[39m
+          [36m<p[39m
+            [33mclass[39m=[32m"error-text"[39m
+          [36m>[39m
+            [0m阻断原因：[0m
+            [0mPROVIDER_TIMEOUT[0m
+          [36m</p>[39m
+          [36m<div[39m
+            [33mclass[39m=[32m"execution-progress-list"[39m
+          [36m>[39m
+            [36m<div[39m
+              [33mclass[39m=[32m"execution-progress"[39m
+            [36m>[39m
+              [36m<span>[39m
+                [0m业务回合[0m
+                [0m [0m
+                [0m4[0m
+                [0m/[0m
+                [0m20[0m
+              [36m</span>[39m
+              [36m<progress[39m
+                [33maria-label[39m=[32m"业务回合进度"[39m
+                [33maria-valuemax[39m=[32m"20"[39m
+                [33maria-valuemin[39m=[32m"0"[39m
+                [33maria-valuenow[39m=[32m"4"[39m
+                [33mmax[39m=[32m"20"[39m
+                [33mvalue[39m=[32m"4"[39m
+              [36m/>[39m
+            [36m</div>[39m
+            [36m<div[39m
+              [33mclass[39m=[32m"execution-progress"[39m
+            [36m>[39m
+              [36m<span>[39m
+                [0m工具调用[0m
+                [0m [0m
+                [0m7[0m
+                [0m/[0m
+                [0m40[0m
+              [36m</span>[39m
+              [36m<progress[39m
+                [33maria-label[39m=[32m"工具调用进度"[39m
+                [33maria-valuemax[39m=[32m"40"[39m
+                [33maria-valuemin[39m=[32m"0"[39m
+                [33maria-valuenow[39m=[32m"7"[39m
+                [33mmax[39m=[32m"40"[39m
+                [33mvalue[39m=[32m"7"[39m
+              [36m/>[39m
+            [36m</div>[39m
+            [36m<div[39m
+              [33mclass[39m=[32m"execution-progress"[39m
+            [36m>[39m
+              [36m<span>[39m
+                [0mToken [0m
+                [0m [0m
+                [0m900[0m
+                [0m/[0m
+                [0m2000[0m
+              [36m</span>[39m
+              [36m<progress[39m
+                [33maria-label[39m=[32m"Token 进度"[39m
+                [33maria-valuemax[39m=[32m"2000"[39m
+                [33maria-valuemin[39m=[32m"0"[39m
+                [33maria-valuenow[39m=[32m"900"[39m
+                [33mmax[39m=[32m"2000"[39m
+                [33mvalue[39m=[32m"900"[39m
+              [36m/>[39m
+            [36m</div>[39m
+          [36m</div>[39m
+          [36m<div[39m
+            [33mclass[39m=[32m"execution-card-controls"[39m
+          [36m>[39m
+            [36m<button[39m
+              [33mstyle[39m=[32m"min-height: var(--control-min);"[39m
+              [33mtype[39m=[32m"button"[39m
+            [36m>[39m
+              [0m继续[0m
+              [0m [0m
+              [0mTask B[0m
+            [36m</button>[39m
+            [36m<button[39m
+              [33mstyle[39m=[32m"min-height: var(--control-min);"[39m
+              [33mtype[39m=[32m"button"[39m
+            [36m>[39m
+              [0m停止[0m
+              [0m [0m
+              [0mTask B[0m
+            [36m</button>[39m
+            [36m<button[39m
+              [33mstyle[39m=[32m"min-height: var(--control-min);"[39m
+              [33mtype[39m=[32m"button"[39m
+            [36m>[39m
+              [0m刷新 [0m
+              [0mTask B[0m
+            [36m</button>[39m
+          [36m</div>[39m
+        [36m</section>[39m
+      [36m</div>[39m
+    [36m</section>[39m
+  [36m</div>[39m
+[36m</body>[39m
+
+Ignored nodes: comments, script, style
+[36m<body>[39m
+  [36m<div>[39m
+    [36m<section[39m
+      [33maria-labelledby[39m=[32m"executions-title-project-execution-cards"[39m
+      [33mclass[39m=[32m"stack"[39m
+    [36m>[39m
+      [36m<div[39m
+        [33mclass[39m=[32m"panel-heading"[39m
+      [36m>[39m
+        [36m<div>[39m
+          [36m<p[39m
+            [33mclass[39m=[32m"eyebrow"[39m
+          [36m>[39m
+            [0m项目执行[0m
+          [36m</p>[39m
+          [36m<h3[39m
+            [33mid[39m=[32m"executions-title-project-execution-cards"[39m
+          [36m>[39m
+            [0m运行详情[0m
+          [36m</h3>[39m
+        [36m</div>[39m
+        [36m<button[39m
+          [33mstyle[39m=[32m"min-height: var(--control-min);"[39m
+          [33mtype[39m=[32m"button"[39m
+        [36m>[39m
+          [0m刷新执行[0m
+        [36m</button>[39m
+      [36m</div>[39m
+      [36m<section[39m
+        [33maria-labelledby[39m=[32m"execution-picker-project-execution-cards"[39m
+        [33mclass[39m=[32m"stack"[39m
+      [36m>[39m
+        [36m<h4[39m
+          [33mid[39m=[32m"execution-picker-project-execution-cards"[39m
+        [36m>[39m
+          [0m选择并执行[0m
+        [36m</h4>[39m
+        [36m<p>[39m
+          [0m没有符合条件的进行中任务。[0m
+        [36m</p>[39m
+      [36m</section>[39m
+      [36m<button[39m
+        [33maria-expanded[39m=[32m"false"[39m
+        [33mstyle[39m=[32m"min-height: var(--control-min);"[39m
+        [33mtype[39m=[32m"button"[39m
+      [36m>[39m
+        [0m管理验证政策[0m
+      [36m</button>[39m
+      [36m<div[39m
+        [33mclass[39m=[32m"run-details"[39m
+      [36m>[39m
+        [36m<section[39m
+          [33maria-labelledby[39m=[32m"execution-execution-a-title"[39m
+          [33mclass[39m=[32m"run-detail execution-card"[39m
+          [33mdata-accent[39m=[32m"sage"[39m
+          [33mrole[39m=[32m"region"[39m
+        [36m>[39m
+          [36m<div[39m
+            [33mclass[39m=[32m"panel-heading"[39m
+          [36m>[39m
+            [36m<div>[39m
+              [36m<p[39m
+                [33mclass[39m=[32m"eyebrow"[39m
+              [36m>[39m
+                [0mA[0m
+              [36m</p>[39m
+              [36m<p>[39m
+                [0mAlpha[0m
+              [36m</p>[39m
+              [36m<h3[39m
+                [33mid[39m=[32m"execution-execution-a-title"[39m
+                [33mtabindex[39m=[32m"-1"[39m
+              [36m>[39m
+                [0mTask A[0m
+              [36m</h3>[39m
+            [36m</div>[39m
+            [36m<span[39m
+              [33mclass[39m=[32m"status-label status-paused"[39m
+            [36m>[39m
+              [0m已暂停[0m
+            [36m</span>[39m
+          [36m</div>[39m
+          [36m<p[39m
+            [33mrole[39m=[32m"status"[39m
+          [36m>[39m
+            [0m当前没有进行中的动作[0m
+          [36m</p>[39m
+          [36m<p[39m
+            [33mclass[39m=[32m"error-text"[39m
+          [36m>[39m
+            [0m阻断原因：[0m
+            [0mPROVIDER_TIMEOUT[0m
+          [36m</p>[39m
+          [36m<div[39m
+            [33mclass[39m=[32m"execution-progress-list"[39m
+          [36m>[39m
+            [36m<div[39m
+              [33mclass[39m=[32m"execution-progress"[39m
+            [36m>[39m
+              [36m<span>[39m
+                [0m业务回合[0m
+                [0m [0m
+                [0m4[0m
+                [0m/[0m
+                [0m20[0m
+              [36m</span>[39m
+              [36m<progress[39m
+                [33maria-label[39m=[32m"业务回合进度"[39m
+                [33maria-valuemax[39m=[32m"20"[39m
+                [33maria-valuemin[39m=[32m"0"[39m
+                [33maria-valuenow[39m=[32m"4"[39m
+                [33mmax[39m=[32m"20"[39m
+                [33mvalue[39m=[32m"4"[39m
+              [36m/>[39m
+            [36m</div>[39m
+            [36m<div[39m
+              [33mclass[39m=[32m"execution-progress"[39m
+            [36m>[39m
+              [36m<span>[39m
+                [0m工具调用[0m
+                [0m [0m
+                [0m7[0m
+                [0m/[0m
+                [0m40[0m
+              [36m</span>[39m
+              [36m<progress[39m
+                [33maria-label[39m=[32m"工具调用进度"[39m
+                [33maria-valuemax[39m=[32m"40"[39m
+                [33maria-valuemin[39m=[32m"0"[39m
+                [33maria-valuenow[39m=[32m"7"[39m
+                [33mmax[39m=[32m"40"[39m
+                [33mvalue[39m=[32m"7"[39m
+              [36m/>[39m
+            [36m</div>[39m
+            [36m<div[39m
+              [33mclass[39m=[32m"execution-progress"[39m
+            [36m>[39m
+              [36m<span>[39m
+                [0mToken [0m
+                [0m [0m
+                [0m900[0m
+                [0m/[0m
+                [0m2000[0m
+              [36m</span>[39m
+              [36m<progress[39m
+                [33maria-label[39m=[32m"Token 进度"[39m
+                [33maria-valuemax[39m=[32m"2000"[39m
+                [33maria-valuemin[39m=[32m"0"[39m
+                [33maria-valuenow[39m=[32m"900"[39m
+                [33mmax[39m=[32m"2000"[39m
+                [33mvalue[39m=[32m"900"[39m
+              [36m/>[39m
+            [36m</div>[39m
+          [36m</div>[39m
+          [36m<p[39m
+            [33mclass[39m=[32m"error-text"[39m
+            [33mrole[39m=[32m"alert"[39m
+          [36m>[39m
+            [0m无法执行控制操作，请重试。[0m
+          [36m</p>[39m
+          [36m<div[39m
+            [33mclass[39m=[32m"execution-card-controls"[39m
+          [36m>[39m
+            [36m<button[39m
+              [33mstyle[39m=[32m"min-height: var(--control-min);"[39m
+              [33mtype[39m=[32m"button"[39m
+            [36m>[39m
+              [0m继续[0m
+              [0m [0m
+              [0mTask A[0m
+            [36m</button>[39m
+            [36m<button[39m
+              [33mstyle[39m=[32m"min-height: var(--control-min);"[39m
+              [33mtype[39m=[32m"button"[39m
+            [36m>[39m
+              [0m停止[0m
+              [0m [0m
+              [0mTask A[0m
+            [36m</button>[39m
+            [36m<button[39m
+              [33mstyle[39m=[32m"min-height: var(--control-min);"[39m
+              [33mtype[39m=[32m"button"[39m
+            [36m>[39m
+              [0m刷新 [0m
+              [0mTask A[0m
+            [36m</button>[39m
+          [36m</div>[39m
+        [36m</section>[39m
+        [36m<section[39m
+          [33maria-labelledby[39m=[32m"execution-execution-b-title"[39m
+          [33mclass[39m=[32m"run-detail execution-card"[39m
+          [33mdata-accent[39m=[32m"clay"[39m
+          [33mrole[39m=[32m"region"[39m
+        [36m>[39m
+          [36m<div[39m
+            [33mclass[39m=[32m"panel-heading"[39m
+          [36m>[39m
+            [36m<div>[39m
+              [36m<p[39m
+                [33mclass[39m=[32m"eyebrow"[39m
+              [36m>[39m
+                [0mB[0m
+              [36m</p>[39m
+              [36m<p>[39m
+                [0mBeta[0m
+              [36m</p>[39m
+              [36m<h3[39m
+                [33mid[39m=[32m"execution-execution-b-title"[39m
+                [33mtabindex[39m=[32m"-1"[39m
+              [36m>[39m
+                [0mTask B[0m
+              [36m</h3>[39m
+            [36m</div>[39m
+            [36m<span[39m
+              [33mclass[39m=[32m"status-label status-paused"[39m
+            [36m>[39m
+              [0m已暂停[0m
+            [36m</span>[39m
+          [36m</div>[39m
+          [36m<p[39m
+            [33mrole[39m=[32m"status"[39m
+          [36m>[39m
+            [0m当前没有进行中的动作[0m
+          [36m</p>[39m
+          [36m<p[39m
+            [33mclass[39m=[32m"error-text"[39m
+          [36m>[39m
+            [0m阻断原因：[0m
+            [0mPROVIDER_TIMEOUT[0m
+          [36m</p>[39m
+          [36m<div[39m
+            [33mclass[39m=[32m"execution-progress-list"[39m
+          [36m>[39m
+            [36m<div[39m
+              [33mclass[39m=[32m"execution-progress"[39m
+            [36m>[39m
+              [36m<span>[39m
+                [0m业务回合[0m
+                [0m [0m
+                [0m4[0m
+                [0m/[0m
+                [0m20[0m
+              [36m</span>[39m
+              [36m<progress[39m
+                [33maria-label[39m=[32m"业务回合进度"[39m
+                [33maria-valuemax[39m=[32m"20"[39m
+                [33maria-valuemin[39m=[32m"0"[39m
+                [33maria-valuenow[39m=[32m"4"[39m
+                [33mmax[39m=[32m"20"[39m
+                [33mvalue[39m=[32m"4"[39m
+              [36m/>[39m
+            [36m</div>[39m
+            [36m<div[39m
+              [33mclass[39m=[32m"execution-progress"[39m
+            [36m>[39m
+              [36m<span>[39m
+                [0m工具调用[0m
+                [0m [0m
+                [0m7[0m
+                [0m/[0m
+                [0m40[0m
+              [36m</span>[39m
+              [36m<progress[39m
+                [33maria-label[39m=[32m"工具调用进度"[39m
+                [33maria-valuemax[39m=[32m"40"[39m
+                [33maria-valuemin[39m=[32m"0"[39m
+                [33maria-valuenow[39m=[32m"7"[39m
+                [33mmax[39m=[32m"40"[39m
+                [33mvalue[39m=[32m"7"[39m
+              [36m/>[39m
+            [36m</div>[39m
+            [36m<div[39m
+              [33mclass[39m=[32m"execution-progress"[39m
+            [36m>[39m
+              [36m<span>[39m
+                [0mToken [0m
+                [0m [0m
+                [0m900[0m
+                [0m/[0m
+                [0m2000[0m
+              [36m</span>[39m
+              [36m<progress[39m
+                [33maria-label[39m=[32m"Token 进度"[39m
+                [33maria-valuemax[39m=[32m"2000"[39m
+                [33maria-valuemin[39m=[32m"0"[39m
+                [33maria-valuenow[39m=[32m"900"[39m
+                [33mmax[39m=[32m"2000"[39m
+                [33mvalue[39m=[32m"900"[39m
+              [36m/>[39m
+            [36m</div>[39m
+          [36m</div>[39m
+          [36m<div[39m
+            [33mclass[39m=[32m"execution-card-controls"[39m
+          [36m>[39m
+            [36m<button[39m
+              [33mstyle[39m=[32m"min-height: var(--control-min);"[39m
+              [33mtype[39m=[32m"button"[39m
+            [36m>[39m
+              [0m继续[0m
+              [0m [0m
+              [0mTask B[0m
+            [36m</button>[39m
+            [36m<button[39m
+              [33mstyle[39m=[32m"min-height: var(--control-min);"[39m
+              [33mtype[39m=[32m"button"[39m
+            [36m>[39m
+              [0m停止[0m
+              [0m [0m
+              [0mTask B[0m
+            [36m</button>[39m
+            [36m<button[39m
+              [33mstyle[39m=[32m"min-height: var(--control-min);"[39m
+              [33mtype[39m=[32m"button"[39m
+            [36m>[39m
+              [0m刷新 [0m
+              [0mTask B[0m
+            [36m</button>[39m
+          [36m</div>[39m
+        [36m</section>[39m
+      [36m</div>[39m
+    [36m</section>[39m
+  [36m</div>[39m
+[36m</body>[39m
+ ❯ waitForWrapper node_modules/@testing-library/dom/dist/wait-for.js:163:27
+ ❯ node_modules/@testing-library/dom/dist/query-helpers.js:86:33
+ ❯ tests/execution-cards-ui.test.tsx:245:25
+    243|     const second = await screen.findByRole("region", { name: "Task B" …
+    244|     await user.click(screen.getByRole("button", { name: "继续 Task A" })…
+    245|     expect(await screen.findByText("执行状态已变化，请刷新后重试。")).toBeInTheDocume…
+       |                         ^
+    246|     expect(within(second).getByText("已暂停")).toBeInTheDocument();
+    247|     expect(within(second).getByRole("button", { name: "继续 Task B" })).…
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[1/1]⎯
+
+
+ Test Files  1 failed (1)
+      Tests  1 failed | 4 passed (5)
+   Start at  22:02:32
+   Duration  5.05s (transform 147ms, setup 495ms, import 476ms, tests 1.59s, environment 2.15s)
+
+# exit: 1

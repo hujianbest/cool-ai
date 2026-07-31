@@ -1,0 +1,1260 @@
+# hf-gate-run
+# label: t30-green
+# command: cmd /c npm test -- tests/execution-recovery-ui.test.tsx tests/execution-accessibility.test.tsx
+# started: 2026-07-30T14:36:03+00:00
+
+> collaboration-cockpit@0.1.0 test
+> vitest run tests/execution-recovery-ui.test.tsx tests/execution-accessibility.test.tsx
+
+
+ RUN  v4.1.10 D:/cool-ai
+
+ ❯ tests/execution-recovery-ui.test.tsx (5 tests | 3 failed) 3921ms
+     × submits exact recovered_old only after second confirmation and restores focus to its outcome 1094ms
+     × submits exact recovered_new only after second confirmation and restores focus to its outcome 1090ms
+     × submits exact abandon only after second confirmation and restores focus to its outcome 1391ms
+
+⎯⎯⎯⎯⎯⎯⎯ Failed Tests 3 ⎯⎯⎯⎯⎯⎯⎯
+
+ FAIL  tests/execution-recovery-ui.test.tsx > T-30 manual recovery UI > submits exact recovered_old only after second confirmation and restores focus to its outcome
+TestingLibraryElementError: Unable to find role="button" and name "重试 Recover workspace"
+
+Ignored nodes: comments, script, style
+[36m<body[39m
+  [33mstyle[39m=[32m""[39m
+[36m>[39m
+  [36m<div>[39m
+    [36m<section[39m
+      [33maria-labelledby[39m=[32m"executions-title-project-recovery-ui"[39m
+      [33mclass[39m=[32m"stack execution-panel"[39m
+    [36m>[39m
+      [36m<div[39m
+        [33mclass[39m=[32m"panel-heading"[39m
+      [36m>[39m
+        [36m<div>[39m
+          [36m<p[39m
+            [33mclass[39m=[32m"eyebrow"[39m
+          [36m>[39m
+            [0m项目执行[0m
+          [36m</p>[39m
+          [36m<h3[39m
+            [33mid[39m=[32m"executions-title-project-recovery-ui"[39m
+          [36m>[39m
+            [0m运行详情[0m
+          [36m</h3>[39m
+        [36m</div>[39m
+        [36m<button[39m
+          [33mstyle[39m=[32m"min-height: var(--control-min);"[39m
+          [33mtype[39m=[32m"button"[39m
+        [36m>[39m
+          [0m刷新执行[0m
+        [36m</button>[39m
+      [36m</div>[39m
+      [36m<section[39m
+        [33maria-labelledby[39m=[32m"execution-picker-project-recovery-ui"[39m
+        [33mclass[39m=[32m"stack"[39m
+      [36m>[39m
+        [36m<h4[39m
+          [33mid[39m=[32m"execution-picker-project-recovery-ui"[39m
+        [36m>[39m
+          [0m选择并执行[0m
+        [36m</h4>[39m
+        [36m<p>[39m
+          [0m没有符合条件的进行中任务。[0m
+        [36m</p>[39m
+      [36m</section>[39m
+      [36m<button[39m
+        [33maria-expanded[39m=[32m"false"[39m
+        [33mstyle[39m=[32m"min-height: var(--control-min);"[39m
+        [33mtype[39m=[32m"button"[39m
+      [36m>[39m
+        [0m管理验证政策[0m
+      [36m</button>[39m
+      [36m<div[39m
+        [33mclass[39m=[32m"run-details"[39m
+      [36m>[39m
+        [36m<section[39m
+          [33maria-labelledby[39m=[32m"execution-execution-recovery-title"[39m
+          [33mclass[39m=[32m"run-detail execution-card"[39m
+          [33mdata-accent[39m=[32m"sage"[39m
+          [33mrole[39m=[32m"region"[39m
+        [36m>[39m
+          [36m<div[39m
+            [33mclass[39m=[32m"panel-heading"[39m
+          [36m>[39m
+            [36m<div>[39m
+              [36m<p[39m
+                [33mclass[39m=[32m"eyebrow"[39m
+              [36m>[39m
+                [0mA[0m
+              [36m</p>[39m
+              [36m<p>[39m
+                [0mAlpha[0m
+              [36m</p>[39m
+              [36m<h3[39m
+                [33mid[39m=[32m"execution-execution-recovery-title"[39m
+                [33mtabindex[39m=[32m"-1"[39m
+              [36m>[39m
+                [0mRecover workspace[0m
+              [36m</h3>[39m
+            [36m</div>[39m
+            [36m<span[39m
+              [33mclass[39m=[32m"status-label status-conflicted"[39m
+            [36m>[39m
+              [0m存在冲突[0m
+            [36m</span>[39m
+          [36m</div>[39m
+          [36m<p[39m
+            [33mrole[39m=[32m"status"[39m
+          [36m>[39m
+            [0m当前没有进行中的动作[0m
+          [36m</p>[39m
+          [36m<p[39m
+            [33mclass[39m=[32m"error-text"[39m
+          [36m>[39m
+            [0m阻断原因：[0m
+            [0mMANUAL_RECOVERY_REQUIRED[0m
+          [36m</p>[39m
+          [36m<section[39m
+            [33maria-label[39m=[32m"需要人工恢复"[39m
+            [33mclass[39m=[32m"execution-recovery stack"[39m
+            [33mrole[39m=[32m"region"[39m
+          [36m>[39m
+            [36m<h4>[39m
+              [0m需要人工恢复[0m
+            [36m</h4>[39m
+            [36m<p[39m
+              [33mclass[39m=[32m"warning-text"[39m
+            [36m>[39m
+              [0m检测到平台外写入；平台已停止自动改写，当前 workspace 可能既非完整旧版也非完整新版。[0m
+            [36m</p>[39m
+            [36m<dl[39m
+              [33mclass[39m=[32m"execution-review-facts"[39m
+            [36m>[39m
+              [36m<div>[39m
+                [36m<dt>[39m
+                  [0m不匹配阶段[0m
+                [36m</dt>[39m
+                [36m<dd>[39m
+                  [0mrollback_after_replace[0m
+                [36m</dd>[39m
+              [36m</div>[39m
+              [36m<div>[39m
+                [36m<dt>[39m
+                  [0m旧版 manifest[0m
+                [36m</dt>[39m
+                [36m<dd>[39m
+                  [36m<code>[39m
+                    [0maaaaaaaaaaaa[0m
+                  [36m</code>[39m
+                [36m</dd>[39m
+              [36m</div>[39m
+              [36m<div>[39m
+                [36m<dt>[39m
+                  [0m新版 manifest[0m
+                [36m</dt>[39m
+                [36m<dd>[39m
+                  [36m<code>[39m
+                    [0mbbbbbbbbbbbb[0m
+                  [36m</code>[39m
+                [36m</dd>[39m
+              [36m</div>[39m
+              [36m<div>[39m
+                [36m<dt>[39m
+                  [0mObserved manifest[0m
+                [36m</dt>[39m
+                [36m<dd>[39m
+                  [36m<code>[39m
+                    [0mcccccccccccc[0m
+                  [36m</code>[39m
+                [36m</dd>[39m
+              [36m</div>[39m
+            [36m</dl>[39m
+            [36m<h5>[39m
+              [0m差异路径[0m
+            [36m</h5>[39m
+            [36m<ol[39m
+              [33mclass[39m=[32m"execution-review-list"[39m
+            [36m>[39m
+              [36m<li[39m
+                [33mclass[39m=[32m"execution-review-item"[39m
+              [36m>[39m
+                [36m<strong>[39m
+                  [0msrc/changed.ts[0m
+                [36m</strong>[39m
+                [36m<p>[39m
+                  [0mapplied[0m
+                  [0m · old [0m
+                  [0maaaaaaaaaaaa[0m
+                  [0m · post [0m
+                  [0mbbbbbbbbbbbb[0m
+                [36m</p>[39m
+              [36m</li>[39m
+            [36m</ol>[39m
+            [36m<button[39m
+              [33mtype[39m=[32m"button"[39m
+            [36m>[39m
+              [0m加载更多差异路径[0m
+            [36m</button>[39m
+            [36m<p[39m
+              [33mclass[39m=[32m"error-text"[39m
+              [33mrole[39m=[32m"alert"[39m
+            [36m>[39m
+              [0m无法完成人工恢复，请重试。[0m
+            [36m</p>[39m
+            [36m<p[39m
+              [33maria-live[39m=[32m"polite"[39m
+            [36m>[39m
+              [0m人工恢复已完成。[0m
+            [36m</p>[39m
+            [36m<div[39m
+              [33mclass[39m=[32m"execution-review-actions"[39m
+            [36m>[39m
+              [36m<button[39m
+                [33mtype[39m=[32m"button"[39m
+              [36m>[39m
+                [0m已恢复为旧版本并重试[0m
+              [36m</button>[39m
+              [36m<button[39m
+                [33mtype[39m=[32m"button"[39m
+              [36m>[39m
+                [0m已确认完整新版本[0m
+              [36m</button>[39m
+              [36m<button[39m
+                [33mtype[39m=[32m"button"[39m
+              [36m>[39m
+                [0m放弃且不改 canonical[0m
+              [36m</button>[39m
+            [36m</div>[39m
+          [36m</section>[39m
+          [36m<div[39m
+            [33mclass[39m=[32m"execution-progress-list"[39m
+          [36m>[39m
+            [36m<div[39m
+              [33mclass[39m=[32m"execution-progress"[39m
+            [36m>[39m
+              [36m<span>[39m
+                [0m业务回合[0m
+                [0m [0m
+                [0m4[0m
+                [0m/[0m
+                [0m20[0m
+              [36m</span>[39m
+              [36m<progress[39m
+                [33maria-label[39m=[32m"业务回合进度"[39m
+                [33maria-valuemax[39m=[32m"20"[39m
+                [33maria-valuemin[39m=[32m"0"[39m
+                [33maria-valuenow[39m=[32m"4"[39m
+                [33mmax[39m=[32m"20"[39m
+                [33mvalue[39m=[32m"4"[39m
+              [36m/>[39m
+            [36m</div>[39m
+            [36m<div[39m
+              [33mclass[39m=[32m"execution-progress"[39m
+            [36m>[39m
+              [36m<span>[39m
+                [0m工具调用[0m
+                [0m [0m
+                [0m7[0m
+                [0m/[0m
+                [0m40[0m
+              [36m</span>[39m
+              [36m<progress[39m
+                [33maria-label[39m=[32m"工具调用进度"[39m
+                [33maria-valuemax[39m=[32m"40"[39m
+                [33maria-valuemin[39m=[32m"0"[39m
+                [33maria-valuenow[39m=[32m"7"[39m
+                [33mmax[39m=[32m"40"[39m
+                [33mvalue[39m=[32m"7"[39m
+              [36m/>[39m
+            [36m</div>[39m
+            [36m<div[39m
+              [33mclass[39m=[32m"execution-progress"[39m
+            [36m>[39m
+              [36m<span>[39m
+                [0mToken [0m
+                [0m [0m
+                [0m900[0m
+                [0m/[0m
+                [0m2000[0m
+              [36m</span>[39m
+              [36m<progress[39m
+                [33maria-label[39m=[32m"Token 进度"[39m
+                [33maria-valuemax[39m=[32m"2000"[39m
+                [33maria-valuemin[39m=[32m"0"[39m
+                [33maria-valuenow[39m=[32m"900"[39m
+                [33mmax[39m=[32m"2000"[39m
+                [33mvalue[39m=[32m"900"[39m
+              [36m/>[39m
+            [36m</div>[39m
+          [36m</div>[39m
+          [36m<div[39m
+            [33mclass[39m=[32m"execution-card-controls"[39m
+          [36m>[39m
+            [36m<button[39m
+              [33mstyle[39m=[32m"min-height: var(--control-min);"[39m
+              [33mtype[39m=[32m"button"[39m
+            [36m>[39m
+              [0m刷新 [0m
+              [0mRecover workspace[0m
+            [36m</button>[39m
+          [36m</div>[39m
+        [36m</section>[39m
+      [36m</div>[39m
+    [36m</section>[39m
+  [36m</div>[39m
+[36m</body>[39m
+
+Ignored nodes: comments, script, style
+[36m<body[39m
+  [33mstyle[39m=[32m""[39m
+[36m>[39m
+  [36m<div>[39m
+    [36m<section[39m
+      [33maria-labelledby[39m=[32m"executions-title-project-recovery-ui"[39m
+      [33mclass[39m=[32m"stack execution-panel"[39m
+    [36m>[39m
+      [36m<div[39m
+        [33mclass[39m=[32m"panel-heading"[39m
+      [36m>[39m
+        [36m<div>[39m
+          [36m<p[39m
+            [33mclass[39m=[32m"eyebrow"[39m
+          [36m>[39m
+            [0m项目执行[0m
+          [36m</p>[39m
+          [36m<h3[39m
+            [33mid[39m=[32m"executions-title-project-recovery-ui"[39m
+          [36m>[39m
+            [0m运行详情[0m
+          [36m</h3>[39m
+        [36m</div>[39m
+        [36m<button[39m
+          [33mstyle[39m=[32m"min-height: var(--control-min);"[39m
+          [33mtype[39m=[32m"button"[39m
+        [36m>[39m
+          [0m刷新执行[0m
+        [36m</button>[39m
+      [36m</div>[39m
+      [36m<section[39m
+        [33maria-labelledby[39m=[32m"execution-picker-project-recovery-ui"[39m
+        [33mclass[39m=[32m"stack"[39m
+      [36m>[39m
+        [36m<h4[39m
+          [33mid[39m=[32m"execution-picker-project-recovery-ui"[39m
+        [36m>[39m
+          [0m选择并执行[0m
+        [36m</h4>[39m
+        [36m<p>[39m
+          [0m没有符合条件的进行中任务。[0m
+        [36m</p>[39m
+      [36m</section>[39m
+      [36m<button[39m
+        [33maria-expanded[39m=[32m"false"[39m
+        [33mstyle[39m=[32m"min-height: var(--control-min);"[39m
+        [33mtype[39m=[32m"button"[39m
+      [36m>[39m
+        [0m管理验证政策[0m
+      [36m</button>[39m
+      [36m<div[39m
+        [33mclass[39m=[32m"run-details"[39m
+      [36m>[39m
+        [36m<section[39m
+          [33maria-labelledby[39m=[32m"execution-execution-recovery-title"[39m
+          [33mclass[39m=[32m"run-detail execution-card"[39m
+          [33mdata-accent[39m=[32m"sage"[39m
+          [33mrole[39m=[32m"region"[39m
+        [36m>[39m
+          [36m<div[39m
+            [33mclass[39m=[32m"panel-heading"[39m
+          [36m>[39m
+            [36m<div>[39m
+              [36m<p[39m
+                [33mclass[39m=[32m"eyebrow"[39m
+              [36m>[39m
+                [0mA[0m
+              [36m</p>[39m
+              [36m<p>[39m
+                [0mAlpha[0m
+              [36m</p>[39m
+              [36m<h3[39m
+                [33mid[39m=[32m"execution-execution-recovery-title"[39m
+                [33mtabindex[39m=[32m"-1"[39m
+              [36m>[39m
+                [0mRecover workspace[0m
+              [36m</h3>[39m
+            [36m</div>[39m
+            [36m<span[39m
+              [33mclass[39m=[32m"status-label status-conflicted"[39m
+            [36m>[39m
+              [0m存在冲突[0m
+            [36m</span>[39m
+          [36m</div>[39m
+          [36m<p[39m
+            [33mrole[39m=[32m"status"[39m
+          [36m>[39m
+            [0m当前没有进行中的动作[0m
+          [36m</p>[39m
+          [36m<p[39m
+            [33mclass[39m=[32m"error-text"[39m
+          [36m>[39m
+            [0m阻断原因：[0m
+            [0mMANUAL_RECOVERY_REQUIRED[0m
+          [36m</p>[39m
+          [36m<section[39m
+            [33maria-label[39m=[32m"需要人工恢复"[39m
+            [33mclass[39m=[32m"execution-recovery stack"[39m
+            [33mrole[39m=[32m"region"[39m
+          [36m>[39m
+            [36m<h4>[39m
+              [0m需要人工恢复[0m
+            [36m</h4>[39m
+            [36m<p[39m
+              [33mclass[39m=[32m"warning-text"[39m
+            [36m>[39m
+              [0m检测到平台外写入；平台已停止自动改写，当前 workspace 可能既非完整旧版也非完整新版。[0m
+            [36m</p>[39m
+            [36m<dl[39m
+              [33mclass[39m=[32m"execution-review-facts"[39m
+            [36m>[39m
+              [36m<div>[39m
+                [36m<dt>[39m
+                  [0m不匹配阶段[0m
+                [36m</dt>[39m
+                [36m<dd>[39m
+                  [0mrollback_after_replace[0m
+                [36m</dd>[39m
+              [36m</div>[39m
+              [36m<div>[39m
+                [36m<dt>[39m
+                  [0m旧版 manifest[0m
+                [36m</dt>[39m
+                [36m<dd>[39m
+                  [36m<code>[39m
+                    [0maaaaaaaaaaaa[0m
+                  [36m</code>[39m
+                [36m</dd>[39m
+              [36m</div>[39m
+              [36m<div>[39m
+                [36m<dt>[39m
+                  [0m新版 manifest[0m
+                [36m</dt>[39m
+                [36m<dd>[39m
+                  [36m<code>[39m
+                    [0mbbbbbbbbbbbb[0m
+                  [36m</code>[39m
+                [36m</dd>[39m
+              [36m</div>[39m
+              [36m<div>[39m
+                [36m<dt>[39m
+                  [0mObserved manifest[0m
+                [36m</dt>[39m
+                [36m<dd>[39m
+                  [36m<code>[39m
+                    [0mcccccccccccc[0m
+                  [36m</code>[39m
+                [36m</dd>[39m
+              [36m</div>[39m
+            [36m</dl>[39m
+            [36m<h5>[39m
+              [0m差异路径[0m
+            [36m</h5>[39m
+            [36m<ol[39m
+              [33mclass[39m=[32m"execution-review-list"[39m
+            [36m>[39m
+              [36m<li[39m
+                [33mclass[39m=[32m"execution-review-item"[39m
+              [36m>[39m
+                [36m<strong>[39m
+                  [0msrc/changed.ts[0m
+                [36m</strong>[39m
+                [36m<p>[39m
+                  [0mapplied[0m
+                  [0m · old [0m
+                  [0maaaaaaaaaaaa[0m
+                  [0m · post [0m
+                  [0mbbbbbbbbbbbb[0m
+                [36m</p>[39m
+              [36m</li>[39m
+            [36m</ol>[39m
+            [36m<button[39m
+              [33mtype[39m=[32m"button"[39m
+            [36m>[39m
+              [0m加载更多差异路径[0m
+            [36m</button>[39m
+            [36m<p[39m
+              [33mclass[39m=[32m"error-text"[39m
+              [33mrole[39m=[32m"alert"[39m
+            [36m>[39m
+              [0m无法完成人工恢复，请重试。[0m
+            [36m</p>[39m
+            [36m<p[39m
+              [33maria-live[39m=[32m"polite"[39m
+            [36m>[39m
+              [0m人工恢复已完成。[0m
+            [36m</p>[39m
+            [36m<div[39m
+              [33mclass[39m=[32m"execution-review-actions"[39m
+            [36m>[39m
+              [36m<button[39m
+                [33mtype[39m=[32m"button"[39m
+              [36m>[39m
+                [0m已恢复为旧版本并重试[0m
+              [36m</button>[39m
+              [36m<button[39m
+                [33mtype[39m=[32m"button"[39m
+              [36m>[39m
+                [0m已确认完整新版本[0m
+              [36m</button>[39m
+              [36m<button[39m
+                [33mtype[39m=[32m"button"[39m
+              [36m>[39m
+                [0m放弃且不改 canonical[0m
+              [36m</button>[39m
+            [36m</div>[39m
+          [36m</section>[39m
+          [36m<div[39m
+            [33mclass[39m=[32m"execution-progress-list"[39m
+          [36m>[39m
+            [36m<div[39m
+              [33mclass[39m=[32m"execution-progress"[39m
+            [36m>[39m
+              [36m<span>[39m
+                [0m业务回合[0m
+                [0m [0m
+                [0m4[0m
+                [0m/[0m
+                [0m20[0m
+              [36m</span>[39m
+              [36m<progress[39m
+                [33maria-label[39m=[32m"业务回合进度"[39m
+                [33maria-valuemax[39m=[32m"20"[39m
+                [33maria-valuemin[39m=[32m"0"[39m
+                [33maria-valuenow[39m=[32m"4"[39m
+                [33mmax[39m=[32m"20"[39m
+                [33mvalue[39m=[32m"4"[39m
+              [36m/>[39m
+            [36m</div>[39m
+            [36m<div[39m
+              [33mclass[39m=[32m"execution-progress"[39m
+            [36m>[39m
+              [36m<span>[39m
+                [0m工具调用[0m
+                [0m [0m
+                [0m7[0m
+                [0m/[0m
+                [0m40[0m
+              [36m</span>[39m
+              [36m<progress[39m
+                [33maria-label[39m=[32m"工具调用进度"[39m
+                [33maria-valuemax[39m=[32m"40"[39m
+                [33maria-valuemin[39m=[32m"0"[39m
+                [33maria-valuenow[39m=[32m"7"[39m
+                [33mmax[39m=[32m"40"[39m
+                [33mvalue[39m=[32m"7"[39m
+              [36m/>[39m
+            [36m</div>[39m
+            [36m<div[39m
+              [33mclass[39m=[32m"execution-progress"[39m
+            [36m>[39m
+              [36m<span>[39m
+                [0mToken [0m
+                [0m [0m
+                [0m900[0m
+                [0m/[0m
+                [0m2000[0m
+              [36m</span>[39m
+              [36m<progress[39m
+                [33maria-label[39m=[32m"Token 进度"[39m
+                [33maria-valuemax[39m=[32m"2000"[39m
+                [33maria-valuemin[39m=[32m"0"[39m
+                [33maria-valuenow[39m=[32m"900"[39m
+                [33mmax[39m=[32m"2000"[39m
+                [33mvalue[39m=[32m"900"[39m
+              [36m/>[39m
+            [36m</div>[39m
+          [36m</div>[39m
+          [36m<div[39m
+            [33mclass[39m=[32m"execution-card-controls"[39m
+          [36m>[39m
+            [36m<button[39m
+              [33mstyle[39m=[32m"min-height: var(--control-min);"[39m
+              [33mtype[39m=[32m"button"[39m
+            [36m>[39m
+              [0m刷新 [0m
+              [0mRecover workspace[0m
+            [36m</button>[39m
+          [36m</div>[39m
+        [36m</section>[39m
+      [36m</div>[39m
+    [36m</section>[39m
+  [36m</div>[39m
+[36m</body>[39m
+ ❯ waitForWrapper node_modules/@testing-library/dom/dist/wait-for.js:163:27
+ ❯ node_modules/@testing-library/dom/dist/query-helpers.js:86:33
+ ❯ tests/execution-recovery-ui.test.tsx:225:38
+    223|       });
+    224|       if (action === "recovered_old") {
+    225|         const outcome = await screen.findByRole("button", { name: focu…
+       |                                      ^
+    226|         await waitFor(() => expect(outcome).toHaveFocus());
+    227|       } else {
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[1/3]⎯
+
+ FAIL  tests/execution-recovery-ui.test.tsx > T-30 manual recovery UI > submits exact recovered_new only after second confirmation and restores focus to its outcome
+Error: expect(element).toHaveFocus()
+
+Expected element with focus:
+  <h3
+  id="execution-execution-recovery-title"
+  tabindex="-1"
+>
+  Recover workspace
+</h3>
+Received element with focus:
+  <button
+  type="button"
+>
+  已确认完整新版本
+</button>
+
+Ignored nodes: comments, script, style
+[36m<html>[39m
+  [36m<head />[39m
+  [36m<body[39m
+    [33mstyle[39m=[32m""[39m
+  [36m>[39m
+    [36m<div>[39m
+      [36m<section[39m
+        [33maria-labelledby[39m=[32m"executions-title-project-recovery-ui"[39m
+        [33mclass[39m=[32m"stack execution-panel"[39m
+      [36m>[39m
+        [36m<div[39m
+          [33mclass[39m=[32m"panel-heading"[39m
+        [36m>[39m
+          [36m<div>[39m
+            [36m<p[39m
+              [33mclass[39m=[32m"eyebrow"[39m
+            [36m>[39m
+              [0m项目执行[0m
+            [36m</p>[39m
+            [36m<h3[39m
+              [33mid[39m=[32m"executions-title-project-recovery-ui"[39m
+            [36m>[39m
+              [0m运行详情[0m
+            [36m</h3>[39m
+          [36m</div>[39m
+          [36m<button[39m
+            [33mstyle[39m=[32m"min-height: var(--control-min);"[39m
+            [33mtype[39m=[32m"button"[39m
+          [36m>[39m
+            [0m刷新执行[0m
+          [36m</button>[39m
+        [36m</div>[39m
+        [36m<section[39m
+          [33maria-labelledby[39m=[32m"execution-picker-project-recovery-ui"[39m
+          [33mclass[39m=[32m"stack"[39m
+        [36m>[39m
+          [36m<h4[39m
+            [33mid[39m=[32m"execution-picker-project-recovery-ui"[39m
+          [36m>[39m
+            [0m选择并执行[0m
+          [36m</h4>[39m
+          [36m<p>[39m
+            [0m没有符合条件的进行中任务。[0m
+          [36m</p>[39m
+        [36m</section>[39m
+        [36m<button[39m
+          [33maria-expanded[39m=[32m"false"[39m
+          [33mstyle[39m=[32m"min-height: var(--control-min);"[39m
+          [33mtype[39m=[32m"button"[39m
+        [36m>[39m
+          [0m管理验证政策[0m
+        [36m</button>[39m
+        [36m<div[39m
+          [33mclass[39m=[32m"run-details"[39m
+        [36m>[39m
+          [36m<section[39m
+            [33maria-labelledby[39m=[32m"execution-execution-recovery-title"[39m
+            [33mclass[39m=[32m"run-detail execution-card"[39m
+            [33mdata-accent[39m=[32m"sage"[39m
+            [33mrole[39m=[32m"region"[39m
+          [36m>[39m
+            [36m<div[39m
+              [33mclass[39m=[32m"panel-heading"[39m
+            [36m>[39m
+              [36m<div>[39m
+                [36m<p[39m
+                  [33mclass[39m=[32m"eyebrow"[39m
+                [36m>[39m
+                  [0mA[0m
+                [36m</p>[39m
+                [36m<p>[39m
+                  [0mAlpha[0m
+                [36m</p>[39m
+                [36m<h3[39m
+                  [33mid[39m=[32m"execution-execution-recovery-title"[39m
+                  [33mtabindex[39m=[32m"-1"[39m
+                [36m>[39m
+                  [0mRecover workspace[0m
+                [36m</h3>[39m
+              [36m</div>[39m
+              [36m<span[39m
+                [33mclass[39m=[32m"status-label status-conflicted"[39m
+              [36m>[39m
+                [0m存在冲突[0m
+              [36m</span>[39m
+            [36m</div>[39m
+            [36m<p[39m
+              [33mrole[39m=[32m"status"[39m
+            [36m>[39m
+              [0m当前没有进行中的动作[0m
+            [36m</p>[39m
+            [36m<p[39m
+              [33mclass[39m=[32m"error-text"[39m
+            [36m>[39m
+              [0m阻断原因：[0m
+              [0mMANUAL_RECOVERY_REQUIRED[0m
+            [36m</p>[39m
+            [36m<section[39m
+              [33maria-label[39m=[32m"需要人工恢复"[39m
+              [33mclass[39m=[32m"execution-recovery stack"[39m
+              [33mrole[39m=[32m"region"[39m
+            [36m>[39m
+              [36m<h4>[39m
+                [0m需要人工恢复[0m
+              [36m</h4>[39m
+              [36m<p[39m
+                [33mclass[39m=[32m"warning-text"[39m
+              [36m>[39m
+                [0m检测到平台外写入；平台已停止自动改写，当前 workspace 可能既非完整旧版也非完整新版。[0m
+              [36m</p>[39m
+              [36m<dl[39m
+                [33mclass[39m=[32m"execution-review-facts"[39m
+              [36m>[39m
+                [36m<div>[39m
+                  [36m<dt>[39m
+                    [0m不匹配阶段[0m
+                  [36m</dt>[39m
+                  [36m<dd>[39m
+                    [0mrollback_after_replace[0m
+                  [36m</dd>[39m
+                [36m</div>[39m
+                [36m<div>[39m
+                  [36m<dt>[39m
+                    [0m旧版 manifest[0m
+                  [36m</dt>[39m
+                  [36m<dd>[39m
+                    [36m<code>[39m
+                      [0maaaaaaaaaaaa[0m
+                    [36m</code>[39m
+                  [36m</dd>[39m
+                [36m</div>[39m
+                [36m<div>[39m
+                  [36m<dt>[39m
+                    [0m新版 manifest[0m
+                  [36m</dt>[39m
+                  [36m<dd>[39m
+                    [36m<code>[39m
+                      [0mbbbbbbbbbbbb[0m
+                    [36m</code>[39m
+                  [36m</dd>[39m
+                [36m</div>[39m
+                [36m<div>[39m
+                  [36m<dt>[39m
+                    [0mObserved manifest[0m
+                  [36m</dt>[39m
+                  [36m<dd>[39m
+                    [36m<code>[39m
+                      [0mcccccccccccc[0m
+                    [36m</code>[39m
+                  [36m</dd>[39m
+                [36m</div>[39m
+              [36m</dl>[39m
+              [36m<h5>[39m
+                [0m差异路径[0m
+              [36m</h5>[39m
+              [36m<ol[39m
+                [33mclass[39m=[32m"execution-review-list"[39m
+              [36m>[39m
+                [36m<li[39m
+                  [33mclass[39m=[32m"execution-review-item"[39m
+                [36m>[39m
+                  [36m<strong>[39m
+                    [0msrc/changed.ts[0m
+                  [36m</strong>[39m
+                  [36m<p>[39m
+                    [0mapplied[0m
+                    [0m · old [0m
+                    [0maaaaaaaaaaaa[0m
+                    [0m · post [0m
+                    [0mbbbbbbbbbbbb[0m
+                  [36m</p>[39m
+                [36m</li>[39m
+              [36m</ol>[39m
+              [36m<button[39m
+                [33mtype[39m=[32m"button"[39m
+              [36m>[39m
+                [0m加载更多差异路径[0m
+              [36m</button>[39m
+              [36m<p[39m
+                [33mclass[39m=[32m"error-text"[39m
+                [33mrole[39m=[32m"alert"[39m
+              [36m>[39m
+                [0m无法完成人工恢复，请重试。[0m
+              [36m</p>[39m
+              [36m<p[39m
+                [33maria-live[39m=[32m"polite"[39m
+              [36m>[39m
+                [0m人工恢复已完成。[0m
+              [36m</p>[39m
+              [36m<div[39m
+                [33mclass[39m=[32m"execution-review-actions"[39m
+              [36m>[39m
+                [36m<button[39m
+                  [33mtype[39m=[32m"button"[39m
+                [36m>[39m
+                  [0m已恢复为旧版本并重试[0m
+                [36m</button>[39m
+                [36m<button[39m
+                  [33mtype[39m=[32m"button"[39m
+                [36m>[39m
+                  [0m已确认完整新版本[0m
+                [36m</button>[39m
+                [36m<button[39m
+                  [33mtype[39m=[32m"button"[39m
+                [36m>[39m
+                  [0m放弃且不改 canonical[0m
+                [36m</button>[39m
+              [36m</div>[39m
+            [36m</section>[39m
+            [36m<div[39m
+              [33mclass[39m=[32m"execution-progress-list"[39m
+            [36m>[39m
+              [36m<div[39m
+                [33mclass[39m=[32m"execution-progress"[39m
+              [36m>[39m
+                [36m<span>[39m
+                  [0m业务回合[0m
+                  [0m [0m
+                  [0m4[0m
+                  [0m/[0m
+                  [0m20[0m
+                [36m</span>[39m
+                [36m<progress[39m
+                  [33maria-label[39m=[32m"业务回合进度"[39m
+                  [33maria-valuemax[39m=[32m"20"[39m
+                  [33maria-valuemin[39m=[32m"0"[39m
+                  [33maria-valuenow[39m=[32m"4"[39m
+                  [33mmax[39m=[32m"20"[39m
+                  [33mvalue[39m=[32m"4"[39m
+                [36m/>[39m
+              [36m</div>[39m
+              [36m<div[39m
+                [33mclass[39m=[32m"execution-progress"[39m
+              [36m>[39m
+                [36m<span>[39m
+                  [0m工具调用[0m
+                  [0m [0m
+                  [0m7[0m
+                  [0m/[0m
+                  [0m40[0m
+                [36m</span>[39m
+                [36m<progress[39m
+                  [33maria-label[39m=[32m"工具调用进度"[39m
+                  [33maria-valuemax[39m=[32m"40"[39m
+                  [33maria-valuemin[39m=[32m"0"[39m
+                  [33maria-valuenow[39m=[32m"7"[39m
+                  [33mmax[39m=[32m"40"[39m
+                  [33mvalue[39m=[32m"7"[39m
+                [36m/>[39m
+              [36m</div>[39m
+              [36m<div[39m
+                [33mclass[39m=[32m"execution-progress"[39m
+              [36m>[39m
+                [36m<span>[39m
+                  [0mToken [0m
+                  [0m [0m
+                  [0m900[0m
+                  [0m/[0m
+                  [0m2000[0m
+                [36m</span>[39m
+                [36m<progress[39m
+                  [33maria-label[39m=[32m"Token 进度"[39m
+                  [33maria-valuemax[39m=[32m"2000"[39m
+                  [33maria-valuemin[39m=[32m"0"[39m
+                  [33maria-valuenow[39m=[32m"900"[39m
+                  [33mmax[39m=[32m"2000"[39m
+                  [33mvalue[39m=[32m"900"[39m
+                [36m/>[39m
+              [36m</div>[39m
+            [36m</div>[39m
+            [36m<div[39m
+              [33mclass[39m=[32m"execution-card-controls"[39m
+            [36m>[39m
+              [36m<button[39m
+                [33mstyle[39m=[32m"min-height: var(--control-min);"[39m
+                [33mtype[39m=[32m"button"[39m
+              [36m>[39m
+                [0m刷新 [0m
+                [0mRecover workspace[0m
+              [36m</button>[39m
+            [36m</div>[39m
+          [36m</section>[39m
+        [36m</div>[39m
+      [36m</section>[39m
+    [36m</div>[39m
+  [36m</body>[39m
+[36m</html>[39m
+ ❯ tests/execution-recovery-ui.test.tsx:229:45
+    227|       } else {
+    228|         const outcome = await screen.findByRole("heading", { name: foc…
+    229|         await waitFor(() => expect(outcome).toHaveFocus());
+       |                                             ^
+    230|       }
+    231|       if (action === "abandon") {
+ ❯ runWithExpensiveErrorDiagnosticsDisabled node_modules/@testing-library/dom/dist/config.js:47:12
+ ❯ checkCallback node_modules/@testing-library/dom/dist/wait-for.js:124:77
+ ❯ Timeout.checkRealTimersCallback node_modules/@testing-library/dom/dist/wait-for.js:118:16
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[2/3]⎯
+
+ FAIL  tests/execution-recovery-ui.test.tsx > T-30 manual recovery UI > submits exact abandon only after second confirmation and restores focus to its outcome
+Error: expect(element).toHaveFocus()
+
+Expected element with focus:
+  <h3
+  id="execution-execution-recovery-title"
+  tabindex="-1"
+>
+  Recover workspace
+</h3>
+Received element with focus:
+  <button
+  type="button"
+>
+  放弃且不改 canonical
+</button>
+
+Ignored nodes: comments, script, style
+[36m<html>[39m
+  [36m<head />[39m
+  [36m<body[39m
+    [33mstyle[39m=[32m""[39m
+  [36m>[39m
+    [36m<div>[39m
+      [36m<section[39m
+        [33maria-labelledby[39m=[32m"executions-title-project-recovery-ui"[39m
+        [33mclass[39m=[32m"stack execution-panel"[39m
+      [36m>[39m
+        [36m<div[39m
+          [33mclass[39m=[32m"panel-heading"[39m
+        [36m>[39m
+          [36m<div>[39m
+            [36m<p[39m
+              [33mclass[39m=[32m"eyebrow"[39m
+            [36m>[39m
+              [0m项目执行[0m
+            [36m</p>[39m
+            [36m<h3[39m
+              [33mid[39m=[32m"executions-title-project-recovery-ui"[39m
+            [36m>[39m
+              [0m运行详情[0m
+            [36m</h3>[39m
+          [36m</div>[39m
+          [36m<button[39m
+            [33mstyle[39m=[32m"min-height: var(--control-min);"[39m
+            [33mtype[39m=[32m"button"[39m
+          [36m>[39m
+            [0m刷新执行[0m
+          [36m</button>[39m
+        [36m</div>[39m
+        [36m<section[39m
+          [33maria-labelledby[39m=[32m"execution-picker-project-recovery-ui"[39m
+          [33mclass[39m=[32m"stack"[39m
+        [36m>[39m
+          [36m<h4[39m
+            [33mid[39m=[32m"execution-picker-project-recovery-ui"[39m
+          [36m>[39m
+            [0m选择并执行[0m
+          [36m</h4>[39m
+          [36m<p>[39m
+            [0m没有符合条件的进行中任务。[0m
+          [36m</p>[39m
+        [36m</section>[39m
+        [36m<button[39m
+          [33maria-expanded[39m=[32m"false"[39m
+          [33mstyle[39m=[32m"min-height: var(--control-min);"[39m
+          [33mtype[39m=[32m"button"[39m
+        [36m>[39m
+          [0m管理验证政策[0m
+        [36m</button>[39m
+        [36m<div[39m
+          [33mclass[39m=[32m"run-details"[39m
+        [36m>[39m
+          [36m<section[39m
+            [33maria-labelledby[39m=[32m"execution-execution-recovery-title"[39m
+            [33mclass[39m=[32m"run-detail execution-card"[39m
+            [33mdata-accent[39m=[32m"sage"[39m
+            [33mrole[39m=[32m"region"[39m
+          [36m>[39m
+            [36m<div[39m
+              [33mclass[39m=[32m"panel-heading"[39m
+            [36m>[39m
+              [36m<div>[39m
+                [36m<p[39m
+                  [33mclass[39m=[32m"eyebrow"[39m
+                [36m>[39m
+                  [0mA[0m
+                [36m</p>[39m
+                [36m<p>[39m
+                  [0mAlpha[0m
+                [36m</p>[39m
+                [36m<h3[39m
+                  [33mid[39m=[32m"execution-execution-recovery-title"[39m
+                  [33mtabindex[39m=[32m"-1"[39m
+                [36m>[39m
+                  [0mRecover workspace[0m
+                [36m</h3>[39m
+              [36m</div>[39m
+              [36m<span[39m
+                [33mclass[39m=[32m"status-label status-conflicted"[39m
+              [36m>[39m
+                [0m存在冲突[0m
+              [36m</span>[39m
+            [36m</div>[39m
+            [36m<p[39m
+              [33mrole[39m=[32m"status"[39m
+            [36m>[39m
+              [0m当前没有进行中的动作[0m
+            [36m</p>[39m
+            [36m<p[39m
+              [33mclass[39m=[32m"error-text"[39m
+            [36m>[39m
+              [0m阻断原因：[0m
+              [0mMANUAL_RECOVERY_REQUIRED[0m
+            [36m</p>[39m
+            [36m<section[39m
+              [33maria-label[39m=[32m"需要人工恢复"[39m
+              [33mclass[39m=[32m"execution-recovery stack"[39m
+              [33mrole[39m=[32m"region"[39m
+            [36m>[39m
+              [36m<h4>[39m
+                [0m需要人工恢复[0m
+              [36m</h4>[39m
+              [36m<p[39m
+                [33mclass[39m=[32m"warning-text"[39m
+              [36m>[39m
+                [0m检测到平台外写入；平台已停止自动改写，当前 workspace 可能既非完整旧版也非完整新版。[0m
+              [36m</p>[39m
+              [36m<dl[39m
+                [33mclass[39m=[32m"execution-review-facts"[39m
+              [36m>[39m
+                [36m<div>[39m
+                  [36m<dt>[39m
+                    [0m不匹配阶段[0m
+                  [36m</dt>[39m
+                  [36m<dd>[39m
+                    [0mrollback_after_replace[0m
+                  [36m</dd>[39m
+                [36m</div>[39m
+                [36m<div>[39m
+                  [36m<dt>[39m
+                    [0m旧版 manifest[0m
+                  [36m</dt>[39m
+                  [36m<dd>[39m
+                    [36m<code>[39m
+                      [0maaaaaaaaaaaa[0m
+                    [36m</code>[39m
+                  [36m</dd>[39m
+                [36m</div>[39m
+                [36m<div>[39m
+                  [36m<dt>[39m
+                    [0m新版 manifest[0m
+                  [36m</dt>[39m
+                  [36m<dd>[39m
+                    [36m<code>[39m
+                      [0mbbbbbbbbbbbb[0m
+                    [36m</code>[39m
+                  [36m</dd>[39m
+                [36m</div>[39m
+                [36m<div>[39m
+                  [36m<dt>[39m
+                    [0mObserved manifest[0m
+                  [36m</dt>[39m
+                  [36m<dd>[39m
+                    [36m<code>[39m
+                      [0mcccccccccccc[0m
+                    [36m</code>[39m
+                  [36m</dd>[39m
+                [36m</div>[39m
+              [36m</dl>[39m
+              [36m<h5>[39m
+                [0m差异路径[0m
+              [36m</h5>[39m
+              [36m<ol[39m
+                [33mclass[39m=[32m"execution-review-list"[39m
+              [36m>[39m
+                [36m<li[39m
+                  [33mclass[39m=[32m"execution-review-item"[39m
+                [36m>[39m
+                  [36m<strong>[39m
+                    [0msrc/changed.ts[0m
+                  [36m</strong>[39m
+                  [36m<p>[39m
+                    [0mapplied[0m
+                    [0m · old [0m
+                    [0maaaaaaaaaaaa[0m
+                    [0m · post [0m
+                    [0mbbbbbbbbbbbb[0m
+                  [36m</p>[39m
+                [36m</li>[39m
+              [36m</ol>[39m
+              [36m<button[39m
+                [33mtype[39m=[32m"button"[39m
+              [36m>[39m
+                [0m加载更多差异路径[0m
+              [36m</button>[39m
+              [36m<p[39m
+                [33mclass[39m=[32m"error-text"[39m
+                [33mrole[39m=[32m"alert"[39m
+              [36m>[39m
+                [0m无法完成人工恢复，请重试。[0m
+              [36m</p>[39m
+              [36m<p[39m
+                [33maria-live[39m=[32m"polite"[39m
+              [36m>[39m
+                [0m人工恢复已完成。[0m
+              [36m</p>[39m
+              [36m<div[39m
+                [33mclass[39m=[32m"execution-review-actions"[39m
+              [36m>[39m
+                [36m<button[39m
+                  [33mtype[39m=[32m"button"[39m
+                [36m>[39m
+                  [0m已恢复为旧版本并重试[0m
+                [36m</button>[39m
+                [36m<button[39m
+                  [33mtype[39m=[32m"button"[39m
+                [36m>[39m
+                  [0m已确认完整新版本[0m
+                [36m</button>[39m
+                [36m<button[39m
+                  [33mtype[39m=[32m"button"[39m
+                [36m>[39m
+                  [0m放弃且不改 canonical[0m
+                [36m</button>[39m
+              [36m</div>[39m
+              [36m<section[39m
+                [33maria-label[39m=[32m"未清理的平台 owned 路径"[39m
+                [33mclass[39m=[32m"stack"[39m
+              [36m>[39m
+                [36m<h5>[39m
+                  [0m未清理的平台 owned 路径[0m
+                [36m</h5>[39m
+                [36m<ol>[39m
+                  [36m<li>[39m
+                    [0mowned/item-21.tmp[0m
+                  [36m</li>[39m
+                [36m</ol>[39m
+              [36m</section>[39m
+            [36m</section>[39m
+            [36m<div[39m
+              [33mclass[39m=[32m"execution-progress-list"[39m
+            [36m>[39m
+              [36m<div[39m
+                [33mclass[39m=[32m"execution-progress"[39m
+              [36m>[39m
+                [36m<span>[39m
+                  [0m业务回合[0m
+                  [0m [0m
+                  [0m4[0m
+                  [0m/[0m
+                  [0m20[0m
+                [36m</span>[39m
+                [36m<progress[39m
+                  [33maria-label[39m=[32m"业务回合进度"[39m
+                  [33maria-valuemax[39m=[32m"20"[39m
+                  [33maria-valuemin[39m=[32m"0"[39m
+                  [33maria-valuenow[39m=[32m"4"[39m
+                  [33mmax[39m=[32m"20"[39m
+                  [33mvalue[39m=[32m"4"[39m
+                [36m/>[39m
+              [36m</div>[39m
+              [36m<div[39m
+                [33mclass[39m=[32m"execution-progress"[39m
+              [36m>[39m
+                [36m<span>[39m
+                  [0m工具调用[0m
+                  [0m [0m
+                  [0m7[0m
+                  [0m/[0m
+                  [0m40[0m
+                [36m</span>[39m
+                [36m<progress[39m
+                  [33maria-label[39m=[32m"工具调用进度"[39m
+                  [33maria-valuemax[39m=[32m"40"[39m
+                  [33maria-valuemin[39m=[32m"0"[39m
+                  [33maria-valuenow[39m=[32m"7"[39m
+                  [33mmax[39m=[32m"40"[39m
+                  [33mvalue[39m=[32m"7"[39m
+                [36m/>[39m
+              [36m</div>[39m
+              [36m<div[39m
+                [33mclass[39m=[32m"execution-progress"[39m
+              [36m>[39m
+                [36m<span>[39m
+                  [0mToken [0m
+                  [0m [0m
+                  [0m900[0m
+                  [0m/[0m
+                  [0m2000[0m
+                [36m</span>[39m
+                [36m<progress[39m
+                  [33maria-label[39m=[32m"Token 进度"[39m
+                  [33maria-valuemax[39m=[32m"2000"[39m
+                  [33maria-valuemin[39m=[32m"0"[39m
+                  [33maria-valuenow[39m=[32m"900"[39m
+                  [33mmax[39m=[32m"2000"[39m
+                  [33mvalue[39m=[32m"900"[39m
+                [36m/>[39m
+              [36m</div>[39m
+            [36m</div>[39m
+            [36m<div[39m
+              [33mclass[39m=[32m"execution-card-controls"[39m
+            [36m>[39m
+              [36m<button[39m
+                [33mstyle[39m=[32m"min-height: var(--control-min);"[39m
+                [33mtype[39m=[32m"button"[39m
+              [36m>[39m
+                [0m刷新 [0m
+                [0mRecover workspace[0m
+              [36m</button>[39m
+            [36m</div>[39m
+          [36m</section>[39m
+        [36m</div>[39m
+      [36m</section>[39m
+    [36m</div>[39m
+  [36m</body>[39m
+[36m</html>[39m
+ ❯ tests/execution-recovery-ui.test.tsx:229:45
+    227|       } else {
+    228|         const outcome = await screen.findByRole("heading", { name: foc…
+    229|         await waitFor(() => expect(outcome).toHaveFocus());
+       |                                             ^
+    230|       }
+    231|       if (action === "abandon") {
+ ❯ runWithExpensiveErrorDiagnosticsDisabled node_modules/@testing-library/dom/dist/config.js:47:12
+ ❯ checkCallback node_modules/@testing-library/dom/dist/wait-for.js:124:77
+ ❯ Timeout.checkRealTimersCallback node_modules/@testing-library/dom/dist/wait-for.js:118:16
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[3/3]⎯
+
+
+ Test Files  1 failed | 1 passed (2)
+      Tests  3 failed | 4 passed (7)
+   Start at  22:36:04
+   Duration  7.09s (transform 386ms, setup 915ms, import 1.01s, tests 4.24s, environment 3.79s)
+
+# exit: 1

@@ -1,0 +1,20 @@
+# hf-gate-run
+# label: t7-regression
+# command: cmd /c npm test -- tests/team-skill-slice.test.tsx tests/provider-panel.test.tsx
+# started: 2026-07-29T17:29:47+00:00
+
+> collaboration-cockpit@0.1.0 test
+> vitest run tests/team-skill-slice.test.tsx tests/provider-panel.test.tsx
+
+
+ RUN  v4.1.10 D:/cool-ai
+
+(node:9588) ExperimentalWarning: SQLite is an experimental feature and might change at any time
+(Use `node --trace-warnings ...` to show where the warning was created)
+
+ Test Files  2 passed (2)
+      Tests  5 passed (5)
+   Start at  01:29:48
+   Duration  4.06s (transform 263ms, setup 726ms, import 407ms, tests 2.52s, environment 2.94s)
+
+# exit: 0

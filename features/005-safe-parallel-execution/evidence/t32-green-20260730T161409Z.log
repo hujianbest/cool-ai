@@ -1,0 +1,40 @@
+# hf-gate-run
+# label: t32-green
+# command: npm.cmd run smoke:execution
+# started: 2026-07-30T16:14:09+00:00
+
+> collaboration-cockpit@0.1.0 smoke:execution
+> node tests/execution-browser-smoke.mjs
+
+(node:10692) ExperimentalWarning: SQLite is an experimental feature and might change at any time
+(Use `node --trace-warnings ...` to show where the warning was created)
+
+<--- Last few GCs --->
+.9[10692:0000014E08484000]     8804 ms: Mark-Compact (reduce) 43.6 (77.2) -> 42.5 (45.5) MB, pooled: 0 MB, 9.80 / 1.30 ms  (+ 0.0 ms in 1 steps since start of marking, biggest step 0.0 ms, walltime since start of marking 37 ms) (average mu = 0.998, current [10692:0000014E08484000]     9417 ms: Mark-Compact (reduce) 42.5 (45.5) -> 42.5 (45.7) MB, pooled: 0 MB, 2.10 / 0.00 ms  (+ 9.6 ms in 144 steps since start of marking, biggest step 0.8 ms, walltime since start of marking 14 ms) (average mu = 0.996, curren
+FATAL ERROR: Committing semi space failed. Allocation failed - JavaScript heap out of memory
+----- Native stack trace -----
+
+ 1: 00007FF67B4DC36F 
+ 2: 00007FF67C124D77 
+ 3: 00007FF67BF25467 
+ 4: 00007FF67BEBDE8B 
+ 5: 00007FF67BE958DE 
+ 6: 00007FF67BF27F02 
+ 7: 00007FF67BF26EB7 
+ 8: 00007FF67BF37E22 
+ 9: 00007FF67BF3794B 
+10: 00007FF67D3BDAED 
+11: 00007FF67BF22F30 
+12: 00007FF67BED38E2 
+13: 00007FF67B42F0CA 
+14: 00007FF67B42D8B0 
+15: 00007FF67C18C70B 
+16: 00007FF67C18C27F 
+17: 00007FF67B5EEBCF 
+18: 00007FF67B46B416 
+19: 00007FF67B53718C 
+20: 00007FF67C553F82 
+21: 00007FF67D3C71F4 
+22: 00007FFADC024CB0 
+23: 00007FFADCEDEDCB 
+# exit: 134

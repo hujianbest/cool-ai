@@ -1,0 +1,57 @@
+# hf-gate-run
+# label: review1-f4-red
+# command: npm.cmd test -- tests/collaboration-decisions.test.ts tests/collaboration-controls.test.tsx
+# started: 2026-07-30T00:22:54+00:00
+
+> collaboration-cockpit@0.1.0 test
+> vitest run tests/collaboration-decisions.test.ts tests/collaboration-controls.test.tsx
+
+
+ RUN  v4.1.10 D:/cool-ai
+
+(node:1460) ExperimentalWarning: SQLite is an experimental feature and might change at any time
+(Use `node --trace-warnings ...` to show where the warning was created)
+ ❯ tests/collaboration-controls.test.tsx (12 tests | 1 failed) 924ms
+     × enforces the 5000-grapheme decision answer boundary in the UI 26ms
+ ❯ tests/collaboration-decisions.test.ts (7 tests | 1 failed) 3763ms
+     × requires waiting/open/exact version, a 1..5000 answer, and a current member mention 494ms
+
+⎯⎯⎯⎯⎯⎯⎯ Failed Tests 2 ⎯⎯⎯⎯⎯⎯⎯
+
+ FAIL  tests/collaboration-controls.test.tsx > collaboration decisions, controls, and usage > enforces the 5000-grapheme decision answer boundary in the UI
+Error: expect(element).toHaveAttribute("maxlength", "5000") // element.getAttribute("maxlength") === "5000"
+
+Expected the element to have attribute:
+  maxlength="5000"
+Received:
+  null
+ ❯ tests/collaboration-controls.test.tsx:162:19
+    160|     render(createElement(CollaborationPanel, { projectId: "project-1" …
+    161|     const input = await screen.findByLabelText("其他回答");
+    162|     expect(input).toHaveAttribute("maxlength", "5000");
+       |                   ^
+    163|
+    164|     fireEvent.change(input, { target: { value: "答".repeat(5_001) } });
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[1/2]⎯
+
+ FAIL  tests/collaboration-decisions.test.ts > owner decision answer > requires waiting/open/exact version, a 1..5000 answer, and a current member mention
+AssertionError: expected Error: Expected INVALID_INPUT to be an instance of CollaborationError
+ ❯ expectCode tests/collaboration-decisions.test.ts:166:19
+    164|     throw new Error(`Expected ${code}`);
+    165|   } catch (error) {
+    166|     expect(error).toBeInstanceOf(CollaborationError);
+       |                   ^
+    167|     expect(error).toMatchObject({
+    168|       code,
+ ❯ tests/collaboration-decisions.test.ts:452:7
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[2/2]⎯
+
+
+ Test Files  2 failed (2)
+      Tests  2 failed | 17 passed (19)
+   Start at  08:22:55
+   Duration  6.28s (transform 388ms, setup 730ms, import 637ms, tests 4.69s, environment 2.98s)
+
+# exit: 1

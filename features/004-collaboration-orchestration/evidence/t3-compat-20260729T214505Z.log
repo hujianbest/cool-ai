@@ -1,0 +1,24 @@
+# hf-gate-run
+# label: t3-compat
+# command: cmd /c npm test -- tests/collaboration-slice.test.tsx tests/api-error-sanitization.test.ts tests/collaboration-operations.test.ts tests/project-chat.api.test.ts
+# started: 2026-07-29T21:45:05+00:00
+
+> collaboration-cockpit@0.1.0 test
+> vitest run tests/collaboration-slice.test.tsx tests/api-error-sanitization.test.ts tests/collaboration-operations.test.ts tests/project-chat.api.test.ts
+
+
+ RUN  v4.1.10 D:/cool-ai
+
+(node:9256) ExperimentalWarning: SQLite is an experimental feature and might change at any time
+(Use `node --trace-warnings ...` to show where the warning was created)
+(node:4924) ExperimentalWarning: SQLite is an experimental feature and might change at any time
+(Use `node --trace-warnings ...` to show where the warning was created)
+(node:16736) ExperimentalWarning: SQLite is an experimental feature and might change at any time
+(Use `node --trace-warnings ...` to show where the warning was created)
+
+ Test Files  4 passed (4)
+      Tests  18 passed (18)
+   Start at  05:45:06
+   Duration  4.31s (transform 422ms, setup 1.64s, import 556ms, tests 4.69s, environment 6.49s)
+
+# exit: 0

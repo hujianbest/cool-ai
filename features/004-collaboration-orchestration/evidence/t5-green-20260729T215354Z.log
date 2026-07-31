@@ -1,0 +1,71 @@
+# hf-gate-run
+# label: t5-green
+# command: npm.cmd test -- tests/collaboration-context-guards.test.ts
+# started: 2026-07-29T21:53:54+00:00
+
+> collaboration-cockpit@0.1.0 test
+> vitest run tests/collaboration-context-guards.test.ts
+
+
+ RUN  v4.1.10 D:/cool-ai
+
+(node:10176) ExperimentalWarning: SQLite is an experimental feature and might change at any time
+(Use `node --trace-warnings ...` to show where the warning was created)
+ ❯ tests/collaboration-context-guards.test.ts (9 tests | 2 failed) 3131ms
+     × changes the roster fingerprint when a member is added 339ms
+     × preserves roster replacement behavior when no nonterminal run exists 321ms
+
+⎯⎯⎯⎯⎯⎯⎯ Failed Tests 2 ⎯⎯⎯⎯⎯⎯⎯
+
+ FAIL  tests/collaboration-context-guards.test.ts > collaboration context fingerprint > changes the roster fingerprint when a member is added
+AssertionError: expected [ 'agent-c', 'agent-a', 'agent-b' ] to deeply equal [ 'agent-a', 'agent-b', 'agent-c' ]
+
+- Expected
++ Received
+
+  [
++   "agent-c",
+    "agent-a",
+    "agent-b",
+-   "agent-c",
+  ]
+
+ ❯ tests/collaboration-context-guards.test.ts:206:57
+    204|     const current = fingerprint();
+    205|
+    206|     expect(state.members.map(({ agentId }) => agentId)).toEqual([
+       |                                                         ^
+    207|       "agent-a",
+    208|       "agent-b",
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[1/2]⎯
+
+ FAIL  tests/collaboration-context-guards.test.ts > active collaboration mutation guards > preserves roster replacement behavior when no nonterminal run exists
+AssertionError: expected [ 'agent-c', 'agent-a' ] to deeply equal [ 'agent-a', 'agent-c' ]
+
+- Expected
++ Received
+
+  [
+-   "agent-a",
+    "agent-c",
++   "agent-a",
+  ]
+
+ ❯ tests/collaboration-context-guards.test.ts:320:7
+    318|         expectedProjectVersion: 1,
+    319|       }).members.map(({ agentId }) => agentId),
+    320|     ).toEqual(["agent-a", "agent-c"]);
+       |       ^
+    321|   });
+    322| });
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[2/2]⎯
+
+
+ Test Files  1 failed (1)
+      Tests  2 failed | 7 passed (9)
+   Start at  05:53:55
+   Duration  5.49s (transform 207ms, setup 341ms, import 337ms, tests 3.13s, environment 1.41s)
+
+# exit: 1

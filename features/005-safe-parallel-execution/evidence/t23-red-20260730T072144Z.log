@@ -1,0 +1,49 @@
+# hf-gate-run
+# label: t23-red
+# command: npm.cmd test -- tests/merge-external-writer.test.ts
+# started: 2026-07-30T07:21:44+00:00
+
+> collaboration-cockpit@0.1.0 test
+> vitest run tests/merge-external-writer.test.ts
+
+
+ RUN  v4.1.10 D:/cool-ai
+
+(node:8172) ExperimentalWarning: SQLite is an experimental feature and might change at any time
+(Use `node --trace-warnings ...` to show where the warning was created)
+ ❯ tests/merge-external-writer.test.ts (5 tests | 5 failed) 234ms
+     × preserves an external replacement and enters durable manual recovery 230ms
+     × requires the exact observed whole-manifest hash and refreshes a mismatch 1ms
+     × resolves exact old/new manifests and replays each operation exactly 1ms
+     × abandons without touching canonical bytes and only conditionally cleans owned files 1ms
+     × treats delete, new identity, and symlink races as non-overwritable mismatches 1ms
+
+⎯⎯⎯⎯⎯⎯⎯ Failed Tests 5 ⎯⎯⎯⎯⎯⎯⎯
+
+ FAIL  tests/merge-external-writer.test.ts > external-writer merge recovery > preserves an external replacement and enters durable manual recovery
+ FAIL  tests/merge-external-writer.test.ts > external-writer merge recovery > requires the exact observed whole-manifest hash and refreshes a mismatch
+ FAIL  tests/merge-external-writer.test.ts > external-writer merge recovery > resolves exact old/new manifests and replays each operation exactly
+ FAIL  tests/merge-external-writer.test.ts > external-writer merge recovery > abandons without touching canonical bytes and only conditionally cleans owned files
+ FAIL  tests/merge-external-writer.test.ts > external-writer merge recovery > treats delete, new identity, and symlink races as non-overwritable mismatches
+AssertionError: T-23 resolution service must exist: expected undefined to be type of 'function'
+
+Expected: "function"
+Received: "undefined"
+
+ ❯ tests/merge-external-writer.test.ts:81:81
+     79| beforeEach(async () => {
+     80|   const candidate = await import("@/src/server/execution/merge-journal…
+     81|   expect(candidate.resolveManualRecovery, "T-23 resolution service mus…
+       |                                                                                 ^
+     82|   mergeModule = candidate as MergeModule;
+     83| });
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[1/5]⎯
+
+
+ Test Files  1 failed (1)
+      Tests  5 failed (5)
+   Start at  15:21:45
+   Duration  2.38s (transform 206ms, setup 347ms, import 100ms, tests 234ms, environment 1.44s)
+
+# exit: 1

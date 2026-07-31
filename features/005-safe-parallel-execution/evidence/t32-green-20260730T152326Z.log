@@ -1,0 +1,29 @@
+# hf-gate-run
+# label: t32-green
+# command: npm.cmd run smoke:execution
+# started: 2026-07-30T15:23:26+00:00
+
+> collaboration-cockpit@0.1.0 smoke:execution
+> node tests/execution-browser-smoke.mjs
+
+(node:16392) ExperimentalWarning: SQLite is an experimental feature and might change at any time
+(Use `node --trace-warnings ...` to show where the warning was created)
+node:internal/modules/run_main:107
+    triggerUncaughtException(
+    ^
+
+page.reload: Timeout 30000ms exceeded.
+Call log:
+  - waiting for navigation until "networkidle"
+    - navigated to "http://127.0.0.1:20827/"
+
+    at D:\cool-ai\tests\execution-browser-smoke.mjs:936:14 {
+  log: [
+    '  - waiting for navigation until "networkidle"',
+    '    - navigated to "http://127.0.0.1:20827/"'
+  ],
+  name: 'TimeoutError'
+}
+
+Node.js v24.14.0
+# exit: 1

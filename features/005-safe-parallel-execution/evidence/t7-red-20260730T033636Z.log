@@ -1,0 +1,65 @@
+# hf-gate-run
+# label: t7-red
+# command: npm.cmd test -- tests/sandbox-snapshot.test.ts
+# started: 2026-07-30T03:36:36+00:00
+
+> collaboration-cockpit@0.1.0 test
+> vitest run tests/sandbox-snapshot.test.ts
+
+
+ RUN  v4.1.10 D:/cool-ai
+
+(node:3776) ExperimentalWarning: SQLite is an experimental feature and might change at any time
+(Use `node --trace-warnings ...` to show where the warning was created)
+ ❯ tests/sandbox-snapshot.test.ts (8 tests | 3 failed) 1121ms
+     × keeps the business clock NULL across a healthy heartbeat after 120 seconds 287ms
+     × reconciles a restarted expired build to paused only after owned cleanup 253ms
+     × fails closed without deleting a replacement sandbox when ownership is uncertain 253ms
+
+⎯⎯⎯⎯⎯⎯⎯ Failed Tests 3 ⎯⎯⎯⎯⎯⎯⎯
+
+ FAIL  tests/sandbox-snapshot.test.ts > durable sandbox action lifecycle > keeps the business clock NULL across a healthy heartbeat after 120 seconds
+SchemaMigrationError: Database version 5 schema is invalid.
+ ❯ migrateDatabase src/server/migrations.ts:1342:13
+    1340|     const validation = validateV5(database);
+    1341|     if (validation) {
+    1342|       throw new SchemaMigrationError(validation, "Database version 5 s…
+       |             ^
+    1343|     }
+    1344|   }
+ ❯ openDatabase src/server/db.ts:14:5
+ ❯ tests/sandbox-snapshot.test.ts:230:22
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[1/3]⎯
+
+ FAIL  tests/sandbox-snapshot.test.ts > durable sandbox action lifecycle > reconciles a restarted expired build to paused only after owned cleanup
+TypeError: snapshot.cleanupOwnedSandbox is not a function
+ ❯ tests/sandbox-snapshot.test.ts:248:27
+    246|     writeFileSync(join(sandboxRoot, "partial"), "owned");
+    247|     const identity = await snapshot.nodeSandboxSnapshotAdapter.inspect…
+    248|     expect(await snapshot.cleanupOwnedSandbox({ expectedRootIdentity: …
+       |                           ^
+    249|     let database = openDatabase(databasePath);
+    250|     expect(actions.reconcileSandboxBuildAction(database, {
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[2/3]⎯
+
+ FAIL  tests/sandbox-snapshot.test.ts > durable sandbox action lifecycle > fails closed without deleting a replacement sandbox when ownership is uncertain
+TypeError: snapshot.cleanupOwnedSandbox is not a function
+ ❯ tests/sandbox-snapshot.test.ts:266:27
+    264|     mkdirSync(sandboxRoot, { recursive: true });
+    265|     writeFileSync(join(sandboxRoot, "external"), "do-not-delete");
+    266|     expect(await snapshot.cleanupOwnedSandbox({ expectedRootIdentity: …
+       |                           ^
+    267|     const database = openDatabase(databasePath);
+    268|     try {
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[3/3]⎯
+
+
+ Test Files  1 failed (1)
+      Tests  3 failed | 5 passed (8)
+   Start at  11:36:38
+   Duration  3.26s (transform 185ms, setup 348ms, import 114ms, tests 1.12s, environment 1.41s)
+
+# exit: 1

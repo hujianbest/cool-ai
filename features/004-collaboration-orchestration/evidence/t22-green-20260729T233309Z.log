@@ -1,0 +1,40 @@
+# hf-gate-run
+# label: t22-green
+# command: npm.cmd test -- tests/collaboration-controls.test.tsx
+# started: 2026-07-29T23:33:09+00:00
+
+> collaboration-cockpit@0.1.0 test
+> vitest run tests/collaboration-controls.test.tsx
+
+
+ RUN  v4.1.10 D:/cool-ai
+
+ ❯ tests/collaboration-controls.test.tsx (11 tests | 1 failed) 874ms
+     × renders a waiting decision, radio options, free text, usage totals, and per-Agent metrics 248ms
+
+⎯⎯⎯⎯⎯⎯⎯ Failed Tests 1 ⎯⎯⎯⎯⎯⎯⎯
+
+ FAIL  tests/collaboration-controls.test.tsx > collaboration decisions, controls, and usage > renders a waiting decision, radio options, free text, usage totals, and per-Agent metrics
+Error: expect(element).toHaveTextContent()
+
+Expected element to have text content:
+  Alpha
+Received:
+  运行用量轮次 7Prompt 1300Completion 200总计 1500交棒 3修复调用 2未报告 1agent-aPrompt 800Completion 120总计 920交棒 2agent-bPrompt 500Completion 80总计 580交棒 1
+ ❯ tests/collaboration-controls.test.tsx:152:19
+    150|     expect(usage).toHaveTextContent("修复调用 2");
+    151|     expect(usage).toHaveTextContent("未报告 1");
+    152|     expect(usage).toHaveTextContent("Alpha");
+       |                   ^
+    153|     expect(usage).toHaveTextContent("920");
+    154|     expect(usage).toHaveTextContent("Beta");
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[1/1]⎯
+
+
+ Test Files  1 failed (1)
+      Tests  1 failed | 10 passed (11)
+   Start at  07:33:10
+   Duration  3.09s (transform 106ms, setup 335ms, import 226ms, tests 874ms, environment 1.40s)
+
+# exit: 1

@@ -1,0 +1,38 @@
+# hf-gate-run
+# label: t1-green
+# command: cmd /c npm test -- tests/migrations-v5.test.ts
+# started: 2026-07-30T02:38:20+00:00
+
+> collaboration-cockpit@0.1.0 test
+> vitest run tests/migrations-v5.test.ts
+
+
+ RUN  v4.1.10 D:/cool-ai
+
+(node:3088) ExperimentalWarning: SQLite is an experimental feature and might change at any time
+(Use `node --trace-warnings ...` to show where the warning was created)
+ ❯ tests/migrations-v5.test.ts (7 tests | 1 failed) 9838ms
+     × rejects drift of every v5 table, index, and trigger instead of repairing it 7054ms
+
+⎯⎯⎯⎯⎯⎯⎯ Failed Tests 1 ⎯⎯⎯⎯⎯⎯⎯
+
+ FAIL  tests/migrations-v5.test.ts > SQLite v5 strict atomic migration > rejects drift of every v5 table, index, and trigger instead of repairing it
+Error: Test timed out in 5000ms.
+If this is a long-running test, pass a timeout value as the last argument or configure it globally with "testTimeout".
+ ❯ tests/migrations-v5.test.ts:298:3
+    296|   });
+    297|
+    298|   it("rejects drift of every v5 table, index, and trigger instead of r…
+       |   ^
+    299|     for (const [type, objects] of [
+    300|       ["table", V5_TABLES],
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[1/1]⎯
+
+
+ Test Files  1 failed (1)
+      Tests  1 failed | 6 passed (7)
+   Start at  10:38:21
+   Duration  11.94s (transform 104ms, setup 339ms, import 95ms, tests 9.84s, environment 1.41s)
+
+# exit: 1

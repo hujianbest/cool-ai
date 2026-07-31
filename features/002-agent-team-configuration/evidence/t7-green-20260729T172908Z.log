@@ -1,0 +1,22 @@
+# hf-gate-run
+# label: t7-green
+# command: cmd /c npm test -- tests/skills.service.test.ts tests/skills.api.test.ts tests/skill-panel.test.tsx
+# started: 2026-07-29T17:29:08+00:00
+
+> collaboration-cockpit@0.1.0 test
+> vitest run tests/skills.service.test.ts tests/skills.api.test.ts tests/skill-panel.test.tsx
+
+
+ RUN  v4.1.10 D:/cool-ai
+
+(node:4652) ExperimentalWarning: SQLite is an experimental feature and might change at any time
+(Use `node --trace-warnings ...` to show where the warning was created)
+(node:17208) ExperimentalWarning: SQLite is an experimental feature and might change at any time
+(Use `node --trace-warnings ...` to show where the warning was created)
+
+ Test Files  3 passed (3)
+      Tests  13 passed (13)
+   Start at  01:29:09
+   Duration  3.23s (transform 319ms, setup 1.17s, import 650ms, tests 1.33s, environment 4.62s)
+
+# exit: 0

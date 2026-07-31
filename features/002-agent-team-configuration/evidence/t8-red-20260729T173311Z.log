@@ -1,0 +1,253 @@
+# hf-gate-run
+# label: t8-red
+# command: cmd /c npm test -- tests/agents.service.test.ts tests/agents.api.test.ts
+# started: 2026-07-29T17:33:11+00:00
+
+> collaboration-cockpit@0.1.0 test
+> vitest run tests/agents.service.test.ts tests/agents.api.test.ts
+
+
+ RUN  v4.1.10 D:/cool-ai
+
+(node:8388) ExperimentalWarning: SQLite is an experimental feature and might change at any time
+(Use `node --trace-warnings ...` to show where the warning was created)
+(node:4076) ExperimentalWarning: SQLite is an experimental feature and might change at any time
+(Use `node --trace-warnings ...` to show where the warning was created)
+ ❯ tests/agents.api.test.ts (3 tests | 3 failed) 18ms
+     × returns detached immutable template DTOs 11ms
+     × creates, lists and fully replaces an Agent 3ms
+     × maps validation, references, not-found and version conflicts stably 2ms
+ ❯ tests/agents.service.test.ts (22 tests | 22 failed) 56ms
+     × returns fresh immutable planner, builder and reviewer defaults 12ms
+     × creates and lists agents with grapheme avatars and ordered skill references 8ms
+     × rejects exact input bounds without persistence 2ms
+     × rejects exact input bounds without persistence 2ms
+     × rejects exact input bounds without persistence 2ms
+     × rejects exact input bounds without persistence 2ms
+     × rejects exact input bounds without persistence 2ms
+     × rejects exact input bounds without persistence 2ms
+     × rejects exact input bounds without persistence 2ms
+     × rejects exact input bounds without persistence 2ms
+     × rejects exact input bounds without persistence 2ms
+     × rejects exact input bounds without persistence 2ms
+     × rejects exact input bounds without persistence 2ms
+     × rejects exact input bounds without persistence 2ms
+     × rejects exact input bounds without persistence 2ms
+     × rejects exact input bounds without persistence 2ms
+     × rejects exact input bounds without persistence 2ms
+     × requires a currently verified provider and its exact default model 2ms
+     × rejects missing and duplicate skill references before writing 2ms
+     × fully replaces an agent and its ordered skills in one transaction 2ms
+     × rolls back invalid updates and reports stale and missing agents 2ms
+     × lists deterministically by creation time and id 2ms
+
+⎯⎯⎯⎯⎯⎯ Failed Tests 25 ⎯⎯⎯⎯⎯⎯⎯
+
+ FAIL  tests/agents.api.test.ts > Agent API > returns detached immutable template DTOs
+AssertionError: the Agent collection route must exist: expected undefined to be type of 'function'
+
+Expected: "function"
+Received: "undefined"
+
+ ❯ routes tests/agents.api.test.ts:38:67
+     36|   const loadItem = itemRoutes["../app/api/agents/[agentId]/route.ts"];
+     37|   const loadTemplates = templateRoutes["../app/api/agent-templates/rou…
+     38|   expect(loadCollection, "the Agent collection route must exist").toBe…
+       |                                                                   ^
+     39|   expect(loadItem, "the Agent PATCH route must exist").toBeTypeOf("fun…
+     40|   expect(loadTemplates, "the Agent template route must exist").toBeTyp…
+ ❯ tests/agents.api.test.ts:134:33
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[1/25]⎯
+
+ FAIL  tests/agents.api.test.ts > Agent API > creates, lists and fully replaces an Agent
+AssertionError: the Agent collection route must exist: expected undefined to be type of 'function'
+
+Expected: "function"
+Received: "undefined"
+
+ ❯ routes tests/agents.api.test.ts:38:67
+     36|   const loadItem = itemRoutes["../app/api/agents/[agentId]/route.ts"];
+     37|   const loadTemplates = templateRoutes["../app/api/agent-templates/rou…
+     38|   expect(loadCollection, "the Agent collection route must exist").toBe…
+       |                                                                   ^
+     39|   expect(loadItem, "the Agent PATCH route must exist").toBeTypeOf("fun…
+     40|   expect(loadTemplates, "the Agent template route must exist").toBeTyp…
+ ❯ tests/agents.api.test.ts:148:40
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[2/25]⎯
+
+ FAIL  tests/agents.api.test.ts > Agent API > maps validation, references, not-found and version conflicts stably
+AssertionError: the Agent collection route must exist: expected undefined to be type of 'function'
+
+Expected: "function"
+Received: "undefined"
+
+ ❯ routes tests/agents.api.test.ts:38:67
+     36|   const loadItem = itemRoutes["../app/api/agents/[agentId]/route.ts"];
+     37|   const loadTemplates = templateRoutes["../app/api/agent-templates/rou…
+     38|   expect(loadCollection, "the Agent collection route must exist").toBe…
+       |                                                                   ^
+     39|   expect(loadItem, "the Agent PATCH route must exist").toBeTypeOf("fun…
+     40|   expect(loadTemplates, "the Agent template route must exist").toBeTyp…
+ ❯ tests/agents.api.test.ts:185:40
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[3/25]⎯
+
+ FAIL  tests/agents.service.test.ts > Agent templates > returns fresh immutable planner, builder and reviewer defaults
+AssertionError: the Agent domain service must exist: expected undefined to be type of 'function'
+
+Expected: "function"
+Received: "undefined"
+
+ ❯ loadService tests/agents.service.test.ts:59:55
+     57| async function loadService(): Promise<AgentServiceModule> {
+     58|   const load = serviceModules["../src/server/agent-service.ts"];
+     59|   expect(load, "the Agent domain service must exist").toBeTypeOf("func…
+       |                                                       ^
+     60|   return load();
+     61| }
+ ❯ tests/agents.service.test.ts:147:27
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[4/25]⎯
+
+ FAIL  tests/agents.service.test.ts > Agent service > creates and lists agents with grapheme avatars and ordered skill references
+AssertionError: the Agent domain service must exist: expected undefined to be type of 'function'
+
+Expected: "function"
+Received: "undefined"
+
+ ❯ loadService tests/agents.service.test.ts:59:55
+     57| async function loadService(): Promise<AgentServiceModule> {
+     58|   const load = serviceModules["../src/server/agent-service.ts"];
+     59|   expect(load, "the Agent domain service must exist").toBeTypeOf("func…
+       |                                                       ^
+     60|   return load();
+     61| }
+ ❯ tests/agents.service.test.ts:171:27
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[5/25]⎯
+
+ FAIL  tests/agents.service.test.ts > Agent service > rejects exact input bounds without persistence
+ FAIL  tests/agents.service.test.ts > Agent service > rejects exact input bounds without persistence
+ FAIL  tests/agents.service.test.ts > Agent service > rejects exact input bounds without persistence
+ FAIL  tests/agents.service.test.ts > Agent service > rejects exact input bounds without persistence
+ FAIL  tests/agents.service.test.ts > Agent service > rejects exact input bounds without persistence
+ FAIL  tests/agents.service.test.ts > Agent service > rejects exact input bounds without persistence
+ FAIL  tests/agents.service.test.ts > Agent service > rejects exact input bounds without persistence
+ FAIL  tests/agents.service.test.ts > Agent service > rejects exact input bounds without persistence
+ FAIL  tests/agents.service.test.ts > Agent service > rejects exact input bounds without persistence
+ FAIL  tests/agents.service.test.ts > Agent service > rejects exact input bounds without persistence
+ FAIL  tests/agents.service.test.ts > Agent service > rejects exact input bounds without persistence
+ FAIL  tests/agents.service.test.ts > Agent service > rejects exact input bounds without persistence
+ FAIL  tests/agents.service.test.ts > Agent service > rejects exact input bounds without persistence
+ FAIL  tests/agents.service.test.ts > Agent service > rejects exact input bounds without persistence
+ FAIL  tests/agents.service.test.ts > Agent service > rejects exact input bounds without persistence
+AssertionError: the Agent domain service must exist: expected undefined to be type of 'function'
+
+Expected: "function"
+Received: "undefined"
+
+ ❯ loadService tests/agents.service.test.ts:59:55
+     57| async function loadService(): Promise<AgentServiceModule> {
+     58|   const load = serviceModules["../src/server/agent-service.ts"];
+     59|   expect(load, "the Agent domain service must exist").toBeTypeOf("func…
+       |                                                       ^
+     60|   return load();
+     61| }
+ ❯ tests/agents.service.test.ts:217:27
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[6/25]⎯
+
+ FAIL  tests/agents.service.test.ts > Agent service > requires a currently verified provider and its exact default model
+AssertionError: the Agent domain service must exist: expected undefined to be type of 'function'
+
+Expected: "function"
+Received: "undefined"
+
+ ❯ loadService tests/agents.service.test.ts:59:55
+     57| async function loadService(): Promise<AgentServiceModule> {
+     58|   const load = serviceModules["../src/server/agent-service.ts"];
+     59|   expect(load, "the Agent domain service must exist").toBeTypeOf("func…
+       |                                                       ^
+     60|   return load();
+     61| }
+ ❯ tests/agents.service.test.ts:230:27
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[7/25]⎯
+
+ FAIL  tests/agents.service.test.ts > Agent service > rejects missing and duplicate skill references before writing
+AssertionError: the Agent domain service must exist: expected undefined to be type of 'function'
+
+Expected: "function"
+Received: "undefined"
+
+ ❯ loadService tests/agents.service.test.ts:59:55
+     57| async function loadService(): Promise<AgentServiceModule> {
+     58|   const load = serviceModules["../src/server/agent-service.ts"];
+     59|   expect(load, "the Agent domain service must exist").toBeTypeOf("func…
+       |                                                       ^
+     60|   return load();
+     61| }
+ ❯ tests/agents.service.test.ts:265:27
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[8/25]⎯
+
+ FAIL  tests/agents.service.test.ts > Agent service > fully replaces an agent and its ordered skills in one transaction
+AssertionError: the Agent domain service must exist: expected undefined to be type of 'function'
+
+Expected: "function"
+Received: "undefined"
+
+ ❯ loadService tests/agents.service.test.ts:59:55
+     57| async function loadService(): Promise<AgentServiceModule> {
+     58|   const load = serviceModules["../src/server/agent-service.ts"];
+     59|   expect(load, "the Agent domain service must exist").toBeTypeOf("func…
+       |                                                       ^
+     60|   return load();
+     61| }
+ ❯ tests/agents.service.test.ts:291:27
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[9/25]⎯
+
+ FAIL  tests/agents.service.test.ts > Agent service > rolls back invalid updates and reports stale and missing agents
+AssertionError: the Agent domain service must exist: expected undefined to be type of 'function'
+
+Expected: "function"
+Received: "undefined"
+
+ ❯ loadService tests/agents.service.test.ts:59:55
+     57| async function loadService(): Promise<AgentServiceModule> {
+     58|   const load = serviceModules["../src/server/agent-service.ts"];
+     59|   expect(load, "the Agent domain service must exist").toBeTypeOf("func…
+       |                                                       ^
+     60|   return load();
+     61| }
+ ❯ tests/agents.service.test.ts:330:27
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[10/25]⎯
+
+ FAIL  tests/agents.service.test.ts > Agent service > lists deterministically by creation time and id
+AssertionError: the Agent domain service must exist: expected undefined to be type of 'function'
+
+Expected: "function"
+Received: "undefined"
+
+ ❯ loadService tests/agents.service.test.ts:59:55
+     57| async function loadService(): Promise<AgentServiceModule> {
+     58|   const load = serviceModules["../src/server/agent-service.ts"];
+     59|   expect(load, "the Agent domain service must exist").toBeTypeOf("func…
+       |                                                       ^
+     60|   return load();
+     61| }
+ ❯ tests/agents.service.test.ts:372:27
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[11/25]⎯
+
+
+ Test Files  2 failed (2)
+      Tests  25 failed (25)
+   Start at  01:33:12
+   Duration  2.45s (transform 230ms, setup 725ms, import 430ms, tests 74ms, environment 2.92s)
+
+# exit: 1

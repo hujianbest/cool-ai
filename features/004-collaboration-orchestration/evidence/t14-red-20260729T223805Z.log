@@ -1,0 +1,190 @@
+# hf-gate-run
+# label: t14-red
+# command: npm.cmd test -- tests/handoff-plan-ready.test.ts
+# started: 2026-07-29T22:38:05+00:00
+
+> collaboration-cockpit@0.1.0 test
+> vitest run tests/handoff-plan-ready.test.ts
+
+
+ RUN  v4.1.10 D:/cool-ai
+
+(node:6112) ExperimentalWarning: SQLite is an experimental feature and might change at any time
+(Use `node --trace-warnings ...` to show where the warning was created)
+ ❯ tests/handoff-plan-ready.test.ts (11 tests | 11 failed) 3194ms
+     × atomically persists message, turn, snapshots, events, round/version, and the next current Agent 362ms
+     × rejects the same Agent and rolls back every handoff fact 245ms
+     × rejects a non-member and rolls back every handoff fact 244ms
+     × rejects an empty summary and rolls back every handoff fact 239ms
+     × rejects an overlong summary and rolls back every handoff fact 240ms
+     × rejects an empty reason and rolls back every handoff fact 237ms
+     × rejects an overlong reason and rolls back every handoff fact 236ms
+     × enforces maxHandoffs immediately before commit without implementing token budgets 281ms
+     × plans only after two distinct committed Agents and a claimed mission task, without completing either 474ms
+     × rolls back the whole invalid turn and reports only the allowlisted missing preconditions 352ms
+     × rolls back message, turn, baton, run revision, and event sequences when a late write fails 282ms
+
+⎯⎯⎯⎯⎯⎯ Failed Tests 11 ⎯⎯⎯⎯⎯⎯⎯
+
+ FAIL  tests/handoff-plan-ready.test.ts > handoff action commit > atomically persists message, turn, snapshots, events, round/version, and the next current Agent
+AssertionError: expected { affectedRows: 1, …(2) } to match object { affectedRows: 1, …(2) }
+(5 matching properties omitted from actual)
+
+- Expected
++ Received
+
+  {
+    "affectedRows": 1,
+    "body": {
+      "attemptStatus": "committed",
+      "run": {
+-       "currentAgentId": "agent-handoff-b",
++       "currentAgentId": "agent-handoff-a",
+        "roundCount": 1,
+        "status": "running",
+-       "version": 2,
++       "version": 1,
+      },
+    },
+    "status": 200,
+  }
+
+ ❯ tests/handoff-plan-ready.test.ts:285:22
+    283|     const response = advance(handoff(AGENT_A, AGENT_B));
+    284|
+    285|     expect(response).toMatchObject({
+       |                      ^
+    286|       affectedRows: 1,
+    287|       body: {
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[1/11]⎯
+
+ FAIL  tests/handoff-plan-ready.test.ts > handoff action commit > rejects the same Agent and rolls back every handoff fact
+ FAIL  tests/handoff-plan-ready.test.ts > handoff action commit > rejects a non-member and rolls back every handoff fact
+ FAIL  tests/handoff-plan-ready.test.ts > handoff action commit > rejects an empty summary and rolls back every handoff fact
+ FAIL  tests/handoff-plan-ready.test.ts > handoff action commit > rejects an overlong summary and rolls back every handoff fact
+ FAIL  tests/handoff-plan-ready.test.ts > handoff action commit > rejects an empty reason and rolls back every handoff fact
+ FAIL  tests/handoff-plan-ready.test.ts > handoff action commit > rejects an overlong reason and rolls back every handoff fact
+AssertionError: expected function to throw an error, but it didn't
+ ❯ tests/handoff-plan-ready.test.ts:373:7
+    371|         },
+    372|       }),
+    373|     ).toThrowError(expect.objectContaining({ code: "ACTION_INVALID" })…
+       |       ^
+    374|     expect(snapshot()).toMatchObject({
+    375|       currentAgentId: AGENT_A,
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[2/11]⎯
+
+ FAIL  tests/handoff-plan-ready.test.ts > handoff action commit > enforces maxHandoffs immediately before commit without implementing token budgets
+AssertionError: expected function to throw an error, but it didn't
+ ❯ tests/handoff-plan-ready.test.ts:393:57
+    391|     database.close();
+    392|
+    393|     expect(() => withCommit(handoff(AGENT_A, AGENT_B))).toThrowError(
+       |                                                         ^
+    394|       expect.objectContaining({ code: "BOUNDARY_REACHED" }),
+    395|     );
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[3/11]⎯
+
+ FAIL  tests/handoff-plan-ready.test.ts > plan-ready action commit > plans only after two distinct committed Agents and a claimed mission task, without completing either
+AssertionError: expected { affectedRows: 1, …(2) } to match object { affectedRows: 1, …(2) }
+(5 matching properties omitted from actual)
+
+- Expected
++ Received
+
+  {
+    "affectedRows": 1,
+    "body": {
+      "attemptStatus": "committed",
+      "run": {
+-       "currentAgentId": "agent-handoff-b",
++       "currentAgentId": "agent-handoff-a",
+        "roundCount": 2,
+-       "status": "planned",
+-       "version": 3,
++       "status": "running",
++       "version": 1,
+      },
+    },
+    "status": 200,
+  }
+
+ ❯ tests/handoff-plan-ready.test.ts:424:22
+    422|     );
+    423|
+    424|     expect(response).toMatchObject({
+       |                      ^
+    425|       affectedRows: 1,
+    426|       body: {
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[4/11]⎯
+
+ FAIL  tests/handoff-plan-ready.test.ts > plan-ready action commit > rolls back the whole invalid turn and reports only the allowlisted missing preconditions
+AssertionError: expected { affectedRows: 1, …(2) } to match object { affectedRows: 1, …(2) }
+(11 matching properties omitted from actual)
+
+- Expected
++ Received
+
+  {
+    "affectedRows": 1,
+    "body": {
+-     "error": {
+-       "category": "action_invalid",
+-       "code": "ACTION_INVALID",
++     "attemptStatus": "committed",
++     "run": {
++       "createdAt": "2026-07-30T04:00:00.000Z",
++       "currentAgentId": "agent-handoff-a",
++       "id": "run-handoff",
++       "pauseCategory": null,
++       "projectId": "project-handoff",
++       "roundCount": 1,
++       "status": "running",
++       "updatedAt": "2026-07-30T04:00:00.000Z",
++       "version": 1,
+      },
+    },
+-   "status": 400,
++   "status": 200,
+  }
+
+ ❯ tests/handoff-plan-ready.test.ts:463:22
+    461|     const response = advance(planReady());
+    462|
+    463|     expect(response).toMatchObject({
+       |                      ^
+    464|       affectedRows: 1,
+    465|       body: {
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[5/11]⎯
+
+ FAIL  tests/handoff-plan-ready.test.ts > plan-ready action commit > rolls back message, turn, baton, run revision, and event sequences when a late write fails
+AssertionError: expected [Function] to throw an error
+
+- Expected:
+null
+
++ Received:
+undefined
+
+ ❯ tests/handoff-plan-ready.test.ts:509:57
+    507|     database.close();
+    508|
+    509|     expect(() => withCommit(handoff(AGENT_A, AGENT_B))).toThrow(
+       |                                                         ^
+    510|       "injected handoff event failure",
+    511|     );
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[6/11]⎯
+
+
+ Test Files  1 failed (1)
+      Tests  11 failed (11)
+   Start at  06:38:07
+   Duration  5.42s (transform 161ms, setup 355ms, import 181ms, tests 3.19s, environment 1.42s)
+
+# exit: 1

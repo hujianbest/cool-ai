@@ -1,0 +1,117 @@
+# hf-gate-run
+# label: t32-green
+# command: npm.cmd run smoke:execution
+# started: 2026-07-30T16:15:03+00:00
+
+> collaboration-cockpit@0.1.0 smoke:execution
+> node tests/execution-browser-smoke.mjs
+
+(node:13620) ExperimentalWarning: SQLite is an experimental feature and might change at any time
+(Use `node --trace-warnings ...` to show where the warning was created)
+file:///D:/cool-ai/tests/execution-browser-smoke.mjs:230
+      throw new Error(`Execution app exited before readiness.\n${serverOutput}`);
+            ^
+
+Error: Execution app exited before readiness.
+
+> collaboration-cockpit@0.1.0 dev
+> next dev --webpack --hostname 127.0.0.1 --port 20235
+
+▲ Next.js 16.2.12 (webpack)
+- Local:         http://127.0.0.1:20235
+- Network:       http://127.0.0.1:20235
+✓ Ready in 1068ms
+⚠ Attempted to load @next/swc-win32-x64-msvc, but an error occurred: \\?\D:\cool-ai\node_modules\@next\swc-win32-x64-msvc\next-swc.win32-x64-msvc.node is not a valid Win32 application.
+
+\\?\D:\cool-ai\node_modules\@next\swc-win32-x64-msvc\next-swc.win32-x64-msvc.node
+  Skipping creating a lockfile at D:\cool-ai\.next\dev\lock because we're using WASM bindings
+
+
+
+
+
+#
+
+# Fatal process out of memory: Zone
+
+#
+
+----- Native stack trace -----
+
+
+
+
+
+
+
+#
+
+# Fatal process out of memory: Zone
+
+#
+
+----- Native stack trace -----
+
+
+
+ 1: 00007FF67B430ECD 
+
+ 2: 00007FF67C892576 
+
+ 3: 00007FF67C124CC5 
+
+ 4: 00007FF67BA9FBD6 
+
+ 5: 00007FF67B660C12 
+
+ 6: 00007FF67B662AB8 
+
+ 7: 00007FF67B6628BF 
+
+ 8: 00007FF67B71A771 
+
+ 9: 00007FF67B71A522 
+
+10: 00007FF67B71FDED 
+
+11: 00007FF67B71EC87 
+
+12: 00007FF67B70BB9C 
+
+13: 00007FF67B708789 
+
+14: 00007FF67B706D8A 
+
+15: 00007FF67B70680A 
+
+16: 00007FF67CB1E03A 
+
+17: 00007FF67C8F285B 
+
+18: 00007FF67B7994A6 
+
+19: 00007FF67B794BE3 
+
+20: 00007FF67B7944C9 
+
+21: 00007FF67C90570F 
+
+22: 00007FF67B42CD8E 
+
+23: 00007FF67C17A096 
+
+24: 00007FF67D3D92B3 
+
+25: 00007FFADC024CB0 
+
+26: 00007FFADCEDEDCB 
+
+ 1: 00007FF67B430ECD 
+
+[?25h
+
+    at waitForApp (file:///D:/cool-ai/tests/execution-browser-smoke.mjs:230:13)
+    at async file:///D:/cool-ai/tests/execution-browser-smoke.mjs:992:3
+
+Node.js v24.14.0
+# exit: 1

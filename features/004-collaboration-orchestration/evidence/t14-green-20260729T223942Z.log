@@ -1,0 +1,26 @@
+# hf-gate-run
+# label: t14-green
+# command: npm.cmd test -- tests/handoff-plan-ready.test.ts tests/agent-task-actions.test.ts tests/turn-finalize.test.ts tests/turn-acquire.test.ts
+# started: 2026-07-29T22:39:42+00:00
+
+> collaboration-cockpit@0.1.0 test
+> vitest run tests/handoff-plan-ready.test.ts tests/agent-task-actions.test.ts tests/turn-finalize.test.ts tests/turn-acquire.test.ts
+
+
+ RUN  v4.1.10 D:/cool-ai
+
+(node:16704) ExperimentalWarning: SQLite is an experimental feature and might change at any time
+(Use `node --trace-warnings ...` to show where the warning was created)
+(node:11156) ExperimentalWarning: SQLite is an experimental feature and might change at any time
+(Use `node --trace-warnings ...` to show where the warning was created)
+(node:11220) ExperimentalWarning: SQLite is an experimental feature and might change at any time
+(Use `node --trace-warnings ...` to show where the warning was created)
+(node:8092) ExperimentalWarning: SQLite is an experimental feature and might change at any time
+(Use `node --trace-warnings ...` to show where the warning was created)
+
+ Test Files  4 passed (4)
+      Tests  51 passed (51)
+   Start at  06:39:43
+   Duration  9.80s (transform 560ms, setup 1.64s, import 678ms, tests 22.85s, environment 6.40s)
+
+# exit: 0

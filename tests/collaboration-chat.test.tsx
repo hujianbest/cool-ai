@@ -1,0 +1,308 @@
+import { fireEvent, render, screen, waitFor } from "@testing-library/react";
+import userEvent from "@testing-library/user-event";
+import { createElement } from "react";
+import { afterEach, describe, expect, it, vi } from "vitest";
+
+import { CollaborationPanel } from "@/components/collaboration/collaboration-panel";
+import type {
+  CollaborationReadResponse,
+  ProjectMessage,
+} from "@/src/shared/collaboration-contracts";
+import type { MembershipState } from "@/src/shared/project-context-contracts";
+
+const emptyRead: CollaborationReadResponse = {
+  pendingDecision: null,
+  projectMessagesPage: { items: [], nextAfter: null },
+  readiness: { missing: [], ready: true },
+  run: null,
+  timelinePage: { items: [], nextAfter: null },
+  usage: {
+    byAgent: [],
+    completionTokens: 0,
+    promptTokens: 0,
+    repairCalls: 0,
+    totalTokens: 0,
+    unreportedCalls: 0,
+  },
+};
+
+const members: MembershipState = {
+  members: [
+    {
+      accentToken: "sage",
+      agentId: "agent-a",
+      avatarText: "A",
+      joinedAt: "2026-07-30T00:00:00.000Z",
+      model: "test-model",
+      name: "Alpha",
+      permissions: { readFiles: true, runCommands: false, writeFiles: false },
+      role: "Peer",
+      skillNames: [],
+    },
+    {
+      accentToken: "terracotta",
+      agentId: "agent-b",
+      avatarText: "B",
+      joinedAt: "2026-07-30T00:00:00.000Z",
+      model: "test-model",
+      name: "Beta",
+      permissions: { readFiles: true, runCommands: false, writeFiles: false },
+      role: "Peer",
+      skillNames: [],
+    },
+  ],
+  projectVersion: 1,
+};
+
+function ownerMessage(overrides: Partial<ProjectMessage> = {}): ProjectMessage {
+  return {
+    authorAgentId: null,
+    authorDisplayName: "项目所有者",
+    authorType: "owner",
+    content: "Plan the release",
+    createdAt: "2026-07-30T00:00:00.000Z",
+    id: "message-1",
+    mentionAgentId: null,
+    mentionDisplayName: null,
+    mentionMemberStatus: null,
+    runId: "run-1",
+    sequence: 1,
+    ...overrides,
+  };
+}
+
+function installFetch(
+  handler?: (url: string, init?: RequestInit) => Promise<Response> | Response,
+) {
+  const fetchMock = vi.fn(
+    async (input: RequestInfo | URL, init?: RequestInit): Promise<Response> => {
+      const url = String(input);
+      if (handler) {
+        const response = await handler(url, init);
+        if (response) return response;
+      }
+      if (url.endsWith("/collaboration")) return Response.json(emptyRead);
+      if (url.endsWith("/members")) return Response.json(members);
+      throw new Error(`Unexpected request: ${url}`);
+    },
+  );
+  vi.stubGlobal("fetch", fetchMock);
+  return fetchMock;
+}
+
+afterEach(() => {
+  vi.unstubAllGlobals();
+});
+
+describe("collaboration chat composer", () => {
+  it("shows loading, empty, and collaboration API error copy", async () => {
+    let release!: () => void;
+    const gate = new Promise<void>((resolve) => {
+      release = resolve;
+    });
+    installFetch(async (url) => {
+      if (url.endsWith("/collaboration")) {
+        await gate;
+        return Response.json(emptyRead);
+      }
+      return Response.json(members);
+    });
+
+    const view = render(createElement(CollaborationPanel, { projectId: "project-1" }));
+    expect(screen.getByText("正在加载项目群聊…")).toHaveAttribute("aria-busy", "true");
+    release();
+    expect(await screen.findByText("尚无协作消息。")).toBeInTheDocument();
+    view.unmount();
+
+    installFetch((url) =>
+      url.endsWith("/collaboration")
+        ? Response.json(
+            { error: { code: "STORAGE_UNAVAILABLE", message: "raw storage detail" } },
+            { status: 503 },
+          )
+        : Response.json(members),
+    );
+    render(createElement(CollaborationPanel, { projectId: "project-1" }));
+    expect(await screen.findByRole("alert")).toHaveTextContent(
+      "服务暂时不可用，请稍后重试。",
+    );
+    expect(screen.queryByText("raw storage detail")).not.toBeInTheDocument();
+  });
+
+  it("validates 1..10000 characters with a field-linked error", async () => {
+    installFetch();
+    const user = userEvent.setup();
+    render(createElement(CollaborationPanel, { projectId: "project-1" }));
+    const composer = await screen.findByLabelText("发送给项目群聊");
+    const send = screen.getByRole("button", { name: "发送并启动协作" });
+
+    fireEvent.change(composer, { target: { value: "   " } });
+    fireEvent.submit(send.closest("form")!);
+    expect(screen.getByText("请输入 1 至 10000 个字符。")).toHaveAttribute(
+      "id",
+      composer.getAttribute("aria-describedby"),
+    );
+    expect(composer).toHaveAttribute("aria-invalid", "true");
+
+    fireEvent.change(composer, { target: { value: "x".repeat(10_001) } });
+    fireEvent.submit(send.closest("form")!);
+    expect(screen.getByText("请输入 1 至 10000 个字符。")).toBeInTheDocument();
+  });
+
+  it("preserves the draft while sending and on sanitized API failure", async () => {
+    let finishSend!: (response: Response) => void;
+    const pendingSend = new Promise<Response>((resolve) => {
+      finishSend = resolve;
+    });
+    installFetch((url) => {
+      if (url.endsWith("/runs")) return pendingSend;
+      if (url.endsWith("/collaboration")) return Response.json(emptyRead);
+      return Response.json(members);
+    });
+    const user = userEvent.setup();
+    render(createElement(CollaborationPanel, { projectId: "project-1" }));
+    const composer = await screen.findByLabelText("发送给项目群聊");
+    await user.type(composer, "Keep this draft");
+    await user.click(screen.getByRole("button", { name: "发送并启动协作" }));
+
+    expect(composer).toBeDisabled();
+    expect(composer).toHaveValue("Keep this draft");
+    finishSend(
+      Response.json(
+        { error: { code: "AGENT_NOT_MEMBER", message: "raw membership detail" } },
+        { status: 409 },
+      ),
+    );
+    expect(await screen.findByRole("alert")).toHaveTextContent(
+      "所选 Agent 不是项目成员。",
+    );
+    expect(composer).toBeEnabled();
+    expect(composer).toHaveValue("Keep this draft");
+    expect(screen.queryByText("raw membership detail")).not.toBeInTheDocument();
+  });
+
+  it("uses one keyboard-operable member combobox and sends the stable agent id", async () => {
+    const sentBodies: Array<Record<string, unknown>> = [];
+    installFetch((url, init) => {
+      if (url.endsWith("/runs")) {
+        const body = JSON.parse(String(init?.body)) as Record<string, unknown>;
+        sentBodies.push(body);
+        return Response.json(
+          {
+            created: true,
+            message: ownerMessage({
+              content: String(body.message),
+              mentionAgentId: "agent-b",
+              mentionDisplayName: "Beta",
+              mentionMemberStatus: "current",
+            }),
+            run: {
+              createdAt: "2026-07-30T00:00:00.000Z",
+              currentAgentId: "agent-b",
+              id: "run-1",
+              pauseCategory: null,
+              projectId: "project-1",
+              roundCount: 0,
+              status: "running",
+              updatedAt: "2026-07-30T00:00:00.000Z",
+              version: 1,
+            },
+          },
+          { status: 201 },
+        );
+      }
+      if (url.endsWith("/collaboration")) return Response.json(emptyRead);
+      return Response.json(members);
+    });
+    const user = userEvent.setup();
+    render(createElement(CollaborationPanel, { projectId: "project-1" }));
+    await screen.findByText("尚无协作消息。");
+
+    const combo = screen.getByRole("combobox", { name: "@成员" });
+    expect(combo).toHaveAttribute("aria-controls");
+    await user.click(combo);
+    expect(await screen.findByRole("listbox", { name: "项目成员" })).toBeInTheDocument();
+    await user.keyboard("{ArrowDown}{Enter}");
+    expect(screen.getByText("@Beta")).toBeInTheDocument();
+    expect(screen.queryByRole("listbox", { name: "项目成员" })).not.toBeInTheDocument();
+
+    await user.click(combo);
+    await user.keyboard("{Escape}");
+    expect(combo).toHaveFocus();
+    await user.click(combo);
+    await user.tab();
+    expect(screen.queryByRole("listbox", { name: "项目成员" })).not.toBeInTheDocument();
+
+    await user.type(screen.getByLabelText("发送给项目群聊"), "Ask @Alpha plainly");
+    await user.click(screen.getByRole("button", { name: "发送并启动协作" }));
+    await screen.findByText("Ask @Alpha plainly");
+    expect(sentBodies).toHaveLength(1);
+    expect(sentBodies[0]).toMatchObject({
+      mentionAgentId: "agent-b",
+      message: "Ask @Alpha plainly",
+    });
+  });
+
+  it("uses message or start APIs by run state and focuses the successful owner message", async () => {
+    const activeRead = {
+      ...emptyRead,
+      run: {
+        createdAt: "2026-07-30T00:00:00.000Z",
+        currentAgentId: "agent-a",
+        id: "run-1",
+        pauseCategory: null,
+        projectId: "project-1",
+        roundCount: 0,
+        status: "running" as const,
+        updatedAt: "2026-07-30T00:00:00.000Z",
+        version: 1,
+      },
+    };
+    const urls: string[] = [];
+    installFetch((url) => {
+      if (url.endsWith("/collaboration")) return Response.json(activeRead);
+      if (url.endsWith("/messages")) {
+        urls.push(url);
+        return Response.json({ message: ownerMessage(), run: activeRead.run });
+      }
+      return Response.json(members);
+    });
+    const user = userEvent.setup();
+    render(createElement(CollaborationPanel, { projectId: "project-1" }));
+    const composer = await screen.findByLabelText("发送给项目群聊");
+    await user.type(composer, "Plan the release");
+    await user.click(screen.getByRole("button", { name: "发送消息" }));
+
+    const message = await screen.findByText("Plan the release");
+    await waitFor(() => expect(message.closest("li")).toHaveFocus());
+    expect(composer).toHaveValue("");
+    expect(urls).toEqual(["/api/projects/project-1/messages"]);
+  });
+
+  it("renders immutable mention snapshots and left-member state without parsing plain @ text", async () => {
+    installFetch((url) =>
+      url.endsWith("/collaboration")
+        ? Response.json({
+            ...emptyRead,
+            projectMessagesPage: {
+              items: [
+                ownerMessage({
+                  content: "Ask @renamed text",
+                  mentionAgentId: "agent-gone",
+                  mentionDisplayName: "Former Name",
+                  mentionMemberStatus: "left",
+                }),
+              ],
+              nextAfter: null,
+            },
+          })
+        : Response.json(members),
+    );
+    render(createElement(CollaborationPanel, { projectId: "project-1" }));
+
+    expect(await screen.findByText("@Former Name")).toBeInTheDocument();
+    expect(screen.getByText("已离组")).toBeInTheDocument();
+    expect(screen.getByText("Ask @renamed text")).toBeInTheDocument();
+    expect(screen.queryByText("@renamed")).not.toBeInTheDocument();
+  });
+});

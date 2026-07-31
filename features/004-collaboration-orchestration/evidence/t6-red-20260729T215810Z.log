@@ -1,0 +1,96 @@
+# hf-gate-run
+# label: t6-red
+# command: npm.cmd test -- tests/collaboration-prompt.test.ts
+# started: 2026-07-29T21:58:10+00:00
+
+> collaboration-cockpit@0.1.0 test
+> vitest run tests/collaboration-prompt.test.ts
+
+
+ RUN  v4.1.10 D:/cool-ai
+
+(node:10348) ExperimentalWarning: SQLite is an experimental feature and might change at any time
+(Use `node --trace-warnings ...` to show where the warning was created)
+ ❯ tests/collaboration-prompt.test.ts (4 tests | 4 failed) 775ms
+     × gives both Agents identical shared context and only the current private configuration 212ms
+     × selects the newest 30 public messages in stable order with stored name snapshots 191ms
+     × keeps whole messages at the 60000 character boundary without skipping older entries 184ms
+     × returns an immutable acquire snapshot with deterministic canonical hashes 185ms
+
+⎯⎯⎯⎯⎯⎯⎯ Failed Tests 4 ⎯⎯⎯⎯⎯⎯⎯
+
+ FAIL  tests/collaboration-prompt.test.ts > collaboration prompt allowlist > gives both Agents identical shared context and only the current private configuration
+AssertionError: T-6 prompt builder service must exist: expected undefined to be type of 'function'
+
+Expected: "function"
+Received: "undefined"
+
+ ❯ promptBuilder tests/collaboration-prompt.test.ts:92:57
+     90|   const load =
+     91|     promptBuilderModules["../src/server/collaboration/prompt-builder.t…
+     92|   expect(load, "T-6 prompt builder service must exist").toBeTypeOf("fu…
+       |                                                         ^
+     93|   return load();
+     94| }
+ ❯ tests/collaboration-prompt.test.ts:258:27
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[1/4]⎯
+
+ FAIL  tests/collaboration-prompt.test.ts > collaboration prompt allowlist > selects the newest 30 public messages in stable order with stored name snapshots
+AssertionError: T-6 prompt builder service must exist: expected undefined to be type of 'function'
+
+Expected: "function"
+Received: "undefined"
+
+ ❯ promptBuilder tests/collaboration-prompt.test.ts:92:57
+     90|   const load =
+     91|     promptBuilderModules["../src/server/collaboration/prompt-builder.t…
+     92|   expect(load, "T-6 prompt builder service must exist").toBeTypeOf("fu…
+       |                                                         ^
+     93|   return load();
+     94| }
+ ❯ tests/collaboration-prompt.test.ts:335:27
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[2/4]⎯
+
+ FAIL  tests/collaboration-prompt.test.ts > collaboration prompt allowlist > keeps whole messages at the 60000 character boundary without skipping older entries
+AssertionError: T-6 prompt builder service must exist: expected undefined to be type of 'function'
+
+Expected: "function"
+Received: "undefined"
+
+ ❯ promptBuilder tests/collaboration-prompt.test.ts:92:57
+     90|   const load =
+     91|     promptBuilderModules["../src/server/collaboration/prompt-builder.t…
+     92|   expect(load, "T-6 prompt builder service must exist").toBeTypeOf("fu…
+       |                                                         ^
+     93|   return load();
+     94| }
+ ❯ tests/collaboration-prompt.test.ts:380:27
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[3/4]⎯
+
+ FAIL  tests/collaboration-prompt.test.ts > collaboration prompt allowlist > returns an immutable acquire snapshot with deterministic canonical hashes
+AssertionError: T-6 prompt builder service must exist: expected undefined to be type of 'function'
+
+Expected: "function"
+Received: "undefined"
+
+ ❯ promptBuilder tests/collaboration-prompt.test.ts:92:57
+     90|   const load =
+     91|     promptBuilderModules["../src/server/collaboration/prompt-builder.t…
+     92|   expect(load, "T-6 prompt builder service must exist").toBeTypeOf("fu…
+       |                                                         ^
+     93|   return load();
+     94| }
+ ❯ tests/collaboration-prompt.test.ts:402:27
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[4/4]⎯
+
+
+ Test Files  1 failed (1)
+      Tests  4 failed (4)
+   Start at  05:58:12
+   Duration  2.91s (transform 106ms, setup 339ms, import 94ms, tests 775ms, environment 1.44s)
+
+# exit: 1

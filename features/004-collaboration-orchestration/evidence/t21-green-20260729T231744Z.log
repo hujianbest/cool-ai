@@ -1,0 +1,352 @@
+# hf-gate-run
+# label: t21-green
+# command: npm.cmd test -- tests/collaboration-timeline-ui.test.tsx
+# started: 2026-07-29T23:17:44+00:00
+
+> collaboration-cockpit@0.1.0 test
+> vitest run tests/collaboration-timeline-ui.test.tsx
+
+
+ RUN  v4.1.10 D:/cool-ai
+
+ ❯ tests/collaboration-timeline-ui.test.tsx (4 tests | 4 failed) 11309ms
+     × renders typed messages and model calls as statuses with actor, time, heading, and equal baton 218ms
+     × polls updates, preserves an above-bottom position, and announces a new-event affordance 5004ms
+     × keeps one advance in flight and creates a fresh operation id for the next turn 5002ms
+     × reuses the logical operation id on retry and stops for every non-running state and unmount 1083ms
+
+⎯⎯⎯⎯⎯⎯⎯ Failed Tests 4 ⎯⎯⎯⎯⎯⎯⎯
+
+ FAIL  tests/collaboration-timeline-ui.test.tsx > collaboration timeline and auto-loop > renders typed messages and model calls as statuses with actor, time, heading, and equal baton
+TestingLibraryElementError: Unable to find a label with the text of: Alpha 的头像
+
+Ignored nodes: comments, script, style
+[36m<body>[39m
+  [36m<div>[39m
+    [36m<section[39m
+      [33maria-labelledby[39m=[32m"collaboration-title"[39m
+      [33mclass[39m=[32m"stack"[39m
+    [36m>[39m
+      [36m<div[39m
+        [33mclass[39m=[32m"panel-heading"[39m
+      [36m>[39m
+        [36m<div>[39m
+          [36m<p[39m
+            [33mclass[39m=[32m"eyebrow"[39m
+          [36m>[39m
+            [0m平等协作[0m
+          [36m</p>[39m
+          [36m<h3[39m
+            [33mid[39m=[32m"collaboration-title"[39m
+          [36m>[39m
+            [0m项目群聊[0m
+          [36m</h3>[39m
+        [36m</div>[39m
+        [36m<div[39m
+          [33mclass[39m=[32m"baton"[39m
+        [36m>[39m
+          [36m<span[39m
+            [33maria-label[39m=[32m"agent-a 的头像"[39m
+            [33mclass[39m=[32m"agent-avatar"[39m
+          [36m>[39m
+            [0mA[0m
+          [36m</span>[39m
+          [36m<span>[39m
+            [36m<span[39m
+              [33mclass[39m=[32m"eyebrow"[39m
+            [36m>[39m
+              [0m当前持棒[0m
+            [36m</span>[39m
+            [36m<strong>[39m
+              [0magent-a[0m
+            [36m</strong>[39m
+          [36m</span>[39m
+        [36m</div>[39m
+      [36m</div>[39m
+      [36m<ol[39m
+        [33maria-label[39m=[32m"协作时间线"[39m
+        [33mclass[39m=[32m"timeline collaboration-timeline"[39m
+        [33mrole[39m=[32m"log"[39m
+      [36m>[39m
+        [36m<li[39m
+          [33mclass[39m=[32m"timeline-item timeline-event"[39m
+        [36m>[39m
+          [36m<div[39m
+            [33mclass[39m=[32m"timeline-event-heading"[39m
+          [36m>[39m
+            [36m<h4>[39m
+              [0m正在调用模型[0m
+            [36m</h4>[39m
+            [36m<time[39m
+              [33mdatetime[39m=[32m"2026-07-30T00:01:00.000Z"[39m
+            [36m>[39m
+              [0m08:01[0m
+            [36m</time>[39m
+          [36m</div>[39m
+          [36m<p[39m
+            [33mclass[39m=[32m"muted"[39m
+          [36m>[39m
+            [0magent-a[0m
+          [36m</p>[39m
+        [36m</li>[39m
+        [36m<li[39m
+          [33mclass[39m=[32m"timeline-item timeline-event"[39m
+        [36m>[39m
+          [36m<div[39m
+            [33mclass[39m=[32m"timeline-event-heading"[39m
+          [36m>[39m
+            [36m<h4>[39m
+              [0mAgent 发来消息[0m
+            [36m</h4>[39m
+            [36m<time[39m
+              [33mdatetime[39m=[32m"2026-07-30T00:01:00.000Z"[39m
+            [36m>[39m
+              [0m08:01[0m
+            [36m</time>[39m
+          [36m</div>[39m
+          [36m<p[39m
+            [33mclass[39m=[32m"muted"[39m
+          [36m>[39m
+            [0mAlpha[0m
+          [36m</p>[39m
+          [36m<p>[39m
+            [0mA real agent message[0m
+          [36m</p>[39m
+        [36m</li>[39m
+      [36m</ol>[39m
+      [36m<p[39m
+        [33maria-atomic[39m=[32m"true"[39m
+        [33maria-live[39m=[32m"polite"[39m
+        [33mclass[39m=[32m"sr-only"[39m
+        [33mrole[39m=[32m"status"[39m
+      [36m/>[39m
+      [36m<form[39m
+        [33mclass[39m=[32m"composer"[39m
+      [36m>[39m
+        [36m<div[39m
+          [33mclass[39m=[32m"form-field"[39m
+        [36m>[39m
+          [36m<label[39m
+            [33mfor[39m=[32m"collaboration-message-project-1"[39m
+          [36m>[39m
+            [0m发送给项目群聊[0m
+          [36m</label>[39m
+          [36m<textarea[39m
+            [33mid[39m=[32m"collaboration-message-project-1"[39m
+          [36m/>[39m
+        [36m</div>[39m
+        [36m<div[39m
+          [33mclass[39m=[32m"mention-picker"[39m
+        [36m>[39m
+          [36m<button[39m
+            [33maria-controls[39m=[32m"collaboration-members-project-1"[39m
+            [33maria-expanded[39m=[32m"false"[39m
+            [33maria-haspopup[39m=[32m"listbox"[39m
+            [33maria-label[39m=[32m"@成员"[39m
+            [33mrole[39m=[32m"combobox"[39m
+            [33mtype[39m=[32m"button"[39m
+          [36m>[39m
+            [0m@成员[0m
+          [36m</button>[39m
+        [36m</div>[39m
+        [36m<button[39m
+          [33mdisabled[39m=[32m""[39m
+          [33mtype[39m=[32m"submit"[39m
+        [36m>[39m
+          [0m发送消息[0m
+        [36m</button>[39m
+      [36m</form>[39m
+    [36m</section>[39m
+  [36m</div>[39m
+[36m</body>[39m
+ ❯ Object.getElementError node_modules/@testing-library/dom/dist/config.js:37:19
+ ❯ getAllByLabelText node_modules/@testing-library/dom/dist/queries/label-text.js:111:38
+ ❯ node_modules/@testing-library/dom/dist/query-helpers.js:52:17
+ ❯ node_modules/@testing-library/dom/dist/query-helpers.js:95:19
+ ❯ tests/collaboration-timeline-ui.test.tsx:140:19
+    138|     expect(log.querySelectorAll("h4")).toHaveLength(2);
+    139|     expect(screen.getByText("当前持棒")).toBeInTheDocument();
+    140|     expect(screen.getByLabelText("Alpha 的头像")).toHaveTextContent("A");
+       |                   ^
+    141|     expect(screen.getAllByText("Alpha").length).toBeGreaterThan(0);
+    142|     expect(screen.queryByText(/领导|leader/i)).not.toBeInTheDocument();
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[1/4]⎯
+
+ FAIL  tests/collaboration-timeline-ui.test.tsx > collaboration timeline and auto-loop > polls updates, preserves an above-bottom position, and announces a new-event affordance
+Error: Test timed out in 5000ms.
+If this is a long-running test, pass a timeout value as the last argument or configure it globally with "testTimeout".
+ ❯ tests/collaboration-timeline-ui.test.tsx:148:3
+    146|   });
+    147|
+    148|   it("polls updates, preserves an above-bottom position, and announces…
+       |   ^
+    149|     vi.useFakeTimers();
+    150|     const first = event();
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[2/4]⎯
+
+ FAIL  tests/collaboration-timeline-ui.test.tsx > collaboration timeline and auto-loop > keeps one advance in flight and creates a fresh operation id for the next turn
+Error: Test timed out in 5000ms.
+If this is a long-running test, pass a timeout value as the last argument or configure it globally with "testTimeout".
+ ❯ tests/collaboration-timeline-ui.test.tsx:188:3
+    186|   });
+    187|
+    188|   it("keeps one advance in flight and creates a fresh operation id for…
+       |   ^
+    189|     vi.useFakeTimers();
+    190|     const advanceBodies: Array<{ operationId: string }> = [];
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[3/4]⎯
+
+ FAIL  tests/collaboration-timeline-ui.test.tsx > collaboration timeline and auto-loop > reuses the logical operation id on retry and stops for every non-running state and unmount
+AssertionError: expected [ …(3) ] to have a length of 2 but got 3
+
+Ignored nodes: comments, script, style
+[36m<html>[39m
+  [36m<head />[39m
+  [36m<body>[39m
+    [36m<div>[39m
+      [36m<section[39m
+        [33maria-labelledby[39m=[32m"collaboration-title"[39m
+        [33mclass[39m=[32m"stack"[39m
+      [36m>[39m
+        [36m<div[39m
+          [33mclass[39m=[32m"panel-heading"[39m
+        [36m>[39m
+          [36m<div>[39m
+            [36m<p[39m
+              [33mclass[39m=[32m"eyebrow"[39m
+            [36m>[39m
+              [0m平等协作[0m
+            [36m</p>[39m
+            [36m<h3[39m
+              [33mid[39m=[32m"collaboration-title"[39m
+            [36m>[39m
+              [0m项目群聊[0m
+            [36m</h3>[39m
+          [36m</div>[39m
+          [36m<div[39m
+            [33mclass[39m=[32m"baton"[39m
+            [33mdata-accent[39m=[32m"sage"[39m
+          [36m>[39m
+            [36m<span[39m
+              [33maria-label[39m=[32m"Alpha 的头像"[39m
+              [33mclass[39m=[32m"agent-avatar"[39m
+            [36m>[39m
+              [0mA[0m
+            [36m</span>[39m
+            [36m<span>[39m
+              [36m<span[39m
+                [33mclass[39m=[32m"eyebrow"[39m
+              [36m>[39m
+                [0m当前持棒[0m
+              [36m</span>[39m
+              [36m<strong>[39m
+                [0mAlpha[0m
+              [36m</strong>[39m
+            [36m</span>[39m
+          [36m</div>[39m
+        [36m</div>[39m
+        [36m<ol[39m
+          [33maria-label[39m=[32m"协作时间线"[39m
+          [33mclass[39m=[32m"timeline collaboration-timeline"[39m
+          [33mrole[39m=[32m"log"[39m
+        [36m>[39m
+          [36m<li[39m
+            [33mclass[39m=[32m"timeline-item timeline-event"[39m
+            [33mtabindex[39m=[32m"-1"[39m
+          [36m>[39m
+            [36m<div[39m
+              [33mclass[39m=[32m"timeline-event-heading"[39m
+            [36m>[39m
+              [36m<h4>[39m
+                [0mAgent 发来消息[0m
+              [36m</h4>[39m
+              [36m<time[39m
+                [33mdatetime[39m=[32m"2026-07-30T00:00:30.000Z"[39m
+              [36m>[39m
+                [0m08:00[0m
+              [36m</time>[39m
+            [36m</div>[39m
+            [36m<strong>[39m
+              [0mAlpha[0m
+            [36m</strong>[39m
+            [36m<span>[39m
+              [0mA real agent message[0m
+            [36m</span>[39m
+          [36m</li>[39m
+        [36m</ol>[39m
+        [36m<p[39m
+          [33maria-atomic[39m=[32m"true"[39m
+          [33maria-live[39m=[32m"polite"[39m
+          [33mclass[39m=[32m"sr-only"[39m
+          [33mrole[39m=[32m"status"[39m
+        [36m/>[39m
+        [36m<form[39m
+          [33mclass[39m=[32m"composer"[39m
+        [36m>[39m
+          [36m<div[39m
+            [33mclass[39m=[32m"form-field"[39m
+          [36m>[39m
+            [36m<label[39m
+              [33mfor[39m=[32m"collaboration-message-project-1"[39m
+            [36m>[39m
+              [0m发送给项目群聊[0m
+            [36m</label>[39m
+            [36m<textarea[39m
+              [33mid[39m=[32m"collaboration-message-project-1"[39m
+            [36m/>[39m
+          [36m</div>[39m
+          [36m<div[39m
+            [33mclass[39m=[32m"mention-picker"[39m
+          [36m>[39m
+            [36m<button[39m
+              [33maria-controls[39m=[32m"collaboration-members-project-1"[39m
+              [33maria-expanded[39m=[32m"false"[39m
+              [33maria-haspopup[39m=[32m"listbox"[39m
+              [33maria-label[39m=[32m"@成员"[39m
+              [33mrole[39m=[32m"combobox"[39m
+              [33mtype[39m=[32m"button"[39m
+            [36m>[39m
+              [0m@成员[0m
+            [36m</button>[39m
+          [36m</div>[39m
+          [36m<button[39m
+            [33mdisabled[39m=[32m""[39m
+            [33mtype[39m=[32m"submit"[39m
+          [36m>[39m
+            [0m发送消息[0m
+          [36m</button>[39m
+        [36m</form>[39m
+      [36m</section>[39m
+    [36m</div>[39m
+  [36m</body>[39m
+[36m</html>[39m
+
+- Expected
++ Received
+
+- 2
++ 3
+
+ ❯ tests/collaboration-timeline-ui.test.tsx:256:40
+    254|     expect(screen.queryByText("network detail")).not.toBeInTheDocument…
+    255|     await user.click(screen.getByRole("button", { name: "重试推进" }));
+    256|     await waitFor(() => expect(bodies).toHaveLength(2));
+       |                                        ^
+    257|     expect(bodies[1].operationId).toBe(bodies[0].operationId);
+    258|     view.unmount();
+ ❯ runWithExpensiveErrorDiagnosticsDisabled node_modules/@testing-library/dom/dist/config.js:47:12
+ ❯ checkCallback node_modules/@testing-library/dom/dist/wait-for.js:124:77
+ ❯ Timeout.checkRealTimersCallback node_modules/@testing-library/dom/dist/wait-for.js:118:16
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[4/4]⎯
+
+
+ Test Files  1 failed (1)
+      Tests  4 failed (4)
+   Start at  07:17:45
+   Duration  13.54s (transform 97ms, setup 340ms, import 205ms, tests 11.31s, environment 1.42s)
+
+# exit: 1

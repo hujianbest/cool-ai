@@ -1,0 +1,216 @@
+# hf-gate-run
+# label: t16-red
+# command: cmd /c npm test -- tests/collaboration-decisions.test.ts
+# started: 2026-07-29T22:47:32+00:00
+
+> collaboration-cockpit@0.1.0 test
+> vitest run tests/collaboration-decisions.test.ts
+
+
+ RUN  v4.1.10 D:/cool-ai
+
+(node:16876) ExperimentalWarning: SQLite is an experimental feature and might change at any time
+(Use `node --trace-warnings ...` to show where the warning was created)
+ ❯ tests/collaboration-decisions.test.ts (6 tests | 6 failed) 2073ms
+     × atomically writes the Agent message, turn, sole open decision and events while waiting 360ms
+     × keeps ordinary waiting chat queued and does not treat it as an answer 347ms
+     × atomically saves an owner message snapshot, answers/version-bumps, emits an event and resumes requester 342ms
+     × uses an optional current member mention as the next Agent and snapshots its name 334ms
+     × requires waiting/open/exact version, a 1..10000 answer, and a current member mention 345ms
+     × exactly replays across reopen, rejects operation conflicts and rejects an answered decision 343ms
+
+⎯⎯⎯⎯⎯⎯⎯ Failed Tests 6 ⎯⎯⎯⎯⎯⎯⎯
+
+ FAIL  tests/collaboration-decisions.test.ts > decision request commit > atomically writes the Agent message, turn, sole open decision and events while waiting
+AssertionError: expected { affectedRows: 1, …(2) } to match object { body: { …(2) }, status: 200 }
+(8 matching properties omitted from actual)
+
+- Expected
++ Received
+
+  {
+    "body": {
+      "attemptStatus": "committed",
+      "run": {
+-       "status": "waiting_owner",
+-       "version": 2,
++       "status": "running",
++       "version": 1,
+      },
+    },
+    "status": 200,
+  }
+
+ ❯ requestDecision tests/collaboration-decisions.test.ts:134:21
+    132|     dependencies(),
+    133|   );
+    134|   expect(finalized).toMatchObject({
+       |                     ^
+    135|     body: {
+    136|       attemptStatus: "committed",
+ ❯ tests/collaboration-decisions.test.ts:282:24
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[1/6]⎯
+
+ FAIL  tests/collaboration-decisions.test.ts > decision request commit > keeps ordinary waiting chat queued and does not treat it as an answer
+AssertionError: expected { affectedRows: 1, …(2) } to match object { body: { …(2) }, status: 200 }
+(8 matching properties omitted from actual)
+
+- Expected
++ Received
+
+  {
+    "body": {
+      "attemptStatus": "committed",
+      "run": {
+-       "status": "waiting_owner",
+-       "version": 2,
++       "status": "running",
++       "version": 1,
+      },
+    },
+    "status": 200,
+  }
+
+ ❯ requestDecision tests/collaboration-decisions.test.ts:134:21
+    132|     dependencies(),
+    133|   );
+    134|   expect(finalized).toMatchObject({
+       |                     ^
+    135|     body: {
+    136|       attemptStatus: "committed",
+ ❯ tests/collaboration-decisions.test.ts:349:24
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[2/6]⎯
+
+ FAIL  tests/collaboration-decisions.test.ts > owner decision answer > atomically saves an owner message snapshot, answers/version-bumps, emits an event and resumes requester
+AssertionError: expected { affectedRows: 1, …(2) } to match object { body: { …(2) }, status: 200 }
+(8 matching properties omitted from actual)
+
+- Expected
++ Received
+
+  {
+    "body": {
+      "attemptStatus": "committed",
+      "run": {
+-       "status": "waiting_owner",
+-       "version": 2,
++       "status": "running",
++       "version": 1,
+      },
+    },
+    "status": 200,
+  }
+
+ ❯ requestDecision tests/collaboration-decisions.test.ts:134:21
+    132|     dependencies(),
+    133|   );
+    134|   expect(finalized).toMatchObject({
+       |                     ^
+    135|     body: {
+    136|       attemptStatus: "committed",
+ ❯ tests/collaboration-decisions.test.ts:373:24
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[3/6]⎯
+
+ FAIL  tests/collaboration-decisions.test.ts > owner decision answer > uses an optional current member mention as the next Agent and snapshots its name
+AssertionError: expected { affectedRows: 1, …(2) } to match object { body: { …(2) }, status: 200 }
+(8 matching properties omitted from actual)
+
+- Expected
++ Received
+
+  {
+    "body": {
+      "attemptStatus": "committed",
+      "run": {
+-       "status": "waiting_owner",
+-       "version": 2,
++       "status": "running",
++       "version": 1,
+      },
+    },
+    "status": 200,
+  }
+
+ ❯ requestDecision tests/collaboration-decisions.test.ts:134:21
+    132|     dependencies(),
+    133|   );
+    134|   expect(finalized).toMatchObject({
+       |                     ^
+    135|     body: {
+    136|       attemptStatus: "committed",
+ ❯ tests/collaboration-decisions.test.ts:421:24
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[4/6]⎯
+
+ FAIL  tests/collaboration-decisions.test.ts > owner decision answer > requires waiting/open/exact version, a 1..10000 answer, and a current member mention
+AssertionError: expected { affectedRows: 1, …(2) } to match object { body: { …(2) }, status: 200 }
+(8 matching properties omitted from actual)
+
+- Expected
++ Received
+
+  {
+    "body": {
+      "attemptStatus": "committed",
+      "run": {
+-       "status": "waiting_owner",
+-       "version": 2,
++       "status": "running",
++       "version": 1,
+      },
+    },
+    "status": 200,
+  }
+
+ ❯ requestDecision tests/collaboration-decisions.test.ts:134:21
+    132|     dependencies(),
+    133|   );
+    134|   expect(finalized).toMatchObject({
+       |                     ^
+    135|     body: {
+    136|       attemptStatus: "committed",
+ ❯ tests/collaboration-decisions.test.ts:446:24
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[5/6]⎯
+
+ FAIL  tests/collaboration-decisions.test.ts > owner decision answer > exactly replays across reopen, rejects operation conflicts and rejects an answered decision
+AssertionError: expected { affectedRows: 1, …(2) } to match object { body: { …(2) }, status: 200 }
+(8 matching properties omitted from actual)
+
+- Expected
++ Received
+
+  {
+    "body": {
+      "attemptStatus": "committed",
+      "run": {
+-       "status": "waiting_owner",
+-       "version": 2,
++       "status": "running",
++       "version": 1,
+      },
+    },
+    "status": 200,
+  }
+
+ ❯ requestDecision tests/collaboration-decisions.test.ts:134:21
+    132|     dependencies(),
+    133|   );
+    134|   expect(finalized).toMatchObject({
+       |                     ^
+    135|     body: {
+    136|       attemptStatus: "committed",
+ ❯ tests/collaboration-decisions.test.ts:494:24
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[6/6]⎯
+
+
+ Test Files  1 failed (1)
+      Tests  6 failed (6)
+   Start at  06:47:33
+   Duration  4.54s (transform 358ms, setup 342ms, import 458ms, tests 2.07s, environment 1.41s)
+
+# exit: 1

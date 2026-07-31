@@ -1,0 +1,41 @@
+# hf-gate-run
+# label: t32-green
+# command: npm.cmd run smoke:execution
+# started: 2026-07-30T15:38:26+00:00
+
+> collaboration-cockpit@0.1.0 smoke:execution
+> node tests/execution-browser-smoke.mjs
+
+(node:6740) ExperimentalWarning: SQLite is an experimental feature and might change at any time
+(Use `node --trace-warnings ...` to show where the warning was created)
+file:///D:/cool-ai/tests/execution-browser-smoke.mjs:212
+      throw new Error(`Execution app exited before readiness.\n${serverOutput}`);
+            ^
+
+Error: Execution app exited before readiness.
+
+> collaboration-cockpit@0.1.0 dev
+> next dev --webpack --hostname 127.0.0.1 --port 19061
+
+▲ Next.js 16.2.12 (webpack)
+- Local:         http://127.0.0.1:19061
+- Network:       http://127.0.0.1:19061
+✓ Ready in 1087ms
+⚠ Attempted to load @next/swc-win32-x64-msvc, but an error occurred: \\?\D:\cool-ai\node_modules\@next\swc-win32-x64-msvc\next-swc.win32-x64-msvc.node is not a valid Win32 application.
+
+\\?\D:\cool-ai\node_modules\@next\swc-win32-x64-msvc\next-swc.win32-x64-msvc.node
+  Skipping creating a lockfile at D:\cool-ai\.next\dev\lock because we're using WASM bindings
+Error: ENOTEMPTY: directory not empty, rmdir 'D:\cool-ai\.next\dev\server\app\api\providers'
+    at ignore-listed frames {
+  errno: -4051,
+  code: 'ENOTEMPTY',
+  syscall: 'rmdir',
+  path: 'D:\\cool-ai\\.next\\dev\\server\\app\\api\\providers'
+}
+[?25h
+
+    at waitForApp (file:///D:/cool-ai/tests/execution-browser-smoke.mjs:212:13)
+    at async file:///D:/cool-ai/tests/execution-browser-smoke.mjs:918:3
+
+Node.js v24.14.0
+# exit: 1

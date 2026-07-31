@@ -1,0 +1,145 @@
+# hf-gate-run
+# label: t2-red
+# command: cmd /c npm test -- tests/context-migrations.test.ts tests/workspace.service.test.ts
+# started: 2026-07-29T18:55:50+00:00
+
+> collaboration-cockpit@0.1.0 test
+> vitest run tests/context-migrations.test.ts tests/workspace.service.test.ts
+
+
+ RUN  v4.1.10 D:/cool-ai
+
+(node:5312) ExperimentalWarning: SQLite is an experimental feature and might change at any time
+(Use `node --trace-warnings ...` to show where the warning was created)
+(node:13520) ExperimentalWarning: SQLite is an experimental feature and might change at any time
+(Use `node --trace-warnings ...` to show where the warning was created)
+ ❯ tests/workspace.service.test.ts (4 tests | 4 failed) 280ms
+     × returns typed, path-sanitized errors for relative, missing, file, and unreadable inputs 68ms
+     × audits only realpath, stat, and access while binding a real directory 55ms
+     × rejects alias and Windows case variants already bound to another project 85ms
+     × requires explicit rebind confirmation and the current expectedVersion 70ms
+ ❯ tests/context-migrations.test.ts (3 tests | 1 failed) 504ms
+     × rejects drifted v2 before mutation and leaves its schema untouched 165ms
+
+⎯⎯⎯⎯⎯⎯⎯ Failed Tests 5 ⎯⎯⎯⎯⎯⎯⎯
+
+ FAIL  tests/context-migrations.test.ts > version 3 context migration > rejects drifted v2 before mutation and leaves its schema untouched
+AssertionError: expected undefined to deeply equal ObjectContaining{…}
+
+- Expected:
+ObjectContaining {
+  "code": "SCHEMA_DRIFT",
+  "message": StringNotContaining "C:\\Users\\ADMINI~1\\AppData\\Local\\Temp\\2\\cockpit-context-migration-lE7QLn\\cockpit.sqlite",
+}
+
++ Received:
+undefined
+
+ ❯ tests/context-migrations.test.ts:155:28
+    153|       migrationError = error;
+    154|     }
+    155|     expect(migrationError).toEqual(
+       |                            ^
+    156|       expect.objectContaining({ code: "SCHEMA_DRIFT", message: expect.…
+    157|     );
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[1/5]⎯
+
+ FAIL  tests/workspace.service.test.ts > workspace service security boundary > returns typed, path-sanitized errors for relative, missing, file, and unreadable inputs
+AssertionError: expected WorkspaceError: Workspace path must be ab… { code: '…' } to match object { code: 'WORKSPACE_INVALID' }
+(1 matching property omitted from actual)
+
+- Expected
++ Received
+
+- {
+-   "code": "WORKSPACE_INVALID",
++ WorkspaceError {
++   "code": "INVALID_INPUT",
+  }
+
+ ❯ expectWorkspaceError tests/workspace.service.test.ts:58:26
+     56|   secretPath?: string,
+     57| ): Promise<void> {
+     58|   await expect(operation).rejects.toMatchObject({ code });
+       |                          ^
+     59|   if (secretPath) {
+     60|     await expect(operation).rejects.toEqual(
+ ❯ tests/workspace.service.test.ts:83:11
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[2/5]⎯
+
+ FAIL  tests/workspace.service.test.ts > workspace service security boundary > audits only realpath, stat, and access while binding a real directory
+AssertionError: expected undefined to be type of 'function'
+
+Expected: "function"
+Received: "undefined"
+
+ ❯ tests/workspace.service.test.ts:150:35
+    148|     const project = createProject("Audited workspace", databasePath);
+    149|     const operations: string[] = [];
+    150|     expect(createNodeWorkspaceFs).toBeTypeOf("function");
+       |                                   ^
+    151|     const workspaceFs = createNodeWorkspaceFs!((operation) => operatio…
+    152|
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[3/5]⎯
+
+ FAIL  tests/workspace.service.test.ts > workspace service security boundary > rejects alias and Windows case variants already bound to another project
+AssertionError: expected Error: UNIQUE constraint failed: projects… { …(3) } to match object { code: 'WORKSPACE_ALREADY_BOUND' }
+(2 matching properties omitted from actual)
+
+- Expected
++ Received
+
+- {
+-   "code": "WORKSPACE_ALREADY_BOUND",
++ Error {
++   "code": "ERR_SQLITE_ERROR",
+  }
+
+ ❯ expectWorkspaceError tests/workspace.service.test.ts:58:26
+     56|   secretPath?: string,
+     57| ): Promise<void> {
+     58|   await expect(operation).rejects.toMatchObject({ code });
+       |                          ^
+     59|   if (secretPath) {
+     60|     await expect(operation).rejects.toEqual(
+ ❯ tests/workspace.service.test.ts:189:11
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[4/5]⎯
+
+ FAIL  tests/workspace.service.test.ts > workspace service security boundary > requires explicit rebind confirmation and the current expectedVersion
+AssertionError: promise resolved "{ workspace: { …(2) }, …(1) }" instead of rejecting
+
+- Expected
++ Received
+
+- Error {
+-   "message": "rejected promise",
++ {
++   "projectVersion": 3,
++   "workspace": {
++     "path": "C:\\Users\\Administrator\\AppData\\Local\\Temp\\2\\cockpit-workspace-service-xslJRn\\second",
++     "status": "ready",
++   },
+  }
+
+ ❯ expectWorkspaceError tests/workspace.service.test.ts:58:26
+     56|   secretPath?: string,
+     57| ): Promise<void> {
+     58|   await expect(operation).rejects.toMatchObject({ code });
+       |                          ^
+     59|   if (secretPath) {
+     60|     await expect(operation).rejects.toEqual(
+ ❯ tests/workspace.service.test.ts:241:11
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[5/5]⎯
+
+
+ Test Files  2 failed (2)
+      Tests  5 failed | 2 passed (7)
+   Start at  02:55:51
+   Duration  2.69s (transform 147ms, setup 756ms, import 127ms, tests 784ms, environment 2.94s)
+
+# exit: 1

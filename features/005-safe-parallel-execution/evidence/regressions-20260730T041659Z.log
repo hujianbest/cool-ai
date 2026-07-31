@@ -1,0 +1,287 @@
+# hf-gate-run
+# label: regressions
+# command: cmd /c npm test -- --maxWorkers=1
+# started: 2026-07-30T04:16:59+00:00
+
+> collaboration-cockpit@0.1.0 test
+> vitest run --maxWorkers=1
+
+
+ RUN  v4.1.10 D:/cool-ai
+
+(node:3068) ExperimentalWarning: SQLite is an experimental feature and might change at any time
+(Use `node --trace-warnings ...` to show where the warning was created)
+(node:7028) ExperimentalWarning: SQLite is an experimental feature and might change at any time
+(Use `node --trace-warnings ...` to show where the warning was created)
+(node:14348) ExperimentalWarning: SQLite is an experimental feature and might change at any time
+(Use `node --trace-warnings ...` to show where the warning was created)
+(node:12260) ExperimentalWarning: SQLite is an experimental feature and might change at any time
+(Use `node --trace-warnings ...` to show where the warning was created)
+(node:12168) ExperimentalWarning: SQLite is an experimental feature and might change at any time
+(Use `node --trace-warnings ...` to show where the warning was created)
+(node:3472) ExperimentalWarning: SQLite is an experimental feature and might change at any time
+(Use `node --trace-warnings ...` to show where the warning was created)
+(node:10152) ExperimentalWarning: SQLite is an experimental feature and might change at any time
+(Use `node --trace-warnings ...` to show where the warning was created)
+(node:160) ExperimentalWarning: SQLite is an experimental feature and might change at any time
+(Use `node --trace-warnings ...` to show where the warning was created)
+(node:9680) ExperimentalWarning: SQLite is an experimental feature and might change at any time
+(Use `node --trace-warnings ...` to show where the warning was created)
+(node:16520) ExperimentalWarning: SQLite is an experimental feature and might change at any time
+(Use `node --trace-warnings ...` to show where the warning was created)
+(node:15148) ExperimentalWarning: SQLite is an experimental feature and might change at any time
+(Use `node --trace-warnings ...` to show where the warning was created)
+(node:1276) ExperimentalWarning: SQLite is an experimental feature and might change at any time
+(Use `node --trace-warnings ...` to show where the warning was created)
+(node:5328) ExperimentalWarning: SQLite is an experimental feature and might change at any time
+(Use `node --trace-warnings ...` to show where the warning was created)
+(node:16484) ExperimentalWarning: SQLite is an experimental feature and might change at any time
+(Use `node --trace-warnings ...` to show where the warning was created)
+(node:12212) ExperimentalWarning: SQLite is an experimental feature and might change at any time
+(Use `node --trace-warnings ...` to show where the warning was created)
+(node:6784) ExperimentalWarning: SQLite is an experimental feature and might change at any time
+(Use `node --trace-warnings ...` to show where the warning was created)
+(node:11340) ExperimentalWarning: SQLite is an experimental feature and might change at any time
+(Use `node --trace-warnings ...` to show where the warning was created)
+(node:14944) ExperimentalWarning: SQLite is an experimental feature and might change at any time
+(Use `node --trace-warnings ...` to show where the warning was created)
+(node:13696) ExperimentalWarning: SQLite is an experimental feature and might change at any time
+(Use `node --trace-warnings ...` to show where the warning was created)
+(node:9376) ExperimentalWarning: SQLite is an experimental feature and might change at any time
+(Use `node --trace-warnings ...` to show where the warning was created)
+(node:10684) ExperimentalWarning: SQLite is an experimental feature and might change at any time
+(Use `node --trace-warnings ...` to show where the warning was created)
+(node:13164) ExperimentalWarning: SQLite is an experimental feature and might change at any time
+(Use `node --trace-warnings ...` to show where the warning was created)
+ ❯ tests/execution-actions.test.ts (7 tests | 7 failed) 1992ms
+     × starts the business clock from SQLite once and never resets or extends it 385ms
+     × uses a random 120 second lease and heartbeat renews from DB time without extending overall deadline 270ms
+     × enforces the DB-time boundary at now=deadline-1 268ms
+     × enforces the DB-time boundary at now=deadline 263ms
+     × enforces the DB-time boundary at now=deadline+1 268ms
+     × lets heartbeat, finalize, reconcile, or control win one terminal CAS with durable receipt and late no-op 266ms
+     × ignores caller-skew fields and uses only SQLite time 270ms
+(node:11900) ExperimentalWarning: SQLite is an experimental feature and might change at any time
+(Use `node --trace-warnings ...` to show where the warning was created)
+(node:16328) ExperimentalWarning: SQLite is an experimental feature and might change at any time
+(Use `node --trace-warnings ...` to show where the warning was created)
+(node:9160) ExperimentalWarning: SQLite is an experimental feature and might change at any time
+(Use `node --trace-warnings ...` to show where the warning was created)
+(node:11656) ExperimentalWarning: SQLite is an experimental feature and might change at any time
+(Use `node --trace-warnings ...` to show where the warning was created)
+(node:10984) ExperimentalWarning: SQLite is an experimental feature and might change at any time
+(Use `node --trace-warnings ...` to show where the warning was created)
+(node:15344) ExperimentalWarning: SQLite is an experimental feature and might change at any time
+(Use `node --trace-warnings ...` to show where the warning was created)
+(node:7328) ExperimentalWarning: SQLite is an experimental feature and might change at any time
+(Use `node --trace-warnings ...` to show where the warning was created)
+(node:5504) ExperimentalWarning: SQLite is an experimental feature and might change at any time
+(Use `node --trace-warnings ...` to show where the warning was created)
+(node:12332) ExperimentalWarning: SQLite is an experimental feature and might change at any time
+(Use `node --trace-warnings ...` to show where the warning was created)
+(node:13900) ExperimentalWarning: SQLite is an experimental feature and might change at any time
+(Use `node --trace-warnings ...` to show where the warning was created)
+(node:11060) ExperimentalWarning: SQLite is an experimental feature and might change at any time
+(Use `node --trace-warnings ...` to show where the warning was created)
+ ❯ tests/execution-operations.test.ts (5 tests | 5 failed) 1352ms
+     × keeps the receipt pending across contiguous children and completes only on the final public outcome 302ms
+     × replays exact status/body and conflicts on either kind or canonical request hash 263ms
+     × allows at most one running child for an operation and its execution 266ms
+     × uses CAS so final completion occurs exactly once and duplicate finalizers replay deterministically 262ms
+     × rejects gaps, stale action_count, and appending behind a nonterminal child 257ms
+(node:12312) ExperimentalWarning: SQLite is an experimental feature and might change at any time
+(Use `node --trace-warnings ...` to show where the warning was created)
+(node:13488) ExperimentalWarning: SQLite is an experimental feature and might change at any time
+(Use `node --trace-warnings ...` to show where the warning was created)
+(node:14488) ExperimentalWarning: SQLite is an experimental feature and might change at any time
+(Use `node --trace-warnings ...` to show where the warning was created)
+(node:11824) ExperimentalWarning: SQLite is an experimental feature and might change at any time
+(Use `node --trace-warnings ...` to show where the warning was created)
+(node:15008) ExperimentalWarning: SQLite is an experimental feature and might change at any time
+(Use `node --trace-warnings ...` to show where the warning was created)
+(node:6760) ExperimentalWarning: SQLite is an experimental feature and might change at any time
+(Use `node --trace-warnings ...` to show where the warning was created)
+(node:15604) ExperimentalWarning: SQLite is an experimental feature and might change at any time
+(Use `node --trace-warnings ...` to show where the warning was created)
+(node:10312) ExperimentalWarning: SQLite is an experimental feature and might change at any time
+(Use `node --trace-warnings ...` to show where the warning was created)
+(node:15728) ExperimentalWarning: SQLite is an experimental feature and might change at any time
+(Use `node --trace-warnings ...` to show where the warning was created)
+(node:3232) ExperimentalWarning: SQLite is an experimental feature and might change at any time
+(Use `node --trace-warnings ...` to show where the warning was created)
+(node:8468) ExperimentalWarning: SQLite is an experimental feature and might change at any time
+(Use `node --trace-warnings ...` to show where the warning was created)
+(node:4536) ExperimentalWarning: SQLite is an experimental feature and might change at any time
+(Use `node --trace-warnings ...` to show where the warning was created)
+(node:4024) ExperimentalWarning: SQLite is an experimental feature and might change at any time
+(Use `node --trace-warnings ...` to show where the warning was created)
+(node:11452) ExperimentalWarning: SQLite is an experimental feature and might change at any time
+(Use `node --trace-warnings ...` to show where the warning was created)
+(node:11024) ExperimentalWarning: SQLite is an experimental feature and might change at any time
+(Use `node --trace-warnings ...` to show where the warning was created)
+(node:15464) ExperimentalWarning: SQLite is an experimental feature and might change at any time
+(Use `node --trace-warnings ...` to show where the warning was created)
+(node:10260) ExperimentalWarning: SQLite is an experimental feature and might change at any time
+(Use `node --trace-warnings ...` to show where the warning was created)
+(node:10096) ExperimentalWarning: SQLite is an experimental feature and might change at any time
+(Use `node --trace-warnings ...` to show where the warning was created)
+(node:11280) ExperimentalWarning: SQLite is an experimental feature and might change at any time
+(Use `node --trace-warnings ...` to show where the warning was created)
+(node:8440) ExperimentalWarning: SQLite is an experimental feature and might change at any time
+(Use `node --trace-warnings ...` to show where the warning was created)
+(node:16788) ExperimentalWarning: SQLite is an experimental feature and might change at any time
+(Use `node --trace-warnings ...` to show where the warning was created)
+(node:8564) ExperimentalWarning: SQLite is an experimental feature and might change at any time
+(Use `node --trace-warnings ...` to show where the warning was created)
+
+⎯⎯⎯⎯⎯⎯ Failed Tests 12 ⎯⎯⎯⎯⎯⎯⎯
+
+ FAIL  tests/execution-actions.test.ts > generic execution child action CAS > starts the business clock from SQLite once and never resets or extends it
+SchemaMigrationError: Database version 5 schema is invalid.
+ ❯ migrateDatabase src/server/migrations.ts:1342:13
+    1340|     const validation = validateV5(database);
+    1341|     if (validation) {
+    1342|       throw new SchemaMigrationError(validation, "Database version 5 s…
+       |             ^
+    1343|     }
+    1344|   }
+ ❯ openDatabase src/server/db.ts:14:5
+ ❯ tests/execution-actions.test.ts:198:22
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[1/12]⎯
+
+ FAIL  tests/execution-actions.test.ts > generic execution child action CAS > uses a random 120 second lease and heartbeat renews from DB time without extending overall deadline
+SchemaMigrationError: Database version 5 schema is invalid.
+ ❯ migrateDatabase src/server/migrations.ts:1342:13
+    1340|     const validation = validateV5(database);
+    1341|     if (validation) {
+    1342|       throw new SchemaMigrationError(validation, "Database version 5 s…
+       |             ^
+    1343|     }
+    1344|   }
+ ❯ openDatabase src/server/db.ts:14:5
+ ❯ tests/execution-actions.test.ts:267:22
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[2/12]⎯
+
+ FAIL  tests/execution-actions.test.ts > generic execution child action CAS > enforces the DB-time boundary at now=deadline-1
+ FAIL  tests/execution-actions.test.ts > generic execution child action CAS > enforces the DB-time boundary at now=deadline
+ FAIL  tests/execution-actions.test.ts > generic execution child action CAS > enforces the DB-time boundary at now=deadline+1
+SchemaMigrationError: Database version 5 schema is invalid.
+ ❯ migrateDatabase src/server/migrations.ts:1342:13
+    1340|     const validation = validateV5(database);
+    1341|     if (validation) {
+    1342|       throw new SchemaMigrationError(validation, "Database version 5 s…
+       |             ^
+    1343|     }
+    1344|   }
+ ❯ openDatabase src/server/db.ts:14:5
+ ❯ tests/execution-actions.test.ts:316:22
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[3/12]⎯
+
+ FAIL  tests/execution-actions.test.ts > generic execution child action CAS > lets heartbeat, finalize, reconcile, or control win one terminal CAS with durable receipt and late no-op
+SchemaMigrationError: Database version 5 schema is invalid.
+ ❯ migrateDatabase src/server/migrations.ts:1342:13
+    1340|     const validation = validateV5(database);
+    1341|     if (validation) {
+    1342|       throw new SchemaMigrationError(validation, "Database version 5 s…
+       |             ^
+    1343|     }
+    1344|   }
+ ❯ openDatabase src/server/db.ts:14:5
+ ❯ tests/execution-actions.test.ts:329:22
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[4/12]⎯
+
+ FAIL  tests/execution-actions.test.ts > generic execution child action CAS > ignores caller-skew fields and uses only SQLite time
+SchemaMigrationError: Database version 5 schema is invalid.
+ ❯ migrateDatabase src/server/migrations.ts:1342:13
+    1340|     const validation = validateV5(database);
+    1341|     if (validation) {
+    1342|       throw new SchemaMigrationError(validation, "Database version 5 s…
+       |             ^
+    1343|     }
+    1344|   }
+ ❯ openDatabase src/server/db.ts:14:5
+ ❯ tests/execution-actions.test.ts:428:22
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[5/12]⎯
+
+ FAIL  tests/execution-operations.test.ts > execution parent operations and ordered child receipts > keeps the receipt pending across contiguous children and completes only on the final public outcome
+SchemaMigrationError: Database version 5 schema is invalid.
+ ❯ migrateDatabase src/server/migrations.ts:1342:13
+    1340|     const validation = validateV5(database);
+    1341|     if (validation) {
+    1342|       throw new SchemaMigrationError(validation, "Database version 5 s…
+       |             ^
+    1343|     }
+    1344|   }
+ ❯ openDatabase src/server/db.ts:14:5
+ ❯ tests/execution-operations.test.ts:237:22
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[6/12]⎯
+
+ FAIL  tests/execution-operations.test.ts > execution parent operations and ordered child receipts > replays exact status/body and conflicts on either kind or canonical request hash
+SchemaMigrationError: Database version 5 schema is invalid.
+ ❯ migrateDatabase src/server/migrations.ts:1342:13
+    1340|     const validation = validateV5(database);
+    1341|     if (validation) {
+    1342|       throw new SchemaMigrationError(validation, "Database version 5 s…
+       |             ^
+    1343|     }
+    1344|   }
+ ❯ openDatabase src/server/db.ts:14:5
+ ❯ tests/execution-operations.test.ts:313:22
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[7/12]⎯
+
+ FAIL  tests/execution-operations.test.ts > execution parent operations and ordered child receipts > allows at most one running child for an operation and its execution
+SchemaMigrationError: Database version 5 schema is invalid.
+ ❯ migrateDatabase src/server/migrations.ts:1342:13
+    1340|     const validation = validateV5(database);
+    1341|     if (validation) {
+    1342|       throw new SchemaMigrationError(validation, "Database version 5 s…
+       |             ^
+    1343|     }
+    1344|   }
+ ❯ openDatabase src/server/db.ts:14:5
+ ❯ tests/execution-operations.test.ts:360:22
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[8/12]⎯
+
+ FAIL  tests/execution-operations.test.ts > execution parent operations and ordered child receipts > uses CAS so final completion occurs exactly once and duplicate finalizers replay deterministically
+SchemaMigrationError: Database version 5 schema is invalid.
+ ❯ migrateDatabase src/server/migrations.ts:1342:13
+    1340|     const validation = validateV5(database);
+    1341|     if (validation) {
+    1342|       throw new SchemaMigrationError(validation, "Database version 5 s…
+       |             ^
+    1343|     }
+    1344|   }
+ ❯ openDatabase src/server/db.ts:14:5
+ ❯ tests/execution-operations.test.ts:380:22
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[9/12]⎯
+
+ FAIL  tests/execution-operations.test.ts > execution parent operations and ordered child receipts > rejects gaps, stale action_count, and appending behind a nonterminal child
+SchemaMigrationError: Database version 5 schema is invalid.
+ ❯ migrateDatabase src/server/migrations.ts:1342:13
+    1340|     const validation = validateV5(database);
+    1341|     if (validation) {
+    1342|       throw new SchemaMigrationError(validation, "Database version 5 s…
+       |             ^
+    1343|     }
+    1344|   }
+ ❯ openDatabase src/server/db.ts:14:5
+ ❯ tests/execution-operations.test.ts:425:22
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[10/12]⎯
+
+
+ Test Files  2 failed | 89 passed (91)
+      Tests  12 failed | 558 passed (570)
+   Start at  12:17:00
+   Duration  371.52s (transform 2.40s, setup 28.09s, import 8.97s, tests 183.23s, environment 128.41s)
+
+# exit: 1

@@ -1,0 +1,73 @@
+# hf-gate-run
+# label: t23-green
+# command: npm.cmd test -- tests/merge-external-writer.test.ts tests/merge-journal-prepare.test.ts tests/merge-recovery.test.ts tests/execution-orchestrator.test.ts tests/command-request.test.ts
+# started: 2026-07-30T07:24:36+00:00
+
+> collaboration-cockpit@0.1.0 test
+> vitest run tests/merge-external-writer.test.ts tests/merge-journal-prepare.test.ts tests/merge-recovery.test.ts tests/execution-orchestrator.test.ts tests/command-request.test.ts
+
+
+ RUN  v4.1.10 D:/cool-ai
+
+(node:11484) ExperimentalWarning: SQLite is an experimental feature and might change at any time
+(Use `node --trace-warnings ...` to show where the warning was created)
+(node:7816) ExperimentalWarning: SQLite is an experimental feature and might change at any time
+(Use `node --trace-warnings ...` to show where the warning was created)
+(node:2352) ExperimentalWarning: SQLite is an experimental feature and might change at any time
+(Use `node --trace-warnings ...` to show where the warning was created)
+(node:11504) ExperimentalWarning: SQLite is an experimental feature and might change at any time
+(Use `node --trace-warnings ...` to show where the warning was created)
+(node:12600) ExperimentalWarning: SQLite is an experimental feature and might change at any time
+(Use `node --trace-warnings ...` to show where the warning was created)
+ ❯ tests/merge-journal-prepare.test.ts (4 tests | 2 failed) 5263ms
+     × conditionally rolls every prepare/apply fault back to all-old 3449ms
+     × never overwrites an external mismatch during conditional rollback 378ms
+
+⎯⎯⎯⎯⎯⎯⎯ Failed Tests 2 ⎯⎯⎯⎯⎯⎯⎯
+
+ FAIL  tests/merge-journal-prepare.test.ts > merge journal prepare and conditional apply > conditionally rolls every prepare/apply fault back to all-old
+AssertionError: expected [Function] to throw error including 'fault:after_replace' but got 'Conditional merge rollback found an e…'
+
+Expected: "fault:after_replace"
+Received: "Conditional merge rollback found an external writer mismatch."
+
+ ❯ tests/merge-journal-prepare.test.ts:186:12
+    184|             },
+    185|           },
+    186|         })).rejects.toThrow(`fault:${point}`);
+       |            ^
+    187|         expect(readFileSync(join(fixture.workspaceRoot, "src/a.txt"), …
+    188|         expect(existsSync(join(fixture.workspaceRoot, "src/z.txt"))).t…
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[1/2]⎯
+
+ FAIL  tests/merge-journal-prepare.test.ts > merge journal prepare and conditional apply > never overwrites an external mismatch during conditional rollback
+AssertionError: expected ExecutionError: Conditional merge rollbac… { …(2) } to match object { code: 'MERGE_RECOVERY_REQUIRED' }
+(2 matching properties omitted from actual)
+
+- Expected
++ Received
+
+- {
+-   "code": "MERGE_RECOVERY_REQUIRED",
++ ExecutionError {
++   "code": "MANUAL_RECOVERY_REQUIRED",
+  }
+
+ ❯ tests/merge-journal-prepare.test.ts:208:10
+    206|           },
+    207|         },
+    208|       })).rejects.toMatchObject({ code: "MERGE_RECOVERY_REQUIRED" });
+       |          ^
+    209|       expect(await readFile(join(fixture.workspaceRoot, "src/a.txt"), …
+    210|         .toBe("external-writer");
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[2/2]⎯
+
+
+ Test Files  1 failed | 4 passed (5)
+      Tests  2 failed | 29 passed (31)
+   Start at  15:24:37
+   Duration  8.18s (transform 1.11s, setup 2.09s, import 850ms, tests 19.35s, environment 10.07s)
+
+# exit: 1

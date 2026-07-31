@@ -1,0 +1,43 @@
+# hf-gate-run
+# label: t13-red
+# command: npm.cmd test -- tests/process-runner.test.ts
+# started: 2026-07-30T04:49:11+00:00
+
+> collaboration-cockpit@0.1.0 test
+> vitest run tests/process-runner.test.ts
+
+
+ RUN  v4.1.10 D:/cool-ai
+
+ ❯ tests/process-runner.test.ts (5 tests | 5 failed) 48ms
+     × spawns executable and args directly in sandbox with fixed minimal environment 17ms
+     × heartbeats every 30 seconds but terminates the tree at the independent exact 120 second deadline 8ms
+     × fails closed when heartbeat loses the lease and tree termination cannot be confirmed 7ms
+     × terminates and reaps a real harmless child tree through the platform adapter 7ms
+     × caps each stream at 1 MiB, redacts secrets, marks truncation, hashes, and emits UTF-8-safe 64 KiB chunks 7ms
+
+⎯⎯⎯⎯⎯⎯⎯ Failed Tests 5 ⎯⎯⎯⎯⎯⎯⎯
+
+ FAIL  tests/process-runner.test.ts > direct process runner > spawns executable and args directly in sandbox with fixed minimal environment
+ FAIL  tests/process-runner.test.ts > direct process runner > heartbeats every 30 seconds but terminates the tree at the independent exact 120 second deadline
+ FAIL  tests/process-runner.test.ts > direct process runner > fails closed when heartbeat loses the lease and tree termination cannot be confirmed
+ FAIL  tests/process-runner.test.ts > direct process runner > terminates and reaps a real harmless child tree through the platform adapter
+ FAIL  tests/process-runner.test.ts > direct process runner > caps each stream at 1 MiB, redacts secrets, marks truncation, hashes, and emits UTF-8-safe 64 KiB chunks
+AssertionError: The direct process runner is unavailable.
+ ❯ tests/process-runner.test.ts:155:12
+    153|     runner = await import(/* @vite-ignore */ moduleId) as RunnerModule;
+    154|   } catch {
+    155|     expect.fail("The direct process runner is unavailable.");
+       |            ^
+    156|   }
+    157| });
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[1/5]⎯
+
+
+ Test Files  1 failed (1)
+      Tests  5 failed (5)
+   Start at  12:49:12
+   Duration  2.28s (transform 219ms, setup 360ms, import 189ms, tests 48ms, environment 1.42s)
+
+# exit: 1

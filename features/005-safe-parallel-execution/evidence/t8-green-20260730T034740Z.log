@@ -1,0 +1,60 @@
+# hf-gate-run
+# label: t8-green
+# command: cmd /c npm test -- tests/execution-list-tool.test.ts
+# started: 2026-07-30T03:47:40+00:00
+
+> collaboration-cockpit@0.1.0 test
+> vitest run tests/execution-list-tool.test.ts
+
+
+ RUN  v4.1.10 D:/cool-ai
+
+(node:12616) ExperimentalWarning: SQLite is an experimental feature and might change at any time
+(Use `node --trace-warnings ...` to show where the warning was created)
+ ❯ tests/execution-list-tool.test.ts (38 tests | 1 failed) 1872ms
+     × fails closed when an existing segment or listed child changes identity 294ms
+
+⎯⎯⎯⎯⎯⎯⎯ Failed Tests 1 ⎯⎯⎯⎯⎯⎯⎯
+
+ FAIL  tests/execution-list-tool.test.ts > verified-handle bounded list > fails closed when an existing segment or listed child changes identity
+AssertionError: expected Error: UNIQUE constraint failed: projects… { …(3) } to match object { code: 'SANDBOX_UNVERIFIABLE' }
+(2 matching properties omitted from actual)
+
+- Expected
++ Received
+
+- {
+-   "code": "SANDBOX_UNVERIFIABLE",
++ Error {
++   "code": "ERR_SQLITE_ERROR",
+  }
+
+ ❯ tests/execution-list-tool.test.ts:277:47
+    275|       if (name === "file.txt") node.identity = identity("replacement",…
+    276|     };
+    277|     await expect(runList(childRace, "src", 4)).rejects.toMatchObject({
+       |                                               ^
+    278|       code: "SANDBOX_UNVERIFIABLE",
+    279|     });
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[1/2]⎯
+
+ FAIL  tests/execution-list-tool.test.ts > verified-handle bounded list > fails closed when an existing segment or listed child changes identity
+Error: EPERM, Permission denied: \\?\C:\Users\ADMINI~1\AppData\Local\Temp\2\cool-ai-list-tool-quo5IJ '\\?\C:\Users\ADMINI~1\AppData\Local\Temp\2\cool-ai-list-tool-quo5IJ'
+ ❯ tests/execution-list-tool.test.ts:143:17
+    141| });
+    142|
+    143| afterEach(() => rmSync(directory, { force: true, recursive: true }));
+       |                 ^
+    144|
+    145| describe("cross-platform relative path guard", () => {
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[2/2]⎯
+
+
+ Test Files  1 failed (1)
+      Tests  1 failed | 37 passed (38)
+   Start at  11:47:41
+   Duration  4.14s (transform 176ms, setup 332ms, import 266ms, tests 1.87s, environment 1.40s)
+
+# exit: 1

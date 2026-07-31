@@ -1,0 +1,22 @@
+# hf-gate-run
+# label: review-manifest
+# command: git status --short
+# started: 2026-07-29T18:19:23+00:00
+?? .cursor/
+?? .gitignore
+?? .idea/
+?? README.md
+?? app/
+?? components/
+?? features/
+?? next-env.d.ts
+?? package-lock.json
+?? package.json
+?? product/
+?? src/
+?? tests/
+?? tsconfig.json
+?? tsconfig.tsbuildinfo
+?? vite-env.d.ts
+?? vitest.config.ts
+# exit: 0

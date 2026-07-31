@@ -1,0 +1,337 @@
+# hf-gate-run
+# label: t1-red
+# command: cmd /c npm test -- tests/migrations-v5.test.ts
+# started: 2026-07-30T02:35:50+00:00
+
+> collaboration-cockpit@0.1.0 test
+> vitest run tests/migrations-v5.test.ts
+
+
+ RUN  v4.1.10 D:/cool-ai
+
+(node:17064) ExperimentalWarning: SQLite is an experimental feature and might change at any time
+(Use `node --trace-warnings ...` to show where the warning was created)
+ ❯ tests/migrations-v5.test.ts (7 tests | 7 failed) 1027ms
+     × migrates complete v4 with exactly 23 tables, 22 indexes, and 6 immutable triggers 245ms
+     × creates exact ordered columns, types, nullability, defaults, checks, uniques, and composite FKs 114ms
+     × rejects drift of every v5 table, index, and trigger instead of repairing it 111ms
+     × rejects partial v5 schemas before writing and atomically rolls back injected DDL faults 183ms
+     × rejects foreign-key and policy data invariant corruption on reopen 113ms
+     × enforces immutable policy history while allowing project cascade deletion 113ms
+     × reopens idempotently and rejects versions newer than v5 145ms
+
+⎯⎯⎯⎯⎯⎯⎯ Failed Tests 7 ⎯⎯⎯⎯⎯⎯⎯
+
+ FAIL  tests/migrations-v5.test.ts > SQLite v5 strict atomic migration > migrates complete v4 with exactly 23 tables, 22 indexes, and 6 immutable triggers
+AssertionError: expected 4 to be 5 // Object.is equality
+
+- Expected
++ Received
+
+- 5
++ 4
+
+ ❯ tests/migrations-v5.test.ts:200:35
+    198|
+    199|     const migrated = openDatabase(path);
+    200|     expect(userVersion(migrated)).toBe(5);
+       |                                   ^
+    201|     expect(names(migrated, "table")).toEqual(expect.arrayContaining([.…
+    202|     expect(V5_TABLES).toHaveLength(23);
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[1/13]⎯
+
+ FAIL  tests/migrations-v5.test.ts > SQLite v5 strict atomic migration > migrates complete v4 with exactly 23 tables, 22 indexes, and 6 immutable triggers
+Error: EPERM, Permission denied: \\?\C:\Users\ADMINI~1\AppData\Local\Temp\2\cockpit-v5-migration-Keldfo '\\?\C:\Users\ADMINI~1\AppData\Local\Temp\2\cockpit-v5-migration-Keldfo'
+ ❯ tests/migrations-v5.test.ts:187:5
+    185| afterEach(() => {
+    186|   for (const directory of temporaryDirectories.splice(0)) {
+    187|     rmSync(directory, { force: true, recursive: true });
+       |     ^
+    188|   }
+    189| });
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[2/13]⎯
+
+ FAIL  tests/migrations-v5.test.ts > SQLite v5 strict atomic migration > creates exact ordered columns, types, nullability, defaults, checks, uniques, and composite FKs
+AssertionError: expected [] to deeply equal [ ObjectContaining{…}, …(21) ]
+
+- Expected
++ Received
+
+- [
+-   ObjectContaining {
+-     "dflt_value": null,
+-     "name": "id",
+-     "notnull": 0,
+-     "pk": 1,
+-     "type": "TEXT",
+-   },
+-   ObjectContaining {
+-     "name": "project_id",
+-     "notnull": 1,
+-     "type": "TEXT",
+-   },
+-   ObjectContaining {
+-     "name": "source_collaboration_run_id",
+-     "notnull": 1,
+-     "type": "TEXT",
+-   },
+-   ObjectContaining {
+-     "name": "mission_id",
+-     "notnull": 1,
+-     "type": "TEXT",
+-   },
+-   ObjectContaining {
+-     "name": "work_item_id",
+-     "notnull": 1,
+-     "type": "TEXT",
+-   },
+-   ObjectContaining {
+-     "name": "agent_id",
+-     "notnull": 1,
+-     "type": "TEXT",
+-   },
+-   ObjectContaining {
+-     "name": "current_policy_revision_id",
+-     "notnull": 1,
+-     "type": "TEXT",
+-   },
+-   ObjectContaining {
+-     "name": "status",
+-     "notnull": 1,
+-     "type": "TEXT",
+-   },
+-   ObjectContaining {
+-     "name": "resume_target",
+-     "notnull": 0,
+-     "type": "TEXT",
+-   },
+-   ObjectContaining {
+-     "name": "reason_code",
+-     "notnull": 0,
+-     "type": "TEXT",
+-   },
+-   ObjectContaining {
+-     "dflt_value": "0",
+-     "name": "manual_recovery_required",
+-     "notnull": 1,
+-     "type": "INTEGER",
+-   },
+-   ObjectContaining {
+-     "name": "recovery_resolution",
+-     "notnull": 0,
+-     "type": "TEXT",
+-   },
+-   ObjectContaining {
+-     "name": "current_attempt_no",
+-     "notnull": 1,
+-     "type": "INTEGER",
+-   },
+-   ObjectContaining {
+-     "dflt_value": "0",
+-     "name": "business_round_count",
+-     "notnull": 1,
+-     "type": "INTEGER",
+-   },
+-   ObjectContaining {
+-     "dflt_value": "0",
+-     "name": "tool_call_count",
+-     "notnull": 1,
+-     "type": "INTEGER",
+-   },
+-   ObjectContaining {
+-     "dflt_value": "1",
+-     "name": "next_event_sequence",
+-     "notnull": 1,
+-     "type": "INTEGER",
+-   },
+-   ObjectContaining {
+-     "dflt_value": "1",
+-     "name": "version",
+-     "notnull": 1,
+-     "type": "INTEGER",
+-   },
+-   ObjectContaining {
+-     "name": "created_at",
+-     "notnull": 1,
+-     "type": "TEXT",
+-   },
+-   ObjectContaining {
+-     "name": "business_deadline_at",
+-     "notnull": 0,
+-     "type": "TEXT",
+-   },
+-   ObjectContaining {
+-     "name": "first_running_at",
+-     "notnull": 0,
+-     "type": "TEXT",
+-   },
+-   ObjectContaining {
+-     "name": "updated_at",
+-     "notnull": 1,
+-     "type": "TEXT",
+-   },
+-   ObjectContaining {
+-     "name": "merged_at",
+-     "notnull": 0,
+-     "type": "TEXT",
+-   },
+- ]
++ []
+
+ ❯ tests/migrations-v5.test.ts:246:30
+    244|     const database = openDatabase(databasePath());
+    245|     const executionColumns = database.prepare("PRAGMA table_info(execu…
+    246|     expect(executionColumns).toEqual([
+       |                              ^
+    247|       expect.objectContaining({ name: "id", type: "TEXT", notnull: 0, …
+    248|       expect.objectContaining({ name: "project_id", type: "TEXT", notn…
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[3/13]⎯
+
+ FAIL  tests/migrations-v5.test.ts > SQLite v5 strict atomic migration > creates exact ordered columns, types, nullability, defaults, checks, uniques, and composite FKs
+Error: EPERM, Permission denied: \\?\C:\Users\ADMINI~1\AppData\Local\Temp\2\cockpit-v5-migration-6QPRu2 '\\?\C:\Users\ADMINI~1\AppData\Local\Temp\2\cockpit-v5-migration-6QPRu2'
+ ❯ tests/migrations-v5.test.ts:187:5
+    185| afterEach(() => {
+    186|   for (const directory of temporaryDirectories.splice(0)) {
+    187|     rmSync(directory, { force: true, recursive: true });
+       |     ^
+    188|   }
+    189| });
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[4/13]⎯
+
+ FAIL  tests/migrations-v5.test.ts > SQLite v5 strict atomic migration > rejects drift of every v5 table, index, and trigger instead of repairing it
+Error: table sqlite_master may not be modified
+ ❯ tests/migrations-v5.test.ts:308:12
+    306|         database.exec("PRAGMA writable_schema=ON");
+    307|         database
+    308|           .prepare(`UPDATE sqlite_master SET sql=sql||' /* drift */' W…
+       |            ^
+    309|           .run(type, object);
+    310|         database.exec("PRAGMA writable_schema=OFF");
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[5/13]⎯
+
+ FAIL  tests/migrations-v5.test.ts > SQLite v5 strict atomic migration > rejects drift of every v5 table, index, and trigger instead of repairing it
+Error: EPERM, Permission denied: \\?\C:\Users\ADMINI~1\AppData\Local\Temp\2\cockpit-v5-migration-wlHlij '\\?\C:\Users\ADMINI~1\AppData\Local\Temp\2\cockpit-v5-migration-wlHlij'
+ ❯ tests/migrations-v5.test.ts:187:5
+    185| afterEach(() => {
+    186|   for (const directory of temporaryDirectories.splice(0)) {
+    187|     rmSync(directory, { force: true, recursive: true });
+       |     ^
+    188|   }
+    189| });
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[6/13]⎯
+
+ FAIL  tests/migrations-v5.test.ts > SQLite v5 strict atomic migration > rejects partial v5 schemas before writing and atomically rolls back injected DDL faults
+AssertionError: expected undefined to deeply equal ObjectContaining{…}
+
+- Expected:
+ObjectContaining {
+  "code": "SCHEMA_DRIFT",
+  "message": StringNotContaining "C:\\Users\\ADMINI~1\\AppData\\Local\\Temp\\2\\cockpit-v5-migration-zhH73a\\cockpit.sqlite",
+}
+
++ Received:
+undefined
+
+ ❯ expectOpenError tests/migrations-v5.test.ts:143:17
+    141|     error = caught;
+    142|   }
+    143|   expect(error).toEqual(
+       |                 ^
+    144|     expect.objectContaining({ code, message: expect.not.stringContaini…
+    145|   );
+ ❯ tests/migrations-v5.test.ts:326:5
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[7/13]⎯
+
+ FAIL  tests/migrations-v5.test.ts > SQLite v5 strict atomic migration > rejects foreign-key and policy data invariant corruption on reopen
+Error: no such table: execution_events
+ ❯ tests/migrations-v5.test.ts:354:14
+    352|     const orphaned = new DatabaseSync(foreignKeyPath);
+    353|     orphaned.exec("PRAGMA foreign_keys=OFF");
+    354|     orphaned.prepare(
+       |              ^
+    355|       `INSERT INTO execution_events
+    356|         (id,project_id,execution_id,sequence,attempt_no,type,actor_typ…
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[8/13]⎯
+
+ FAIL  tests/migrations-v5.test.ts > SQLite v5 strict atomic migration > rejects foreign-key and policy data invariant corruption on reopen
+Error: EPERM, Permission denied: \\?\C:\Users\ADMINI~1\AppData\Local\Temp\2\cockpit-v5-migration-UyYcb5 '\\?\C:\Users\ADMINI~1\AppData\Local\Temp\2\cockpit-v5-migration-UyYcb5'
+ ❯ tests/migrations-v5.test.ts:187:5
+    185| afterEach(() => {
+    186|   for (const directory of temporaryDirectories.splice(0)) {
+    187|     rmSync(directory, { force: true, recursive: true });
+       |     ^
+    188|   }
+    189| });
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[9/13]⎯
+
+ FAIL  tests/migrations-v5.test.ts > SQLite v5 strict atomic migration > enforces immutable policy history while allowing project cascade deletion
+Error: no such table: project_validation_policy_revisions
+ ❯ tests/migrations-v5.test.ts:391:8
+    389|     );
+    390|     const revision = database
+    391|       .prepare("SELECT id FROM project_validation_policy_revisions WHE…
+       |        ^
+    392|       .get() as { id: string };
+    393|     expect(() =>
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[10/13]⎯
+
+ FAIL  tests/migrations-v5.test.ts > SQLite v5 strict atomic migration > enforces immutable policy history while allowing project cascade deletion
+Error: EPERM, Permission denied: \\?\C:\Users\ADMINI~1\AppData\Local\Temp\2\cockpit-v5-migration-2booe0 '\\?\C:\Users\ADMINI~1\AppData\Local\Temp\2\cockpit-v5-migration-2booe0'
+ ❯ tests/migrations-v5.test.ts:187:5
+    185| afterEach(() => {
+    186|   for (const directory of temporaryDirectories.splice(0)) {
+    187|     rmSync(directory, { force: true, recursive: true });
+       |     ^
+    188|   }
+    189| });
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[11/13]⎯
+
+ FAIL  tests/migrations-v5.test.ts > SQLite v5 strict atomic migration > reopens idempotently and rejects versions newer than v5
+AssertionError: expected 4 to be 5 // Object.is equality
+
+- Expected
++ Received
+
+- 5
++ 4
+
+ ❯ tests/migrations-v5.test.ts:418:35
+    416|     first.close();
+    417|     const reopened = openDatabase(path);
+    418|     expect(userVersion(reopened)).toBe(5);
+       |                                   ^
+    419|     expect(
+    420|       reopened
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[12/13]⎯
+
+ FAIL  tests/migrations-v5.test.ts > SQLite v5 strict atomic migration > reopens idempotently and rejects versions newer than v5
+Error: EPERM, Permission denied: \\?\C:\Users\ADMINI~1\AppData\Local\Temp\2\cockpit-v5-migration-iq71Xj '\\?\C:\Users\ADMINI~1\AppData\Local\Temp\2\cockpit-v5-migration-iq71Xj'
+ ❯ tests/migrations-v5.test.ts:187:5
+    185| afterEach(() => {
+    186|   for (const directory of temporaryDirectories.splice(0)) {
+    187|     rmSync(directory, { force: true, recursive: true });
+       |     ^
+    188|   }
+    189| });
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[13/13]⎯
+
+
+ Test Files  1 failed (1)
+      Tests  7 failed (7)
+   Start at  10:35:51
+   Duration  3.15s (transform 90ms, setup 335ms, import 76ms, tests 1.03s, environment 1.43s)
+
+# exit: 1

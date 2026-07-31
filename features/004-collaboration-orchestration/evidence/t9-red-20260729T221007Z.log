@@ -1,0 +1,134 @@
+# hf-gate-run
+# label: t9-red
+# command: npm.cmd test -- tests/turn-acquire.test.ts
+# started: 2026-07-29T22:10:07+00:00
+
+> collaboration-cockpit@0.1.0 test
+> vitest run tests/turn-acquire.test.ts
+
+
+ RUN  v4.1.10 D:/cool-ai
+
+(node:13356) ExperimentalWarning: SQLite is an experimental feature and might change at any time
+(Use `node --trace-warnings ...` to show where the warning was created)
+ ❯ tests/turn-acquire.test.ts (10 tests | 10 failed) 2130ms
+     × atomically stores an immutable prompt snapshot, hashes, epoch, sequence, lease, event, and pending receipt 188ms
+     × returns operation in progress for a repeated pending advance without duplicating work 171ms
+     × guards a paused run before creating an attempt 216ms
+     × guards a waiting_owner run before creating an attempt 221ms
+     × guards a stopped run before creating an attempt 231ms
+     × guards an open decision and another calling attempt 247ms
+     × serializes concurrent advances so exactly one calling attempt is acquired 167ms
+     × pauses at the rounds pre-boundary, completes the receipt, and starts no call 208ms
+     × pauses at the tokens pre-boundary, completes the receipt, and starts no call 217ms
+     × pauses at the handoffs pre-boundary, completes the receipt, and starts no call 262ms
+
+⎯⎯⎯⎯⎯⎯ Failed Tests 10 ⎯⎯⎯⎯⎯⎯⎯
+
+ FAIL  tests/turn-acquire.test.ts > advance operation acquisition > atomically stores an immutable prompt snapshot, hashes, epoch, sequence, lease, event, and pending receipt
+AssertionError: T-9 turn orchestrator must exist: expected undefined to be type of 'function'
+
+Expected: "function"
+Received: "undefined"
+
+ ❯ acquire tests/turn-acquire.test.ts:87:52
+     85|   const load =
+     86|     orchestratorModules["../src/server/collaboration/turn-orchestrator…
+     87|   expect(load, "T-9 turn orchestrator must exist").toBeTypeOf("functio…
+       |                                                    ^
+     88|   const implementation = (await load!()).acquireAdvance;
+     89|   expect(implementation, "T-9 acquireAdvance must exist").toBeTypeOf("…
+ ❯ tests/turn-acquire.test.ts:206:26
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[1/10]⎯
+
+ FAIL  tests/turn-acquire.test.ts > advance operation acquisition > returns operation in progress for a repeated pending advance without duplicating work
+AssertionError: T-9 turn orchestrator must exist: expected undefined to be type of 'function'
+
+Expected: "function"
+Received: "undefined"
+
+ ❯ acquire tests/turn-acquire.test.ts:87:52
+     85|   const load =
+     86|     orchestratorModules["../src/server/collaboration/turn-orchestrator…
+     87|   expect(load, "T-9 turn orchestrator must exist").toBeTypeOf("functio…
+       |                                                    ^
+     88|   const implementation = (await load!()).acquireAdvance;
+     89|   expect(implementation, "T-9 acquireAdvance must exist").toBeTypeOf("…
+ ❯ tests/turn-acquire.test.ts:302:11
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[2/10]⎯
+
+ FAIL  tests/turn-acquire.test.ts > advance operation acquisition > guards a paused run before creating an attempt
+ FAIL  tests/turn-acquire.test.ts > advance operation acquisition > guards a waiting_owner run before creating an attempt
+ FAIL  tests/turn-acquire.test.ts > advance operation acquisition > guards a stopped run before creating an attempt
+AssertionError: expected AssertionError: T-9 turn orchestrator mus… { …(4) } to be an instance of CollaborationError
+ ❯ expectCode tests/turn-acquire.test.ts:162:17
+    160|
+    161| function expectCode(error: unknown, code: string): void {
+    162|   expect(error).toBeInstanceOf(CollaborationError);
+       |                 ^
+    163|   expect(error).toMatchObject({ code });
+    164| }
+ ❯ tests/turn-acquire.test.ts:334:5
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[3/10]⎯
+
+ FAIL  tests/turn-acquire.test.ts > advance operation acquisition > guards an open decision and another calling attempt
+AssertionError: expected AssertionError: T-9 turn orchestrator mus… { …(4) } to be an instance of CollaborationError
+ ❯ expectCode tests/turn-acquire.test.ts:162:17
+    160|
+    161| function expectCode(error: unknown, code: string): void {
+    162|   expect(error).toBeInstanceOf(CollaborationError);
+       |                 ^
+    163|   expect(error).toMatchObject({ code });
+    164| }
+ ❯ tests/turn-acquire.test.ts:393:5
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[4/10]⎯
+
+ FAIL  tests/turn-acquire.test.ts > advance operation acquisition > serializes concurrent advances so exactly one calling attempt is acquired
+AssertionError: expected [] to have a length of 1 but got +0
+
+- Expected
++ Received
+
+- 1
++ 0
+
+ ❯ tests/turn-acquire.test.ts:422:67
+    420|     ]);
+    421|
+    422|     expect(results.filter((item) => item.status === "fulfilled")).toHa…
+       |                                                                   ^
+    423|     const rejected = results.find((item) => item.status === "rejected"…
+    424|     expect(rejected?.status).toBe("rejected");
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[5/10]⎯
+
+ FAIL  tests/turn-acquire.test.ts > advance operation acquisition > pauses at the rounds pre-boundary, completes the receipt, and starts no call
+ FAIL  tests/turn-acquire.test.ts > advance operation acquisition > pauses at the tokens pre-boundary, completes the receipt, and starts no call
+ FAIL  tests/turn-acquire.test.ts > advance operation acquisition > pauses at the handoffs pre-boundary, completes the receipt, and starts no call
+AssertionError: T-9 turn orchestrator must exist: expected undefined to be type of 'function'
+
+Expected: "function"
+Received: "undefined"
+
+ ❯ acquire tests/turn-acquire.test.ts:87:52
+     85|   const load =
+     86|     orchestratorModules["../src/server/collaboration/turn-orchestrator…
+     87|   expect(load, "T-9 turn orchestrator must exist").toBeTypeOf("functio…
+       |                                                    ^
+     88|   const implementation = (await load!()).acquireAdvance;
+     89|   expect(implementation, "T-9 acquireAdvance must exist").toBeTypeOf("…
+ ❯ tests/turn-acquire.test.ts:525:28
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[6/10]⎯
+
+
+ Test Files  1 failed (1)
+      Tests  10 failed (10)
+   Start at  06:10:08
+   Duration  4.24s (transform 106ms, setup 337ms, import 97ms, tests 2.13s, environment 1.41s)
+
+# exit: 1

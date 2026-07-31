@@ -1,0 +1,114 @@
+# hf-gate-run
+# label: t12-red
+# command: cmd /c npm test -- tests/mission-transaction-primitives.test.ts
+# started: 2026-07-29T22:26:44+00:00
+
+> collaboration-cockpit@0.1.0 test
+> vitest run tests/mission-transaction-primitives.test.ts
+
+
+ RUN  v4.1.10 D:/cool-ai
+
+(node:17384) ExperimentalWarning: SQLite is an experimental feature and might change at any time
+(Use `node --trace-warnings ...` to show where the warning was created)
+ ❯ tests/mission-transaction-primitives.test.ts (5 tests | 5 failed) 1125ms
+     × uses the caller transaction, supports outer rollback, and never begins or closes it 233ms
+     × creates a complete same-batch DAG, increments mission once, and claims conditionally 222ms
+     × reuses S-3 fields and rejects duplicate keys, missing dependencies, and cycles atomically 234ms
+     × rejects mission, membership, item version, status, and assignment conflicts without mutation 213ms
+     × makes an owner write win deterministically and reports the stale claim version 221ms
+
+⎯⎯⎯⎯⎯⎯⎯ Failed Tests 5 ⎯⎯⎯⎯⎯⎯⎯
+
+ FAIL  tests/mission-transaction-primitives.test.ts > transaction-aware mission primitives > uses the caller transaction, supports outer rollback, and never begins or closes it
+AssertionError: batch transaction primitive must be exported: expected undefined to be type of 'function'
+
+Expected: "function"
+Received: "undefined"
+
+ ❯ primitives tests/mission-transaction-primitives.test.ts:80:88
+     78| async function primitives(): Promise<Required<Primitives>> {
+     79|   const domain = (await import("@/src/server/mission-service")) as Pri…
+     80|   expect(domain.createWorkItemBatchTx, "batch transaction primitive mu…
+       |                                                                                        ^
+     81|     "function",
+     82|   );
+ ❯ tests/mission-transaction-primitives.test.ts:131:20
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[1/5]⎯
+
+ FAIL  tests/mission-transaction-primitives.test.ts > transaction-aware mission primitives > creates a complete same-batch DAG, increments mission once, and claims conditionally
+AssertionError: batch transaction primitive must be exported: expected undefined to be type of 'function'
+
+Expected: "function"
+Received: "undefined"
+
+ ❯ primitives tests/mission-transaction-primitives.test.ts:80:88
+     78| async function primitives(): Promise<Required<Primitives>> {
+     79|   const domain = (await import("@/src/server/mission-service")) as Pri…
+     80|   expect(domain.createWorkItemBatchTx, "batch transaction primitive mu…
+       |                                                                                        ^
+     81|     "function",
+     82|   );
+ ❯ tests/mission-transaction-primitives.test.ts:160:20
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[2/5]⎯
+
+ FAIL  tests/mission-transaction-primitives.test.ts > transaction-aware mission primitives > reuses S-3 fields and rejects duplicate keys, missing dependencies, and cycles atomically
+AssertionError: batch transaction primitive must be exported: expected undefined to be type of 'function'
+
+Expected: "function"
+Received: "undefined"
+
+ ❯ primitives tests/mission-transaction-primitives.test.ts:80:88
+     78| async function primitives(): Promise<Required<Primitives>> {
+     79|   const domain = (await import("@/src/server/mission-service")) as Pri…
+     80|   expect(domain.createWorkItemBatchTx, "batch transaction primitive mu…
+       |                                                                                        ^
+     81|     "function",
+     82|   );
+ ❯ tests/mission-transaction-primitives.test.ts:221:20
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[3/5]⎯
+
+ FAIL  tests/mission-transaction-primitives.test.ts > transaction-aware mission primitives > rejects mission, membership, item version, status, and assignment conflicts without mutation
+AssertionError: batch transaction primitive must be exported: expected undefined to be type of 'function'
+
+Expected: "function"
+Received: "undefined"
+
+ ❯ primitives tests/mission-transaction-primitives.test.ts:80:88
+     78| async function primitives(): Promise<Required<Primitives>> {
+     79|   const domain = (await import("@/src/server/mission-service")) as Pri…
+     80|   expect(domain.createWorkItemBatchTx, "batch transaction primitive mu…
+       |                                                                                        ^
+     81|     "function",
+     82|   );
+ ❯ tests/mission-transaction-primitives.test.ts:295:20
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[4/5]⎯
+
+ FAIL  tests/mission-transaction-primitives.test.ts > transaction-aware mission primitives > makes an owner write win deterministically and reports the stale claim version
+AssertionError: batch transaction primitive must be exported: expected undefined to be type of 'function'
+
+Expected: "function"
+Received: "undefined"
+
+ ❯ primitives tests/mission-transaction-primitives.test.ts:80:88
+     78| async function primitives(): Promise<Required<Primitives>> {
+     79|   const domain = (await import("@/src/server/mission-service")) as Pri…
+     80|   expect(domain.createWorkItemBatchTx, "batch transaction primitive mu…
+       |                                                                                        ^
+     81|     "function",
+     82|   );
+ ❯ tests/mission-transaction-primitives.test.ts:353:20
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[5/5]⎯
+
+
+ Test Files  1 failed (1)
+      Tests  5 failed (5)
+   Start at  06:26:45
+   Duration  3.26s (transform 106ms, setup 334ms, import 114ms, tests 1.13s, environment 1.43s)
+
+# exit: 1

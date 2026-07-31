@@ -1,0 +1,120 @@
+# hf-gate-run
+# label: t19-red
+# command: cmd /c npm test -- tests/execution-staging.test.ts
+# started: 2026-07-30T06:24:59+00:00
+
+> collaboration-cockpit@0.1.0 test
+> vitest run tests/execution-staging.test.ts
+
+
+ RUN  v4.1.10 D:/cool-ai
+
+ ❯ tests/execution-staging.test.ts (7 tests | 7 failed) 27ms
+     × detects no changes without fabricating a staged result 12ms
+     × keeps all observations but only creates merge rows for globally eligible input 4ms
+     × scans 100000 generated observations without materializing sandbox files 2ms
+     × classifies delete, stable rename, binary, permission, link, and oversize blockers 2ms
+     × requires exact frozen policy validations and uses staged-hash approval for empty policy 2ms
+     × chunks 0, 16, and worst-case 17 UTF-8 chunks without splitting a scalar 2ms
+     × rejects chunk gaps, reorder, and hash corruption 2ms
+
+⎯⎯⎯⎯⎯⎯⎯ Failed Tests 7 ⎯⎯⎯⎯⎯⎯⎯
+
+ FAIL  tests/execution-staging.test.ts > execution staging > detects no changes without fabricating a staged result
+AssertionError: The execution staging service is unavailable.
+ ❯ loadStaging tests/execution-staging.test.ts:91:12
+     89|     return await import(/* @vite-ignore */ moduleId) as StagingModule;
+     90|   } catch {
+     91|     expect.fail("The execution staging service is unavailable.");
+       |            ^
+     92|   }
+     93| }
+ ❯ tests/execution-staging.test.ts:118:21
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[1/7]⎯
+
+ FAIL  tests/execution-staging.test.ts > execution staging > keeps all observations but only creates merge rows for globally eligible input
+AssertionError: The execution staging service is unavailable.
+ ❯ loadStaging tests/execution-staging.test.ts:91:12
+     89|     return await import(/* @vite-ignore */ moduleId) as StagingModule;
+     90|   } catch {
+     91|     expect.fail("The execution staging service is unavailable.");
+       |            ^
+     92|   }
+     93| }
+ ❯ tests/execution-staging.test.ts:138:21
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[2/7]⎯
+
+ FAIL  tests/execution-staging.test.ts > execution staging > scans 100000 generated observations without materializing sandbox files
+AssertionError: The execution staging service is unavailable.
+ ❯ loadStaging tests/execution-staging.test.ts:91:12
+     89|     return await import(/* @vite-ignore */ moduleId) as StagingModule;
+     90|   } catch {
+     91|     expect.fail("The execution staging service is unavailable.");
+       |            ^
+     92|   }
+     93| }
+ ❯ tests/execution-staging.test.ts:160:21
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[3/7]⎯
+
+ FAIL  tests/execution-staging.test.ts > execution staging > classifies delete, stable rename, binary, permission, link, and oversize blockers
+AssertionError: The execution staging service is unavailable.
+ ❯ loadStaging tests/execution-staging.test.ts:91:12
+     89|     return await import(/* @vite-ignore */ moduleId) as StagingModule;
+     90|   } catch {
+     91|     expect.fail("The execution staging service is unavailable.");
+       |            ^
+     92|   }
+     93| }
+ ❯ tests/execution-staging.test.ts:177:21
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[4/7]⎯
+
+ FAIL  tests/execution-staging.test.ts > execution staging > requires exact frozen policy validations and uses staged-hash approval for empty policy
+AssertionError: The execution staging service is unavailable.
+ ❯ loadStaging tests/execution-staging.test.ts:91:12
+     89|     return await import(/* @vite-ignore */ moduleId) as StagingModule;
+     90|   } catch {
+     91|     expect.fail("The execution staging service is unavailable.");
+       |            ^
+     92|   }
+     93| }
+ ❯ tests/execution-staging.test.ts:215:21
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[5/7]⎯
+
+ FAIL  tests/execution-staging.test.ts > execution staging > chunks 0, 16, and worst-case 17 UTF-8 chunks without splitting a scalar
+AssertionError: The execution staging service is unavailable.
+ ❯ loadStaging tests/execution-staging.test.ts:91:12
+     89|     return await import(/* @vite-ignore */ moduleId) as StagingModule;
+     90|   } catch {
+     91|     expect.fail("The execution staging service is unavailable.");
+       |            ^
+     92|   }
+     93| }
+ ❯ tests/execution-staging.test.ts:246:21
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[6/7]⎯
+
+ FAIL  tests/execution-staging.test.ts > execution staging > rejects chunk gaps, reorder, and hash corruption
+AssertionError: The execution staging service is unavailable.
+ ❯ loadStaging tests/execution-staging.test.ts:91:12
+     89|     return await import(/* @vite-ignore */ moduleId) as StagingModule;
+     90|   } catch {
+     91|     expect.fail("The execution staging service is unavailable.");
+       |            ^
+     92|   }
+     93| }
+ ❯ tests/execution-staging.test.ts:265:21
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[7/7]⎯
+
+
+ Test Files  1 failed (1)
+      Tests  7 failed (7)
+   Start at  14:25:00
+   Duration  2.34s (transform 98ms, setup 385ms, import 75ms, tests 27ms, environment 1.59s)
+
+# exit: 1

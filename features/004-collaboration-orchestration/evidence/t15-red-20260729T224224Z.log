@@ -1,0 +1,105 @@
+# hf-gate-run
+# label: t15-red
+# command: npm.cmd test -- tests/collaboration-usage-budget.test.ts
+# started: 2026-07-29T22:42:24+00:00
+
+> collaboration-cockpit@0.1.0 test
+> vitest run tests/collaboration-usage-budget.test.ts
+
+
+ RUN  v4.1.10 D:/cool-ai
+
+(node:17060) ExperimentalWarning: SQLite is an experimental feature and might change at any time
+(Use `node --trace-warnings ...` to show where the warning was created)
+ ❯ tests/collaboration-usage-budget.test.ts (5 tests | 2 failed) 2065ms
+     × includes valid primary, repair, and provider-error usage by run and Agent while separating repair, handoff, round, and unreported counts 699ms
+     × persists the crossing call and budget event but discards every business action 345ms
+
+⎯⎯⎯⎯⎯⎯⎯ Failed Tests 2 ⎯⎯⎯⎯⎯⎯⎯
+
+ FAIL  tests/collaboration-usage-budget.test.ts > persisted collaboration usage aggregate > includes valid primary, repair, and provider-error usage by run and Agent while separating repair, handoff, round, and unreported counts
+AssertionError: expected { byAgent: [], …(5) } to deeply equal { …(6) }
+
+- Expected
++ Received
+
+  {
+-   "byAgent": [
+-     {
+-       "agentId": "agent-usage-a",
+-       "completionTokens": 9,
+-       "handoffs": 1,
+-       "promptTokens": 13,
+-       "totalTokens": 22,
+-     },
+-     {
+-       "agentId": "agent-usage-b",
+-       "completionTokens": 5,
+-       "handoffs": 0,
+-       "promptTokens": 6,
+-       "totalTokens": 11,
+-     },
+-   ],
+-   "completionTokens": 14,
+-   "promptTokens": 19,
+-   "repairCalls": 1,
+-   "totalTokens": 33,
++   "byAgent": [],
++   "completionTokens": 0,
++   "promptTokens": 0,
++   "repairCalls": 0,
++   "totalTokens": 0,
+    "unreportedCalls": 2,
+  }
+
+ ❯ tests/collaboration-usage-budget.test.ts:324:28
+    322|     const response = getCollaboration(databasePath, PROJECT_ID);
+    323|     expect(response.run?.roundCount).toBe(3);
+    324|     expect(response.usage).toEqual({
+       |                            ^
+    325|       byAgent: [
+    326|         {
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[1/2]⎯
+
+ FAIL  tests/collaboration-usage-budget.test.ts > collaboration budget boundaries > persists the crossing call and budget event but discards every business action
+AssertionError: expected { affectedRows: 1, …(2) } to match object { affectedRows: 1, …(2) }
+(6 matching properties omitted from actual)
+
+- Expected
++ Received
+
+  {
+    "affectedRows": 1,
+    "body": {
+-     "attemptStatus": "discarded",
++     "attemptStatus": "committed",
+      "run": {
+-       "pauseCategory": "boundary_reached",
+-       "roundCount": 0,
+-       "status": "paused",
++       "pauseCategory": null,
++       "roundCount": 1,
++       "status": "running",
+      },
+    },
+    "status": 200,
+  }
+
+ ❯ tests/collaboration-usage-budget.test.ts:443:22
+    441|       dependencies(),
+    442|     );
+    443|     expect(response).toMatchObject({
+       |                      ^
+    444|       affectedRows: 1,
+    445|       body: {
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[2/2]⎯
+
+
+ Test Files  1 failed (1)
+      Tests  2 failed | 3 passed (5)
+   Start at  06:42:26
+   Duration  4.31s (transform 180ms, setup 336ms, import 205ms, tests 2.06s, environment 1.43s)
+
+# exit: 1

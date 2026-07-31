@@ -1,0 +1,26 @@
+# hf-gate-run
+# label: t13-typecheck
+# command: npm.cmd exec tsc -- --noEmit
+# started: 2026-07-30T04:55:42+00:00
+src/server/execution/process-runner.ts(278,43): error TS2769: No overload matches this call.
+  The last overload gave the following error.
+    Argument of type 'Omit<SpawnOptions, "stdio"> & { stdio: "ignore"; }' is not assignable to parameter of type 'SpawnOptions'.
+      Types of property 'env' are incompatible.
+        Property 'NODE_ENV' is missing in type 'Record<string, string>' but required in type 'ProcessEnv'.
+src/server/execution/process-runner.ts(279,11): error TS2339: Property 'once' does not exist on type 'never'.
+  The intersection 'ChildProcessWithoutNullStreams & ChildProcessByStdio<Writable, Readable, Readable> & ... 7 more ... & ChildProcess' was reduced to 'never' because property 'stdin' has conflicting types in some constituents.
+src/server/execution/process-runner.ts(280,11): error TS2339: Property 'once' does not exist on type 'never'.
+  The intersection 'ChildProcessWithoutNullStreams & ChildProcessByStdio<Writable, Readable, Readable> & ... 7 more ... & ChildProcess' was reduced to 'never' because property 'stdin' has conflicting types in some constituents.
+src/server/execution/process-runner.ts(280,25): error TS7006: Parameter 'code' implicitly has an 'any' type.
+src/server/execution/process-runner.ts(298,36): error TS2769: No overload matches this call.
+  The last overload gave the following error.
+    Argument of type 'SpawnOptions' is not assignable to parameter of type 'import("node:child_process").SpawnOptions'.
+      Types of property 'env' are incompatible.
+        Property 'NODE_ENV' is missing in type 'Record<string, string>' but required in type 'ProcessEnv'.
+tests/process-runner.test.ts(139,22): error TS18046: 'timer.every' is of type 'unknown'.
+tests/process-runner.test.ts(290,40): error TS2769: No overload matches this call.
+  The last overload gave the following error.
+    Argument of type 'SpawnOptions' is not assignable to parameter of type 'import("node:child_process").SpawnOptions'.
+      Types of property 'env' are incompatible.
+        Property 'NODE_ENV' is missing in type 'Record<string, string>' but required in type 'ProcessEnv'.
+# exit: 2

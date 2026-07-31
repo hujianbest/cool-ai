@@ -1,0 +1,27 @@
+# hf-gate-run
+# label: smoke
+# command: cmd /c npm run smoke
+# started: 2026-07-29T15:45:00+00:00
+
+> collaboration-cockpit@0.1.0 smoke
+> node tests/browser-smoke.mjs
+
+node:internal/modules/run_main:107
+    triggerUncaughtException(
+    ^
+
+AssertionError [ERR_ASSERTION]: narrow viewport must not overflow horizontally
+
+false !== true
+
+    at file:///D:/cool-ai/tests/browser-smoke.mjs:136:10 {
+  generatedMessage: false,
+  code: 'ERR_ASSERTION',
+  actual: false,
+  expected: true,
+  operator: 'strictEqual',
+  diff: 'simple'
+}
+
+Node.js v24.14.0
+# exit: 1

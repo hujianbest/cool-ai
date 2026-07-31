@@ -1,0 +1,64 @@
+# hf-gate-run
+# label: t12-green
+# command: cmd /c npm test -- tests/command-request.test.ts
+# started: 2026-07-30T04:31:51+00:00
+
+> collaboration-cockpit@0.1.0 test
+> vitest run tests/command-request.test.ts
+
+
+ RUN  v4.1.10 D:/cool-ai
+
+(node:8180) ExperimentalWarning: SQLite is an experimental feature and might change at any time
+(Use `node --trace-warnings ...` to show where the warning was created)
+ ❯ tests/command-request.test.ts (9 tests | 5 failed) 2154ms
+     × denies shell with zero command actions or approval requests 223ms
+     × denies path escape with zero command actions or approval requests 222ms
+     × denies canonical deploy with zero command actions or approval requests 222ms
+     × denies unknown path syntax with zero command actions or approval requests 225ms
+     × never creates an owner-approvable request when execute permission is missing 226ms
+
+⎯⎯⎯⎯⎯⎯⎯ Failed Tests 5 ⎯⎯⎯⎯⎯⎯⎯
+
+ FAIL  tests/command-request.test.ts > command request classification and durable facts > denies shell with zero command actions or approval requests
+ FAIL  tests/command-request.test.ts > command request classification and durable facts > denies path escape with zero command actions or approval requests
+ FAIL  tests/command-request.test.ts > command request classification and durable facts > denies canonical deploy with zero command actions or approval requests
+ FAIL  tests/command-request.test.ts > command request classification and durable facts > denies unknown path syntax with zero command actions or approval requests
+CommandRequestError: Unexpected command classification.
+ ❯ src/server/execution/command-request.ts:264:13
+    262|     const decision = reasonCode ? "denied" : classification.decision;
+    263|     if (decision !== "deny" && decision !== "one_shot" && decision !==…
+    264|       throw new CommandRequestError("INTERNAL_ERROR", "Unexpected comm…
+       |             ^
+    265|     }
+    266|     const policySource = {
+ ❯ transaction src/server/execution/command-request.ts:70:20
+ ❯ Module.requestExecutionCommand src/server/execution/command-request.ts:221:10
+ ❯ request tests/command-request.test.ts:328:25
+ ❯ tests/command-request.test.ts:233:22
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[1/5]⎯
+
+ FAIL  tests/command-request.test.ts > command request classification and durable facts > never creates an owner-approvable request when execute permission is missing
+CommandRequestError: Unexpected command classification.
+ ❯ src/server/execution/command-request.ts:264:13
+    262|     const decision = reasonCode ? "denied" : classification.decision;
+    263|     if (decision !== "deny" && decision !== "one_shot" && decision !==…
+    264|       throw new CommandRequestError("INTERNAL_ERROR", "Unexpected comm…
+       |             ^
+    265|     }
+    266|     const policySource = {
+ ❯ transaction src/server/execution/command-request.ts:70:20
+ ❯ Module.requestExecutionCommand src/server/execution/command-request.ts:221:10
+ ❯ request tests/command-request.test.ts:328:25
+ ❯ tests/command-request.test.ts:281:22
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[2/5]⎯
+
+
+ Test Files  1 failed (1)
+      Tests  5 failed | 4 passed (9)
+   Start at  12:31:52
+   Duration  4.59s (transform 372ms, setup 573ms, import 113ms, tests 2.15s, environment 1.49s)
+
+# exit: 1

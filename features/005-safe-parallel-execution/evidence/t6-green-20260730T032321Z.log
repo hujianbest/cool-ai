@@ -1,0 +1,192 @@
+# hf-gate-run
+# label: t6-green
+# command: cmd /c npm test -- tests/sandbox-preflight.test.ts
+# started: 2026-07-30T03:23:21+00:00
+
+> collaboration-cockpit@0.1.0 test
+> vitest run tests/sandbox-preflight.test.ts
+
+
+ RUN  v4.1.10 D:/cool-ai
+
+ ❯ tests/sandbox-preflight.test.ts (18 tests | 11 failed) 266ms
+     × excludes exact configured sensitive paths while retaining normal source names 49ms
+     × rejects a real symbolic link before traversing or reading its target 13ms
+     × rejects adapter-proven link entries 8ms
+     × rejects adapter-proven reparse entries 8ms
+     × rejects adapter-proven special entries 8ms
+     × enforces the 100000 entry boundary at limit-1 23ms
+     × enforces the 100000 entry boundary at limit 6ms
+     × enforces the 100000 entry boundary at limit+1 6ms
+     × enforces the 2 GiB byte boundary at limit-1 6ms
+     × enforces the 2 GiB byte boundary at limit 6ms
+     × enforces the 2 GiB byte boundary at limit+1 7ms
+
+⎯⎯⎯⎯⎯⎯ Failed Tests 11 ⎯⎯⎯⎯⎯⎯⎯
+
+ FAIL  tests/sandbox-preflight.test.ts > sandbox preflight > excludes exact configured sensitive paths while retaining normal source names
+AssertionError: expected 1 to be 5 // Object.is equality
+
+- Expected
++ Received
+
+- 5
++ 1
+
+ ❯ tests/sandbox-preflight.test.ts:206:34
+    204|       "private/credentials/token.txt",
+    205|     ]));
+    206|     expect(result.excludedCount).toBe(5);
+       |                                  ^
+    207|   });
+    208|
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[1/11]⎯
+
+ FAIL  tests/sandbox-preflight.test.ts > sandbox preflight > rejects a real symbolic link before traversing or reading its target
+AssertionError: expected SandboxPreflightError: The platform adapt… { code: '…' } to match object { code: 'SPECIAL_FILE_REJECTED' }
+(1 matching property omitted from actual)
+
+- Expected
++ Received
+
+- {
+-   "code": "SPECIAL_FILE_REJECTED",
++ SandboxPreflightError {
++   "code": "SANDBOX_UNVERIFIABLE",
+  }
+
+ ❯ expectCode tests/sandbox-preflight.test.ts:85:24
+     83|
+     84| async function expectCode(promise: Promise<unknown>, code: string): Pr…
+     85|   await expect(promise).rejects.toMatchObject({ code });
+       |                        ^
+     86| }
+     87|
+ ❯ tests/sandbox-preflight.test.ts:259:11
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[2/11]⎯
+
+ FAIL  tests/sandbox-preflight.test.ts > sandbox preflight > rejects adapter-proven link entries
+ FAIL  tests/sandbox-preflight.test.ts > sandbox preflight > rejects adapter-proven reparse entries
+ FAIL  tests/sandbox-preflight.test.ts > sandbox preflight > rejects adapter-proven special entries
+AssertionError: expected SandboxPreflightError: The canonical root… { code: '…' } to match object { code: 'SPECIAL_FILE_REJECTED' }
+(1 matching property omitted from actual)
+
+- Expected
++ Received
+
+- {
+-   "code": "SPECIAL_FILE_REJECTED",
++ SandboxPreflightError {
++   "code": "SANDBOX_UNVERIFIABLE",
+  }
+
+ ❯ expectCode tests/sandbox-preflight.test.ts:85:24
+     83|
+     84| async function expectCode(promise: Promise<unknown>, code: string): Pr…
+     85|   await expect(promise).rejects.toMatchObject({ code });
+       |                        ^
+     86| }
+     87|
+ ❯ tests/sandbox-preflight.test.ts:269:13
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[3/11]⎯
+
+ FAIL  tests/sandbox-preflight.test.ts > sandbox preflight > enforces the 100000 entry boundary at limit-1
+ FAIL  tests/sandbox-preflight.test.ts > sandbox preflight > enforces the 100000 entry boundary at limit
+AssertionError: promise rejected "SandboxPreflightError: The canonical root… { code: '…' }" instead of resolving
+ ❯ tests/sandbox-preflight.test.ts:321:28
+    319|     });
+    320|     if (succeeds) {
+    321|       await expect(promise).resolves.toMatchObject({ itemCount: count …
+       |                            ^
+    322|     } else {
+    323|       await expectCode(promise, "SANDBOX_LIMIT_EXCEEDED");
+
+Caused by: SandboxPreflightError: The canonical root cannot be proven as an ordinary directory.
+ ❯ failUnverifiable src/server/execution/sandbox-preflight.ts:83:9
+ ❯ proveRoot src/server/execution/sandbox-preflight.ts:179:5
+ ❯ Module.preflightSandbox src/server/execution/sandbox-preflight.ts:230:3
+ ❯ tests/sandbox-preflight.test.ts:321:7
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯
+Serialized Error: { code: 'SANDBOX_UNVERIFIABLE' }
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[4/11]⎯
+
+ FAIL  tests/sandbox-preflight.test.ts > sandbox preflight > enforces the 100000 entry boundary at limit+1
+AssertionError: expected SandboxPreflightError: The canonical root… { code: '…' } to match object { code: 'SANDBOX_LIMIT_EXCEEDED' }
+(1 matching property omitted from actual)
+
+- Expected
++ Received
+
+- {
+-   "code": "SANDBOX_LIMIT_EXCEEDED",
++ SandboxPreflightError {
++   "code": "SANDBOX_UNVERIFIABLE",
+  }
+
+ ❯ expectCode tests/sandbox-preflight.test.ts:85:24
+     83|
+     84| async function expectCode(promise: Promise<unknown>, code: string): Pr…
+     85|   await expect(promise).rejects.toMatchObject({ code });
+       |                        ^
+     86| }
+     87|
+ ❯ tests/sandbox-preflight.test.ts:323:13
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[5/11]⎯
+
+ FAIL  tests/sandbox-preflight.test.ts > sandbox preflight > enforces the 2 GiB byte boundary at limit-1
+ FAIL  tests/sandbox-preflight.test.ts > sandbox preflight > enforces the 2 GiB byte boundary at limit
+AssertionError: promise rejected "SandboxPreflightError: The canonical root… { code: '…' }" instead of resolving
+ ❯ tests/sandbox-preflight.test.ts:338:28
+    336|     });
+    337|     if (succeeds) {
+    338|       await expect(promise).resolves.toMatchObject({ itemCount: 2, tot…
+       |                            ^
+    339|     } else {
+    340|       await expectCode(promise, "SANDBOX_LIMIT_EXCEEDED");
+
+Caused by: SandboxPreflightError: The canonical root cannot be proven as an ordinary directory.
+ ❯ failUnverifiable src/server/execution/sandbox-preflight.ts:83:9
+ ❯ proveRoot src/server/execution/sandbox-preflight.ts:179:5
+ ❯ Module.preflightSandbox src/server/execution/sandbox-preflight.ts:230:3
+ ❯ tests/sandbox-preflight.test.ts:338:7
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯
+Serialized Error: { code: 'SANDBOX_UNVERIFIABLE' }
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[6/11]⎯
+
+ FAIL  tests/sandbox-preflight.test.ts > sandbox preflight > enforces the 2 GiB byte boundary at limit+1
+AssertionError: expected SandboxPreflightError: The canonical root… { code: '…' } to match object { code: 'SANDBOX_LIMIT_EXCEEDED' }
+(1 matching property omitted from actual)
+
+- Expected
++ Received
+
+- {
+-   "code": "SANDBOX_LIMIT_EXCEEDED",
++ SandboxPreflightError {
++   "code": "SANDBOX_UNVERIFIABLE",
+  }
+
+ ❯ expectCode tests/sandbox-preflight.test.ts:85:24
+     83|
+     84| async function expectCode(promise: Promise<unknown>, code: string): Pr…
+     85|   await expect(promise).rejects.toMatchObject({ code });
+       |                        ^
+     86| }
+     87|
+ ❯ tests/sandbox-preflight.test.ts:340:13
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[7/11]⎯
+
+
+ Test Files  1 failed (1)
+      Tests  11 failed | 7 passed (18)
+   Start at  11:23:22
+   Duration  2.33s (transform 82ms, setup 332ms, import 33ms, tests 266ms, environment 1.41s)
+
+# exit: 1

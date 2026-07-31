@@ -1,0 +1,32 @@
+# hf-gate-run
+# label: t32-green
+# command: npm.cmd run smoke:execution
+# started: 2026-07-30T15:23:50+00:00
+
+> collaboration-cockpit@0.1.0 smoke:execution
+> node tests/execution-browser-smoke.mjs
+
+(node:12560) ExperimentalWarning: SQLite is an experimental feature and might change at any time
+(Use `node --trace-warnings ...` to show where the warning was created)
+node:internal/modules/run_main:107
+    triggerUncaughtException(
+    ^
+
+locator.click: Timeout 30000ms exceeded.
+Call log:
+  - waiting for getByRole('button', { name: '添加持续批准' })
+    - waiting for "http://127.0.0.1:10183/" navigation to finish...
+    - navigated to "http://127.0.0.1:10183/"
+
+    at saveStandingPolicy (D:\cool-ai\tests\execution-browser-smoke.mjs:822:54)
+    at async file:///D:/cool-ai/tests/execution-browser-smoke.mjs:938:3 {
+  log: [
+    "  - waiting for getByRole('button', { name: '添加持续批准' })",
+    '    - waiting for "http://127.0.0.1:10183/" navigation to finish...',
+    '    - navigated to "http://127.0.0.1:10183/"'
+  ],
+  name: 'TimeoutError'
+}
+
+Node.js v24.14.0
+# exit: 1

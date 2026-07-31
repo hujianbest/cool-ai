@@ -1,0 +1,57 @@
+# hf-gate-run
+# label: t11-compat
+# command: npm.cmd test -- tests/turn-acquire.test.ts tests/turn-finalize.test.ts tests/collaboration-controls.service.test.ts tests/collaboration-operations.test.ts tests/project-chat.api.test.ts
+# started: 2026-07-29T22:22:41+00:00
+
+> collaboration-cockpit@0.1.0 test
+> vitest run tests/turn-acquire.test.ts tests/turn-finalize.test.ts tests/collaboration-controls.service.test.ts tests/collaboration-operations.test.ts tests/project-chat.api.test.ts
+
+
+ RUN  v4.1.10 D:/cool-ai
+
+(node:3980) ExperimentalWarning: SQLite is an experimental feature and might change at any time
+(Use `node --trace-warnings ...` to show where the warning was created)
+(node:15536) ExperimentalWarning: SQLite is an experimental feature and might change at any time
+(Use `node --trace-warnings ...` to show where the warning was created)
+(node:8440) ExperimentalWarning: SQLite is an experimental feature and might change at any time
+(Use `node --trace-warnings ...` to show where the warning was created)
+(node:7056) ExperimentalWarning: SQLite is an experimental feature and might change at any time
+(Use `node --trace-warnings ...` to show where the warning was created)
+(node:3160) ExperimentalWarning: SQLite is an experimental feature and might change at any time
+(Use `node --trace-warnings ...` to show where the warning was created)
+ ❯ tests/turn-acquire.test.ts (10 tests | 1 failed) 4324ms
+     × guards an open decision and another calling attempt 536ms
+
+⎯⎯⎯⎯⎯⎯⎯ Failed Tests 1 ⎯⎯⎯⎯⎯⎯⎯
+
+ FAIL  tests/turn-acquire.test.ts > advance operation acquisition > guards an open decision and another calling attempt
+AssertionError: expected CollaborationError: Only a running collab… { …(3) } to match object { code: 'TURN_IN_PROGRESS' }
+(3 matching properties omitted from actual)
+
+- Expected
++ Received
+
+- {
+-   "code": "TURN_IN_PROGRESS",
++ CollaborationError {
++   "code": "RUN_STATE_CONFLICT",
+  }
+
+ ❯ expectCode tests/turn-acquire.test.ts:163:17
+    161| function expectCode(error: unknown, code: string): void {
+    162|   expect(error).toBeInstanceOf(CollaborationError);
+    163|   expect(error).toMatchObject({ code });
+       |                 ^
+    164| }
+    165|
+ ❯ tests/turn-acquire.test.ts:412:5
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[1/1]⎯
+
+
+ Test Files  1 failed | 4 passed (5)
+      Tests  1 failed | 43 passed (44)
+   Start at  06:22:42
+   Duration  9.83s (transform 685ms, setup 2.21s, import 799ms, tests 20.85s, environment 8.36s)
+
+# exit: 1

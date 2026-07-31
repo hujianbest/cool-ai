@@ -1,0 +1,132 @@
+# hf-gate-run
+# label: t1-green
+# command: cmd /c npm test -- tests/migrations-v5.test.ts
+# started: 2026-07-30T02:37:39+00:00
+
+> collaboration-cockpit@0.1.0 test
+> vitest run tests/migrations-v5.test.ts
+
+
+ RUN  v4.1.10 D:/cool-ai
+
+(node:13956) ExperimentalWarning: SQLite is an experimental feature and might change at any time
+(Use `node --trace-warnings ...` to show where the warning was created)
+ ❯ tests/migrations-v5.test.ts (7 tests | 4 failed) 2321ms
+     × rejects drift of every v5 table, index, and trigger instead of repairing it 143ms
+     × rejects partial v5 schemas before writing and atomically rolls back injected DDL faults 927ms
+     × rejects foreign-key and policy data invariant corruption on reopen 318ms
+     × enforces immutable policy history while allowing project cascade deletion 128ms
+
+⎯⎯⎯⎯⎯⎯⎯ Failed Tests 4 ⎯⎯⎯⎯⎯⎯⎯
+
+ FAIL  tests/migrations-v5.test.ts > SQLite v5 strict atomic migration > rejects drift of every v5 table, index, and trigger instead of repairing it
+Error: table sqlite_master may not be modified
+ ❯ tests/migrations-v5.test.ts:308:12
+    306|         database.exec("PRAGMA writable_schema=ON");
+    307|         database
+    308|           .prepare(`UPDATE sqlite_master SET sql=sql||' /* drift */' W…
+       |            ^
+    309|           .run(type, object);
+    310|         database.exec("PRAGMA writable_schema=OFF");
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[1/6]⎯
+
+ FAIL  tests/migrations-v5.test.ts > SQLite v5 strict atomic migration > rejects drift of every v5 table, index, and trigger instead of repairing it
+Error: EPERM, Permission denied: \\?\C:\Users\ADMINI~1\AppData\Local\Temp\2\cockpit-v5-migration-oac3Ra '\\?\C:\Users\ADMINI~1\AppData\Local\Temp\2\cockpit-v5-migration-oac3Ra'
+ ❯ tests/migrations-v5.test.ts:187:5
+    185| afterEach(() => {
+    186|   for (const directory of temporaryDirectories.splice(0)) {
+    187|     rmSync(directory, { force: true, recursive: true });
+       |     ^
+    188|   }
+    189| });
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[2/6]⎯
+
+ FAIL  tests/migrations-v5.test.ts > SQLite v5 strict atomic migration > rejects partial v5 schemas before writing and atomically rolls back injected DDL faults
+AssertionError: expected SchemaMigrationError: Database version 5 … { code: '…' } to deeply equal ObjectContaining{…}
+
+- Expected
++ Received
+
+- ObjectContaining {
+-   "code": "STORAGE_UNAVAILABLE",
+-   "message": StringNotContaining "C:\\Users\\ADMINI~1\\AppData\\Local\\Temp\\2\\cockpit-v5-migration-JJvZuW\\cockpit.sqlite",
++ SchemaMigrationError {
++   "message": "Database version 5 schema is partial.",
++   "code": "SCHEMA_DRIFT",
++   "name": "SchemaMigrationError",
+  }
+
+ ❯ expectOpenError tests/migrations-v5.test.ts:143:17
+    141|     error = caught;
+    142|   }
+    143|   expect(error).toEqual(
+       |                 ^
+    144|     expect.objectContaining({ code, message: expect.not.stringContaini…
+    145|   );
+ ❯ tests/migrations-v5.test.ts:339:5
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[3/6]⎯
+
+ FAIL  tests/migrations-v5.test.ts > SQLite v5 strict atomic migration > rejects foreign-key and policy data invariant corruption on reopen
+AssertionError: expected undefined to deeply equal ObjectContaining{…}
+
+- Expected:
+ObjectContaining {
+  "code": "SCHEMA_DATA_INVALID",
+  "message": StringNotContaining "C:\\Users\\ADMINI~1\\AppData\\Local\\Temp\\2\\cockpit-v5-migration-NBSMEh\\cockpit.sqlite",
+}
+
++ Received:
+undefined
+
+ ❯ expectOpenError tests/migrations-v5.test.ts:143:17
+    141|     error = caught;
+    142|   }
+    143|   expect(error).toEqual(
+       |                 ^
+    144|     expect.objectContaining({ code, message: expect.not.stringContaini…
+    145|   );
+ ❯ tests/migrations-v5.test.ts:381:5
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[4/6]⎯
+
+ FAIL  tests/migrations-v5.test.ts > SQLite v5 strict atomic migration > enforces immutable policy history while allowing project cascade deletion
+AssertionError: expected [Function] to throw an error
+
+- Expected:
+null
+
++ Received:
+undefined
+
+ ❯ tests/migrations-v5.test.ts:395:7
+    393|     expect(() =>
+    394|       database.prepare("UPDATE project_validation_policy_revisions SET…
+    395|     ).toThrow(/IMMUTABLE_POLICY_REVISION/);
+       |       ^
+    396|     expect(() =>
+    397|       database.prepare("DELETE FROM project_validation_policy_revision…
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[5/6]⎯
+
+ FAIL  tests/migrations-v5.test.ts > SQLite v5 strict atomic migration > enforces immutable policy history while allowing project cascade deletion
+Error: EPERM, Permission denied: \\?\C:\Users\ADMINI~1\AppData\Local\Temp\2\cockpit-v5-migration-u8uMWt '\\?\C:\Users\ADMINI~1\AppData\Local\Temp\2\cockpit-v5-migration-u8uMWt'
+ ❯ tests/migrations-v5.test.ts:187:5
+    185| afterEach(() => {
+    186|   for (const directory of temporaryDirectories.splice(0)) {
+    187|     rmSync(directory, { force: true, recursive: true });
+       |     ^
+    188|   }
+    189| });
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[6/6]⎯
+
+
+ Test Files  1 failed (1)
+      Tests  4 failed | 3 passed (7)
+   Start at  10:37:40
+   Duration  4.43s (transform 106ms, setup 330ms, import 97ms, tests 2.32s, environment 1.41s)
+
+# exit: 1

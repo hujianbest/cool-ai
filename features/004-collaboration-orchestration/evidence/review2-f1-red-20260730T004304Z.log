@@ -1,0 +1,38 @@
+# hf-gate-run
+# label: review2-f1-red
+# command: npm.cmd test -- tests/collaboration-controls.service.test.ts -t rejects provider auth retry after only non-connection provider fields change
+# started: 2026-07-30T00:43:04+00:00
+
+> collaboration-cockpit@0.1.0 test
+> vitest run tests/collaboration-controls.service.test.ts -t rejects provider auth retry after only non-connection provider fields change
+
+
+ RUN  v4.1.10 D:/cool-ai
+
+(node:17284) ExperimentalWarning: SQLite is an experimental feature and might change at any time
+(Use `node --trace-warnings ...` to show where the warning was created)
+ ❯ tests/collaboration-controls.service.test.ts (10 tests | 1 failed | 9 skipped) 442ms
+     × rejects provider auth retry after only non-connection provider fields change 440ms
+
+⎯⎯⎯⎯⎯⎯⎯ Failed Tests 1 ⎯⎯⎯⎯⎯⎯⎯
+
+ FAIL  tests/collaboration-controls.service.test.ts > collaboration run control service > rejects provider auth retry after only non-connection provider fields change
+AssertionError: expected Error: Expected CREDENTIAL_UNAVAILABLE to be an instance of CollaborationError
+ ❯ expectCode tests/collaboration-controls.service.test.ts:184:19
+    182|     throw new Error(`Expected ${code}`);
+    183|   } catch (error) {
+    184|     expect(error).toBeInstanceOf(CollaborationError);
+       |                   ^
+    185|     expect(error).toMatchObject({
+    186|       code,
+ ❯ tests/collaboration-controls.service.test.ts:333:5
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[1/1]⎯
+
+
+ Test Files  1 failed (1)
+      Tests  1 failed | 9 skipped (10)
+   Start at  08:43:05
+   Duration  2.91s (transform 309ms, setup 340ms, import 461ms, tests 442ms, environment 1.39s)
+
+# exit: 1

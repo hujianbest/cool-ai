@@ -1,0 +1,63 @@
+# hf-gate-run
+# label: t11-red
+# command: cmd /c npm test -- tests/validation-policy.test.ts tests/command-policy.test.ts
+# started: 2026-07-30T04:12:11+00:00
+
+> collaboration-cockpit@0.1.0 test
+> vitest run tests/validation-policy.test.ts tests/command-policy.test.ts
+
+
+ RUN  v4.1.10 D:/cool-ai
+
+ ❯ tests/validation-policy.test.ts (0 test)
+ ❯ tests/command-policy.test.ts (0 test)
+
+⎯⎯⎯⎯⎯⎯ Failed Suites 2 ⎯⎯⎯⎯⎯⎯⎯
+
+ FAIL  tests/command-policy.test.ts [ tests/command-policy.test.ts ]
+Error: Failed to resolve import "@/src/server/execution/command-policy" from "tests/command-policy.test.ts". Does the file exist?
+  Plugin: vite:import-analysis
+  File: D:/cool-ai/tests/command-policy.test.ts:66:33
+  25 |  beforeAll(async () => {
+  26 |  	try {
+  27 |  		commandPolicy = await import("@/src/server/execution/command-policy");
+     |                                 ^
+  28 |  	} catch {
+  29 |  		expect.fail("The T-11 mechanical command classifier is unavailable.");
+ ❯ TransformPluginContext._formatLog node_modules/vite/dist/node/chunks/node.js:30416:39
+ ❯ TransformPluginContext.error node_modules/vite/dist/node/chunks/node.js:30413:14
+ ❯ normalizeUrl node_modules/vite/dist/node/chunks/node.js:27438:18
+ ❯ node_modules/vite/dist/node/chunks/node.js:27506:30
+ ❯ TransformPluginContext.transform node_modules/vite/dist/node/chunks/node.js:27474:4
+ ❯ EnvironmentPluginContainer.transform node_modules/vite/dist/node/chunks/node.js:30201:14
+ ❯ loadAndTransform node_modules/vite/dist/node/chunks/node.js:20124:26
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[1/2]⎯
+
+ FAIL  tests/validation-policy.test.ts [ tests/validation-policy.test.ts ]
+Error: Failed to resolve import "@/src/server/execution/validation-policy-service" from "tests/validation-policy.test.ts". Does the file exist?
+  Plugin: vite:import-analysis
+  File: D:/cool-ai/tests/validation-policy.test.ts:95:26
+  34 |  	databasePath = join(directory, "cockpit.sqlite");
+  35 |  	try {
+  36 |  		policy = await import("@/src/server/execution/validation-policy-service");
+     |                          ^
+  37 |  	} catch {
+  38 |  		expect.fail("The T-11 validation policy service is unavailable.");
+ ❯ TransformPluginContext._formatLog node_modules/vite/dist/node/chunks/node.js:30416:39
+ ❯ TransformPluginContext.error node_modules/vite/dist/node/chunks/node.js:30413:14
+ ❯ normalizeUrl node_modules/vite/dist/node/chunks/node.js:27438:18
+ ❯ node_modules/vite/dist/node/chunks/node.js:27506:30
+ ❯ TransformPluginContext.transform node_modules/vite/dist/node/chunks/node.js:27474:4
+ ❯ EnvironmentPluginContainer.transform node_modules/vite/dist/node/chunks/node.js:30201:14
+ ❯ loadAndTransform node_modules/vite/dist/node/chunks/node.js:20124:26
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[2/2]⎯
+
+
+ Test Files  2 failed (2)
+      Tests  no tests
+   Start at  12:12:12
+   Duration  2.25s (transform 49ms, setup 737ms, import 0ms, tests 0ms, environment 2.94s)
+
+# exit: 1

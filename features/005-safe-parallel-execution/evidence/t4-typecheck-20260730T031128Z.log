@@ -1,0 +1,8 @@
+# hf-gate-run
+# label: t4-typecheck
+# command: cmd /c npx tsc --noEmit
+# started: 2026-07-30T03:11:28+00:00
+tests/execution-operations.test.ts(219,5): error TS2353: Object literal may only specify known properties, and 'responseSchema' does not exist in type '{ action: { actionId: string; attemptId: string; kind: ActionKind; overallDeadlineAt: string; requestHash: string; }; executionId: string; kind: "start" | "recover"; operationId: string; projectId: string; requestHash: string; timestamp: string; }'.
+tests/execution-operations.test.ts(418,63): error TS2345: Argument of type '{ actionId: string; attemptId: string; executionId: string; kind: "model"; operationId: string; overallDeadlineAt: string; projectId: string; requestHash: string; timestamp: string; }' is not assignable to parameter of type '{ actionId: string; attemptId: string; executionId: string; kind: ActionKind; operationId: string; overallDeadlineAt: string; projectId: string; requestHash: string; responseSchema: { ...; }; timestamp: string; }'.
+  Property 'responseSchema' is missing in type '{ actionId: string; attemptId: string; executionId: string; kind: "model"; operationId: string; overallDeadlineAt: string; projectId: string; requestHash: string; timestamp: string; }' but required in type '{ actionId: string; attemptId: string; executionId: string; kind: ActionKind; operationId: string; overallDeadlineAt: string; projectId: string; requestHash: string; responseSchema: { ...; }; timestamp: string; }'.
+# exit: 2

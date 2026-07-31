@@ -1,0 +1,45 @@
+# hf-gate-run
+# label: t16-red
+# command: npm.cmd test -- tests/execution-orchestrator.test.ts
+# started: 2026-07-30T05:41:49+00:00
+
+> collaboration-cockpit@0.1.0 test
+> vitest run tests/execution-orchestrator.test.ts
+
+
+ RUN  v4.1.10 D:/cool-ai
+
+(node:6768) ExperimentalWarning: SQLite is an experimental feature and might change at any time
+(Use `node --trace-warnings ...` to show where the warning was created)
+ ❯ tests/execution-orchestrator.test.ts (3 tests | 3 failed) 732ms
+     × runs model primary/repair in one child, then executes its tool as a new operation 263ms
+     × allows two different executions to hold model actions concurrently but rejects a second action for one execution 243ms
+     × discards a provider result that arrives after execution control invalidates its lease 224ms
+
+⎯⎯⎯⎯⎯⎯⎯ Failed Tests 3 ⎯⎯⎯⎯⎯⎯⎯
+
+ FAIL  tests/execution-orchestrator.test.ts > client-driven execution advance orchestration > runs model primary/repair in one child, then executes its tool as a new operation
+ FAIL  tests/execution-orchestrator.test.ts > client-driven execution advance orchestration > allows two different executions to hold model actions concurrently but rejects a second action for one execution
+ FAIL  tests/execution-orchestrator.test.ts > client-driven execution advance orchestration > discards a provider result that arrives after execution control invalidates its lease
+AssertionError: T-16 action orchestrator must exist: expected undefined to be type of 'function'
+
+Expected: "function"
+Received: "undefined"
+
+ ❯ tests/execution-orchestrator.test.ts:253:55
+    251|   );
+    252|   const load = modules["../src/server/execution/action-orchestrator.ts…
+    253|   expect(load, "T-16 action orchestrator must exist").toBeTypeOf("func…
+       |                                                       ^
+    254|   advance = await load();
+    255| });
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[1/3]⎯
+
+
+ Test Files  1 failed (1)
+      Tests  3 failed (3)
+   Start at  13:41:50
+   Duration  2.88s (transform 127ms, setup 336ms, import 121ms, tests 732ms, environment 1.42s)
+
+# exit: 1

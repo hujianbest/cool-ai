@@ -1,0 +1,18 @@
+# hf-gate-run
+# label: t21-green
+# command: npm.cmd test -- tests/collaboration-timeline-ui.test.tsx
+# started: 2026-07-29T23:20:38+00:00
+
+> collaboration-cockpit@0.1.0 test
+> vitest run tests/collaboration-timeline-ui.test.tsx
+
+
+ RUN  v4.1.10 D:/cool-ai
+
+
+ Test Files  1 passed (1)
+      Tests  4 passed (4)
+   Start at  07:20:39
+   Duration  7.07s (transform 151ms, setup 751ms, import 419ms, tests 2.87s, environment 2.69s)
+
+# exit: 0

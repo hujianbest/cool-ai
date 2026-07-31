@@ -1,0 +1,18 @@
+# hf-gate-run
+# label: review1-f6-green
+# command: npm.cmd test -- tests/openai-chat-client.test.ts
+# started: 2026-07-30T00:26:39+00:00
+
+> collaboration-cockpit@0.1.0 test
+> vitest run tests/openai-chat-client.test.ts
+
+
+ RUN  v4.1.10 D:/cool-ai
+
+
+ Test Files  1 passed (1)
+      Tests  28 passed (28)
+   Start at  08:26:41
+   Duration  5.26s (transform 71ms, setup 339ms, import 42ms, tests 3.18s, environment 1.42s)
+
+# exit: 0

@@ -1,0 +1,81 @@
+# hf-gate-run
+# label: t25-green
+# command: cmd /c npm test -- tests/execution-approvals.test.ts -t creates a distinct exact staged approval
+# started: 2026-07-30T07:49:46+00:00
+
+> collaboration-cockpit@0.1.0 test
+> vitest run tests/execution-approvals.test.ts -t creates a distinct exact staged approval
+
+
+ RUN  v4.1.10 D:/cool-ai
+
+(node:11204) ExperimentalWarning: SQLite is an experimental feature and might change at any time
+(Use `node --trace-warnings ...` to show where the warning was created)
+stderr | tests/execution-approvals.test.ts > execution approvals > creates a distinct exact staged approval and denies tamper, conflict, stale, and terminal use
+approval-staged-debug {
+  request: {
+    attemptId: 'approval-attempt',
+    contextHash: 'cccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccc',
+    inputHash: 'bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb',
+    kind: 'staged_merge',
+    stagedHash: 'dddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddd',
+    approvalId: '90557eae-c42b-4bf3-b2f8-20933837be5a',
+    requestHash: 'e7259b1acb071888ce97ef82982902e17ddcecb9f7a7cbd9d0381a9f4e2fc472'
+  },
+  row: [Object: null prototype] {
+    executionId: 'approval-execution',
+    projectId: 'approval-project',
+    attemptId: 'approval-attempt',
+    toolCallId: null,
+    kind: 'staged_merge',
+    status: 'pending',
+    requestHash: 'e7259b1acb071888ce97ef82982902e17ddcecb9f7a7cbd9d0381a9f4e2fc472',
+    inputHash: 'bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb',
+    stagedHash: 'dddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddd',
+    publicRequestJson: '{"attemptId":"approval-attempt","contextHash":"cccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccc","inputHash":"bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb","kind":"staged_merge","stagedHash":"dddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddd","approvalId":"90557eae-c42b-4bf3-b2f8-20933837be5a","requestHash":"e7259b1acb071888ce97ef82982902e17ddcecb9f7a7cbd9d0381a9f4e2fc472"}',
+    createdAt: '2026-07-30T07:49:50.572Z',
+    decidedAt: null,
+    consumedAt: null,
+    executionStatus: 'staged',
+    executionVersion: 2,
+    currentAttemptNo: 1,
+    manualRecoveryRequired: 0,
+    currentAttemptId: 'approval-attempt',
+    contextHash: 'cccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccc',
+    sandboxManifestHash: 'bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb',
+    toolRequestHash: null,
+    toolRequestJson: null,
+    toolInputHash: null,
+    toolStatus: null,
+    commandJson: null
+  },
+  staged: undefined
+}
+
+ ❯ tests/execution-approvals.test.ts (12 tests | 1 failed | 11 skipped) 544ms
+     × creates a distinct exact staged approval and denies tamper, conflict, stale, and terminal use 542ms
+
+⎯⎯⎯⎯⎯⎯⎯ Failed Tests 1 ⎯⎯⎯⎯⎯⎯⎯
+
+ FAIL  tests/execution-approvals.test.ts > execution approvals > creates a distinct exact staged approval and denies tamper, conflict, stale, and terminal use
+ExecutionError: Approval facts changed.
+ ❯ src/server/execution/execution-approval-service.ts:415:21
+    413|       }
+    414|       if (!approvalIsCurrent(database, row)) {
+    415|         return fail(new ExecutionError("APPROVAL_STALE", 409, "Approva…
+       |                     ^
+    416|       }
+    417|       const expectedStatus = input.action === "revoke" ? "approved" : …
+ ❯ transaction src/server/execution/execution-approval-service.ts:67:20
+ ❯ Module.decideExecutionApproval src/server/execution/execution-approval-service.ts:368:20
+ ❯ tests/execution-approvals.test.ts:445:36
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[1/1]⎯
+
+
+ Test Files  1 failed (1)
+      Tests  1 failed | 11 skipped (12)
+   Start at  15:49:47
+   Duration  2.73s (transform 185ms, setup 338ms, import 113ms, tests 544ms, environment 1.46s)
+
+# exit: 1

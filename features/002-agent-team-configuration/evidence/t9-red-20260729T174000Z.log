@@ -1,0 +1,2069 @@
+# hf-gate-run
+# label: t9-red
+# command: cmd /c npm test -- tests/agent-panel.test.tsx tests/team-accessibility.test.tsx tests/team-visual-tokens.test.ts
+# started: 2026-07-29T17:40:00+00:00
+
+> collaboration-cockpit@0.1.0 test
+> vitest run tests/agent-panel.test.tsx tests/team-accessibility.test.tsx tests/team-visual-tokens.test.ts
+
+
+ RUN  v4.1.10 D:/cool-ai
+
+ ❯ tests/team-visual-tokens.test.ts (7 tests | 7 failed) 13ms
+     × sage foreground/background pair has WCAG AA contrast 6ms
+     × terracotta foreground/background pair has WCAG AA contrast 1ms
+     × gold foreground/background pair has WCAG AA contrast 1ms
+     × slate foreground/background pair has WCAG AA contrast 1ms
+     × rose foreground/background pair has WCAG AA contrast 1ms
+     × olive foreground/background pair has WCAG AA contrast 1ms
+     × uses controlled accent attributes and no inline or raw visual values 2ms
+ ❯ tests/team-accessibility.test.tsx (3 tests | 3 failed) 302ms
+     × implements a three-tab keyboard navigation model 168ms
+     × uses labelled fieldsets and keyboard-operable controls 83ms
+     × makes the mobile editor modal, inert and focus trapped with restoration 49ms
+ ❯ tests/agent-panel.test.tsx (3 tests | 3 failed) 343ms
+     × shows loading, retry, empty and disabled no-provider states 233ms
+     × uses detached template or blank defaults and creates a complete Agent 56ms
+     × edits with expectedVersion and preserves a failed draft with field errors 52ms
+
+⎯⎯⎯⎯⎯⎯ Failed Tests 13 ⎯⎯⎯⎯⎯⎯⎯
+
+ FAIL  tests/agent-panel.test.tsx > Agent panel > shows loading, retry, empty and disabled no-provider states
+TestingLibraryElementError: Unable to find an accessible element with the role "tab" and name "Agent"
+
+Here are the accessible roles:
+
+  complementary:
+
+  Name "团队导航":
+  [36m<aside[39m
+    [33maria-label[39m=[32m"团队导航"[39m
+    [33mclass[39m=[32m"cockpit-sidebar"[39m
+  [36m/>[39m
+
+  Name "创建技能":
+  [36m<aside[39m
+    [33maria-labelledby[39m=[32m"skill-editor-title"[39m
+    [33mclass[39m=[32m"cockpit-context"[39m
+  [36m/>[39m
+
+  --------------------------------------------------
+  paragraph:
+
+  Name "":
+  [36m<p[39m
+    [33mclass[39m=[32m"eyebrow"[39m
+  [36m/>[39m
+
+  Name "":
+  [36m<p[39m
+    [33mclass[39m=[32m"eyebrow"[39m
+  [36m/>[39m
+
+  Name "":
+  [36m<p[39m
+    [33maria-busy[39m=[32m"true"[39m
+    [33mclass[39m=[32m"muted"[39m
+  [36m/>[39m
+
+  Name "":
+  [36m<p[39m
+    [33mclass[39m=[32m"eyebrow"[39m
+  [36m/>[39m
+
+  --------------------------------------------------
+  heading:
+
+  Name "Cool AI":
+  [36m<h1 />[39m
+
+  Name "技能":
+  [36m<h2 />[39m
+
+  Name "创建技能":
+  [36m<h2[39m
+    [33mid[39m=[32m"skill-editor-title"[39m
+  [36m/>[39m
+
+  --------------------------------------------------
+  navigation:
+
+  Name "主导航":
+  [36m<nav[39m
+    [33maria-label[39m=[32m"主导航"[39m
+  [36m/>[39m
+
+  --------------------------------------------------
+  list:
+
+  Name "":
+  [36m<ul[39m
+    [33mclass[39m=[32m"project-list"[39m
+  [36m/>[39m
+
+  --------------------------------------------------
+  listitem:
+
+  Name "":
+  [36m<li />[39m
+
+  Name "":
+  [36m<li />[39m
+
+  --------------------------------------------------
+  link:
+
+  Name "工作":
+  [36m<a[39m
+    [33mhref[39m=[32m"/"[39m
+  [36m/>[39m
+
+  Name "团队":
+  [36m<a[39m
+    [33maria-current[39m=[32m"page"[39m
+    [33mhref[39m=[32m"/team"[39m
+  [36m/>[39m
+
+  --------------------------------------------------
+  tablist:
+
+  Name "团队资源":
+  [36m<div[39m
+    [33maria-label[39m=[32m"团队资源"[39m
+    [33mclass[39m=[32m"resource-tabs"[39m
+    [33mrole[39m=[32m"tablist"[39m
+  [36m/>[39m
+
+  --------------------------------------------------
+  tab:
+
+  Name "技能":
+  [36m<button[39m
+    [33maria-controls[39m=[32m"skill-resource-panel"[39m
+    [33maria-selected[39m=[32m"true"[39m
+    [33mid[39m=[32m"skill-resource-tab"[39m
+    [33mrole[39m=[32m"tab"[39m
+    [33mtabindex[39m=[32m"0"[39m
+    [33mtype[39m=[32m"button"[39m
+  [36m/>[39m
+
+  Name "模型服务":
+  [36m<button[39m
+    [33maria-controls[39m=[32m"provider-resource-panel"[39m
+    [33maria-selected[39m=[32m"false"[39m
+    [33mid[39m=[32m"provider-resource-tab"[39m
+    [33mrole[39m=[32m"tab"[39m
+    [33mtabindex[39m=[32m"-1"[39m
+    [33mtype[39m=[32m"button"[39m
+  [36m/>[39m
+
+  --------------------------------------------------
+  tabpanel:
+
+  Name "技能":
+  [36m<main[39m
+    [33maria-labelledby[39m=[32m"skill-resource-tab"[39m
+    [33mclass[39m=[32m"cockpit-flow"[39m
+    [33mid[39m=[32m"skill-resource-panel"[39m
+    [33mrole[39m=[32m"tabpanel"[39m
+  [36m/>[39m
+
+  --------------------------------------------------
+  banner:
+
+  Name "":
+  [36m<header[39m
+    [33mclass[39m=[32m"stack"[39m
+  [36m/>[39m
+
+  --------------------------------------------------
+  button:
+
+  Name "创建新技能":
+  [36m<button[39m
+    [33mtype[39m=[32m"button"[39m
+  [36m/>[39m
+
+  Name "创建技能":
+  [36m<button[39m
+    [33mtype[39m=[32m"submit"[39m
+  [36m/>[39m
+
+  --------------------------------------------------
+  textbox:
+
+  Name "技能名称":
+  [36m<input[39m
+    [33mid[39m=[32m"skill-name"[39m
+    [33mmaxlength[39m=[32m"80"[39m
+    [33mrequired[39m=[32m""[39m
+    [33mvalue[39m=[32m""[39m
+  [36m/>[39m
+
+  Name "技能说明":
+  [36m<textarea[39m
+    [33mid[39m=[32m"skill-description"[39m
+    [33mmaxlength[39m=[32m"280"[39m
+  [36m/>[39m
+
+  Name "指令正文":
+  [36m<textarea[39m
+    [33mid[39m=[32m"skill-instructions"[39m
+    [33mmaxlength[39m=[32m"20000"[39m
+    [33mrequired[39m=[32m""[39m
+  [36m/>[39m
+
+  --------------------------------------------------
+
+Ignored nodes: comments, script, style
+[36m<body>[39m
+  [36m<div>[39m
+    [36m<div[39m
+      [33mclass[39m=[32m"collaboration-cockpit"[39m
+    [36m>[39m
+      [36m<aside[39m
+        [33maria-label[39m=[32m"团队导航"[39m
+        [33mclass[39m=[32m"cockpit-sidebar"[39m
+      [36m>[39m
+        [36m<div[39m
+          [33mclass[39m=[32m"product-identity"[39m
+        [36m>[39m
+          [36m<span[39m
+            [33maria-hidden[39m=[32m"true"[39m
+            [33mclass[39m=[32m"product-mark"[39m
+          [36m>[39m
+            [0mC[0m
+          [36m</span>[39m
+          [36m<div>[39m
+            [36m<p[39m
+              [33mclass[39m=[32m"eyebrow"[39m
+            [36m>[39m
+              [0m协作驾驶舱[0m
+            [36m</p>[39m
+            [36m<h1>[39m
+              [0mCool AI[0m
+            [36m</h1>[39m
+          [36m</div>[39m
+        [36m</div>[39m
+        [36m<nav[39m
+          [33maria-label[39m=[32m"主导航"[39m
+        [36m>[39m
+          [36m<ul[39m
+            [33mclass[39m=[32m"project-list"[39m
+          [36m>[39m
+            [36m<li>[39m
+              [36m<a[39m
+                [33mhref[39m=[32m"/"[39m
+              [36m>[39m
+                [0m工作[0m
+              [36m</a>[39m
+            [36m</li>[39m
+            [36m<li>[39m
+              [36m<a[39m
+                [33maria-current[39m=[32m"page"[39m
+                [33mhref[39m=[32m"/team"[39m
+              [36m>[39m
+                [0m团队[0m
+              [36m</a>[39m
+            [36m</li>[39m
+          [36m</ul>[39m
+        [36m</nav>[39m
+        [36m<div[39m
+          [33maria-label[39m=[32m"团队资源"[39m
+          [33mclass[39m=[32m"resource-tabs"[39m
+          [33mrole[39m=[32m"tablist"[39m
+        [36m>[39m
+          [36m<button[39m
+            [33maria-controls[39m=[32m"skill-resource-panel"[39m
+            [33maria-selected[39m=[32m"true"[39m
+            [33mid[39m=[32m"skill-resource-tab"[39m
+            [33mrole[39m=[32m"tab"[39m
+            [33mtabindex[39m=[32m"0"[39m
+            [33mtype[39m=[32m"button"[39m
+          [36m>[39m
+            [0m技能[0m
+          [36m</button>[39m
+          [36m<button[39m
+            [33maria-controls[39m=[32m"provider-resource-panel"[39m
+            [33maria-selected[39m=[32m"false"[39m
+            [33mid[39m=[32m"provider-resource-tab"[39m
+            [33mrole[39m=[32m"tab"[39m
+            [33mtabindex[39m=[32m"-1"[39m
+            [33mtype[39m=[32m"button"[39m
+          [36m>[39m
+            [0m模型服务[0m
+          [36m</button>[39m
+        [36m</div>[39m
+      [36m</aside>[39m
+      [36m<main[39m
+        [33maria-labelledby[39m=[32m"skill-resource-tab"[39m
+        [33mclass[39m=[32m"cockpit-flow"[39m
+        [33mid[39m=[32m"skill-resource-panel"[39m
+        [33mrole[39m=[32m"tabpanel"[39m
+      [36m>[39m
+        [36m<header[39m
+          [33mclass[39m=[32m"stack"[39m
+        [36m>[39m
+          [36m<p[39m
+            [33mclass[39m=[32m"eyebrow"[39m
+          [36m>[39m
+            [0m团队资源[0m
+          [36m</p>[39m
+          [36m<h2>[39m
+            [0m技能[0m
+          [36m</h2>[39m
+          [36m<button[39m
+            [33mtype[39m=[32m"button"[39m
+          [36m>[39m
+            [0m创建新技能[0m
+          [36m</button>[39m
+        [36m</header>[39m
+        [36m<p[39m
+          [33maria-busy[39m=[32m"true"[39m
+          [33mclass[39m=[32m"muted"[39m
+        [36m>[39m
+          [0m正在加载技能…[0m
+        [36m</p>[39m
+      [36m</main>[39m
+      [36m<aside[39m
+        [33maria-labelledby[39m=[32m"skill-editor-title"[39m
+        [33mclass[39m=[32m"cockpit-context"[39m
+      [36m>[39m
+        [36m<div[39m
+          [33mclass[39m=[32m"stack"[39m
+        [36m>[39m
+          [36m<p[39m
+            [33mclass[39m=[32m"eyebrow"[39m
+          [36m>[39m
+            [0m文本技能[0m
+          [36m</p>[39m
+          [36m<h2[39m
+            [33mid[39m=[32m"skill-editor-title"[39m
+          [36m>[39m
+            [0m创建技能[0m
+          [36m</h2>[39m
+        [36m</div>[39m
+        [36m<form[39m
+          [33mclass[39m=[32m"stack"[39m
+        [36m>[39m
+          [36m<div[39m
+            [33mclass[39m=[32m"form-field"[39m
+          [36m>[39m
+            [36m<label[39m
+              [33mfor[39m=[32m"skill-name"[39m
+            [36m>[39m
+              [0m技能名称[0m
+            [36m</label>[39m
+            [36m<input[39m
+              [33mid[39m=[32m"skill-name"[39m
+              [33mmaxlength[39m=[32m"80"[39m
+              [33mrequired[39m=[32m""[39m
+              [33mvalue[39m=[32m""[39m
+            [36m/>[39m
+          [36m</div>[39m
+          [36m<div[39m
+            [33mclass[39m=[32m"form-field"[39m
+          [36m>[39m
+            [36m<label[39m
+              [33mfor[39m=[32m"skill-description"[39m
+            [36m>[39m
+              [0m技能说明[0m
+            [36m</label>[39m
+            [36m<textarea[39m
+              [33mid[39m=[32m"skill-description"[39m
+              [33mmaxlength[39m=[32m"280"[39m
+            [36m/>[39m
+          [36m</div>[39m
+          [36m<div[39m
+            [33mclass[39m=[32m"form-field"[39m
+          [36m>[39m
+            [36m<label[39m
+              [33mfor[39m=[32m"skill-instructions"[39m
+            [36m>[39m
+              [0m指令正文[0m
+            [36m</label>[39m
+            [36m<textarea[39m
+              [33mid[39m=[32m"skill-instructions"[39m
+              [33mmaxlength[39m=[32m"20000"[39m
+              [33mrequired[39m=[32m""[39m
+            [36m/>[39m
+          [36m</div>[39m
+          [36m<button[39m
+            [33mtype[39m=[32m"submit"[39m
+          [36m>[39m
+            [0m创建技能[0m
+          [36m</button>[39m
+        [36m</form>[39m
+      [36m</aside>[39m
+    [36m</div>[39m
+  [36m</div>[39m
+[36m</body>[39m
+ ❯ Object.getElementError node_modules/@testing-library/dom/dist/config.js:37:19
+ ❯ node_modules/@testing-library/dom/dist/query-helpers.js:76:38
+ ❯ node_modules/@testing-library/dom/dist/query-helpers.js:52:17
+ ❯ node_modules/@testing-library/dom/dist/query-helpers.js:95:19
+ ❯ tests/agent-panel.test.tsx:128:29
+    126|     const user = userEvent.setup();
+    127|     render(<TeamPanel />);
+    128|     await user.click(screen.getByRole("tab", { name: "Agent" }));
+       |                             ^
+    129|
+    130|     expect(screen.getByText("正在加载 Agent…")).toHaveAttribute("aria-busy…
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[1/13]⎯
+
+ FAIL  tests/agent-panel.test.tsx > Agent panel > uses detached template or blank defaults and creates a complete Agent
+TestingLibraryElementError: Unable to find an accessible element with the role "tab" and name "Agent"
+
+Here are the accessible roles:
+
+  complementary:
+
+  Name "团队导航":
+  [36m<aside[39m
+    [33maria-label[39m=[32m"团队导航"[39m
+    [33mclass[39m=[32m"cockpit-sidebar"[39m
+  [36m/>[39m
+
+  Name "创建技能":
+  [36m<aside[39m
+    [33maria-labelledby[39m=[32m"skill-editor-title"[39m
+    [33mclass[39m=[32m"cockpit-context"[39m
+  [36m/>[39m
+
+  --------------------------------------------------
+  paragraph:
+
+  Name "":
+  [36m<p[39m
+    [33mclass[39m=[32m"eyebrow"[39m
+  [36m/>[39m
+
+  Name "":
+  [36m<p[39m
+    [33mclass[39m=[32m"eyebrow"[39m
+  [36m/>[39m
+
+  Name "":
+  [36m<p[39m
+    [33maria-busy[39m=[32m"true"[39m
+    [33mclass[39m=[32m"muted"[39m
+  [36m/>[39m
+
+  Name "":
+  [36m<p[39m
+    [33mclass[39m=[32m"eyebrow"[39m
+  [36m/>[39m
+
+  --------------------------------------------------
+  heading:
+
+  Name "Cool AI":
+  [36m<h1 />[39m
+
+  Name "技能":
+  [36m<h2 />[39m
+
+  Name "创建技能":
+  [36m<h2[39m
+    [33mid[39m=[32m"skill-editor-title"[39m
+  [36m/>[39m
+
+  --------------------------------------------------
+  navigation:
+
+  Name "主导航":
+  [36m<nav[39m
+    [33maria-label[39m=[32m"主导航"[39m
+  [36m/>[39m
+
+  --------------------------------------------------
+  list:
+
+  Name "":
+  [36m<ul[39m
+    [33mclass[39m=[32m"project-list"[39m
+  [36m/>[39m
+
+  --------------------------------------------------
+  listitem:
+
+  Name "":
+  [36m<li />[39m
+
+  Name "":
+  [36m<li />[39m
+
+  --------------------------------------------------
+  link:
+
+  Name "工作":
+  [36m<a[39m
+    [33mhref[39m=[32m"/"[39m
+  [36m/>[39m
+
+  Name "团队":
+  [36m<a[39m
+    [33maria-current[39m=[32m"page"[39m
+    [33mhref[39m=[32m"/team"[39m
+  [36m/>[39m
+
+  --------------------------------------------------
+  tablist:
+
+  Name "团队资源":
+  [36m<div[39m
+    [33maria-label[39m=[32m"团队资源"[39m
+    [33mclass[39m=[32m"resource-tabs"[39m
+    [33mrole[39m=[32m"tablist"[39m
+  [36m/>[39m
+
+  --------------------------------------------------
+  tab:
+
+  Name "技能":
+  [36m<button[39m
+    [33maria-controls[39m=[32m"skill-resource-panel"[39m
+    [33maria-selected[39m=[32m"true"[39m
+    [33mid[39m=[32m"skill-resource-tab"[39m
+    [33mrole[39m=[32m"tab"[39m
+    [33mtabindex[39m=[32m"0"[39m
+    [33mtype[39m=[32m"button"[39m
+  [36m/>[39m
+
+  Name "模型服务":
+  [36m<button[39m
+    [33maria-controls[39m=[32m"provider-resource-panel"[39m
+    [33maria-selected[39m=[32m"false"[39m
+    [33mid[39m=[32m"provider-resource-tab"[39m
+    [33mrole[39m=[32m"tab"[39m
+    [33mtabindex[39m=[32m"-1"[39m
+    [33mtype[39m=[32m"button"[39m
+  [36m/>[39m
+
+  --------------------------------------------------
+  tabpanel:
+
+  Name "技能":
+  [36m<main[39m
+    [33maria-labelledby[39m=[32m"skill-resource-tab"[39m
+    [33mclass[39m=[32m"cockpit-flow"[39m
+    [33mid[39m=[32m"skill-resource-panel"[39m
+    [33mrole[39m=[32m"tabpanel"[39m
+  [36m/>[39m
+
+  --------------------------------------------------
+  banner:
+
+  Name "":
+  [36m<header[39m
+    [33mclass[39m=[32m"stack"[39m
+  [36m/>[39m
+
+  --------------------------------------------------
+  button:
+
+  Name "创建新技能":
+  [36m<button[39m
+    [33mtype[39m=[32m"button"[39m
+  [36m/>[39m
+
+  Name "创建技能":
+  [36m<button[39m
+    [33mtype[39m=[32m"submit"[39m
+  [36m/>[39m
+
+  --------------------------------------------------
+  textbox:
+
+  Name "技能名称":
+  [36m<input[39m
+    [33mid[39m=[32m"skill-name"[39m
+    [33mmaxlength[39m=[32m"80"[39m
+    [33mrequired[39m=[32m""[39m
+    [33mvalue[39m=[32m""[39m
+  [36m/>[39m
+
+  Name "技能说明":
+  [36m<textarea[39m
+    [33mid[39m=[32m"skill-description"[39m
+    [33mmaxlength[39m=[32m"280"[39m
+  [36m/>[39m
+
+  Name "指令正文":
+  [36m<textarea[39m
+    [33mid[39m=[32m"skill-instructions"[39m
+    [33mmaxlength[39m=[32m"20000"[39m
+    [33mrequired[39m=[32m""[39m
+  [36m/>[39m
+
+  --------------------------------------------------
+
+Ignored nodes: comments, script, style
+[36m<body>[39m
+  [36m<div>[39m
+    [36m<div[39m
+      [33mclass[39m=[32m"collaboration-cockpit"[39m
+    [36m>[39m
+      [36m<aside[39m
+        [33maria-label[39m=[32m"团队导航"[39m
+        [33mclass[39m=[32m"cockpit-sidebar"[39m
+      [36m>[39m
+        [36m<div[39m
+          [33mclass[39m=[32m"product-identity"[39m
+        [36m>[39m
+          [36m<span[39m
+            [33maria-hidden[39m=[32m"true"[39m
+            [33mclass[39m=[32m"product-mark"[39m
+          [36m>[39m
+            [0mC[0m
+          [36m</span>[39m
+          [36m<div>[39m
+            [36m<p[39m
+              [33mclass[39m=[32m"eyebrow"[39m
+            [36m>[39m
+              [0m协作驾驶舱[0m
+            [36m</p>[39m
+            [36m<h1>[39m
+              [0mCool AI[0m
+            [36m</h1>[39m
+          [36m</div>[39m
+        [36m</div>[39m
+        [36m<nav[39m
+          [33maria-label[39m=[32m"主导航"[39m
+        [36m>[39m
+          [36m<ul[39m
+            [33mclass[39m=[32m"project-list"[39m
+          [36m>[39m
+            [36m<li>[39m
+              [36m<a[39m
+                [33mhref[39m=[32m"/"[39m
+              [36m>[39m
+                [0m工作[0m
+              [36m</a>[39m
+            [36m</li>[39m
+            [36m<li>[39m
+              [36m<a[39m
+                [33maria-current[39m=[32m"page"[39m
+                [33mhref[39m=[32m"/team"[39m
+              [36m>[39m
+                [0m团队[0m
+              [36m</a>[39m
+            [36m</li>[39m
+          [36m</ul>[39m
+        [36m</nav>[39m
+        [36m<div[39m
+          [33maria-label[39m=[32m"团队资源"[39m
+          [33mclass[39m=[32m"resource-tabs"[39m
+          [33mrole[39m=[32m"tablist"[39m
+        [36m>[39m
+          [36m<button[39m
+            [33maria-controls[39m=[32m"skill-resource-panel"[39m
+            [33maria-selected[39m=[32m"true"[39m
+            [33mid[39m=[32m"skill-resource-tab"[39m
+            [33mrole[39m=[32m"tab"[39m
+            [33mtabindex[39m=[32m"0"[39m
+            [33mtype[39m=[32m"button"[39m
+          [36m>[39m
+            [0m技能[0m
+          [36m</button>[39m
+          [36m<button[39m
+            [33maria-controls[39m=[32m"provider-resource-panel"[39m
+            [33maria-selected[39m=[32m"false"[39m
+            [33mid[39m=[32m"provider-resource-tab"[39m
+            [33mrole[39m=[32m"tab"[39m
+            [33mtabindex[39m=[32m"-1"[39m
+            [33mtype[39m=[32m"button"[39m
+          [36m>[39m
+            [0m模型服务[0m
+          [36m</button>[39m
+        [36m</div>[39m
+      [36m</aside>[39m
+      [36m<main[39m
+        [33maria-labelledby[39m=[32m"skill-resource-tab"[39m
+        [33mclass[39m=[32m"cockpit-flow"[39m
+        [33mid[39m=[32m"skill-resource-panel"[39m
+        [33mrole[39m=[32m"tabpanel"[39m
+      [36m>[39m
+        [36m<header[39m
+          [33mclass[39m=[32m"stack"[39m
+        [36m>[39m
+          [36m<p[39m
+            [33mclass[39m=[32m"eyebrow"[39m
+          [36m>[39m
+            [0m团队资源[0m
+          [36m</p>[39m
+          [36m<h2>[39m
+            [0m技能[0m
+          [36m</h2>[39m
+          [36m<button[39m
+            [33mtype[39m=[32m"button"[39m
+          [36m>[39m
+            [0m创建新技能[0m
+          [36m</button>[39m
+        [36m</header>[39m
+        [36m<p[39m
+          [33maria-busy[39m=[32m"true"[39m
+          [33mclass[39m=[32m"muted"[39m
+        [36m>[39m
+          [0m正在加载技能…[0m
+        [36m</p>[39m
+      [36m</main>[39m
+      [36m<aside[39m
+        [33maria-labelledby[39m=[32m"skill-editor-title"[39m
+        [33mclass[39m=[32m"cockpit-context"[39m
+      [36m>[39m
+        [36m<div[39m
+          [33mclass[39m=[32m"stack"[39m
+        [36m>[39m
+          [36m<p[39m
+            [33mclass[39m=[32m"eyebrow"[39m
+          [36m>[39m
+            [0m文本技能[0m
+          [36m</p>[39m
+          [36m<h2[39m
+            [33mid[39m=[32m"skill-editor-title"[39m
+          [36m>[39m
+            [0m创建技能[0m
+          [36m</h2>[39m
+        [36m</div>[39m
+        [36m<form[39m
+          [33mclass[39m=[32m"stack"[39m
+        [36m>[39m
+          [36m<div[39m
+            [33mclass[39m=[32m"form-field"[39m
+          [36m>[39m
+            [36m<label[39m
+              [33mfor[39m=[32m"skill-name"[39m
+            [36m>[39m
+              [0m技能名称[0m
+            [36m</label>[39m
+            [36m<input[39m
+              [33mid[39m=[32m"skill-name"[39m
+              [33mmaxlength[39m=[32m"80"[39m
+              [33mrequired[39m=[32m""[39m
+              [33mvalue[39m=[32m""[39m
+            [36m/>[39m
+          [36m</div>[39m
+          [36m<div[39m
+            [33mclass[39m=[32m"form-field"[39m
+          [36m>[39m
+            [36m<label[39m
+              [33mfor[39m=[32m"skill-description"[39m
+            [36m>[39m
+              [0m技能说明[0m
+            [36m</label>[39m
+            [36m<textarea[39m
+              [33mid[39m=[32m"skill-description"[39m
+              [33mmaxlength[39m=[32m"280"[39m
+            [36m/>[39m
+          [36m</div>[39m
+          [36m<div[39m
+            [33mclass[39m=[32m"form-field"[39m
+          [36m>[39m
+            [36m<label[39m
+              [33mfor[39m=[32m"skill-instructions"[39m
+            [36m>[39m
+              [0m指令正文[0m
+            [36m</label>[39m
+            [36m<textarea[39m
+              [33mid[39m=[32m"skill-instructions"[39m
+              [33mmaxlength[39m=[32m"20000"[39m
+              [33mrequired[39m=[32m""[39m
+            [36m/>[39m
+          [36m</div>[39m
+          [36m<button[39m
+            [33mtype[39m=[32m"submit"[39m
+          [36m>[39m
+            [0m创建技能[0m
+          [36m</button>[39m
+        [36m</form>[39m
+      [36m</aside>[39m
+    [36m</div>[39m
+  [36m</div>[39m
+[36m</body>[39m
+ ❯ Object.getElementError node_modules/@testing-library/dom/dist/config.js:37:19
+ ❯ node_modules/@testing-library/dom/dist/query-helpers.js:76:38
+ ❯ node_modules/@testing-library/dom/dist/query-helpers.js:52:17
+ ❯ node_modules/@testing-library/dom/dist/query-helpers.js:95:19
+ ❯ tests/agent-panel.test.tsx:159:29
+    157|     const user = userEvent.setup();
+    158|     render(<TeamPanel />);
+    159|     await user.click(screen.getByRole("tab", { name: "Agent" }));
+       |                             ^
+    160|     await screen.findByText("暂无 Agent。");
+    161|     await user.click(screen.getByRole("button", { name: "创建 Agent" }));
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[2/13]⎯
+
+ FAIL  tests/agent-panel.test.tsx > Agent panel > edits with expectedVersion and preserves a failed draft with field errors
+TestingLibraryElementError: Unable to find an accessible element with the role "tab" and name "Agent"
+
+Here are the accessible roles:
+
+  complementary:
+
+  Name "团队导航":
+  [36m<aside[39m
+    [33maria-label[39m=[32m"团队导航"[39m
+    [33mclass[39m=[32m"cockpit-sidebar"[39m
+  [36m/>[39m
+
+  Name "创建技能":
+  [36m<aside[39m
+    [33maria-labelledby[39m=[32m"skill-editor-title"[39m
+    [33mclass[39m=[32m"cockpit-context"[39m
+  [36m/>[39m
+
+  --------------------------------------------------
+  paragraph:
+
+  Name "":
+  [36m<p[39m
+    [33mclass[39m=[32m"eyebrow"[39m
+  [36m/>[39m
+
+  Name "":
+  [36m<p[39m
+    [33mclass[39m=[32m"eyebrow"[39m
+  [36m/>[39m
+
+  Name "":
+  [36m<p[39m
+    [33maria-busy[39m=[32m"true"[39m
+    [33mclass[39m=[32m"muted"[39m
+  [36m/>[39m
+
+  Name "":
+  [36m<p[39m
+    [33mclass[39m=[32m"eyebrow"[39m
+  [36m/>[39m
+
+  --------------------------------------------------
+  heading:
+
+  Name "Cool AI":
+  [36m<h1 />[39m
+
+  Name "技能":
+  [36m<h2 />[39m
+
+  Name "创建技能":
+  [36m<h2[39m
+    [33mid[39m=[32m"skill-editor-title"[39m
+  [36m/>[39m
+
+  --------------------------------------------------
+  navigation:
+
+  Name "主导航":
+  [36m<nav[39m
+    [33maria-label[39m=[32m"主导航"[39m
+  [36m/>[39m
+
+  --------------------------------------------------
+  list:
+
+  Name "":
+  [36m<ul[39m
+    [33mclass[39m=[32m"project-list"[39m
+  [36m/>[39m
+
+  --------------------------------------------------
+  listitem:
+
+  Name "":
+  [36m<li />[39m
+
+  Name "":
+  [36m<li />[39m
+
+  --------------------------------------------------
+  link:
+
+  Name "工作":
+  [36m<a[39m
+    [33mhref[39m=[32m"/"[39m
+  [36m/>[39m
+
+  Name "团队":
+  [36m<a[39m
+    [33maria-current[39m=[32m"page"[39m
+    [33mhref[39m=[32m"/team"[39m
+  [36m/>[39m
+
+  --------------------------------------------------
+  tablist:
+
+  Name "团队资源":
+  [36m<div[39m
+    [33maria-label[39m=[32m"团队资源"[39m
+    [33mclass[39m=[32m"resource-tabs"[39m
+    [33mrole[39m=[32m"tablist"[39m
+  [36m/>[39m
+
+  --------------------------------------------------
+  tab:
+
+  Name "技能":
+  [36m<button[39m
+    [33maria-controls[39m=[32m"skill-resource-panel"[39m
+    [33maria-selected[39m=[32m"true"[39m
+    [33mid[39m=[32m"skill-resource-tab"[39m
+    [33mrole[39m=[32m"tab"[39m
+    [33mtabindex[39m=[32m"0"[39m
+    [33mtype[39m=[32m"button"[39m
+  [36m/>[39m
+
+  Name "模型服务":
+  [36m<button[39m
+    [33maria-controls[39m=[32m"provider-resource-panel"[39m
+    [33maria-selected[39m=[32m"false"[39m
+    [33mid[39m=[32m"provider-resource-tab"[39m
+    [33mrole[39m=[32m"tab"[39m
+    [33mtabindex[39m=[32m"-1"[39m
+    [33mtype[39m=[32m"button"[39m
+  [36m/>[39m
+
+  --------------------------------------------------
+  tabpanel:
+
+  Name "技能":
+  [36m<main[39m
+    [33maria-labelledby[39m=[32m"skill-resource-tab"[39m
+    [33mclass[39m=[32m"cockpit-flow"[39m
+    [33mid[39m=[32m"skill-resource-panel"[39m
+    [33mrole[39m=[32m"tabpanel"[39m
+  [36m/>[39m
+
+  --------------------------------------------------
+  banner:
+
+  Name "":
+  [36m<header[39m
+    [33mclass[39m=[32m"stack"[39m
+  [36m/>[39m
+
+  --------------------------------------------------
+  button:
+
+  Name "创建新技能":
+  [36m<button[39m
+    [33mtype[39m=[32m"button"[39m
+  [36m/>[39m
+
+  Name "创建技能":
+  [36m<button[39m
+    [33mtype[39m=[32m"submit"[39m
+  [36m/>[39m
+
+  --------------------------------------------------
+  textbox:
+
+  Name "技能名称":
+  [36m<input[39m
+    [33mid[39m=[32m"skill-name"[39m
+    [33mmaxlength[39m=[32m"80"[39m
+    [33mrequired[39m=[32m""[39m
+    [33mvalue[39m=[32m""[39m
+  [36m/>[39m
+
+  Name "技能说明":
+  [36m<textarea[39m
+    [33mid[39m=[32m"skill-description"[39m
+    [33mmaxlength[39m=[32m"280"[39m
+  [36m/>[39m
+
+  Name "指令正文":
+  [36m<textarea[39m
+    [33mid[39m=[32m"skill-instructions"[39m
+    [33mmaxlength[39m=[32m"20000"[39m
+    [33mrequired[39m=[32m""[39m
+  [36m/>[39m
+
+  --------------------------------------------------
+
+Ignored nodes: comments, script, style
+[36m<body>[39m
+  [36m<div>[39m
+    [36m<div[39m
+      [33mclass[39m=[32m"collaboration-cockpit"[39m
+    [36m>[39m
+      [36m<aside[39m
+        [33maria-label[39m=[32m"团队导航"[39m
+        [33mclass[39m=[32m"cockpit-sidebar"[39m
+      [36m>[39m
+        [36m<div[39m
+          [33mclass[39m=[32m"product-identity"[39m
+        [36m>[39m
+          [36m<span[39m
+            [33maria-hidden[39m=[32m"true"[39m
+            [33mclass[39m=[32m"product-mark"[39m
+          [36m>[39m
+            [0mC[0m
+          [36m</span>[39m
+          [36m<div>[39m
+            [36m<p[39m
+              [33mclass[39m=[32m"eyebrow"[39m
+            [36m>[39m
+              [0m协作驾驶舱[0m
+            [36m</p>[39m
+            [36m<h1>[39m
+              [0mCool AI[0m
+            [36m</h1>[39m
+          [36m</div>[39m
+        [36m</div>[39m
+        [36m<nav[39m
+          [33maria-label[39m=[32m"主导航"[39m
+        [36m>[39m
+          [36m<ul[39m
+            [33mclass[39m=[32m"project-list"[39m
+          [36m>[39m
+            [36m<li>[39m
+              [36m<a[39m
+                [33mhref[39m=[32m"/"[39m
+              [36m>[39m
+                [0m工作[0m
+              [36m</a>[39m
+            [36m</li>[39m
+            [36m<li>[39m
+              [36m<a[39m
+                [33maria-current[39m=[32m"page"[39m
+                [33mhref[39m=[32m"/team"[39m
+              [36m>[39m
+                [0m团队[0m
+              [36m</a>[39m
+            [36m</li>[39m
+          [36m</ul>[39m
+        [36m</nav>[39m
+        [36m<div[39m
+          [33maria-label[39m=[32m"团队资源"[39m
+          [33mclass[39m=[32m"resource-tabs"[39m
+          [33mrole[39m=[32m"tablist"[39m
+        [36m>[39m
+          [36m<button[39m
+            [33maria-controls[39m=[32m"skill-resource-panel"[39m
+            [33maria-selected[39m=[32m"true"[39m
+            [33mid[39m=[32m"skill-resource-tab"[39m
+            [33mrole[39m=[32m"tab"[39m
+            [33mtabindex[39m=[32m"0"[39m
+            [33mtype[39m=[32m"button"[39m
+          [36m>[39m
+            [0m技能[0m
+          [36m</button>[39m
+          [36m<button[39m
+            [33maria-controls[39m=[32m"provider-resource-panel"[39m
+            [33maria-selected[39m=[32m"false"[39m
+            [33mid[39m=[32m"provider-resource-tab"[39m
+            [33mrole[39m=[32m"tab"[39m
+            [33mtabindex[39m=[32m"-1"[39m
+            [33mtype[39m=[32m"button"[39m
+          [36m>[39m
+            [0m模型服务[0m
+          [36m</button>[39m
+        [36m</div>[39m
+      [36m</aside>[39m
+      [36m<main[39m
+        [33maria-labelledby[39m=[32m"skill-resource-tab"[39m
+        [33mclass[39m=[32m"cockpit-flow"[39m
+        [33mid[39m=[32m"skill-resource-panel"[39m
+        [33mrole[39m=[32m"tabpanel"[39m
+      [36m>[39m
+        [36m<header[39m
+          [33mclass[39m=[32m"stack"[39m
+        [36m>[39m
+          [36m<p[39m
+            [33mclass[39m=[32m"eyebrow"[39m
+          [36m>[39m
+            [0m团队资源[0m
+          [36m</p>[39m
+          [36m<h2>[39m
+            [0m技能[0m
+          [36m</h2>[39m
+          [36m<button[39m
+            [33mtype[39m=[32m"button"[39m
+          [36m>[39m
+            [0m创建新技能[0m
+          [36m</button>[39m
+        [36m</header>[39m
+        [36m<p[39m
+          [33maria-busy[39m=[32m"true"[39m
+          [33mclass[39m=[32m"muted"[39m
+        [36m>[39m
+          [0m正在加载技能…[0m
+        [36m</p>[39m
+      [36m</main>[39m
+      [36m<aside[39m
+        [33maria-labelledby[39m=[32m"skill-editor-title"[39m
+        [33mclass[39m=[32m"cockpit-context"[39m
+      [36m>[39m
+        [36m<div[39m
+          [33mclass[39m=[32m"stack"[39m
+        [36m>[39m
+          [36m<p[39m
+            [33mclass[39m=[32m"eyebrow"[39m
+          [36m>[39m
+            [0m文本技能[0m
+          [36m</p>[39m
+          [36m<h2[39m
+            [33mid[39m=[32m"skill-editor-title"[39m
+          [36m>[39m
+            [0m创建技能[0m
+          [36m</h2>[39m
+        [36m</div>[39m
+        [36m<form[39m
+          [33mclass[39m=[32m"stack"[39m
+        [36m>[39m
+          [36m<div[39m
+            [33mclass[39m=[32m"form-field"[39m
+          [36m>[39m
+            [36m<label[39m
+              [33mfor[39m=[32m"skill-name"[39m
+            [36m>[39m
+              [0m技能名称[0m
+            [36m</label>[39m
+            [36m<input[39m
+              [33mid[39m=[32m"skill-name"[39m
+              [33mmaxlength[39m=[32m"80"[39m
+              [33mrequired[39m=[32m""[39m
+              [33mvalue[39m=[32m""[39m
+            [36m/>[39m
+          [36m</div>[39m
+          [36m<div[39m
+            [33mclass[39m=[32m"form-field"[39m
+          [36m>[39m
+            [36m<label[39m
+              [33mfor[39m=[32m"skill-description"[39m
+            [36m>[39m
+              [0m技能说明[0m
+            [36m</label>[39m
+            [36m<textarea[39m
+              [33mid[39m=[32m"skill-description"[39m
+              [33mmaxlength[39m=[32m"280"[39m
+            [36m/>[39m
+          [36m</div>[39m
+          [36m<div[39m
+            [33mclass[39m=[32m"form-field"[39m
+          [36m>[39m
+            [36m<label[39m
+              [33mfor[39m=[32m"skill-instructions"[39m
+            [36m>[39m
+              [0m指令正文[0m
+            [36m</label>[39m
+            [36m<textarea[39m
+              [33mid[39m=[32m"skill-instructions"[39m
+              [33mmaxlength[39m=[32m"20000"[39m
+              [33mrequired[39m=[32m""[39m
+            [36m/>[39m
+          [36m</div>[39m
+          [36m<button[39m
+            [33mtype[39m=[32m"submit"[39m
+          [36m>[39m
+            [0m创建技能[0m
+          [36m</button>[39m
+        [36m</form>[39m
+      [36m</aside>[39m
+    [36m</div>[39m
+  [36m</div>[39m
+[36m</body>[39m
+ ❯ Object.getElementError node_modules/@testing-library/dom/dist/config.js:37:19
+ ❯ node_modules/@testing-library/dom/dist/query-helpers.js:76:38
+ ❯ node_modules/@testing-library/dom/dist/query-helpers.js:52:17
+ ❯ node_modules/@testing-library/dom/dist/query-helpers.js:95:19
+ ❯ tests/agent-panel.test.tsx:234:29
+    232|     const user = userEvent.setup();
+    233|     render(<TeamPanel />);
+    234|     await user.click(screen.getByRole("tab", { name: "Agent" }));
+       |                             ^
+    235|     await user.click(await screen.findByRole("button", { name: "编辑 规划"…
+    236|     expect(screen.getByLabelText("规划技能")).toBeChecked();
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[3/13]⎯
+
+ FAIL  tests/team-accessibility.test.tsx > Team accessibility contract > implements a three-tab keyboard navigation model
+AssertionError: expected [ '技能', '模型服务' ] to deeply equal [ '技能', '模型服务', 'Agent' ]
+
+- Expected
++ Received
+
+  [
+    "技能",
+    "模型服务",
+-   "Agent",
+  ]
+
+ ❯ tests/team-accessibility.test.tsx:92:48
+     90|     const tablist = screen.getByRole("tablist", { name: "团队资源" });
+     91|     const tabs = within(tablist).getAllByRole("tab");
+     92|     expect(tabs.map((tab) => tab.textContent)).toEqual(["技能", "模型服务", …
+       |                                                ^
+     93|     expect(tabs[0]).toHaveAttribute("aria-selected", "true");
+     94|     tabs[0].focus();
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[4/13]⎯
+
+ FAIL  tests/team-accessibility.test.tsx > Team accessibility contract > uses labelled fieldsets and keyboard-operable controls
+TestingLibraryElementError: Unable to find an accessible element with the role "tab" and name "Agent"
+
+Here are the accessible roles:
+
+  complementary:
+
+  Name "团队导航":
+  [36m<aside[39m
+    [33maria-label[39m=[32m"团队导航"[39m
+    [33mclass[39m=[32m"cockpit-sidebar"[39m
+  [36m/>[39m
+
+  Name "创建技能":
+  [36m<aside[39m
+    [33maria-labelledby[39m=[32m"skill-editor-title"[39m
+    [33mclass[39m=[32m"cockpit-context"[39m
+  [36m/>[39m
+
+  --------------------------------------------------
+  paragraph:
+
+  Name "":
+  [36m<p[39m
+    [33mclass[39m=[32m"eyebrow"[39m
+  [36m/>[39m
+
+  Name "":
+  [36m<p[39m
+    [33mclass[39m=[32m"eyebrow"[39m
+  [36m/>[39m
+
+  Name "":
+  [36m<p[39m
+    [33maria-busy[39m=[32m"true"[39m
+    [33mclass[39m=[32m"muted"[39m
+  [36m/>[39m
+
+  Name "":
+  [36m<p[39m
+    [33mclass[39m=[32m"eyebrow"[39m
+  [36m/>[39m
+
+  --------------------------------------------------
+  heading:
+
+  Name "Cool AI":
+  [36m<h1 />[39m
+
+  Name "技能":
+  [36m<h2 />[39m
+
+  Name "创建技能":
+  [36m<h2[39m
+    [33mid[39m=[32m"skill-editor-title"[39m
+  [36m/>[39m
+
+  --------------------------------------------------
+  navigation:
+
+  Name "主导航":
+  [36m<nav[39m
+    [33maria-label[39m=[32m"主导航"[39m
+  [36m/>[39m
+
+  --------------------------------------------------
+  list:
+
+  Name "":
+  [36m<ul[39m
+    [33mclass[39m=[32m"project-list"[39m
+  [36m/>[39m
+
+  --------------------------------------------------
+  listitem:
+
+  Name "":
+  [36m<li />[39m
+
+  Name "":
+  [36m<li />[39m
+
+  --------------------------------------------------
+  link:
+
+  Name "工作":
+  [36m<a[39m
+    [33mhref[39m=[32m"/"[39m
+  [36m/>[39m
+
+  Name "团队":
+  [36m<a[39m
+    [33maria-current[39m=[32m"page"[39m
+    [33mhref[39m=[32m"/team"[39m
+  [36m/>[39m
+
+  --------------------------------------------------
+  tablist:
+
+  Name "团队资源":
+  [36m<div[39m
+    [33maria-label[39m=[32m"团队资源"[39m
+    [33mclass[39m=[32m"resource-tabs"[39m
+    [33mrole[39m=[32m"tablist"[39m
+  [36m/>[39m
+
+  --------------------------------------------------
+  tab:
+
+  Name "技能":
+  [36m<button[39m
+    [33maria-controls[39m=[32m"skill-resource-panel"[39m
+    [33maria-selected[39m=[32m"true"[39m
+    [33mid[39m=[32m"skill-resource-tab"[39m
+    [33mrole[39m=[32m"tab"[39m
+    [33mtabindex[39m=[32m"0"[39m
+    [33mtype[39m=[32m"button"[39m
+  [36m/>[39m
+
+  Name "模型服务":
+  [36m<button[39m
+    [33maria-controls[39m=[32m"provider-resource-panel"[39m
+    [33maria-selected[39m=[32m"false"[39m
+    [33mid[39m=[32m"provider-resource-tab"[39m
+    [33mrole[39m=[32m"tab"[39m
+    [33mtabindex[39m=[32m"-1"[39m
+    [33mtype[39m=[32m"button"[39m
+  [36m/>[39m
+
+  --------------------------------------------------
+  tabpanel:
+
+  Name "技能":
+  [36m<main[39m
+    [33maria-labelledby[39m=[32m"skill-resource-tab"[39m
+    [33mclass[39m=[32m"cockpit-flow"[39m
+    [33mid[39m=[32m"skill-resource-panel"[39m
+    [33mrole[39m=[32m"tabpanel"[39m
+  [36m/>[39m
+
+  --------------------------------------------------
+  banner:
+
+  Name "":
+  [36m<header[39m
+    [33mclass[39m=[32m"stack"[39m
+  [36m/>[39m
+
+  --------------------------------------------------
+  button:
+
+  Name "创建新技能":
+  [36m<button[39m
+    [33mtype[39m=[32m"button"[39m
+  [36m/>[39m
+
+  Name "创建技能":
+  [36m<button[39m
+    [33mtype[39m=[32m"submit"[39m
+  [36m/>[39m
+
+  --------------------------------------------------
+  textbox:
+
+  Name "技能名称":
+  [36m<input[39m
+    [33mid[39m=[32m"skill-name"[39m
+    [33mmaxlength[39m=[32m"80"[39m
+    [33mrequired[39m=[32m""[39m
+    [33mvalue[39m=[32m""[39m
+  [36m/>[39m
+
+  Name "技能说明":
+  [36m<textarea[39m
+    [33mid[39m=[32m"skill-description"[39m
+    [33mmaxlength[39m=[32m"280"[39m
+  [36m/>[39m
+
+  Name "指令正文":
+  [36m<textarea[39m
+    [33mid[39m=[32m"skill-instructions"[39m
+    [33mmaxlength[39m=[32m"20000"[39m
+    [33mrequired[39m=[32m""[39m
+  [36m/>[39m
+
+  --------------------------------------------------
+
+Ignored nodes: comments, script, style
+[36m<body>[39m
+  [36m<div>[39m
+    [36m<div[39m
+      [33mclass[39m=[32m"collaboration-cockpit"[39m
+    [36m>[39m
+      [36m<aside[39m
+        [33maria-label[39m=[32m"团队导航"[39m
+        [33mclass[39m=[32m"cockpit-sidebar"[39m
+      [36m>[39m
+        [36m<div[39m
+          [33mclass[39m=[32m"product-identity"[39m
+        [36m>[39m
+          [36m<span[39m
+            [33maria-hidden[39m=[32m"true"[39m
+            [33mclass[39m=[32m"product-mark"[39m
+          [36m>[39m
+            [0mC[0m
+          [36m</span>[39m
+          [36m<div>[39m
+            [36m<p[39m
+              [33mclass[39m=[32m"eyebrow"[39m
+            [36m>[39m
+              [0m协作驾驶舱[0m
+            [36m</p>[39m
+            [36m<h1>[39m
+              [0mCool AI[0m
+            [36m</h1>[39m
+          [36m</div>[39m
+        [36m</div>[39m
+        [36m<nav[39m
+          [33maria-label[39m=[32m"主导航"[39m
+        [36m>[39m
+          [36m<ul[39m
+            [33mclass[39m=[32m"project-list"[39m
+          [36m>[39m
+            [36m<li>[39m
+              [36m<a[39m
+                [33mhref[39m=[32m"/"[39m
+              [36m>[39m
+                [0m工作[0m
+              [36m</a>[39m
+            [36m</li>[39m
+            [36m<li>[39m
+              [36m<a[39m
+                [33maria-current[39m=[32m"page"[39m
+                [33mhref[39m=[32m"/team"[39m
+              [36m>[39m
+                [0m团队[0m
+              [36m</a>[39m
+            [36m</li>[39m
+          [36m</ul>[39m
+        [36m</nav>[39m
+        [36m<div[39m
+          [33maria-label[39m=[32m"团队资源"[39m
+          [33mclass[39m=[32m"resource-tabs"[39m
+          [33mrole[39m=[32m"tablist"[39m
+        [36m>[39m
+          [36m<button[39m
+            [33maria-controls[39m=[32m"skill-resource-panel"[39m
+            [33maria-selected[39m=[32m"true"[39m
+            [33mid[39m=[32m"skill-resource-tab"[39m
+            [33mrole[39m=[32m"tab"[39m
+            [33mtabindex[39m=[32m"0"[39m
+            [33mtype[39m=[32m"button"[39m
+          [36m>[39m
+            [0m技能[0m
+          [36m</button>[39m
+          [36m<button[39m
+            [33maria-controls[39m=[32m"provider-resource-panel"[39m
+            [33maria-selected[39m=[32m"false"[39m
+            [33mid[39m=[32m"provider-resource-tab"[39m
+            [33mrole[39m=[32m"tab"[39m
+            [33mtabindex[39m=[32m"-1"[39m
+            [33mtype[39m=[32m"button"[39m
+          [36m>[39m
+            [0m模型服务[0m
+          [36m</button>[39m
+        [36m</div>[39m
+      [36m</aside>[39m
+      [36m<main[39m
+        [33maria-labelledby[39m=[32m"skill-resource-tab"[39m
+        [33mclass[39m=[32m"cockpit-flow"[39m
+        [33mid[39m=[32m"skill-resource-panel"[39m
+        [33mrole[39m=[32m"tabpanel"[39m
+      [36m>[39m
+        [36m<header[39m
+          [33mclass[39m=[32m"stack"[39m
+        [36m>[39m
+          [36m<p[39m
+            [33mclass[39m=[32m"eyebrow"[39m
+          [36m>[39m
+            [0m团队资源[0m
+          [36m</p>[39m
+          [36m<h2>[39m
+            [0m技能[0m
+          [36m</h2>[39m
+          [36m<button[39m
+            [33mtype[39m=[32m"button"[39m
+          [36m>[39m
+            [0m创建新技能[0m
+          [36m</button>[39m
+        [36m</header>[39m
+        [36m<p[39m
+          [33maria-busy[39m=[32m"true"[39m
+          [33mclass[39m=[32m"muted"[39m
+        [36m>[39m
+          [0m正在加载技能…[0m
+        [36m</p>[39m
+      [36m</main>[39m
+      [36m<aside[39m
+        [33maria-labelledby[39m=[32m"skill-editor-title"[39m
+        [33mclass[39m=[32m"cockpit-context"[39m
+      [36m>[39m
+        [36m<div[39m
+          [33mclass[39m=[32m"stack"[39m
+        [36m>[39m
+          [36m<p[39m
+            [33mclass[39m=[32m"eyebrow"[39m
+          [36m>[39m
+            [0m文本技能[0m
+          [36m</p>[39m
+          [36m<h2[39m
+            [33mid[39m=[32m"skill-editor-title"[39m
+          [36m>[39m
+            [0m创建技能[0m
+          [36m</h2>[39m
+        [36m</div>[39m
+        [36m<form[39m
+          [33mclass[39m=[32m"stack"[39m
+        [36m>[39m
+          [36m<div[39m
+            [33mclass[39m=[32m"form-field"[39m
+          [36m>[39m
+            [36m<label[39m
+              [33mfor[39m=[32m"skill-name"[39m
+            [36m>[39m
+              [0m技能名称[0m
+            [36m</label>[39m
+            [36m<input[39m
+              [33mid[39m=[32m"skill-name"[39m
+              [33mmaxlength[39m=[32m"80"[39m
+              [33mrequired[39m=[32m""[39m
+              [33mvalue[39m=[32m""[39m
+            [36m/>[39m
+          [36m</div>[39m
+          [36m<div[39m
+            [33mclass[39m=[32m"form-field"[39m
+          [36m>[39m
+            [36m<label[39m
+              [33mfor[39m=[32m"skill-description"[39m
+            [36m>[39m
+              [0m技能说明[0m
+            [36m</label>[39m
+            [36m<textarea[39m
+              [33mid[39m=[32m"skill-description"[39m
+              [33mmaxlength[39m=[32m"280"[39m
+            [36m/>[39m
+          [36m</div>[39m
+          [36m<div[39m
+            [33mclass[39m=[32m"form-field"[39m
+          [36m>[39m
+            [36m<label[39m
+              [33mfor[39m=[32m"skill-instructions"[39m
+            [36m>[39m
+              [0m指令正文[0m
+            [36m</label>[39m
+            [36m<textarea[39m
+              [33mid[39m=[32m"skill-instructions"[39m
+              [33mmaxlength[39m=[32m"20000"[39m
+              [33mrequired[39m=[32m""[39m
+            [36m/>[39m
+          [36m</div>[39m
+          [36m<button[39m
+            [33mtype[39m=[32m"submit"[39m
+          [36m>[39m
+            [0m创建技能[0m
+          [36m</button>[39m
+        [36m</form>[39m
+      [36m</aside>[39m
+    [36m</div>[39m
+  [36m</div>[39m
+[36m</body>[39m
+ ❯ Object.getElementError node_modules/@testing-library/dom/dist/config.js:37:19
+ ❯ node_modules/@testing-library/dom/dist/query-helpers.js:76:38
+ ❯ node_modules/@testing-library/dom/dist/query-helpers.js:52:17
+ ❯ node_modules/@testing-library/dom/dist/query-helpers.js:95:19
+ ❯ tests/team-accessibility.test.tsx:113:29
+    111|     const user = userEvent.setup();
+    112|     render(<TeamPanel />);
+    113|     await user.click(screen.getByRole("tab", { name: "Agent" }));
+       |                             ^
+    114|     await screen.findByText("暂无 Agent。");
+    115|
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[5/13]⎯
+
+ FAIL  tests/team-accessibility.test.tsx > Team accessibility contract > makes the mobile editor modal, inert and focus trapped with restoration
+TestingLibraryElementError: Unable to find an accessible element with the role "tab" and name "Agent"
+
+Here are the accessible roles:
+
+  complementary:
+
+  Name "团队导航":
+  [36m<aside[39m
+    [33maria-label[39m=[32m"团队导航"[39m
+    [33mclass[39m=[32m"cockpit-sidebar"[39m
+  [36m/>[39m
+
+  Name "创建技能":
+  [36m<aside[39m
+    [33maria-labelledby[39m=[32m"skill-editor-title"[39m
+    [33mclass[39m=[32m"cockpit-context"[39m
+  [36m/>[39m
+
+  --------------------------------------------------
+  paragraph:
+
+  Name "":
+  [36m<p[39m
+    [33mclass[39m=[32m"eyebrow"[39m
+  [36m/>[39m
+
+  Name "":
+  [36m<p[39m
+    [33mclass[39m=[32m"eyebrow"[39m
+  [36m/>[39m
+
+  Name "":
+  [36m<p[39m
+    [33maria-busy[39m=[32m"true"[39m
+    [33mclass[39m=[32m"muted"[39m
+  [36m/>[39m
+
+  Name "":
+  [36m<p[39m
+    [33mclass[39m=[32m"eyebrow"[39m
+  [36m/>[39m
+
+  --------------------------------------------------
+  heading:
+
+  Name "Cool AI":
+  [36m<h1 />[39m
+
+  Name "技能":
+  [36m<h2 />[39m
+
+  Name "创建技能":
+  [36m<h2[39m
+    [33mid[39m=[32m"skill-editor-title"[39m
+  [36m/>[39m
+
+  --------------------------------------------------
+  navigation:
+
+  Name "主导航":
+  [36m<nav[39m
+    [33maria-label[39m=[32m"主导航"[39m
+  [36m/>[39m
+
+  --------------------------------------------------
+  list:
+
+  Name "":
+  [36m<ul[39m
+    [33mclass[39m=[32m"project-list"[39m
+  [36m/>[39m
+
+  --------------------------------------------------
+  listitem:
+
+  Name "":
+  [36m<li />[39m
+
+  Name "":
+  [36m<li />[39m
+
+  --------------------------------------------------
+  link:
+
+  Name "工作":
+  [36m<a[39m
+    [33mhref[39m=[32m"/"[39m
+  [36m/>[39m
+
+  Name "团队":
+  [36m<a[39m
+    [33maria-current[39m=[32m"page"[39m
+    [33mhref[39m=[32m"/team"[39m
+  [36m/>[39m
+
+  --------------------------------------------------
+  tablist:
+
+  Name "团队资源":
+  [36m<div[39m
+    [33maria-label[39m=[32m"团队资源"[39m
+    [33mclass[39m=[32m"resource-tabs"[39m
+    [33mrole[39m=[32m"tablist"[39m
+  [36m/>[39m
+
+  --------------------------------------------------
+  tab:
+
+  Name "技能":
+  [36m<button[39m
+    [33maria-controls[39m=[32m"skill-resource-panel"[39m
+    [33maria-selected[39m=[32m"true"[39m
+    [33mid[39m=[32m"skill-resource-tab"[39m
+    [33mrole[39m=[32m"tab"[39m
+    [33mtabindex[39m=[32m"0"[39m
+    [33mtype[39m=[32m"button"[39m
+  [36m/>[39m
+
+  Name "模型服务":
+  [36m<button[39m
+    [33maria-controls[39m=[32m"provider-resource-panel"[39m
+    [33maria-selected[39m=[32m"false"[39m
+    [33mid[39m=[32m"provider-resource-tab"[39m
+    [33mrole[39m=[32m"tab"[39m
+    [33mtabindex[39m=[32m"-1"[39m
+    [33mtype[39m=[32m"button"[39m
+  [36m/>[39m
+
+  --------------------------------------------------
+  tabpanel:
+
+  Name "技能":
+  [36m<main[39m
+    [33maria-labelledby[39m=[32m"skill-resource-tab"[39m
+    [33mclass[39m=[32m"cockpit-flow"[39m
+    [33mid[39m=[32m"skill-resource-panel"[39m
+    [33mrole[39m=[32m"tabpanel"[39m
+  [36m/>[39m
+
+  --------------------------------------------------
+  banner:
+
+  Name "":
+  [36m<header[39m
+    [33mclass[39m=[32m"stack"[39m
+  [36m/>[39m
+
+  --------------------------------------------------
+  button:
+
+  Name "创建新技能":
+  [36m<button[39m
+    [33mtype[39m=[32m"button"[39m
+  [36m/>[39m
+
+  Name "创建技能":
+  [36m<button[39m
+    [33mtype[39m=[32m"submit"[39m
+  [36m/>[39m
+
+  --------------------------------------------------
+  textbox:
+
+  Name "技能名称":
+  [36m<input[39m
+    [33mid[39m=[32m"skill-name"[39m
+    [33mmaxlength[39m=[32m"80"[39m
+    [33mrequired[39m=[32m""[39m
+    [33mvalue[39m=[32m""[39m
+  [36m/>[39m
+
+  Name "技能说明":
+  [36m<textarea[39m
+    [33mid[39m=[32m"skill-description"[39m
+    [33mmaxlength[39m=[32m"280"[39m
+  [36m/>[39m
+
+  Name "指令正文":
+  [36m<textarea[39m
+    [33mid[39m=[32m"skill-instructions"[39m
+    [33mmaxlength[39m=[32m"20000"[39m
+    [33mrequired[39m=[32m""[39m
+  [36m/>[39m
+
+  --------------------------------------------------
+
+Ignored nodes: comments, script, style
+[36m<body>[39m
+  [36m<div>[39m
+    [36m<div[39m
+      [33mclass[39m=[32m"collaboration-cockpit"[39m
+    [36m>[39m
+      [36m<aside[39m
+        [33maria-label[39m=[32m"团队导航"[39m
+        [33mclass[39m=[32m"cockpit-sidebar"[39m
+      [36m>[39m
+        [36m<div[39m
+          [33mclass[39m=[32m"product-identity"[39m
+        [36m>[39m
+          [36m<span[39m
+            [33maria-hidden[39m=[32m"true"[39m
+            [33mclass[39m=[32m"product-mark"[39m
+          [36m>[39m
+            [0mC[0m
+          [36m</span>[39m
+          [36m<div>[39m
+            [36m<p[39m
+              [33mclass[39m=[32m"eyebrow"[39m
+            [36m>[39m
+              [0m协作驾驶舱[0m
+            [36m</p>[39m
+            [36m<h1>[39m
+              [0mCool AI[0m
+            [36m</h1>[39m
+          [36m</div>[39m
+        [36m</div>[39m
+        [36m<nav[39m
+          [33maria-label[39m=[32m"主导航"[39m
+        [36m>[39m
+          [36m<ul[39m
+            [33mclass[39m=[32m"project-list"[39m
+          [36m>[39m
+            [36m<li>[39m
+              [36m<a[39m
+                [33mhref[39m=[32m"/"[39m
+              [36m>[39m
+                [0m工作[0m
+              [36m</a>[39m
+            [36m</li>[39m
+            [36m<li>[39m
+              [36m<a[39m
+                [33maria-current[39m=[32m"page"[39m
+                [33mhref[39m=[32m"/team"[39m
+              [36m>[39m
+                [0m团队[0m
+              [36m</a>[39m
+            [36m</li>[39m
+          [36m</ul>[39m
+        [36m</nav>[39m
+        [36m<div[39m
+          [33maria-label[39m=[32m"团队资源"[39m
+          [33mclass[39m=[32m"resource-tabs"[39m
+          [33mrole[39m=[32m"tablist"[39m
+        [36m>[39m
+          [36m<button[39m
+            [33maria-controls[39m=[32m"skill-resource-panel"[39m
+            [33maria-selected[39m=[32m"true"[39m
+            [33mid[39m=[32m"skill-resource-tab"[39m
+            [33mrole[39m=[32m"tab"[39m
+            [33mtabindex[39m=[32m"0"[39m
+            [33mtype[39m=[32m"button"[39m
+          [36m>[39m
+            [0m技能[0m
+          [36m</button>[39m
+          [36m<button[39m
+            [33maria-controls[39m=[32m"provider-resource-panel"[39m
+            [33maria-selected[39m=[32m"false"[39m
+            [33mid[39m=[32m"provider-resource-tab"[39m
+            [33mrole[39m=[32m"tab"[39m
+            [33mtabindex[39m=[32m"-1"[39m
+            [33mtype[39m=[32m"button"[39m
+          [36m>[39m
+            [0m模型服务[0m
+          [36m</button>[39m
+        [36m</div>[39m
+      [36m</aside>[39m
+      [36m<main[39m
+        [33maria-labelledby[39m=[32m"skill-resource-tab"[39m
+        [33mclass[39m=[32m"cockpit-flow"[39m
+        [33mid[39m=[32m"skill-resource-panel"[39m
+        [33mrole[39m=[32m"tabpanel"[39m
+      [36m>[39m
+        [36m<header[39m
+          [33mclass[39m=[32m"stack"[39m
+        [36m>[39m
+          [36m<p[39m
+            [33mclass[39m=[32m"eyebrow"[39m
+          [36m>[39m
+            [0m团队资源[0m
+          [36m</p>[39m
+          [36m<h2>[39m
+            [0m技能[0m
+          [36m</h2>[39m
+          [36m<button[39m
+            [33mtype[39m=[32m"button"[39m
+          [36m>[39m
+            [0m创建新技能[0m
+          [36m</button>[39m
+        [36m</header>[39m
+        [36m<p[39m
+          [33maria-busy[39m=[32m"true"[39m
+          [33mclass[39m=[32m"muted"[39m
+        [36m>[39m
+          [0m正在加载技能…[0m
+        [36m</p>[39m
+      [36m</main>[39m
+      [36m<aside[39m
+        [33maria-labelledby[39m=[32m"skill-editor-title"[39m
+        [33mclass[39m=[32m"cockpit-context"[39m
+      [36m>[39m
+        [36m<div[39m
+          [33mclass[39m=[32m"stack"[39m
+        [36m>[39m
+          [36m<p[39m
+            [33mclass[39m=[32m"eyebrow"[39m
+          [36m>[39m
+            [0m文本技能[0m
+          [36m</p>[39m
+          [36m<h2[39m
+            [33mid[39m=[32m"skill-editor-title"[39m
+          [36m>[39m
+            [0m创建技能[0m
+          [36m</h2>[39m
+        [36m</div>[39m
+        [36m<form[39m
+          [33mclass[39m=[32m"stack"[39m
+        [36m>[39m
+          [36m<div[39m
+            [33mclass[39m=[32m"form-field"[39m
+          [36m>[39m
+            [36m<label[39m
+              [33mfor[39m=[32m"skill-name"[39m
+            [36m>[39m
+              [0m技能名称[0m
+            [36m</label>[39m
+            [36m<input[39m
+              [33mid[39m=[32m"skill-name"[39m
+              [33mmaxlength[39m=[32m"80"[39m
+              [33mrequired[39m=[32m""[39m
+              [33mvalue[39m=[32m""[39m
+            [36m/>[39m
+          [36m</div>[39m
+          [36m<div[39m
+            [33mclass[39m=[32m"form-field"[39m
+          [36m>[39m
+            [36m<label[39m
+              [33mfor[39m=[32m"skill-description"[39m
+            [36m>[39m
+              [0m技能说明[0m
+            [36m</label>[39m
+            [36m<textarea[39m
+              [33mid[39m=[32m"skill-description"[39m
+              [33mmaxlength[39m=[32m"280"[39m
+            [36m/>[39m
+          [36m</div>[39m
+          [36m<div[39m
+            [33mclass[39m=[32m"form-field"[39m
+          [36m>[39m
+            [36m<label[39m
+              [33mfor[39m=[32m"skill-instructions"[39m
+            [36m>[39m
+              [0m指令正文[0m
+            [36m</label>[39m
+            [36m<textarea[39m
+              [33mid[39m=[32m"skill-instructions"[39m
+              [33mmaxlength[39m=[32m"20000"[39m
+              [33mrequired[39m=[32m""[39m
+            [36m/>[39m
+          [36m</div>[39m
+          [36m<button[39m
+            [33mtype[39m=[32m"submit"[39m
+          [36m>[39m
+            [0m创建技能[0m
+          [36m</button>[39m
+        [36m</form>[39m
+      [36m</aside>[39m
+    [36m</div>[39m
+  [36m</div>[39m
+[36m</body>[39m
+ ❯ Object.getElementError node_modules/@testing-library/dom/dist/config.js:37:19
+ ❯ node_modules/@testing-library/dom/dist/query-helpers.js:76:38
+ ❯ node_modules/@testing-library/dom/dist/query-helpers.js:52:17
+ ❯ node_modules/@testing-library/dom/dist/query-helpers.js:95:19
+ ❯ tests/team-accessibility.test.tsx:133:29
+    131|     const user = userEvent.setup();
+    132|     render(<TeamPanel />);
+    133|     await user.click(screen.getByRole("tab", { name: "Agent" }));
+       |                             ^
+    134|     await screen.findByText("暂无 Agent。");
+    135|     const opener = screen.getByRole("button", { name: "创建 Agent" });
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[6/13]⎯
+
+ FAIL  tests/team-visual-tokens.test.ts > Team visual tokens > sage foreground/background pair has WCAG AA contrast
+AssertionError: sage foreground token: expected undefined to be defined
+ ❯ tests/team-visual-tokens.test.ts:53:54
+     51|     )?.[1];
+     52|
+     53|     expect(foreground, `${accent} foreground token`).toBeDefined();
+       |                                                      ^
+     54|     expect(background, `${accent} background token`).toBeDefined();
+     55|     expect(contrast(foreground!, background!)).toBeGreaterThanOrEqual(…
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[7/13]⎯
+
+ FAIL  tests/team-visual-tokens.test.ts > Team visual tokens > terracotta foreground/background pair has WCAG AA contrast
+AssertionError: terracotta foreground token: expected undefined to be defined
+ ❯ tests/team-visual-tokens.test.ts:53:54
+     51|     )?.[1];
+     52|
+     53|     expect(foreground, `${accent} foreground token`).toBeDefined();
+       |                                                      ^
+     54|     expect(background, `${accent} background token`).toBeDefined();
+     55|     expect(contrast(foreground!, background!)).toBeGreaterThanOrEqual(…
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[8/13]⎯
+
+ FAIL  tests/team-visual-tokens.test.ts > Team visual tokens > gold foreground/background pair has WCAG AA contrast
+AssertionError: gold foreground token: expected undefined to be defined
+ ❯ tests/team-visual-tokens.test.ts:53:54
+     51|     )?.[1];
+     52|
+     53|     expect(foreground, `${accent} foreground token`).toBeDefined();
+       |                                                      ^
+     54|     expect(background, `${accent} background token`).toBeDefined();
+     55|     expect(contrast(foreground!, background!)).toBeGreaterThanOrEqual(…
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[9/13]⎯
+
+ FAIL  tests/team-visual-tokens.test.ts > Team visual tokens > slate foreground/background pair has WCAG AA contrast
+AssertionError: slate foreground token: expected undefined to be defined
+ ❯ tests/team-visual-tokens.test.ts:53:54
+     51|     )?.[1];
+     52|
+     53|     expect(foreground, `${accent} foreground token`).toBeDefined();
+       |                                                      ^
+     54|     expect(background, `${accent} background token`).toBeDefined();
+     55|     expect(contrast(foreground!, background!)).toBeGreaterThanOrEqual(…
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[10/13]⎯
+
+ FAIL  tests/team-visual-tokens.test.ts > Team visual tokens > rose foreground/background pair has WCAG AA contrast
+AssertionError: rose foreground token: expected undefined to be defined
+ ❯ tests/team-visual-tokens.test.ts:53:54
+     51|     )?.[1];
+     52|
+     53|     expect(foreground, `${accent} foreground token`).toBeDefined();
+       |                                                      ^
+     54|     expect(background, `${accent} background token`).toBeDefined();
+     55|     expect(contrast(foreground!, background!)).toBeGreaterThanOrEqual(…
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[11/13]⎯
+
+ FAIL  tests/team-visual-tokens.test.ts > Team visual tokens > olive foreground/background pair has WCAG AA contrast
+AssertionError: olive foreground token: expected undefined to be defined
+ ❯ tests/team-visual-tokens.test.ts:53:54
+     51|     )?.[1];
+     52|
+     53|     expect(foreground, `${accent} foreground token`).toBeDefined();
+       |                                                      ^
+     54|     expect(background, `${accent} background token`).toBeDefined();
+     55|     expect(contrast(foreground!, background!)).toBeGreaterThanOrEqual(…
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[12/13]⎯
+
+ FAIL  tests/team-visual-tokens.test.ts > Team visual tokens > uses controlled accent attributes and no inline or raw visual values
+AssertionError: expected '' to contain 'data-accent={agent.accentToken}'
+
+- Expected
++ Received
+
+- data-accent={agent.accentToken}
+
+ ❯ tests/team-visual-tokens.test.ts:60:24
+     58|
+     59|   it("uses controlled accent attributes and no inline or raw visual va…
+     60|     expect(agentPanel).toContain("data-accent={agent.accentToken}");
+       |                        ^
+     61|     expect(agentPanel).not.toMatch(/style=\{\{/);
+     62|     expect(agentPanel).not.toMatch(
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[13/13]⎯
+
+
+ Test Files  3 failed (3)
+      Tests  13 failed (13)
+   Start at  01:40:01
+   Duration  2.89s (transform 202ms, setup 1.50s, import 426ms, tests 658ms, environment 4.68s)
+
+# exit: 1

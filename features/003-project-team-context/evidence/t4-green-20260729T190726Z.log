@@ -1,0 +1,20 @@
+# hf-gate-run
+# label: t4-green
+# command: cmd /c npm test -- tests/mission-crud.test.ts
+# started: 2026-07-29T19:07:26+00:00
+
+> collaboration-cockpit@0.1.0 test
+> vitest run tests/mission-crud.test.ts
+
+
+ RUN  v4.1.10 D:/cool-ai
+
+(node:6000) ExperimentalWarning: SQLite is an experimental feature and might change at any time
+(Use `node --trace-warnings ...` to show where the warning was created)
+
+ Test Files  1 passed (1)
+      Tests  3 passed (3)
+   Start at  03:07:27
+   Duration  2.89s (transform 148ms, setup 354ms, import 86ms, tests 784ms, environment 1.40s)
+
+# exit: 0

@@ -1,0 +1,7 @@
+# hf-gate-run
+# label: typecheck
+# command: cmd /c npx tsc --noEmit --pretty false
+# started: 2026-07-30T06:35:22+00:00
+src/server/execution/action-orchestrator.ts(872,7): error TS2322: Type '{ succeeded: boolean; finishedAt: string; manifestHash: string; policyEntryId: string; }[]' is not assignable to type 'ValidationSnapshot[]'.
+  Type '{ succeeded: boolean; finishedAt: string; manifestHash: string; policyEntryId: string; }' is missing the following properties from type 'ValidationSnapshot': exitCode, policyRevisionId, required, stderrSha256, and 3 more.
+# exit: 2

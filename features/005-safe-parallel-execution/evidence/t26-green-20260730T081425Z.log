@@ -1,0 +1,20 @@
+# hf-gate-run
+# label: t26-green
+# command: npm.cmd test -- tests/execution-read-api.test.ts
+# started: 2026-07-30T08:14:25+00:00
+
+> collaboration-cockpit@0.1.0 test
+> vitest run tests/execution-read-api.test.ts
+
+
+ RUN  v4.1.10 D:/cool-ai
+
+(node:300) ExperimentalWarning: SQLite is an experimental feature and might change at any time
+(Use `node --trace-warnings ...` to show where the warning was created)
+
+ Test Files  1 passed (1)
+      Tests  7 passed (7)
+   Start at  16:14:26
+   Duration  21.12s (transform 306ms, setup 350ms, import 347ms, tests 18.72s, environment 1.43s)
+
+# exit: 0

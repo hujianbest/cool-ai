@@ -1,0 +1,18 @@
+# hf-gate-run
+# label: t10-green
+# command: cmd /c npm test -- tests/mission-board.test.tsx
+# started: 2026-07-29T19:42:06+00:00
+
+> collaboration-cockpit@0.1.0 test
+> vitest run tests/mission-board.test.tsx
+
+
+ RUN  v4.1.10 D:/cool-ai
+
+
+ Test Files  1 passed (1)
+      Tests  4 passed (4)
+   Start at  03:42:07
+   Duration  3.76s (transform 100ms, setup 342ms, import 171ms, tests 1.58s, environment 1.41s)
+
+# exit: 0

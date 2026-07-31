@@ -1,0 +1,49 @@
+# hf-gate-run
+# label: t5-red
+# command: cmd /c npm test -- tests/execution-actions.test.ts
+# started: 2026-07-30T03:16:25+00:00
+
+> collaboration-cockpit@0.1.0 test
+> vitest run tests/execution-actions.test.ts
+
+
+ RUN  v4.1.10 D:/cool-ai
+
+(node:6988) ExperimentalWarning: SQLite is an experimental feature and might change at any time
+(Use `node --trace-warnings ...` to show where the warning was created)
+ ❯ tests/execution-actions.test.ts (7 tests | 7 failed) 1535ms
+     × starts the business clock from SQLite once and never resets or extends it 233ms
+     × uses a random 120 second lease and heartbeat renews from DB time without extending overall deadline 217ms
+     × enforces the DB-time boundary at now=deadline-1 221ms
+     × enforces the DB-time boundary at now=deadline 215ms
+     × enforces the DB-time boundary at now=deadline+1 216ms
+     × lets heartbeat, finalize, reconcile, or control win one terminal CAS with durable receipt and late no-op 215ms
+     × ignores caller-skew fields and uses only SQLite time 217ms
+
+⎯⎯⎯⎯⎯⎯⎯ Failed Tests 7 ⎯⎯⎯⎯⎯⎯⎯
+
+ FAIL  tests/execution-actions.test.ts > generic execution child action CAS > starts the business clock from SQLite once and never resets or extends it
+ FAIL  tests/execution-actions.test.ts > generic execution child action CAS > uses a random 120 second lease and heartbeat renews from DB time without extending overall deadline
+ FAIL  tests/execution-actions.test.ts > generic execution child action CAS > enforces the DB-time boundary at now=deadline-1
+ FAIL  tests/execution-actions.test.ts > generic execution child action CAS > enforces the DB-time boundary at now=deadline
+ FAIL  tests/execution-actions.test.ts > generic execution child action CAS > enforces the DB-time boundary at now=deadline+1
+ FAIL  tests/execution-actions.test.ts > generic execution child action CAS > lets heartbeat, finalize, reconcile, or control win one terminal CAS with durable receipt and late no-op
+ FAIL  tests/execution-actions.test.ts > generic execution child action CAS > ignores caller-skew fields and uses only SQLite time
+AssertionError: The generic execution action CAS primitive is unavailable.
+ ❯ tests/execution-actions.test.ts:63:12
+     61|     actions = await import(/* @vite-ignore */ moduleId) as ActionModul…
+     62|   } catch {
+     63|     expect.fail("The generic execution action CAS primitive is unavail…
+       |            ^
+     64|   }
+     65| });
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[1/7]⎯
+
+
+ Test Files  1 failed (1)
+      Tests  7 failed (7)
+   Start at  11:16:26
+   Duration  3.68s (transform 107ms, setup 383ms, import 100ms, tests 1.53s, environment 1.40s)
+
+# exit: 1

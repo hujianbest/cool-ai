@@ -1,0 +1,18 @@
+# hf-gate-run
+# label: t23-green
+# command: npm.cmd test -- tests/collaboration-accessibility.test.tsx
+# started: 2026-07-29T23:41:18+00:00
+
+> collaboration-cockpit@0.1.0 test
+> vitest run tests/collaboration-accessibility.test.tsx
+
+
+ RUN  v4.1.10 D:/cool-ai
+
+No test files found, exiting with code 1
+
+filter: tests/collaboration-accessibility.test.tsx
+include: **/*.{test,spec}.?(c|m)[jt]s?(x)
+exclude:  tests/baseline.test.mjs, node_modules/**
+
+# exit: 1

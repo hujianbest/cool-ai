@@ -1,0 +1,6 @@
+# hf-gate-run
+# label: t21-red
+# command: npm test -- tests/merge-journal-prepare.test.ts
+# started: 2026-07-30T06:59:39+00:00
+hf-gate: 命令无法启动: [WinError 2] 系统找不到指定的文件。
+# exit: 127

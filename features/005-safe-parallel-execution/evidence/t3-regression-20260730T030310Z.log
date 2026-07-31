@@ -1,0 +1,24 @@
+# hf-gate-run
+# label: t3-regression
+# command: cmd /c npm test -- tests/execution-slice.test.tsx tests/collaboration-accessibility.test.tsx tests/workspace-slice.test.tsx tests/migrations-v5.test.ts
+# started: 2026-07-30T03:03:10+00:00
+
+> collaboration-cockpit@0.1.0 test
+> vitest run tests/execution-slice.test.tsx tests/collaboration-accessibility.test.tsx tests/workspace-slice.test.tsx tests/migrations-v5.test.ts
+
+
+ RUN  v4.1.10 D:/cool-ai
+
+(node:11684) ExperimentalWarning: SQLite is an experimental feature and might change at any time
+(Use `node --trace-warnings ...` to show where the warning was created)
+(node:16672) ExperimentalWarning: SQLite is an experimental feature and might change at any time
+(Use `node --trace-warnings ...` to show where the warning was created)
+(node:6684) ExperimentalWarning: SQLite is an experimental feature and might change at any time
+(Use `node --trace-warnings ...` to show where the warning was created)
+
+ Test Files  4 passed (4)
+      Tests  14 passed (14)
+   Start at  11:03:11
+   Duration  14.51s (transform 734ms, setup 1.73s, import 1.12s, tests 15.53s, environment 6.36s)
+
+# exit: 0

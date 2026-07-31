@@ -1,0 +1,99 @@
+# hf-gate-run
+# label: t10-red
+# command: cmd /c npm test -- tests/team-smoke-contract.test.ts
+# started: 2026-07-29T17:47:38+00:00
+
+> collaboration-cockpit@0.1.0 test
+> vitest run tests/team-smoke-contract.test.ts
+
+
+ RUN  v4.1.10 D:/cool-ai
+
+ ❯ tests/team-smoke-contract.test.ts (4 tests | 4 failed) 13ms
+     × exposes a separate documented smoke:team command 8ms
+     × isolates the app, database, key and local compatible provider 2ms
+     × drives the complete persisted Team browser behavior 1ms
+     × writes exact visual evidence and scans every secret surface 1ms
+
+⎯⎯⎯⎯⎯⎯⎯ Failed Tests 4 ⎯⎯⎯⎯⎯⎯⎯
+
+ FAIL  tests/team-smoke-contract.test.ts > Team browser developer loop and security contract > exposes a separate documented smoke:team command
+AssertionError: expected undefined to be 'node tests/team-browser-smoke.mjs' // Object.is equality
+
+- Expected:
+"node tests/team-browser-smoke.mjs"
+
++ Received:
+undefined
+
+ ❯ tests/team-smoke-contract.test.ts:15:49
+     13| describe("Team browser developer loop and security contract", () => {
+     14|   it("exposes a separate documented smoke:team command", () => {
+     15|     expect(packageJson.scripts?.["smoke:team"]).toBe(
+       |                                                 ^
+     16|       "node tests/team-browser-smoke.mjs",
+     17|     );
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[1/4]⎯
+
+ FAIL  tests/team-smoke-contract.test.ts > Team browser developer loop and security contract > isolates the app, database, key and local compatible provider
+AssertionError: expected '' to contain 'mkdtempSync'
+
+- Expected
++ Received
+
+- mkdtempSync
+
+ ❯ tests/team-smoke-contract.test.ts:27:19
+     25|
+     26|   it("isolates the app, database, key and local compatible provider", …
+     27|     expect(smoke).toContain("mkdtempSync");
+       |                   ^
+     28|     expect(smoke).toContain("COCKPIT_DB_PATH");
+     29|     expect(smoke).toContain("COCKPIT_MASTER_KEY");
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[2/4]⎯
+
+ FAIL  tests/team-smoke-contract.test.ts > Team browser developer loop and security contract > drives the complete persisted Team browser behavior
+AssertionError: 创建模型服务: expected '' to contain '创建模型服务'
+
+- Expected
++ Received
+
+- 创建模型服务
+
+ ❯ tests/team-smoke-contract.test.ts:49:29
+     47|       "Escape",
+     48|     ]) {
+     49|       expect(smoke, marker).toContain(marker);
+       |                             ^
+     50|     }
+     51|   });
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[3/4]⎯
+
+ FAIL  tests/team-smoke-contract.test.ts > Team browser developer loop and security contract > writes exact visual evidence and scans every secret surface
+AssertionError: expected '' to contain 'smoke-team-desktop.png'
+
+- Expected
++ Received
+
+- smoke-team-desktop.png
+
+ ❯ tests/team-smoke-contract.test.ts:59:21
+     57|       "demo-agent-team.png",
+     58|     ]) {
+     59|       expect(smoke).toContain(filename);
+       |                     ^
+     60|     }
+     61|     for (const surface of [
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[4/4]⎯
+
+
+ Test Files  1 failed (1)
+      Tests  4 failed (4)
+   Start at  01:47:40
+   Duration  2.25s (transform 42ms, setup 337ms, import 21ms, tests 13ms, environment 1.59s)
+
+# exit: 1

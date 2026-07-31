@@ -1,0 +1,22 @@
+# hf-gate-run
+# label: t28-regression
+# command: npm.cmd test -- tests/visual-tokens.test.ts tests/owner-handoff-plan-races.test.ts tests/execution-slice.test.tsx tests/execution-start-policy-ui.test.tsx tests/execution-cards-ui.test.tsx
+# started: 2026-07-30T14:05:50+00:00
+
+> collaboration-cockpit@0.1.0 test
+> vitest run tests/visual-tokens.test.ts tests/owner-handoff-plan-races.test.ts tests/execution-slice.test.tsx tests/execution-start-policy-ui.test.tsx tests/execution-cards-ui.test.tsx
+
+
+ RUN  v4.1.10 D:/cool-ai
+
+(node:16600) ExperimentalWarning: SQLite is an experimental feature and might change at any time
+(Use `node --trace-warnings ...` to show where the warning was created)
+(node:9888) ExperimentalWarning: SQLite is an experimental feature and might change at any time
+(Use `node --trace-warnings ...` to show where the warning was created)
+
+ Test Files  5 passed (5)
+      Tests  21 passed (21)
+   Start at  22:05:52
+   Duration  15.78s (transform 777ms, setup 4.76s, import 1.85s, tests 14.38s, environment 16.51s)
+
+# exit: 0

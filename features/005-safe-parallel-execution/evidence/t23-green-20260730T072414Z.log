@@ -1,0 +1,20 @@
+# hf-gate-run
+# label: t23-green
+# command: npm.cmd test -- tests/merge-external-writer.test.ts
+# started: 2026-07-30T07:24:14+00:00
+
+> collaboration-cockpit@0.1.0 test
+> vitest run tests/merge-external-writer.test.ts
+
+
+ RUN  v4.1.10 D:/cool-ai
+
+(node:16588) ExperimentalWarning: SQLite is an experimental feature and might change at any time
+(Use `node --trace-warnings ...` to show where the warning was created)
+
+ Test Files  1 passed (1)
+      Tests  5 passed (5)
+   Start at  15:24:15
+   Duration  5.42s (transform 211ms, setup 345ms, import 102ms, tests 3.27s, environment 1.44s)
+
+# exit: 0

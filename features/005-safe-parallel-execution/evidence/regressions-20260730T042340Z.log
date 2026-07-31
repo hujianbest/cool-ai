@@ -1,0 +1,22 @@
+# hf-gate-run
+# label: regressions
+# command: cmd /c npm test -- tests/execution-actions.test.ts tests/execution-operations.test.ts
+# started: 2026-07-30T04:23:40+00:00
+
+> collaboration-cockpit@0.1.0 test
+> vitest run tests/execution-actions.test.ts tests/execution-operations.test.ts
+
+
+ RUN  v4.1.10 D:/cool-ai
+
+(node:15880) ExperimentalWarning: SQLite is an experimental feature and might change at any time
+(Use `node --trace-warnings ...` to show where the warning was created)
+(node:324) ExperimentalWarning: SQLite is an experimental feature and might change at any time
+(Use `node --trace-warnings ...` to show where the warning was created)
+
+ Test Files  2 passed (2)
+      Tests  12 passed (12)
+   Start at  12:23:41
+   Duration  4.64s (transform 248ms, setup 726ms, import 267ms, tests 4.06s, environment 2.91s)
+
+# exit: 0

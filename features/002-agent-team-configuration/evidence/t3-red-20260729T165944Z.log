@@ -1,0 +1,148 @@
+# hf-gate-run
+# label: t3-red
+# command: cmd /c npm test -- tests/credential-vault.test.ts
+# started: 2026-07-29T16:59:44+00:00
+
+> collaboration-cockpit@0.1.0 test
+> vitest run tests/credential-vault.test.ts
+
+
+ RUN  v4.1.10 D:/cool-ai
+
+ ❯ tests/credential-vault.test.ts (7 tests | 7 failed) 20ms
+     × requires a canonical unpadded base64url 32-byte environment key 10ms
+     × uses the fixed HKDF keys, AES-256-GCM envelope, provider AAD, mask and fingerprint 1ms
+     × distinguishes unavailable keys from corrupt envelopes and supports replacement recovery 1ms
+     × issues and verifies canonical create tokens bound to the complete draft 2ms
+     × binds retain and replace tokens to provider version and credential generation 1ms
+     × rejects malformed and oversized tokens before accepting a signature 1ms
+     × does not expose plaintext in envelopes, tokens, implementation source, or logs 2ms
+
+⎯⎯⎯⎯⎯⎯⎯ Failed Tests 7 ⎯⎯⎯⎯⎯⎯⎯
+
+ FAIL  tests/credential-vault.test.ts > credential vault > requires a canonical unpadded base64url 32-byte environment key
+AssertionError: the versioned credential vault must exist: expected undefined to be type of 'function'
+
+Expected: "function"
+Received: "undefined"
+
+ ❯ loadVaultModule tests/credential-vault.test.ts:71:66
+     69| async function loadVaultModule(): Promise<VaultModule> {
+     70|   const loadVault = vaultModules["../src/server/credential-vault.ts"];
+     71|   expect(loadVault, "the versioned credential vault must exist").toBeT…
+       |                                                                  ^
+     72|   return loadVault();
+     73| }
+ ❯ tests/credential-vault.test.ts:83:45
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[1/7]⎯
+
+ FAIL  tests/credential-vault.test.ts > credential vault > uses the fixed HKDF keys, AES-256-GCM envelope, provider AAD, mask and fingerprint
+AssertionError: the versioned credential vault must exist: expected undefined to be type of 'function'
+
+Expected: "function"
+Received: "undefined"
+
+ ❯ loadVaultModule tests/credential-vault.test.ts:71:66
+     69| async function loadVaultModule(): Promise<VaultModule> {
+     70|   const loadVault = vaultModules["../src/server/credential-vault.ts"];
+     71|   expect(loadVault, "the versioned credential vault must exist").toBeT…
+       |                                                                  ^
+     72|   return loadVault();
+     73| }
+ ❯ tests/credential-vault.test.ts:107:45
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[2/7]⎯
+
+ FAIL  tests/credential-vault.test.ts > credential vault > distinguishes unavailable keys from corrupt envelopes and supports replacement recovery
+AssertionError: the versioned credential vault must exist: expected undefined to be type of 'function'
+
+Expected: "function"
+Received: "undefined"
+
+ ❯ loadVaultModule tests/credential-vault.test.ts:71:66
+     69| async function loadVaultModule(): Promise<VaultModule> {
+     70|   const loadVault = vaultModules["../src/server/credential-vault.ts"];
+     71|   expect(loadVault, "the versioned credential vault must exist").toBeT…
+       |                                                                  ^
+     72|   return loadVault();
+     73| }
+ ❯ tests/credential-vault.test.ts:154:45
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[3/7]⎯
+
+ FAIL  tests/credential-vault.test.ts > credential vault > issues and verifies canonical create tokens bound to the complete draft
+AssertionError: the versioned credential vault must exist: expected undefined to be type of 'function'
+
+Expected: "function"
+Received: "undefined"
+
+ ❯ loadVaultModule tests/credential-vault.test.ts:71:66
+     69| async function loadVaultModule(): Promise<VaultModule> {
+     70|   const loadVault = vaultModules["../src/server/credential-vault.ts"];
+     71|   expect(loadVault, "the versioned credential vault must exist").toBeT…
+       |                                                                  ^
+     72|   return loadVault();
+     73| }
+ ❯ tests/credential-vault.test.ts:190:45
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[4/7]⎯
+
+ FAIL  tests/credential-vault.test.ts > credential vault > binds retain and replace tokens to provider version and credential generation
+AssertionError: the versioned credential vault must exist: expected undefined to be type of 'function'
+
+Expected: "function"
+Received: "undefined"
+
+ ❯ loadVaultModule tests/credential-vault.test.ts:71:66
+     69| async function loadVaultModule(): Promise<VaultModule> {
+     70|   const loadVault = vaultModules["../src/server/credential-vault.ts"];
+     71|   expect(loadVault, "the versioned credential vault must exist").toBeT…
+       |                                                                  ^
+     72|   return loadVault();
+     73| }
+ ❯ tests/credential-vault.test.ts:227:45
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[5/7]⎯
+
+ FAIL  tests/credential-vault.test.ts > credential vault > rejects malformed and oversized tokens before accepting a signature
+AssertionError: the versioned credential vault must exist: expected undefined to be type of 'function'
+
+Expected: "function"
+Received: "undefined"
+
+ ❯ loadVaultModule tests/credential-vault.test.ts:71:66
+     69| async function loadVaultModule(): Promise<VaultModule> {
+     70|   const loadVault = vaultModules["../src/server/credential-vault.ts"];
+     71|   expect(loadVault, "the versioned credential vault must exist").toBeT…
+       |                                                                  ^
+     72|   return loadVault();
+     73| }
+ ❯ tests/credential-vault.test.ts:281:45
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[6/7]⎯
+
+ FAIL  tests/credential-vault.test.ts > credential vault > does not expose plaintext in envelopes, tokens, implementation source, or logs
+AssertionError: the versioned credential vault must exist: expected undefined to be type of 'function'
+
+Expected: "function"
+Received: "undefined"
+
+ ❯ loadVaultModule tests/credential-vault.test.ts:71:66
+     69| async function loadVaultModule(): Promise<VaultModule> {
+     70|   const loadVault = vaultModules["../src/server/credential-vault.ts"];
+     71|   expect(loadVault, "the versioned credential vault must exist").toBeT…
+       |                                                                  ^
+     72|   return loadVault();
+     73| }
+ ❯ tests/credential-vault.test.ts:300:45
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[7/7]⎯
+
+
+ Test Files  1 failed (1)
+      Tests  7 failed (7)
+   Start at  00:59:45
+   Duration  2.11s (transform 64ms, setup 350ms, import 41ms, tests 20ms, environment 1.41s)
+
+# exit: 1

@@ -1,0 +1,89 @@
+# hf-gate-run
+# label: t9-red
+# command: cmd /c npm test -- tests/execution-read-tool.test.ts
+# started: 2026-07-30T03:54:19+00:00
+
+> collaboration-cockpit@0.1.0 test
+> vitest run tests/execution-read-tool.test.ts
+
+
+ RUN  v4.1.10 D:/cool-ai
+
+(node:12004) ExperimentalWarning: SQLite is an experimental feature and might change at any time
+(Use `node --trace-warnings ...` to show where the warning was created)
+ ❯ tests/execution-read-tool.test.ts (5 tests | 5 failed) 488ms
+     × accepts empty, BOM, and exactly 1 MiB files and hashes original bytes 28ms
+     × rejects 1 MiB + 1, NUL, malformed UTF-8, and non-files without partial text 2ms
+     × rejects file and ancestor identity changes after reading 2ms
+     × redacts configured and credential-like values before model, DTO, event, or DB storage 234ms
+     × discards a late read result when stop wins without facts, count, event, or secret 220ms
+
+⎯⎯⎯⎯⎯⎯⎯ Failed Tests 5 ⎯⎯⎯⎯⎯⎯⎯
+
+ FAIL  tests/execution-read-tool.test.ts > verified-handle UTF-8 read > accepts empty, BOM, and exactly 1 MiB files and hashes original bytes
+TypeError: readTool.readVerifiedFile is not a function
+ ❯ tests/execution-read-tool.test.ts:143:37
+    141|       [3, Buffer.alloc(1_048_576, 0x61), "a".repeat(1_048_576)],
+    142|     ] as const) {
+    143|       const result = await readTool.readVerifiedFile({
+       |                                     ^
+    144|         fs: adapterWithFile(bytes),
+    145|         path: "src/value.txt",
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[1/5]⎯
+
+ FAIL  tests/execution-read-tool.test.ts > verified-handle UTF-8 read > rejects 1 MiB + 1, NUL, malformed UTF-8, and non-files without partial text
+TypeError: readTool.readVerifiedFile is not a function
+ ❯ tests/execution-read-tool.test.ts:165:29
+    163|       [Buffer.from([0x66, 0x80, 0x6f]), "TEXT_INVALID"],
+    164|     ] as const) {
+    165|       await expect(readTool.readVerifiedFile({
+       |                             ^
+    166|         fs: adapterWithFile(bytes),
+    167|         path: "src/value.txt",
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[2/5]⎯
+
+ FAIL  tests/execution-read-tool.test.ts > verified-handle UTF-8 read > rejects file and ancestor identity changes after reading
+TypeError: readTool.readVerifiedFile is not a function
+ ❯ tests/execution-read-tool.test.ts:191:27
+    189|       node.bytes = Buffer.from("secret", "utf8");
+    190|     };
+    191|     await expect(readTool.readVerifiedFile({
+       |                           ^
+    192|       fs: fileRace,
+    193|       path: "src/value.txt",
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[3/5]⎯
+
+ FAIL  tests/execution-read-tool.test.ts > read redaction and durable CAS > redacts configured and credential-like values before model, DTO, event, or DB storage
+TypeError: readTool.executeReadToolAction is not a function
+ ❯ tests/execution-read-tool.test.ts:224:37
+    222|     const database = seedDatabase(10);
+    223|     try {
+    224|       const result = await readTool.executeReadToolAction({
+       |                                     ^
+    225|         actionIndex: 0,
+    226|         database,
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[4/5]⎯
+
+ FAIL  tests/execution-read-tool.test.ts > read redaction and durable CAS > discards a late read result when stop wins without facts, count, event, or secret
+TypeError: readTool.executeReadToolAction is not a function
+ ❯ tests/execution-read-tool.test.ts:289:37
+    287|     const database = seedDatabase(11);
+    288|     try {
+    289|       const result = await readTool.executeReadToolAction({
+       |                                     ^
+    290|         actionIndex: 0,
+    291|         database,
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[5/5]⎯
+
+
+ Test Files  1 failed (1)
+      Tests  5 failed (5)
+   Start at  11:54:20
+   Duration  3.19s (transform 350ms, setup 341ms, import 438ms, tests 488ms, environment 1.64s)
+
+# exit: 1

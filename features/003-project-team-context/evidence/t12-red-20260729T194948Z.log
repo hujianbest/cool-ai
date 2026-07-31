@@ -1,0 +1,62 @@
+# hf-gate-run
+# label: t12-red
+# command: cmd /c npm test -- tests/context-smoke-contract.test.ts
+# started: 2026-07-29T19:49:48+00:00
+
+> collaboration-cockpit@0.1.0 test
+> vitest run tests/context-smoke-contract.test.ts
+
+
+ RUN  v4.1.10 D:/cool-ai
+
+ ❯ tests/context-smoke-contract.test.ts (2 tests | 2 failed) 12ms
+     × documents and exposes the isolated context smoke command 8ms
+     × provides a compiling harness with required evidence and security contracts 2ms
+
+⎯⎯⎯⎯⎯⎯⎯ Failed Tests 2 ⎯⎯⎯⎯⎯⎯⎯
+
+ FAIL  tests/context-smoke-contract.test.ts > project-context developer loop contract > documents and exposes the isolated context smoke command
+AssertionError: expected undefined to be 'node tests/context-browser-smoke.mjs' // Object.is equality
+
+- Expected:
+"node tests/context-browser-smoke.mjs"
+
++ Received:
+undefined
+
+ ❯ tests/context-smoke-contract.test.ts:15:52
+     13| describe("project-context developer loop contract", () => {
+     14|   it("documents and exposes the isolated context smoke command", () =>…
+     15|     expect(packageJson.scripts?.["smoke:context"]).toBe(
+       |                                                    ^
+     16|       "node tests/context-browser-smoke.mjs",
+     17|     );
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[1/2]⎯
+
+ FAIL  tests/context-smoke-contract.test.ts > project-context developer loop contract > provides a compiling harness with required evidence and security contracts
+AssertionError: expected false to be true // Object.is equality
+
+- Expected
++ Received
+
+- true
++ false
+
+ ❯ tests/context-smoke-contract.test.ts:24:37
+     22|
+     23|   it("provides a compiling harness with required evidence and security…
+     24|     expect(existsSync(harnessPath)).toBe(true);
+       |                                     ^
+     25|     if (!existsSync(harnessPath)) return;
+     26|
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[2/2]⎯
+
+
+ Test Files  1 failed (1)
+      Tests  2 failed (2)
+   Start at  03:49:49
+   Duration  2.04s (transform 40ms, setup 333ms, import 19ms, tests 12ms, environment 1.40s)
+
+# exit: 1

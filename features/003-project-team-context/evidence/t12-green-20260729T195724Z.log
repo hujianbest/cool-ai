@@ -1,0 +1,2369 @@
+# hf-gate-run
+# label: t12-green
+# command: cmd /c npm test
+# started: 2026-07-29T19:57:24+00:00
+
+> collaboration-cockpit@0.1.0 test
+> vitest run
+
+
+ RUN  v4.1.10 D:/cool-ai
+
+(node:15624) ExperimentalWarning: SQLite is an experimental feature and might change at any time
+(Use `node --trace-warnings ...` to show where the warning was created)
+(node:15656) ExperimentalWarning: SQLite is an experimental feature and might change at any time
+(Use `node --trace-warnings ...` to show where the warning was created)
+(node:12820) ExperimentalWarning: SQLite is an experimental feature and might change at any time
+(Use `node --trace-warnings ...` to show where the warning was created)
+stderr | tests/project-panel.test.tsx > ProjectPanel > loads existing projects
+An error occurred in the <MembersSetup> component.
+
+Consider adding an error boundary to your tree to customize error handling behavior.
+Visit https://react.dev/link/error-boundaries to learn more about error boundaries.
+
+An error occurred in the <MissionBoard> component.
+
+Consider adding an error boundary to your tree to customize error handling behavior.
+Visit https://react.dev/link/error-boundaries to learn more about error boundaries.
+
+An error occurred in the <MemoryPanel> component.
+
+Consider adding an error boundary to your tree to customize error handling behavior.
+Visit https://react.dev/link/error-boundaries to learn more about error boundaries.
+
+An error occurred in the <TaskPanel> component.
+
+Consider adding an error boundary to your tree to customize error handling behavior.
+Visit https://react.dev/link/error-boundaries to learn more about error boundaries.
+
+
+ ❯ tests/workspace-slice.test.tsx (1 test | 1 failed) 674ms
+     × validates a real directory, persists its canonical path, and reloads it 673ms
+stderr | tests/task-flow.test.tsx > task event flow > shows loading, then restores persisted task events and result
+An error occurred in the <MembersSetup> component.
+
+Consider adding an error boundary to your tree to customize error handling behavior.
+Visit https://react.dev/link/error-boundaries to learn more about error boundaries.
+
+An error occurred in the <MissionBoard> component.
+
+Consider adding an error boundary to your tree to customize error handling behavior.
+Visit https://react.dev/link/error-boundaries to learn more about error boundaries.
+
+An error occurred in the <MemoryPanel> component.
+
+Consider adding an error boundary to your tree to customize error handling behavior.
+Visit https://react.dev/link/error-boundaries to learn more about error boundaries.
+
+An error occurred in the <TaskPanel> component.
+
+Consider adding an error boundary to your tree to customize error handling behavior.
+Visit https://react.dev/link/error-boundaries to learn more about error boundaries.
+
+
+stderr | tests/task-flow.test.tsx > task event flow > shows an actionable empty state when the project has no tasks
+An error occurred in the <MembersSetup> component.
+
+Consider adding an error boundary to your tree to customize error handling behavior.
+Visit https://react.dev/link/error-boundaries to learn more about error boundaries.
+
+An error occurred in the <MissionBoard> component.
+
+Consider adding an error boundary to your tree to customize error handling behavior.
+Visit https://react.dev/link/error-boundaries to learn more about error boundaries.
+
+An error occurred in the <MemoryPanel> component.
+
+Consider adding an error boundary to your tree to customize error handling behavior.
+Visit https://react.dev/link/error-boundaries to learn more about error boundaries.
+
+An error occurred in the <TaskPanel> component.
+
+Consider adding an error boundary to your tree to customize error handling behavior.
+Visit https://react.dev/link/error-boundaries to learn more about error boundaries.
+
+
+stderr | tests/task-flow.test.tsx > task event flow > calls create, start, and execute in order while rendering each persisted state
+An error occurred in the <MissionBoard> component.
+
+Consider adding an error boundary to your tree to customize error handling behavior.
+Visit https://react.dev/link/error-boundaries to learn more about error boundaries.
+
+An error occurred in the <MemoryPanel> component.
+
+Consider adding an error boundary to your tree to customize error handling behavior.
+Visit https://react.dev/link/error-boundaries to learn more about error boundaries.
+
+An error occurred in the <TaskPanel> component.
+
+Consider adding an error boundary to your tree to customize error handling behavior.
+Visit https://react.dev/link/error-boundaries to learn more about error boundaries.
+
+
+stderr | tests/cockpit-layout.test.tsx > desktop collaboration cockpit > presents project navigation, task flow, and current context from real data
+An error occurred in the <MembersSetup> component.
+
+Consider adding an error boundary to your tree to customize error handling behavior.
+Visit https://react.dev/link/error-boundaries to learn more about error boundaries.
+
+An error occurred in the <MissionBoard> component.
+
+Consider adding an error boundary to your tree to customize error handling behavior.
+Visit https://react.dev/link/error-boundaries to learn more about error boundaries.
+
+An error occurred in the <MemoryPanel> component.
+
+Consider adding an error boundary to your tree to customize error handling behavior.
+Visit https://react.dev/link/error-boundaries to learn more about error boundaries.
+
+An error occurred in the <TaskPanel> component.
+
+Consider adding an error boundary to your tree to customize error handling behavior.
+Visit https://react.dev/link/error-boundaries to learn more about error boundaries.
+
+
+ ❯ tests/cockpit-layout.test.tsx (1 test | 1 failed) 1237ms
+     × presents project navigation, task flow, and current context from real data 1235ms
+stderr | tests/project-panel.test.tsx > ProjectPanel > creates and displays a project
+An error occurred in the <MembersSetup> component.
+
+Consider adding an error boundary to your tree to customize error handling behavior.
+Visit https://react.dev/link/error-boundaries to learn more about error boundaries.
+
+An error occurred in the <MissionBoard> component.
+
+Consider adding an error boundary to your tree to customize error handling behavior.
+Visit https://react.dev/link/error-boundaries to learn more about error boundaries.
+
+An error occurred in the <MemoryPanel> component.
+
+Consider adding an error boundary to your tree to customize error handling behavior.
+Visit https://react.dev/link/error-boundaries to learn more about error boundaries.
+
+An error occurred in the <TaskPanel> component.
+
+Consider adding an error boundary to your tree to customize error handling behavior.
+Visit https://react.dev/link/error-boundaries to learn more about error boundaries.
+
+
+ ❯ tests/project-panel.test.tsx (3 tests | 2 failed) 1634ms
+     × loads existing projects 288ms
+     × creates and displays a project 1174ms
+stderr | tests/task-flow.test.tsx > task event flow > offers retry after a load error
+An error occurred in the <MembersSetup> component.
+
+Consider adding an error boundary to your tree to customize error handling behavior.
+Visit https://react.dev/link/error-boundaries to learn more about error boundaries.
+
+An error occurred in the <MissionBoard> component.
+
+Consider adding an error boundary to your tree to customize error handling behavior.
+Visit https://react.dev/link/error-boundaries to learn more about error boundaries.
+
+An error occurred in the <MemoryPanel> component.
+
+Consider adding an error boundary to your tree to customize error handling behavior.
+Visit https://react.dev/link/error-boundaries to learn more about error boundaries.
+
+An error occurred in the <TaskPanel> component.
+
+Consider adding an error boundary to your tree to customize error handling behavior.
+Visit https://react.dev/link/error-boundaries to learn more about error boundaries.
+
+
+stderr | tests/task-flow.test.tsx > task event flow > renders a persisted failed event and preserves the goal after execution fails
+An error occurred in the <MissionBoard> component.
+
+Consider adding an error boundary to your tree to customize error handling behavior.
+Visit https://react.dev/link/error-boundaries to learn more about error boundaries.
+
+An error occurred in the <MemoryPanel> component.
+
+Consider adding an error boundary to your tree to customize error handling behavior.
+Visit https://react.dev/link/error-boundaries to learn more about error boundaries.
+
+An error occurred in the <TaskPanel> component.
+
+Consider adding an error boundary to your tree to customize error handling behavior.
+Visit https://react.dev/link/error-boundaries to learn more about error boundaries.
+
+
+ ❯ tests/task-flow.test.tsx (5 tests | 5 failed) 2171ms
+     × shows loading, then restores persisted task events and result 1045ms
+     × shows an actionable empty state when the project has no tasks 38ms
+     × calls create, start, and execute in order while rendering each persisted state 37ms
+     × offers retry after a load error 1009ms
+     × renders a persisted failed event and preserves the goal after execution fails 41ms
+(node:11608) ExperimentalWarning: SQLite is an experimental feature and might change at any time
+(Use `node --trace-warnings ...` to show where the warning was created)
+(node:4636) ExperimentalWarning: SQLite is an experimental feature and might change at any time
+(Use `node --trace-warnings ...` to show where the warning was created)
+(node:7412) ExperimentalWarning: SQLite is an experimental feature and might change at any time
+(Use `node --trace-warnings ...` to show where the warning was created)
+(node:14236) ExperimentalWarning: SQLite is an experimental feature and might change at any time
+(Use `node --trace-warnings ...` to show where the warning was created)
+(node:2624) ExperimentalWarning: SQLite is an experimental feature and might change at any time
+(Use `node --trace-warnings ...` to show where the warning was created)
+(node:14692) ExperimentalWarning: SQLite is an experimental feature and might change at any time
+(Use `node --trace-warnings ...` to show where the warning was created)
+(node:12312) ExperimentalWarning: SQLite is an experimental feature and might change at any time
+(Use `node --trace-warnings ...` to show where the warning was created)
+(node:828) ExperimentalWarning: SQLite is an experimental feature and might change at any time
+(Use `node --trace-warnings ...` to show where the warning was created)
+(node:948) ExperimentalWarning: SQLite is an experimental feature and might change at any time
+(Use `node --trace-warnings ...` to show where the warning was created)
+ ❯ tests/migrations.test.ts (8 tests | 5 failed) 789ms
+     × migrates an empty v0 database through v1 to the complete v2 schema 80ms
+     × adopts a real S-1 legacy v0 database and preserves its data and foreign keys 143ms
+     × upgrades a valid v1 database and accepts a valid v2 database 131ms
+     × reopens a migrated database idempotently without changing persisted rows 111ms
+     × rejects schemas newer than the application 101ms
+(node:4540) ExperimentalWarning: SQLite is an experimental feature and might change at any time
+(Use `node --trace-warnings ...` to show where the warning was created)
+(node:11544) ExperimentalWarning: SQLite is an experimental feature and might change at any time
+(Use `node --trace-warnings ...` to show where the warning was created)
+(node:9736) ExperimentalWarning: SQLite is an experimental feature and might change at any time
+(Use `node --trace-warnings ...` to show where the warning was created)
+(node:3264) ExperimentalWarning: SQLite is an experimental feature and might change at any time
+(Use `node --trace-warnings ...` to show where the warning was created)
+(node:8692) ExperimentalWarning: SQLite is an experimental feature and might change at any time
+(Use `node --trace-warnings ...` to show where the warning was created)
+stderr | tests/accessibility.test.tsx > narrow-screen and keyboard accessibility > moves focus into each drawer and restores it to the opener
+An error occurred in the <MembersSetup> component.
+
+Consider adding an error boundary to your tree to customize error handling behavior.
+Visit https://react.dev/link/error-boundaries to learn more about error boundaries.
+
+An error occurred in the <MissionBoard> component.
+
+Consider adding an error boundary to your tree to customize error handling behavior.
+Visit https://react.dev/link/error-boundaries to learn more about error boundaries.
+
+An error occurred in the <MemoryPanel> component.
+
+Consider adding an error boundary to your tree to customize error handling behavior.
+Visit https://react.dev/link/error-boundaries to learn more about error boundaries.
+
+An error occurred in the <TaskPanel> component.
+
+Consider adding an error boundary to your tree to customize error handling behavior.
+Visit https://react.dev/link/error-boundaries to learn more about error boundaries.
+
+
+(node:13948) ExperimentalWarning: SQLite is an experimental feature and might change at any time
+(Use `node --trace-warnings ...` to show where the warning was created)
+stderr | tests/accessibility.test.tsx > narrow-screen and keyboard accessibility > places drawer controls before the primary form in keyboard order
+An error occurred in the <MembersSetup> component.
+
+Consider adding an error boundary to your tree to customize error handling behavior.
+Visit https://react.dev/link/error-boundaries to learn more about error boundaries.
+
+An error occurred in the <MissionBoard> component.
+
+Consider adding an error boundary to your tree to customize error handling behavior.
+Visit https://react.dev/link/error-boundaries to learn more about error boundaries.
+
+An error occurred in the <MemoryPanel> component.
+
+Consider adding an error boundary to your tree to customize error handling behavior.
+Visit https://react.dev/link/error-boundaries to learn more about error boundaries.
+
+An error occurred in the <TaskPanel> component.
+
+Consider adding an error boundary to your tree to customize error handling behavior.
+Visit https://react.dev/link/error-boundaries to learn more about error boundaries.
+
+
+(node:5348) ExperimentalWarning: SQLite is an experimental feature and might change at any time
+(Use `node --trace-warnings ...` to show where the warning was created)
+(node:3392) ExperimentalWarning: SQLite is an experimental feature and might change at any time
+(Use `node --trace-warnings ...` to show where the warning was created)
+stderr | tests/accessibility.test.tsx > narrow-screen and keyboard accessibility > announces the restored task status through a polite status region
+An error occurred in the <MembersSetup> component.
+
+Consider adding an error boundary to your tree to customize error handling behavior.
+Visit https://react.dev/link/error-boundaries to learn more about error boundaries.
+
+An error occurred in the <MissionBoard> component.
+
+Consider adding an error boundary to your tree to customize error handling behavior.
+Visit https://react.dev/link/error-boundaries to learn more about error boundaries.
+
+An error occurred in the <MemoryPanel> component.
+
+Consider adding an error boundary to your tree to customize error handling behavior.
+Visit https://react.dev/link/error-boundaries to learn more about error boundaries.
+
+An error occurred in the <TaskPanel> component.
+
+Consider adding an error boundary to your tree to customize error handling behavior.
+Visit https://react.dev/link/error-boundaries to learn more about error boundaries.
+
+
+ ❯ tests/accessibility.test.tsx (4 tests | 3 failed) 1360ms
+     × moves focus into each drawer and restores it to the opener 92ms
+     × places drawer controls before the primary form in keyboard order 51ms
+     × announces the restored task status through a polite status region 1022ms
+stderr | tests/code-review-fixes.test.tsx > code review fixes > focuses the current project title after creation
+An error occurred in the <MembersSetup> component.
+
+Consider adding an error boundary to your tree to customize error handling behavior.
+Visit https://react.dev/link/error-boundaries to learn more about error boundaries.
+
+An error occurred in the <MissionBoard> component.
+
+Consider adding an error boundary to your tree to customize error handling behavior.
+Visit https://react.dev/link/error-boundaries to learn more about error boundaries.
+
+An error occurred in the <MemoryPanel> component.
+
+Consider adding an error boundary to your tree to customize error handling behavior.
+Visit https://react.dev/link/error-boundaries to learn more about error boundaries.
+
+An error occurred in the <TaskPanel> component.
+
+Consider adding an error boundary to your tree to customize error handling behavior.
+Visit https://react.dev/link/error-boundaries to learn more about error boundaries.
+
+
+ ❯ tests/code-review-fixes.test.tsx (4 tests | 1 failed) 1540ms
+     × focuses the current project title after creation 1203ms
+(node:12132) ExperimentalWarning: SQLite is an experimental feature and might change at any time
+(Use `node --trace-warnings ...` to show where the warning was created)
+(node:17252) ExperimentalWarning: SQLite is an experimental feature and might change at any time
+(Use `node --trace-warnings ...` to show where the warning was created)
+(node:13840) ExperimentalWarning: SQLite is an experimental feature and might change at any time
+(Use `node --trace-warnings ...` to show where the warning was created)
+(node:6684) ExperimentalWarning: SQLite is an experimental feature and might change at any time
+(Use `node --trace-warnings ...` to show where the warning was created)
+ ❯ tests/visual-tokens.test.ts (3 tests | 1 failed) 17ms
+     × keeps raw visual values out of component styles 10ms
+
+⎯⎯⎯⎯⎯⎯ Failed Tests 19 ⎯⎯⎯⎯⎯⎯⎯
+
+ FAIL  tests/accessibility.test.tsx > narrow-screen and keyboard accessibility > moves focus into each drawer and restores it to the opener
+TestingLibraryElementError: Unable to find an accessible element with the role "button" and name "关闭项目导航"
+
+There are no accessible roles. But there might be some inaccessible roles. If you wish to access them, then set the `hidden` option to `true`. Learn more about this here: https://testing-library.com/docs/dom-testing-library/api-queries#byrole
+
+Ignored nodes: comments, script, style
+[36m<body>[39m
+  [36m<div />[39m
+[36m</body>[39m
+ ❯ Object.getElementError node_modules/@testing-library/dom/dist/config.js:37:19
+ ❯ node_modules/@testing-library/dom/dist/query-helpers.js:76:38
+ ❯ node_modules/@testing-library/dom/dist/query-helpers.js:52:17
+ ❯ node_modules/@testing-library/dom/dist/query-helpers.js:95:19
+ ❯ tests/accessibility.test.tsx:51:34
+     49|     const projects = screen.getByRole("button", { name: "打开项目导航" });
+     50|     await user.click(projects);
+     51|     const closeProjects = screen.getByRole("button", { name: "关闭项目导航" …
+       |                                  ^
+     52|     expect(projects).toHaveAttribute("aria-expanded", "true");
+     53|     expect(closeProjects).toHaveFocus();
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[1/23]⎯
+
+ FAIL  tests/accessibility.test.tsx > narrow-screen and keyboard accessibility > places drawer controls before the primary form in keyboard order
+TestingLibraryElementError: Unable to find an accessible element with the role "button" and name "打开项目导航"
+
+There are no accessible roles. But there might be some inaccessible roles. If you wish to access them, then set the `hidden` option to `true`. Learn more about this here: https://testing-library.com/docs/dom-testing-library/api-queries#byrole
+
+Ignored nodes: comments, script, style
+[36m<body>[39m
+  [36m<div />[39m
+[36m</body>[39m
+ ❯ Object.getElementError node_modules/@testing-library/dom/dist/config.js:37:19
+ ❯ node_modules/@testing-library/dom/dist/query-helpers.js:76:38
+ ❯ node_modules/@testing-library/dom/dist/query-helpers.js:52:17
+ ❯ node_modules/@testing-library/dom/dist/query-helpers.js:95:19
+ ❯ tests/accessibility.test.tsx:73:19
+     71|
+     72|     await user.tab();
+     73|     expect(screen.getByRole("button", { name: "打开项目导航" })).toHaveFocus…
+       |                   ^
+     74|     await user.tab();
+     75|     expect(screen.getByRole("button", { name: "打开当前任务上下文" })).toHaveFo…
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[2/23]⎯
+
+ FAIL  tests/accessibility.test.tsx > narrow-screen and keyboard accessibility > announces the restored task status through a polite status region
+TestingLibraryElementError: Unable to find an element with the text: 最新任务状态：已完成. This could be because the text is broken up by multiple elements. In this case, you can provide a function for your text matcher to make your matcher more flexible.
+
+Ignored nodes: comments, script, style
+[36m<body>[39m
+  [36m<div />[39m
+[36m</body>[39m
+
+Ignored nodes: comments, script, style
+[36m<body>[39m
+  [36m<div />[39m
+[36m</body>[39m
+ ❯ waitForWrapper node_modules/@testing-library/dom/dist/wait-for.js:163:27
+ ❯ node_modules/@testing-library/dom/dist/query-helpers.js:86:33
+ ❯ tests/accessibility.test.tsx:121:18
+    119|     render(<ProjectPanel />);
+    120|
+    121|     await screen.findByText("最新任务状态：已完成");
+       |                  ^
+    122|     const status = screen.getByRole("status");
+    123|     expect(status).toHaveAttribute("aria-live", "polite");
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[3/23]⎯
+
+ FAIL  tests/cockpit-layout.test.tsx > desktop collaboration cockpit > presents project navigation, task flow, and current context from real data
+TestingLibraryElementError: Unable to find an element with the text: 任务已完成。. This could be because the text is broken up by multiple elements. In this case, you can provide a function for your text matcher to make your matcher more flexible.
+
+Ignored nodes: comments, script, style
+[36m<main[39m
+  [33maria-label[39m=[32m"任务事件流"[39m
+  [33mclass[39m=[32m"cockpit-flow"[39m
+  [33mdata-open[39m=[32m"false"[39m
+  [33mdata-testid[39m=[32m"editor-surface"[39m
+  [33mid[39m=[32m"task-editor-surface"[39m
+[36m>[39m
+  [36m<span[39m
+    [33mclass[39m=[32m"sr-only"[39m
+    [33mid[39m=[32m"task-editor-label"[39m
+  [36m>[39m
+    [0m任务编辑[0m
+  [36m</span>[39m
+  [36m<button[39m
+    [33maria-label[39m=[32m"关闭任务编辑"[39m
+    [33mclass[39m=[32m"drawer-close"[39m
+    [33mdata-dialog-close[39m=[32m"true"[39m
+    [33mtabindex[39m=[32m"-1"[39m
+    [33mtype[39m=[32m"button"[39m
+  [36m>[39m
+    [0m关闭[0m
+  [36m</button>[39m
+  [36m<div[39m
+    [33mclass[39m=[32m"panel-heading"[39m
+  [36m>[39m
+    [36m<span[39m
+      [33maria-hidden[39m=[32m"true"[39m
+      [33mclass[39m=[32m"agent-mark"[39m
+    [36m>[39m
+      [0mA[0m
+    [36m</span>[39m
+    [36m<div>[39m
+      [36m<p[39m
+        [33mclass[39m=[32m"eyebrow"[39m
+      [36m>[39m
+        [0m确定性示例 Agent[0m
+      [36m</p>[39m
+      [36m<h2[39m
+        [33mid[39m=[32m"tasks-title"[39m
+        [33mtabindex[39m=[32m"-1"[39m
+      [36m>[39m
+        [0mLaunch plan[0m
+      [36m</h2>[39m
+    [36m</div>[39m
+  [36m</div>[39m
+  [36m<section[39m
+    [33maria-labelledby[39m=[32m"mission-board-title-project-1"[39m
+    [33mclass[39m=[32m"stack mission-board"[39m
+    [33mid[39m=[32m"mission-board"[39m
+  [36m>[39m
+    [36m<h2[39m
+      [33mid[39m=[32m"mission-board-title-project-1"[39m
+    [36m>[39m
+      [0m使命看板[0m
+    [36m</h2>[39m
+    [36m<p[39m
+      [33maria-busy[39m=[32m"true"[39m
+      [33mclass[39m=[32m"state-message"[39m
+    [36m>[39m
+      [0m正在加载使命看板…[0m
+    [36m</p>[39m
+  [36m</section>[39m
+  [36m<form[39m
+    [33mclass[39m=[32m"composer"[39m
+  [36m>[39m
+    [36m<div[39m
+      [33mclass[39m=[32m"form-row"[39m
+    [36m>[39m
+      [36m<div[39m
+        [33mclass[39m=[32m"form-field"[39m
+      [36m>[39m
+        [36m<label[39m
+          [33mfor[39m=[32m"task-goal"[39m
+        [36m>[39m
+          [0m任务目标[0m
+        [36m</label>[39m
+        [36m<input[39m
+          [33mid[39m=[32m"task-goal"[39m
+          [33mname[39m=[32m"goal"[39m
+          [33mvalue[39m=[32m""[39m
+        [36m/>[39m
+      [36m</div>[39m
+      [36m<button[39m
+        [33mdisabled[39m=[32m""[39m
+        [33mtype[39m=[32m"submit"[39m
+      [36m>[39m
+        [0m运行任务[0m
+      [36m</button>[39m
+    [36m</div>[39m
+  [36m</form>[39m
+  [36m<p[39m
+    [33mclass[39m=[32m"state-message"[39m
+  [36m>[39m
+    [0m暂无任务。输入目标即可运行示例 Agent。[0m
+  [36m</p>[39m
+  [36m<p[39m
+    [33maria-atomic[39m=[32m"true"[39m
+    [33maria-live[39m=[32m"polite"[39m
+    [33mclass[39m=[32m"muted"[39m
+    [33mrole[39m=[32m"status"[39m
+  [36m/>[39m
+[36m</main>[39m
+
+Ignored nodes: comments, script, style
+[36m<main[39m
+  [33maria-label[39m=[32m"任务事件流"[39m
+  [33mclass[39m=[32m"cockpit-flow"[39m
+  [33mdata-open[39m=[32m"false"[39m
+  [33mdata-testid[39m=[32m"editor-surface"[39m
+  [33mid[39m=[32m"task-editor-surface"[39m
+[36m>[39m
+  [36m<span[39m
+    [33mclass[39m=[32m"sr-only"[39m
+    [33mid[39m=[32m"task-editor-label"[39m
+  [36m>[39m
+    [0m任务编辑[0m
+  [36m</span>[39m
+  [36m<button[39m
+    [33maria-label[39m=[32m"关闭任务编辑"[39m
+    [33mclass[39m=[32m"drawer-close"[39m
+    [33mdata-dialog-close[39m=[32m"true"[39m
+    [33mtabindex[39m=[32m"-1"[39m
+    [33mtype[39m=[32m"button"[39m
+  [36m>[39m
+    [0m关闭[0m
+  [36m</button>[39m
+  [36m<div[39m
+    [33mclass[39m=[32m"panel-heading"[39m
+  [36m>[39m
+    [36m<span[39m
+      [33maria-hidden[39m=[32m"true"[39m
+      [33mclass[39m=[32m"agent-mark"[39m
+    [36m>[39m
+      [0mA[0m
+    [36m</span>[39m
+    [36m<div>[39m
+      [36m<p[39m
+        [33mclass[39m=[32m"eyebrow"[39m
+      [36m>[39m
+        [0m确定性示例 Agent[0m
+      [36m</p>[39m
+      [36m<h2[39m
+        [33mid[39m=[32m"tasks-title"[39m
+        [33mtabindex[39m=[32m"-1"[39m
+      [36m>[39m
+        [0mLaunch plan[0m
+      [36m</h2>[39m
+    [36m</div>[39m
+  [36m</div>[39m
+  [36m<section[39m
+    [33maria-labelledby[39m=[32m"mission-board-title-project-1"[39m
+    [33mclass[39m=[32m"stack mission-board"[39m
+    [33mid[39m=[32m"mission-board"[39m
+  [36m>[39m
+    [36m<h2[39m
+      [33mid[39m=[32m"mission-board-title-project-1"[39m
+    [36m>[39m
+      [0m使命看板[0m
+    [36m</h2>[39m
+    [36m<p[39m
+      [33maria-busy[39m=[32m"true"[39m
+      [33mclass[39m=[32m"state-message"[39m
+    [36m>[39m
+      [0m正在加载使命看板…[0m
+    [36m</p>[39m
+  [36m</section>[39m
+  [36m<form[39m
+    [33mclass[39m=[32m"composer"[39m
+  [36m>[39m
+    [36m<div[39m
+      [33mclass[39m=[32m"form-row"[39m
+    [36m>[39m
+      [36m<div[39m
+        [33mclass[39m=[32m"form-field"[39m
+      [36m>[39m
+        [36m<label[39m
+          [33mfor[39m=[32m"task-goal"[39m
+        [36m>[39m
+          [0m任务目标[0m
+        [36m</label>[39m
+        [36m<input[39m
+          [33mid[39m=[32m"task-goal"[39m
+          [33mname[39m=[32m"goal"[39m
+          [33mvalue[39m=[32m""[39m
+        [36m/>[39m
+      [36m</div>[39m
+      [36m<button[39m
+        [33mdisabled[39m=[32m""[39m
+        [33mtype[39m=[32m"submit"[39m
+      [36m>[39m
+        [0m运行任务[0m
+      [36m</button>[39m
+    [36m</div>[39m
+  [36m</form>[39m
+  [36m<p[39m
+    [33mclass[39m=[32m"state-message"[39m
+  [36m>[39m
+    [0m暂无任务。输入目标即可运行示例 Agent。[0m
+  [36m</p>[39m
+  [36m<p[39m
+    [33maria-atomic[39m=[32m"true"[39m
+    [33maria-live[39m=[32m"polite"[39m
+    [33mclass[39m=[32m"muted"[39m
+    [33mrole[39m=[32m"status"[39m
+  [36m/>[39m
+[36m</main>[39m
+ ❯ waitForWrapper node_modules/@testing-library/dom/dist/wait-for.js:163:27
+ ❯ node_modules/@testing-library/dom/dist/query-helpers.js:86:33
+ ❯ tests/cockpit-layout.test.tsx:86:31
+     84|       "page",
+     85|     );
+     86|     expect(await within(flow).findByText("任务已完成。")).toBeInTheDocument(…
+       |                               ^
+     87|     expect(within(flow).getByText("已完成", { selector: ".status-label" }…
+     88|     expect(within(context).getByText("Prepare launch notes")).toBeInTh…
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[4/23]⎯
+
+ FAIL  tests/code-review-fixes.test.tsx > code review fixes > focuses the current project title after creation
+TestingLibraryElementError: Unable to find role="heading" and name "新项目"
+
+Ignored nodes: comments, script, style
+[36m<body>[39m
+  [36m<div />[39m
+[36m</body>[39m
+
+Ignored nodes: comments, script, style
+[36m<body>[39m
+  [36m<div />[39m
+[36m</body>[39m
+ ❯ waitForWrapper node_modules/@testing-library/dom/dist/wait-for.js:163:27
+ ❯ node_modules/@testing-library/dom/dist/query-helpers.js:86:33
+ ❯ tests/code-review-fixes.test.tsx:88:32
+     86|     await user.click(screen.getByRole("button", { name: "创建项目" }));
+     87|
+     88|     const title = await screen.findByRole("heading", { level: 2, name:…
+       |                                ^
+     89|     expect(title).toHaveAttribute("tabindex", "-1");
+     90|     expect(title).toHaveFocus();
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[5/23]⎯
+
+ FAIL  tests/migrations.test.ts > database migrations > migrates an empty v0 database through v1 to the complete v2 schema
+AssertionError: expected 3 to be 2 // Object.is equality
+
+- Expected
++ Received
+
+- 2
++ 3
+
+ ❯ tests/migrations.test.ts:137:35
+    135|     const database = openDatabase(databasePath());
+    136|
+    137|     expect(userVersion(database)).toBe(2);
+       |                                   ^
+    138|     expect(tableNames(database)).toEqual([
+    139|       "agent_skills",
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[6/23]⎯
+
+ FAIL  tests/migrations.test.ts > database migrations > migrates an empty v0 database through v1 to the complete v2 schema
+Error: EPERM, Permission denied: \\?\C:\Users\ADMINI~1\AppData\Local\Temp\2\cockpit-migrations-8KPzu9 '\\?\C:\Users\ADMINI~1\AppData\Local\Temp\2\cockpit-migrations-8KPzu9'
+ ❯ tests/migrations.test.ts:129:5
+    127| afterEach(() => {
+    128|   for (const directory of temporaryDirectories.splice(0)) {
+    129|     rmSync(directory, { force: true, recursive: true });
+       |     ^
+    130|   }
+    131| });
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[7/23]⎯
+
+ FAIL  tests/migrations.test.ts > database migrations > adopts a real S-1 legacy v0 database and preserves its data and foreign keys
+AssertionError: expected 3 to be 2 // Object.is equality
+
+- Expected
++ Received
+
+- 2
++ 3
+
+ ❯ tests/migrations.test.ts:168:35
+    166|     const database = openDatabase(path);
+    167|
+    168|     expect(userVersion(database)).toBe(2);
+       |                                   ^
+    169|     expect(database.prepare("SELECT name FROM projects").all()).toEqua…
+    170|     expect(database.prepare("SELECT goal FROM task_runs").all()).toEqu…
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[8/23]⎯
+
+ FAIL  tests/migrations.test.ts > database migrations > adopts a real S-1 legacy v0 database and preserves its data and foreign keys
+Error: EPERM, Permission denied: \\?\C:\Users\ADMINI~1\AppData\Local\Temp\2\cockpit-migrations-0Vlstm '\\?\C:\Users\ADMINI~1\AppData\Local\Temp\2\cockpit-migrations-0Vlstm'
+ ❯ tests/migrations.test.ts:129:5
+    127| afterEach(() => {
+    128|   for (const directory of temporaryDirectories.splice(0)) {
+    129|     rmSync(directory, { force: true, recursive: true });
+       |     ^
+    130|   }
+    131| });
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[9/23]⎯
+
+ FAIL  tests/migrations.test.ts > database migrations > upgrades a valid v1 database and accepts a valid v2 database
+AssertionError: expected 3 to be 2 // Object.is equality
+
+- Expected
++ Received
+
+- 2
++ 3
+
+ ❯ tests/migrations.test.ts:191:35
+    189|
+    190|     const upgraded = openDatabase(v1Path);
+    191|     expect(userVersion(upgraded)).toBe(2);
+       |                                   ^
+    192|     expect(tableNames(upgraded)).toContain("agent_skills");
+    193|     upgraded.close();
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[10/23]⎯
+
+ FAIL  tests/migrations.test.ts > database migrations > upgrades a valid v1 database and accepts a valid v2 database
+Error: EPERM, Permission denied: \\?\C:\Users\ADMINI~1\AppData\Local\Temp\2\cockpit-migrations-yrMDPv '\\?\C:\Users\ADMINI~1\AppData\Local\Temp\2\cockpit-migrations-yrMDPv'
+ ❯ tests/migrations.test.ts:129:5
+    127| afterEach(() => {
+    128|   for (const directory of temporaryDirectories.splice(0)) {
+    129|     rmSync(directory, { force: true, recursive: true });
+       |     ^
+    130|   }
+    131| });
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[11/23]⎯
+
+ FAIL  tests/migrations.test.ts > database migrations > reopens a migrated database idempotently without changing persisted rows
+AssertionError: expected 3 to be 2 // Object.is equality
+
+- Expected
++ Received
+
+- 2
++ 3
+
+ ❯ tests/migrations.test.ts:215:33
+    213|
+    214|     const second = openDatabase(path);
+    215|     expect(userVersion(second)).toBe(2);
+       |                                 ^
+    216|     expect(second.prepare("SELECT name FROM skills").all()).toEqual([{…
+    217|     second.close();
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[12/23]⎯
+
+ FAIL  tests/migrations.test.ts > database migrations > reopens a migrated database idempotently without changing persisted rows
+Error: EPERM, Permission denied: \\?\C:\Users\ADMINI~1\AppData\Local\Temp\2\cockpit-migrations-jltzsD '\\?\C:\Users\ADMINI~1\AppData\Local\Temp\2\cockpit-migrations-jltzsD'
+ ❯ tests/migrations.test.ts:129:5
+    127| afterEach(() => {
+    128|   for (const directory of temporaryDirectories.splice(0)) {
+    129|     rmSync(directory, { force: true, recursive: true });
+       |     ^
+    130|   }
+    131| });
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[13/23]⎯
+
+ FAIL  tests/migrations.test.ts > database migrations > rejects schemas newer than the application
+AssertionError: expected error to match asymmetric matcher
+
+- Expected
++ Received
+
+- ObjectContaining {
+-   "code": "SCHEMA_TOO_NEW",
+-   "message": StringNotContaining "C:\\Users\\ADMINI~1\\AppData\\Local\\Temp\\2\\cockpit-migrations-xaOa8E\\cockpit.sqlite",
++ SchemaMigrationError {
++   "message": "Database schema does not match version 3.",
++   "code": "SCHEMA_DRIFT",
++   "name": "SchemaMigrationError",
+  }
+
+ ❯ expectSchemaError tests/migrations.test.ts:122:36
+    120|
+    121| function expectSchemaError(path: string, code: string): void {
+    122|   expect(() => openDatabase(path)).toThrowError(
+       |                                    ^
+    123|     expect.objectContaining({ code, message: expect.not.stringContaini…
+    124|   );
+ ❯ tests/migrations.test.ts:277:5
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[14/23]⎯
+
+ FAIL  tests/project-panel.test.tsx > ProjectPanel > loads existing projects
+Error: expect(element).toBeInTheDocument()
+
+element could not be found in the document
+ ❯ tests/project-panel.test.tsx:28:77
+     26|
+     27|     expect(screen.getAllByText("正在加载项目…")).toHaveLength(2);
+     28|     expect(await screen.findByRole("button", { name: "Existing project…
+       |                                                                             ^
+     29|   });
+     30|
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[15/23]⎯
+
+ FAIL  tests/project-panel.test.tsx > ProjectPanel > creates and displays a project
+TestingLibraryElementError: Unable to find role="heading" and name "Launch plan"
+
+Ignored nodes: comments, script, style
+[36m<body>[39m
+  [36m<div />[39m
+[36m</body>[39m
+
+Ignored nodes: comments, script, style
+[36m<body>[39m
+  [36m<div />[39m
+[36m</body>[39m
+ ❯ waitForWrapper node_modules/@testing-library/dom/dist/wait-for.js:163:27
+ ❯ node_modules/@testing-library/dom/dist/query-helpers.js:86:33
+ ❯ tests/project-panel.test.tsx:52:25
+     50|     await user.click(screen.getByRole("button", { name: "创建项目" }));
+     51|
+     52|     expect(await screen.findByRole("heading", { level: 2, name: "Launc…
+       |                         ^
+     53|     expect(fetchMock).toHaveBeenCalledWith(
+     54|       "/api/projects",
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[16/23]⎯
+
+ FAIL  tests/task-flow.test.tsx > task event flow > shows loading, then restores persisted task events and result
+TestingLibraryElementError: Unable to find an element with the text: 正在加载任务历史…. This could be because the text is broken up by multiple elements. In this case, you can provide a function for your text matcher to make your matcher more flexible.
+
+Ignored nodes: comments, script, style
+[36m<body>[39m
+  [36m<div />[39m
+[36m</body>[39m
+
+Ignored nodes: comments, script, style
+[36m<body>[39m
+  [36m<div />[39m
+[36m</body>[39m
+ ❯ waitForWrapper node_modules/@testing-library/dom/dist/wait-for.js:163:27
+ ❯ node_modules/@testing-library/dom/dist/query-helpers.js:86:33
+ ❯ tests/task-flow.test.tsx:64:25
+     62|     render(<ProjectPanel />);
+     63|
+     64|     expect(await screen.findByText("正在加载任务历史…")).toBeInTheDocument();
+       |                         ^
+     65|     loaded.resolve(
+     66|       Response.json({
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[17/23]⎯
+
+ FAIL  tests/task-flow.test.tsx > task event flow > shows an actionable empty state when the project has no tasks
+Error: expect(element).toBeInTheDocument()
+
+element could not be found in the document
+ ❯ tests/task-flow.test.tsx:92:63
+     90|     render(<ProjectPanel />);
+     91|
+     92|     expect(await screen.findByText("暂无任务。输入目标即可运行示例 Agent。")).toBeInTh…
+       |                                                               ^
+     93|     expect(screen.getByLabelText("任务目标")).toBeEnabled();
+     94|     expect(screen.getByRole("button", { name: "运行任务" })).toBeDisabled(…
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[18/23]⎯
+
+ FAIL  tests/task-flow.test.tsx > task event flow > calls create, start, and execute in order while rendering each persisted state
+TestingLibraryElementError: Unable to find a label with the text of: 任务目标
+
+Ignored nodes: comments, script, style
+[36m<body>[39m
+  [36m<div />[39m
+[36m</body>[39m
+ ❯ Object.getElementError node_modules/@testing-library/dom/dist/config.js:37:19
+ ❯ getAllByLabelText node_modules/@testing-library/dom/dist/queries/label-text.js:111:38
+ ❯ node_modules/@testing-library/dom/dist/query-helpers.js:52:17
+ ❯ node_modules/@testing-library/dom/dist/query-helpers.js:95:19
+ ❯ tests/task-flow.test.tsx:115:28
+    113|     render(<ProjectPanel />);
+    114|     await screen.findByText("暂无任务。输入目标即可运行示例 Agent。");
+    115|     await user.type(screen.getByLabelText("任务目标"), "Prepare launch not…
+       |                            ^
+    116|     await user.click(screen.getByRole("button", { name: "运行任务" }));
+    117|
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[19/23]⎯
+
+ FAIL  tests/task-flow.test.tsx > task event flow > offers retry after a load error
+TestingLibraryElementError: Unable to find role="alert"
+
+Ignored nodes: comments, script, style
+[36m<body>[39m
+  [36m<div />[39m
+[36m</body>[39m
+
+Ignored nodes: comments, script, style
+[36m<body>[39m
+  [36m<div />[39m
+[36m</body>[39m
+ ❯ waitForWrapper node_modules/@testing-library/dom/dist/wait-for.js:163:27
+ ❯ node_modules/@testing-library/dom/dist/query-helpers.js:86:33
+ ❯ tests/task-flow.test.tsx:163:25
+    161|     render(<ProjectPanel />);
+    162|
+    163|     expect(await screen.findByRole("alert")).toHaveTextContent("服务暂时不可…
+       |                         ^
+    164|     await user.click(screen.getByRole("button", { name: "重试任务历史" }));
+    165|     expect(await screen.findByText("暂无任务。输入目标即可运行示例 Agent。")).toBeInTh…
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[20/23]⎯
+
+ FAIL  tests/task-flow.test.tsx > task event flow > renders a persisted failed event and preserves the goal after execution fails
+TestingLibraryElementError: Unable to find a label with the text of: 任务目标
+
+Ignored nodes: comments, script, style
+[36m<body>[39m
+  [36m<div />[39m
+[36m</body>[39m
+ ❯ Object.getElementError node_modules/@testing-library/dom/dist/config.js:37:19
+ ❯ getAllByLabelText node_modules/@testing-library/dom/dist/queries/label-text.js:111:38
+ ❯ node_modules/@testing-library/dom/dist/query-helpers.js:52:17
+ ❯ node_modules/@testing-library/dom/dist/query-helpers.js:95:19
+ ❯ tests/task-flow.test.tsx:197:28
+    195|     render(<ProjectPanel />);
+    196|     await screen.findByText("暂无任务。输入目标即可运行示例 Agent。");
+    197|     await user.type(screen.getByLabelText("任务目标"), "Prepare launch not…
+       |                            ^
+    198|     await user.click(screen.getByRole("button", { name: "运行任务" }));
+    199|
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[21/23]⎯
+
+ FAIL  tests/visual-tokens.test.ts > visual token discipline > keeps raw visual values out of component styles
+AssertionError: Raw visual value is not tokenized: width: 1px;: expected false to be true // Object.is equality
+
+- Expected
++ Received
+
+- true
++ false
+
+ ❯ tests/visual-tokens.test.ts:72:9
+     70|         value.includes("var(") || /^(?:0|auto|none|inherit)$/.test(val…
+     71|         `Raw visual value is not tokenized: ${match[0].trim()}`,
+     72|       ).toBe(true);
+       |         ^
+     73|     }
+     74|   });
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[22/23]⎯
+
+ FAIL  tests/workspace-slice.test.tsx > workspace binding vertical slice > validates a real directory, persists its canonical path, and reloads it
+TestingLibraryElementError: Found multiple elements with the role "alert"
+
+Here are the matching elements:
+
+Ignored nodes: comments, script, style
+[36m<p[39m
+  [33mclass[39m=[32m"error-text"[39m
+  [33mid[39m=[32m"workspace-error-88cad97c-c0f7-4661-acbe-333c1edab107"[39m
+  [33mrole[39m=[32m"alert"[39m
+[36m>[39m
+  [0m请输入绝对目录路径。[0m
+[36m</p>[39m
+
+Ignored nodes: comments, script, style
+[36m<p[39m
+  [33mclass[39m=[32m"error-text"[39m
+  [33mid[39m=[32m"members-error-88cad97c-c0f7-4661-acbe-333c1edab107"[39m
+  [33mrole[39m=[32m"alert"[39m
+[36m>[39m
+  [0m无法加载 Agent 库，请重试。[0m
+[36m</p>[39m
+
+Ignored nodes: comments, script, style
+[36m<p[39m
+  [33mclass[39m=[32m"error-text"[39m
+  [33mrole[39m=[32m"alert"[39m
+[36m>[39m
+  [0m无法加载使命看板，请重试。[0m
+[36m</p>[39m
+
+Ignored nodes: comments, script, style
+[36m<p[39m
+  [33mclass[39m=[32m"error-text"[39m
+  [33mid[39m=[32m"memory-error-88cad97c-c0f7-4661-acbe-333c1edab107"[39m
+  [33mrole[39m=[32m"alert"[39m
+[36m>[39m
+  [0m无法加载共享记忆，请重试。[0m
+[36m</p>[39m
+
+(If this is intentional, then use the `*AllBy*` variant of the query (like `queryAllByText`, `getAllByText`, or `findAllByText`)).
+
+Ignored nodes: comments, script, style
+[36m<body>[39m
+  [36m<div>[39m
+    [36m<div[39m
+      [33mclass[39m=[32m"collaboration-cockpit"[39m
+      [33mdata-testid[39m=[32m"collaboration-cockpit"[39m
+    [36m>[39m
+      [36m<div[39m
+        [33maria-label[39m=[32m"驾驶舱面板"[39m
+        [33mclass[39m=[32m"mobile-toolbar"[39m
+        [33mrole[39m=[32m"toolbar"[39m
+      [36m>[39m
+        [36m<button[39m
+          [33maria-controls[39m=[32m"project-navigation-drawer"[39m
+          [33maria-expanded[39m=[32m"false"[39m
+          [33maria-label[39m=[32m"打开项目导航"[39m
+          [33mtype[39m=[32m"button"[39m
+        [36m>[39m
+          [0m项目[0m
+        [36m</button>[39m
+        [36m<button[39m
+          [33maria-controls[39m=[32m"task-editor-surface"[39m
+          [33maria-expanded[39m=[32m"false"[39m
+          [33maria-label[39m=[32m"打开编辑"[39m
+          [33mtype[39m=[32m"button"[39m
+        [36m>[39m
+          [0m编辑[0m
+        [36m</button>[39m
+        [36m<button[39m
+          [33maria-controls[39m=[32m"task-context-drawer"[39m
+          [33maria-expanded[39m=[32m"false"[39m
+          [33maria-label[39m=[32m"打开当前任务上下文"[39m
+          [33mtype[39m=[32m"button"[39m
+        [36m>[39m
+          [0m上下文[0m
+        [36m</button>[39m
+      [36m</div>[39m
+      [36m<aside[39m
+        [33maria-label[39m=[32m"项目导航"[39m
+        [33mclass[39m=[32m"cockpit-sidebar"[39m
+        [33mdata-open[39m=[32m"false"[39m
+        [33mdata-testid[39m=[32m"project-surface"[39m
+        [33mid[39m=[32m"project-navigation-drawer"[39m
+      [36m>[39m
+        [36m<span[39m
+          [33mclass[39m=[32m"sr-only"[39m
+          [33mid[39m=[32m"project-navigation-label"[39m
+        [36m>[39m
+          [0m项目导航[0m
+        [36m</span>[39m
+        [36m<button[39m
+          [33maria-label[39m=[32m"关闭项目导航"[39m
+          [33mclass[39m=[32m"drawer-close"[39m
+          [33mtabindex[39m=[32m"-1"[39m
+          [33mtype[39m=[32m"button"[39m
+        [36m>[39m
+          [0m关闭[0m
+        [36m</button>[39m
+        [36m<div[39m
+          [33mclass[39m=[32m"product-identity"[39m
+        [36m>[39m
+          [36m<span[39m
+            [33maria-hidden[39m=[32m"true"[39m
+            [33mclass[39m=[32m"product-mark"[39m
+          [36m>[39m
+            [0mC[0m
+          [36m</span>[39m
+          [36m<div>[39m
+            [36m<p[39m
+              [33mclass[39m=[32m"eyebrow"[39m
+            [36m>[39m
+              [0m协作驾驶舱[0m
+            [36m</p>[39m
+            [36m<h1>[39m
+              [0mCool AI[0m
+            [36m</h1>[39m
+          [36m</div>[39m
+        [36m</div>[39m
+        [36m<nav[39m
+          [33maria-label[39m=[32m"主导航"[39m
+        [36m>[39m
+          [36m<ul[39m
+            [33mclass[39m=[32m"project-list"[39m
+          [36m>[39m
+            [36m<li>[39m
+              [36m<a[39m
+                [33maria-current[39m=[32m"page"[39m
+                [33mhref[39m=[32m"/"[39m
+              [36m>[39m
+                [0m工作[0m
+              [36m</a>[39m
+            [36m</li>[39m
+            [36m<li>[39m
+              [36m<a[39m
+                [33mhref[39m=[32m"/team"[39m
+              [36m>[39m
+                [0m团队[0m
+              [36m</a>[39m
+            [36m</li>[39m
+          [36m</ul>[39m
+        [36m</nav>[39m
+        [36m<section[39m
+          [33maria-labelledby[39m=[32m"projects-title"[39m
+          [33mclass[39m=[32m"stack"[39m
+        [36m>[39m
+          [36m<h2[39m
+            [33mid[39m=[32m"projects-title"[39m
+          [36m>[39m
+            [0m项目[0m
+          [36m</h2>[39m
+          [36m<form[39m
+            [33mclass[39m=[32m"stack"[39m
+          [36m>[39m
+            [36m<div[39m
+              [33mclass[39m=[32m"form-field"[39m
+            [36m>[39m
+              [36m<label[39m
+                [33mfor[39m=[32m"project-name"[39m
+              [36m>[39m
+                [0m项目名称[0m
+              [36m</label>[39m
+              [36m<input[39m
+                [33mid[39m=[32m"project-name"[39m
+                [33mname[39m=[32m"name"[39m
+                [33mvalue[39m=[32m""[39m
+              [36m/>[39m
+            [36m</div>[39m
+            [36m<button[39m
+              [33mtype[39m=[32m"submit"[39m
+            [36m>[39m
+              [0m创建项目[0m
+            [36m</button>[39m
+          [36m</form>[39m
+          [36m<nav[39m
+            [33maria-label[39m=[32m"项目"[39m
+          [36m>[39m
+            [36m<ul[39m
+              [33mclass[39m=[32m"project-list"[39m
+            [36m>[39m
+              [36m<li>[39m
+                [36m<button[39m
+                  [33maria-current[39m=[32m"page"[39m
+                  [33mtype[39m=[32m"button"[39m
+                [36m>[39m
+                  [0mWorkspace project[0m
+                [36m</button>[39m
+              [36m</li>[39m
+            [36m</ul>[39m
+          [36m</nav>[39m
+        [36m</section>[39m
+        [36m<section[39m
+          [33maria-labelledby[39m=[32m"project-setup-title-88cad97c-c0f7-4661-acbe-333c1edab107"[39m
+          [33mclass[39m=[32m"stack project-setup"[39m
+        [36m>[39m
+          [36m<h2[39m
+            [33mid[39m=[32m"project-setup-title-88cad97c-c0f7-4661-acbe-333c1edab107"[39m
+          [36m>[39m
+            [0m项目设置[0m
+          [36m</h2>[39m
+          [36m<section[39m
+            [33maria-labelledby[39m=[32m"workspace-title-88cad97c-c0f7-4661-acbe-333c1edab107"[39m
+            [33mclass[39m=[32m"stack"[39m
+          [36m>[39m
+            [36m<div>[39m
+              [36m<div[39m
+                [33mclass[39m=[32m"stack"[39m
+              [36m>[39m
+                [36m<h3[39m
+                  [33mid[39m=[32m"workspace-title-88cad97c-c0f7-4661-acbe-333c1edab107"[39m
+                [36m>[39m
+                  [0m本地工作区[0m
+                [36m</h3>[39m
+                [36m<p[39m
+                  [33mclass[39m=[32m"muted"[39m
+                [36m>[39m
+                  [0m尚未绑定本地工作区。[0m
+                [36m</p>[39m
+                [36m<form[39m
+                  [33mclass[39m=[32m"stack"[39m
+                [36m>[39m
+                  [36m<div[39m
+                    [33mclass[39m=[32m"form-field"[39m
+                  [36m>[39m
+                    [36m<label[39m
+                      [33mfor[39m=[32m"workspace-path-88cad97c-c0f7-4661-acbe-333c1edab107"[39m
+                    [36m>[39m
+                      [0m本地工作区路径[0m
+                    [36m</label>[39m
+                    [36m<input[39m
+                      [33maria-describedby[39m=[32m"workspace-error-88cad97c-c0f7-4661-acbe-333c1edab107"[39m
+                      [33mid[39m=[32m"workspace-path-88cad97c-c0f7-4661-acbe-333c1edab107"[39m
+          ...
+ ❯ Object.getElementError node_modules/@testing-library/dom/dist/config.js:37:19
+ ❯ getElementError node_modules/@testing-library/dom/dist/query-helpers.js:20:35
+ ❯ getMultipleElementsFoundError node_modules/@testing-library/dom/dist/query-helpers.js:23:10
+ ❯ node_modules/@testing-library/dom/dist/query-helpers.js:55:13
+ ❯ node_modules/@testing-library/dom/dist/query-helpers.js:95:19
+ ❯ tests/workspace-slice.test.tsx:75:19
+     73|     await user.type(screen.getByLabelText("本地工作区路径"), "relative/path");
+     74|     await user.click(screen.getByRole("button", { name: "绑定工作区" }));
+     75|     expect(screen.getByRole("alert")).toHaveTextContent("请输入绝对目录路径。");
+       |                   ^
+     76|     expect(
+     77|       fetchMock.mock.calls.filter(
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[23/23]⎯
+
+⎯⎯⎯⎯⎯⎯ Unhandled Errors ⎯⎯⎯⎯⎯⎯
+
+Vitest caught 48 unhandled errors during the test run.
+This might cause false positive tests. Resolve unhandled errors to make sure your tests are not affected.
+
+⎯⎯⎯⎯⎯ Uncaught Exception ⎯⎯⎯⎯⎯
+TypeError: Cannot read properties of undefined (reading 'then')
+ ❯ components/project-context/members-setup.tsx:80:27
+     78|     setSuccess("");
+     79|     void Promise.allSettled([
+     80|       fetch("/api/agents").then(async (response) => {
+       |                           ^
+     81|         const payload = (await response.json()) as {
+     82|           agents?: AgentProfile[];
+ ❯ Object.react_stack_bottom_frame node_modules/react-dom/cjs/react-dom-client.development.js:25989:20
+ ❯ runWithFiberInDEV node_modules/react-dom/cjs/react-dom-client.development.js:874:13
+ ❯ commitHookEffectListMount node_modules/react-dom/cjs/react-dom-client.development.js:13249:29
+ ❯ commitHookPassiveMountEffects node_modules/react-dom/cjs/react-dom-client.development.js:13336:11
+ ❯ commitPassiveMountOnFiber node_modules/react-dom/cjs/react-dom-client.development.js:15484:13
+ ❯ recursivelyTraversePassiveMountEffects node_modules/react-dom/cjs/react-dom-client.development.js:15439:11
+ ❯ commitPassiveMountOnFiber node_modules/react-dom/cjs/react-dom-client.development.js:15718:11
+ ❯ recursivelyTraversePassiveMountEffects node_modules/react-dom/cjs/react-dom-client.development.js:15439:11
+ ❯ commitPassiveMountOnFiber node_modules/react-dom/cjs/react-dom-client.development.js:15476:11
+
+This error originated in "tests/task-flow.test.tsx" test file. It doesn't mean the error was thrown inside the file itself, but while it was running.
+The latest test that might've caused the error is "shows loading, then restores persisted task events and result". It might mean one of the following:
+- The error was thrown, while Vitest was running this test.
+- If the error occurred after the test had been completed, this was the last documented test before it was thrown.
+
+⎯⎯⎯⎯⎯ Uncaught Exception ⎯⎯⎯⎯⎯
+TypeError: Cannot read properties of undefined (reading 'then')
+ ❯ components/project-context/mission-board.tsx:154:50
+    152|     setSuccess("");
+    153|     void Promise.all([
+    154|       fetch(`/api/projects/${projectId}/mission`).then(async (response…
+       |                                                  ^
+    155|         const payload = (await response.json()) as MissionState & Erro…
+    156|         if (!response.ok) throw new Error("mission");
+ ❯ Object.react_stack_bottom_frame node_modules/react-dom/cjs/react-dom-client.development.js:25989:20
+ ❯ runWithFiberInDEV node_modules/react-dom/cjs/react-dom-client.development.js:874:13
+ ❯ commitHookEffectListMount node_modules/react-dom/cjs/react-dom-client.development.js:13249:29
+ ❯ commitHookPassiveMountEffects node_modules/react-dom/cjs/react-dom-client.development.js:13336:11
+ ❯ commitPassiveMountOnFiber node_modules/react-dom/cjs/react-dom-client.development.js:15484:13
+ ❯ recursivelyTraversePassiveMountEffects node_modules/react-dom/cjs/react-dom-client.development.js:15439:11
+ ❯ commitPassiveMountOnFiber node_modules/react-dom/cjs/react-dom-client.development.js:15718:11
+ ❯ recursivelyTraversePassiveMountEffects node_modules/react-dom/cjs/react-dom-client.development.js:15439:11
+ ❯ commitPassiveMountOnFiber node_modules/react-dom/cjs/react-dom-client.development.js:15718:11
+
+This error originated in "tests/task-flow.test.tsx" test file. It doesn't mean the error was thrown inside the file itself, but while it was running.
+The latest test that might've caused the error is "shows loading, then restores persisted task events and result". It might mean one of the following:
+- The error was thrown, while Vitest was running this test.
+- If the error occurred after the test had been completed, this was the last documented test before it was thrown.
+
+⎯⎯⎯⎯⎯ Uncaught Exception ⎯⎯⎯⎯⎯
+TypeError: Cannot read properties of undefined (reading 'then')
+ ❯ components/project-context/memory-panel.tsx:89:6
+     87|         includeHistory ? "1" : "0"
+     88|       }`,
+     89|     )
+       |      ^
+     90|       .then(async (response) => {
+     91|         const payload = (await response.json()) as {
+ ❯ Object.react_stack_bottom_frame node_modules/react-dom/cjs/react-dom-client.development.js:25989:20
+ ❯ runWithFiberInDEV node_modules/react-dom/cjs/react-dom-client.development.js:874:13
+ ❯ commitHookEffectListMount node_modules/react-dom/cjs/react-dom-client.development.js:13249:29
+ ❯ commitHookPassiveMountEffects node_modules/react-dom/cjs/react-dom-client.development.js:13336:11
+ ❯ commitPassiveMountOnFiber node_modules/react-dom/cjs/react-dom-client.development.js:15484:13
+ ❯ recursivelyTraversePassiveMountEffects node_modules/react-dom/cjs/react-dom-client.development.js:15439:11
+ ❯ commitPassiveMountOnFiber node_modules/react-dom/cjs/react-dom-client.development.js:15718:11
+ ❯ recursivelyTraversePassiveMountEffects node_modules/react-dom/cjs/react-dom-client.development.js:15439:11
+ ❯ commitPassiveMountOnFiber node_modules/react-dom/cjs/react-dom-client.development.js:15718:11
+
+This error originated in "tests/task-flow.test.tsx" test file. It doesn't mean the error was thrown inside the file itself, but while it was running.
+The latest test that might've caused the error is "shows loading, then restores persisted task events and result". It might mean one of the following:
+- The error was thrown, while Vitest was running this test.
+- If the error occurred after the test had been completed, this was the last documented test before it was thrown.
+
+⎯⎯⎯⎯⎯ Uncaught Exception ⎯⎯⎯⎯⎯
+TypeError: Cannot read properties of undefined (reading 'then')
+ ❯ components/task-panel.tsx:102:51
+    100|
+    101|     setIsLoading(true);
+    102|     void fetch(`/api/projects/${projectId}/tasks`)
+       |                                                   ^
+    103|       .then(async (response) => {
+    104|         const payload = await readPayload<TaskCollection & Partial<Api…
+ ❯ Object.react_stack_bottom_frame node_modules/react-dom/cjs/react-dom-client.development.js:25989:20
+ ❯ runWithFiberInDEV node_modules/react-dom/cjs/react-dom-client.development.js:874:13
+ ❯ commitHookEffectListMount node_modules/react-dom/cjs/react-dom-client.development.js:13249:29
+ ❯ commitHookPassiveMountEffects node_modules/react-dom/cjs/react-dom-client.development.js:13336:11
+ ❯ commitPassiveMountOnFiber node_modules/react-dom/cjs/react-dom-client.development.js:15484:13
+ ❯ recursivelyTraversePassiveMountEffects node_modules/react-dom/cjs/react-dom-client.development.js:15439:11
+ ❯ commitPassiveMountOnFiber node_modules/react-dom/cjs/react-dom-client.development.js:15718:11
+ ❯ recursivelyTraversePassiveMountEffects node_modules/react-dom/cjs/react-dom-client.development.js:15439:11
+ ❯ commitPassiveMountOnFiber node_modules/react-dom/cjs/react-dom-client.development.js:15476:11
+
+This error originated in "tests/task-flow.test.tsx" test file. It doesn't mean the error was thrown inside the file itself, but while it was running.
+The latest test that might've caused the error is "shows loading, then restores persisted task events and result". It might mean one of the following:
+- The error was thrown, while Vitest was running this test.
+- If the error occurred after the test had been completed, this was the last documented test before it was thrown.
+
+⎯⎯⎯⎯⎯ Uncaught Exception ⎯⎯⎯⎯⎯
+TypeError: Cannot read properties of undefined (reading 'then')
+ ❯ components/project-context/members-setup.tsx:80:27
+     78|     setSuccess("");
+     79|     void Promise.allSettled([
+     80|       fetch("/api/agents").then(async (response) => {
+       |                           ^
+     81|         const payload = (await response.json()) as {
+     82|           agents?: AgentProfile[];
+ ❯ Object.react_stack_bottom_frame node_modules/react-dom/cjs/react-dom-client.development.js:25989:20
+ ❯ runWithFiberInDEV node_modules/react-dom/cjs/react-dom-client.development.js:874:13
+ ❯ commitHookEffectListMount node_modules/react-dom/cjs/react-dom-client.development.js:13249:29
+ ❯ commitHookPassiveMountEffects node_modules/react-dom/cjs/react-dom-client.development.js:13336:11
+ ❯ commitPassiveMountOnFiber node_modules/react-dom/cjs/react-dom-client.development.js:15484:13
+ ❯ recursivelyTraversePassiveMountEffects node_modules/react-dom/cjs/react-dom-client.development.js:15439:11
+ ❯ commitPassiveMountOnFiber node_modules/react-dom/cjs/react-dom-client.development.js:15718:11
+ ❯ recursivelyTraversePassiveMountEffects node_modules/react-dom/cjs/react-dom-client.development.js:15439:11
+ ❯ commitPassiveMountOnFiber node_modules/react-dom/cjs/react-dom-client.development.js:15476:11
+
+This error originated in "tests/cockpit-layout.test.tsx" test file. It doesn't mean the error was thrown inside the file itself, but while it was running.
+The latest test that might've caused the error is "presents project navigation, task flow, and current context from real data". It might mean one of the following:
+- The error was thrown, while Vitest was running this test.
+- If the error occurred after the test had been completed, this was the last documented test before it was thrown.
+
+⎯⎯⎯⎯⎯ Uncaught Exception ⎯⎯⎯⎯⎯
+TypeError: Cannot read properties of undefined (reading 'then')
+ ❯ components/project-context/mission-board.tsx:154:50
+    152|     setSuccess("");
+    153|     void Promise.all([
+    154|       fetch(`/api/projects/${projectId}/mission`).then(async (response…
+       |                                                  ^
+    155|         const payload = (await response.json()) as MissionState & Erro…
+    156|         if (!response.ok) throw new Error("mission");
+ ❯ Object.react_stack_bottom_frame node_modules/react-dom/cjs/react-dom-client.development.js:25989:20
+ ❯ runWithFiberInDEV node_modules/react-dom/cjs/react-dom-client.development.js:874:13
+ ❯ commitHookEffectListMount node_modules/react-dom/cjs/react-dom-client.development.js:13249:29
+ ❯ commitHookPassiveMountEffects node_modules/react-dom/cjs/react-dom-client.development.js:13336:11
+ ❯ commitPassiveMountOnFiber node_modules/react-dom/cjs/react-dom-client.development.js:15484:13
+ ❯ recursivelyTraversePassiveMountEffects node_modules/react-dom/cjs/react-dom-client.development.js:15439:11
+ ❯ commitPassiveMountOnFiber node_modules/react-dom/cjs/react-dom-client.development.js:15718:11
+ ❯ recursivelyTraversePassiveMountEffects node_modules/react-dom/cjs/react-dom-client.development.js:15439:11
+ ❯ commitPassiveMountOnFiber node_modules/react-dom/cjs/react-dom-client.development.js:15718:11
+
+This error originated in "tests/cockpit-layout.test.tsx" test file. It doesn't mean the error was thrown inside the file itself, but while it was running.
+The latest test that might've caused the error is "presents project navigation, task flow, and current context from real data". It might mean one of the following:
+- The error was thrown, while Vitest was running this test.
+- If the error occurred after the test had been completed, this was the last documented test before it was thrown.
+
+⎯⎯⎯⎯⎯ Uncaught Exception ⎯⎯⎯⎯⎯
+TypeError: Cannot read properties of undefined (reading 'then')
+ ❯ components/project-context/memory-panel.tsx:89:6
+     87|         includeHistory ? "1" : "0"
+     88|       }`,
+     89|     )
+       |      ^
+     90|       .then(async (response) => {
+     91|         const payload = (await response.json()) as {
+ ❯ Object.react_stack_bottom_frame node_modules/react-dom/cjs/react-dom-client.development.js:25989:20
+ ❯ runWithFiberInDEV node_modules/react-dom/cjs/react-dom-client.development.js:874:13
+ ❯ commitHookEffectListMount node_modules/react-dom/cjs/react-dom-client.development.js:13249:29
+ ❯ commitHookPassiveMountEffects node_modules/react-dom/cjs/react-dom-client.development.js:13336:11
+ ❯ commitPassiveMountOnFiber node_modules/react-dom/cjs/react-dom-client.development.js:15484:13
+ ❯ recursivelyTraversePassiveMountEffects node_modules/react-dom/cjs/react-dom-client.development.js:15439:11
+ ❯ commitPassiveMountOnFiber node_modules/react-dom/cjs/react-dom-client.development.js:15718:11
+ ❯ recursivelyTraversePassiveMountEffects node_modules/react-dom/cjs/react-dom-client.development.js:15439:11
+ ❯ commitPassiveMountOnFiber node_modules/react-dom/cjs/react-dom-client.development.js:15718:11
+
+This error originated in "tests/cockpit-layout.test.tsx" test file. It doesn't mean the error was thrown inside the file itself, but while it was running.
+The latest test that might've caused the error is "presents project navigation, task flow, and current context from real data". It might mean one of the following:
+- The error was thrown, while Vitest was running this test.
+- If the error occurred after the test had been completed, this was the last documented test before it was thrown.
+
+⎯⎯⎯⎯⎯ Uncaught Exception ⎯⎯⎯⎯⎯
+TypeError: Cannot read properties of undefined (reading 'then')
+ ❯ components/task-panel.tsx:102:51
+    100|
+    101|     setIsLoading(true);
+    102|     void fetch(`/api/projects/${projectId}/tasks`)
+       |                                                   ^
+    103|       .then(async (response) => {
+    104|         const payload = await readPayload<TaskCollection & Partial<Api…
+ ❯ Object.react_stack_bottom_frame node_modules/react-dom/cjs/react-dom-client.development.js:25989:20
+ ❯ runWithFiberInDEV node_modules/react-dom/cjs/react-dom-client.development.js:874:13
+ ❯ commitHookEffectListMount node_modules/react-dom/cjs/react-dom-client.development.js:13249:29
+ ❯ commitHookPassiveMountEffects node_modules/react-dom/cjs/react-dom-client.development.js:13336:11
+ ❯ commitPassiveMountOnFiber node_modules/react-dom/cjs/react-dom-client.development.js:15484:13
+ ❯ recursivelyTraversePassiveMountEffects node_modules/react-dom/cjs/react-dom-client.development.js:15439:11
+ ❯ commitPassiveMountOnFiber node_modules/react-dom/cjs/react-dom-client.development.js:15718:11
+ ❯ recursivelyTraversePassiveMountEffects node_modules/react-dom/cjs/react-dom-client.development.js:15439:11
+ ❯ commitPassiveMountOnFiber node_modules/react-dom/cjs/react-dom-client.development.js:15476:11
+
+This error originated in "tests/cockpit-layout.test.tsx" test file. It doesn't mean the error was thrown inside the file itself, but while it was running.
+The latest test that might've caused the error is "presents project navigation, task flow, and current context from real data". It might mean one of the following:
+- The error was thrown, while Vitest was running this test.
+- If the error occurred after the test had been completed, this was the last documented test before it was thrown.
+
+⎯⎯⎯⎯⎯ Uncaught Exception ⎯⎯⎯⎯⎯
+TypeError: Cannot read properties of undefined (reading 'then')
+ ❯ components/project-context/members-setup.tsx:80:27
+     78|     setSuccess("");
+     79|     void Promise.allSettled([
+     80|       fetch("/api/agents").then(async (response) => {
+       |                           ^
+     81|         const payload = (await response.json()) as {
+     82|           agents?: AgentProfile[];
+ ❯ Object.react_stack_bottom_frame node_modules/react-dom/cjs/react-dom-client.development.js:25989:20
+ ❯ runWithFiberInDEV node_modules/react-dom/cjs/react-dom-client.development.js:874:13
+ ❯ commitHookEffectListMount node_modules/react-dom/cjs/react-dom-client.development.js:13249:29
+ ❯ commitHookPassiveMountEffects node_modules/react-dom/cjs/react-dom-client.development.js:13336:11
+ ❯ commitPassiveMountOnFiber node_modules/react-dom/cjs/react-dom-client.development.js:15484:13
+ ❯ recursivelyTraversePassiveMountEffects node_modules/react-dom/cjs/react-dom-client.development.js:15439:11
+ ❯ commitPassiveMountOnFiber node_modules/react-dom/cjs/react-dom-client.development.js:15718:11
+ ❯ recursivelyTraversePassiveMountEffects node_modules/react-dom/cjs/react-dom-client.development.js:15439:11
+ ❯ commitPassiveMountOnFiber node_modules/react-dom/cjs/react-dom-client.development.js:15476:11
+
+This error originated in "tests/project-panel.test.tsx" test file. It doesn't mean the error was thrown inside the file itself, but while it was running.
+The latest test that might've caused the error is "loads existing projects". It might mean one of the following:
+- The error was thrown, while Vitest was running this test.
+- If the error occurred after the test had been completed, this was the last documented test before it was thrown.
+
+⎯⎯⎯⎯⎯ Uncaught Exception ⎯⎯⎯⎯⎯
+TypeError: Cannot read properties of undefined (reading 'then')
+ ❯ components/project-context/mission-board.tsx:154:50
+    152|     setSuccess("");
+    153|     void Promise.all([
+    154|       fetch(`/api/projects/${projectId}/mission`).then(async (response…
+       |                                                  ^
+    155|         const payload = (await response.json()) as MissionState & Erro…
+    156|         if (!response.ok) throw new Error("mission");
+ ❯ Object.react_stack_bottom_frame node_modules/react-dom/cjs/react-dom-client.development.js:25989:20
+ ❯ runWithFiberInDEV node_modules/react-dom/cjs/react-dom-client.development.js:874:13
+ ❯ commitHookEffectListMount node_modules/react-dom/cjs/react-dom-client.development.js:13249:29
+ ❯ commitHookPassiveMountEffects node_modules/react-dom/cjs/react-dom-client.development.js:13336:11
+ ❯ commitPassiveMountOnFiber node_modules/react-dom/cjs/react-dom-client.development.js:15484:13
+ ❯ recursivelyTraversePassiveMountEffects node_modules/react-dom/cjs/react-dom-client.development.js:15439:11
+ ❯ commitPassiveMountOnFiber node_modules/react-dom/cjs/react-dom-client.development.js:15718:11
+ ❯ recursivelyTraversePassiveMountEffects node_modules/react-dom/cjs/react-dom-client.development.js:15439:11
+ ❯ commitPassiveMountOnFiber node_modules/react-dom/cjs/react-dom-client.development.js:15718:11
+
+This error originated in "tests/project-panel.test.tsx" test file. It doesn't mean the error was thrown inside the file itself, but while it was running.
+The latest test that might've caused the error is "loads existing projects". It might mean one of the following:
+- The error was thrown, while Vitest was running this test.
+- If the error occurred after the test had been completed, this was the last documented test before it was thrown.
+
+⎯⎯⎯⎯⎯ Uncaught Exception ⎯⎯⎯⎯⎯
+TypeError: Cannot read properties of undefined (reading 'then')
+ ❯ components/project-context/memory-panel.tsx:89:6
+     87|         includeHistory ? "1" : "0"
+     88|       }`,
+     89|     )
+       |      ^
+     90|       .then(async (response) => {
+     91|         const payload = (await response.json()) as {
+ ❯ Object.react_stack_bottom_frame node_modules/react-dom/cjs/react-dom-client.development.js:25989:20
+ ❯ runWithFiberInDEV node_modules/react-dom/cjs/react-dom-client.development.js:874:13
+ ❯ commitHookEffectListMount node_modules/react-dom/cjs/react-dom-client.development.js:13249:29
+ ❯ commitHookPassiveMountEffects node_modules/react-dom/cjs/react-dom-client.development.js:13336:11
+ ❯ commitPassiveMountOnFiber node_modules/react-dom/cjs/react-dom-client.development.js:15484:13
+ ❯ recursivelyTraversePassiveMountEffects node_modules/react-dom/cjs/react-dom-client.development.js:15439:11
+ ❯ commitPassiveMountOnFiber node_modules/react-dom/cjs/react-dom-client.development.js:15718:11
+ ❯ recursivelyTraversePassiveMountEffects node_modules/react-dom/cjs/react-dom-client.development.js:15439:11
+ ❯ commitPassiveMountOnFiber node_modules/react-dom/cjs/react-dom-client.development.js:15718:11
+
+This error originated in "tests/project-panel.test.tsx" test file. It doesn't mean the error was thrown inside the file itself, but while it was running.
+The latest test that might've caused the error is "loads existing projects". It might mean one of the following:
+- The error was thrown, while Vitest was running this test.
+- If the error occurred after the test had been completed, this was the last documented test before it was thrown.
+
+⎯⎯⎯⎯⎯ Uncaught Exception ⎯⎯⎯⎯⎯
+TypeError: Cannot read properties of undefined (reading 'then')
+ ❯ components/task-panel.tsx:102:51
+    100|
+    101|     setIsLoading(true);
+    102|     void fetch(`/api/projects/${projectId}/tasks`)
+       |                                                   ^
+    103|       .then(async (response) => {
+    104|         const payload = await readPayload<TaskCollection & Partial<Api…
+ ❯ Object.react_stack_bottom_frame node_modules/react-dom/cjs/react-dom-client.development.js:25989:20
+ ❯ runWithFiberInDEV node_modules/react-dom/cjs/react-dom-client.development.js:874:13
+ ❯ commitHookEffectListMount node_modules/react-dom/cjs/react-dom-client.development.js:13249:29
+ ❯ commitHookPassiveMountEffects node_modules/react-dom/cjs/react-dom-client.development.js:13336:11
+ ❯ commitPassiveMountOnFiber node_modules/react-dom/cjs/react-dom-client.development.js:15484:13
+ ❯ recursivelyTraversePassiveMountEffects node_modules/react-dom/cjs/react-dom-client.development.js:15439:11
+ ❯ commitPassiveMountOnFiber node_modules/react-dom/cjs/react-dom-client.development.js:15718:11
+ ❯ recursivelyTraversePassiveMountEffects node_modules/react-dom/cjs/react-dom-client.development.js:15439:11
+ ❯ commitPassiveMountOnFiber node_modules/react-dom/cjs/react-dom-client.development.js:15476:11
+
+This error originated in "tests/project-panel.test.tsx" test file. It doesn't mean the error was thrown inside the file itself, but while it was running.
+The latest test that might've caused the error is "loads existing projects". It might mean one of the following:
+- The error was thrown, while Vitest was running this test.
+- If the error occurred after the test had been completed, this was the last documented test before it was thrown.
+
+⎯⎯⎯⎯⎯ Uncaught Exception ⎯⎯⎯⎯⎯
+TypeError: Cannot read properties of undefined (reading 'then')
+ ❯ components/project-context/members-setup.tsx:80:27
+     78|     setSuccess("");
+     79|     void Promise.allSettled([
+     80|       fetch("/api/agents").then(async (response) => {
+       |                           ^
+     81|         const payload = (await response.json()) as {
+     82|           agents?: AgentProfile[];
+ ❯ Object.react_stack_bottom_frame node_modules/react-dom/cjs/react-dom-client.development.js:25989:20
+ ❯ runWithFiberInDEV node_modules/react-dom/cjs/react-dom-client.development.js:874:13
+ ❯ commitHookEffectListMount node_modules/react-dom/cjs/react-dom-client.development.js:13249:29
+ ❯ commitHookPassiveMountEffects node_modules/react-dom/cjs/react-dom-client.development.js:13336:11
+ ❯ commitPassiveMountOnFiber node_modules/react-dom/cjs/react-dom-client.development.js:15484:13
+ ❯ recursivelyTraversePassiveMountEffects node_modules/react-dom/cjs/react-dom-client.development.js:15439:11
+ ❯ commitPassiveMountOnFiber node_modules/react-dom/cjs/react-dom-client.development.js:15718:11
+ ❯ recursivelyTraversePassiveMountEffects node_modules/react-dom/cjs/react-dom-client.development.js:15439:11
+ ❯ commitPassiveMountOnFiber node_modules/react-dom/cjs/react-dom-client.development.js:15476:11
+
+This error originated in "tests/project-panel.test.tsx" test file. It doesn't mean the error was thrown inside the file itself, but while it was running.
+The latest test that might've caused the error is "creates and displays a project". It might mean one of the following:
+- The error was thrown, while Vitest was running this test.
+- If the error occurred after the test had been completed, this was the last documented test before it was thrown.
+
+⎯⎯⎯⎯⎯ Uncaught Exception ⎯⎯⎯⎯⎯
+TypeError: Cannot read properties of undefined (reading 'then')
+ ❯ components/project-context/mission-board.tsx:154:50
+    152|     setSuccess("");
+    153|     void Promise.all([
+    154|       fetch(`/api/projects/${projectId}/mission`).then(async (response…
+       |                                                  ^
+    155|         const payload = (await response.json()) as MissionState & Erro…
+    156|         if (!response.ok) throw new Error("mission");
+ ❯ Object.react_stack_bottom_frame node_modules/react-dom/cjs/react-dom-client.development.js:25989:20
+ ❯ runWithFiberInDEV node_modules/react-dom/cjs/react-dom-client.development.js:874:13
+ ❯ commitHookEffectListMount node_modules/react-dom/cjs/react-dom-client.development.js:13249:29
+ ❯ commitHookPassiveMountEffects node_modules/react-dom/cjs/react-dom-client.development.js:13336:11
+ ❯ commitPassiveMountOnFiber node_modules/react-dom/cjs/react-dom-client.development.js:15484:13
+ ❯ recursivelyTraversePassiveMountEffects node_modules/react-dom/cjs/react-dom-client.development.js:15439:11
+ ❯ commitPassiveMountOnFiber node_modules/react-dom/cjs/react-dom-client.development.js:15718:11
+ ❯ recursivelyTraversePassiveMountEffects node_modules/react-dom/cjs/react-dom-client.development.js:15439:11
+ ❯ commitPassiveMountOnFiber node_modules/react-dom/cjs/react-dom-client.development.js:15718:11
+
+This error originated in "tests/project-panel.test.tsx" test file. It doesn't mean the error was thrown inside the file itself, but while it was running.
+The latest test that might've caused the error is "creates and displays a project". It might mean one of the following:
+- The error was thrown, while Vitest was running this test.
+- If the error occurred after the test had been completed, this was the last documented test before it was thrown.
+
+⎯⎯⎯⎯⎯ Uncaught Exception ⎯⎯⎯⎯⎯
+TypeError: Cannot read properties of undefined (reading 'then')
+ ❯ components/project-context/memory-panel.tsx:89:6
+     87|         includeHistory ? "1" : "0"
+     88|       }`,
+     89|     )
+       |      ^
+     90|       .then(async (response) => {
+     91|         const payload = (await response.json()) as {
+ ❯ Object.react_stack_bottom_frame node_modules/react-dom/cjs/react-dom-client.development.js:25989:20
+ ❯ runWithFiberInDEV node_modules/react-dom/cjs/react-dom-client.development.js:874:13
+ ❯ commitHookEffectListMount node_modules/react-dom/cjs/react-dom-client.development.js:13249:29
+ ❯ commitHookPassiveMountEffects node_modules/react-dom/cjs/react-dom-client.development.js:13336:11
+ ❯ commitPassiveMountOnFiber node_modules/react-dom/cjs/react-dom-client.development.js:15484:13
+ ❯ recursivelyTraversePassiveMountEffects node_modules/react-dom/cjs/react-dom-client.development.js:15439:11
+ ❯ commitPassiveMountOnFiber node_modules/react-dom/cjs/react-dom-client.development.js:15718:11
+ ❯ recursivelyTraversePassiveMountEffects node_modules/react-dom/cjs/react-dom-client.development.js:15439:11
+ ❯ commitPassiveMountOnFiber node_modules/react-dom/cjs/react-dom-client.development.js:15718:11
+
+This error originated in "tests/project-panel.test.tsx" test file. It doesn't mean the error was thrown inside the file itself, but while it was running.
+The latest test that might've caused the error is "creates and displays a project". It might mean one of the following:
+- The error was thrown, while Vitest was running this test.
+- If the error occurred after the test had been completed, this was the last documented test before it was thrown.
+
+⎯⎯⎯⎯⎯ Uncaught Exception ⎯⎯⎯⎯⎯
+TypeError: Cannot read properties of undefined (reading 'then')
+ ❯ components/task-panel.tsx:102:51
+    100|
+    101|     setIsLoading(true);
+    102|     void fetch(`/api/projects/${projectId}/tasks`)
+       |                                                   ^
+    103|       .then(async (response) => {
+    104|         const payload = await readPayload<TaskCollection & Partial<Api…
+ ❯ Object.react_stack_bottom_frame node_modules/react-dom/cjs/react-dom-client.development.js:25989:20
+ ❯ runWithFiberInDEV node_modules/react-dom/cjs/react-dom-client.development.js:874:13
+ ❯ commitHookEffectListMount node_modules/react-dom/cjs/react-dom-client.development.js:13249:29
+ ❯ commitHookPassiveMountEffects node_modules/react-dom/cjs/react-dom-client.development.js:13336:11
+ ❯ commitPassiveMountOnFiber node_modules/react-dom/cjs/react-dom-client.development.js:15484:13
+ ❯ recursivelyTraversePassiveMountEffects node_modules/react-dom/cjs/react-dom-client.development.js:15439:11
+ ❯ commitPassiveMountOnFiber node_modules/react-dom/cjs/react-dom-client.development.js:15718:11
+ ❯ recursivelyTraversePassiveMountEffects node_modules/react-dom/cjs/react-dom-client.development.js:15439:11
+ ❯ commitPassiveMountOnFiber node_modules/react-dom/cjs/react-dom-client.development.js:15476:11
+
+This error originated in "tests/project-panel.test.tsx" test file. It doesn't mean the error was thrown inside the file itself, but while it was running.
+The latest test that might've caused the error is "creates and displays a project". It might mean one of the following:
+- The error was thrown, while Vitest was running this test.
+- If the error occurred after the test had been completed, this was the last documented test before it was thrown.
+
+⎯⎯⎯⎯⎯ Uncaught Exception ⎯⎯⎯⎯⎯
+TypeError: Cannot read properties of undefined (reading 'then')
+ ❯ components/project-context/members-setup.tsx:80:27
+     78|     setSuccess("");
+     79|     void Promise.allSettled([
+     80|       fetch("/api/agents").then(async (response) => {
+       |                           ^
+     81|         const payload = (await response.json()) as {
+     82|           agents?: AgentProfile[];
+ ❯ Object.react_stack_bottom_frame node_modules/react-dom/cjs/react-dom-client.development.js:25989:20
+ ❯ runWithFiberInDEV node_modules/react-dom/cjs/react-dom-client.development.js:874:13
+ ❯ commitHookEffectListMount node_modules/react-dom/cjs/react-dom-client.development.js:13249:29
+ ❯ commitHookPassiveMountEffects node_modules/react-dom/cjs/react-dom-client.development.js:13336:11
+ ❯ commitPassiveMountOnFiber node_modules/react-dom/cjs/react-dom-client.development.js:15484:13
+ ❯ recursivelyTraversePassiveMountEffects node_modules/react-dom/cjs/react-dom-client.development.js:15439:11
+ ❯ commitPassiveMountOnFiber node_modules/react-dom/cjs/react-dom-client.development.js:15718:11
+ ❯ recursivelyTraversePassiveMountEffects node_modules/react-dom/cjs/react-dom-client.development.js:15439:11
+ ❯ commitPassiveMountOnFiber node_modules/react-dom/cjs/react-dom-client.development.js:15476:11
+
+This error originated in "tests/task-flow.test.tsx" test file. It doesn't mean the error was thrown inside the file itself, but while it was running.
+The latest test that might've caused the error is "shows an actionable empty state when the project has no tasks". It might mean one of the following:
+- The error was thrown, while Vitest was running this test.
+- If the error occurred after the test had been completed, this was the last documented test before it was thrown.
+
+⎯⎯⎯⎯⎯ Uncaught Exception ⎯⎯⎯⎯⎯
+TypeError: Cannot read properties of undefined (reading 'then')
+ ❯ components/project-context/mission-board.tsx:154:50
+    152|     setSuccess("");
+    153|     void Promise.all([
+    154|       fetch(`/api/projects/${projectId}/mission`).then(async (response…
+       |                                                  ^
+    155|         const payload = (await response.json()) as MissionState & Erro…
+    156|         if (!response.ok) throw new Error("mission");
+ ❯ Object.react_stack_bottom_frame node_modules/react-dom/cjs/react-dom-client.development.js:25989:20
+ ❯ runWithFiberInDEV node_modules/react-dom/cjs/react-dom-client.development.js:874:13
+ ❯ commitHookEffectListMount node_modules/react-dom/cjs/react-dom-client.development.js:13249:29
+ ❯ commitHookPassiveMountEffects node_modules/react-dom/cjs/react-dom-client.development.js:13336:11
+ ❯ commitPassiveMountOnFiber node_modules/react-dom/cjs/react-dom-client.development.js:15484:13
+ ❯ recursivelyTraversePassiveMountEffects node_modules/react-dom/cjs/react-dom-client.development.js:15439:11
+ ❯ commitPassiveMountOnFiber node_modules/react-dom/cjs/react-dom-client.development.js:15718:11
+ ❯ recursivelyTraversePassiveMountEffects node_modules/react-dom/cjs/react-dom-client.development.js:15439:11
+ ❯ commitPassiveMountOnFiber node_modules/react-dom/cjs/react-dom-client.development.js:15718:11
+
+This error originated in "tests/task-flow.test.tsx" test file. It doesn't mean the error was thrown inside the file itself, but while it was running.
+The latest test that might've caused the error is "shows an actionable empty state when the project has no tasks". It might mean one of the following:
+- The error was thrown, while Vitest was running this test.
+- If the error occurred after the test had been completed, this was the last documented test before it was thrown.
+
+⎯⎯⎯⎯⎯ Uncaught Exception ⎯⎯⎯⎯⎯
+TypeError: Cannot read properties of undefined (reading 'then')
+ ❯ components/project-context/memory-panel.tsx:89:6
+     87|         includeHistory ? "1" : "0"
+     88|       }`,
+     89|     )
+       |      ^
+     90|       .then(async (response) => {
+     91|         const payload = (await response.json()) as {
+ ❯ Object.react_stack_bottom_frame node_modules/react-dom/cjs/react-dom-client.development.js:25989:20
+ ❯ runWithFiberInDEV node_modules/react-dom/cjs/react-dom-client.development.js:874:13
+ ❯ commitHookEffectListMount node_modules/react-dom/cjs/react-dom-client.development.js:13249:29
+ ❯ commitHookPassiveMountEffects node_modules/react-dom/cjs/react-dom-client.development.js:13336:11
+ ❯ commitPassiveMountOnFiber node_modules/react-dom/cjs/react-dom-client.development.js:15484:13
+ ❯ recursivelyTraversePassiveMountEffects node_modules/react-dom/cjs/react-dom-client.development.js:15439:11
+ ❯ commitPassiveMountOnFiber node_modules/react-dom/cjs/react-dom-client.development.js:15718:11
+ ❯ recursivelyTraversePassiveMountEffects node_modules/react-dom/cjs/react-dom-client.development.js:15439:11
+ ❯ commitPassiveMountOnFiber node_modules/react-dom/cjs/react-dom-client.development.js:15718:11
+
+This error originated in "tests/task-flow.test.tsx" test file. It doesn't mean the error was thrown inside the file itself, but while it was running.
+The latest test that might've caused the error is "shows an actionable empty state when the project has no tasks". It might mean one of the following:
+- The error was thrown, while Vitest was running this test.
+- If the error occurred after the test had been completed, this was the last documented test before it was thrown.
+
+⎯⎯⎯⎯⎯ Uncaught Exception ⎯⎯⎯⎯⎯
+TypeError: Cannot read properties of undefined (reading 'then')
+ ❯ components/task-panel.tsx:102:51
+    100|
+    101|     setIsLoading(true);
+    102|     void fetch(`/api/projects/${projectId}/tasks`)
+       |                                                   ^
+    103|       .then(async (response) => {
+    104|         const payload = await readPayload<TaskCollection & Partial<Api…
+ ❯ Object.react_stack_bottom_frame node_modules/react-dom/cjs/react-dom-client.development.js:25989:20
+ ❯ runWithFiberInDEV node_modules/react-dom/cjs/react-dom-client.development.js:874:13
+ ❯ commitHookEffectListMount node_modules/react-dom/cjs/react-dom-client.development.js:13249:29
+ ❯ commitHookPassiveMountEffects node_modules/react-dom/cjs/react-dom-client.development.js:13336:11
+ ❯ commitPassiveMountOnFiber node_modules/react-dom/cjs/react-dom-client.development.js:15484:13
+ ❯ recursivelyTraversePassiveMountEffects node_modules/react-dom/cjs/react-dom-client.development.js:15439:11
+ ❯ commitPassiveMountOnFiber node_modules/react-dom/cjs/react-dom-client.development.js:15718:11
+ ❯ recursivelyTraversePassiveMountEffects node_modules/react-dom/cjs/react-dom-client.development.js:15439:11
+ ❯ commitPassiveMountOnFiber node_modules/react-dom/cjs/react-dom-client.development.js:15476:11
+
+This error originated in "tests/task-flow.test.tsx" test file. It doesn't mean the error was thrown inside the file itself, but while it was running.
+The latest test that might've caused the error is "shows an actionable empty state when the project has no tasks". It might mean one of the following:
+- The error was thrown, while Vitest was running this test.
+- If the error occurred after the test had been completed, this was the last documented test before it was thrown.
+
+⎯⎯⎯⎯⎯ Uncaught Exception ⎯⎯⎯⎯⎯
+TypeError: Cannot read properties of undefined (reading 'then')
+ ❯ components/project-context/mission-board.tsx:162:50
+    160|         return payload;
+    161|       }),
+    162|       fetch(`/api/projects/${projectId}/members`).then(async (response…
+       |                                                  ^
+    163|         const payload = (await response.json()) as MembershipState &
+    164|           ErrorPayload;
+ ❯ Object.react_stack_bottom_frame node_modules/react-dom/cjs/react-dom-client.development.js:25989:20
+ ❯ runWithFiberInDEV node_modules/react-dom/cjs/react-dom-client.development.js:874:13
+ ❯ commitHookEffectListMount node_modules/react-dom/cjs/react-dom-client.development.js:13249:29
+ ❯ commitHookPassiveMountEffects node_modules/react-dom/cjs/react-dom-client.development.js:13336:11
+ ❯ commitPassiveMountOnFiber node_modules/react-dom/cjs/react-dom-client.development.js:15484:13
+ ❯ recursivelyTraversePassiveMountEffects node_modules/react-dom/cjs/react-dom-client.development.js:15439:11
+ ❯ commitPassiveMountOnFiber node_modules/react-dom/cjs/react-dom-client.development.js:15718:11
+ ❯ recursivelyTraversePassiveMountEffects node_modules/react-dom/cjs/react-dom-client.development.js:15439:11
+ ❯ commitPassiveMountOnFiber node_modules/react-dom/cjs/react-dom-client.development.js:15718:11
+
+This error originated in "tests/task-flow.test.tsx" test file. It doesn't mean the error was thrown inside the file itself, but while it was running.
+The latest test that might've caused the error is "calls create, start, and execute in order while rendering each persisted state". It might mean one of the following:
+- The error was thrown, while Vitest was running this test.
+- If the error occurred after the test had been completed, this was the last documented test before it was thrown.
+
+⎯⎯⎯⎯⎯ Uncaught Exception ⎯⎯⎯⎯⎯
+TypeError: Cannot read properties of undefined (reading 'then')
+ ❯ components/project-context/memory-panel.tsx:89:6
+     87|         includeHistory ? "1" : "0"
+     88|       }`,
+     89|     )
+       |      ^
+     90|       .then(async (response) => {
+     91|         const payload = (await response.json()) as {
+ ❯ Object.react_stack_bottom_frame node_modules/react-dom/cjs/react-dom-client.development.js:25989:20
+ ❯ runWithFiberInDEV node_modules/react-dom/cjs/react-dom-client.development.js:874:13
+ ❯ commitHookEffectListMount node_modules/react-dom/cjs/react-dom-client.development.js:13249:29
+ ❯ commitHookPassiveMountEffects node_modules/react-dom/cjs/react-dom-client.development.js:13336:11
+ ❯ commitPassiveMountOnFiber node_modules/react-dom/cjs/react-dom-client.development.js:15484:13
+ ❯ recursivelyTraversePassiveMountEffects node_modules/react-dom/cjs/react-dom-client.development.js:15439:11
+ ❯ commitPassiveMountOnFiber node_modules/react-dom/cjs/react-dom-client.development.js:15718:11
+ ❯ recursivelyTraversePassiveMountEffects node_modules/react-dom/cjs/react-dom-client.development.js:15439:11
+ ❯ commitPassiveMountOnFiber node_modules/react-dom/cjs/react-dom-client.development.js:15718:11
+
+This error originated in "tests/task-flow.test.tsx" test file. It doesn't mean the error was thrown inside the file itself, but while it was running.
+The latest test that might've caused the error is "calls create, start, and execute in order while rendering each persisted state". It might mean one of the following:
+- The error was thrown, while Vitest was running this test.
+- If the error occurred after the test had been completed, this was the last documented test before it was thrown.
+
+⎯⎯⎯⎯⎯ Uncaught Exception ⎯⎯⎯⎯⎯
+TypeError: Cannot read properties of undefined (reading 'then')
+ ❯ components/task-panel.tsx:102:51
+    100|
+    101|     setIsLoading(true);
+    102|     void fetch(`/api/projects/${projectId}/tasks`)
+       |                                                   ^
+    103|       .then(async (response) => {
+    104|         const payload = await readPayload<TaskCollection & Partial<Api…
+ ❯ Object.react_stack_bottom_frame node_modules/react-dom/cjs/react-dom-client.development.js:25989:20
+ ❯ runWithFiberInDEV node_modules/react-dom/cjs/react-dom-client.development.js:874:13
+ ❯ commitHookEffectListMount node_modules/react-dom/cjs/react-dom-client.development.js:13249:29
+ ❯ commitHookPassiveMountEffects node_modules/react-dom/cjs/react-dom-client.development.js:13336:11
+ ❯ commitPassiveMountOnFiber node_modules/react-dom/cjs/react-dom-client.development.js:15484:13
+ ❯ recursivelyTraversePassiveMountEffects node_modules/react-dom/cjs/react-dom-client.development.js:15439:11
+ ❯ commitPassiveMountOnFiber node_modules/react-dom/cjs/react-dom-client.development.js:15718:11
+ ❯ recursivelyTraversePassiveMountEffects node_modules/react-dom/cjs/react-dom-client.development.js:15439:11
+ ❯ commitPassiveMountOnFiber node_modules/react-dom/cjs/react-dom-client.development.js:15476:11
+
+This error originated in "tests/task-flow.test.tsx" test file. It doesn't mean the error was thrown inside the file itself, but while it was running.
+The latest test that might've caused the error is "calls create, start, and execute in order while rendering each persisted state". It might mean one of the following:
+- The error was thrown, while Vitest was running this test.
+- If the error occurred after the test had been completed, this was the last documented test before it was thrown.
+
+⎯⎯⎯⎯⎯ Uncaught Exception ⎯⎯⎯⎯⎯
+TypeError: Cannot read properties of undefined (reading 'then')
+ ❯ components/project-context/members-setup.tsx:88:50
+     86|         return payload.agents;
+     87|       }),
+     88|       fetch(`/api/projects/${projectId}/members`).then(async (response…
+       |                                                  ^
+     89|         const payload = (await response.json()) as MembershipState &
+     90|           Partial<ApiError>;
+ ❯ Object.react_stack_bottom_frame node_modules/react-dom/cjs/react-dom-client.development.js:25989:20
+ ❯ runWithFiberInDEV node_modules/react-dom/cjs/react-dom-client.development.js:874:13
+ ❯ commitHookEffectListMount node_modules/react-dom/cjs/react-dom-client.development.js:13249:29
+ ❯ commitHookPassiveMountEffects node_modules/react-dom/cjs/react-dom-client.development.js:13336:11
+ ❯ commitPassiveMountOnFiber node_modules/react-dom/cjs/react-dom-client.development.js:15484:13
+ ❯ recursivelyTraversePassiveMountEffects node_modules/react-dom/cjs/react-dom-client.development.js:15439:11
+ ❯ commitPassiveMountOnFiber node_modules/react-dom/cjs/react-dom-client.development.js:15718:11
+ ❯ recursivelyTraversePassiveMountEffects node_modules/react-dom/cjs/react-dom-client.development.js:15439:11
+ ❯ commitPassiveMountOnFiber node_modules/react-dom/cjs/react-dom-client.development.js:15476:11
+
+This error originated in "tests/task-flow.test.tsx" test file. It doesn't mean the error was thrown inside the file itself, but while it was running.
+The latest test that might've caused the error is "offers retry after a load error". It might mean one of the following:
+- The error was thrown, while Vitest was running this test.
+- If the error occurred after the test had been completed, this was the last documented test before it was thrown.
+
+⎯⎯⎯⎯⎯ Uncaught Exception ⎯⎯⎯⎯⎯
+TypeError: Cannot read properties of undefined (reading 'then')
+ ❯ components/project-context/mission-board.tsx:154:50
+    152|     setSuccess("");
+    153|     void Promise.all([
+    154|       fetch(`/api/projects/${projectId}/mission`).then(async (response…
+       |                                                  ^
+    155|         const payload = (await response.json()) as MissionState & Erro…
+    156|         if (!response.ok) throw new Error("mission");
+ ❯ Object.react_stack_bottom_frame node_modules/react-dom/cjs/react-dom-client.development.js:25989:20
+ ❯ runWithFiberInDEV node_modules/react-dom/cjs/react-dom-client.development.js:874:13
+ ❯ commitHookEffectListMount node_modules/react-dom/cjs/react-dom-client.development.js:13249:29
+ ❯ commitHookPassiveMountEffects node_modules/react-dom/cjs/react-dom-client.development.js:13336:11
+ ❯ commitPassiveMountOnFiber node_modules/react-dom/cjs/react-dom-client.development.js:15484:13
+ ❯ recursivelyTraversePassiveMountEffects node_modules/react-dom/cjs/react-dom-client.development.js:15439:11
+ ❯ commitPassiveMountOnFiber node_modules/react-dom/cjs/react-dom-client.development.js:15718:11
+ ❯ recursivelyTraversePassiveMountEffects node_modules/react-dom/cjs/react-dom-client.development.js:15439:11
+ ❯ commitPassiveMountOnFiber node_modules/react-dom/cjs/react-dom-client.development.js:15718:11
+
+This error originated in "tests/task-flow.test.tsx" test file. It doesn't mean the error was thrown inside the file itself, but while it was running.
+The latest test that might've caused the error is "offers retry after a load error". It might mean one of the following:
+- The error was thrown, while Vitest was running this test.
+- If the error occurred after the test had been completed, this was the last documented test before it was thrown.
+
+⎯⎯⎯⎯⎯ Uncaught Exception ⎯⎯⎯⎯⎯
+TypeError: Cannot read properties of undefined (reading 'then')
+ ❯ components/project-context/memory-panel.tsx:89:6
+     87|         includeHistory ? "1" : "0"
+     88|       }`,
+     89|     )
+       |      ^
+     90|       .then(async (response) => {
+     91|         const payload = (await response.json()) as {
+ ❯ Object.react_stack_bottom_frame node_modules/react-dom/cjs/react-dom-client.development.js:25989:20
+ ❯ runWithFiberInDEV node_modules/react-dom/cjs/react-dom-client.development.js:874:13
+ ❯ commitHookEffectListMount node_modules/react-dom/cjs/react-dom-client.development.js:13249:29
+ ❯ commitHookPassiveMountEffects node_modules/react-dom/cjs/react-dom-client.development.js:13336:11
+ ❯ commitPassiveMountOnFiber node_modules/react-dom/cjs/react-dom-client.development.js:15484:13
+ ❯ recursivelyTraversePassiveMountEffects node_modules/react-dom/cjs/react-dom-client.development.js:15439:11
+ ❯ commitPassiveMountOnFiber node_modules/react-dom/cjs/react-dom-client.development.js:15718:11
+ ❯ recursivelyTraversePassiveMountEffects node_modules/react-dom/cjs/react-dom-client.development.js:15439:11
+ ❯ commitPassiveMountOnFiber node_modules/react-dom/cjs/react-dom-client.development.js:15718:11
+
+This error originated in "tests/task-flow.test.tsx" test file. It doesn't mean the error was thrown inside the file itself, but while it was running.
+The latest test that might've caused the error is "offers retry after a load error". It might mean one of the following:
+- The error was thrown, while Vitest was running this test.
+- If the error occurred after the test had been completed, this was the last documented test before it was thrown.
+
+⎯⎯⎯⎯⎯ Uncaught Exception ⎯⎯⎯⎯⎯
+TypeError: Cannot read properties of undefined (reading 'then')
+ ❯ components/task-panel.tsx:102:51
+    100|
+    101|     setIsLoading(true);
+    102|     void fetch(`/api/projects/${projectId}/tasks`)
+       |                                                   ^
+    103|       .then(async (response) => {
+    104|         const payload = await readPayload<TaskCollection & Partial<Api…
+ ❯ Object.react_stack_bottom_frame node_modules/react-dom/cjs/react-dom-client.development.js:25989:20
+ ❯ runWithFiberInDEV node_modules/react-dom/cjs/react-dom-client.development.js:874:13
+ ❯ commitHookEffectListMount node_modules/react-dom/cjs/react-dom-client.development.js:13249:29
+ ❯ commitHookPassiveMountEffects node_modules/react-dom/cjs/react-dom-client.development.js:13336:11
+ ❯ commitPassiveMountOnFiber node_modules/react-dom/cjs/react-dom-client.development.js:15484:13
+ ❯ recursivelyTraversePassiveMountEffects node_modules/react-dom/cjs/react-dom-client.development.js:15439:11
+ ❯ commitPassiveMountOnFiber node_modules/react-dom/cjs/react-dom-client.development.js:15718:11
+ ❯ recursivelyTraversePassiveMountEffects node_modules/react-dom/cjs/react-dom-client.development.js:15439:11
+ ❯ commitPassiveMountOnFiber node_modules/react-dom/cjs/react-dom-client.development.js:15476:11
+
+This error originated in "tests/task-flow.test.tsx" test file. It doesn't mean the error was thrown inside the file itself, but while it was running.
+The latest test that might've caused the error is "offers retry after a load error". It might mean one of the following:
+- The error was thrown, while Vitest was running this test.
+- If the error occurred after the test had been completed, this was the last documented test before it was thrown.
+
+⎯⎯⎯⎯ Unhandled Rejection ⎯⎯⎯⎯⎯
+Error: agents
+ ❯ components/project-context/members-setup.tsx:85:51
+     83|         } & Partial<ApiError>;
+     84|         if (!response.ok) throw new Error("agents");
+     85|         if (!Array.isArray(payload.agents)) throw new Error("agents");
+       |                                                   ^
+     86|         return payload.agents;
+     87|       }),
+ ❯ processTicksAndRejections node:internal/process/task_queues:104:5
+
+This error originated in "tests/task-flow.test.tsx" test file. It doesn't mean the error was thrown inside the file itself, but while it was running.
+The latest test that might've caused the error is "offers retry after a load error". It might mean one of the following:
+- The error was thrown, while Vitest was running this test.
+- If the error occurred after the test had been completed, this was the last documented test before it was thrown.
+
+⎯⎯⎯⎯⎯ Uncaught Exception ⎯⎯⎯⎯⎯
+TypeError: Cannot read properties of undefined (reading 'then')
+ ❯ components/project-context/mission-board.tsx:162:50
+    160|         return payload;
+    161|       }),
+    162|       fetch(`/api/projects/${projectId}/members`).then(async (response…
+       |                                                  ^
+    163|         const payload = (await response.json()) as MembershipState &
+    164|           ErrorPayload;
+ ❯ Object.react_stack_bottom_frame node_modules/react-dom/cjs/react-dom-client.development.js:25989:20
+ ❯ runWithFiberInDEV node_modules/react-dom/cjs/react-dom-client.development.js:874:13
+ ❯ commitHookEffectListMount node_modules/react-dom/cjs/react-dom-client.development.js:13249:29
+ ❯ commitHookPassiveMountEffects node_modules/react-dom/cjs/react-dom-client.development.js:13336:11
+ ❯ commitPassiveMountOnFiber node_modules/react-dom/cjs/react-dom-client.development.js:15484:13
+ ❯ recursivelyTraversePassiveMountEffects node_modules/react-dom/cjs/react-dom-client.development.js:15439:11
+ ❯ commitPassiveMountOnFiber node_modules/react-dom/cjs/react-dom-client.development.js:15718:11
+ ❯ recursivelyTraversePassiveMountEffects node_modules/react-dom/cjs/react-dom-client.development.js:15439:11
+ ❯ commitPassiveMountOnFiber node_modules/react-dom/cjs/react-dom-client.development.js:15718:11
+
+This error originated in "tests/task-flow.test.tsx" test file. It doesn't mean the error was thrown inside the file itself, but while it was running.
+The latest test that might've caused the error is "renders a persisted failed event and preserves the goal after execution fails". It might mean one of the following:
+- The error was thrown, while Vitest was running this test.
+- If the error occurred after the test had been completed, this was the last documented test before it was thrown.
+
+⎯⎯⎯⎯⎯ Uncaught Exception ⎯⎯⎯⎯⎯
+TypeError: Cannot read properties of undefined (reading 'then')
+ ❯ components/project-context/memory-panel.tsx:89:6
+     87|         includeHistory ? "1" : "0"
+     88|       }`,
+     89|     )
+       |      ^
+     90|       .then(async (response) => {
+     91|         const payload = (await response.json()) as {
+ ❯ Object.react_stack_bottom_frame node_modules/react-dom/cjs/react-dom-client.development.js:25989:20
+ ❯ runWithFiberInDEV node_modules/react-dom/cjs/react-dom-client.development.js:874:13
+ ❯ commitHookEffectListMount node_modules/react-dom/cjs/react-dom-client.development.js:13249:29
+ ❯ commitHookPassiveMountEffects node_modules/react-dom/cjs/react-dom-client.development.js:13336:11
+ ❯ commitPassiveMountOnFiber node_modules/react-dom/cjs/react-dom-client.development.js:15484:13
+ ❯ recursivelyTraversePassiveMountEffects node_modules/react-dom/cjs/react-dom-client.development.js:15439:11
+ ❯ commitPassiveMountOnFiber node_modules/react-dom/cjs/react-dom-client.development.js:15718:11
+ ❯ recursivelyTraversePassiveMountEffects node_modules/react-dom/cjs/react-dom-client.development.js:15439:11
+ ❯ commitPassiveMountOnFiber node_modules/react-dom/cjs/react-dom-client.development.js:15718:11
+
+This error originated in "tests/task-flow.test.tsx" test file. It doesn't mean the error was thrown inside the file itself, but while it was running.
+The latest test that might've caused the error is "renders a persisted failed event and preserves the goal after execution fails". It might mean one of the following:
+- The error was thrown, while Vitest was running this test.
+- If the error occurred after the test had been completed, this was the last documented test before it was thrown.
+
+⎯⎯⎯⎯⎯ Uncaught Exception ⎯⎯⎯⎯⎯
+TypeError: Cannot read properties of undefined (reading 'then')
+ ❯ components/task-panel.tsx:102:51
+    100|
+    101|     setIsLoading(true);
+    102|     void fetch(`/api/projects/${projectId}/tasks`)
+       |                                                   ^
+    103|       .then(async (response) => {
+    104|         const payload = await readPayload<TaskCollection & Partial<Api…
+ ❯ Object.react_stack_bottom_frame node_modules/react-dom/cjs/react-dom-client.development.js:25989:20
+ ❯ runWithFiberInDEV node_modules/react-dom/cjs/react-dom-client.development.js:874:13
+ ❯ commitHookEffectListMount node_modules/react-dom/cjs/react-dom-client.development.js:13249:29
+ ❯ commitHookPassiveMountEffects node_modules/react-dom/cjs/react-dom-client.development.js:13336:11
+ ❯ commitPassiveMountOnFiber node_modules/react-dom/cjs/react-dom-client.development.js:15484:13
+ ❯ recursivelyTraversePassiveMountEffects node_modules/react-dom/cjs/react-dom-client.development.js:15439:11
+ ❯ commitPassiveMountOnFiber node_modules/react-dom/cjs/react-dom-client.development.js:15718:11
+ ❯ recursivelyTraversePassiveMountEffects node_modules/react-dom/cjs/react-dom-client.development.js:15439:11
+ ❯ commitPassiveMountOnFiber node_modules/react-dom/cjs/react-dom-client.development.js:15476:11
+
+This error originated in "tests/task-flow.test.tsx" test file. It doesn't mean the error was thrown inside the file itself, but while it was running.
+The latest test that might've caused the error is "renders a persisted failed event and preserves the goal after execution fails". It might mean one of the following:
+- The error was thrown, while Vitest was running this test.
+- If the error occurred after the test had been completed, this was the last documented test before it was thrown.
+
+⎯⎯⎯⎯ Unhandled Rejection ⎯⎯⎯⎯⎯
+Error: mission
+ ❯ components/project-context/mission-board.tsx:156:33
+    154|       fetch(`/api/projects/${projectId}/mission`).then(async (response…
+    155|         const payload = (await response.json()) as MissionState & Erro…
+    156|         if (!response.ok) throw new Error("mission");
+       |                                 ^
+    157|         if (!Array.isArray(payload.workItems) || !("mission" in payloa…
+    158|           throw new Error("mission");
+ ❯ processTicksAndRejections node:internal/process/task_queues:104:5
+
+This error originated in "tests/task-flow.test.tsx" test file. It doesn't mean the error was thrown inside the file itself, but while it was running.
+The latest test that might've caused the error is "renders a persisted failed event and preserves the goal after execution fails". It might mean one of the following:
+- The error was thrown, while Vitest was running this test.
+- If the error occurred after the test had been completed, this was the last documented test before it was thrown.
+
+⎯⎯⎯⎯⎯ Uncaught Exception ⎯⎯⎯⎯⎯
+TypeError: Cannot read properties of undefined (reading 'then')
+ ❯ components/project-context/members-setup.tsx:80:27
+     78|     setSuccess("");
+     79|     void Promise.allSettled([
+     80|       fetch("/api/agents").then(async (response) => {
+       |                           ^
+     81|         const payload = (await response.json()) as {
+     82|           agents?: AgentProfile[];
+ ❯ Object.react_stack_bottom_frame node_modules/react-dom/cjs/react-dom-client.development.js:25989:20
+ ❯ runWithFiberInDEV node_modules/react-dom/cjs/react-dom-client.development.js:874:13
+ ❯ commitHookEffectListMount node_modules/react-dom/cjs/react-dom-client.development.js:13249:29
+ ❯ commitHookPassiveMountEffects node_modules/react-dom/cjs/react-dom-client.development.js:13336:11
+ ❯ commitPassiveMountOnFiber node_modules/react-dom/cjs/react-dom-client.development.js:15484:13
+ ❯ recursivelyTraversePassiveMountEffects node_modules/react-dom/cjs/react-dom-client.development.js:15439:11
+ ❯ commitPassiveMountOnFiber node_modules/react-dom/cjs/react-dom-client.development.js:15718:11
+ ❯ recursivelyTraversePassiveMountEffects node_modules/react-dom/cjs/react-dom-client.development.js:15439:11
+ ❯ commitPassiveMountOnFiber node_modules/react-dom/cjs/react-dom-client.development.js:15476:11
+
+This error originated in "tests/accessibility.test.tsx" test file. It doesn't mean the error was thrown inside the file itself, but while it was running.
+The latest test that might've caused the error is "moves focus into each drawer and restores it to the opener". It might mean one of the following:
+- The error was thrown, while Vitest was running this test.
+- If the error occurred after the test had been completed, this was the last documented test before it was thrown.
+
+⎯⎯⎯⎯⎯ Uncaught Exception ⎯⎯⎯⎯⎯
+TypeError: Cannot read properties of undefined (reading 'then')
+ ❯ components/project-context/mission-board.tsx:154:50
+    152|     setSuccess("");
+    153|     void Promise.all([
+    154|       fetch(`/api/projects/${projectId}/mission`).then(async (response…
+       |                                                  ^
+    155|         const payload = (await response.json()) as MissionState & Erro…
+    156|         if (!response.ok) throw new Error("mission");
+ ❯ Object.react_stack_bottom_frame node_modules/react-dom/cjs/react-dom-client.development.js:25989:20
+ ❯ runWithFiberInDEV node_modules/react-dom/cjs/react-dom-client.development.js:874:13
+ ❯ commitHookEffectListMount node_modules/react-dom/cjs/react-dom-client.development.js:13249:29
+ ❯ commitHookPassiveMountEffects node_modules/react-dom/cjs/react-dom-client.development.js:13336:11
+ ❯ commitPassiveMountOnFiber node_modules/react-dom/cjs/react-dom-client.development.js:15484:13
+ ❯ recursivelyTraversePassiveMountEffects node_modules/react-dom/cjs/react-dom-client.development.js:15439:11
+ ❯ commitPassiveMountOnFiber node_modules/react-dom/cjs/react-dom-client.development.js:15718:11
+ ❯ recursivelyTraversePassiveMountEffects node_modules/react-dom/cjs/react-dom-client.development.js:15439:11
+ ❯ commitPassiveMountOnFiber node_modules/react-dom/cjs/react-dom-client.development.js:15718:11
+
+This error originated in "tests/accessibility.test.tsx" test file. It doesn't mean the error was thrown inside the file itself, but while it was running.
+The latest test that might've caused the error is "moves focus into each drawer and restores it to the opener". It might mean one of the following:
+- The error was thrown, while Vitest was running this test.
+- If the error occurred after the test had been completed, this was the last documented test before it was thrown.
+
+⎯⎯⎯⎯⎯ Uncaught Exception ⎯⎯⎯⎯⎯
+TypeError: Cannot read properties of undefined (reading 'then')
+ ❯ components/project-context/memory-panel.tsx:89:6
+     87|         includeHistory ? "1" : "0"
+     88|       }`,
+     89|     )
+       |      ^
+     90|       .then(async (response) => {
+     91|         const payload = (await response.json()) as {
+ ❯ Object.react_stack_bottom_frame node_modules/react-dom/cjs/react-dom-client.development.js:25989:20
+ ❯ runWithFiberInDEV node_modules/react-dom/cjs/react-dom-client.development.js:874:13
+ ❯ commitHookEffectListMount node_modules/react-dom/cjs/react-dom-client.development.js:13249:29
+ ❯ commitHookPassiveMountEffects node_modules/react-dom/cjs/react-dom-client.development.js:13336:11
+ ❯ commitPassiveMountOnFiber node_modules/react-dom/cjs/react-dom-client.development.js:15484:13
+ ❯ recursivelyTraversePassiveMountEffects node_modules/react-dom/cjs/react-dom-client.development.js:15439:11
+ ❯ commitPassiveMountOnFiber node_modules/react-dom/cjs/react-dom-client.development.js:15718:11
+ ❯ recursivelyTraversePassiveMountEffects node_modules/react-dom/cjs/react-dom-client.development.js:15439:11
+ ❯ commitPassiveMountOnFiber node_modules/react-dom/cjs/react-dom-client.development.js:15718:11
+
+This error originated in "tests/accessibility.test.tsx" test file. It doesn't mean the error was thrown inside the file itself, but while it was running.
+The latest test that might've caused the error is "moves focus into each drawer and restores it to the opener". It might mean one of the following:
+- The error was thrown, while Vitest was running this test.
+- If the error occurred after the test had been completed, this was the last documented test before it was thrown.
+
+⎯⎯⎯⎯⎯ Uncaught Exception ⎯⎯⎯⎯⎯
+TypeError: Cannot read properties of undefined (reading 'then')
+ ❯ components/task-panel.tsx:102:51
+    100|
+    101|     setIsLoading(true);
+    102|     void fetch(`/api/projects/${projectId}/tasks`)
+       |                                                   ^
+    103|       .then(async (response) => {
+    104|         const payload = await readPayload<TaskCollection & Partial<Api…
+ ❯ Object.react_stack_bottom_frame node_modules/react-dom/cjs/react-dom-client.development.js:25989:20
+ ❯ runWithFiberInDEV node_modules/react-dom/cjs/react-dom-client.development.js:874:13
+ ❯ commitHookEffectListMount node_modules/react-dom/cjs/react-dom-client.development.js:13249:29
+ ❯ commitHookPassiveMountEffects node_modules/react-dom/cjs/react-dom-client.development.js:13336:11
+ ❯ commitPassiveMountOnFiber node_modules/react-dom/cjs/react-dom-client.development.js:15484:13
+ ❯ recursivelyTraversePassiveMountEffects node_modules/react-dom/cjs/react-dom-client.development.js:15439:11
+ ❯ commitPassiveMountOnFiber node_modules/react-dom/cjs/react-dom-client.development.js:15718:11
+ ❯ recursivelyTraversePassiveMountEffects node_modules/react-dom/cjs/react-dom-client.development.js:15439:11
+ ❯ commitPassiveMountOnFiber node_modules/react-dom/cjs/react-dom-client.development.js:15476:11
+
+This error originated in "tests/accessibility.test.tsx" test file. It doesn't mean the error was thrown inside the file itself, but while it was running.
+The latest test that might've caused the error is "moves focus into each drawer and restores it to the opener". It might mean one of the following:
+- The error was thrown, while Vitest was running this test.
+- If the error occurred after the test had been completed, this was the last documented test before it was thrown.
+
+⎯⎯⎯⎯⎯ Uncaught Exception ⎯⎯⎯⎯⎯
+TypeError: Cannot read properties of undefined (reading 'then')
+ ❯ components/project-context/members-setup.tsx:80:27
+     78|     setSuccess("");
+     79|     void Promise.allSettled([
+     80|       fetch("/api/agents").then(async (response) => {
+       |                           ^
+     81|         const payload = (await response.json()) as {
+     82|           agents?: AgentProfile[];
+ ❯ Object.react_stack_bottom_frame node_modules/react-dom/cjs/react-dom-client.development.js:25989:20
+ ❯ runWithFiberInDEV node_modules/react-dom/cjs/react-dom-client.development.js:874:13
+ ❯ commitHookEffectListMount node_modules/react-dom/cjs/react-dom-client.development.js:13249:29
+ ❯ commitHookPassiveMountEffects node_modules/react-dom/cjs/react-dom-client.development.js:13336:11
+ ❯ commitPassiveMountOnFiber node_modules/react-dom/cjs/react-dom-client.development.js:15484:13
+ ❯ recursivelyTraversePassiveMountEffects node_modules/react-dom/cjs/react-dom-client.development.js:15439:11
+ ❯ commitPassiveMountOnFiber node_modules/react-dom/cjs/react-dom-client.development.js:15718:11
+ ❯ recursivelyTraversePassiveMountEffects node_modules/react-dom/cjs/react-dom-client.development.js:15439:11
+ ❯ commitPassiveMountOnFiber node_modules/react-dom/cjs/react-dom-client.development.js:15476:11
+
+This error originated in "tests/accessibility.test.tsx" test file. It doesn't mean the error was thrown inside the file itself, but while it was running.
+The latest test that might've caused the error is "places drawer controls before the primary form in keyboard order". It might mean one of the following:
+- The error was thrown, while Vitest was running this test.
+- If the error occurred after the test had been completed, this was the last documented test before it was thrown.
+
+⎯⎯⎯⎯⎯ Uncaught Exception ⎯⎯⎯⎯⎯
+TypeError: Cannot read properties of undefined (reading 'then')
+ ❯ components/project-context/mission-board.tsx:154:50
+    152|     setSuccess("");
+    153|     void Promise.all([
+    154|       fetch(`/api/projects/${projectId}/mission`).then(async (response…
+       |                                                  ^
+    155|         const payload = (await response.json()) as MissionState & Erro…
+    156|         if (!response.ok) throw new Error("mission");
+ ❯ Object.react_stack_bottom_frame node_modules/react-dom/cjs/react-dom-client.development.js:25989:20
+ ❯ runWithFiberInDEV node_modules/react-dom/cjs/react-dom-client.development.js:874:13
+ ❯ commitHookEffectListMount node_modules/react-dom/cjs/react-dom-client.development.js:13249:29
+ ❯ commitHookPassiveMountEffects node_modules/react-dom/cjs/react-dom-client.development.js:13336:11
+ ❯ commitPassiveMountOnFiber node_modules/react-dom/cjs/react-dom-client.development.js:15484:13
+ ❯ recursivelyTraversePassiveMountEffects node_modules/react-dom/cjs/react-dom-client.development.js:15439:11
+ ❯ commitPassiveMountOnFiber node_modules/react-dom/cjs/react-dom-client.development.js:15718:11
+ ❯ recursivelyTraversePassiveMountEffects node_modules/react-dom/cjs/react-dom-client.development.js:15439:11
+ ❯ commitPassiveMountOnFiber node_modules/react-dom/cjs/react-dom-client.development.js:15718:11
+
+This error originated in "tests/accessibility.test.tsx" test file. It doesn't mean the error was thrown inside the file itself, but while it was running.
+The latest test that might've caused the error is "places drawer controls before the primary form in keyboard order". It might mean one of the following:
+- The error was thrown, while Vitest was running this test.
+- If the error occurred after the test had been completed, this was the last documented test before it was thrown.
+
+⎯⎯⎯⎯⎯ Uncaught Exception ⎯⎯⎯⎯⎯
+TypeError: Cannot read properties of undefined (reading 'then')
+ ❯ components/project-context/memory-panel.tsx:89:6
+     87|         includeHistory ? "1" : "0"
+     88|       }`,
+     89|     )
+       |      ^
+     90|       .then(async (response) => {
+     91|         const payload = (await response.json()) as {
+ ❯ Object.react_stack_bottom_frame node_modules/react-dom/cjs/react-dom-client.development.js:25989:20
+ ❯ runWithFiberInDEV node_modules/react-dom/cjs/react-dom-client.development.js:874:13
+ ❯ commitHookEffectListMount node_modules/react-dom/cjs/react-dom-client.development.js:13249:29
+ ❯ commitHookPassiveMountEffects node_modules/react-dom/cjs/react-dom-client.development.js:13336:11
+ ❯ commitPassiveMountOnFiber node_modules/react-dom/cjs/react-dom-client.development.js:15484:13
+ ❯ recursivelyTraversePassiveMountEffects node_modules/react-dom/cjs/react-dom-client.development.js:15439:11
+ ❯ commitPassiveMountOnFiber node_modules/react-dom/cjs/react-dom-client.development.js:15718:11
+ ❯ recursivelyTraversePassiveMountEffects node_modules/react-dom/cjs/react-dom-client.development.js:15439:11
+ ❯ commitPassiveMountOnFiber node_modules/react-dom/cjs/react-dom-client.development.js:15718:11
+
+This error originated in "tests/accessibility.test.tsx" test file. It doesn't mean the error was thrown inside the file itself, but while it was running.
+The latest test that might've caused the error is "places drawer controls before the primary form in keyboard order". It might mean one of the following:
+- The error was thrown, while Vitest was running this test.
+- If the error occurred after the test had been completed, this was the last documented test before it was thrown.
+
+⎯⎯⎯⎯⎯ Uncaught Exception ⎯⎯⎯⎯⎯
+TypeError: Cannot read properties of undefined (reading 'then')
+ ❯ components/task-panel.tsx:102:51
+    100|
+    101|     setIsLoading(true);
+    102|     void fetch(`/api/projects/${projectId}/tasks`)
+       |                                                   ^
+    103|       .then(async (response) => {
+    104|         const payload = await readPayload<TaskCollection & Partial<Api…
+ ❯ Object.react_stack_bottom_frame node_modules/react-dom/cjs/react-dom-client.development.js:25989:20
+ ❯ runWithFiberInDEV node_modules/react-dom/cjs/react-dom-client.development.js:874:13
+ ❯ commitHookEffectListMount node_modules/react-dom/cjs/react-dom-client.development.js:13249:29
+ ❯ commitHookPassiveMountEffects node_modules/react-dom/cjs/react-dom-client.development.js:13336:11
+ ❯ commitPassiveMountOnFiber node_modules/react-dom/cjs/react-dom-client.development.js:15484:13
+ ❯ recursivelyTraversePassiveMountEffects node_modules/react-dom/cjs/react-dom-client.development.js:15439:11
+ ❯ commitPassiveMountOnFiber node_modules/react-dom/cjs/react-dom-client.development.js:15718:11
+ ❯ recursivelyTraversePassiveMountEffects node_modules/react-dom/cjs/react-dom-client.development.js:15439:11
+ ❯ commitPassiveMountOnFiber node_modules/react-dom/cjs/react-dom-client.development.js:15476:11
+
+This error originated in "tests/accessibility.test.tsx" test file. It doesn't mean the error was thrown inside the file itself, but while it was running.
+The latest test that might've caused the error is "places drawer controls before the primary form in keyboard order". It might mean one of the following:
+- The error was thrown, while Vitest was running this test.
+- If the error occurred after the test had been completed, this was the last documented test before it was thrown.
+
+⎯⎯⎯⎯⎯ Uncaught Exception ⎯⎯⎯⎯⎯
+TypeError: Cannot read properties of undefined (reading 'then')
+ ❯ components/project-context/members-setup.tsx:80:27
+     78|     setSuccess("");
+     79|     void Promise.allSettled([
+     80|       fetch("/api/agents").then(async (response) => {
+       |                           ^
+     81|         const payload = (await response.json()) as {
+     82|           agents?: AgentProfile[];
+ ❯ Object.react_stack_bottom_frame node_modules/react-dom/cjs/react-dom-client.development.js:25989:20
+ ❯ runWithFiberInDEV node_modules/react-dom/cjs/react-dom-client.development.js:874:13
+ ❯ commitHookEffectListMount node_modules/react-dom/cjs/react-dom-client.development.js:13249:29
+ ❯ commitHookPassiveMountEffects node_modules/react-dom/cjs/react-dom-client.development.js:13336:11
+ ❯ commitPassiveMountOnFiber node_modules/react-dom/cjs/react-dom-client.development.js:15484:13
+ ❯ recursivelyTraversePassiveMountEffects node_modules/react-dom/cjs/react-dom-client.development.js:15439:11
+ ❯ commitPassiveMountOnFiber node_modules/react-dom/cjs/react-dom-client.development.js:15718:11
+ ❯ recursivelyTraversePassiveMountEffects node_modules/react-dom/cjs/react-dom-client.development.js:15439:11
+ ❯ commitPassiveMountOnFiber node_modules/react-dom/cjs/react-dom-client.development.js:15476:11
+
+This error originated in "tests/accessibility.test.tsx" test file. It doesn't mean the error was thrown inside the file itself, but while it was running.
+The latest test that might've caused the error is "announces the restored task status through a polite status region". It might mean one of the following:
+- The error was thrown, while Vitest was running this test.
+- If the error occurred after the test had been completed, this was the last documented test before it was thrown.
+
+⎯⎯⎯⎯⎯ Uncaught Exception ⎯⎯⎯⎯⎯
+TypeError: Cannot read properties of undefined (reading 'then')
+ ❯ components/project-context/mission-board.tsx:154:50
+    152|     setSuccess("");
+    153|     void Promise.all([
+    154|       fetch(`/api/projects/${projectId}/mission`).then(async (response…
+       |                                                  ^
+    155|         const payload = (await response.json()) as MissionState & Erro…
+    156|         if (!response.ok) throw new Error("mission");
+ ❯ Object.react_stack_bottom_frame node_modules/react-dom/cjs/react-dom-client.development.js:25989:20
+ ❯ runWithFiberInDEV node_modules/react-dom/cjs/react-dom-client.development.js:874:13
+ ❯ commitHookEffectListMount node_modules/react-dom/cjs/react-dom-client.development.js:13249:29
+ ❯ commitHookPassiveMountEffects node_modules/react-dom/cjs/react-dom-client.development.js:13336:11
+ ❯ commitPassiveMountOnFiber node_modules/react-dom/cjs/react-dom-client.development.js:15484:13
+ ❯ recursivelyTraversePassiveMountEffects node_modules/react-dom/cjs/react-dom-client.development.js:15439:11
+ ❯ commitPassiveMountOnFiber node_modules/react-dom/cjs/react-dom-client.development.js:15718:11
+ ❯ recursivelyTraversePassiveMountEffects node_modules/react-dom/cjs/react-dom-client.development.js:15439:11
+ ❯ commitPassiveMountOnFiber node_modules/react-dom/cjs/react-dom-client.development.js:15718:11
+
+This error originated in "tests/accessibility.test.tsx" test file. It doesn't mean the error was thrown inside the file itself, but while it was running.
+The latest test that might've caused the error is "announces the restored task status through a polite status region". It might mean one of the following:
+- The error was thrown, while Vitest was running this test.
+- If the error occurred after the test had been completed, this was the last documented test before it was thrown.
+
+⎯⎯⎯⎯⎯ Uncaught Exception ⎯⎯⎯⎯⎯
+TypeError: Cannot read properties of undefined (reading 'then')
+ ❯ components/project-context/memory-panel.tsx:89:6
+     87|         includeHistory ? "1" : "0"
+     88|       }`,
+     89|     )
+       |      ^
+     90|       .then(async (response) => {
+     91|         const payload = (await response.json()) as {
+ ❯ Object.react_stack_bottom_frame node_modules/react-dom/cjs/react-dom-client.development.js:25989:20
+ ❯ runWithFiberInDEV node_modules/react-dom/cjs/react-dom-client.development.js:874:13
+ ❯ commitHookEffectListMount node_modules/react-dom/cjs/react-dom-client.development.js:13249:29
+ ❯ commitHookPassiveMountEffects node_modules/react-dom/cjs/react-dom-client.development.js:13336:11
+ ❯ commitPassiveMountOnFiber node_modules/react-dom/cjs/react-dom-client.development.js:15484:13
+ ❯ recursivelyTraversePassiveMountEffects node_modules/react-dom/cjs/react-dom-client.development.js:15439:11
+ ❯ commitPassiveMountOnFiber node_modules/react-dom/cjs/react-dom-client.development.js:15718:11
+ ❯ recursivelyTraversePassiveMountEffects node_modules/react-dom/cjs/react-dom-client.development.js:15439:11
+ ❯ commitPassiveMountOnFiber node_modules/react-dom/cjs/react-dom-client.development.js:15718:11
+
+This error originated in "tests/accessibility.test.tsx" test file. It doesn't mean the error was thrown inside the file itself, but while it was running.
+The latest test that might've caused the error is "announces the restored task status through a polite status region". It might mean one of the following:
+- The error was thrown, while Vitest was running this test.
+- If the error occurred after the test had been completed, this was the last documented test before it was thrown.
+
+⎯⎯⎯⎯⎯ Uncaught Exception ⎯⎯⎯⎯⎯
+TypeError: Cannot read properties of undefined (reading 'then')
+ ❯ components/task-panel.tsx:102:51
+    100|
+    101|     setIsLoading(true);
+    102|     void fetch(`/api/projects/${projectId}/tasks`)
+       |                                                   ^
+    103|       .then(async (response) => {
+    104|         const payload = await readPayload<TaskCollection & Partial<Api…
+ ❯ Object.react_stack_bottom_frame node_modules/react-dom/cjs/react-dom-client.development.js:25989:20
+ ❯ runWithFiberInDEV node_modules/react-dom/cjs/react-dom-client.development.js:874:13
+ ❯ commitHookEffectListMount node_modules/react-dom/cjs/react-dom-client.development.js:13249:29
+ ❯ commitHookPassiveMountEffects node_modules/react-dom/cjs/react-dom-client.development.js:13336:11
+ ❯ commitPassiveMountOnFiber node_modules/react-dom/cjs/react-dom-client.development.js:15484:13
+ ❯ recursivelyTraversePassiveMountEffects node_modules/react-dom/cjs/react-dom-client.development.js:15439:11
+ ❯ commitPassiveMountOnFiber node_modules/react-dom/cjs/react-dom-client.development.js:15718:11
+ ❯ recursivelyTraversePassiveMountEffects node_modules/react-dom/cjs/react-dom-client.development.js:15439:11
+ ❯ commitPassiveMountOnFiber node_modules/react-dom/cjs/react-dom-client.development.js:15476:11
+
+This error originated in "tests/accessibility.test.tsx" test file. It doesn't mean the error was thrown inside the file itself, but while it was running.
+The latest test that might've caused the error is "announces the restored task status through a polite status region". It might mean one of the following:
+- The error was thrown, while Vitest was running this test.
+- If the error occurred after the test had been completed, this was the last documented test before it was thrown.
+
+⎯⎯⎯⎯⎯ Uncaught Exception ⎯⎯⎯⎯⎯
+TypeError: Cannot read properties of undefined (reading 'then')
+ ❯ components/project-context/members-setup.tsx:80:27
+     78|     setSuccess("");
+     79|     void Promise.allSettled([
+     80|       fetch("/api/agents").then(async (response) => {
+       |                           ^
+     81|         const payload = (await response.json()) as {
+     82|           agents?: AgentProfile[];
+ ❯ Object.react_stack_bottom_frame node_modules/react-dom/cjs/react-dom-client.development.js:25989:20
+ ❯ runWithFiberInDEV node_modules/react-dom/cjs/react-dom-client.development.js:874:13
+ ❯ commitHookEffectListMount node_modules/react-dom/cjs/react-dom-client.development.js:13249:29
+ ❯ commitHookPassiveMountEffects node_modules/react-dom/cjs/react-dom-client.development.js:13336:11
+ ❯ commitPassiveMountOnFiber node_modules/react-dom/cjs/react-dom-client.development.js:15484:13
+ ❯ recursivelyTraversePassiveMountEffects node_modules/react-dom/cjs/react-dom-client.development.js:15439:11
+ ❯ commitPassiveMountOnFiber node_modules/react-dom/cjs/react-dom-client.development.js:15718:11
+ ❯ recursivelyTraversePassiveMountEffects node_modules/react-dom/cjs/react-dom-client.development.js:15439:11
+ ❯ commitPassiveMountOnFiber node_modules/react-dom/cjs/react-dom-client.development.js:15476:11
+
+This error originated in "tests/code-review-fixes.test.tsx" test file. It doesn't mean the error was thrown inside the file itself, but while it was running.
+The latest test that might've caused the error is "focuses the current project title after creation". It might mean one of the following:
+- The error was thrown, while Vitest was running this test.
+- If the error occurred after the test had been completed, this was the last documented test before it was thrown.
+
+⎯⎯⎯⎯⎯ Uncaught Exception ⎯⎯⎯⎯⎯
+TypeError: Cannot read properties of undefined (reading 'then')
+ ❯ components/project-context/mission-board.tsx:154:50
+    152|     setSuccess("");
+    153|     void Promise.all([
+    154|       fetch(`/api/projects/${projectId}/mission`).then(async (response…
+       |                                                  ^
+    155|         const payload = (await response.json()) as MissionState & Erro…
+    156|         if (!response.ok) throw new Error("mission");
+ ❯ Object.react_stack_bottom_frame node_modules/react-dom/cjs/react-dom-client.development.js:25989:20
+ ❯ runWithFiberInDEV node_modules/react-dom/cjs/react-dom-client.development.js:874:13
+ ❯ commitHookEffectListMount node_modules/react-dom/cjs/react-dom-client.development.js:13249:29
+ ❯ commitHookPassiveMountEffects node_modules/react-dom/cjs/react-dom-client.development.js:13336:11
+ ❯ commitPassiveMountOnFiber node_modules/react-dom/cjs/react-dom-client.development.js:15484:13
+ ❯ recursivelyTraversePassiveMountEffects node_modules/react-dom/cjs/react-dom-client.development.js:15439:11
+ ❯ commitPassiveMountOnFiber node_modules/react-dom/cjs/react-dom-client.development.js:15718:11
+ ❯ recursivelyTraversePassiveMountEffects node_modules/react-dom/cjs/react-dom-client.development.js:15439:11
+ ❯ commitPassiveMountOnFiber node_modules/react-dom/cjs/react-dom-client.development.js:15718:11
+
+This error originated in "tests/code-review-fixes.test.tsx" test file. It doesn't mean the error was thrown inside the file itself, but while it was running.
+The latest test that might've caused the error is "focuses the current project title after creation". It might mean one of the following:
+- The error was thrown, while Vitest was running this test.
+- If the error occurred after the test had been completed, this was the last documented test before it was thrown.
+
+⎯⎯⎯⎯⎯ Uncaught Exception ⎯⎯⎯⎯⎯
+TypeError: Cannot read properties of undefined (reading 'then')
+ ❯ components/project-context/memory-panel.tsx:89:6
+     87|         includeHistory ? "1" : "0"
+     88|       }`,
+     89|     )
+       |      ^
+     90|       .then(async (response) => {
+     91|         const payload = (await response.json()) as {
+ ❯ Object.react_stack_bottom_frame node_modules/react-dom/cjs/react-dom-client.development.js:25989:20
+ ❯ runWithFiberInDEV node_modules/react-dom/cjs/react-dom-client.development.js:874:13
+ ❯ commitHookEffectListMount node_modules/react-dom/cjs/react-dom-client.development.js:13249:29
+ ❯ commitHookPassiveMountEffects node_modules/react-dom/cjs/react-dom-client.development.js:13336:11
+ ❯ commitPassiveMountOnFiber node_modules/react-dom/cjs/react-dom-client.development.js:15484:13
+ ❯ recursivelyTraversePassiveMountEffects node_modules/react-dom/cjs/react-dom-client.development.js:15439:11
+ ❯ commitPassiveMountOnFiber node_modules/react-dom/cjs/react-dom-client.development.js:15718:11
+ ❯ recursivelyTraversePassiveMountEffects node_modules/react-dom/cjs/react-dom-client.development.js:15439:11
+ ❯ commitPassiveMountOnFiber node_modules/react-dom/cjs/react-dom-client.development.js:15718:11
+
+This error originated in "tests/code-review-fixes.test.tsx" test file. It doesn't mean the error was thrown inside the file itself, but while it was running.
+The latest test that might've caused the error is "focuses the current project title after creation". It might mean one of the following:
+- The error was thrown, while Vitest was running this test.
+- If the error occurred after the test had been completed, this was the last documented test before it was thrown.
+
+⎯⎯⎯⎯⎯ Uncaught Exception ⎯⎯⎯⎯⎯
+TypeError: Cannot read properties of undefined (reading 'then')
+ ❯ components/task-panel.tsx:102:51
+    100|
+    101|     setIsLoading(true);
+    102|     void fetch(`/api/projects/${projectId}/tasks`)
+       |                                                   ^
+    103|       .then(async (response) => {
+    104|         const payload = await readPayload<TaskCollection & Partial<Api…
+ ❯ Object.react_stack_bottom_frame node_modules/react-dom/cjs/react-dom-client.development.js:25989:20
+ ❯ runWithFiberInDEV node_modules/react-dom/cjs/react-dom-client.development.js:874:13
+ ❯ commitHookEffectListMount node_modules/react-dom/cjs/react-dom-client.development.js:13249:29
+ ❯ commitHookPassiveMountEffects node_modules/react-dom/cjs/react-dom-client.development.js:13336:11
+ ❯ commitPassiveMountOnFiber node_modules/react-dom/cjs/react-dom-client.development.js:15484:13
+ ❯ recursivelyTraversePassiveMountEffects node_modules/react-dom/cjs/react-dom-client.development.js:15439:11
+ ❯ commitPassiveMountOnFiber node_modules/react-dom/cjs/react-dom-client.development.js:15718:11
+ ❯ recursivelyTraversePassiveMountEffects node_modules/react-dom/cjs/react-dom-client.development.js:15439:11
+ ❯ commitPassiveMountOnFiber node_modules/react-dom/cjs/react-dom-client.development.js:15476:11
+
+This error originated in "tests/code-review-fixes.test.tsx" test file. It doesn't mean the error was thrown inside the file itself, but while it was running.
+The latest test that might've caused the error is "focuses the current project title after creation". It might mean one of the following:
+- The error was thrown, while Vitest was running this test.
+- If the error occurred after the test had been completed, this was the last documented test before it was thrown.
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯
+
+
+ Test Files  8 failed | 42 passed (50)
+      Tests  19 failed | 182 passed (201)
+     Errors  48 errors
+   Start at  03:57:26
+   Duration  27.49s (transform 2.26s, setup 22.13s, import 6.73s, tests 44.57s, environment 97.38s)
+
+# exit: 1

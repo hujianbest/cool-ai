@@ -1,0 +1,30 @@
+# hf-gate-run
+# label: t19-integration
+# command: npm.cmd test -- tests/collaboration-read-api.test.ts tests/collaboration-slice.test.tsx tests/project-chat.api.test.ts tests/collaboration-usage-budget.test.ts tests/collaboration-decisions.test.ts tests/collaboration-recovery.api.test.ts
+# started: 2026-07-29T23:05:42+00:00
+
+> collaboration-cockpit@0.1.0 test
+> vitest run tests/collaboration-read-api.test.ts tests/collaboration-slice.test.tsx tests/project-chat.api.test.ts tests/collaboration-usage-budget.test.ts tests/collaboration-decisions.test.ts tests/collaboration-recovery.api.test.ts
+
+
+ RUN  v4.1.10 D:/cool-ai
+
+(node:7620) ExperimentalWarning: SQLite is an experimental feature and might change at any time
+(Use `node --trace-warnings ...` to show where the warning was created)
+(node:3504) ExperimentalWarning: SQLite is an experimental feature and might change at any time
+(Use `node --trace-warnings ...` to show where the warning was created)
+(node:11868) ExperimentalWarning: SQLite is an experimental feature and might change at any time
+(Use `node --trace-warnings ...` to show where the warning was created)
+(node:4244) ExperimentalWarning: SQLite is an experimental feature and might change at any time
+(Use `node --trace-warnings ...` to show where the warning was created)
+(node:11528) ExperimentalWarning: SQLite is an experimental feature and might change at any time
+(Use `node --trace-warnings ...` to show where the warning was created)
+(node:10364) ExperimentalWarning: SQLite is an experimental feature and might change at any time
+(Use `node --trace-warnings ...` to show where the warning was created)
+
+ Test Files  6 passed (6)
+      Tests  33 passed (33)
+   Start at  07:05:43
+   Duration  6.93s (transform 717ms, setup 2.43s, import 1.25s, tests 17.91s, environment 10.78s)
+
+# exit: 0

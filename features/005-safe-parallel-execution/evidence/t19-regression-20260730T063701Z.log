@@ -1,0 +1,290 @@
+# hf-gate-run
+# label: t19-regression
+# command: cmd /c npm test
+# started: 2026-07-30T06:37:01+00:00
+
+> collaboration-cockpit@0.1.0 test
+> vitest run
+
+
+ RUN  v4.1.10 D:/cool-ai
+
+(node:14872) ExperimentalWarning: SQLite is an experimental feature and might change at any time
+(Use `node --trace-warnings ...` to show where the warning was created)
+(node:12068) ExperimentalWarning: SQLite is an experimental feature and might change at any time
+(Use `node --trace-warnings ...` to show where the warning was created)
+(node:13616) ExperimentalWarning: SQLite is an experimental feature and might change at any time
+(Use `node --trace-warnings ...` to show where the warning was created)
+(node:15452) ExperimentalWarning: SQLite is an experimental feature and might change at any time
+(Use `node --trace-warnings ...` to show where the warning was created)
+(node:15412) ExperimentalWarning: SQLite is an experimental feature and might change at any time
+(Use `node --trace-warnings ...` to show where the warning was created)
+(node:13748) ExperimentalWarning: SQLite is an experimental feature and might change at any time
+(Use `node --trace-warnings ...` to show where the warning was created)
+ ❯ tests/validation-policy.test.ts (6 tests | 2 failed) 2882ms
+     × retains history and frozen references across restart until project deletion 534ms
+     × rejects validation facts that do not belong to the attempt's frozen revision 776ms
+ ❯ tests/owner-decision-races.test.ts (4 tests | 4 failed) 4417ms
+     × keeps ordinary and mentioned post-acquire messages queued without answering or changing requester 1334ms
+     × preserves queued message and mention sequence across reopen for the next prompt after an explicit answer 1174ms
+     × consumes no included or post-acquire owner messages when a decision commit fails, then replays them after retry 1006ms
+     × consumes none on a discarded decision result and retains stable pending order after continue 901ms
+(node:10772) ExperimentalWarning: SQLite is an experimental feature and might change at any time
+(Use `node --trace-warnings ...` to show where the warning was created)
+(node:508) ExperimentalWarning: SQLite is an experimental feature and might change at any time
+(Use `node --trace-warnings ...` to show where the warning was created)
+(node:7716) ExperimentalWarning: SQLite is an experimental feature and might change at any time
+(Use `node --trace-warnings ...` to show where the warning was created)
+(node:15984) ExperimentalWarning: SQLite is an experimental feature and might change at any time
+(Use `node --trace-warnings ...` to show where the warning was created)
+(node:14992) ExperimentalWarning: SQLite is an experimental feature and might change at any time
+(Use `node --trace-warnings ...` to show where the warning was created)
+(node:12176) ExperimentalWarning: SQLite is an experimental feature and might change at any time
+(Use `node --trace-warnings ...` to show where the warning was created)
+(node:17344) ExperimentalWarning: SQLite is an experimental feature and might change at any time
+(Use `node --trace-warnings ...` to show where the warning was created)
+(node:12084) ExperimentalWarning: SQLite is an experimental feature and might change at any time
+(Use `node --trace-warnings ...` to show where the warning was created)
+(node:4380) ExperimentalWarning: SQLite is an experimental feature and might change at any time
+(Use `node --trace-warnings ...` to show where the warning was created)
+(node:11020) ExperimentalWarning: SQLite is an experimental feature and might change at any time
+(Use `node --trace-warnings ...` to show where the warning was created)
+(node:520) ExperimentalWarning: SQLite is an experimental feature and might change at any time
+(Use `node --trace-warnings ...` to show where the warning was created)
+(node:11792) ExperimentalWarning: SQLite is an experimental feature and might change at any time
+(Use `node --trace-warnings ...` to show where the warning was created)
+(node:13132) ExperimentalWarning: SQLite is an experimental feature and might change at any time
+(Use `node --trace-warnings ...` to show where the warning was created)
+(node:15320) ExperimentalWarning: SQLite is an experimental feature and might change at any time
+(Use `node --trace-warnings ...` to show where the warning was created)
+(node:1756) ExperimentalWarning: SQLite is an experimental feature and might change at any time
+(Use `node --trace-warnings ...` to show where the warning was created)
+(node:12180) ExperimentalWarning: SQLite is an experimental feature and might change at any time
+(Use `node --trace-warnings ...` to show where the warning was created)
+(node:15536) ExperimentalWarning: SQLite is an experimental feature and might change at any time
+(Use `node --trace-warnings ...` to show where the warning was created)
+(node:5420) ExperimentalWarning: SQLite is an experimental feature and might change at any time
+(Use `node --trace-warnings ...` to show where the warning was created)
+(node:10060) ExperimentalWarning: SQLite is an experimental feature and might change at any time
+(Use `node --trace-warnings ...` to show where the warning was created)
+(node:14124) ExperimentalWarning: SQLite is an experimental feature and might change at any time
+(Use `node --trace-warnings ...` to show where the warning was created)
+(node:13220) ExperimentalWarning: SQLite is an experimental feature and might change at any time
+(Use `node --trace-warnings ...` to show where the warning was created)
+(node:5544) ExperimentalWarning: SQLite is an experimental feature and might change at any time
+(Use `node --trace-warnings ...` to show where the warning was created)
+(node:11464) ExperimentalWarning: SQLite is an experimental feature and might change at any time
+(Use `node --trace-warnings ...` to show where the warning was created)
+(node:11008) ExperimentalWarning: SQLite is an experimental feature and might change at any time
+(Use `node --trace-warnings ...` to show where the warning was created)
+(node:3504) ExperimentalWarning: SQLite is an experimental feature and might change at any time
+(Use `node --trace-warnings ...` to show where the warning was created)
+(node:5476) ExperimentalWarning: SQLite is an experimental feature and might change at any time
+(Use `node --trace-warnings ...` to show where the warning was created)
+(node:12492) ExperimentalWarning: SQLite is an experimental feature and might change at any time
+(Use `node --trace-warnings ...` to show where the warning was created)
+(node:14988) ExperimentalWarning: SQLite is an experimental feature and might change at any time
+(Use `node --trace-warnings ...` to show where the warning was created)
+(node:12108) ExperimentalWarning: SQLite is an experimental feature and might change at any time
+(Use `node --trace-warnings ...` to show where the warning was created)
+(node:15096) ExperimentalWarning: SQLite is an experimental feature and might change at any time
+(Use `node --trace-warnings ...` to show where the warning was created)
+(node:17048) ExperimentalWarning: SQLite is an experimental feature and might change at any time
+(Use `node --trace-warnings ...` to show where the warning was created)
+(node:14372) ExperimentalWarning: SQLite is an experimental feature and might change at any time
+(Use `node --trace-warnings ...` to show where the warning was created)
+(node:3508) ExperimentalWarning: SQLite is an experimental feature and might change at any time
+(Use `node --trace-warnings ...` to show where the warning was created)
+(node:6116) ExperimentalWarning: SQLite is an experimental feature and might change at any time
+(Use `node --trace-warnings ...` to show where the warning was created)
+(node:14104) ExperimentalWarning: SQLite is an experimental feature and might change at any time
+(Use `node --trace-warnings ...` to show where the warning was created)
+(node:3940) ExperimentalWarning: SQLite is an experimental feature and might change at any time
+(Use `node --trace-warnings ...` to show where the warning was created)
+(node:3068) ExperimentalWarning: SQLite is an experimental feature and might change at any time
+(Use `node --trace-warnings ...` to show where the warning was created)
+(node:8300) ExperimentalWarning: SQLite is an experimental feature and might change at any time
+(Use `node --trace-warnings ...` to show where the warning was created)
+(node:10464) ExperimentalWarning: SQLite is an experimental feature and might change at any time
+(Use `node --trace-warnings ...` to show where the warning was created)
+(node:12312) ExperimentalWarning: SQLite is an experimental feature and might change at any time
+(Use `node --trace-warnings ...` to show where the warning was created)
+(node:11984) ExperimentalWarning: SQLite is an experimental feature and might change at any time
+(Use `node --trace-warnings ...` to show where the warning was created)
+(node:17324) ExperimentalWarning: SQLite is an experimental feature and might change at any time
+(Use `node --trace-warnings ...` to show where the warning was created)
+(node:10268) ExperimentalWarning: SQLite is an experimental feature and might change at any time
+(Use `node --trace-warnings ...` to show where the warning was created)
+(node:15764) ExperimentalWarning: SQLite is an experimental feature and might change at any time
+(Use `node --trace-warnings ...` to show where the warning was created)
+(node:11064) ExperimentalWarning: SQLite is an experimental feature and might change at any time
+(Use `node --trace-warnings ...` to show where the warning was created)
+(node:2220) ExperimentalWarning: SQLite is an experimental feature and might change at any time
+(Use `node --trace-warnings ...` to show where the warning was created)
+(node:16228) ExperimentalWarning: SQLite is an experimental feature and might change at any time
+(Use `node --trace-warnings ...` to show where the warning was created)
+(node:16836) ExperimentalWarning: SQLite is an experimental feature and might change at any time
+(Use `node --trace-warnings ...` to show where the warning was created)
+(node:8572) ExperimentalWarning: SQLite is an experimental feature and might change at any time
+(Use `node --trace-warnings ...` to show where the warning was created)
+(node:10992) ExperimentalWarning: SQLite is an experimental feature and might change at any time
+(Use `node --trace-warnings ...` to show where the warning was created)
+(node:11892) ExperimentalWarning: SQLite is an experimental feature and might change at any time
+(Use `node --trace-warnings ...` to show where the warning was created)
+(node:560) ExperimentalWarning: SQLite is an experimental feature and might change at any time
+(Use `node --trace-warnings ...` to show where the warning was created)
+(node:16812) ExperimentalWarning: SQLite is an experimental feature and might change at any time
+(Use `node --trace-warnings ...` to show where the warning was created)
+(node:10700) ExperimentalWarning: SQLite is an experimental feature and might change at any time
+(Use `node --trace-warnings ...` to show where the warning was created)
+(node:4092) ExperimentalWarning: SQLite is an experimental feature and might change at any time
+(Use `node --trace-warnings ...` to show where the warning was created)
+(node:3828) ExperimentalWarning: SQLite is an experimental feature and might change at any time
+(Use `node --trace-warnings ...` to show where the warning was created)
+
+⎯⎯⎯⎯⎯⎯⎯ Failed Tests 6 ⎯⎯⎯⎯⎯⎯⎯
+
+ FAIL  tests/owner-decision-races.test.ts > calling owner messages and decision requests > keeps ordinary and mentioned post-acquire messages queued without answering or changing requester
+AssertionError: expected { affectedRows: +0, …(2) } to match object { body: { …(2) }, status: 200 }
+(8 matching properties omitted from actual)
+
+- Expected
++ Received
+
+  {
+    "body": {
+-     "attemptStatus": "committed",
++     "attemptStatus": "interrupted",
+      "run": {
+        "currentAgentId": "agent-decision-requester",
+-       "status": "waiting_owner",
++       "status": "paused",
+      },
+    },
+    "status": 200,
+  }
+
+ ❯ tests/owner-decision-races.test.ts:229:22
+    227|     const response = finalize(acquired, decision());
+    228|
+    229|     expect(response).toMatchObject({
+       |                      ^
+    230|       body: {
+    231|         attemptStatus: "committed",
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[1/7]⎯
+
+ FAIL  tests/owner-decision-races.test.ts > calling owner messages and decision requests > preserves queued message and mention sequence across reopen for the next prompt after an explicit answer
+TypeError: Cannot read properties of undefined (reading 'id')
+ ❯ tests/owner-decision-races.test.ts:267:55
+    265|
+    266|     const openDecision = persistedState().decisionRows[0];
+    267|     answerDecision(databasePath, RUN_ID, openDecision.id, {
+       |                                                       ^
+    268|       answer: "Explicit owner answer",
+    269|       expectedVersion: 1,
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[2/7]⎯
+
+ FAIL  tests/owner-decision-races.test.ts > calling owner messages and decision requests > consumes no included or post-acquire owner messages when a decision commit fails, then replays them after retry
+AssertionError: expected { affectedRows: +0, …(2) } to match object { …(2) }
+(12 matching properties omitted from actual)
+
+- Expected
++ Received
+
+  {
+    "body": {
+-     "error": {
+-       "code": "ACTION_INVALID",
++     "attemptStatus": "interrupted",
++     "run": {
++       "createdAt": "2026-07-30T06:30:00.000Z",
++       "currentAgentId": "agent-decision-requester",
++       "id": "run-owner-decision-races",
++       "pauseCategory": "interrupted",
++       "projectId": "project-owner-decision-races",
++       "roundCount": 0,
++       "status": "paused",
++       "updatedAt": "2026-07-30T06:37:10.492Z",
++       "version": 2,
+      },
+    },
+-   "status": 400,
++   "status": 200,
+  }
+
+ ❯ tests/owner-decision-races.test.ts:300:70
+    298|     const pending = ownerMessage("Pending after invalid decision", REV…
+    299|
+    300|     expect(finalize(acquired, decision(["Duplicate", "Duplicate"]))).t…
+       |                                                                      ^
+    301|       body: { error: { code: "ACTION_INVALID" } },
+    302|       status: 400,
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[3/7]⎯
+
+ FAIL  tests/owner-decision-races.test.ts > calling owner messages and decision requests > consumes none on a discarded decision result and retains stable pending order after continue
+CollaborationError: Only a running collaboration can be paused.
+ ❯ src/server/collaboration/run-service.ts:788:17
+    786|       if (input.action === "pause") {
+    787|         if (row.status !== "running") {
+    788|           throw new CollaborationError(
+       |                 ^
+    789|             "RUN_STATE_CONFLICT",
+    790|             409,
+ ❯ transaction src/server/collaboration/run-service.ts:106:20
+ ❯ controlRun src/server/collaboration/run-service.ts:732:12
+ ❯ tests/owner-decision-races.test.ts:327:5
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[4/7]⎯
+
+ FAIL  tests/validation-policy.test.ts > append-only validation policy > retains history and frozen references across restart until project deletion
+SchemaMigrationError: Database version 5 schema is invalid.
+ ❯ migrateDatabase src/server/migrations.ts:1342:13
+    1340|     const validation = validateV5(database);
+    1341|     if (validation) {
+    1342|       throw new SchemaMigrationError(validation, "Database version 5 s…
+       |             ^
+    1343|     }
+    1344|   }
+ ❯ openDatabase src/server/db.ts:14:5
+ ❯ Module.listValidationPolicyRevisions src/server/execution/validation-policy-service.ts:256:20
+ ❯ tests/validation-policy.test.ts:270:34
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[5/7]⎯
+
+ FAIL  tests/validation-policy.test.ts > append-only validation policy > retains history and frozen references across restart until project deletion
+Error: EPERM, Permission denied: \\?\C:\Users\ADMINI~1\AppData\Local\Temp\2\cool-ai-validation-policy-HUnEXl '\\?\C:\Users\ADMINI~1\AppData\Local\Temp\2\cool-ai-validation-policy-HUnEXl'
+ ❯ tests/validation-policy.test.ts:103:5
+    101| afterEach(() => {
+    102|   for (const directory of temporaryDirectories.splice(0)) {
+    103|     rmSync(directory, { force: true, recursive: true });
+       |     ^
+    104|   }
+    105| });
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[6/7]⎯
+
+ FAIL  tests/validation-policy.test.ts > append-only validation policy > rejects validation facts that do not belong to the attempt's frozen revision
+SchemaMigrationError: Database version 5 schema is invalid.
+ ❯ migrateDatabase src/server/migrations.ts:1342:13
+    1340|     const validation = validateV5(database);
+    1341|     if (validation) {
+    1342|       throw new SchemaMigrationError(validation, "Database version 5 s…
+       |             ^
+    1343|     }
+    1344|   }
+ ❯ openDatabase src/server/db.ts:14:5
+ ❯ Module.saveValidationPolicy src/server/execution/validation-policy-service.ts:458:20
+ ❯ tests/validation-policy.test.ts:313:26
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[7/7]⎯
+
+
+ Test Files  2 failed | 98 passed (100)
+      Tests  6 failed | 632 passed (638)
+   Start at  14:37:02
+   Duration  79.02s (transform 4.31s, setup 42.59s, import 12.70s, tests 263.08s, environment 196.32s)
+
+# exit: 1

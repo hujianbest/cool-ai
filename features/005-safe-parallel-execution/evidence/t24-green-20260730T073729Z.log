@@ -1,0 +1,236 @@
+# hf-gate-run
+# label: t24-green
+# command: cmd /c npm test -- tests/execution-controls.test.ts
+# started: 2026-07-30T07:37:29+00:00
+
+> collaboration-cockpit@0.1.0 test
+> vitest run tests/execution-controls.test.ts
+
+
+ RUN  v4.1.10 D:/cool-ai
+
+(node:7412) ExperimentalWarning: SQLite is an experimental feature and might change at any time
+(Use `node --trace-warnings ...` to show where the warning was created)
+ ❯ tests/execution-controls.test.ts (13 tests | 13 failed) 4850ms
+     × pauses queued with its exact resume target 304ms
+     × pauses running with its exact resume target 269ms
+     × pauses waiting_approval with its exact resume target 267ms
+     × discards an in-flight action, requests command termination, and fences late results 260ms
+     × continues only to the recorded target with target-specific preconditions 255ms
+     × retries stale execution as a new attempt and sandbox without resetting history or deadline 1272ms
+     × rejects retry when current eligibility, workspace, context, or budget preconditions fail 285ms
+     × stops a single execution, expires approvals, and never mutates the other execution 277ms
+     × keeps stopped terminal 272ms
+     × keeps merged terminal 276ms
+     × blocks every ordinary control while manual recovery is required 574ms
+     × durably replays the exact receipt and conflicts on reused operation content 269ms
+     × persists stale-version conflicts without overwriting newer owner actions 269ms
+
+⎯⎯⎯⎯⎯⎯ Failed Tests 13 ⎯⎯⎯⎯⎯⎯⎯
+
+ FAIL  tests/execution-controls.test.ts > execution lifecycle controls > pauses queued with its exact resume target
+ FAIL  tests/execution-controls.test.ts > execution lifecycle controls > pauses running with its exact resume target
+ FAIL  tests/execution-controls.test.ts > execution lifecycle controls > pauses waiting_approval with its exact resume target
+AssertionError: promise rejected "SchemaMigrationError: Database version 5 … { code: '…' }" instead of resolving
+ ❯ tests/execution-controls.test.ts:168:25
+    166|     }, dependencies);
+    167|
+    168|     await expect(result).resolves.toMatchObject({
+       |                         ^
+    169|       body: { execution: { status: "paused", resumeTarget: target } },
+    170|       status: 200,
+
+Caused by: SchemaMigrationError: Database version 5 schema is invalid.
+ ❯ migrateDatabase src/server/migrations.ts:1342:13
+ ❯ openDatabase src/server/db.ts:14:5
+ ❯ controlExecution src/server/execution/execution-control-service.ts:404:20
+ ❯ tests/execution-controls.test.ts:162:20
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯
+Serialized Error: { code: 'SCHEMA_DATA_INVALID' }
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[1/13]⎯
+
+ FAIL  tests/execution-controls.test.ts > execution lifecycle controls > discards an in-flight action, requests command termination, and fences late results
+SchemaMigrationError: Database version 5 schema is invalid.
+ ❯ migrateDatabase src/server/migrations.ts:1342:13
+    1340|     const validation = validateV5(database);
+    1341|     if (validation) {
+    1342|       throw new SchemaMigrationError(validation, "Database version 5 s…
+       |             ^
+    1343|     }
+    1344|   }
+ ❯ openDatabase src/server/db.ts:14:5
+ ❯ controlExecution src/server/execution/execution-control-service.ts:404:20
+ ❯ tests/execution-controls.test.ts:194:26
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[2/13]⎯
+
+ FAIL  tests/execution-controls.test.ts > execution lifecycle controls > continues only to the recorded target with target-specific preconditions
+AssertionError: promise rejected "SchemaMigrationError: Database version 5 … { code: '…' }" instead of resolving
+ ❯ tests/execution-controls.test.ts:215:22
+    213|       expectedVersion: runningVersion,
+    214|       operationId: operationId(10),
+    215|     }, dependencies)).resolves.toMatchObject({
+       |                      ^
+    216|       body: { execution: { status: "running", resumeTarget: null } },
+    217|     });
+
+Caused by: SchemaMigrationError: Database version 5 schema is invalid.
+ ❯ migrateDatabase src/server/migrations.ts:1342:13
+ ❯ openDatabase src/server/db.ts:14:5
+ ❯ controlExecution src/server/execution/execution-control-service.ts:404:20
+ ❯ tests/execution-controls.test.ts:211:18
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯
+Serialized Error: { code: 'SCHEMA_DATA_INVALID' }
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[3/13]⎯
+
+ FAIL  tests/execution-controls.test.ts > execution lifecycle controls > retries stale execution as a new attempt and sandbox without resetting history or deadline
+AssertionError: expected [] to have a length of 1 but got +0
+
+- Expected
++ Received
+
+- 1
++ 0
+
+ ❯ tests/execution-controls.test.ts:236:50
+    234|     }, dependencies);
+    235|     void pending.catch(() => undefined);
+    236|     await vi.waitFor(() => expect(sandboxInputs).toHaveLength(1));
+       |                                                  ^
+    237|
+    238|     expect(row("executions", "id=?", EXECUTION_ID)).toMatchObject({
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[4/13]⎯
+
+ FAIL  tests/execution-controls.test.ts > execution lifecycle controls > rejects retry when current eligibility, workspace, context, or budget preconditions fail
+AssertionError: expected SchemaMigrationError: Database version 5 … { code: '…' } to match object { code: 'TASK_NOT_ELIGIBLE' }
+(1 matching property omitted from actual)
+
+- Expected
++ Received
+
+- {
+-   "code": "TASK_NOT_ELIGIBLE",
++ SchemaMigrationError {
++   "code": "SCHEMA_DATA_INVALID",
+  }
+
+ ❯ tests/execution-controls.test.ts:264:22
+    262|       expectedVersion: version,
+    263|       operationId: operationId(21),
+    264|     }, dependencies)).rejects.toMatchObject({ code: "TASK_NOT_ELIGIBLE…
+       |                      ^
+    265|     expect(row("executions", "id=?", EXECUTION_ID).current_attempt_no)…
+    266|   });
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[5/13]⎯
+
+ FAIL  tests/execution-controls.test.ts > execution lifecycle controls > stops a single execution, expires approvals, and never mutates the other execution
+SchemaMigrationError: Database version 5 schema is invalid.
+ ❯ migrateDatabase src/server/migrations.ts:1342:13
+    1340|     const validation = validateV5(database);
+    1341|     if (validation) {
+    1342|       throw new SchemaMigrationError(validation, "Database version 5 s…
+       |             ^
+    1343|     }
+    1344|   }
+ ❯ openDatabase src/server/db.ts:14:5
+ ❯ controlExecution src/server/execution/execution-control-service.ts:404:20
+ ❯ tests/execution-controls.test.ts:286:11
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[6/13]⎯
+
+ FAIL  tests/execution-controls.test.ts > execution lifecycle controls > keeps stopped terminal
+ FAIL  tests/execution-controls.test.ts > execution lifecycle controls > keeps merged terminal
+AssertionError: expected SchemaMigrationError: Database version 5 … { code: '…' } to match object { code: 'EXECUTION_STATE_CONFLICT' }
+(1 matching property omitted from actual)
+
+- Expected
++ Received
+
+- {
+-   "code": "EXECUTION_STATE_CONFLICT",
++ SchemaMigrationError {
++   "code": "SCHEMA_DATA_INVALID",
+  }
+
+ ❯ tests/execution-controls.test.ts:306:22
+    304|       expectedVersion: version,
+    305|       operationId: operationId(31),
+    306|     }, dependencies)).rejects.toMatchObject({ code: "EXECUTION_STATE_C…
+       |                      ^
+    307|   });
+    308|
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[7/13]⎯
+
+ FAIL  tests/execution-controls.test.ts > execution lifecycle controls > blocks every ordinary control while manual recovery is required
+AssertionError: expected SchemaMigrationError: Database version 5 … { code: '…' } to match object { code: 'MANUAL_RECOVERY_REQUIRED' }
+(1 matching property omitted from actual)
+
+- Expected
++ Received
+
+- {
+-   "code": "MANUAL_RECOVERY_REQUIRED",
++ SchemaMigrationError {
++   "code": "SCHEMA_DATA_INVALID",
+  }
+
+ ❯ tests/execution-controls.test.ts:320:24
+    318|         expectedVersion: version,
+    319|         operationId: operationId(40 + index),
+    320|       }, dependencies)).rejects.toMatchObject({ code: "MANUAL_RECOVERY…
+       |                        ^
+    321|     }
+    322|   });
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[8/13]⎯
+
+ FAIL  tests/execution-controls.test.ts > execution lifecycle controls > durably replays the exact receipt and conflicts on reused operation content
+SchemaMigrationError: Database version 5 schema is invalid.
+ ❯ migrateDatabase src/server/migrations.ts:1342:13
+    1340|     const validation = validateV5(database);
+    1341|     if (validation) {
+    1342|       throw new SchemaMigrationError(validation, "Database version 5 s…
+       |             ^
+    1343|     }
+    1344|   }
+ ❯ openDatabase src/server/db.ts:14:5
+ ❯ controlExecution src/server/execution/execution-control-service.ts:404:20
+ ❯ tests/execution-controls.test.ts:330:25
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[9/13]⎯
+
+ FAIL  tests/execution-controls.test.ts > execution lifecycle controls > persists stale-version conflicts without overwriting newer owner actions
+AssertionError: expected SchemaMigrationError: Database version 5 … { code: '…' } to match object { code: 'EXECUTION_STATE_CONFLICT' }
+(1 matching property omitted from actual)
+
+- Expected
++ Received
+
+- {
+-   "code": "EXECUTION_STATE_CONFLICT",
++ SchemaMigrationError {
++   "code": "SCHEMA_DATA_INVALID",
+  }
+
+ ❯ tests/execution-controls.test.ts:348:22
+    346|       expectedVersion: 99,
+    347|       operationId: operationId(70),
+    348|     }, dependencies)).rejects.toMatchObject({ code: "EXECUTION_STATE_C…
+       |                      ^
+    349|     expect(row("execution_operations", "id=?", operationId(70))).toMat…
+    350|       status: "completed",
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[10/13]⎯
+
+
+ Test Files  1 failed (1)
+      Tests  13 failed (13)
+   Start at  15:37:30
+   Duration  7.19s (transform 191ms, setup 333ms, import 306ms, tests 4.85s, environment 1.42s)
+
+# exit: 1

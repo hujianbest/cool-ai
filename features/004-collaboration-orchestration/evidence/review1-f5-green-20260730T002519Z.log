@@ -1,0 +1,372 @@
+# hf-gate-run
+# label: review1-f5-green
+# command: npm.cmd test -- tests/collaboration-timeline-ui.test.tsx tests/collaboration-chat.test.tsx tests/collaboration-controls.test.tsx
+# started: 2026-07-30T00:25:19+00:00
+
+> collaboration-cockpit@0.1.0 test
+> vitest run tests/collaboration-timeline-ui.test.tsx tests/collaboration-chat.test.tsx tests/collaboration-controls.test.tsx
+
+
+ RUN  v4.1.10 D:/cool-ai
+
+ ❯ tests/collaboration-timeline-ui.test.tsx (5 tests | 1 failed) 3845ms
+     × loads every initial page, then polls after the last sequences and deduplicates overlap 1032ms
+
+⎯⎯⎯⎯⎯⎯⎯ Failed Tests 1 ⎯⎯⎯⎯⎯⎯⎯
+
+ FAIL  tests/collaboration-timeline-ui.test.tsx > collaboration timeline and auto-loop > loads every initial page, then polls after the last sequences and deduplicates overlap
+AssertionError: expected <li …(1)>…(2)</li>
+…(3) to have a length of 2 but got 4
+
+Ignored nodes: comments, script, style
+[36m<html>[39m
+  [36m<head />[39m
+  [36m<body>[39m
+    [36m<div>[39m
+      [36m<section[39m
+        [33maria-labelledby[39m=[32m"collaboration-title"[39m
+        [33mclass[39m=[32m"stack"[39m
+      [36m>[39m
+        [36m<div[39m
+          [33mclass[39m=[32m"panel-heading"[39m
+        [36m>[39m
+          [36m<div>[39m
+            [36m<p[39m
+              [33mclass[39m=[32m"eyebrow"[39m
+            [36m>[39m
+              [0m平等协作[0m
+            [36m</p>[39m
+            [36m<h3[39m
+              [33mid[39m=[32m"collaboration-title"[39m
+            [36m>[39m
+              [0m项目群聊[0m
+            [36m</h3>[39m
+          [36m</div>[39m
+          [36m<div[39m
+            [33mclass[39m=[32m"baton"[39m
+            [33mdata-accent[39m=[32m"sage"[39m
+          [36m>[39m
+            [36m<span[39m
+              [33maria-label[39m=[32m"Alpha 的头像"[39m
+              [33mclass[39m=[32m"agent-avatar"[39m
+            [36m>[39m
+              [0mA[0m
+            [36m</span>[39m
+            [36m<span>[39m
+              [36m<span[39m
+                [33mclass[39m=[32m"eyebrow"[39m
+              [36m>[39m
+                [0m当前持棒[0m
+              [36m</span>[39m
+              [36m<strong>[39m
+                [0mAlpha[0m
+              [36m</strong>[39m
+            [36m</span>[39m
+          [36m</div>[39m
+        [36m</div>[39m
+        [36m<div[39m
+          [33mclass[39m=[32m"run-details"[39m
+        [36m>[39m
+          [36m<p[39m
+            [33mclass[39m=[32m"state-message"[39m
+            [33mrole[39m=[32m"status"[39m
+          [36m>[39m
+            [0m运行状态：[0m
+            [0mpaused[0m
+          [36m</p>[39m
+          [36m<section[39m
+            [33maria-label[39m=[32m"运行控制"[39m
+            [33mclass[39m=[32m"run-detail"[39m
+            [33mrole[39m=[32m"region"[39m
+          [36m>[39m
+            [36m<div[39m
+              [33mclass[39m=[32m"panel-heading"[39m
+            [36m>[39m
+              [36m<h3>[39m
+                [0m运行控制[0m
+              [36m</h3>[39m
+              [36m<span[39m
+                [33mclass[39m=[32m"status-label"[39m
+              [36m>[39m
+                [0mpaused[0m
+              [36m</span>[39m
+            [36m</div>[39m
+            [36m<p>[39m
+              [0m运行已暂停，请检查后重试。[0m
+            [36m</p>[39m
+            [36m<div[39m
+              [33mclass[39m=[32m"control-actions"[39m
+            [36m>[39m
+              [36m<button[39m
+                [33mdisabled[39m=[32m""[39m
+                [33mtype[39m=[32m"button"[39m
+              [36m>[39m
+                [0m暂停[0m
+              [36m</button>[39m
+              [36m<button[39m
+                [33mtype[39m=[32m"button"[39m
+              [36m>[39m
+                [0m继续[0m
+              [36m</button>[39m
+              [36m<button[39m
+                [33mdisabled[39m=[32m""[39m
+                [33mtype[39m=[32m"button"[39m
+              [36m>[39m
+                [0m重试[0m
+              [36m</button>[39m
+              [36m<button[39m
+                [33mtype[39m=[32m"button"[39m
+              [36m>[39m
+                [0m停止[0m
+              [36m</button>[39m
+            [36m</div>[39m
+            [36m<p[39m
+              [33mclass[39m=[32m"muted"[39m
+            [36m>[39m
+              [0m手动暂停请使用继续。[0m
+            [36m</p>[39m
+          [36m</section>[39m
+          [36m<section[39m
+            [33maria-label[39m=[32m"运行用量"[39m
+            [33mclass[39m=[32m"run-detail"[39m
+            [33mrole[39m=[32m"region"[39m
+          [36m>[39m
+            [36m<div[39m
+              [33mclass[39m=[32m"panel-heading"[39m
+            [36m>[39m
+              [36m<h3>[39m
+                [0m运行用量[0m
+              [36m</h3>[39m
+              [36m<span[39m
+                [33mclass[39m=[32m"status-label"[39m
+              [36m>[39m
+                [0m轮次 [0m
+                [0m1[0m
+              [36m</span>[39m
+            [36m</div>[39m
+            [36m<p[39m
+              [33mclass[39m=[32m"muted"[39m
+            [36m>[39m
+              [0m尚无已报告的模型用量。[0m
+            [36m</p>[39m
+            [36m<dl[39m
+              [33mclass[39m=[32m"metric-grid"[39m
+            [36m>[39m
+              [36m<div>[39m
+                [36m<dt>[39m
+                  [0mPrompt [0m
+                [36m</dt>[39m
+                [36m<dd>[39m
+                  [0m0[0m
+                [36m</dd>[39m
+              [36m</div>[39m
+              [36m<div>[39m
+                [36m<dt>[39m
+                  [0mCompletion [0m
+                [36m</dt>[39m
+                [36m<dd>[39m
+                  [0m0[0m
+                [36m</dd>[39m
+              [36m</div>[39m
+              [36m<div>[39m
+                [36m<dt>[39m
+                  [0m总计 [0m
+                [36m</dt>[39m
+                [36m<dd>[39m
+                  [0m0[0m
+                [36m</dd>[39m
+              [36m</div>[39m
+              [36m<div>[39m
+                [36m<dt>[39m
+                  [0m交棒 [0m
+                [36m</dt>[39m
+                [36m<dd>[39m
+                  [0m0[0m
+                [36m</dd>[39m
+              [36m</div>[39m
+              [36m<div>[39m
+                [36m<dt>[39m
+                  [0m修复调用 [0m
+                [36m</dt>[39m
+                [36m<dd>[39m
+                  [0m0[0m
+                [36m</dd>[39m
+              [36m</div>[39m
+              [36m<div>[39m
+                [36m<dt>[39m
+                  [0m未报告 [0m
+                [36m</dt>[39m
+                [36m<dd>[39m
+                  [0m0[0m
+                [36m</dd>[39m
+              [36m</div>[39m
+            [36m</dl>[39m
+          [36m</section>[39m
+        [36m</div>[39m
+        [36m<ol[39m
+          [33maria-label[39m=[32m"协作时间线"[39m
+          [33mclass[39m=[32m"timeline collaboration-timeline"[39m
+          [33mrole[39m=[32m"log"[39m
+        [36m>[39m
+          [36m<li[39m
+            [33mclass[39m=[32m"timeline-item timeline-event"[39m
+          [36m>[39m
+            [36m<div[39m
+              [33mclass[39m=[32m"timeline-event-heading"[39m
+            [36m>[39m
+              [36m<h4>[39m
+                [0m正在调用模型[0m
+              [36m</h4>[39m
+              [36m<time[39m
+                [33mdatetime[39m=[32m"2026-07-30T00:01:00.000Z"[39m
+              [36m>[39m
+                [0m08:01[0m
+              [36m</time>[39m
+            [36m</div>[39m
+            [36m<p[39m
+              [33mclass[39m=[32m"muted"[39m
+            [36m>[39m
+              [0mAlpha[0m
+            [36m</p>[39m
+          [36m</li>[39m
+          [36m<li[39m
+            [33mclass[39m=[32m"timeline-item timeline-event"[39m
+          [36m>[39m
+            [36m<div[39m
+              [33mclass[39m=[32m"timeline-event-heading"[39m
+            [36m>[39m
+              [36m<h4>[39m
+                [0m模型调用已完成[0m
+              [36m</h4>[39m
+              [36m<time[39m
+                [33mdatetime[39m=[32m"2026-07-30T00:01:00.000Z"[39m
+              [36m>[39m
+                [0m08:01[0m
+              [36m</time>[39m
+            [36m</div>[39m
+            [36m<p[39m
+              [33mclass[39m=[32m"muted"[39m
+            [36m>[39m
+              [0mAlpha[0m
+            [36m</p>[39m
+          [36m</li>[39m
+          [36m<li[39m
+            [33mclass[39m=[32m"timeline-item timeline-event"[39m
+            [33mtabindex[39m=[32m"-1"[39m
+          [36m>[39m
+            [36m<div[39m
+              [33mclass[39m=[32m"timeline-event-heading"[39m
+            [36m>[39m
+              [36m<h4>[39m
+                [0mAgent 发来消息[0m
+              [36m</h4>[39m
+              [36m<time[39m
+                [33mdatetime[39m=[32m"2026-07-30T00:00:30.000Z"[39m
+              [36m>[39m
+                [0m08:00[0m
+              [36m</time>[39m
+            [36m</div>[39m
+            [36m<strong>[39m
+              [0mAlpha[0m
+            [36m</strong>[39m
+            [36m<span>[39m
+              [0mA real agent message[0m
+            [36m</span>[39m
+          [36m</li>[39m
+          [36m<li[39m
+            [33mclass[39m=[32m"timeline-item timeline-event"[39m
+            [33mtabindex[39m=[32m"-1"[39m
+          [36m>[39m
+            [36m<div[39m
+              [33mclass[39m=[32m"timeline-event-heading"[39m
+            [36m>[39m
+              [36m<h4>[39m
+                [0mAgent 发来消息[0m
+              [36m</h4>[39m
+              [36m<time[39m
+                [33mdatetime[39m=[32m"2026-07-30T00:00:30.000Z"[39m
+              [36m>[39m
+                [0m08:00[0m
+              [36m</time>[39m
+            [36m</div>[39m
+            [36m<strong>[39m
+              [0mAlpha[0m
+            [36m</strong>[39m
+            [36m<span>[39m
+              [0mA real agent message[0m
+            [36m</span>[39m
+          [36m</li>[39m
+        [36m</ol>[39m
+        [36m<p[39m
+          [33maria-atomic[39m=[32m"true"[39m
+          [33maria-label[39m=[32m"时间线更新摘要"[39m
+          [33maria-live[39m=[32m"polite"[39m
+          [33mclass[39m=[32m"sr-only"[39m
+        [36m/>[39m
+        [36m<form[39m
+          [33mclass[39m=[32m"composer"[39m
+        [36m>[39m
+          [36m<div[39m
+            [33mclass[39m=[32m"form-field"[39m
+          [36m>[39m
+            [36m<label[39m
+              [33mfor[39m=[32m"collaboration-message-project-1"[39m
+            [36m>[39m
+              [0m发送给项目群聊[0m
+            [36m</label>[39m
+            [36m<textarea[39m
+              [33mid[39m=[32m"collaboration-message-project-1"[39m
+            [36m/>[39m
+          [36m</div>[39m
+          [36m<div[39m
+            [33mclass[39m=[32m"mention-picker"[39m
+          [36m>[39m
+            [36m<button[39m
+              [33maria-controls[39m=[32m"collaboration-members-project-1"[39m
+              [33maria-expanded[39m=[32m"false"[39m
+              [33maria-haspopup[39m=[32m"listbox"[39m
+              [33maria-label[39m=[32m"@成员"[39m
+              [33mrole[39m=[32m"combobox"[39m
+              [33mtype[39m=[32m"button"[39m
+            [36m>[39m
+              [0m@成员[0m
+            [36m</button>[39m
+          [36m</div>[39m
+          [36m<button[39m
+            [33mdisabled[39m=[32m""[39m
+            [33mtype[39m=[32m"submit"[39m
+          [36m>[39m
+            [0m发送消息[0m
+          [36m</button>[39m
+        [36m</form>[39m
+      [36m</section>[39m
+    [36m</div>[39m
+  [36m</body>[39m
+[36m</html>[39m
+
+- Expected
++ Received
+
+- 2
++ 4
+
+ ❯ tests/collaboration-timeline-ui.test.tsx:238:60
+    236|     render(createElement(CollaborationPanel, { projectId: "project-1" …
+    237|     const log = await screen.findByRole("log", { name: "协作时间线" });
+    238|     await waitFor(() => expect(log.querySelectorAll("li")).toHaveLengt…
+       |                                                            ^
+    239|     expect(collaborationUrls[1]).toContain("messageAfter=1");
+    240|     expect(collaborationUrls[1]).toContain("eventAfter=1");
+ ❯ runWithExpensiveErrorDiagnosticsDisabled node_modules/@testing-library/dom/dist/config.js:47:12
+ ❯ checkCallback node_modules/@testing-library/dom/dist/wait-for.js:124:77
+ ❯ Timeout.checkRealTimersCallback node_modules/@testing-library/dom/dist/wait-for.js:118:16
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[1/1]⎯
+
+
+ Test Files  1 failed | 2 passed (3)
+      Tests  1 failed | 22 passed (23)
+   Start at  08:25:20
+   Duration  6.52s (transform 188ms, setup 1.09s, import 670ms, tests 5.49s, environment 5.43s)
+
+# exit: 1

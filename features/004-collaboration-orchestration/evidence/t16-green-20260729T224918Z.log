@@ -1,0 +1,78 @@
+# hf-gate-run
+# label: t16-green
+# command: cmd /c npm test -- tests/collaboration-decisions.test.ts
+# started: 2026-07-29T22:49:18+00:00
+
+> collaboration-cockpit@0.1.0 test
+> vitest run tests/collaboration-decisions.test.ts
+
+
+ RUN  v4.1.10 D:/cool-ai
+
+(node:16432) ExperimentalWarning: SQLite is an experimental feature and might change at any time
+(Use `node --trace-warnings ...` to show where the warning was created)
+ ❯ tests/collaboration-decisions.test.ts (6 tests | 2 failed) 3502ms
+     × atomically writes the Agent message, turn, sole open decision and events while waiting 427ms
+     × atomically saves an owner message snapshot, answers/version-bumps, emits an event and resumes requester 502ms
+
+⎯⎯⎯⎯⎯⎯⎯ Failed Tests 2 ⎯⎯⎯⎯⎯⎯⎯
+
+ FAIL  tests/collaboration-decisions.test.ts > decision request commit > atomically writes the Agent message, turn, sole open decision and events while waiting
+AssertionError: expected { status: 'waiting_owner', …(4) } to deeply equal { …(5) }
+
+- Expected
++ Received
+
+  {
+    "currentAgentId": "agent-requester",
+-   "nextEventSequence": 3,
++   "nextEventSequence": 6,
+    "roundCount": 1,
+    "status": "waiting_owner",
+    "version": 2,
+  }
+
+ ❯ tests/collaboration-decisions.test.ts:285:23
+    283|     const state = snapshot();
+    284|
+    285|     expect(state.run).toEqual({
+       |                       ^
+    286|       currentAgentId: REQUESTER_ID,
+    287|       nextEventSequence: 3,
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[1/2]⎯
+
+ FAIL  tests/collaboration-decisions.test.ts > owner decision answer > atomically saves an owner message snapshot, answers/version-bumps, emits an event and resumes requester
+AssertionError: expected { sequence: 6, …(3) } to deeply equal { actorType: 'owner', …(3) }
+
+- Expected
++ Received
+
+@@ -5,8 +5,8 @@
+      "decisionId": "16ed94f5-55b8-4fe4-801e-c72e385c39b9",
+      "messageId": "25c8f54b-a956-47f2-8677-18808aa147b0",
+      "messageSequence": 2,
+      "nextAgentId": "agent-requester",
+    },
+-   "sequence": 3,
++   "sequence": 6,
+    "type": "decision_answered",
+  }
+
+ ❯ tests/collaboration-decisions.test.ts:406:33
+    404|       sequence: 2,
+    405|     });
+    406|     expect(state.events.at(-1)).toEqual({
+       |                                 ^
+    407|       actorType: "owner",
+    408|       payload: {
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[2/2]⎯
+
+
+ Test Files  1 failed (1)
+      Tests  2 failed | 4 passed (6)
+   Start at  06:49:19
+   Duration  5.76s (transform 221ms, setup 343ms, import 234ms, tests 3.50s, environment 1.41s)
+
+# exit: 1

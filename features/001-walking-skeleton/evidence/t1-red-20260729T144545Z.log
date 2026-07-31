@@ -1,0 +1,545 @@
+# hf-gate-run
+# label: t1-red
+# command: cmd /c npm test
+# started: 2026-07-29T14:45:45+00:00
+
+> collaboration-cockpit@0.1.0 test
+> vitest run
+
+
+ RUN  v4.1.10 D:/cool-ai
+
+✔ test harness is available (1.4812ms)
+ ❯ tests/baseline.test.mjs (0 test)
+ ❯ tests/projects.api.test.ts (2 tests | 2 failed) 19ms
+     × creates a project and returns it from the collection 14ms
+     × returns the stable empty-name error contract 2ms
+ ❯ tests/projects.service.test.ts (2 tests | 2 failed) 16ms
+     × creates and reloads a trimmed project from SQLite 11ms
+     × rejects an empty project name without persisting 3ms
+ ❯ tests/project-panel.test.tsx (3 tests | 3 failed) 2063ms
+     × loads existing projects 48ms
+     × creates and displays a project 1008ms
+     × shows validation and request errors while preserving input 1006ms
+
+⎯⎯⎯⎯⎯⎯ Failed Suites 1 ⎯⎯⎯⎯⎯⎯⎯
+
+ FAIL  tests/baseline.test.mjs [ tests/baseline.test.mjs ]
+Error: No test suite found in file D:/cool-ai/tests/baseline.test.mjs
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[1/8]⎯
+
+
+⎯⎯⎯⎯⎯⎯⎯ Failed Tests 7 ⎯⎯⎯⎯⎯⎯⎯
+
+ FAIL  tests/project-panel.test.tsx > ProjectPanel > loads existing projects
+TestingLibraryElementError: Unable to find an element with the text: Loading projects…. This could be because the text is broken up by multiple elements. In this case, you can provide a function for your text matcher to make your matcher more flexible.
+
+Ignored nodes: comments, script, style
+[36m<body>[39m
+  [36m<div>[39m
+    [36m<section[39m
+      [33maria-labelledby[39m=[32m"projects-title"[39m
+    [36m>[39m
+      [36m<h1[39m
+        [33mid[39m=[32m"projects-title"[39m
+      [36m>[39m
+        [0mProjects[0m
+      [36m</h1>[39m
+      [36m<form>[39m
+        [36m<label[39m
+          [33mfor[39m=[32m"project-name"[39m
+        [36m>[39m
+          [0mProject name[0m
+        [36m</label>[39m
+        [36m<input[39m
+          [33mid[39m=[32m"project-name"[39m
+          [33mname[39m=[32m"name"[39m
+        [36m/>[39m
+        [36m<button[39m
+          [33mtype[39m=[32m"submit"[39m
+        [36m>[39m
+          [0mCreate project[0m
+        [36m</button>[39m
+      [36m</form>[39m
+      [36m<p>[39m
+        [0mNo projects yet.[0m
+      [36m</p>[39m
+    [36m</section>[39m
+  [36m</div>[39m
+[36m</body>[39m
+ ❯ Object.getElementError node_modules/@testing-library/dom/dist/config.js:37:19
+ ❯ node_modules/@testing-library/dom/dist/query-helpers.js:76:38
+ ❯ node_modules/@testing-library/dom/dist/query-helpers.js:52:17
+ ❯ node_modules/@testing-library/dom/dist/query-helpers.js:95:19
+ ❯ tests/project-panel.test.tsx:24:19
+     22|     render(<ProjectPanel />);
+     23|
+     24|     expect(screen.getByText("Loading projects…")).toBeInTheDocument();
+       |                   ^
+     25|     expect(await screen.findByText("Existing project")).toBeInTheDocum…
+     26|   });
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[2/8]⎯
+
+ FAIL  tests/project-panel.test.tsx > ProjectPanel > creates and displays a project
+TestingLibraryElementError: Found multiple elements with the text: No projects yet.
+
+Here are the matching elements:
+
+Ignored nodes: comments, script, style
+[36m<p>[39m
+  [0mNo projects yet.[0m
+[36m</p>[39m
+
+Ignored nodes: comments, script, style
+[36m<p>[39m
+  [0mNo projects yet.[0m
+[36m</p>[39m
+
+(If this is intentional, then use the `*AllBy*` variant of the query (like `queryAllByText`, `getAllByText`, or `findAllByText`)).
+
+Ignored nodes: comments, script, style
+[36m<body>[39m
+  [36m<div>[39m
+    [36m<section[39m
+      [33maria-labelledby[39m=[32m"projects-title"[39m
+    [36m>[39m
+      [36m<h1[39m
+        [33mid[39m=[32m"projects-title"[39m
+      [36m>[39m
+        [0mProjects[0m
+      [36m</h1>[39m
+      [36m<form>[39m
+        [36m<label[39m
+          [33mfor[39m=[32m"project-name"[39m
+        [36m>[39m
+          [0mProject name[0m
+        [36m</label>[39m
+        [36m<input[39m
+          [33mid[39m=[32m"project-name"[39m
+          [33mname[39m=[32m"name"[39m
+        [36m/>[39m
+        [36m<button[39m
+          [33mtype[39m=[32m"submit"[39m
+        [36m>[39m
+          [0mCreate project[0m
+        [36m</button>[39m
+      [36m</form>[39m
+      [36m<p>[39m
+        [0mNo projects yet.[0m
+      [36m</p>[39m
+    [36m</section>[39m
+  [36m</div>[39m
+  [36m<div>[39m
+    [36m<section[39m
+      [33maria-labelledby[39m=[32m"projects-title"[39m
+    [36m>[39m
+      [36m<h1[39m
+        [33mid[39m=[32m"projects-title"[39m
+      [36m>[39m
+        [0mProjects[0m
+      [36m</h1>[39m
+      [36m<form>[39m
+        [36m<label[39m
+          [33mfor[39m=[32m"project-name"[39m
+        [36m>[39m
+          [0mProject name[0m
+        [36m</label>[39m
+        [36m<input[39m
+          [33mid[39m=[32m"project-name"[39m
+          [33mname[39m=[32m"name"[39m
+        [36m/>[39m
+        [36m<button[39m
+          [33mtype[39m=[32m"submit"[39m
+        [36m>[39m
+          [0mCreate project[0m
+        [36m</button>[39m
+      [36m</form>[39m
+      [36m<p>[39m
+        [0mNo projects yet.[0m
+      [36m</p>[39m
+    [36m</section>[39m
+  [36m</div>[39m
+[36m</body>[39m
+
+Ignored nodes: comments, script, style
+[36m<body>[39m
+  [36m<div>[39m
+    [36m<section[39m
+      [33maria-labelledby[39m=[32m"projects-title"[39m
+    [36m>[39m
+      [36m<h1[39m
+        [33mid[39m=[32m"projects-title"[39m
+      [36m>[39m
+        [0mProjects[0m
+      [36m</h1>[39m
+      [36m<form>[39m
+        [36m<label[39m
+          [33mfor[39m=[32m"project-name"[39m
+        [36m>[39m
+          [0mProject name[0m
+        [36m</label>[39m
+        [36m<input[39m
+          [33mid[39m=[32m"project-name"[39m
+          [33mname[39m=[32m"name"[39m
+        [36m/>[39m
+        [36m<button[39m
+          [33mtype[39m=[32m"submit"[39m
+        [36m>[39m
+          [0mCreate project[0m
+        [36m</button>[39m
+      [36m</form>[39m
+      [36m<p>[39m
+        [0mNo projects yet.[0m
+      [36m</p>[39m
+    [36m</section>[39m
+  [36m</div>[39m
+  [36m<div>[39m
+    [36m<section[39m
+      [33maria-labelledby[39m=[32m"projects-title"[39m
+    [36m>[39m
+      [36m<h1[39m
+        [33mid[39m=[32m"projects-title"[39m
+      [36m>[39m
+        [0mProjects[0m
+      [36m</h1>[39m
+      [36m<form>[39m
+        [36m<label[39m
+          [33mfor[39m=[32m"project-name"[39m
+        [36m>[39m
+          [0mProject name[0m
+        [36m</label>[39m
+        [36m<input[39m
+          [33mid[39m=[32m"project-name"[39m
+          [33mname[39m=[32m"name"[39m
+        [36m/>[39m
+        [36m<button[39m
+          [33mtype[39m=[32m"submit"[39m
+        [36m>[39m
+          [0mCreate project[0m
+        [36m</button>[39m
+      [36m</form>[39m
+      [36m<p>[39m
+        [0mNo projects yet.[0m
+      [36m</p>[39m
+    [36m</section>[39m
+  [36m</div>[39m
+[36m</body>[39m
+ ❯ waitForWrapper node_modules/@testing-library/dom/dist/wait-for.js:163:27
+ ❯ node_modules/@testing-library/dom/dist/query-helpers.js:86:33
+ ❯ tests/project-panel.test.tsx:44:18
+     42|
+     43|     render(<ProjectPanel />);
+     44|     await screen.findByText("No projects yet.");
+       |                  ^
+     45|     await user.type(screen.getByLabelText("Project name"), "Launch pla…
+     46|     await user.click(screen.getByRole("button", { name: "Create projec…
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[3/8]⎯
+
+ FAIL  tests/project-panel.test.tsx > ProjectPanel > shows validation and request errors while preserving input
+TestingLibraryElementError: Found multiple elements with the text: No projects yet.
+
+Here are the matching elements:
+
+Ignored nodes: comments, script, style
+[36m<p>[39m
+  [0mNo projects yet.[0m
+[36m</p>[39m
+
+Ignored nodes: comments, script, style
+[36m<p>[39m
+  [0mNo projects yet.[0m
+[36m</p>[39m
+
+Ignored nodes: comments, script, style
+[36m<p>[39m
+  [0mNo projects yet.[0m
+[36m</p>[39m
+
+(If this is intentional, then use the `*AllBy*` variant of the query (like `queryAllByText`, `getAllByText`, or `findAllByText`)).
+
+Ignored nodes: comments, script, style
+[36m<body>[39m
+  [36m<div>[39m
+    [36m<section[39m
+      [33maria-labelledby[39m=[32m"projects-title"[39m
+    [36m>[39m
+      [36m<h1[39m
+        [33mid[39m=[32m"projects-title"[39m
+      [36m>[39m
+        [0mProjects[0m
+      [36m</h1>[39m
+      [36m<form>[39m
+        [36m<label[39m
+          [33mfor[39m=[32m"project-name"[39m
+        [36m>[39m
+          [0mProject name[0m
+        [36m</label>[39m
+        [36m<input[39m
+          [33mid[39m=[32m"project-name"[39m
+          [33mname[39m=[32m"name"[39m
+        [36m/>[39m
+        [36m<button[39m
+          [33mtype[39m=[32m"submit"[39m
+        [36m>[39m
+          [0mCreate project[0m
+        [36m</button>[39m
+      [36m</form>[39m
+      [36m<p>[39m
+        [0mNo projects yet.[0m
+      [36m</p>[39m
+    [36m</section>[39m
+  [36m</div>[39m
+  [36m<div>[39m
+    [36m<section[39m
+      [33maria-labelledby[39m=[32m"projects-title"[39m
+    [36m>[39m
+      [36m<h1[39m
+        [33mid[39m=[32m"projects-title"[39m
+      [36m>[39m
+        [0mProjects[0m
+      [36m</h1>[39m
+      [36m<form>[39m
+        [36m<label[39m
+          [33mfor[39m=[32m"project-name"[39m
+        [36m>[39m
+          [0mProject name[0m
+        [36m</label>[39m
+        [36m<input[39m
+          [33mid[39m=[32m"project-name"[39m
+          [33mname[39m=[32m"name"[39m
+        [36m/>[39m
+        [36m<button[39m
+          [33mtype[39m=[32m"submit"[39m
+        [36m>[39m
+          [0mCreate project[0m
+        [36m</button>[39m
+      [36m</form>[39m
+      [36m<p>[39m
+        [0mNo projects yet.[0m
+      [36m</p>[39m
+    [36m</section>[39m
+  [36m</div>[39m
+  [36m<div>[39m
+    [36m<section[39m
+      [33maria-labelledby[39m=[32m"projects-title"[39m
+    [36m>[39m
+      [36m<h1[39m
+        [33mid[39m=[32m"projects-title"[39m
+      [36m>[39m
+        [0mProjects[0m
+      [36m</h1>[39m
+      [36m<form>[39m
+        [36m<label[39m
+          [33mfor[39m=[32m"project-name"[39m
+        [36m>[39m
+          [0mProject name[0m
+        [36m</label>[39m
+        [36m<input[39m
+          [33mid[39m=[32m"project-name"[39m
+          [33mname[39m=[32m"name"[39m
+        [36m/>[39m
+        [36m<button[39m
+          [33mtype[39m=[32m"submit"[39m
+        [36m>[39m
+          [0mCreate project[0m
+        [36m</button>[39m
+      [36m</form>[39m
+      [36m<p>[39m
+        [0mNo projects yet.[0m
+      [36m</p>[39m
+    [36m</section>[39m
+  [36m</div>[39m
+[36m</body>[39m
+
+Ignored nodes: comments, script, style
+[36m<body>[39m
+  [36m<div>[39m
+    [36m<section[39m
+      [33maria-labelledby[39m=[32m"projects-title"[39m
+    [36m>[39m
+      [36m<h1[39m
+        [33mid[39m=[32m"projects-title"[39m
+      [36m>[39m
+        [0mProjects[0m
+      [36m</h1>[39m
+      [36m<form>[39m
+        [36m<label[39m
+          [33mfor[39m=[32m"project-name"[39m
+        [36m>[39m
+          [0mProject name[0m
+        [36m</label>[39m
+        [36m<input[39m
+          [33mid[39m=[32m"project-name"[39m
+          [33mname[39m=[32m"name"[39m
+        [36m/>[39m
+        [36m<button[39m
+          [33mtype[39m=[32m"submit"[39m
+        [36m>[39m
+          [0mCreate project[0m
+        [36m</button>[39m
+      [36m</form>[39m
+      [36m<p>[39m
+        [0mNo projects yet.[0m
+      [36m</p>[39m
+    [36m</section>[39m
+  [36m</div>[39m
+  [36m<div>[39m
+    [36m<section[39m
+      [33maria-labelledby[39m=[32m"projects-title"[39m
+    [36m>[39m
+      [36m<h1[39m
+        [33mid[39m=[32m"projects-title"[39m
+      [36m>[39m
+        [0mProjects[0m
+      [36m</h1>[39m
+      [36m<form>[39m
+        [36m<label[39m
+          [33mfor[39m=[32m"project-name"[39m
+        [36m>[39m
+          [0mProject name[0m
+        [36m</label>[39m
+        [36m<input[39m
+          [33mid[39m=[32m"project-name"[39m
+          [33mname[39m=[32m"name"[39m
+        [36m/>[39m
+        [36m<button[39m
+          [33mtype[39m=[32m"submit"[39m
+        [36m>[39m
+          [0mCreate project[0m
+        [36m</button>[39m
+      [36m</form>[39m
+      [36m<p>[39m
+        [0mNo projects yet.[0m
+      [36m</p>[39m
+    [36m</section>[39m
+  [36m</div>[39m
+  [36m<div>[39m
+    [36m<section[39m
+      [33maria-labelledby[39m=[32m"projects-title"[39m
+    [36m>[39m
+      [36m<h1[39m
+        [33mid[39m=[32m"projects-title"[39m
+      [36m>[39m
+        [0mProjects[0m
+      [36m</h1>[39m
+      [36m<form>[39m
+        [36m<label[39m
+          [33mfor[39m=[32m"project-name"[39m
+        [36m>[39m
+          [0mProject name[0m
+        [36m</label>[39m
+        [36m<input[39m
+          [33mid[39m=[32m"project-name"[39m
+          [33mname[39m=[32m"name"[39m
+        [36m/>[39m
+        [36m<button[39m
+          [33mtype[39m=[32m"submit"[39m
+        [36m>[39m
+          [0mCreate project[0m
+        [36m</button>[39m
+      [36m</form>[39m
+      [36m<p>[39m
+        [0mNo projects yet.[0m
+      [36m</p>[39m
+    [36m</section>[39m
+  [36m</div>[39m
+[36m</body>[39m
+ ❯ waitForWrapper node_modules/@testing-library/dom/dist/wait-for.js:163:27
+ ❯ node_modules/@testing-library/dom/dist/query-helpers.js:86:33
+ ❯ tests/project-panel.test.tsx:72:18
+     70|
+     71|     render(<ProjectPanel />);
+     72|     await screen.findByText("No projects yet.");
+       |                  ^
+     73|     await user.click(screen.getByRole("button", { name: "Create projec…
+     74|     expect(screen.getByRole("alert")).toHaveTextContent("Project name …
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[4/8]⎯
+
+ FAIL  tests/projects.api.test.ts > /api/projects > creates a project and returns it from the collection
+AssertionError: expected 501 to be 201 // Object.is equality
+
+- Expected
++ Received
+
+- 201
++ 501
+
+ ❯ tests/projects.api.test.ts:30:29
+     28|     );
+     29|
+     30|     expect(response.status).toBe(201);
+       |                             ^
+     31|     const { project } = await response.json();
+     32|     expect(project).toMatchObject({ name: "Launch plan" });
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[5/8]⎯
+
+ FAIL  tests/projects.api.test.ts > /api/projects > returns the stable empty-name error contract
+AssertionError: expected 501 to be 400 // Object.is equality
+
+- Expected
++ Received
+
+- 400
++ 501
+
+ ❯ tests/projects.api.test.ts:47:29
+     45|     );
+     46|
+     47|     expect(response.status).toBe(400);
+       |                             ^
+     48|     await expect(response.json()).resolves.toEqual({
+     49|       error: {
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[6/8]⎯
+
+ FAIL  tests/projects.service.test.ts > project service > creates and reloads a trimmed project from SQLite
+AssertionError: expected undefined to match object { name: 'Launch plan' }
+
+- Expected:
+{
+  "name": "Launch plan",
+}
+
++ Received:
+undefined
+
+ ❯ tests/projects.service.test.ts:29:21
+     27|     const reloaded = listProjects(path);
+     28|
+     29|     expect(created).toMatchObject({ name: "Launch plan" });
+       |                     ^
+     30|     expect(created.id).toEqual(expect.any(String));
+     31|     expect(reloaded).toEqual([created]);
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[7/8]⎯
+
+ FAIL  tests/projects.service.test.ts > project service > rejects an empty project name without persisting
+AssertionError: expected [Function] to throw an error
+
+- Expected:
+null
+
++ Received:
+undefined
+
+ ❯ tests/projects.service.test.ts:37:46
+     35|     const path = databasePath();
+     36|
+     37|     expect(() => createProject("   ", path)).toThrowError("Project nam…
+       |                                              ^
+     38|     expect(listProjects(path)).toEqual([]);
+     39|   });
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[8/8]⎯
+
+
+ Test Files  4 failed (4)
+      Tests  7 failed (7)
+   Start at  22:45:47
+   Duration  4.67s (transform 143ms, setup 1.53s, import 351ms, tests 2.10s, environment 6.70s)
+
+# exit: 1

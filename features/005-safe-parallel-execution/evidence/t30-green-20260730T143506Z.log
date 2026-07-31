@@ -1,0 +1,303 @@
+# hf-gate-run
+# label: t30-green
+# command: cmd /c npm test -- tests/execution-recovery-ui.test.tsx tests/execution-accessibility.test.tsx
+# started: 2026-07-30T14:35:06+00:00
+
+> collaboration-cockpit@0.1.0 test
+> vitest run tests/execution-recovery-ui.test.tsx tests/execution-accessibility.test.tsx
+
+
+ RUN  v4.1.10 D:/cool-ai
+
+ ❯ tests/execution-accessibility.test.tsx (2 tests | 1 failed) 282ms
+     × uses a narrow summary switcher and exactly one trapped detail overlay with Escape restore 234ms
+ ❯ tests/execution-recovery-ui.test.tsx (5 tests | 5 failed) 331ms
+     × replaces ordinary actions, shows manifest facts, and independently pages affected paths 203ms
+     × submits exact recovered_old only after second confirmation and restores focus to its outcome 38ms
+     × submits exact recovered_new only after second confirmation and restores focus to its outcome 29ms
+     × submits exact abandon only after second confirmation and restores focus to its outcome 35ms
+     × refreshes the observed manifest and clears confirmation after mismatch 24ms
+
+⎯⎯⎯⎯⎯⎯⎯ Failed Tests 6 ⎯⎯⎯⎯⎯⎯⎯
+
+ FAIL  tests/execution-accessibility.test.tsx > T-30 execution accessibility > uses a narrow summary switcher and exactly one trapped detail overlay with Escape restore
+Error: expect(element).toHaveAttribute("inert") // element.hasAttribute("inert")
+
+Expected the element to have attribute:
+  inert
+Received:
+  null
+ ❯ tests/execution-accessibility.test.tsx:140:22
+    138|     const dialog = screen.getByRole("dialog", { name: "First execution…
+    139|     expect(screen.getAllByRole("dialog")).toHaveLength(1);
+    140|     expect(switcher).toHaveAttribute("inert");
+       |                      ^
+    141|     const close = within(dialog).getByRole("button", { name: "关闭执行详情" …
+    142|     const controls = within(dialog).getAllByRole("button");
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[1/6]⎯
+
+ FAIL  tests/execution-recovery-ui.test.tsx > T-30 manual recovery UI > replaces ordinary actions, shows manifest facts, and independently pages affected paths
+Error: expect(element).toHaveTextContent()
+
+Expected element to have text content:
+  rollback_after_replace
+Received:
+  需要人工恢复检测到平台外写入；平台已停止自动改写，当前 workspace 可能既非完整旧版也非完整新版。正在加载人工恢复详情…
+ ❯ tests/execution-recovery-ui.test.tsx:184:22
+    182|     const card = await screen.findByRole("region", { name: "Recover wo…
+    183|     const recovery = await within(card).findByRole("region", { name: "…
+    184|     expect(recovery).toHaveTextContent("rollback_after_replace");
+       |                      ^
+    185|     expect(recovery).toHaveTextContent(OLD.slice(0, 12));
+    186|     expect(recovery).toHaveTextContent(POST.slice(0, 12));
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[2/6]⎯
+
+ FAIL  tests/execution-recovery-ui.test.tsx > T-30 manual recovery UI > submits exact recovered_old only after second confirmation and restores focus to its outcome
+TestingLibraryElementError: Unable to find an accessible element with the role "button" and name "已恢复为旧版本并重试"
+
+Here are the accessible roles:
+
+  heading:
+
+  Name "需要人工恢复":
+  [36m<h4 />[39m
+
+  --------------------------------------------------paragraph:
+
+  Name "":
+  [36m<p[39m
+    [33mclass[39m=[32m"warning-text"[39m
+  [36m/>[39m
+
+  --------------------------------------------------paragraph:
+
+  Name "":
+  [36m<p[39m
+    [33maria-busy[39m=[32m"true"[39m
+  [36m/>[39m
+
+  --------------------------------------------------
+
+Ignored nodes: comments, script, style
+[36m<section[39m
+  [33maria-label[39m=[32m"需要人工恢复"[39m
+  [33mclass[39m=[32m"execution-recovery stack"[39m
+  [33mrole[39m=[32m"region"[39m
+[36m>[39m
+  [36m<h4>[39m
+    [0m需要人工恢复[0m
+  [36m</h4>[39m
+  [36m<p[39m
+    [33mclass[39m=[32m"warning-text"[39m
+  [36m>[39m
+    [0m检测到平台外写入；平台已停止自动改写，当前 workspace 可能既非完整旧版也非完整新版。[0m
+  [36m</p>[39m
+  [36m<p[39m
+    [33maria-busy[39m=[32m"true"[39m
+  [36m>[39m
+    [0m正在加载人工恢复详情…[0m
+  [36m</p>[39m
+[36m</section>[39m
+ ❯ Object.getElementError node_modules/@testing-library/dom/dist/config.js:37:19
+ ❯ node_modules/@testing-library/dom/dist/query-helpers.js:76:38
+ ❯ node_modules/@testing-library/dom/dist/query-helpers.js:52:17
+ ❯ node_modules/@testing-library/dom/dist/query-helpers.js:95:19
+ ❯ tests/execution-recovery-ui.test.tsx:209:41
+    207|       const recovery = await screen.findByRole("region", { name: "需要人工…
+    208|
+    209|       await user.click(within(recovery).getByRole("button", { name: fi…
+       |                                         ^
+    210|       const confirmation = screen.getByRole("dialog", { name: /确认人工恢复/…
+    211|       expect(confirmation).toHaveTextContent("整个 manifest");
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[3/6]⎯
+
+ FAIL  tests/execution-recovery-ui.test.tsx > T-30 manual recovery UI > submits exact recovered_new only after second confirmation and restores focus to its outcome
+TestingLibraryElementError: Unable to find an accessible element with the role "button" and name "已确认完整新版本"
+
+Here are the accessible roles:
+
+  heading:
+
+  Name "需要人工恢复":
+  [36m<h4 />[39m
+
+  --------------------------------------------------paragraph:
+
+  Name "":
+  [36m<p[39m
+    [33mclass[39m=[32m"warning-text"[39m
+  [36m/>[39m
+
+  --------------------------------------------------paragraph:
+
+  Name "":
+  [36m<p[39m
+    [33maria-busy[39m=[32m"true"[39m
+  [36m/>[39m
+
+  --------------------------------------------------
+
+Ignored nodes: comments, script, style
+[36m<section[39m
+  [33maria-label[39m=[32m"需要人工恢复"[39m
+  [33mclass[39m=[32m"execution-recovery stack"[39m
+  [33mrole[39m=[32m"region"[39m
+[36m>[39m
+  [36m<h4>[39m
+    [0m需要人工恢复[0m
+  [36m</h4>[39m
+  [36m<p[39m
+    [33mclass[39m=[32m"warning-text"[39m
+  [36m>[39m
+    [0m检测到平台外写入；平台已停止自动改写，当前 workspace 可能既非完整旧版也非完整新版。[0m
+  [36m</p>[39m
+  [36m<p[39m
+    [33maria-busy[39m=[32m"true"[39m
+  [36m>[39m
+    [0m正在加载人工恢复详情…[0m
+  [36m</p>[39m
+[36m</section>[39m
+ ❯ Object.getElementError node_modules/@testing-library/dom/dist/config.js:37:19
+ ❯ node_modules/@testing-library/dom/dist/query-helpers.js:76:38
+ ❯ node_modules/@testing-library/dom/dist/query-helpers.js:52:17
+ ❯ node_modules/@testing-library/dom/dist/query-helpers.js:95:19
+ ❯ tests/execution-recovery-ui.test.tsx:209:41
+    207|       const recovery = await screen.findByRole("region", { name: "需要人工…
+    208|
+    209|       await user.click(within(recovery).getByRole("button", { name: fi…
+       |                                         ^
+    210|       const confirmation = screen.getByRole("dialog", { name: /确认人工恢复/…
+    211|       expect(confirmation).toHaveTextContent("整个 manifest");
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[4/6]⎯
+
+ FAIL  tests/execution-recovery-ui.test.tsx > T-30 manual recovery UI > submits exact abandon only after second confirmation and restores focus to its outcome
+TestingLibraryElementError: Unable to find an accessible element with the role "button" and name "放弃且不改 canonical"
+
+Here are the accessible roles:
+
+  heading:
+
+  Name "需要人工恢复":
+  [36m<h4 />[39m
+
+  --------------------------------------------------paragraph:
+
+  Name "":
+  [36m<p[39m
+    [33mclass[39m=[32m"warning-text"[39m
+  [36m/>[39m
+
+  --------------------------------------------------paragraph:
+
+  Name "":
+  [36m<p[39m
+    [33maria-busy[39m=[32m"true"[39m
+  [36m/>[39m
+
+  --------------------------------------------------
+
+Ignored nodes: comments, script, style
+[36m<section[39m
+  [33maria-label[39m=[32m"需要人工恢复"[39m
+  [33mclass[39m=[32m"execution-recovery stack"[39m
+  [33mrole[39m=[32m"region"[39m
+[36m>[39m
+  [36m<h4>[39m
+    [0m需要人工恢复[0m
+  [36m</h4>[39m
+  [36m<p[39m
+    [33mclass[39m=[32m"warning-text"[39m
+  [36m>[39m
+    [0m检测到平台外写入；平台已停止自动改写，当前 workspace 可能既非完整旧版也非完整新版。[0m
+  [36m</p>[39m
+  [36m<p[39m
+    [33maria-busy[39m=[32m"true"[39m
+  [36m>[39m
+    [0m正在加载人工恢复详情…[0m
+  [36m</p>[39m
+[36m</section>[39m
+ ❯ Object.getElementError node_modules/@testing-library/dom/dist/config.js:37:19
+ ❯ node_modules/@testing-library/dom/dist/query-helpers.js:76:38
+ ❯ node_modules/@testing-library/dom/dist/query-helpers.js:52:17
+ ❯ node_modules/@testing-library/dom/dist/query-helpers.js:95:19
+ ❯ tests/execution-recovery-ui.test.tsx:209:41
+    207|       const recovery = await screen.findByRole("region", { name: "需要人工…
+    208|
+    209|       await user.click(within(recovery).getByRole("button", { name: fi…
+       |                                         ^
+    210|       const confirmation = screen.getByRole("dialog", { name: /确认人工恢复/…
+    211|       expect(confirmation).toHaveTextContent("整个 manifest");
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[5/6]⎯
+
+ FAIL  tests/execution-recovery-ui.test.tsx > T-30 manual recovery UI > refreshes the observed manifest and clears confirmation after mismatch
+TestingLibraryElementError: Unable to find an accessible element with the role "button" and name "放弃且不改 canonical"
+
+Here are the accessible roles:
+
+  heading:
+
+  Name "需要人工恢复":
+  [36m<h4 />[39m
+
+  --------------------------------------------------paragraph:
+
+  Name "":
+  [36m<p[39m
+    [33mclass[39m=[32m"warning-text"[39m
+  [36m/>[39m
+
+  --------------------------------------------------paragraph:
+
+  Name "":
+  [36m<p[39m
+    [33maria-busy[39m=[32m"true"[39m
+  [36m/>[39m
+
+  --------------------------------------------------
+
+Ignored nodes: comments, script, style
+[36m<section[39m
+  [33maria-label[39m=[32m"需要人工恢复"[39m
+  [33mclass[39m=[32m"execution-recovery stack"[39m
+  [33mrole[39m=[32m"region"[39m
+[36m>[39m
+  [36m<h4>[39m
+    [0m需要人工恢复[0m
+  [36m</h4>[39m
+  [36m<p[39m
+    [33mclass[39m=[32m"warning-text"[39m
+  [36m>[39m
+    [0m检测到平台外写入；平台已停止自动改写，当前 workspace 可能既非完整旧版也非完整新版。[0m
+  [36m</p>[39m
+  [36m<p[39m
+    [33maria-busy[39m=[32m"true"[39m
+  [36m>[39m
+    [0m正在加载人工恢复详情…[0m
+  [36m</p>[39m
+[36m</section>[39m
+ ❯ Object.getElementError node_modules/@testing-library/dom/dist/config.js:37:19
+ ❯ node_modules/@testing-library/dom/dist/query-helpers.js:76:38
+ ❯ node_modules/@testing-library/dom/dist/query-helpers.js:52:17
+ ❯ node_modules/@testing-library/dom/dist/query-helpers.js:95:19
+ ❯ tests/execution-recovery-ui.test.tsx:249:39
+    247|     render(<ExecutionPanel projectId={PROJECT_ID} />);
+    248|     const recovery = await screen.findByRole("region", { name: "需要人工恢复…
+    249|     await user.click(within(recovery).getByRole("button", { name: "放弃且…
+       |                                       ^
+    250|     await user.click(within(screen.getByRole("dialog")).getByRole("but…
+    251|
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[6/6]⎯
+
+
+ Test Files  2 failed (2)
+      Tests  6 failed | 1 passed (7)
+   Start at  22:35:07
+   Duration  3.83s (transform 438ms, setup 895ms, import 1.46s, tests 612ms, environment 3.93s)
+
+# exit: 1

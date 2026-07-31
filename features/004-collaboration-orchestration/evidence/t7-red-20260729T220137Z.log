@@ -1,0 +1,42 @@
+# hf-gate-run
+# label: t7-red
+# command: cmd /c npm test -- tests/openai-chat-client.test.ts
+# started: 2026-07-29T22:01:37+00:00
+
+> collaboration-cockpit@0.1.0 test
+> vitest run tests/openai-chat-client.test.ts
+
+
+ RUN  v4.1.10 D:/cool-ai
+
+ ❯ tests/openai-chat-client.test.ts (0 test)
+
+⎯⎯⎯⎯⎯⎯ Failed Suites 1 ⎯⎯⎯⎯⎯⎯⎯
+
+ FAIL  tests/openai-chat-client.test.ts [ tests/openai-chat-client.test.ts ]
+Error: Failed to resolve import "../src/server/collaboration/openai-chat-client" from "tests/openai-chat-client.test.ts". Does the file exist?
+  Plugin: vite:import-analysis
+  File: D:/cool-ai/tests/openai-chat-client.test.ts:9:7
+  1  |  import { createServer } from "node:http";
+  2  |  import { afterAll, afterEach, beforeAll, describe, expect, it, vi } from "vitest";
+  3  |  ...PONSE_LIMIT_BYTES, OPENAI_CHAT_TIMEOUT_MILLISECONDS } from "../src/server/collaboration/openai-chat-client";
+     |                                                                 ^
+  4  |  const API_KEY = "chat-key-DO-NOT-LEAK";
+  5  |  const SECRET_BODY = "raw-provider-body-DO-NOT-LEAK";
+ ❯ TransformPluginContext._formatLog node_modules/vite/dist/node/chunks/node.js:30416:39
+ ❯ TransformPluginContext.error node_modules/vite/dist/node/chunks/node.js:30413:14
+ ❯ normalizeUrl node_modules/vite/dist/node/chunks/node.js:27438:18
+ ❯ node_modules/vite/dist/node/chunks/node.js:27506:30
+ ❯ TransformPluginContext.transform node_modules/vite/dist/node/chunks/node.js:27474:4
+ ❯ EnvironmentPluginContainer.transform node_modules/vite/dist/node/chunks/node.js:30201:14
+ ❯ loadAndTransform node_modules/vite/dist/node/chunks/node.js:20124:26
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[1/1]⎯
+
+
+ Test Files  1 failed (1)
+      Tests  no tests
+   Start at  06:01:38
+   Duration  2.12s (transform 30ms, setup 336ms, import 0ms, tests 0ms, environment 1.44s)
+
+# exit: 1

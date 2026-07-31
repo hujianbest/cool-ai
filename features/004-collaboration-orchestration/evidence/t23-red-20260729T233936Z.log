@@ -1,0 +1,6 @@
+# hf-gate-run
+# label: t23-red
+# command: npm test -- tests/collaboration-accessibility.test.tsx
+# started: 2026-07-29T23:39:36+00:00
+hf-gate: 命令无法启动: [WinError 2] 系统找不到指定的文件。
+# exit: 127

@@ -1,0 +1,46 @@
+# hf-gate-run
+# label: t3-green
+# command: cmd /c npm test -- tests/execution-eligibility.test.ts
+# started: 2026-07-30T02:56:22+00:00
+
+> collaboration-cockpit@0.1.0 test
+> vitest run tests/execution-eligibility.test.ts
+
+
+ RUN  v4.1.10 D:/cool-ai
+
+(node:4000) ExperimentalWarning: SQLite is an experimental feature and might change at any time
+(Use `node --trace-warnings ...` to show where the warning was created)
+ ❯ tests/execution-eligibility.test.ts (7 tests | 1 failed) 3314ms
+     × atomically enforces project two, task one, Agent one, and DAG-unrelated selections 751ms
+
+⎯⎯⎯⎯⎯⎯⎯ Failed Tests 1 ⎯⎯⎯⎯⎯⎯⎯
+
+ FAIL  tests/execution-eligibility.test.ts > execution start eligibility > atomically enforces project two, task one, Agent one, and DAG-unrelated selections
+AssertionError: expected { count: 1 } to deeply equal { count: 2 }
+
+- Expected
++ Received
+
+  {
+-   "count": 2,
++   "count": 1,
+  }
+
+ ❯ tests/execution-eligibility.test.ts:237:16
+    235|         `SELECT COUNT(*) AS count FROM executions
+    236|          WHERE status IN ('queued','running','waiting_approval','pause…
+    237|       ).get()).toEqual({ count: 2 });
+       |                ^
+    238|       expect(database.prepare(
+    239|         `SELECT work_item_id AS workItemId,agent_id AS agentId FROM ex…
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[1/1]⎯
+
+
+ Test Files  1 failed (1)
+      Tests  1 failed | 6 passed (7)
+   Start at  10:56:24
+   Duration  5.91s (transform 390ms, setup 339ms, import 597ms, tests 3.31s, environment 1.40s)
+
+# exit: 1

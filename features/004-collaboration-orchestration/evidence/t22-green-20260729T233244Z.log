@@ -1,0 +1,359 @@
+# hf-gate-run
+# label: t22-green
+# command: npm.cmd test -- tests/collaboration-controls.test.tsx
+# started: 2026-07-29T23:32:44+00:00
+
+> collaboration-cockpit@0.1.0 test
+> vitest run tests/collaboration-controls.test.tsx
+
+
+ RUN  v4.1.10 D:/cool-ai
+
+ ❯ tests/collaboration-controls.test.tsx (11 tests | 3 failed) 1790ms
+     × renders a waiting decision, radio options, free text, usage totals, and per-Agent metrics 261ms
+     × answers with expectedVersion, a stable operation id, optional mention, and focuses success 127ms
+     × sends control expectedVersion and unique operation ids, with stop confirmation 1039ms
+
+⎯⎯⎯⎯⎯⎯⎯ Failed Tests 3 ⎯⎯⎯⎯⎯⎯⎯
+
+ FAIL  tests/collaboration-controls.test.tsx > collaboration decisions, controls, and usage > renders a waiting decision, radio options, free text, usage totals, and per-Agent metrics
+Error: expect(element).toHaveTextContent()
+
+Expected element to have text content:
+  Prompt 1300
+Received:
+  运行用量轮次 7Prompt1300Completion200总计1500交棒3修复调用2未报告1agent-aPrompt 800Completion 120总计 920交棒 2agent-bPrompt 500Completion 80总计 580交棒 1
+ ❯ tests/collaboration-controls.test.tsx:145:19
+    143|
+    144|     const usage = screen.getByRole("region", { name: "运行用量" });
+    145|     expect(usage).toHaveTextContent("Prompt 1300");
+       |                   ^
+    146|     expect(usage).toHaveTextContent("Completion 200");
+    147|     expect(usage).toHaveTextContent("总计 1500");
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[1/3]⎯
+
+ FAIL  tests/collaboration-controls.test.tsx > collaboration decisions, controls, and usage > answers with expectedVersion, a stable operation id, optional mention, and focuses success
+AssertionError: expected { answer: 'Ship now', …(2) } to match object { answer: 'Ship now', …(2) }
+(1 matching property omitted from actual)
+
+- Expected
++ Received
+
+  {
+    "answer": "Ship now",
+    "expectedVersion": 3,
+-   "mentionAgentId": "agent-b",
+  }
+
+ ❯ tests/collaboration-controls.test.tsx:177:23
+    175|
+    176|     await waitFor(() => expect(bodies).toHaveLength(1));
+    177|     expect(bodies[0]).toMatchObject({
+       |                       ^
+    178|       answer: "Ship now",
+    179|       expectedVersion: 3,
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[2/3]⎯
+
+ FAIL  tests/collaboration-controls.test.tsx > collaboration decisions, controls, and usage > sends control expectedVersion and unique operation ids, with stop confirmation
+AssertionError: expected [ { …(2) }, { body: { …(3) }, …(1) } ] to have a length of 1 but got 2
+
+Ignored nodes: comments, script, style
+[36m<html>[39m
+  [36m<head />[39m
+  [36m<body>[39m
+    [36m<div>[39m
+      [36m<section[39m
+        [33maria-labelledby[39m=[32m"collaboration-title"[39m
+        [33mclass[39m=[32m"stack"[39m
+      [36m>[39m
+        [36m<div[39m
+          [33mclass[39m=[32m"panel-heading"[39m
+        [36m>[39m
+          [36m<div>[39m
+            [36m<p[39m
+              [33mclass[39m=[32m"eyebrow"[39m
+            [36m>[39m
+              [0m平等协作[0m
+            [36m</p>[39m
+            [36m<h3[39m
+              [33mid[39m=[32m"collaboration-title"[39m
+            [36m>[39m
+              [0m项目群聊[0m
+            [36m</h3>[39m
+          [36m</div>[39m
+          [36m<div[39m
+            [33mclass[39m=[32m"baton"[39m
+            [33mdata-accent[39m=[32m"sage"[39m
+          [36m>[39m
+            [36m<span[39m
+              [33maria-label[39m=[32m"Alpha 的头像"[39m
+              [33mclass[39m=[32m"agent-avatar"[39m
+            [36m>[39m
+              [0mA[0m
+            [36m</span>[39m
+            [36m<span>[39m
+              [36m<span[39m
+                [33mclass[39m=[32m"eyebrow"[39m
+              [36m>[39m
+                [0m当前持棒[0m
+              [36m</span>[39m
+              [36m<strong>[39m
+                [0mAlpha[0m
+              [36m</strong>[39m
+            [36m</span>[39m
+          [36m</div>[39m
+        [36m</div>[39m
+        [36m<div[39m
+          [33mclass[39m=[32m"run-details"[39m
+        [36m>[39m
+          [36m<section[39m
+            [33maria-label[39m=[32m"运行控制"[39m
+            [33mclass[39m=[32m"run-detail"[39m
+            [33mrole[39m=[32m"region"[39m
+          [36m>[39m
+            [36m<div[39m
+              [33mclass[39m=[32m"panel-heading"[39m
+            [36m>[39m
+              [36m<h3>[39m
+                [0m运行控制[0m
+              [36m</h3>[39m
+              [36m<span[39m
+                [33mclass[39m=[32m"status-label"[39m
+              [36m>[39m
+                [0mrunning[0m
+              [36m</span>[39m
+            [36m</div>[39m
+            [36m<div[39m
+              [33mclass[39m=[32m"control-actions"[39m
+            [36m>[39m
+              [36m<button[39m
+                [33mtype[39m=[32m"button"[39m
+              [36m>[39m
+                [0m暂停[0m
+              [36m</button>[39m
+              [36m<button[39m
+                [33mdisabled[39m=[32m""[39m
+                [33mtype[39m=[32m"button"[39m
+              [36m>[39m
+                [0m继续[0m
+              [36m</button>[39m
+              [36m<button[39m
+                [33mdisabled[39m=[32m""[39m
+                [33mtype[39m=[32m"button"[39m
+              [36m>[39m
+                [0m重试[0m
+              [36m</button>[39m
+              [36m<button[39m
+                [33mtype[39m=[32m"button"[39m
+              [36m>[39m
+                [0m停止[0m
+              [36m</button>[39m
+            [36m</div>[39m
+            [36m<p[39m
+              [33mclass[39m=[32m"muted"[39m
+            [36m>[39m
+              [0m仅手动暂停后可继续。[0m
+            [36m</p>[39m
+          [36m</section>[39m
+          [36m<section[39m
+            [33maria-label[39m=[32m"运行用量"[39m
+            [33mclass[39m=[32m"run-detail"[39m
+            [33mrole[39m=[32m"region"[39m
+          [36m>[39m
+            [36m<div[39m
+              [33mclass[39m=[32m"panel-heading"[39m
+            [36m>[39m
+              [36m<h3>[39m
+                [0m运行用量[0m
+              [36m</h3>[39m
+              [36m<span[39m
+                [33mclass[39m=[32m"status-label"[39m
+              [36m>[39m
+                [0m轮次 [0m
+                [0m7[0m
+              [36m</span>[39m
+            [36m</div>[39m
+            [36m<dl[39m
+              [33mclass[39m=[32m"metric-grid"[39m
+            [36m>[39m
+              [36m<div>[39m
+                [36m<dt>[39m
+                  [0mPrompt[0m
+                [36m</dt>[39m
+                [36m<dd>[39m
+                  [0m1300[0m
+                [36m</dd>[39m
+              [36m</div>[39m
+              [36m<div>[39m
+                [36m<dt>[39m
+                  [0mCompletion[0m
+                [36m</dt>[39m
+                [36m<dd>[39m
+                  [0m200[0m
+                [36m</dd>[39m
+              [36m</div>[39m
+              [36m<div>[39m
+                [36m<dt>[39m
+                  [0m总计[0m
+                [36m</dt>[39m
+                [36m<dd>[39m
+                  [0m1500[0m
+                [36m</dd>[39m
+              [36m</div>[39m
+              [36m<div>[39m
+                [36m<dt>[39m
+                  [0m交棒[0m
+                [36m</dt>[39m
+                [36m<dd>[39m
+                  [0m3[0m
+                [36m</dd>[39m
+              [36m</div>[39m
+              [36m<div>[39m
+                [36m<dt>[39m
+                  [0m修复调用[0m
+                [36m</dt>[39m
+                [36m<dd>[39m
+                  [0m2[0m
+                [36m</dd>[39m
+              [36m</div>[39m
+              [36m<div>[39m
+                [36m<dt>[39m
+                  [0m未报告[0m
+                [36m</dt>[39m
+                [36m<dd>[39m
+                  [0m1[0m
+                [36m</dd>[39m
+              [36m</div>[39m
+            [36m</dl>[39m
+            [36m<ul[39m
+              [33maria-label[39m=[32m"按 Agent 用量"[39m
+              [33mclass[39m=[32m"usage-agents"[39m
+            [36m>[39m
+              [36m<li>[39m
+                [36m<strong>[39m
+                  [0mAlpha[0m
+                [36m</strong>[39m
+                [36m<span>[39m
+                  [0mPrompt [0m
+                  [0m800[0m
+                [36m</span>[39m
+                [36m<span>[39m
+                  [0mCompletion [0m
+                  [0m120[0m
+                [36m</span>[39m
+                [36m<span>[39m
+                  [0m总计 [0m
+                  [0m920[0m
+                [36m</span>[39m
+                [36m<span>[39m
+                  [0m交棒 [0m
+                  [0m2[0m
+                [36m</span>[39m
+              [36m</li>[39m
+              [36m<li>[39m
+                [36m<strong>[39m
+                  [0mBeta[0m
+                [36m</strong>[39m
+                [36m<span>[39m
+                  [0mPrompt [0m
+                  [0m500[0m
+                [36m</span>[39m
+                [36m<span>[39m
+                  [0mCompletion [0m
+                  [0m80[0m
+                [36m</span>[39m
+                [36m<span>[39m
+                  [0m总计 [0m
+                  [0m580[0m
+                [36m</span>[39m
+                [36m<span>[39m
+                  [0m交棒 [0m
+                  [0m1[0m
+                [36m</span>[39m
+              [36m</li>[39m
+            [36m</ul>[39m
+          [36m</section>[39m
+        [36m</div>[39m
+        [36m<p[39m
+          [33mclass[39m=[32m"state-message"[39m
+        [36m>[39m
+          [0m尚无协作消息。[0m
+        [36m</p>[39m
+        [36m<p[39m
+          [33maria-atomic[39m=[32m"true"[39m
+          [33maria-label[39m=[32m"时间线更新摘要"[39m
+          [33maria-live[39m=[32m"polite"[39m
+          [33mclass[39m=[32m"sr-only"[39m
+        [36m/>[39m
+        [36m<form[39m
+          [33mclass[39m=[32m"composer"[39m
+        [36m>[39m
+          [36m<div[39m
+            [33mclass[39m=[32m"form-field"[39m
+          [36m>[39m
+            [36m<label[39m
+              [33mfor[39m=[32m"collaboration-message-project-1"[39m
+            [36m>[39m
+              [0m发送给项目群聊[0m
+            [36m</label>[39m
+            [36m<textarea[39m
+              [33mid[39m=[32m"collaboration-message-project-1"[39m
+            [36m/>[39m
+          [36m</div>[39m
+          [36m<div[39m
+            [33mclass[39m=[32m"mention-picker"[39m
+          [36m>[39m
+            [36m<button[39m
+              [33maria-controls[39m=[32m"collaboration-members-project-1"[39m
+              [33maria-expanded[39m=[32m"false"[39m
+              [33maria-haspopup[39m=[32m"listbox"[39m
+              [33maria-label[39m=[32m"@成员"[39m
+              [33mrole[39m=[32m"combobox"[39m
+              [33mtype[39m=[32m"button"[39m
+            [36m>[39m
+              [0m@成员[0m
+            [36m</button>[39m
+          [36m</div>[39m
+          [36m<button[39m
+            [33mdisabled[39m=[32m""[39m
+            [33mtype[39m=[32m"submit"[39m
+          [36m>[39m
+            [0m发送消息[0m
+          [36m</button>[39m
+        [36m</form>[39m
+      [36m</section>[39m
+    [36m</div>[39m
+  [36m</body>[39m
+[36m</html>[39m
+
+- Expected
++ Received
+
+- 1
++ 2
+
+ ❯ tests/collaboration-controls.test.tsx:249:39
+    247|
+    248|     await user.click(await screen.findByRole("button", { name: "暂停" })…
+    249|     await waitFor(() => expect(calls).toHaveLength(1));
+       |                                       ^
+    250|     expect(calls[0]).toMatchObject({
+    251|       body: { action: "pause", expectedVersion: 4 },
+ ❯ runWithExpensiveErrorDiagnosticsDisabled node_modules/@testing-library/dom/dist/config.js:47:12
+ ❯ checkCallback node_modules/@testing-library/dom/dist/wait-for.js:124:77
+ ❯ MutationObserver.checkRealTimersCallback node_modules/@testing-library/dom/dist/wait-for.js:118:16
+ ❯ MutationObserver.invokeTheCallbackFunction node_modules/jsdom/lib/generated/idl/MutationCallback.js:19:26
+ ❯ notifyMutationObservers node_modules/jsdom/lib/jsdom/living/helpers/mutation-observers.js:160:22
+ ❯ node_modules/jsdom/lib/jsdom/living/helpers/mutation-observers.js:133:5
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[3/3]⎯
+
+
+ Test Files  1 failed (1)
+      Tests  3 failed | 8 passed (11)
+   Start at  07:32:45
+   Duration  4.00s (transform 103ms, setup 334ms, import 208ms, tests 1.79s, environment 1.41s)
+
+# exit: 1

@@ -1,0 +1,131 @@
+# hf-gate-run
+# label: t8-red
+# command: cmd /c npm test -- tests/execution-list-tool.test.ts
+# started: 2026-07-30T03:45:40+00:00
+
+> collaboration-cockpit@0.1.0 test
+> vitest run tests/execution-list-tool.test.ts
+
+
+ RUN  v4.1.10 D:/cool-ai
+
+(node:5080) ExperimentalWarning: SQLite is an experimental feature and might change at any time
+(Use `node --trace-warnings ...` to show where the warning was created)
+ ❯ tests/execution-list-tool.test.ts (38 tests | 8 failed) 1694ms
+     × normalizes NFC segments and enforces segment and path byte limits 5ms
+     × lists at most 1000 direct ordinary children in stable UTF-8 name order 240ms
+     × fails closed when a direct child is link 245ms
+     × fails closed when a direct child is reparse 238ms
+     × fails closed when a direct child is special 234ms
+     × fails closed when an existing segment or listed child changes identity 230ms
+     × atomically persists typed tool facts, count, event, action, and receipt 222ms
+     × commits no tool fact, count, or event when stop/discard wins before finalize 225ms
+
+⎯⎯⎯⎯⎯⎯⎯ Failed Tests 8 ⎯⎯⎯⎯⎯⎯⎯
+
+ FAIL  tests/execution-list-tool.test.ts > cross-platform relative path guard > normalizes NFC segments and enforces segment and path byte limits
+Error: Path guard is not implemented.
+ ❯ Module.validateSandboxRelativePath src/server/execution/path-guard.ts:9:9
+      7|   segments: string[];
+      8| } {
+      9|   throw new PathGuardError("Path guard is not implemented.");
+       |         ^
+     10| }
+     11|
+ ❯ tests/execution-list-tool.test.ts:191:18
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[1/8]⎯
+
+ FAIL  tests/execution-list-tool.test.ts > verified-handle bounded list > lists at most 1000 direct ordinary children in stable UTF-8 name order
+Error: List tool is not implemented.
+ ❯ Module.executeListToolAction src/server/execution/file-tools.ts:13:9
+     11|   sandboxRoot: string;
+     12| }): Promise<never> {
+     13|   throw new Error("List tool is not implemented.");
+       |         ^
+     14| }
+     15|
+ ❯ runList tests/execution-list-tool.test.ts:397:27
+ ❯ tests/execution-list-tool.test.ts:220:26
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[2/8]⎯
+
+ FAIL  tests/execution-list-tool.test.ts > verified-handle bounded list > fails closed when a direct child is link
+ FAIL  tests/execution-list-tool.test.ts > verified-handle bounded list > fails closed when a direct child is reparse
+ FAIL  tests/execution-list-tool.test.ts > verified-handle bounded list > fails closed when a direct child is special
+AssertionError: expected Error: List tool is not implemented. to match object { code: 'SPECIAL_FILE_REJECTED' }
+
+- Expected
++ Received
+
+- {
+-   "code": "SPECIAL_FILE_REJECTED",
++ Error {
++   "message": "List tool is not implemented.",
+  }
+
+ ❯ tests/execution-list-tool.test.ts:251:42
+    249|       fs.addRoot(SANDBOX_ROOT, root);
+    250|
+    251|       await expect(runList(fs, "src", 2)).rejects.toMatchObject({
+       |                                          ^
+    252|         code: "SPECIAL_FILE_REJECTED",
+    253|       });
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[3/8]⎯
+
+ FAIL  tests/execution-list-tool.test.ts > verified-handle bounded list > fails closed when an existing segment or listed child changes identity
+AssertionError: expected Error: List tool is not implemented. to match object { code: 'SANDBOX_UNVERIFIABLE' }
+
+- Expected
++ Received
+
+- {
+-   "code": "SANDBOX_UNVERIFIABLE",
++ Error {
++   "message": "List tool is not implemented.",
+  }
+
+ ❯ tests/execution-list-tool.test.ts:267:48
+    265|       if (name === "src") node.identity = identity("replacement", "dir…
+    266|     };
+    267|     await expect(runList(parentRace, "src", 3)).rejects.toMatchObject({
+       |                                                ^
+    268|       code: "SANDBOX_UNVERIFIABLE",
+    269|     });
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[4/8]⎯
+
+ FAIL  tests/execution-list-tool.test.ts > durable list child action > atomically persists typed tool facts, count, event, action, and receipt
+Error: List tool is not implemented.
+ ❯ Module.executeListToolAction src/server/execution/file-tools.ts:13:9
+     11|   sandboxRoot: string;
+     12| }): Promise<never> {
+     13|   throw new Error("List tool is not implemented.");
+       |         ^
+     14| }
+     15|
+ ❯ tests/execution-list-tool.test.ts:288:37
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[5/8]⎯
+
+ FAIL  tests/execution-list-tool.test.ts > durable list child action > commits no tool fact, count, or event when stop/discard wins before finalize
+Error: List tool is not implemented.
+ ❯ Module.executeListToolAction src/server/execution/file-tools.ts:13:9
+     11|   sandboxRoot: string;
+     12| }): Promise<never> {
+     13|   throw new Error("List tool is not implemented.");
+       |         ^
+     14| }
+     15|
+ ❯ tests/execution-list-tool.test.ts:342:37
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[6/8]⎯
+
+
+ Test Files  1 failed (1)
+      Tests  8 failed | 30 passed (38)
+   Start at  11:45:41
+   Duration  3.98s (transform 172ms, setup 338ms, import 267ms, tests 1.69s, environment 1.41s)
+
+# exit: 1

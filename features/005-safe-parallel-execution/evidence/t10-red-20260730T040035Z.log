@@ -1,0 +1,126 @@
+# hf-gate-run
+# label: t10-red
+# command: npm.cmd test -- tests/execution-write-tool.test.ts
+# started: 2026-07-30T04:00:35+00:00
+
+> collaboration-cockpit@0.1.0 test
+> vitest run tests/execution-write-tool.test.ts
+
+
+ RUN  v4.1.10 D:/cool-ai
+
+(node:16636) ExperimentalWarning: SQLite is an experimental feature and might change at any time
+(Use `node --trace-warnings ...` to show where the warning was created)
+ ❯ tests/execution-write-tool.test.ts (7 tests | 7 failed) 1011ms
+     × creates and replaces complete UTF-8 bytes through owned temp, fsync, and atomic replace 297ms
+     × rejects invalid text, excess bytes, and incorrect create/replace expectations before mutation 3ms
+     × fails closed on parent/target races or missing directory durability and cleans only owned temp 2ms
+     × keeps two sandbox roots independent 2ms
+     × requires Agent write permission before filesystem mutation 247ms
+     × persists action, tool, event, and before/after hashes in one finalize transaction 231ms
+     × rolls back the conditional target change when stop wins before database finalize 227ms
+
+⎯⎯⎯⎯⎯⎯⎯ Failed Tests 7 ⎯⎯⎯⎯⎯⎯⎯
+
+ FAIL  tests/execution-write-tool.test.ts > expected-hash durable sandbox write > creates and replaces complete UTF-8 bytes through owned temp, fsync, and atomic replace
+TypeError: writeTool.writeVerifiedFile is not a function
+ ❯ tests/execution-write-tool.test.ts:240:38
+    238|     const fs = adapterWithFile(Buffer.from("old", "utf8"));
+    239|     const beforeHash = sha256("old");
+    240|     const replaced = await writeTool.writeVerifiedFile({
+       |                                      ^
+    241|       content: "café",
+    242|       expectedHash: beforeHash,
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[1/7]⎯
+
+ FAIL  tests/execution-write-tool.test.ts > expected-hash durable sandbox write > rejects invalid text, excess bytes, and incorrect create/replace expectations before mutation
+TypeError: writeTool.writeVerifiedFile is not a function
+ ❯ tests/execution-write-tool.test.ts:292:30
+    290|     ] as const) {
+    291|       const fs = adapterWithFile(Buffer.from("old", "utf8"));
+    292|       await expect(writeTool.writeVerifiedFile({
+       |                              ^
+    293|         content,
+    294|         expectedHash,
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[2/7]⎯
+
+ FAIL  tests/execution-write-tool.test.ts > expected-hash durable sandbox write > fails closed on parent/target races or missing directory durability and cleans only owned temp
+TypeError: writeTool.writeVerifiedFile is not a function
+ ❯ tests/execution-write-tool.test.ts:311:28
+    309|       if (src) src.identity = directoryIdentity("outside", "/outside");
+    310|     };
+    311|     await expect(writeTool.writeVerifiedFile({
+       |                            ^
+    312|       content: "new",
+    313|       expectedHash: sha256("old"),
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[3/7]⎯
+
+ FAIL  tests/execution-write-tool.test.ts > expected-hash durable sandbox write > keeps two sandbox roots independent
+TypeError: writeTool.writeVerifiedFile is not a function
+ ❯ tests/execution-write-tool.test.ts:354:21
+    352|     const fs = adapterWithFile(Buffer.from("same"));
+    353|     fs.addRoot(SANDBOX_B, rootNode("/sandbox-b", Buffer.from("same")));
+    354|     await writeTool.writeVerifiedFile({
+       |                     ^
+    355|       content: "only-a",
+    356|       expectedHash: sha256("same"),
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[4/7]⎯
+
+ FAIL  tests/execution-write-tool.test.ts > write permission and atomic durable facts > requires Agent write permission before filesystem mutation
+AssertionError: expected TypeError: writeTool.executeWriteToolActi… to match object { code: 'AGENT_WRITE_FORBIDDEN' }
+
+- Expected
++ Received
+
+- {
+-   "code": "AGENT_WRITE_FORBIDDEN",
++ TypeError {
++   "message": "writeTool.executeWriteToolAction is not a function",
+  }
+
+ ❯ tests/execution-write-tool.test.ts:372:61
+    370|     const fs = adapterWithFile(Buffer.from("old"));
+    371|     try {
+    372|       await expect(runWrite(database, fs, 1, sha256("old"))).rejects.t…
+       |                                                             ^
+    373|         code: "AGENT_WRITE_FORBIDDEN",
+    374|       });
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[5/7]⎯
+
+ FAIL  tests/execution-write-tool.test.ts > write permission and atomic durable facts > persists action, tool, event, and before/after hashes in one finalize transaction
+TypeError: writeTool.executeWriteToolAction is not a function
+ ❯ runWrite tests/execution-write-tool.test.ts:522:20
+    520|   expectedHash: string | null,
+    521| ) {
+    522|   return writeTool.executeWriteToolAction({
+       |                    ^
+    523|     actionIndex: 0,
+    524|     content: "new",
+ ❯ tests/execution-write-tool.test.ts:385:28
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[6/7]⎯
+
+ FAIL  tests/execution-write-tool.test.ts > write permission and atomic durable facts > rolls back the conditional target change when stop wins before database finalize
+TypeError: writeTool.executeWriteToolAction is not a function
+ ❯ tests/execution-write-tool.test.ts:421:38
+    419|     const fs = adapterWithFile(Buffer.from("old"));
+    420|     try {
+    421|       const result = await writeTool.executeWriteToolAction({
+       |                                      ^
+    422|         actionIndex: 0,
+    423|         content: "new",
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[7/7]⎯
+
+
+ Test Files  1 failed (1)
+      Tests  7 failed (7)
+   Start at  12:00:36
+   Duration  3.48s (transform 437ms, setup 342ms, import 258ms, tests 1.01s, environment 1.58s)
+
+# exit: 1

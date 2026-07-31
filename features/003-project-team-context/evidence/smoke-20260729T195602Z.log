@@ -1,0 +1,30 @@
+# hf-gate-run
+# label: smoke
+# command: cmd /c npm run smoke:context
+# started: 2026-07-29T19:56:02+00:00
+
+> collaboration-cockpit@0.1.0 smoke:context
+> node tests/context-browser-smoke.mjs
+
+(node:2744) ExperimentalWarning: SQLite is an experimental feature and might change at any time
+(Use `node --trace-warnings ...` to show where the warning was created)
+SHARED SNAPSHOT PASS: two member shared sections deeply equal
+node:internal/modules/run_main:107
+    triggerUncaughtException(
+    ^
+
+locator.waitFor: Error: strict mode violation: getByRole('heading', { name: 'Plan task' }) resolved to 2 elements:
+    1) <h4 tabindex="-1">Plan task</h4> aka getByTestId('editor-surface').getByRole('heading', { name: 'Plan task' })
+    2) <h3 tabindex="-1">Plan task completed</h3> aka getByRole('heading', { name: 'Plan task completed' })
+
+Call log:
+  - waiting for getByRole('heading', { name: 'Plan task' }) to be visible
+
+    at D:\cool-ai\tests\context-browser-smoke.mjs:440:58 {
+  log: [
+    "  - waiting for getByRole('heading', { name: 'Plan task' }) to be visible"
+  ]
+}
+
+Node.js v24.14.0
+# exit: 1

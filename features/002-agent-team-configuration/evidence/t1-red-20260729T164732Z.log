@@ -1,0 +1,41 @@
+# hf-gate-run
+# label: t1-red
+# command: cmd /c npm test -- tests/team-skill-slice.test.tsx
+# started: 2026-07-29T16:47:32+00:00
+
+> collaboration-cockpit@0.1.0 test
+> vitest run tests/team-skill-slice.test.tsx
+
+
+ RUN  v4.1.10 D:/cool-ai
+
+(node:3904) ExperimentalWarning: SQLite is an experimental feature and might change at any time
+(Use `node --trace-warnings ...` to show where the warning was created)
+ ❯ tests/team-skill-slice.test.tsx (1 test | 1 failed) 12ms
+     × creates a text skill through the real API and renders it after reload 10ms
+
+⎯⎯⎯⎯⎯⎯⎯ Failed Tests 1 ⎯⎯⎯⎯⎯⎯⎯
+
+ FAIL  tests/team-skill-slice.test.tsx > /team skill vertical slice > creates a text skill through the real API and renders it after reload
+AssertionError: the real /api/skills endpoint must exist: expected undefined to be type of 'function'
+
+Expected: "function"
+Received: "undefined"
+
+ ❯ tests/team-skill-slice.test.tsx:40:67
+     38|     const loadPage = pageModules["../app/team/page.tsx"];
+     39|
+     40|     expect(loadRoute, "the real /api/skills endpoint must exist").toBe…
+       |                                                                   ^
+     41|     expect(loadPage, "the real /team page must exist").toBeTypeOf("fun…
+     42|
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[1/1]⎯
+
+
+ Test Files  1 failed (1)
+      Tests  1 failed (1)
+   Start at  00:47:33
+   Duration  2.20s (transform 53ms, setup 333ms, import 160ms, tests 12ms, environment 1.41s)
+
+# exit: 1

@@ -1,0 +1,44 @@
+# hf-gate-run
+# label: t5-green
+# command: cmd /c npm test -- tests/execution-actions.test.ts
+# started: 2026-07-30T03:17:31+00:00
+
+> collaboration-cockpit@0.1.0 test
+> vitest run tests/execution-actions.test.ts
+
+
+ RUN  v4.1.10 D:/cool-ai
+
+(node:8388) ExperimentalWarning: SQLite is an experimental feature and might change at any time
+(Use `node --trace-warnings ...` to show where the warning was created)
+ ❯ tests/execution-actions.test.ts (7 tests | 1 failed) 2418ms
+     × uses a random 120 second lease and heartbeat renews from DB time without extending overall deadline 300ms
+
+⎯⎯⎯⎯⎯⎯⎯ Failed Tests 1 ⎯⎯⎯⎯⎯⎯⎯
+
+ FAIL  tests/execution-actions.test.ts > generic execution child action CAS > uses a random 120 second lease and heartbeat renews from DB time without extending overall deadline
+AssertionError: expected 118989 to be 120000 // Object.is equality
+
+- Expected
++ Received
+
+- 120000
++ 118989
+
+ ❯ tests/execution-actions.test.ts:278:9
+    276|       expect(
+    277|         Date.parse(acquired.leaseExpiresAt) - Date.parse(acquired.last…
+    278|       ).toBe(120_000);
+       |         ^
+    279|
+    280|       database.prepare(`
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[1/1]⎯
+
+
+ Test Files  1 failed (1)
+      Tests  1 failed | 6 passed (7)
+   Start at  11:17:32
+   Duration  4.56s (transform 169ms, setup 342ms, import 98ms, tests 2.42s, environment 1.43s)
+
+# exit: 1

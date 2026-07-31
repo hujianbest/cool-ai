@@ -1,0 +1,46 @@
+# hf-gate-run
+# label: t32-green
+# command: npm.cmd run smoke:execution
+# started: 2026-07-30T15:22:12+00:00
+
+> collaboration-cockpit@0.1.0 smoke:execution
+> node tests/execution-browser-smoke.mjs
+
+(node:13696) ExperimentalWarning: SQLite is an experimental feature and might change at any time
+(Use `node --trace-warnings ...` to show where the warning was created)
+node:internal/process/promises:394
+    triggerUncaughtException(err, true /* fromPromise */);
+    ^
+
+AssertionError [ERR_ASSERTION]: synthetic execution references must belong to the isolated project
++ actual - expected
+
+  {
++   agent: 0,
+-   agent: 1,
+    mission: 1,
+    policy: 1,
+    run: 1,
+    task: 1
+  }
+
+    at wireStartContract (file:///D:/cool-ai/tests/execution-browser-smoke.mjs:460:12)
+    at file:///D:/cool-ai/tests/execution-browser-smoke.mjs:947:19
+    at RouteHandler._handleInternal (D:\cool-ai\node_modules\playwright-core\lib\coreBundle.js:59786:11)
+    at RouteHandler._handleImpl (D:\cool-ai\node_modules\playwright-core\lib\coreBundle.js:59753:29)
+    at D:\cool-ai\node_modules\playwright-core\lib\coreBundle.js:59747:59
+    at AsyncLocalStorage.run (node:internal/async_local_storage/async_context_frame:63:14)
+    at _Zone.run (D:\cool-ai\node_modules\playwright-core\lib\coreBundle.js:10149:40)
+    at RouteHandler.handle (D:\cool-ai\node_modules\playwright-core\lib\coreBundle.js:59747:38)
+    at _Page._onRoute (D:\cool-ai\node_modules\playwright-core\lib\coreBundle.js:61037:46)
+    at Proxy.<anonymous> (D:\cool-ai\node_modules\playwright-core\lib\coreBundle.js:60984:63) {
+  generatedMessage: false,
+  code: 'ERR_ASSERTION',
+  actual: { agent: 0, mission: 1, policy: 1, run: 1, task: 1 },
+  expected: { agent: 1, mission: 1, policy: 1, run: 1, task: 1 },
+  operator: 'deepStrictEqual',
+  diff: 'simple'
+}
+
+Node.js v24.14.0
+# exit: 1

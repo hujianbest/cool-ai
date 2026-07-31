@@ -1,0 +1,19 @@
+# hf-gate-run
+# label: smoke
+# command: cmd /c npm run smoke:context
+# started: 2026-07-29T20:26:19+00:00
+
+> collaboration-cockpit@0.1.0 smoke:context
+> node tests/context-browser-smoke.mjs
+
+(node:14192) ExperimentalWarning: SQLite is an experimental feature and might change at any time
+(Use `node --trace-warnings ...` to show where the warning was created)
+SHARED SNAPSHOT PASS: two member shared sections deeply equal
+PERSISTENCE PASS: project context survived refresh
+AUDIT PASS: {"access":2,"contentRead":0,"enumerate":0,"exec":0,"realpath":2,"stat":2,"write":0}; content read/enumerate/write/exec=0
+SECURITY PASS: provider secrets=0 across snapshots/project responses/logs; full path=0 in errors/logs and allowlisted in workspace snapshots
+BROWSER PASS: full S-3 desktop and narrow acceptance completed
+SMOKE SCREENSHOT: D:\cool-ai\features\003-project-team-context\evidence\smoke-context-desktop.png
+NARROW SCREENSHOT: D:\cool-ai\features\003-project-team-context\evidence\smoke-context-narrow.png
+DEMO SCREENSHOT: D:\cool-ai\features\003-project-team-context\evidence\demo-project-context.png
+# exit: 0

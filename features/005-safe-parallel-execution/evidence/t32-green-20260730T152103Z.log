@@ -1,0 +1,203 @@
+# hf-gate-run
+# label: t32-green
+# command: npm.cmd run smoke:execution
+# started: 2026-07-30T15:21:03+00:00
+
+> collaboration-cockpit@0.1.0 smoke:execution
+> node tests/execution-browser-smoke.mjs
+
+(node:1132) ExperimentalWarning: SQLite is an experimental feature and might change at any time
+(Use `node --trace-warnings ...` to show where the warning was created)
+file:///D:/cool-ai/tests/execution-browser-smoke.mjs:1048
+      throw new Error(`Expected two concurrent provider calls; got ${maxConcurrentProviderCalls}. `
+            ^
+
+Error: Expected two concurrent provider calls; got 0. Executions=[{"id":"97f4dc8a-8ddf-4b06-b037-c031262b293c","status":"running","reasonCode":null,"version":2},{"id":"d66161e7-fc35-49a2-8a82-e7497c00b1c1","status":"running","reasonCode":null,"version":2}] Calls=[{"status":"calling","errorCategory":null},{"status":"calling","errorCategory":null}] Provider=[{"method":"GET","url":"/v1/models"}] Logs=
+> collaboration-cockpit@0.1.0 dev
+> next dev --webpack --hostname 127.0.0.1 --port 12200
+
+▲ Next.js 16.2.12 (webpack)
+- Local:         http://127.0.0.1:12200
+- Network:       http://127.0.0.1:12200
+✓ Ready in 882ms
+⚠ Attempted to load @next/swc-win32-x64-msvc, but an error occurred: \\?\D:\cool-ai\node_modules\@next\swc-win32-x64-msvc\next-swc.win32-x64-msvc.node is not a valid Win32 application.
+
+\\?\D:\cool-ai\node_modules\@next\swc-win32-x64-msvc\next-swc.win32-x64-msvc.node
+  Skipping creating a lockfile at D:\cool-ai\.next\dev\lock because we're using WASM bindings
+
+ GET / 200 in 2.4s (next.js: 1905ms, application-code: 460ms)
+ GET /team 200 in 1665ms (next.js: 1232ms, application-code: 434ms)
+(node:5332) ExperimentalWarning: SQLite is an experimental feature and might change at any time
+(Use `node --trace-warnings ...` to show where the warning was created)
+ GET /api/skills 200 in 869ms (next.js: 686ms, application-code: 183ms)
+ GET /api/providers 200 in 803ms (next.js: 731ms, application-code: 72ms)
+ GET /api/providers 200 in 58ms (next.js: 3ms, application-code: 55ms)
+ POST /api/providers/verify 200 in 618ms (next.js: 450ms, application-code: 167ms)
+ POST /api/providers 201 in 78ms (next.js: 3ms, application-code: 75ms)
+ GET /api/skills 200 in 78ms (next.js: 8ms, application-code: 70ms)
+ GET /api/skills 200 in 76ms (next.js: 4ms, application-code: 72ms)
+ POST /api/skills 201 in 70ms (next.js: 3ms, application-code: 67ms)
+ POST /api/skills 201 in 66ms (next.js: 3ms, application-code: 62ms)
+ GET /api/providers 200 in 803ms (next.js: 635ms, application-code: 169ms)
+ GET /api/agent-templates 200 in 818ms (next.js: 650ms, application-code: 168ms)
+ GET /api/agents 200 in 800ms (next.js: 633ms, application-code: 168ms)
+ GET /api/skills 200 in 802ms (next.js: 634ms, application-code: 168ms)
+ GET /api/providers 200 in 55ms (next.js: 3ms, application-code: 52ms)
+ GET /api/agent-templates 200 in 10ms (next.js: 3ms, application-code: 7ms)
+ GET /api/skills 200 in 56ms (next.js: 3ms, application-code: 53ms)
+ GET /api/agents 200 in 53ms (next.js: 3ms, application-code: 50ms)
+ POST /api/agents 201 in 72ms (next.js: 3ms, application-code: 68ms)
+ POST /api/agents 201 in 66ms (next.js: 3ms, application-code: 63ms)
+ GET / 200 in 265ms (next.js: 66ms, application-code: 199ms)
+ GET /api/projects 200 in 670ms (next.js: 611ms, application-code: 59ms)
+ POST /api/projects 201 in 64ms (next.js: 3ms, application-code: 61ms)
+ GET /api/agents 200 in 82ms (next.js: 29ms, application-code: 53ms)
+ GET /api/projects/a0cf17cf-f103-4b26-a58d-41196fa01937/members 200 in 2.7s (next.js: 2.6s, application-code: 113ms)
+(node:14592) ExperimentalWarning: SQLite is an experimental feature and might change at any time
+(Use `node --trace-warnings ...` to show where the warning was created)
+ GET /api/projects/a0cf17cf-f103-4b26-a58d-41196fa01937/memories?includeInactive=0 200 in 2.8s (next.js: 2.7s, application-code: 97ms)
+(node:13452) ExperimentalWarning: SQLite is an experimental feature and might change at any time
+(Use `node --trace-warnings ...` to show where the warning was created)
+ GET /api/projects/a0cf17cf-f103-4b26-a58d-41196fa01937/workspace 200 in 2.8s (next.js: 2.8s, application-code: 58ms)
+(node:14468) ExperimentalWarning: SQLite is an experimental feature and might change at any time
+(Use `node --trace-warnings ...` to show where the warning was created)
+ GET /api/projects/a0cf17cf-f103-4b26-a58d-41196fa01937/mission 200 in 2.9s (next.js: 2.8s, application-code: 54ms)
+(node:9836) ExperimentalWarning: SQLite is an experimental feature and might change at any time
+(Use `node --trace-warnings ...` to show where the warning was created)
+ GET /api/projects/a0cf17cf-f103-4b26-a58d-41196fa01937/executions 200 in 2.9s (next.js: 2.9s, application-code: 65ms)
+(node:5932) ExperimentalWarning: SQLite is an experimental feature and might change at any time
+(Use `node --trace-warnings ...` to show where the warning was created)
+ GET /api/projects/a0cf17cf-f103-4b26-a58d-41196fa01937/collaboration 200 in 3.1s (next.js: 3.0s, application-code: 102ms)
+(node:10252) ExperimentalWarning: SQLite is an experimental feature and might change at any time
+(Use `node --trace-warnings ...` to show where the warning was created)
+ GET /api/agents 200 in 66ms (next.js: 11ms, application-code: 55ms)
+ GET /api/projects/a0cf17cf-f103-4b26-a58d-41196fa01937/members 200 in 2.1s (next.js: 1701ms, application-code: 364ms)
+ GET /api/projects/a0cf17cf-f103-4b26-a58d-41196fa01937/mission 200 in 2.1s (next.js: 1693ms, application-code: 363ms)
+ GET /api/projects/a0cf17cf-f103-4b26-a58d-41196fa01937/memories?includeInactive=0 200 in 2.1s (next.js: 1701ms, application-code: 362ms)
+ GET /api/projects/a0cf17cf-f103-4b26-a58d-41196fa01937/workspace 200 in 2.1s (next.js: 1700ms, application-code: 362ms)
+ GET /api/projects/a0cf17cf-f103-4b26-a58d-41196fa01937/executions 200 in 2.1s (next.js: 1691ms, application-code: 363ms)
+ GET /api/projects/a0cf17cf-f103-4b26-a58d-41196fa01937/collaboration 200 in 164ms (next.js: 28ms, application-code: 137ms)
+ GET /api/projects/a0cf17cf-f103-4b26-a58d-41196fa01937/members 200 in 63ms (next.js: 4ms, application-code: 59ms)
+ GET /api/projects/a0cf17cf-f103-4b26-a58d-41196fa01937/mission 200 in 70ms (next.js: 5ms, application-code: 65ms)
+ PUT /api/projects/a0cf17cf-f103-4b26-a58d-41196fa01937/workspace 200 in 112ms (next.js: 5ms, application-code: 107ms)
+ GET /api/projects/a0cf17cf-f103-4b26-a58d-41196fa01937/collaboration 200 in 139ms (next.js: 4ms, application-code: 135ms)
+ GET /api/projects/a0cf17cf-f103-4b26-a58d-41196fa01937/members 200 in 78ms (next.js: 3ms, application-code: 75ms)
+ GET /api/projects/a0cf17cf-f103-4b26-a58d-41196fa01937/mission 200 in 80ms (next.js: 5ms, application-code: 75ms)
+ GET /api/projects/a0cf17cf-f103-4b26-a58d-41196fa01937/collaboration 200 in 145ms (next.js: 4ms, application-code: 141ms)
+ PUT /api/projects/a0cf17cf-f103-4b26-a58d-41196fa01937/members 200 in 484ms (next.js: 98ms, application-code: 385ms)
+(node:5144) ExperimentalWarning: SQLite is an experimental feature and might change at any time
+(Use `node --trace-warnings ...` to show where the warning was created)
+(node:9612) ExperimentalWarning: SQLite is an experimental feature and might change at any time
+(Use `node --trace-warnings ...` to show where the warning was created)
+ GET /api/projects/a0cf17cf-f103-4b26-a58d-41196fa01937/tasks 200 in 3.6s (next.js: 3.5s, application-code: 118ms)
+(node:4000) ExperimentalWarning: SQLite is an experimental feature and might change at any time
+(Use `node --trace-warnings ...` to show where the warning was created)
+(node:13208) ExperimentalWarning: SQLite is an experimental feature and might change at any time
+(Use `node --trace-warnings ...` to show where the warning was created)
+(node:14400) ExperimentalWarning: SQLite is an experimental feature and might change at any time
+(Use `node --trace-warnings ...` to show where the warning was created)
+(node:15828) ExperimentalWarning: SQLite is an experimental feature and might change at any time
+(Use `node --trace-warnings ...` to show where the warning was created)
+ POST /api/projects/a0cf17cf-f103-4b26-a58d-41196fa01937/mission 201 in 93ms (next.js: 12ms, application-code: 81ms)
+ GET /api/projects 200 in 68ms (next.js: 8ms, application-code: 59ms)
+ GET /api/projects/a0cf17cf-f103-4b26-a58d-41196fa01937/mission 200 in 116ms (next.js: 2ms, application-code: 114ms)
+ GET /api/agents 200 in 137ms (next.js: 10ms, application-code: 127ms)
+ GET /api/projects/a0cf17cf-f103-4b26-a58d-41196fa01937/collaboration 503 in 17ms (next.js: 3ms, application-code: 14ms)
+(node:14868) ExperimentalWarning: SQLite is an experimental feature and might change at any time
+(Use `node --trace-warnings ...` to show where the warning was created)
+ GET / 200 in 365ms (next.js: 95ms, application-code: 270ms)
+(node:15956) ExperimentalWarning: SQLite is an experimental feature and might change at any time
+(Use `node --trace-warnings ...` to show where the warning was created)
+ GET /api/projects 200 in 51ms (next.js: 2ms, application-code: 49ms)
+ GET /api/agents 200 in 51ms (next.js: 2ms, application-code: 49ms)
+ GET /api/projects/a0cf17cf-f103-4b26-a58d-41196fa01937/workspace 200 in 59ms (next.js: 9ms, application-code: 50ms)
+ GET /api/projects/a0cf17cf-f103-4b26-a58d-41196fa01937/members 200 in 66ms (next.js: 9ms, application-code: 57ms)
+ GET /api/projects/a0cf17cf-f103-4b26-a58d-41196fa01937/collaboration 200 in 106ms (next.js: 9ms, application-code: 98ms)
+ GET /api/projects/a0cf17cf-f103-4b26-a58d-41196fa01937/mission 200 in 79ms (next.js: 9ms, application-code: 70ms)
+ GET /api/projects/a0cf17cf-f103-4b26-a58d-41196fa01937/executions 200 in 68ms (next.js: 13ms, application-code: 55ms)
+ GET /api/projects/a0cf17cf-f103-4b26-a58d-41196fa01937/memories?includeInactive=0 200 in 73ms (next.js: 10ms, application-code: 63ms)
+ GET /api/agents 200 in 67ms (next.js: 3ms, application-code: 64ms)
+ GET /api/projects/a0cf17cf-f103-4b26-a58d-41196fa01937/tasks 200 in 72ms (next.js: 10ms, application-code: 63ms)
+ GET /api/projects/a0cf17cf-f103-4b26-a58d-41196fa01937/workspace 200 in 57ms (next.js: 3ms, application-code: 55ms)
+ GET /api/projects/a0cf17cf-f103-4b26-a58d-41196fa01937/members 200 in 59ms (next.js: 3ms, application-code: 55ms)
+ GET /api/projects/a0cf17cf-f103-4b26-a58d-41196fa01937/collaboration 200 in 110ms (next.js: 2ms, application-code: 107ms)
+ GET /api/projects/a0cf17cf-f103-4b26-a58d-41196fa01937/mission 200 in 87ms (next.js: 5ms, application-code: 82ms)
+ GET /api/projects/a0cf17cf-f103-4b26-a58d-41196fa01937/executions 200 in 91ms (next.js: 4ms, application-code: 87ms)
+ GET /api/projects/a0cf17cf-f103-4b26-a58d-41196fa01937/memories?includeInactive=0 200 in 76ms (next.js: 5ms, application-code: 70ms)
+(node:15616) ExperimentalWarning: SQLite is an experimental feature and might change at any time
+(Use `node --trace-warnings ...` to show where the warning was created)
+ GET /api/projects/a0cf17cf-f103-4b26-a58d-41196fa01937/members 200 in 67ms (next.js: 4ms, application-code: 64ms)
+ GET /api/projects/a0cf17cf-f103-4b26-a58d-41196fa01937/collaboration 200 in 129ms (next.js: 4ms, application-code: 125ms)
+ GET /api/projects/a0cf17cf-f103-4b26-a58d-41196fa01937/mission 200 in 53ms (next.js: 2ms, application-code: 51ms)
+(node:9240) ExperimentalWarning: SQLite is an experimental feature and might change at any time
+(Use `node --trace-warnings ...` to show where the warning was created)
+(node:14532) ExperimentalWarning: SQLite is an experimental feature and might change at any time
+(Use `node --trace-warnings ...` to show where the warning was created)
+ GET /api/projects/a0cf17cf-f103-4b26-a58d-41196fa01937/members 200 in 77ms (next.js: 10ms, application-code: 68ms)
+ GET /api/projects/a0cf17cf-f103-4b26-a58d-41196fa01937/collaboration?messageAfter=2&eventAfter=2 200 in 123ms (next.js: 12ms, application-code: 111ms)
+(node:13680) ExperimentalWarning: SQLite is an experimental feature and might change at any time
+(Use `node --trace-warnings ...` to show where the warning was created)
+(node:9680) ExperimentalWarning: SQLite is an experimental feature and might change at any time
+(Use `node --trace-warnings ...` to show where the warning was created)
+ GET /api/projects/a0cf17cf-f103-4b26-a58d-41196fa01937/mission 200 in 81ms (next.js: 26ms, application-code: 54ms)
+ GET /api/projects/a0cf17cf-f103-4b26-a58d-41196fa01937/members 200 in 60ms (next.js: 2ms, application-code: 58ms)
+(node:11912) ExperimentalWarning: SQLite is an experimental feature and might change at any time
+(Use `node --trace-warnings ...` to show where the warning was created)
+(node:10236) ExperimentalWarning: SQLite is an experimental feature and might change at any time
+(Use `node --trace-warnings ...` to show where the warning was created)
+ GET /api/projects/a0cf17cf-f103-4b26-a58d-41196fa01937/collaboration?messageAfter=2&eventAfter=2 200 in 104ms (next.js: 3ms, application-code: 101ms)
+(node:12604) ExperimentalWarning: SQLite is an experimental feature and might change at any time
+(Use `node --trace-warnings ...` to show where the warning was created)
+(node:17104) ExperimentalWarning: SQLite is an experimental feature and might change at any time
+(Use `node --trace-warnings ...` to show where the warning was created)
+(node:5016) ExperimentalWarning: SQLite is an experimental feature and might change at any time
+(Use `node --trace-warnings ...` to show where the warning was created)
+ GET /api/projects/a0cf17cf-f103-4b26-a58d-41196fa01937/collaboration?messageAfter=2&eventAfter=2 200 in 1569ms (next.js: 1461ms, application-code: 108ms)
+ GET /api/projects/a0cf17cf-f103-4b26-a58d-41196fa01937/collaboration?messageAfter=2&eventAfter=2 200 in 119ms (next.js: 3ms, application-code: 116ms)
+ GET /api/projects/a0cf17cf-f103-4b26-a58d-41196fa01937/validation-policy/revisions?limit=20 200 in 2.7s (next.js: 2.6s, application-code: 53ms)
+(node:11124) ExperimentalWarning: SQLite is an experimental feature and might change at any time
+(Use `node --trace-warnings ...` to show where the warning was created)
+ GET /api/projects/a0cf17cf-f103-4b26-a58d-41196fa01937/validation-policy/revisions?limit=20 200 in 64ms (next.js: 9ms, application-code: 55ms)
+ GET /api/projects/a0cf17cf-f103-4b26-a58d-41196fa01937/validation-policy 200 in 2.8s (next.js: 2.8s, application-code: 54ms)
+(node:2164) ExperimentalWarning: SQLite is an experimental feature and might change at any time
+(Use `node --trace-warnings ...` to show where the warning was created)
+(node:16716) ExperimentalWarning: SQLite is an experimental feature and might change at any time
+(Use `node --trace-warnings ...` to show where the warning was created)
+ GET /api/projects/a0cf17cf-f103-4b26-a58d-41196fa01937/validation-policy 200 in 61ms (next.js: 9ms, application-code: 52ms)
+ GET /api/projects/a0cf17cf-f103-4b26-a58d-41196fa01937/collaboration?messageAfter=2&eventAfter=2 200 in 133ms (next.js: 9ms, application-code: 124ms)
+ PUT /api/projects/a0cf17cf-f103-4b26-a58d-41196fa01937/validation-policy 200 in 83ms (next.js: 3ms, application-code: 80ms)
+(node:13324) ExperimentalWarning: SQLite is an experimental feature and might change at any time
+(Use `node --trace-warnings ...` to show where the warning was created)
+(node:15332) ExperimentalWarning: SQLite is an experimental feature and might change at any time
+(Use `node --trace-warnings ...` to show where the warning was created)
+(node:8324) ExperimentalWarning: SQLite is an experimental feature and might change at any time
+(Use `node --trace-warnings ...` to show where the warning was created)
+ GET /api/projects/a0cf17cf-f103-4b26-a58d-41196fa01937/collaboration?messageAfter=2&eventAfter=2 200 in 1059ms (next.js: 881ms, application-code: 178ms)
+ GET /api/projects/a0cf17cf-f103-4b26-a58d-41196fa01937/executions 200 in 1484ms (next.js: 1305ms, application-code: 178ms)
+(node:17172) ExperimentalWarning: SQLite is an experimental feature and might change at any time
+(Use `node --trace-warnings ...` to show where the warning was created)
+ GET /api/executions/97f4dc8a-8ddf-4b06-b037-c031262b293c 200 in 2.8s (next.js: 2.5s, application-code: 369ms)
+ GET /api/executions/d66161e7-fc35-49a2-8a82-e7497c00b1c1 200 in 2.8s (next.js: 2.5s, application-code: 369ms)
+ GET /api/executions/97f4dc8a-8ddf-4b06-b037-c031262b293c 200 in 1271ms (next.js: 902ms, application-code: 369ms)
+ GET /api/executions/d66161e7-fc35-49a2-8a82-e7497c00b1c1 200 in 1268ms (next.js: 899ms, application-code: 369ms)
+ GET /api/executions/97f4dc8a-8ddf-4b06-b037-c031262b293c 200 in 1265ms (next.js: 896ms, application-code: 369ms)
+ GET /api/executions/d66161e7-fc35-49a2-8a82-e7497c00b1c1 200 in 1255ms (next.js: 886ms, application-code: 369ms)
+(node:4532) ExperimentalWarning: SQLite is an experimental feature and might change at any time
+(Use `node --trace-warnings ...` to show where the warning was created)
+(node:5968) ExperimentalWarning: SQLite is an experimental feature and might change at any time
+(Use `node --trace-warnings ...` to show where the warning was created)
+ GET /api/projects/a0cf17cf-f103-4b26-a58d-41196fa01937/collaboration?messageAfter=2&eventAfter=2 200 in 1483ms (next.js: 1232ms, application-code: 250ms)
+ GET /api/executions/97f4dc8a-8ddf-4b06-b037-c031262b293c 200 in 1418ms (next.js: 1167ms, application-code: 251ms)
+ GET /api/executions/d66161e7-fc35-49a2-8a82-e7497c00b1c1 200 in 1405ms (next.js: 1154ms, application-code: 251ms)
+ GET /api/projects/a0cf17cf-f103-4b26-a58d-41196fa01937/collaboration?messageAfter=2&eventAfter=2 200 in 123ms (next.js: 3ms, application-code: 120ms)
+(node:3904) ExperimentalWarning: SQLite is an experimental feature and might change at any time
+(Use `node --trace-warnings ...` to show where the warning was created)
+(node:14944) ExperimentalWarning: SQLite is an experimental feature and might change at any time
+(Use `node --trace-warnings ...` to show where the warning was created)
+(node:5664) ExperimentalWarning: SQLite is an experimental feature and might change at any time
+(Use `node --trace-warnings ...` to show where the warning was created)
+
+    at file:///D:/cool-ai/tests/execution-browser-smoke.mjs:1048:13
+
+Node.js v24.14.0
+# exit: 1

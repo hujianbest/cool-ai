@@ -1,0 +1,108 @@
+# hf-gate-run
+# label: t20-red
+# command: cmd /c npm test -- tests/execution-conflicts.test.ts
+# started: 2026-07-30T06:52:11+00:00
+
+> collaboration-cockpit@0.1.0 test
+> vitest run tests/execution-conflicts.test.ts
+
+
+ RUN  v4.1.10 D:/cool-ai
+
+(node:11980) ExperimentalWarning: SQLite is an experimental feature and might change at any time
+(Use `node --trace-warnings ...` to show where the warning was created)
+ ❯ tests/execution-conflicts.test.ts (6 tests | 6 failed) 164ms
+     × detects owner/program edits by identity and hash without overwriting current state 9ms
+     × treats delete/recreate with identical bytes as stale and ignores unrelated paths 1ms
+     × normalizes Unicode, separators, dot segments, and platform casing deterministically 1ms
+     × conflicts both executions on the same normalized path even for identical output 63ms
+     × allows non-overlapping executions to stage and merge independently 43ms
+     × serializes parallel reservations so same-path races cannot both succeed 45ms
+
+⎯⎯⎯⎯⎯⎯⎯ Failed Tests 6 ⎯⎯⎯⎯⎯⎯⎯
+
+ FAIL  tests/execution-conflicts.test.ts > execution canonical path conflicts > detects owner/program edits by identity and hash without overwriting current state
+Error: Canonical path comparison is not implemented.
+ ❯ compareCanonicalPathStates src/server/execution/execution-conflicts.ts:30:9
+     28|   }>;
+     29| } {
+     30|   throw new Error("Canonical path comparison is not implemented.");
+       |         ^
+     31| }
+     32|
+ ❯ tests/execution-conflicts.test.ts:114:20
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[1/6]⎯
+
+ FAIL  tests/execution-conflicts.test.ts > execution canonical path conflicts > treats delete/recreate with identical bytes as stale and ignores unrelated paths
+Error: Canonical path comparison is not implemented.
+ ❯ compareCanonicalPathStates src/server/execution/execution-conflicts.ts:30:9
+     28|   }>;
+     29| } {
+     30|   throw new Error("Canonical path comparison is not implemented.");
+       |         ^
+     31| }
+     32|
+ ❯ tests/execution-conflicts.test.ts:140:12
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[2/6]⎯
+
+ FAIL  tests/execution-conflicts.test.ts > execution canonical path conflicts > normalizes Unicode, separators, dot segments, and platform casing deterministically
+Error: Canonical path normalization is not implemented.
+ ❯ normalizeCanonicalRelativePath src/server/execution/execution-conflicts.ts:14:9
+     12|   _platform: NodeJS.Platform = process.platform,
+     13| ): string {
+     14|   throw new Error("Canonical path normalization is not implemented.");
+       |         ^
+     15| }
+     16|
+ ❯ tests/execution-conflicts.test.ts:156:12
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[3/6]⎯
+
+ FAIL  tests/execution-conflicts.test.ts > execution canonical path conflicts > conflicts both executions on the same normalized path even for identical output
+Error: Execution staged path reservation is not implemented.
+ ❯ reserveExecutionStagedPaths src/server/execution/execution-conflicts.ts:48:9
+     46|   pathKeys: string[];
+     47| } {
+     48|   throw new Error("Execution staged path reservation is not implemente…
+       |         ^
+     49| }
+     50|
+ ❯ tests/execution-conflicts.test.ts:169:22
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[4/6]⎯
+
+ FAIL  tests/execution-conflicts.test.ts > execution canonical path conflicts > allows non-overlapping executions to stage and merge independently
+Error: Execution staged path reservation is not implemented.
+ ❯ reserveExecutionStagedPaths src/server/execution/execution-conflicts.ts:48:9
+     46|   pathKeys: string[];
+     47| } {
+     48|   throw new Error("Execution staged path reservation is not implemente…
+       |         ^
+     49| }
+     50|
+ ❯ tests/execution-conflicts.test.ts:222:14
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[5/6]⎯
+
+ FAIL  tests/execution-conflicts.test.ts > execution canonical path conflicts > serializes parallel reservations so same-path races cannot both succeed
+Error: Execution staged path reservation is not implemented.
+ ❯ reserveExecutionStagedPaths src/server/execution/execution-conflicts.ts:48:9
+     46|   pathKeys: string[];
+     47| } {
+     48|   throw new Error("Execution staged path reservation is not implemente…
+       |         ^
+     49| }
+     50|
+ ❯ tests/execution-conflicts.test.ts:258:27
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[6/6]⎯
+
+
+ Test Files  1 failed (1)
+      Tests  6 failed (6)
+   Start at  14:52:12
+   Duration  2.29s (transform 60ms, setup 357ms, import 43ms, tests 164ms, environment 1.45s)
+
+# exit: 1

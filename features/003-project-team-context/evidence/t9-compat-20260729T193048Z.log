@@ -1,0 +1,1842 @@
+# hf-gate-run
+# label: t9-compat
+# command: cmd /c npm test -- tests/workspace-slice.test.tsx tests/project-panel.test.tsx tests/task-flow.test.tsx tests/cockpit-layout.test.tsx tests/team-mobile-paths.test.tsx
+# started: 2026-07-29T19:30:48+00:00
+
+> collaboration-cockpit@0.1.0 test
+> vitest run tests/workspace-slice.test.tsx tests/project-panel.test.tsx tests/task-flow.test.tsx tests/cockpit-layout.test.tsx tests/team-mobile-paths.test.tsx
+
+
+ RUN  v4.1.10 D:/cool-ai
+
+(node:3788) ExperimentalWarning: SQLite is an experimental feature and might change at any time
+(Use `node --trace-warnings ...` to show where the warning was created)
+ ❯ tests/workspace-slice.test.tsx (1 test | 1 failed) 350ms
+     × validates a real directory, persists its canonical path, and reloads it 348ms
+stderr | tests/project-panel.test.tsx > ProjectPanel > loads existing projects
+An error occurred in the <MembersSetup> component.
+
+Consider adding an error boundary to your tree to customize error handling behavior.
+Visit https://react.dev/link/error-boundaries to learn more about error boundaries.
+
+An error occurred in the <TaskPanel> component.
+
+Consider adding an error boundary to your tree to customize error handling behavior.
+Visit https://react.dev/link/error-boundaries to learn more about error boundaries.
+
+
+stderr | tests/cockpit-layout.test.tsx > desktop collaboration cockpit > presents project navigation, task flow, and current context from real data
+An error occurred in the <MembersSetup> component.
+
+Consider adding an error boundary to your tree to customize error handling behavior.
+Visit https://react.dev/link/error-boundaries to learn more about error boundaries.
+
+An error occurred in the <TaskPanel> component.
+
+Consider adding an error boundary to your tree to customize error handling behavior.
+Visit https://react.dev/link/error-boundaries to learn more about error boundaries.
+
+
+ ❯ tests/cockpit-layout.test.tsx (1 test | 1 failed) 1215ms
+     × presents project navigation, task flow, and current context from real data 1213ms
+stderr | tests/task-flow.test.tsx > task event flow > shows loading, then restores persisted task events and result
+An error occurred in the <MembersSetup> component.
+
+Consider adding an error boundary to your tree to customize error handling behavior.
+Visit https://react.dev/link/error-boundaries to learn more about error boundaries.
+
+An error occurred in the <TaskPanel> component.
+
+Consider adding an error boundary to your tree to customize error handling behavior.
+Visit https://react.dev/link/error-boundaries to learn more about error boundaries.
+
+
+stderr | tests/task-flow.test.tsx > task event flow > shows an actionable empty state when the project has no tasks
+An error occurred in the <MembersSetup> component.
+
+Consider adding an error boundary to your tree to customize error handling behavior.
+Visit https://react.dev/link/error-boundaries to learn more about error boundaries.
+
+An error occurred in the <TaskPanel> component.
+
+Consider adding an error boundary to your tree to customize error handling behavior.
+Visit https://react.dev/link/error-boundaries to learn more about error boundaries.
+
+
+stderr | tests/project-panel.test.tsx > ProjectPanel > creates and displays a project
+An error occurred in the <MembersSetup> component.
+
+Consider adding an error boundary to your tree to customize error handling behavior.
+Visit https://react.dev/link/error-boundaries to learn more about error boundaries.
+
+An error occurred in the <TaskPanel> component.
+
+Consider adding an error boundary to your tree to customize error handling behavior.
+Visit https://react.dev/link/error-boundaries to learn more about error boundaries.
+
+
+ ❯ tests/project-panel.test.tsx (3 tests | 2 failed) 1540ms
+     × loads existing projects 246ms
+     × creates and displays a project 1146ms
+stderr | tests/task-flow.test.tsx > task event flow > offers retry after a load error
+An error occurred in the <MembersSetup> component.
+
+Consider adding an error boundary to your tree to customize error handling behavior.
+Visit https://react.dev/link/error-boundaries to learn more about error boundaries.
+
+An error occurred in the <TaskPanel> component.
+
+Consider adding an error boundary to your tree to customize error handling behavior.
+Visit https://react.dev/link/error-boundaries to learn more about error boundaries.
+
+
+stderr | tests/task-flow.test.tsx > task event flow > renders a persisted failed event and preserves the goal after execution fails
+An error occurred in the <MembersSetup> component.
+
+Consider adding an error boundary to your tree to customize error handling behavior.
+Visit https://react.dev/link/error-boundaries to learn more about error boundaries.
+
+
+ ❯ tests/task-flow.test.tsx (5 tests | 5 failed) 3455ms
+     × shows loading, then restores persisted task events and result 1046ms
+     × shows an actionable empty state when the project has no tasks 23ms
+     × calls create, start, and execute in order while rendering each persisted state 1293ms
+     × offers retry after a load error 1010ms
+     × renders a persisted failed event and preserves the goal after execution fails 81ms
+
+⎯⎯⎯⎯⎯⎯⎯ Failed Tests 9 ⎯⎯⎯⎯⎯⎯⎯
+
+ FAIL  tests/cockpit-layout.test.tsx > desktop collaboration cockpit > presents project navigation, task flow, and current context from real data
+TestingLibraryElementError: Unable to find an element with the text: 任务已完成。. This could be because the text is broken up by multiple elements. In this case, you can provide a function for your text matcher to make your matcher more flexible.
+
+Ignored nodes: comments, script, style
+[36m<main[39m
+  [33maria-label[39m=[32m"任务事件流"[39m
+  [33mclass[39m=[32m"cockpit-flow"[39m
+  [33mdata-open[39m=[32m"false"[39m
+  [33mdata-testid[39m=[32m"editor-surface"[39m
+  [33mid[39m=[32m"task-editor-surface"[39m
+[36m>[39m
+  [36m<span[39m
+    [33mclass[39m=[32m"sr-only"[39m
+    [33mid[39m=[32m"task-editor-label"[39m
+  [36m>[39m
+    [0m任务编辑[0m
+  [36m</span>[39m
+  [36m<button[39m
+    [33maria-label[39m=[32m"关闭任务编辑"[39m
+    [33mclass[39m=[32m"drawer-close"[39m
+    [33mdata-dialog-close[39m=[32m"true"[39m
+    [33mtabindex[39m=[32m"-1"[39m
+    [33mtype[39m=[32m"button"[39m
+  [36m>[39m
+    [0m关闭[0m
+  [36m</button>[39m
+  [36m<div[39m
+    [33mclass[39m=[32m"panel-heading"[39m
+  [36m>[39m
+    [36m<span[39m
+      [33maria-hidden[39m=[32m"true"[39m
+      [33mclass[39m=[32m"agent-mark"[39m
+    [36m>[39m
+      [0mA[0m
+    [36m</span>[39m
+    [36m<div>[39m
+      [36m<p[39m
+        [33mclass[39m=[32m"eyebrow"[39m
+      [36m>[39m
+        [0m确定性示例 Agent[0m
+      [36m</p>[39m
+      [36m<h2[39m
+        [33mid[39m=[32m"tasks-title"[39m
+        [33mtabindex[39m=[32m"-1"[39m
+      [36m>[39m
+        [0mLaunch plan[0m
+      [36m</h2>[39m
+    [36m</div>[39m
+  [36m</div>[39m
+  [36m<form[39m
+    [33mclass[39m=[32m"composer"[39m
+  [36m>[39m
+    [36m<div[39m
+      [33mclass[39m=[32m"form-row"[39m
+    [36m>[39m
+      [36m<div[39m
+        [33mclass[39m=[32m"form-field"[39m
+      [36m>[39m
+        [36m<label[39m
+          [33mfor[39m=[32m"task-goal"[39m
+        [36m>[39m
+          [0m任务目标[0m
+        [36m</label>[39m
+        [36m<input[39m
+          [33mid[39m=[32m"task-goal"[39m
+          [33mname[39m=[32m"goal"[39m
+          [33mvalue[39m=[32m""[39m
+        [36m/>[39m
+      [36m</div>[39m
+      [36m<button[39m
+        [33mdisabled[39m=[32m""[39m
+        [33mtype[39m=[32m"submit"[39m
+      [36m>[39m
+        [0m运行任务[0m
+      [36m</button>[39m
+    [36m</div>[39m
+  [36m</form>[39m
+  [36m<p[39m
+    [33mclass[39m=[32m"state-message"[39m
+  [36m>[39m
+    [0m暂无任务。输入目标即可运行示例 Agent。[0m
+  [36m</p>[39m
+  [36m<p[39m
+    [33maria-atomic[39m=[32m"true"[39m
+    [33maria-live[39m=[32m"polite"[39m
+    [33mclass[39m=[32m"muted"[39m
+    [33mrole[39m=[32m"status"[39m
+  [36m/>[39m
+[36m</main>[39m
+
+Ignored nodes: comments, script, style
+[36m<main[39m
+  [33maria-label[39m=[32m"任务事件流"[39m
+  [33mclass[39m=[32m"cockpit-flow"[39m
+  [33mdata-open[39m=[32m"false"[39m
+  [33mdata-testid[39m=[32m"editor-surface"[39m
+  [33mid[39m=[32m"task-editor-surface"[39m
+[36m>[39m
+  [36m<span[39m
+    [33mclass[39m=[32m"sr-only"[39m
+    [33mid[39m=[32m"task-editor-label"[39m
+  [36m>[39m
+    [0m任务编辑[0m
+  [36m</span>[39m
+  [36m<button[39m
+    [33maria-label[39m=[32m"关闭任务编辑"[39m
+    [33mclass[39m=[32m"drawer-close"[39m
+    [33mdata-dialog-close[39m=[32m"true"[39m
+    [33mtabindex[39m=[32m"-1"[39m
+    [33mtype[39m=[32m"button"[39m
+  [36m>[39m
+    [0m关闭[0m
+  [36m</button>[39m
+  [36m<div[39m
+    [33mclass[39m=[32m"panel-heading"[39m
+  [36m>[39m
+    [36m<span[39m
+      [33maria-hidden[39m=[32m"true"[39m
+      [33mclass[39m=[32m"agent-mark"[39m
+    [36m>[39m
+      [0mA[0m
+    [36m</span>[39m
+    [36m<div>[39m
+      [36m<p[39m
+        [33mclass[39m=[32m"eyebrow"[39m
+      [36m>[39m
+        [0m确定性示例 Agent[0m
+      [36m</p>[39m
+      [36m<h2[39m
+        [33mid[39m=[32m"tasks-title"[39m
+        [33mtabindex[39m=[32m"-1"[39m
+      [36m>[39m
+        [0mLaunch plan[0m
+      [36m</h2>[39m
+    [36m</div>[39m
+  [36m</div>[39m
+  [36m<form[39m
+    [33mclass[39m=[32m"composer"[39m
+  [36m>[39m
+    [36m<div[39m
+      [33mclass[39m=[32m"form-row"[39m
+    [36m>[39m
+      [36m<div[39m
+        [33mclass[39m=[32m"form-field"[39m
+      [36m>[39m
+        [36m<label[39m
+          [33mfor[39m=[32m"task-goal"[39m
+        [36m>[39m
+          [0m任务目标[0m
+        [36m</label>[39m
+        [36m<input[39m
+          [33mid[39m=[32m"task-goal"[39m
+          [33mname[39m=[32m"goal"[39m
+          [33mvalue[39m=[32m""[39m
+        [36m/>[39m
+      [36m</div>[39m
+      [36m<button[39m
+        [33mdisabled[39m=[32m""[39m
+        [33mtype[39m=[32m"submit"[39m
+      [36m>[39m
+        [0m运行任务[0m
+      [36m</button>[39m
+    [36m</div>[39m
+  [36m</form>[39m
+  [36m<p[39m
+    [33mclass[39m=[32m"state-message"[39m
+  [36m>[39m
+    [0m暂无任务。输入目标即可运行示例 Agent。[0m
+  [36m</p>[39m
+  [36m<p[39m
+    [33maria-atomic[39m=[32m"true"[39m
+    [33maria-live[39m=[32m"polite"[39m
+    [33mclass[39m=[32m"muted"[39m
+    [33mrole[39m=[32m"status"[39m
+  [36m/>[39m
+[36m</main>[39m
+ ❯ waitForWrapper node_modules/@testing-library/dom/dist/wait-for.js:163:27
+ ❯ node_modules/@testing-library/dom/dist/query-helpers.js:86:33
+ ❯ tests/cockpit-layout.test.tsx:86:31
+     84|       "page",
+     85|     );
+     86|     expect(await within(flow).findByText("任务已完成。")).toBeInTheDocument(…
+       |                               ^
+     87|     expect(within(flow).getByText("已完成", { selector: ".status-label" }…
+     88|     expect(within(context).getByText("Prepare launch notes")).toBeInTh…
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[1/9]⎯
+
+ FAIL  tests/project-panel.test.tsx > ProjectPanel > loads existing projects
+Error: expect(element).toBeInTheDocument()
+
+element could not be found in the document
+ ❯ tests/project-panel.test.tsx:28:77
+     26|
+     27|     expect(screen.getAllByText("正在加载项目…")).toHaveLength(2);
+     28|     expect(await screen.findByRole("button", { name: "Existing project…
+       |                                                                             ^
+     29|   });
+     30|
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[2/9]⎯
+
+ FAIL  tests/project-panel.test.tsx > ProjectPanel > creates and displays a project
+TestingLibraryElementError: Unable to find role="heading" and name "Launch plan"
+
+Ignored nodes: comments, script, style
+[36m<body>[39m
+  [36m<div />[39m
+[36m</body>[39m
+
+Ignored nodes: comments, script, style
+[36m<body>[39m
+  [36m<div />[39m
+[36m</body>[39m
+ ❯ waitForWrapper node_modules/@testing-library/dom/dist/wait-for.js:163:27
+ ❯ node_modules/@testing-library/dom/dist/query-helpers.js:86:33
+ ❯ tests/project-panel.test.tsx:52:25
+     50|     await user.click(screen.getByRole("button", { name: "创建项目" }));
+     51|
+     52|     expect(await screen.findByRole("heading", { level: 2, name: "Launc…
+       |                         ^
+     53|     expect(fetchMock).toHaveBeenCalledWith(
+     54|       "/api/projects",
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[3/9]⎯
+
+ FAIL  tests/task-flow.test.tsx > task event flow > shows loading, then restores persisted task events and result
+TestingLibraryElementError: Unable to find an element with the text: 正在加载任务历史…. This could be because the text is broken up by multiple elements. In this case, you can provide a function for your text matcher to make your matcher more flexible.
+
+Ignored nodes: comments, script, style
+[36m<body>[39m
+  [36m<div />[39m
+[36m</body>[39m
+
+Ignored nodes: comments, script, style
+[36m<body>[39m
+  [36m<div />[39m
+[36m</body>[39m
+ ❯ waitForWrapper node_modules/@testing-library/dom/dist/wait-for.js:163:27
+ ❯ node_modules/@testing-library/dom/dist/query-helpers.js:86:33
+ ❯ tests/task-flow.test.tsx:64:25
+     62|     render(<ProjectPanel />);
+     63|
+     64|     expect(await screen.findByText("正在加载任务历史…")).toBeInTheDocument();
+       |                         ^
+     65|     loaded.resolve(
+     66|       Response.json({
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[4/9]⎯
+
+ FAIL  tests/task-flow.test.tsx > task event flow > shows an actionable empty state when the project has no tasks
+Error: expect(element).toBeInTheDocument()
+
+element could not be found in the document
+ ❯ tests/task-flow.test.tsx:92:63
+     90|     render(<ProjectPanel />);
+     91|
+     92|     expect(await screen.findByText("暂无任务。输入目标即可运行示例 Agent。")).toBeInTh…
+       |                                                               ^
+     93|     expect(screen.getByLabelText("任务目标")).toBeEnabled();
+     94|     expect(screen.getByRole("button", { name: "运行任务" })).toBeDisabled(…
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[5/9]⎯
+
+ FAIL  tests/task-flow.test.tsx > task event flow > calls create, start, and execute in order while rendering each persisted state
+TestingLibraryElementError: Unable to find an element with the text: 任务已排队。. This could be because the text is broken up by multiple elements. In this case, you can provide a function for your text matcher to make your matcher more flexible.
+
+Ignored nodes: comments, script, style
+[36m<body>[39m
+  [36m<div>[39m
+    [36m<div[39m
+      [33mclass[39m=[32m"collaboration-cockpit"[39m
+      [33mdata-testid[39m=[32m"collaboration-cockpit"[39m
+    [36m>[39m
+      [36m<div[39m
+        [33maria-label[39m=[32m"驾驶舱面板"[39m
+        [33mclass[39m=[32m"mobile-toolbar"[39m
+        [33mrole[39m=[32m"toolbar"[39m
+      [36m>[39m
+        [36m<button[39m
+          [33maria-controls[39m=[32m"project-navigation-drawer"[39m
+          [33maria-expanded[39m=[32m"false"[39m
+          [33maria-label[39m=[32m"打开项目导航"[39m
+          [33mtype[39m=[32m"button"[39m
+        [36m>[39m
+          [0m项目[0m
+        [36m</button>[39m
+        [36m<button[39m
+          [33maria-controls[39m=[32m"task-editor-surface"[39m
+          [33maria-expanded[39m=[32m"false"[39m
+          [33maria-label[39m=[32m"打开编辑"[39m
+          [33mtype[39m=[32m"button"[39m
+        [36m>[39m
+          [0m编辑[0m
+        [36m</button>[39m
+        [36m<button[39m
+          [33maria-controls[39m=[32m"task-context-drawer"[39m
+          [33maria-expanded[39m=[32m"false"[39m
+          [33maria-label[39m=[32m"打开当前任务上下文"[39m
+          [33mtype[39m=[32m"button"[39m
+        [36m>[39m
+          [0m上下文[0m
+        [36m</button>[39m
+      [36m</div>[39m
+      [36m<aside[39m
+        [33maria-label[39m=[32m"项目导航"[39m
+        [33mclass[39m=[32m"cockpit-sidebar"[39m
+        [33mdata-open[39m=[32m"false"[39m
+        [33mdata-testid[39m=[32m"project-surface"[39m
+        [33mid[39m=[32m"project-navigation-drawer"[39m
+      [36m>[39m
+        [36m<span[39m
+          [33mclass[39m=[32m"sr-only"[39m
+          [33mid[39m=[32m"project-navigation-label"[39m
+        [36m>[39m
+          [0m项目导航[0m
+        [36m</span>[39m
+        [36m<button[39m
+          [33maria-label[39m=[32m"关闭项目导航"[39m
+          [33mclass[39m=[32m"drawer-close"[39m
+          [33mtabindex[39m=[32m"-1"[39m
+          [33mtype[39m=[32m"button"[39m
+        [36m>[39m
+          [0m关闭[0m
+        [36m</button>[39m
+        [36m<div[39m
+          [33mclass[39m=[32m"product-identity"[39m
+        [36m>[39m
+          [36m<span[39m
+            [33maria-hidden[39m=[32m"true"[39m
+            [33mclass[39m=[32m"product-mark"[39m
+          [36m>[39m
+            [0mC[0m
+          [36m</span>[39m
+          [36m<div>[39m
+            [36m<p[39m
+              [33mclass[39m=[32m"eyebrow"[39m
+            [36m>[39m
+              [0m协作驾驶舱[0m
+            [36m</p>[39m
+            [36m<h1>[39m
+              [0mCool AI[0m
+            [36m</h1>[39m
+          [36m</div>[39m
+        [36m</div>[39m
+        [36m<nav[39m
+          [33maria-label[39m=[32m"主导航"[39m
+        [36m>[39m
+          [36m<ul[39m
+            [33mclass[39m=[32m"project-list"[39m
+          [36m>[39m
+            [36m<li>[39m
+              [36m<a[39m
+                [33maria-current[39m=[32m"page"[39m
+                [33mhref[39m=[32m"/"[39m
+              [36m>[39m
+                [0m工作[0m
+              [36m</a>[39m
+            [36m</li>[39m
+            [36m<li>[39m
+              [36m<a[39m
+                [33mhref[39m=[32m"/team"[39m
+              [36m>[39m
+                [0m团队[0m
+              [36m</a>[39m
+            [36m</li>[39m
+          [36m</ul>[39m
+        [36m</nav>[39m
+        [36m<section[39m
+          [33maria-labelledby[39m=[32m"projects-title"[39m
+          [33mclass[39m=[32m"stack"[39m
+        [36m>[39m
+          [36m<h2[39m
+            [33mid[39m=[32m"projects-title"[39m
+          [36m>[39m
+            [0m项目[0m
+          [36m</h2>[39m
+          [36m<form[39m
+            [33mclass[39m=[32m"stack"[39m
+          [36m>[39m
+            [36m<div[39m
+              [33mclass[39m=[32m"form-field"[39m
+            [36m>[39m
+              [36m<label[39m
+                [33mfor[39m=[32m"project-name"[39m
+              [36m>[39m
+                [0m项目名称[0m
+              [36m</label>[39m
+              [36m<input[39m
+                [33mid[39m=[32m"project-name"[39m
+                [33mname[39m=[32m"name"[39m
+                [33mvalue[39m=[32m""[39m
+              [36m/>[39m
+            [36m</div>[39m
+            [36m<button[39m
+              [33mtype[39m=[32m"submit"[39m
+            [36m>[39m
+              [0m创建项目[0m
+            [36m</button>[39m
+          [36m</form>[39m
+          [36m<nav[39m
+            [33maria-label[39m=[32m"项目"[39m
+          [36m>[39m
+            [36m<ul[39m
+              [33mclass[39m=[32m"project-list"[39m
+            [36m>[39m
+              [36m<li>[39m
+                [36m<button[39m
+                  [33maria-current[39m=[32m"page"[39m
+                  [33mtype[39m=[32m"button"[39m
+                [36m>[39m
+                  [0mLaunch plan[0m
+                [36m</button>[39m
+              [36m</li>[39m
+            [36m</ul>[39m
+          [36m</nav>[39m
+        [36m</section>[39m
+        [36m<section[39m
+          [33maria-labelledby[39m=[32m"project-setup-title-project-1"[39m
+          [33mclass[39m=[32m"stack project-setup"[39m
+        [36m>[39m
+          [36m<h2[39m
+            [33mid[39m=[32m"project-setup-title-project-1"[39m
+          [36m>[39m
+            [0m项目设置[0m
+          [36m</h2>[39m
+          [36m<section[39m
+            [33maria-labelledby[39m=[32m"workspace-title-project-1"[39m
+            [33mclass[39m=[32m"stack"[39m
+          [36m>[39m
+            [36m<div>[39m
+              [36m<div[39m
+                [33mclass[39m=[32m"stack"[39m
+              [36m>[39m
+                [36m<h3[39m
+                  [33mid[39m=[32m"workspace-title-project-1"[39m
+                [36m>[39m
+                  [0m本地工作区[0m
+                [36m</h3>[39m
+                [36m<p[39m
+                  [33mclass[39m=[32m"muted"[39m
+                [36m>[39m
+                  [0m尚未绑定本地工作区。[0m
+                [36m</p>[39m
+                [36m<form[39m
+                  [33mclass[39m=[32m"stack"[39m
+                [36m>[39m
+                  [36m<div[39m
+                    [33mclass[39m=[32m"form-field"[39m
+                  [36m>[39m
+                    [36m<label[39m
+                      [33mfor[39m=[32m"workspace-path-project-1"[39m
+                    [36m>[39m
+                      [0m本地工作区路径[0m
+                    [36m</label>[39m
+                    [36m<input[39m
+                      [33mid[39m=[32m"workspace-path-project-1"[39m
+                      [33mname[39m=[32m"workspacePath"[39m
+                      [33mvalue[39m=[32m""[39m
+                    [36m/>[39m
+                  [36m</div>[39m
+                  [36m<button[39m
+                    [33mtype[39m=[32m"submit"[39m
+                  [36m>[39m
+                    [0m绑定工作区[0m
+                  [36m</button>[39m
+                [36m</form>[39m
+              [36m</div>[39m
+            [36m</div>[39m
+          [36m</section>[39m
+          [36m<section[39m
+            [33maria-labelledby[39m=[32m"members-title-project-1"[39m
+            [33mclass[39m=[32m"stack"[39m
+          [36m>[39m
+            [36m<h3[39m
+              [33mid[39m=[32m"members-title-project-1"[39m
+            [36m>[39m
+              [0m项目成员[0m
+            [36m</h3>[39m
+            [36m<p[39m
+              [33maria-busy[39m=[32m"true"[39m
+              [33mclass[39m=[32m"muted"[39m
+            [36m>[39m
+              [0m正在加载项目成员…[0m
+            [36m</p>[39m
+          [36m</section>[39m
+        [36m</section>[39m
+      [36m</aside>[39m
+      [36m<main[39m
+        [33maria-label[39m=[32m"任务事件流"[39m
+        [33mclass[39m=[32m"cockpit-flow"[39m
+        [33mdata-open[39m=[32m"false"[39m
+        [33mdata-testid[39m=[32m"editor-surface"[39m
+        [33mid[39m=[32m"task-editor-surface"[39m
+      [36m>[39m
+        [36m<span[39m
+          [33mclass[39m=[32m"sr-only"[39m
+          [33mid[39m=[32m"task-editor-label"[39m
+        [36m>[39m
+          [0m任务编辑[0m
+        [36m</span>[39m
+        [36m<button[39m
+          [33maria-label[39m=[32m"关闭任务编辑"[39m
+          [33mclass[39m=[32m"drawer-close"[39m
+          [33mdata-dialog-close[39m=[32m"true"[39m
+          [33mtabindex[39m=[32m"-1"[39m
+          [33mtype[39m=[32m"button"[39m
+        [36m>[39m
+          [0m关闭[0m
+        [36m</button>[39m
+        [36m<div[39m
+          [33mclass[39m=[32m"panel-heading"[39m
+        [36m>[39m
+          [36m<span[39m
+            [33maria-hidden[39m=[32m"true"[39m
+            [33mclass[39m=[32m"agent-mark"[39m
+          [36m>[39m
+            [0mA[0m
+          [36m</span>[39m
+          [36m<div>[39m
+            [36m<p[39m
+              [33mclass[39m=[32m"eyebrow"[39m
+            [36m>[39m
+              [0m确定性示例 Agent[0m
+            [36m</p>[39m
+            [36m<h2[39m
+              [33mid[39m=[32m"tasks-title"[39m
+              [33mtabindex[39m=[32m"-1"[39m
+            [36m>[39m
+              [0mLaunch plan[0m
+            [36m</h2>[39m
+          [36m</div>[39m
+        [36m</div>[39m
+        [36m<form[39m
+          [33mclass[39m=[32m"composer"[39m
+        [36m>[39m
+          [36m<div[39m
+            [33mclass[39m=[32m"form-row"[39m
+          [36m>[39m
+            [36m<div[39m
+              [33mclass[39m=[32m"form-field"[39m
+            [36m>[39m
+              [36m<label[39m
+                [33mfor[39m=[32m"task-goal"[39m
+              [36m>[39m
+                [0m任务目标[0m
+              [36m</label>[39m
+              [36m<input[39m
+                [33mid[39m=[32m"task-goal"[39m
+                [33mname[39m=[32m"goal"[39m
+                [33mvalue[39m=[32m"Prepare launch notes"[39m
+              [36m/>[39m
+            [36m</div>[39m
+            [36m<button[39m
+              [33mtype[39m=[32m"submit"[39m
+            [36m>[39m
+              [0m运行任务[0m
+            [36m</button>[39m
+          [36m</div>[39m
+        [36m</form>[39m
+        [36m<div[39m
+          [33mclass[39m=[32m"state-message"[39m
+        [36m>[39m
+          [36m<p[39m
+            [33mclass[39m=[32m"error-text"[39m
+            [33mrole[39m=[32m"alert"[39m
+          [36m>[39m
+            [0m无法运行任务，请稍后重试。[0m
+          [36m</p>[39m
+          [36m<button[39m
+            [33mtype[39m=[32m"button"[39m
+          [36m>[39m
+            [0m重试任务历史[0m
+          [36m</button>[39m
+        [36m</div>[39m
+        [36m<p[39m
+          [33maria-busy[39m=[32m"true"[39m
+          [33mclass[39m=[32m"state-message"[39m
+        [36m>[39m
+          [0m正在加载任务历史…[0m
+        [36m</p>[39m
+        [36m<p[39m
+          [33maria-atomic[39m=[32m"true"[39m
+          [33maria-live[39m=[32m"polite"[39m
+          [33mclass[39m=[32m"muted"[39m
+          [33mrole[39m=[32m"status"[39m
+        [36m/>[39m
+      [36m</main>[39m
+      [36m<aside[39m
+        [33maria-label[39m=[32m"当前任务上下文"[39m
+        [33mclass[39m=[32m"cockpit-context"[39m
+        [33mdata-open[39m=[32m"false"[39m
+        [33mdata-testid[39m=[32m"context-surface"[39m
+        [33mid[39m=[32m"task-context-drawer"[39m
+      [36m>[39m
+        [36m<span[39m
+          [33mclass[39m=[32m"sr-only"[39m
+          [33mid[39m=[32m"task-context-label"[39m
+        [36m>[39m
+          [0m当前任务上下文[0m
+        [36m</span>[39m
+        [36m<button[39m
+          [33maria-label[39m=[32m"关闭当前任务上下文"[39m
+          [33mclass[39m=[32m"drawer-close"[39m
+          [33mdata-dialog-close[39m=[32m"true"[39m
+          [33mtabindex[39m=[32m"-1"[39m
+          [33mtype[39m=[32m"button"[39m
+        [36m>[39m
+          [0m关闭[0m
+        [36m</button>[39m
+        [36m<div>[39m
+          [36m<p[39m
+            [33mclass[39m=[32m"eyebrow"[39m
+          [36m>[39m
+            [0m当前工作[0m
+          [36m</p>[39m
+          [36m<h2>[39m
+            [0m当前上下文[0m
+          [36m</h2>[39m
+        [36m</div>[39m
+        [36m<p[39m
+          [33mclass[39m=[32m"state-message"[39m
+        [36m>[39m
+          [0m暂无当前任务。[0m
+        [36m</p>[39m
+      [36m</aside>[39m
+    [36m</div>[39m
+  [36m</div>[39m
+[36m</body>[39m
+
+Ignored nodes: comments, script, style
+[36m<body>[39m
+  [36m<div>[39m
+    [36m<div[39m
+      [33mclass[39m=[32m"collaboration-cockpit"[39m
+      [33mdata-testid[39m=[32m"collaboration-cockpit"[39m
+    [36m>[39m
+      [36m<div[39m
+        [33maria-label[39m=[32m"驾驶舱面板"[39m
+        [33mclass[39m=[32m"mobile-toolbar"[39m
+        [33mrole[39m=[32m"toolbar"[39m
+      [36m>[39m
+        [36m<button[39m
+          [33maria-controls[39m=[32m"project-navigation-drawer"[39m
+          [33maria-expanded[39m=[32m"false"[39m
+          [33maria-label[39m=[32m"打开项目导航"[39m
+          [33mtype[39m=[32m"button"[39m
+        [36m>[39m
+          [0m项目[0m
+        [36m</button>[39m
+        [36m<button[39m
+          [33maria-controls[39m=[32m"task-editor-surface"[39m
+          [33maria-expanded[39m=[32m"false"[39m
+          [33maria-label[39m=[32m"打开编辑"[39m
+          [33mtype[39m=[32m"button"[39m
+        [36m>[39m
+          [0m编辑[0m
+        [36m</button>[39m
+        [36m<button[39m
+          [33maria-controls[39m=[32m"task-context-drawer"[39m
+          [33maria-expanded[39m=[32m"false"[39m
+          [33maria-label[39m=[32m"打开当前任务上下文"[39m
+          [33mtype[39m=[32m"button"[39m
+        [36m>[39m
+          [0m上下文[0m
+        [36m</button>[39m
+      [36m</div>[39m
+      [36m<aside[39m
+        [33maria-label[39m=[32m"项目导航"[39m
+        [33mclass[39m=[32m"cockpit-sidebar"[39m
+        [33mdata-open[39m=[32m"false"[39m
+        [33mdata-testid[39m=[32m"project-surface"[39m
+        [33mid[39m=[32m"project-navigation-drawer"[39m
+      [36m>[39m
+        [36m<span[39m
+          [33mclass[39m=[32m"sr-only"[39m
+          [33mid[39m=[32m"project-navigation-label"[39m
+        [36m>[39m
+          [0m项目导航[0m
+        [36m</span>[39m
+        [36m<button[39m
+          [33maria-label[39m=[32m"关闭项目导航"[39m
+          [33mclass[39m=[32m"drawer-close"[39m
+          [33mtabindex[39m=[32m"-1"[39m
+          [33mtype[39m=[32m"button"[39m
+        [36m>[39m
+          [0m关闭[0m
+        [36m</button>[39m
+        [36m<div[39m
+          [33mclass[39m=[32m"product-identity"[39m
+        [36m>[39m
+          [36m<span[39m
+            [33maria-hidden[39m=[32m"true"[39m
+            [33mclass[39m=[32m"product-mark"[39m
+          [36m>[39m
+            [0mC[0m
+          [36m</span>[39m
+          [36m<div>[39m
+            [36m<p[39m
+              [33mclass[39m=[32m"eyebrow"[39m
+            [36m>[39m
+              [0m协作驾驶舱[0m
+            [36m</p>[39m
+            [36m<h1>[39m
+              [0mCool AI[0m
+            [36m</h1>[39m
+          [36m</div>[39m
+        [36m</div>[39m
+        [36m<nav[39m
+          [33maria-label[39m=[32m"主导航"[39m
+        [36m>[39m
+          [36m<ul[39m
+            [33mclass[39m=[32m"project-list"[39m
+          [36m>[39m
+            [36m<li>[39m
+              [36m<a[39m
+                [33maria-current[39m=[32m"page"[39m
+                [33mhref[39m=[32m"/"[39m
+              [36m>[39m
+                [0m工作[0m
+              [36m</a>[39m
+            [36m</li>[39m
+            [36m<li>[39m
+              [36m<a[39m
+                [33mhref[39m=[32m"/team"[39m
+              [36m>[39m
+                [0m团队[0m
+              [36m</a>[39m
+            [36m</li>[39m
+          [36m</ul>[39m
+        [36m</nav>[39m
+        [36m<section[39m
+          [33maria-labelledby[39m=[32m"projects-title"[39m
+          [33mclass[39m=[32m"stack"[39m
+        [36m>[39m
+          [36m<h2[39m
+            [33mid[39m=[32m"projects-title"[39m
+          [36m>[39m
+            [0m项目[0m
+          [36m</h2>[39m
+          [36m<form[39m
+            [33mclass[39m=[32m"stack"[39m
+          [36m>[39m
+            [36m<div[39m
+              [33mclass[39m=[32m"form-field"[39m
+            [36m>[39m
+              [36m<label[39m
+                [33mfor[39m=[32m"project-name"[39m
+              [36m>[39m
+                [0m项目名称[0m
+              [36m</label>[39m
+              [36m<input[39m
+                [33mid[39m=[32m"project-name"[39m
+                [33mname[39m=[32m"name"[39m
+                [33mvalue[39m=[32m""[39m
+              [36m/>[39m
+            [36m</div>[39m
+            [36m<button[39m
+              [33mtype[39m=[32m"submit"[39m
+            [36m>[39m
+              [0m创建项目[0m
+            [36m</button>[39m
+          [36m</form>[39m
+          [36m<nav[39m
+            [33maria-label[39m=[32m"项目"[39m
+          [36m>[39m
+            [36m<ul[39m
+              [33mclass[39m=[32m"project-list"[39m
+            [36m>[39m
+              [36m<li>[39m
+                [36m<button[39m
+                  [33maria-current[39m=[32m"page"[39m
+                  [33mtype[39m=[32m"button"[39m
+                [36m>[39m
+                  [0mLaunch plan[0m
+                [36m</button>[39m
+              [36m</li>[39m
+            [36m</ul>[39m
+          [36m</nav>[39m
+        [36m</section>[39m
+        [36m<section[39m
+          [33maria-labelledby[39m=[32m"project-setup-title-project-1"[39m
+          [33mclass[39m=[32m"stack project-setup"[39m
+        [36m>[39m
+          [36m<h2[39m
+            [33mid[39m=[32m"project-setup-title-project-1"[39m
+          [36m>[39m
+            [0m项目设置[0m
+          [36m</h2>[39m
+          [36m<section[39m
+            [33maria-labelledby[39m=[32m"workspace-title-project-1"[39m
+            [33mclass[39m=[32m"stack"[39m
+          [36m>[39m
+            [36m<div>[39m
+              [36m<div[39m
+                [33mclass[39m=[32m"stack"[39m
+              [36m>[39m
+                [36m<h3[39m
+                  [33mid[39m=[32m"workspace-title-project-1"[39m
+                [36m>[39m
+                  [0m本地工作区[0m
+                [36m</h3>[39m
+                [36m<p[39m
+                  [33mclass[39m=[32m"muted"[39m
+                [36m>[39m
+                  [0m尚未绑定本地工作区。[0m
+                [36m</p>[39m
+                [36m<form[39m
+                  [33mclass[39m=[32m"stack"[39m
+                [36m>[39m
+                  [36m<div[39m
+                    [33mclass[39m=[32m"form-field"[39m
+                  [36m>[39m
+                    [36m<label[39m
+                      [33mfor[39m=[32m"workspace-path-project-1"[39m
+                    [36m>[39m
+                      [0m本地工作区路径[0m
+                    [36m</label>[39m
+                    [36m<input[39m
+                      [33mid[39m=[32m"workspace-path-project-1"[39m
+                      [33mname[39m=[32m"workspacePath"[39m
+                      [33mvalue[39m=[32m""[39m
+                    [36m/>[39m
+                  [36m</div>[39m
+                  [36m<button[39m
+                    [33mtype[39m=[32m"submit"[39m
+                  [36m>[39m
+                    [0m绑定工作区[0m
+                  [36m</button>[39m
+                [36m</form>[39m
+              [36m</div>[39m
+            [36m</div>[39m
+          [36m</section>[39m
+          [36m<section[39m
+            [33maria-labelledby[39m=[32m"members-title-project-1"[39m
+            [33mclass[39m=[32m"stack"[39m
+          [36m>[39m
+            [36m<h3[39m
+              [33mid[39m=[32m"members-title-project-1"[39m
+            [36m>[39m
+              [0m项目成员[0m
+            [36m</h3>[39m
+            [36m<p[39m
+              [33maria-busy[39m=[32m"true"[39m
+              [33mclass[39m=[32m"muted"[39m
+            [36m>[39m
+              [0m正在加载项目成员…[0m
+            [36m</p>[39m
+          [36m</section>[39m
+        [36m</section>[39m
+      [36m</aside>[39m
+      [36m<main[39m
+        [33maria-label[39m=[32m"任务事件流"[39m
+        [33mclass[39m=[32m"cockpit-flow"[39m
+        [33mdata-open[39m=[32m"false"[39m
+        [33mdata-testid[39m=[32m"editor-surface"[39m
+        [33mid[39m=[32m"task-editor-surface"[39m
+      [36m>[39m
+        [36m<span[39m
+          [33mclass[39m=[32m"sr-only"[39m
+          [33mid[39m=[32m"task-editor-label"[39m
+        [36m>[39m
+          [0m任务编辑[0m
+        [36m</span>[39m
+        [36m<button[39m
+          [33maria-label[39m=[32m"关闭任务编辑"[39m
+          [33mclass[39m=[32m"drawer-close"[39m
+          [33mdata-dialog-close[39m=[32m"true"[39m
+          [33mtabindex[39m=[32m"-1"[39m
+          [33mtype[39m=[32m"button"[39m
+        [36m>[39m
+          [0m关闭[0m
+        [36m</button>[39m
+        [36m<div[39m
+          [33mclass[39m=[32m"panel-heading"[39m
+        [36m>[39m
+          [36m<span[39m
+            [33maria-hidden[39m=[32m"true"[39m
+            [33mclass[39m=[32m"agent-mark"[39m
+          [36m>[39m
+            [0mA[0m
+          [36m</span>[39m
+          [36m<div>[39m
+            [36m<p[39m
+              [33mclass[39m=[32m"eyebrow"[39m
+            [36m>[39m
+              [0m确定性示例 Agent[0m
+            [36m</p>[39m
+            [36m<h2[39m
+              [33mid[39m=[32m"tasks-title"[39m
+              [33mtabindex[39m=[32m"-1"[39m
+            [36m>[39m
+              [0mLaunch plan[0m
+            [36m</h2>[39m
+          [36m</div>[39m
+        [36m</div>[39m
+        [36m<form[39m
+          [33mclass[39m=[32m"composer"[39m
+        [36m>[39m
+          [36m<div[39m
+            [33mclass[39m=[32m"form-row"[39m
+          [36m>[39m
+            [36m<div[39m
+              [33mclass[39m=[32m"form-field"[39m
+            [36m>[39m
+              [36m<label[39m
+                [33mfor[39m=[32m"task-goal"[39m
+              [36m>[39m
+                [0m任务目标[0m
+              [36m</label>[39m
+              [36m<input[39m
+                [33mid[39m=[32m"task-goal"[39m
+                [33mname[39m=[32m"goal"[39m
+                [33mvalue[39m=[32m"Prepare launch notes"[39m
+              [36m/>[39m
+            [36m</div>[39m
+            [36m<button[39m
+              [33mtype[39m=[32m"submit"[39m
+            [36m>[39m
+              [0m运行任务[0m
+            [36m</button>[39m
+          [36m</div>[39m
+        [36m</form>[39m
+        [36m<div[39m
+          [33mclass[39m=[32m"state-message"[39m
+        [36m>[39m
+          [36m<p[39m
+            [33mclass[39m=[32m"error-text"[39m
+            [33mrole[39m=[32m"alert"[39m
+          [36m>[39m
+            [0m无法运行任务，请稍后重试。[0m
+          [36m</p>[39m
+          [36m<button[39m
+            [33mtype[39m=[32m"button"[39m
+          [36m>[39m
+            [0m重试任务历史[0m
+          [36m</button>[39m
+        [36m</div>[39m
+        [36m<p[39m
+          [33maria-busy[39m=[32m"true"[39m
+          [33mclass[39m=[32m"state-message"[39m
+        [36m>[39m
+          [0m正在加载任务历史…[0m
+        [36m</p>[39m
+        [36m<p[39m
+          [33maria-atomic[39m=[32m"true"[39m
+          [33maria-live[39m=[32m"polite"[39m
+          [33mclass[39m=[32m"muted"[39m
+          [33mrole[39m=[32m"status"[39m
+        [36m/>[39m
+      [36m</main>[39m
+      [36m<aside[39m
+        [33maria-label[39m=[32m"当前任务上下文"[39m
+        [33mclass[39m=[32m"cockpit-context"[39m
+        [33mdata-open[39m=[32m"false"[39m
+        [33mdata-testid[39m=[32m"context-surface"[39m
+        [33mid[39m=[32m"task-context-drawer"[39m
+      [36m>[39m
+        [36m<span[39m
+          [33mclass[39m=[32m"sr-only"[39m
+          [33mid[39m=[32m"task-context-label"[39m
+        [36m>[39m
+          [0m当前任务上下文[0m
+        [36m</span>[39m
+        [36m<button[39m
+          [33maria-label[39m=[32m"关闭当前任务上下文"[39m
+          [33mclass[39m=[32m"drawer-close"[39m
+          [33mdata-dialog-close[39m=[32m"true"[39m
+          [33mtabindex[39m=[32m"-1"[39m
+          [33mtype[39m=[32m"button"[39m
+        [36m>[39m
+          [0m关闭[0m
+        [36m</button>[39m
+        [36m<div>[39m
+          [36m<p[39m
+            [33mclass[39m=[32m"eyebrow"[39m
+          [36m>[39m
+            [0m当前工作[0m
+          [36m</p>[39m
+          [36m<h2>[39m
+            [0m当前上下文[0m
+          [36m</h2>[39m
+        [36m</div>[39m
+        [36m<p[39m
+          [33mclass[39m=[32m"state-message"[39m
+        [36m>[39m
+          [0m暂无当前任务。[0m
+        [36m</p>[39m
+      [36m</aside>[39m
+    [36m</div>[39m
+  [36m</div>[39m
+[36m</body>[39m
+ ❯ waitForWrapper node_modules/@testing-library/dom/dist/wait-for.js:163:27
+ ❯ node_modules/@testing-library/dom/dist/query-helpers.js:86:33
+ ❯ tests/task-flow.test.tsx:118:25
+    116|     await user.click(screen.getByRole("button", { name: "运行任务" }));
+    117|
+    118|     expect(await screen.findByText("任务已排队。")).toBeInTheDocument();
+       |                         ^
+    119|     expect(screen.getByRole("button", { name: "任务运行中…" })).toBeDisable…
+    120|     expect(fetchMock.mock.calls[3]?.[0]).toBe("/api/tasks/task-1/start…
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[6/9]⎯
+
+ FAIL  tests/task-flow.test.tsx > task event flow > offers retry after a load error
+TestingLibraryElementError: Unable to find role="alert"
+
+Ignored nodes: comments, script, style
+[36m<body>[39m
+  [36m<div />[39m
+[36m</body>[39m
+
+Ignored nodes: comments, script, style
+[36m<body>[39m
+  [36m<div />[39m
+[36m</body>[39m
+ ❯ waitForWrapper node_modules/@testing-library/dom/dist/wait-for.js:163:27
+ ❯ node_modules/@testing-library/dom/dist/query-helpers.js:86:33
+ ❯ tests/task-flow.test.tsx:163:25
+    161|     render(<ProjectPanel />);
+    162|
+    163|     expect(await screen.findByRole("alert")).toHaveTextContent("服务暂时不可…
+       |                         ^
+    164|     await user.click(screen.getByRole("button", { name: "重试任务历史" }));
+    165|     expect(await screen.findByText("暂无任务。输入目标即可运行示例 Agent。")).toBeInTh…
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[7/9]⎯
+
+ FAIL  tests/task-flow.test.tsx > task event flow > renders a persisted failed event and preserves the goal after execution fails
+TestingLibraryElementError: Unable to find an accessible element with the role "button" and name "运行任务"
+
+There are no accessible roles. But there might be some inaccessible roles. If you wish to access them, then set the `hidden` option to `true`. Learn more about this here: https://testing-library.com/docs/dom-testing-library/api-queries#byrole
+
+Ignored nodes: comments, script, style
+[36m<body>[39m
+  [36m<div />[39m
+[36m</body>[39m
+ ❯ Object.getElementError node_modules/@testing-library/dom/dist/config.js:37:19
+ ❯ node_modules/@testing-library/dom/dist/query-helpers.js:76:38
+ ❯ node_modules/@testing-library/dom/dist/query-helpers.js:52:17
+ ❯ node_modules/@testing-library/dom/dist/query-helpers.js:95:19
+ ❯ tests/task-flow.test.tsx:198:29
+    196|     await screen.findByText("暂无任务。输入目标即可运行示例 Agent。");
+    197|     await user.type(screen.getByLabelText("任务目标"), "Prepare launch not…
+    198|     await user.click(screen.getByRole("button", { name: "运行任务" }));
+       |                             ^
+    199|
+    200|     expect(await screen.findByText("任务执行失败。")).toBeInTheDocument();
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[8/9]⎯
+
+ FAIL  tests/workspace-slice.test.tsx > workspace binding vertical slice > validates a real directory, persists its canonical path, and reloads it
+TestingLibraryElementError: Unable to find a label with the text of: 本地工作区路径
+
+Ignored nodes: comments, script, style
+[36m<body>[39m
+  [36m<div>[39m
+    [36m<div[39m
+      [33mclass[39m=[32m"collaboration-cockpit"[39m
+      [33mdata-testid[39m=[32m"collaboration-cockpit"[39m
+    [36m>[39m
+      [36m<div[39m
+        [33maria-label[39m=[32m"驾驶舱面板"[39m
+        [33mclass[39m=[32m"mobile-toolbar"[39m
+        [33mrole[39m=[32m"toolbar"[39m
+      [36m>[39m
+        [36m<button[39m
+          [33maria-controls[39m=[32m"project-navigation-drawer"[39m
+          [33maria-expanded[39m=[32m"false"[39m
+          [33maria-label[39m=[32m"打开项目导航"[39m
+          [33mtype[39m=[32m"button"[39m
+        [36m>[39m
+          [0m项目[0m
+        [36m</button>[39m
+        [36m<button[39m
+          [33maria-controls[39m=[32m"task-editor-surface"[39m
+          [33maria-expanded[39m=[32m"false"[39m
+          [33maria-label[39m=[32m"打开编辑"[39m
+          [33mtype[39m=[32m"button"[39m
+        [36m>[39m
+          [0m编辑[0m
+        [36m</button>[39m
+        [36m<button[39m
+          [33maria-controls[39m=[32m"task-context-drawer"[39m
+          [33maria-expanded[39m=[32m"false"[39m
+          [33maria-label[39m=[32m"打开当前任务上下文"[39m
+          [33mtype[39m=[32m"button"[39m
+        [36m>[39m
+          [0m上下文[0m
+        [36m</button>[39m
+      [36m</div>[39m
+      [36m<aside[39m
+        [33maria-label[39m=[32m"项目导航"[39m
+        [33mclass[39m=[32m"cockpit-sidebar"[39m
+        [33mdata-open[39m=[32m"false"[39m
+        [33mdata-testid[39m=[32m"project-surface"[39m
+        [33mid[39m=[32m"project-navigation-drawer"[39m
+      [36m>[39m
+        [36m<span[39m
+          [33mclass[39m=[32m"sr-only"[39m
+          [33mid[39m=[32m"project-navigation-label"[39m
+        [36m>[39m
+          [0m项目导航[0m
+        [36m</span>[39m
+        [36m<button[39m
+          [33maria-label[39m=[32m"关闭项目导航"[39m
+          [33mclass[39m=[32m"drawer-close"[39m
+          [33mtabindex[39m=[32m"-1"[39m
+          [33mtype[39m=[32m"button"[39m
+        [36m>[39m
+          [0m关闭[0m
+        [36m</button>[39m
+        [36m<div[39m
+          [33mclass[39m=[32m"product-identity"[39m
+        [36m>[39m
+          [36m<span[39m
+            [33maria-hidden[39m=[32m"true"[39m
+            [33mclass[39m=[32m"product-mark"[39m
+          [36m>[39m
+            [0mC[0m
+          [36m</span>[39m
+          [36m<div>[39m
+            [36m<p[39m
+              [33mclass[39m=[32m"eyebrow"[39m
+            [36m>[39m
+              [0m协作驾驶舱[0m
+            [36m</p>[39m
+            [36m<h1>[39m
+              [0mCool AI[0m
+            [36m</h1>[39m
+          [36m</div>[39m
+        [36m</div>[39m
+        [36m<nav[39m
+          [33maria-label[39m=[32m"主导航"[39m
+        [36m>[39m
+          [36m<ul[39m
+            [33mclass[39m=[32m"project-list"[39m
+          [36m>[39m
+            [36m<li>[39m
+              [36m<a[39m
+                [33maria-current[39m=[32m"page"[39m
+                [33mhref[39m=[32m"/"[39m
+              [36m>[39m
+                [0m工作[0m
+              [36m</a>[39m
+            [36m</li>[39m
+            [36m<li>[39m
+              [36m<a[39m
+                [33mhref[39m=[32m"/team"[39m
+              [36m>[39m
+                [0m团队[0m
+              [36m</a>[39m
+            [36m</li>[39m
+          [36m</ul>[39m
+        [36m</nav>[39m
+        [36m<section[39m
+          [33maria-labelledby[39m=[32m"projects-title"[39m
+          [33mclass[39m=[32m"stack"[39m
+        [36m>[39m
+          [36m<h2[39m
+            [33mid[39m=[32m"projects-title"[39m
+          [36m>[39m
+            [0m项目[0m
+          [36m</h2>[39m
+          [36m<form[39m
+            [33mclass[39m=[32m"stack"[39m
+          [36m>[39m
+            [36m<div[39m
+              [33mclass[39m=[32m"form-field"[39m
+            [36m>[39m
+              [36m<label[39m
+                [33mfor[39m=[32m"project-name"[39m
+              [36m>[39m
+                [0m项目名称[0m
+              [36m</label>[39m
+              [36m<input[39m
+                [33mid[39m=[32m"project-name"[39m
+                [33mname[39m=[32m"name"[39m
+                [33mvalue[39m=[32m""[39m
+              [36m/>[39m
+            [36m</div>[39m
+            [36m<button[39m
+              [33mtype[39m=[32m"submit"[39m
+            [36m>[39m
+              [0m创建项目[0m
+            [36m</button>[39m
+          [36m</form>[39m
+          [36m<nav[39m
+            [33maria-label[39m=[32m"项目"[39m
+          [36m>[39m
+            [36m<ul[39m
+              [33mclass[39m=[32m"project-list"[39m
+            [36m>[39m
+              [36m<li>[39m
+                [36m<button[39m
+                  [33maria-current[39m=[32m"page"[39m
+                  [33mtype[39m=[32m"button"[39m
+                [36m>[39m
+                  [0mWorkspace project[0m
+                [36m</button>[39m
+              [36m</li>[39m
+            [36m</ul>[39m
+          [36m</nav>[39m
+        [36m</section>[39m
+        [36m<section[39m
+          [33maria-labelledby[39m=[32m"project-setup-title-f637a40a-621c-4a4a-91c9-822c4433cfc1"[39m
+          [33mclass[39m=[32m"stack project-setup"[39m
+        [36m>[39m
+          [36m<h2[39m
+            [33mid[39m=[32m"project-setup-title-f637a40a-621c-4a4a-91c9-822c4433cfc1"[39m
+          [36m>[39m
+            [0m项目设置[0m
+          [36m</h2>[39m
+          [36m<section[39m
+            [33maria-labelledby[39m=[32m"workspace-title-f637a40a-621c-4a4a-91c9-822c4433cfc1"[39m
+            [33mclass[39m=[32m"stack"[39m
+          [36m>[39m
+            [36m<div>[39m
+              [36m<div[39m
+                [33mclass[39m=[32m"stack"[39m
+              [36m>[39m
+                [36m<h3[39m
+                  [33mid[39m=[32m"workspace-title-f637a40a-621c-4a4a-91c9-822c4433cfc1"[39m
+                [36m>[39m
+                  [0m本地工作区[0m
+                [36m</h3>[39m
+                [36m<p[39m
+                  [33maria-busy[39m=[32m"true"[39m
+                  [33mclass[39m=[32m"muted"[39m
+                [36m>[39m
+                  [0m正在加载工作区…[0m
+                [36m</p>[39m
+              [36m</div>[39m
+            [36m</div>[39m
+          [36m</section>[39m
+          [36m<section[39m
+            [33maria-labelledby[39m=[32m"members-title-f637a40a-621c-4a4a-91c9-822c4433cfc1"[39m
+            [33mclass[39m=[32m"stack"[39m
+          [36m>[39m
+            [36m<h3[39m
+              [33mid[39m=[32m"members-title-f637a40a-621c-4a4a-91c9-822c4433cfc1"[39m
+            [36m>[39m
+              [0m项目成员[0m
+            [36m</h3>[39m
+            [36m<p[39m
+              [33maria-busy[39m=[32m"true"[39m
+              [33mclass[39m=[32m"muted"[39m
+            [36m>[39m
+              [0m正在加载项目成员…[0m
+            [36m</p>[39m
+          [36m</section>[39m
+        [36m</section>[39m
+      [36m</aside>[39m
+      [36m<main[39m
+        [33maria-label[39m=[32m"任务事件流"[39m
+        [33mclass[39m=[32m"cockpit-flow"[39m
+        [33mdata-open[39m=[32m"false"[39m
+        [33mdata-testid[39m=[32m"editor-surface"[39m
+        [33mid[39m=[32m"task-editor-surface"[39m
+      [36m>[39m
+        [36m<span[39m
+          [33mclass[39m=[32m"sr-only"[39m
+          [33mid[39m=[32m"task-editor-label"[39m
+        [36m>[39m
+          [0m任务编辑[0m
+        [36m</span>[39m
+        [36m<button[39m
+          [33maria-label[39m=[32m"关闭任务编辑"[39m
+          [33mclass[39m=[32m"drawer-close"[39m
+          [33mdata-dialog-close[39m=[32m"true"[39m
+          [33mtabindex[39m=[32m"-1"[39m
+          [33mtype[39m=[32m"button"[39m
+        [36m>[39m
+          [0m关闭[0m
+        [36m</button>[39m
+        [36m<div[39m
+          [33mclass[39m=[32m"panel-heading"[39m
+        [36m>[39m
+          [36m<span[39m
+            [33maria-hidden[39m=[32m"true"[39m
+            [33mclass[39m=[32m"agent-mark"[39m
+          [36m>[39m
+            [0mA[0m
+          [36m</span>[39m
+          [36m<div>[39m
+            [36m<p[39m
+              [33mclass[39m=[32m"eyebrow"[39m
+            [36m>[39m
+              [0m确定性示例 Agent[0m
+            [36m</p>[39m
+            [36m<h2[39m
+              [33mid[39m=[32m"tasks-title"[39m
+              [33mtabindex[39m=[32m"-1"[39m
+            [36m>[39m
+              [0mWorkspace project[0m
+            [36m</h2>[39m
+          [36m</div>[39m
+        [36m</div>[39m
+        [36m<form[39m
+          [33mclass[39m=[32m"composer"[39m
+        [36m>[39m
+          [36m<div[39m
+            [33mclass[39m=[32m"form-row"[39m
+          [36m>[39m
+            [36m<div[39m
+              [33mclass[39m=[32m"form-field"[39m
+            [36m>[39m
+              [36m<label[39m
+                [33mfor[39m=[32m"task-goal"[39m
+              [36m>[39m
+                [0m任务目标[0m
+              [36m</label>[39m
+              [36m<input[39m
+                [33mid[39m=[32m"task-goal"[39m
+                [33mname[39m=[32m"goal"[39m
+                [33mvalue[39m=[32m""[39m
+              [36m/>[39m
+            [36m</div>[39m
+            [36m<button[39m
+              [33mdisabled[39m=[32m""[39m
+              [33mtype[39m=[32m"submit"[39m
+            [36m>[39m
+              [0m运行任务[0m
+            [36m</button>[39m
+          [36m</div>[39m
+        [36m</form>[39m
+        [36m<p[39m
+          [33mclass[39m=[32m"state-message"[39m
+        [36m>[39m
+          [0m暂无任务。输入目标即可运行示例 Agent。[0m
+        [36m</p>[39m
+        [36m<p[39m
+          [33maria-atomic[39m=[32m"true"[39m
+          [33maria-live[39m=[32m"polite"[39m
+          [33mclass[39m=[32m"muted"[39m
+          [33mrole[39m=[32m"status"[39m
+        [36m/>[39m
+      [36m</main>[39m
+      [36m<aside[39m
+        [33maria-label[39m=[32m"当前任务上下文"[39m
+        [33mclass[39m=[32m"cockpit-context"[39m
+        [33mdata-open[39m=[32m"false"[39m
+        [33mdata-testid[39m=[32m"context-surface"[39m
+        [33mid[39m=[32m"task-context-drawer"[39m
+      [36m>[39m
+        [36m<span[39m
+          [33mclass[39m=[32m"sr-only"[39m
+          [33mid[39m=[32m"task-context-label"[39m
+        [36m>[39m
+          [0m当前任务上下文[0m
+        [36m</span>[39m
+        [36m<button[39m
+          [33maria-label[39m=[32m"关闭当前任务上下文"[39m
+          [33mclass[39m=[32m"drawer-close"[39m
+          [33mdata-dialog-close[39m=[32m"true"[39m
+          [33mtabindex[39m=[32m"-1"[39m
+          [33mtype[39m=[32m"button"[39m
+        [36m>[39m
+          [0m关闭[0m
+        [36m</button>[39m
+        [36m<div>[39m
+          [36m<p[39m
+            [33mclass[39m=[32m"eyebrow"[39m
+          [36m>[39m
+            [0m当前工作[0m
+          [36m</p>[39m
+          [36m<h2>[39m
+            [0m当前上下文[0m
+          [36m</h2>[39m
+        [36m</div>[39m
+        [36m<p[39m
+          [33mclass[39m=[32m"state-message"[39m
+        [36m>[39m
+          [0m暂无当前任务。[0m
+        [36m</p>[39m
+      [36m</aside>[39m
+    [36m</div>[39m
+  [36m</div>[39m
+[36m</body>[39m
+ ❯ Object.getElementError node_modules/@testing-library/dom/dist/config.js:37:19
+ ❯ getAllByLabelText node_modules/@testing-library/dom/dist/queries/label-text.js:111:38
+ ❯ node_modules/@testing-library/dom/dist/query-helpers.js:52:17
+ ❯ node_modules/@testing-library/dom/dist/query-helpers.js:95:19
+ ❯ tests/workspace-slice.test.tsx:73:28
+     71|     await screen.findByRole("heading", { name: "Workspace project" });
+     72|
+     73|     await user.type(screen.getByLabelText("本地工作区路径"), "relative/path");
+       |                            ^
+     74|     await user.click(screen.getByRole("button", { name: "绑定工作区" }));
+     75|     expect(screen.getByRole("alert")).toHaveTextContent("请输入绝对目录路径。");
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[9/9]⎯
+
+⎯⎯⎯⎯⎯⎯ Unhandled Errors ⎯⎯⎯⎯⎯⎯
+
+Vitest caught 14 unhandled errors during the test run.
+This might cause false positive tests. Resolve unhandled errors to make sure your tests are not affected.
+
+⎯⎯⎯⎯⎯ Uncaught Exception ⎯⎯⎯⎯⎯
+TypeError: Cannot read properties of undefined (reading 'then')
+ ❯ components/project-context/members-setup.tsx:79:27
+     77|     setSuccess("");
+     78|     void Promise.allSettled([
+     79|       fetch("/api/agents").then(async (response) => {
+       |                           ^
+     80|         const payload = (await response.json()) as {
+     81|           agents?: AgentProfile[];
+ ❯ Object.react_stack_bottom_frame node_modules/react-dom/cjs/react-dom-client.development.js:25989:20
+ ❯ runWithFiberInDEV node_modules/react-dom/cjs/react-dom-client.development.js:874:13
+ ❯ commitHookEffectListMount node_modules/react-dom/cjs/react-dom-client.development.js:13249:29
+ ❯ commitHookPassiveMountEffects node_modules/react-dom/cjs/react-dom-client.development.js:13336:11
+ ❯ commitPassiveMountOnFiber node_modules/react-dom/cjs/react-dom-client.development.js:15484:13
+ ❯ recursivelyTraversePassiveMountEffects node_modules/react-dom/cjs/react-dom-client.development.js:15439:11
+ ❯ commitPassiveMountOnFiber node_modules/react-dom/cjs/react-dom-client.development.js:15718:11
+ ❯ recursivelyTraversePassiveMountEffects node_modules/react-dom/cjs/react-dom-client.development.js:15439:11
+ ❯ commitPassiveMountOnFiber node_modules/react-dom/cjs/react-dom-client.development.js:15476:11
+
+This error originated in "tests/task-flow.test.tsx" test file. It doesn't mean the error was thrown inside the file itself, but while it was running.
+The latest test that might've caused the error is "shows loading, then restores persisted task events and result". It might mean one of the following:
+- The error was thrown, while Vitest was running this test.
+- If the error occurred after the test had been completed, this was the last documented test before it was thrown.
+
+⎯⎯⎯⎯⎯ Uncaught Exception ⎯⎯⎯⎯⎯
+TypeError: Cannot read properties of undefined (reading 'then')
+ ❯ components/task-panel.tsx:100:51
+     98|
+     99|     setIsLoading(true);
+    100|     void fetch(`/api/projects/${projectId}/tasks`)
+       |                                                   ^
+    101|       .then(async (response) => {
+    102|         const payload = await readPayload<TaskCollection & Partial<Api…
+ ❯ Object.react_stack_bottom_frame node_modules/react-dom/cjs/react-dom-client.development.js:25989:20
+ ❯ runWithFiberInDEV node_modules/react-dom/cjs/react-dom-client.development.js:874:13
+ ❯ commitHookEffectListMount node_modules/react-dom/cjs/react-dom-client.development.js:13249:29
+ ❯ commitHookPassiveMountEffects node_modules/react-dom/cjs/react-dom-client.development.js:13336:11
+ ❯ commitPassiveMountOnFiber node_modules/react-dom/cjs/react-dom-client.development.js:15484:13
+ ❯ recursivelyTraversePassiveMountEffects node_modules/react-dom/cjs/react-dom-client.development.js:15439:11
+ ❯ commitPassiveMountOnFiber node_modules/react-dom/cjs/react-dom-client.development.js:15718:11
+ ❯ recursivelyTraversePassiveMountEffects node_modules/react-dom/cjs/react-dom-client.development.js:15439:11
+ ❯ commitPassiveMountOnFiber node_modules/react-dom/cjs/react-dom-client.development.js:15476:11
+
+This error originated in "tests/task-flow.test.tsx" test file. It doesn't mean the error was thrown inside the file itself, but while it was running.
+The latest test that might've caused the error is "shows loading, then restores persisted task events and result". It might mean one of the following:
+- The error was thrown, while Vitest was running this test.
+- If the error occurred after the test had been completed, this was the last documented test before it was thrown.
+
+⎯⎯⎯⎯⎯ Uncaught Exception ⎯⎯⎯⎯⎯
+TypeError: Cannot read properties of undefined (reading 'then')
+ ❯ components/project-context/members-setup.tsx:79:27
+     77|     setSuccess("");
+     78|     void Promise.allSettled([
+     79|       fetch("/api/agents").then(async (response) => {
+       |                           ^
+     80|         const payload = (await response.json()) as {
+     81|           agents?: AgentProfile[];
+ ❯ Object.react_stack_bottom_frame node_modules/react-dom/cjs/react-dom-client.development.js:25989:20
+ ❯ runWithFiberInDEV node_modules/react-dom/cjs/react-dom-client.development.js:874:13
+ ❯ commitHookEffectListMount node_modules/react-dom/cjs/react-dom-client.development.js:13249:29
+ ❯ commitHookPassiveMountEffects node_modules/react-dom/cjs/react-dom-client.development.js:13336:11
+ ❯ commitPassiveMountOnFiber node_modules/react-dom/cjs/react-dom-client.development.js:15484:13
+ ❯ recursivelyTraversePassiveMountEffects node_modules/react-dom/cjs/react-dom-client.development.js:15439:11
+ ❯ commitPassiveMountOnFiber node_modules/react-dom/cjs/react-dom-client.development.js:15718:11
+ ❯ recursivelyTraversePassiveMountEffects node_modules/react-dom/cjs/react-dom-client.development.js:15439:11
+ ❯ commitPassiveMountOnFiber node_modules/react-dom/cjs/react-dom-client.development.js:15476:11
+
+This error originated in "tests/cockpit-layout.test.tsx" test file. It doesn't mean the error was thrown inside the file itself, but while it was running.
+The latest test that might've caused the error is "presents project navigation, task flow, and current context from real data". It might mean one of the following:
+- The error was thrown, while Vitest was running this test.
+- If the error occurred after the test had been completed, this was the last documented test before it was thrown.
+
+⎯⎯⎯⎯⎯ Uncaught Exception ⎯⎯⎯⎯⎯
+TypeError: Cannot read properties of undefined (reading 'then')
+ ❯ components/task-panel.tsx:100:51
+     98|
+     99|     setIsLoading(true);
+    100|     void fetch(`/api/projects/${projectId}/tasks`)
+       |                                                   ^
+    101|       .then(async (response) => {
+    102|         const payload = await readPayload<TaskCollection & Partial<Api…
+ ❯ Object.react_stack_bottom_frame node_modules/react-dom/cjs/react-dom-client.development.js:25989:20
+ ❯ runWithFiberInDEV node_modules/react-dom/cjs/react-dom-client.development.js:874:13
+ ❯ commitHookEffectListMount node_modules/react-dom/cjs/react-dom-client.development.js:13249:29
+ ❯ commitHookPassiveMountEffects node_modules/react-dom/cjs/react-dom-client.development.js:13336:11
+ ❯ commitPassiveMountOnFiber node_modules/react-dom/cjs/react-dom-client.development.js:15484:13
+ ❯ recursivelyTraversePassiveMountEffects node_modules/react-dom/cjs/react-dom-client.development.js:15439:11
+ ❯ commitPassiveMountOnFiber node_modules/react-dom/cjs/react-dom-client.development.js:15718:11
+ ❯ recursivelyTraversePassiveMountEffects node_modules/react-dom/cjs/react-dom-client.development.js:15439:11
+ ❯ commitPassiveMountOnFiber node_modules/react-dom/cjs/react-dom-client.development.js:15476:11
+
+This error originated in "tests/cockpit-layout.test.tsx" test file. It doesn't mean the error was thrown inside the file itself, but while it was running.
+The latest test that might've caused the error is "presents project navigation, task flow, and current context from real data". It might mean one of the following:
+- The error was thrown, while Vitest was running this test.
+- If the error occurred after the test had been completed, this was the last documented test before it was thrown.
+
+⎯⎯⎯⎯⎯ Uncaught Exception ⎯⎯⎯⎯⎯
+TypeError: Cannot read properties of undefined (reading 'then')
+ ❯ components/project-context/members-setup.tsx:79:27
+     77|     setSuccess("");
+     78|     void Promise.allSettled([
+     79|       fetch("/api/agents").then(async (response) => {
+       |                           ^
+     80|         const payload = (await response.json()) as {
+     81|           agents?: AgentProfile[];
+ ❯ Object.react_stack_bottom_frame node_modules/react-dom/cjs/react-dom-client.development.js:25989:20
+ ❯ runWithFiberInDEV node_modules/react-dom/cjs/react-dom-client.development.js:874:13
+ ❯ commitHookEffectListMount node_modules/react-dom/cjs/react-dom-client.development.js:13249:29
+ ❯ commitHookPassiveMountEffects node_modules/react-dom/cjs/react-dom-client.development.js:13336:11
+ ❯ commitPassiveMountOnFiber node_modules/react-dom/cjs/react-dom-client.development.js:15484:13
+ ❯ recursivelyTraversePassiveMountEffects node_modules/react-dom/cjs/react-dom-client.development.js:15439:11
+ ❯ commitPassiveMountOnFiber node_modules/react-dom/cjs/react-dom-client.development.js:15718:11
+ ❯ recursivelyTraversePassiveMountEffects node_modules/react-dom/cjs/react-dom-client.development.js:15439:11
+ ❯ commitPassiveMountOnFiber node_modules/react-dom/cjs/react-dom-client.development.js:15476:11
+
+This error originated in "tests/project-panel.test.tsx" test file. It doesn't mean the error was thrown inside the file itself, but while it was running.
+The latest test that might've caused the error is "loads existing projects". It might mean one of the following:
+- The error was thrown, while Vitest was running this test.
+- If the error occurred after the test had been completed, this was the last documented test before it was thrown.
+
+⎯⎯⎯⎯⎯ Uncaught Exception ⎯⎯⎯⎯⎯
+TypeError: Cannot read properties of undefined (reading 'then')
+ ❯ components/task-panel.tsx:100:51
+     98|
+     99|     setIsLoading(true);
+    100|     void fetch(`/api/projects/${projectId}/tasks`)
+       |                                                   ^
+    101|       .then(async (response) => {
+    102|         const payload = await readPayload<TaskCollection & Partial<Api…
+ ❯ Object.react_stack_bottom_frame node_modules/react-dom/cjs/react-dom-client.development.js:25989:20
+ ❯ runWithFiberInDEV node_modules/react-dom/cjs/react-dom-client.development.js:874:13
+ ❯ commitHookEffectListMount node_modules/react-dom/cjs/react-dom-client.development.js:13249:29
+ ❯ commitHookPassiveMountEffects node_modules/react-dom/cjs/react-dom-client.development.js:13336:11
+ ❯ commitPassiveMountOnFiber node_modules/react-dom/cjs/react-dom-client.development.js:15484:13
+ ❯ recursivelyTraversePassiveMountEffects node_modules/react-dom/cjs/react-dom-client.development.js:15439:11
+ ❯ commitPassiveMountOnFiber node_modules/react-dom/cjs/react-dom-client.development.js:15718:11
+ ❯ recursivelyTraversePassiveMountEffects node_modules/react-dom/cjs/react-dom-client.development.js:15439:11
+ ❯ commitPassiveMountOnFiber node_modules/react-dom/cjs/react-dom-client.development.js:15476:11
+
+This error originated in "tests/project-panel.test.tsx" test file. It doesn't mean the error was thrown inside the file itself, but while it was running.
+The latest test that might've caused the error is "loads existing projects". It might mean one of the following:
+- The error was thrown, while Vitest was running this test.
+- If the error occurred after the test had been completed, this was the last documented test before it was thrown.
+
+⎯⎯⎯⎯⎯ Uncaught Exception ⎯⎯⎯⎯⎯
+TypeError: Cannot read properties of undefined (reading 'then')
+ ❯ components/project-context/members-setup.tsx:79:27
+     77|     setSuccess("");
+     78|     void Promise.allSettled([
+     79|       fetch("/api/agents").then(async (response) => {
+       |                           ^
+     80|         const payload = (await response.json()) as {
+     81|           agents?: AgentProfile[];
+ ❯ Object.react_stack_bottom_frame node_modules/react-dom/cjs/react-dom-client.development.js:25989:20
+ ❯ runWithFiberInDEV node_modules/react-dom/cjs/react-dom-client.development.js:874:13
+ ❯ commitHookEffectListMount node_modules/react-dom/cjs/react-dom-client.development.js:13249:29
+ ❯ commitHookPassiveMountEffects node_modules/react-dom/cjs/react-dom-client.development.js:13336:11
+ ❯ commitPassiveMountOnFiber node_modules/react-dom/cjs/react-dom-client.development.js:15484:13
+ ❯ recursivelyTraversePassiveMountEffects node_modules/react-dom/cjs/react-dom-client.development.js:15439:11
+ ❯ commitPassiveMountOnFiber node_modules/react-dom/cjs/react-dom-client.development.js:15718:11
+ ❯ recursivelyTraversePassiveMountEffects node_modules/react-dom/cjs/react-dom-client.development.js:15439:11
+ ❯ commitPassiveMountOnFiber node_modules/react-dom/cjs/react-dom-client.development.js:15476:11
+
+This error originated in "tests/project-panel.test.tsx" test file. It doesn't mean the error was thrown inside the file itself, but while it was running.
+The latest test that might've caused the error is "creates and displays a project". It might mean one of the following:
+- The error was thrown, while Vitest was running this test.
+- If the error occurred after the test had been completed, this was the last documented test before it was thrown.
+
+⎯⎯⎯⎯⎯ Uncaught Exception ⎯⎯⎯⎯⎯
+TypeError: Cannot read properties of undefined (reading 'then')
+ ❯ components/task-panel.tsx:100:51
+     98|
+     99|     setIsLoading(true);
+    100|     void fetch(`/api/projects/${projectId}/tasks`)
+       |                                                   ^
+    101|       .then(async (response) => {
+    102|         const payload = await readPayload<TaskCollection & Partial<Api…
+ ❯ Object.react_stack_bottom_frame node_modules/react-dom/cjs/react-dom-client.development.js:25989:20
+ ❯ runWithFiberInDEV node_modules/react-dom/cjs/react-dom-client.development.js:874:13
+ ❯ commitHookEffectListMount node_modules/react-dom/cjs/react-dom-client.development.js:13249:29
+ ❯ commitHookPassiveMountEffects node_modules/react-dom/cjs/react-dom-client.development.js:13336:11
+ ❯ commitPassiveMountOnFiber node_modules/react-dom/cjs/react-dom-client.development.js:15484:13
+ ❯ recursivelyTraversePassiveMountEffects node_modules/react-dom/cjs/react-dom-client.development.js:15439:11
+ ❯ commitPassiveMountOnFiber node_modules/react-dom/cjs/react-dom-client.development.js:15718:11
+ ❯ recursivelyTraversePassiveMountEffects node_modules/react-dom/cjs/react-dom-client.development.js:15439:11
+ ❯ commitPassiveMountOnFiber node_modules/react-dom/cjs/react-dom-client.development.js:15476:11
+
+This error originated in "tests/project-panel.test.tsx" test file. It doesn't mean the error was thrown inside the file itself, but while it was running.
+The latest test that might've caused the error is "creates and displays a project". It might mean one of the following:
+- The error was thrown, while Vitest was running this test.
+- If the error occurred after the test had been completed, this was the last documented test before it was thrown.
+
+⎯⎯⎯⎯⎯ Uncaught Exception ⎯⎯⎯⎯⎯
+TypeError: Cannot read properties of undefined (reading 'then')
+ ❯ components/project-context/members-setup.tsx:79:27
+     77|     setSuccess("");
+     78|     void Promise.allSettled([
+     79|       fetch("/api/agents").then(async (response) => {
+       |                           ^
+     80|         const payload = (await response.json()) as {
+     81|           agents?: AgentProfile[];
+ ❯ Object.react_stack_bottom_frame node_modules/react-dom/cjs/react-dom-client.development.js:25989:20
+ ❯ runWithFiberInDEV node_modules/react-dom/cjs/react-dom-client.development.js:874:13
+ ❯ commitHookEffectListMount node_modules/react-dom/cjs/react-dom-client.development.js:13249:29
+ ❯ commitHookPassiveMountEffects node_modules/react-dom/cjs/react-dom-client.development.js:13336:11
+ ❯ commitPassiveMountOnFiber node_modules/react-dom/cjs/react-dom-client.development.js:15484:13
+ ❯ recursivelyTraversePassiveMountEffects node_modules/react-dom/cjs/react-dom-client.development.js:15439:11
+ ❯ commitPassiveMountOnFiber node_modules/react-dom/cjs/react-dom-client.development.js:15718:11
+ ❯ recursivelyTraversePassiveMountEffects node_modules/react-dom/cjs/react-dom-client.development.js:15439:11
+ ❯ commitPassiveMountOnFiber node_modules/react-dom/cjs/react-dom-client.development.js:15476:11
+
+This error originated in "tests/task-flow.test.tsx" test file. It doesn't mean the error was thrown inside the file itself, but while it was running.
+The latest test that might've caused the error is "shows an actionable empty state when the project has no tasks". It might mean one of the following:
+- The error was thrown, while Vitest was running this test.
+- If the error occurred after the test had been completed, this was the last documented test before it was thrown.
+
+⎯⎯⎯⎯⎯ Uncaught Exception ⎯⎯⎯⎯⎯
+TypeError: Cannot read properties of undefined (reading 'then')
+ ❯ components/task-panel.tsx:100:51
+     98|
+     99|     setIsLoading(true);
+    100|     void fetch(`/api/projects/${projectId}/tasks`)
+       |                                                   ^
+    101|       .then(async (response) => {
+    102|         const payload = await readPayload<TaskCollection & Partial<Api…
+ ❯ Object.react_stack_bottom_frame node_modules/react-dom/cjs/react-dom-client.development.js:25989:20
+ ❯ runWithFiberInDEV node_modules/react-dom/cjs/react-dom-client.development.js:874:13
+ ❯ commitHookEffectListMount node_modules/react-dom/cjs/react-dom-client.development.js:13249:29
+ ❯ commitHookPassiveMountEffects node_modules/react-dom/cjs/react-dom-client.development.js:13336:11
+ ❯ commitPassiveMountOnFiber node_modules/react-dom/cjs/react-dom-client.development.js:15484:13
+ ❯ recursivelyTraversePassiveMountEffects node_modules/react-dom/cjs/react-dom-client.development.js:15439:11
+ ❯ commitPassiveMountOnFiber node_modules/react-dom/cjs/react-dom-client.development.js:15718:11
+ ❯ recursivelyTraversePassiveMountEffects node_modules/react-dom/cjs/react-dom-client.development.js:15439:11
+ ❯ commitPassiveMountOnFiber node_modules/react-dom/cjs/react-dom-client.development.js:15476:11
+
+This error originated in "tests/task-flow.test.tsx" test file. It doesn't mean the error was thrown inside the file itself, but while it was running.
+The latest test that might've caused the error is "shows an actionable empty state when the project has no tasks". It might mean one of the following:
+- The error was thrown, while Vitest was running this test.
+- If the error occurred after the test had been completed, this was the last documented test before it was thrown.
+
+⎯⎯⎯⎯⎯ Uncaught Exception ⎯⎯⎯⎯⎯
+TypeError: Cannot read properties of undefined (reading 'then')
+ ❯ components/project-context/members-setup.tsx:86:50
+     84|         return payload.agents ?? [];
+     85|       }),
+     86|       fetch(`/api/projects/${projectId}/members`).then(async (response…
+       |                                                  ^
+     87|         const payload = (await response.json()) as MembershipState &
+     88|           Partial<ApiError>;
+ ❯ Object.react_stack_bottom_frame node_modules/react-dom/cjs/react-dom-client.development.js:25989:20
+ ❯ runWithFiberInDEV node_modules/react-dom/cjs/react-dom-client.development.js:874:13
+ ❯ commitHookEffectListMount node_modules/react-dom/cjs/react-dom-client.development.js:13249:29
+ ❯ commitHookPassiveMountEffects node_modules/react-dom/cjs/react-dom-client.development.js:13336:11
+ ❯ commitPassiveMountOnFiber node_modules/react-dom/cjs/react-dom-client.development.js:15484:13
+ ❯ recursivelyTraversePassiveMountEffects node_modules/react-dom/cjs/react-dom-client.development.js:15439:11
+ ❯ commitPassiveMountOnFiber node_modules/react-dom/cjs/react-dom-client.development.js:15718:11
+ ❯ recursivelyTraversePassiveMountEffects node_modules/react-dom/cjs/react-dom-client.development.js:15439:11
+ ❯ commitPassiveMountOnFiber node_modules/react-dom/cjs/react-dom-client.development.js:15476:11
+
+This error originated in "tests/task-flow.test.tsx" test file. It doesn't mean the error was thrown inside the file itself, but while it was running.
+The latest test that might've caused the error is "offers retry after a load error". It might mean one of the following:
+- The error was thrown, while Vitest was running this test.
+- If the error occurred after the test had been completed, this was the last documented test before it was thrown.
+
+⎯⎯⎯⎯⎯ Uncaught Exception ⎯⎯⎯⎯⎯
+TypeError: Cannot read properties of undefined (reading 'then')
+ ❯ components/task-panel.tsx:100:51
+     98|
+     99|     setIsLoading(true);
+    100|     void fetch(`/api/projects/${projectId}/tasks`)
+       |                                                   ^
+    101|       .then(async (response) => {
+    102|         const payload = await readPayload<TaskCollection & Partial<Api…
+ ❯ Object.react_stack_bottom_frame node_modules/react-dom/cjs/react-dom-client.development.js:25989:20
+ ❯ runWithFiberInDEV node_modules/react-dom/cjs/react-dom-client.development.js:874:13
+ ❯ commitHookEffectListMount node_modules/react-dom/cjs/react-dom-client.development.js:13249:29
+ ❯ commitHookPassiveMountEffects node_modules/react-dom/cjs/react-dom-client.development.js:13336:11
+ ❯ commitPassiveMountOnFiber node_modules/react-dom/cjs/react-dom-client.development.js:15484:13
+ ❯ recursivelyTraversePassiveMountEffects node_modules/react-dom/cjs/react-dom-client.development.js:15439:11
+ ❯ commitPassiveMountOnFiber node_modules/react-dom/cjs/react-dom-client.development.js:15718:11
+ ❯ recursivelyTraversePassiveMountEffects node_modules/react-dom/cjs/react-dom-client.development.js:15439:11
+ ❯ commitPassiveMountOnFiber node_modules/react-dom/cjs/react-dom-client.development.js:15476:11
+
+This error originated in "tests/task-flow.test.tsx" test file. It doesn't mean the error was thrown inside the file itself, but while it was running.
+The latest test that might've caused the error is "offers retry after a load error". It might mean one of the following:
+- The error was thrown, while Vitest was running this test.
+- If the error occurred after the test had been completed, this was the last documented test before it was thrown.
+
+⎯⎯⎯⎯ Unhandled Rejection ⎯⎯⎯⎯⎯
+TypeError: Cannot read properties of undefined (reading 'map')
+ ❯ components/project-context/members-setup.tsx:102:38
+    100|         setMembers(memberResult.value.members);
+    101|         setSelected(
+    102|           memberResult.value.members.map((member) => member.agentId),
+       |                                      ^
+    103|         );
+    104|         setLoadedVersion(memberResult.value.projectVersion);
+
+This error originated in "tests/task-flow.test.tsx" test file. It doesn't mean the error was thrown inside the file itself, but while it was running.
+The latest test that might've caused the error is "renders a persisted failed event and preserves the goal after execution fails". It might mean one of the following:
+- The error was thrown, while Vitest was running this test.
+- If the error occurred after the test had been completed, this was the last documented test before it was thrown.
+
+⎯⎯⎯⎯⎯ Uncaught Exception ⎯⎯⎯⎯⎯
+TypeError: Cannot read properties of undefined (reading 'length')
+ ❯ MembersSetup components/project-context/members-setup.tsx:239:16
+    237|         </p>
+    238|       ) : null}
+    239|       {members.length > 0 ? (
+       |                ^
+    240|         <div className="stack">
+    241|           <h4 ref={rosterHeadingRef} tabIndex={-1}>
+ ❯ Object.react_stack_bottom_frame node_modules/react-dom/cjs/react-dom-client.development.js:25904:20
+ ❯ renderWithHooks node_modules/react-dom/cjs/react-dom-client.development.js:7662:22
+ ❯ updateFunctionComponent node_modules/react-dom/cjs/react-dom-client.development.js:10166:19
+ ❯ beginWork node_modules/react-dom/cjs/react-dom-client.development.js:11778:18
+ ❯ runWithFiberInDEV node_modules/react-dom/cjs/react-dom-client.development.js:874:13
+ ❯ performUnitOfWork node_modules/react-dom/cjs/react-dom-client.development.js:17641:22
+ ❯ workLoopSync node_modules/react-dom/cjs/react-dom-client.development.js:17469:41
+ ❯ renderRootSync node_modules/react-dom/cjs/react-dom-client.development.js:17450:11
+ ❯ performWorkOnRoot node_modules/react-dom/cjs/react-dom-client.development.js:16583:35
+
+This error originated in "tests/task-flow.test.tsx" test file. It doesn't mean the error was thrown inside the file itself, but while it was running.
+The latest test that might've caused the error is "renders a persisted failed event and preserves the goal after execution fails". It might mean one of the following:
+- The error was thrown, while Vitest was running this test.
+- If the error occurred after the test had been completed, this was the last documented test before it was thrown.
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯
+
+
+ Test Files  4 failed | 1 passed (5)
+      Tests  9 failed | 5 passed (14)
+     Errors  14 errors
+   Start at  03:30:49
+   Duration  6.12s (transform 394ms, setup 1.93s, import 1.07s, tests 7.11s, environment 8.75s)
+
+# exit: 1

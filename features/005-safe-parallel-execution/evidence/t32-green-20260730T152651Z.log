@@ -1,0 +1,39 @@
+# hf-gate-run
+# label: t32-green
+# command: npm.cmd run smoke:execution
+# started: 2026-07-30T15:26:51+00:00
+
+> collaboration-cockpit@0.1.0 smoke:execution
+> node tests/execution-browser-smoke.mjs
+
+(node:9680) ExperimentalWarning: SQLite is an experimental feature and might change at any time
+(Use `node --trace-warnings ...` to show where the warning was created)
+file:///D:/cool-ai/tests/execution-browser-smoke.mjs:1041
+    throw new Error(
+          ^
+
+Error: Timed out waiting for two start contracts.
+DOM: 选择并执行
+Implement Beta file
+Implement Alpha file
+开始执行所选任务
+
+Implement Alpha file：服务暂时出现问题，请稍后重试。
+
+重试 Implement Alpha file
+
+Implement Beta file：服务暂时出现问题，请稍后重试。
+
+重试 Implement Beta file
+API: {"pendingDecision":null,"projectMessagesPage":{"items":[],"nextAfter":null},"readiness":{"missing":[],"ready":true},"run":{"id":"034729cd-ab27-4a8a-8c53-d18ec9d03a65","projectId":"afa130e3-e0b4-4ed4-9a90-77cdd4e98482","status":"planned","currentAgentId":"527181ed-c7d2-4f37-aa0e-c5ee3eff8d35","roundCount":2,"pauseCategory":null,"version":1,"createdAt":"2026-07-30T15:27:20.628Z","updatedAt":"2026-07-30T15:27:20.628Z"},"timelinePage":{"items":[],"nextAfter":null},"usage":{"byAgent":[],"completionTokens":0,"promptTokens":0,"repairCalls":0,"totalTokens":0,"unreportedCalls":0}}
+{"pendingDecision":null,"projectMessagesPage":{"items":[],"nextAfter":null},"readiness":{"missing":[],"ready":true},"run":{"id":"034729cd-ab27-4a8a-8c53-d18ec9d03a65","projectId":"afa130e3-e0b4-4ed4-9a90-77cdd4e98482","status":"planned","currentAgentId":"527181ed-c7d2-4f37-aa0e-c5ee3eff8d35","roundCount":2,"pauseCategory":null,"version":1,"createdAt":"2026-07-30T15:27:20.628Z","updatedAt":"2026-07-30T15:27:20.628Z"},"timelinePage":{"items":[],"nextAfter":null},"usage":{"byAgent":[],"completionTokens":0,"promptTokens":0,"repairCalls":0,"totalTokens":0,"unreportedCalls":0}}
+{"pendingDecision":null,"projectMessagesPage":{"items":[],"nextAfter":null},"readiness":{"missing":[],"ready":true},"run":{"id":"034729cd-ab27-4a8a-8c53-d18ec9d03a65","projectId":"afa130e3-e0b4-4ed4-9a90-77cdd4e98482","status":"planned","currentAgentId":"527181ed-c7d2-4f37-aa0e-c5ee3eff8d35","roundCount":2,"pauseCategory":null,"version":1,"createdAt":"2026-07-30T15:27:20.628Z","updatedAt":"2026-07-30T15:27:20.628Z"},"timelinePage":{"items":[],"nextAfter":null},"usage":{"byAgent":[],"completionTokens":0,"promptTokens":0,"repairCalls":0,"totalTokens":0,"unreportedCalls":0}}
+{"pendingDecision":null,"projectMessagesPage":{"items":[],"nextAfter":null},"readiness":{"missing":[],"ready":true},"run":{"id":"034729cd-ab27-4a8a-8c53-d18ec9d03a65","projectId":"afa130e3-e0b4-4ed4-9a90-77cdd4e98482","status":"planned","currentAgentId":"527181ed-c7d2-4f37-aa0e-c5ee3eff8d35","roundCount":2,"pauseCategory":null,"version":1,"createdAt":"2026-07-30T15:27:20.628Z","updatedAt":"2026-07-30T15:27:20.628Z"},"timelinePage":{"items":[],"nextAfter":null},"usage":{"byAgent":[],"completionTokens":0,"promptTokens":0,"repairCalls":0,"totalTokens":0,"unreportedCalls":0}}
+{"pendingDecision":null,"projectMessagesPage":{"items":[],"nextAfter":null},"readiness":{"missing":[],"ready":true},"run":{"id":"034729cd-ab27-4a8a-8c53-d18ec9d03a65","projectId":"afa130e3-e0b4-4ed4-9a90-77cdd4e98482","status":"planned","currentAgentId":"527181ed-c7d2-4f37-aa0e-c5ee3eff8d35","roundCount":2,"pauseCategory":null,"version":1,"createdAt":"2026-07-30T15:27:20.628Z","updatedAt":"2026-07-30T15:27:20.628Z"},"timelinePage":{"items":[],"nextAfter":null},"usage":{"byAgent":[],"completionTokens":0,"promptTokens":0,"repairCalls":0,"totalTokens":0,"unreportedCalls":0}}
+{"pendingDecision":null,"projectMessagesPage":{"items":[],"nextAfter":null},"readiness":{"missing":[],"ready":true},"run":{"id":"034729cd-ab27-4a8a-8c53-d18ec9d03a65","projectId":"afa130e3-e0b4-4ed4-9a90-77cdd4e98482","status":"planned","currentAgentId":"527181ed-c7d2-4f37-aa0e-c5ee3eff8d35","roundCount":2,"pauseCategory":null,"version":1,"createdAt":"2026-07-30T15:27:20.628Z","updatedAt":"2026-07-30T15:27:20.628Z"},"timelinePage":{"items":[],"nextAfter":null},"usage":{"byAgent":[],"completionTokens":0,"promptTokens":0,"repairCalls":0,"totalTokens":0,"unreportedCalls":0}}
+{"pendingDecision":null,"projectMessagesPage":{"items":[],"nextAfter":null},"readiness":{"missing":[],"ready":true},"run":{"id":"034729cd-ab27-4a8a-8c53-d18ec9d03a65","projectId":"afa130e3-e0b4-4ed4-9a90-77cdd4e98482","status":"planned","currentAgentId":"527181ed-c7d2-4f37-aa0e-c5ee3eff8d35","roundCount":2,"pauseCategory":null,"version":1,"createdAt":"2026-07-30T15:27:20.628Z","updatedAt":"2026-07-30T15:27:20.628Z"},"timelinePage":{"items":[],"nextAfter":null},"usage":{"byAgent":[],"completionTokens":0,"promptTokens":0,"repairCalls":0,"totalTokens":0,"unreportedCalls":0}}
+{"pendingDecision":null,"projectMessagesPage":{"items":[],"nextAfter":null},"readiness":{"missing":[],"ready":true},"run":{"id":"034729cd-ab27-4a8a-8c53-d18ec9d03a65","projectId":"afa130e3-e0b4-4ed4-9a90-77cdd4e98482","status":"planned","currentAgentId":"527181ed-c7d2-4f37-aa0e-c5ee3eff8d35","roundCount":2,"pauseCategory":null,"version":1,"createdAt":"2026-07-30T15:27:20.628Z","updatedAt":"2026-07-30T15:27:20.628Z"},"timelinePage":{"items":[],"nextAfter":null},"usage":{"byAgent":[],"completionTokens":0,"promptTokens":0,"repairCalls":0,"totalTokens":0,"unreportedCalls":0}}
+    at file:///D:/cool-ai/tests/execution-browser-smoke.mjs:1041:11
+
+Node.js v24.14.0
+# exit: 1

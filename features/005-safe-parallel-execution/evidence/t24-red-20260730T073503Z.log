@@ -1,0 +1,218 @@
+# hf-gate-run
+# label: t24-red
+# command: cmd /c npm test -- tests/execution-controls.test.ts
+# started: 2026-07-30T07:35:03+00:00
+
+> collaboration-cockpit@0.1.0 test
+> vitest run tests/execution-controls.test.ts
+
+
+ RUN  v4.1.10 D:/cool-ai
+
+(node:12928) ExperimentalWarning: SQLite is an experimental feature and might change at any time
+(Use `node --trace-warnings ...` to show where the warning was created)
+ ❯ tests/execution-controls.test.ts (13 tests | 13 failed) 4128ms
+     × pauses queued with its exact resume target 250ms
+     × pauses running with its exact resume target 233ms
+     × pauses waiting_approval with its exact resume target 236ms
+     × discards an in-flight action, requests command termination, and fences late results 252ms
+     × continues only to the recorded target with target-specific preconditions 243ms
+     × retries stale execution as a new attempt and sandbox without resetting history or deadline 1255ms
+     × rejects retry when current eligibility, workspace, context, or budget preconditions fail 280ms
+     × stops a single execution, expires approvals, and never mutates the other execution 232ms
+     × keeps stopped terminal 236ms
+     × keeps merged terminal 229ms
+     × blocks every ordinary control while manual recovery is required 246ms
+     × durably replays the exact receipt and conflicts on reused operation content 220ms
+     × persists stale-version conflicts without overwriting newer owner actions 215ms
+
+⎯⎯⎯⎯⎯⎯ Failed Tests 13 ⎯⎯⎯⎯⎯⎯⎯
+
+ FAIL  tests/execution-controls.test.ts > execution lifecycle controls > pauses queued with its exact resume target
+ FAIL  tests/execution-controls.test.ts > execution lifecycle controls > pauses running with its exact resume target
+ FAIL  tests/execution-controls.test.ts > execution lifecycle controls > pauses waiting_approval with its exact resume target
+AssertionError: promise rejected "Error: Execution controls are not impleme…" instead of resolving
+ ❯ tests/execution-controls.test.ts:168:25
+    166|     }, dependencies);
+    167|
+    168|     await expect(result).resolves.toMatchObject({
+       |                         ^
+    169|       body: { execution: { status: "paused", resumeTarget: target } },
+    170|       status: 200,
+
+Caused by: Error: Execution controls are not implemented.
+ ❯ controlExecution src/server/execution/execution-control-service.ts:15:9
+ ❯ tests/execution-controls.test.ts:162:20
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[1/13]⎯
+
+ FAIL  tests/execution-controls.test.ts > execution lifecycle controls > discards an in-flight action, requests command termination, and fences late results
+Error: Execution controls are not implemented.
+ ❯ controlExecution src/server/execution/execution-control-service.ts:15:9
+     13|   _dependencies: ExecutionControlDependencies,
+     14| ): Promise<never> {
+     15|   throw new Error("Execution controls are not implemented.");
+       |         ^
+     16| }
+     17|
+ ❯ tests/execution-controls.test.ts:194:26
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[2/13]⎯
+
+ FAIL  tests/execution-controls.test.ts > execution lifecycle controls > continues only to the recorded target with target-specific preconditions
+AssertionError: promise rejected "Error: Execution controls are not impleme…" instead of resolving
+ ❯ tests/execution-controls.test.ts:215:22
+    213|       expectedVersion: runningVersion,
+    214|       operationId: operationId(10),
+    215|     }, dependencies)).resolves.toMatchObject({
+       |                      ^
+    216|       body: { execution: { status: "running", resumeTarget: null } },
+    217|     });
+
+Caused by: Error: Execution controls are not implemented.
+ ❯ controlExecution src/server/execution/execution-control-service.ts:15:9
+ ❯ tests/execution-controls.test.ts:211:18
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[3/13]⎯
+
+ FAIL  tests/execution-controls.test.ts > execution lifecycle controls > retries stale execution as a new attempt and sandbox without resetting history or deadline
+AssertionError: expected [] to have a length of 1 but got +0
+
+- Expected
++ Received
+
+- 1
++ 0
+
+ ❯ tests/execution-controls.test.ts:236:50
+    234|     }, dependencies);
+    235|     void pending.catch(() => undefined);
+    236|     await vi.waitFor(() => expect(sandboxInputs).toHaveLength(1));
+       |                                                  ^
+    237|
+    238|     expect(row("executions", "id=?", EXECUTION_ID)).toMatchObject({
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[4/13]⎯
+
+ FAIL  tests/execution-controls.test.ts > execution lifecycle controls > rejects retry when current eligibility, workspace, context, or budget preconditions fail
+AssertionError: expected Error: Execution controls are not impleme… to match object { code: 'TASK_NOT_ELIGIBLE' }
+
+- Expected
++ Received
+
+- {
+-   "code": "TASK_NOT_ELIGIBLE",
++ Error {
++   "message": "Execution controls are not implemented.",
+  }
+
+ ❯ tests/execution-controls.test.ts:264:22
+    262|       expectedVersion: version,
+    263|       operationId: operationId(21),
+    264|     }, dependencies)).rejects.toMatchObject({ code: "TASK_NOT_ELIGIBLE…
+       |                      ^
+    265|     expect(row("executions", "id=?", EXECUTION_ID).current_attempt_no)…
+    266|   });
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[5/13]⎯
+
+ FAIL  tests/execution-controls.test.ts > execution lifecycle controls > stops a single execution, expires approvals, and never mutates the other execution
+Error: Execution controls are not implemented.
+ ❯ controlExecution src/server/execution/execution-control-service.ts:15:9
+     13|   _dependencies: ExecutionControlDependencies,
+     14| ): Promise<never> {
+     15|   throw new Error("Execution controls are not implemented.");
+       |         ^
+     16| }
+     17|
+ ❯ tests/execution-controls.test.ts:286:11
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[6/13]⎯
+
+ FAIL  tests/execution-controls.test.ts > execution lifecycle controls > keeps stopped terminal
+ FAIL  tests/execution-controls.test.ts > execution lifecycle controls > keeps merged terminal
+AssertionError: expected Error: Execution controls are not impleme… to match object { code: 'EXECUTION_STATE_CONFLICT' }
+
+- Expected
++ Received
+
+- {
+-   "code": "EXECUTION_STATE_CONFLICT",
++ Error {
++   "message": "Execution controls are not implemented.",
+  }
+
+ ❯ tests/execution-controls.test.ts:306:22
+    304|       expectedVersion: version,
+    305|       operationId: operationId(31),
+    306|     }, dependencies)).rejects.toMatchObject({ code: "EXECUTION_STATE_C…
+       |                      ^
+    307|   });
+    308|
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[7/13]⎯
+
+ FAIL  tests/execution-controls.test.ts > execution lifecycle controls > blocks every ordinary control while manual recovery is required
+AssertionError: expected Error: Execution controls are not impleme… to match object { code: 'MANUAL_RECOVERY_REQUIRED' }
+
+- Expected
++ Received
+
+- {
+-   "code": "MANUAL_RECOVERY_REQUIRED",
++ Error {
++   "message": "Execution controls are not implemented.",
+  }
+
+ ❯ tests/execution-controls.test.ts:320:24
+    318|         expectedVersion: version,
+    319|         operationId: operationId(40 + index),
+    320|       }, dependencies)).rejects.toMatchObject({ code: "MANUAL_RECOVERY…
+       |                        ^
+    321|     }
+    322|   });
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[8/13]⎯
+
+ FAIL  tests/execution-controls.test.ts > execution lifecycle controls > durably replays the exact receipt and conflicts on reused operation content
+Error: Execution controls are not implemented.
+ ❯ controlExecution src/server/execution/execution-control-service.ts:15:9
+     13|   _dependencies: ExecutionControlDependencies,
+     14| ): Promise<never> {
+     15|   throw new Error("Execution controls are not implemented.");
+       |         ^
+     16| }
+     17|
+ ❯ tests/execution-controls.test.ts:330:25
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[9/13]⎯
+
+ FAIL  tests/execution-controls.test.ts > execution lifecycle controls > persists stale-version conflicts without overwriting newer owner actions
+AssertionError: expected Error: Execution controls are not impleme… to match object { code: 'EXECUTION_STATE_CONFLICT' }
+
+- Expected
++ Received
+
+- {
+-   "code": "EXECUTION_STATE_CONFLICT",
++ Error {
++   "message": "Execution controls are not implemented.",
+  }
+
+ ❯ tests/execution-controls.test.ts:348:22
+    346|       expectedVersion: 99,
+    347|       operationId: operationId(70),
+    348|     }, dependencies)).rejects.toMatchObject({ code: "EXECUTION_STATE_C…
+       |                      ^
+    349|     expect(row("execution_operations", "id=?", operationId(70))).toMat…
+    350|       status: "completed",
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[10/13]⎯
+
+
+ Test Files  1 failed (1)
+      Tests  13 failed (13)
+   Start at  15:35:04
+   Duration  6.49s (transform 328ms, setup 382ms, import 283ms, tests 4.13s, environment 1.43s)
+
+# exit: 1

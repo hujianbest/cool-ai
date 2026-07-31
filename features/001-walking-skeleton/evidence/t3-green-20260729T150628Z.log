@@ -1,0 +1,26 @@
+# hf-gate-run
+# label: t3-green
+# command: cmd /c npm test
+# started: 2026-07-29T15:06:28+00:00
+
+> collaboration-cockpit@0.1.0 test
+> vitest run
+
+
+ RUN  v4.1.10 D:/cool-ai
+
+(node:224) ExperimentalWarning: SQLite is an experimental feature and might change at any time
+(Use `node --trace-warnings ...` to show where the warning was created)
+(node:5148) ExperimentalWarning: SQLite is an experimental feature and might change at any time
+(Use `node --trace-warnings ...` to show where the warning was created)
+(node:11604) ExperimentalWarning: SQLite is an experimental feature and might change at any time
+(Use `node --trace-warnings ...` to show where the warning was created)
+(node:9684) ExperimentalWarning: SQLite is an experimental feature and might change at any time
+(Use `node --trace-warnings ...` to show where the warning was created)
+
+ Test Files  6 passed (6)
+      Tests  25 passed (25)
+   Start at  23:06:30
+   Duration  3.33s (transform 256ms, setup 2.72s, import 604ms, tests 1.86s, environment 10.92s)
+
+# exit: 0

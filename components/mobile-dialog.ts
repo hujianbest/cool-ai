@@ -1,0 +1,149 @@
+import {
+  useEffect,
+  useState,
+  type KeyboardEvent,
+  type RefObject,
+} from "react";
+
+export function useNarrowMode(): boolean {
+  const [narrow, setNarrow] = useState(false);
+  useEffect(() => {
+    if (typeof window.matchMedia !== "function") return;
+    const breakpoint = window
+      .getComputedStyle(document.documentElement)
+      .getPropertyValue("--breakpoint-cockpit")
+      .trim();
+    const query = window.matchMedia(`(max-width: ${breakpoint})`);
+    const update = () => setNarrow(query.matches);
+    update();
+    query.addEventListener("change", update);
+    return () => query.removeEventListener("change", update);
+  }, []);
+  return narrow;
+}
+
+type ModalSurfaceOptions = {
+  active: boolean;
+  dialogRef: RefObject<HTMLElement | null>;
+  hideBackground?: boolean;
+  inertRootRefs: Array<RefObject<HTMLElement | null>>;
+  initialFocusRef: RefObject<HTMLElement | null>;
+  restoreFocusRef: RefObject<HTMLElement | null>;
+  onClose: () => void;
+};
+
+const EMPTY_SELECTORS: string[] = [];
+
+function focusableElements(root: HTMLElement): HTMLElement[] {
+  return Array.from(
+    root.querySelectorAll<HTMLElement>(
+      'button:not(:disabled), input:not(:disabled), textarea:not(:disabled), select:not(:disabled), a[href], [tabindex]:not([tabindex="-1"])',
+    ),
+  ).filter((element) => !element.hasAttribute("hidden"));
+}
+
+export function useModalSurface(options: ModalSurfaceOptions): void;
+export function useModalSurface(
+  active: boolean,
+  dialogRef: RefObject<HTMLElement | null>,
+  inertSelectors: string[],
+): void;
+export function useModalSurface(
+  optionsOrActive: ModalSurfaceOptions | boolean,
+  legacyDialogRef?: RefObject<HTMLElement | null>,
+  legacyInertSelectors: string[] = EMPTY_SELECTORS,
+): void {
+  const options =
+    typeof optionsOrActive === "boolean"
+      ? null
+      : optionsOrActive;
+  const active = options?.active ?? optionsOrActive === true;
+  const dialogRef = options?.dialogRef ?? legacyDialogRef!;
+
+  useEffect(() => {
+    if (!active) return;
+    const inertElements = options
+      ? options.inertRootRefs.flatMap((reference) =>
+          reference.current ? [reference.current] : [],
+        )
+      : legacyInertSelectors.flatMap((selector) =>
+          Array.from(document.querySelectorAll<HTMLElement>(selector)),
+        );
+    const previousAccessibility = inertElements.map((element) => ({
+      ariaHidden: element.getAttribute("aria-hidden"),
+      element,
+      inert: element.hasAttribute("inert"),
+    }));
+    inertElements.forEach((element) => {
+      element.setAttribute("inert", "");
+      if (options?.hideBackground) element.setAttribute("aria-hidden", "true");
+    });
+    const previousOverflow = document.body.style.overflow;
+    document.body.style.overflow = "hidden";
+
+    const dialog = dialogRef.current;
+    const handleKeyDown = (event: globalThis.KeyboardEvent) => {
+      if (event.key === "Escape" && options) {
+        event.preventDefault();
+        options.onClose();
+        return;
+      }
+      if (event.key !== "Tab" || !dialog) return;
+      const focusable = focusableElements(dialog);
+      if (focusable.length === 0) return;
+      const first = focusable[0];
+      const last = focusable[focusable.length - 1];
+      if (event.shiftKey && document.activeElement === first) {
+        event.preventDefault();
+        last.focus();
+      } else if (!event.shiftKey && document.activeElement === last) {
+        event.preventDefault();
+        first.focus();
+      }
+    };
+    dialog?.addEventListener("keydown", handleKeyDown);
+    queueMicrotask(() => {
+      const initialFocus =
+        options?.initialFocusRef.current ??
+        dialogRef.current?.querySelector<HTMLElement>(
+          '[data-dialog-close="true"]',
+        );
+      initialFocus?.focus();
+    });
+    return () => {
+      dialog?.removeEventListener("keydown", handleKeyDown);
+      previousAccessibility.forEach(({ ariaHidden, element, inert }) => {
+        if (!inert) element.removeAttribute("inert");
+        if (options?.hideBackground) {
+          if (ariaHidden === null) element.removeAttribute("aria-hidden");
+          else element.setAttribute("aria-hidden", ariaHidden);
+        }
+      });
+      document.body.style.overflow = previousOverflow;
+      options?.restoreFocusRef.current?.focus();
+    };
+  }, [active, dialogRef, legacyInertSelectors, options]);
+}
+
+export function trapModalFocus(
+  event: KeyboardEvent<HTMLElement>,
+  close: () => void,
+): void {
+  if (event.key === "Escape") {
+    event.preventDefault();
+    close();
+    return;
+  }
+  if (event.key !== "Tab") return;
+  const focusable = focusableElements(event.currentTarget);
+  if (focusable.length === 0) return;
+  const first = focusable[0];
+  const last = focusable[focusable.length - 1];
+  if (event.shiftKey && document.activeElement === first) {
+    event.preventDefault();
+    last.focus();
+  } else if (!event.shiftKey && document.activeElement === last) {
+    event.preventDefault();
+    first.focus();
+  }
+}

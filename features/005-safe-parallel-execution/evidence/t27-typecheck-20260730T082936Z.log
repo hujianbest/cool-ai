@@ -1,0 +1,11 @@
+# hf-gate-run
+# label: t27-typecheck
+# command: npx.cmd tsc --noEmit
+# started: 2026-07-30T08:29:36+00:00
+tests/execution-start-policy-ui.test.tsx(116,22): error TS2345: Argument of type '(url: URL, init: RequestInit | undefined) => Promise<Response | undefined>' is not assignable to parameter of type '(url: URL, init?: RequestInit | undefined) => Response | Promise<Response> | undefined'.
+  Type 'Promise<Response | undefined>' is not assignable to type 'Response | Promise<Response> | undefined'.
+    Type 'Promise<Response | undefined>' is not assignable to type 'Promise<Response>'.
+      Type 'Response | undefined' is not assignable to type 'Response'.
+        Type 'undefined' is not assignable to type 'Response'.
+tests/execution-start-policy-ui.test.tsx(196,44): error TS18048: 'savedBody' is possibly 'undefined'.
+# exit: 2

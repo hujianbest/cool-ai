@@ -1,0 +1,5 @@
+# hf-gate-run
+# label: t21-advance-typecheck
+# command: npx.cmd tsc --noEmit
+# started: 2026-07-29T23:28:16+00:00
+# exit: 0

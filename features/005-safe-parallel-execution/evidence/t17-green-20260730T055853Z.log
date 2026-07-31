@@ -1,0 +1,41 @@
+# hf-gate-run
+# label: t17-green
+# command: cmd /c npm test -- tests/execution-usage-budget.test.ts
+# started: 2026-07-30T05:58:53+00:00
+
+> collaboration-cockpit@0.1.0 test
+> vitest run tests/execution-usage-budget.test.ts
+
+
+ RUN  v4.1.10 D:/cool-ai
+
+(node:7328) ExperimentalWarning: SQLite is an experimental feature and might change at any time
+(Use `node --trace-warnings ...` to show where the warning was created)
+ ❯ tests/execution-usage-budget.test.ts (4 tests | 1 failed) 2957ms
+     × enforces exact round, tool, and wall-clock prechecks while keeping Agents independent 569ms
+
+⎯⎯⎯⎯⎯⎯⎯ Failed Tests 1 ⎯⎯⎯⎯⎯⎯⎯
+
+ FAIL  tests/execution-usage-budget.test.ts > shared execution usage and business budgets > enforces exact round, tool, and wall-clock prechecks while keeping Agents independent
+SchemaMigrationError: Database version 5 schema is invalid.
+ ❯ migrateDatabase src/server/migrations.ts:1342:13
+    1340|     const validation = validateV5(database);
+    1341|     if (validation) {
+    1342|       throw new SchemaMigrationError(validation, "Database version 5 s…
+       |             ^
+    1343|     }
+    1344|   }
+ ❯ openDatabase src/server/db.ts:14:5
+ ❯ Module.advanceExecution src/server/execution/action-orchestrator.ts:785:20
+ ❯ run tests/execution-usage-budget.test.ts:196:18
+ ❯ tests/execution-usage-budget.test.ts:335:11
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[1/1]⎯
+
+
+ Test Files  1 failed (1)
+      Tests  1 failed | 3 passed (4)
+   Start at  13:58:54
+   Duration  5.09s (transform 315ms, setup 339ms, import 113ms, tests 2.96s, environment 1.41s)
+
+# exit: 1
