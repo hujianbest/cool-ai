@@ -1,4 +1,6 @@
 import { mkdtempSync, rmSync } from "node:fs";
+import { createServer, type Server } from "node:http";
+import type { AddressInfo } from "node:net";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import type { DatabaseSync } from "node:sqlite";
@@ -6,6 +8,10 @@ import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
 import { createCredentialVault } from "@/src/server/credential-vault";
 import { openDatabase } from "@/src/server/db";
+import {
+  controlExecution,
+  type ExecutionControlDependencies,
+} from "@/src/server/execution/execution-control-service";
 
 type Identity = {
   finalPath: string;
@@ -51,6 +57,10 @@ type AdvanceModule = {
     input: unknown,
     dependencies: {
       fileAdapter: ReadOnlyAdapter;
+      modelFaultInjector?: (point:
+        | "after_call_terminal_commit"
+        | "after_call_terminal_update"
+        | "before_call_terminal_update") => void;
       onModelStarted?: (executionId: string) => void;
     },
   ): Promise<{ body: Record<string, unknown>; status: number }>;
@@ -70,6 +80,7 @@ let databasePath: string;
 let database: DatabaseSync;
 let advance: AdvanceModule;
 let adapter: ReadOnlyAdapter;
+let servers: Server[];
 
 function identity(value: string, kind: Identity["kind"], finalPath: string, size = 0): Identity {
   return { finalPath, identity: value, kind, size };
@@ -228,6 +239,7 @@ beforeEach(async () => {
   directory = mkdtempSync(join(tmpdir(), "cool-ai-execution-orchestrator-"));
   databasePath = join(directory, "cockpit.sqlite");
   database = openDatabase(databasePath);
+  servers = [];
   seed();
   const root: Node = {
     children: new Map([[
@@ -256,12 +268,249 @@ beforeEach(async () => {
 
 afterEach(() => {
   vi.unstubAllGlobals();
+  for (const server of servers) server.close();
   database.close();
   rmSync(directory, { force: true, recursive: true });
   delete process.env.COCKPIT_MASTER_KEY;
 });
 
+async function localProvider(
+  respond: (body: string, requestIndex: number) => { body: unknown; status?: number },
+): Promise<{ baseUrl: string; requestCount: () => number }> {
+  let requests = 0;
+  const server = createServer((request, response) => {
+    const chunks: Buffer[] = [];
+    request.on("data", (chunk) => chunks.push(Buffer.from(chunk)));
+    request.on("end", () => {
+      requests += 1;
+      const result = respond(Buffer.concat(chunks).toString("utf8"), requests);
+      response.statusCode = result.status ?? 200;
+      response.setHeader("content-type", "application/json");
+      response.end(JSON.stringify(result.body));
+    });
+  });
+  servers.push(server);
+  await new Promise<void>((resolve) => server.listen(0, "127.0.0.1", resolve));
+  const address = server.address() as AddressInfo;
+  return {
+    baseUrl: `http://127.0.0.1:${address.port}/v1`,
+    requestCount: () => requests,
+  };
+}
+
+function modelFacts() {
+  return database.prepare(`
+    SELECT c.execution_id AS executionId,c.status,c.finished_at AS finishedAt,
+           c.prompt_tokens AS promptTokens,c.total_tokens AS totalTokens,
+           a.status AS actionStatus,o.status AS operationStatus
+    FROM execution_model_calls c
+    JOIN execution_actions a ON a.id=c.action_id
+    JOIN execution_operations o ON o.project_id=a.project_id AND o.id=a.operation_id
+    ORDER BY c.execution_id,c.call_index
+  `).all() as Array<{
+    actionStatus: string;
+    executionId: string;
+    finishedAt: string | null;
+    operationStatus: string;
+    promptTokens: number | null;
+    status: string;
+    totalTokens: number | null;
+  }>;
+}
+
+function retryDependencies(): ExecutionControlDependencies {
+  return {
+    executionRoot: join(directory, "executions"),
+    requestProcessTermination: () => true,
+    sandboxExecutor: async (input) => {
+      const retryDatabase = openDatabase(databasePath);
+      try {
+        retryDatabase.exec("BEGIN IMMEDIATE");
+        retryDatabase.prepare(`
+          UPDATE execution_actions SET status='succeeded',lease_token=NULL,
+            lease_expires_at=NULL,result_json='{"status":"ready"}',
+            finished_at=strftime('%Y-%m-%dT%H:%M:%fZ','now')
+          WHERE id=? AND status='running'
+        `).run(input.actionId);
+        retryDatabase.prepare(`
+          UPDATE execution_attempts SET status='ready' WHERE id=? AND status='preparing'
+        `).run(input.attemptId);
+        retryDatabase.prepare(`
+          UPDATE execution_operations SET status='completed',final_action_index=0,
+            http_status=200,response_json='{"execution":{"status":"queued"}}',
+            updated_at=strftime('%Y-%m-%dT%H:%M:%fZ','now')
+          WHERE project_id=? AND id=? AND status='pending'
+        `).run(input.projectId, input.operationId);
+        retryDatabase.exec("COMMIT");
+      } finally {
+        retryDatabase.close();
+      }
+      throw new Error("sandbox-ready");
+    },
+  };
+}
+
 describe("client-driven execution advance orchestration", () => {
+  it.each(["provider", "parse"] as const)(
+    "terminalizes two real concurrent HTTP calls when one Agent has a %s failure",
+    async (failure) => {
+      const provider = await localProvider((body) => {
+        const executionB = body.includes("work-b");
+        const repairingInvalid = body.includes("The following response was invalid.");
+        if (executionB && failure === "provider") {
+          return { body: { error: "upstream" }, status: 500 };
+        }
+        const action = (executionB || repairingInvalid) && failure === "parse"
+          ? { unexpected: true }
+          : { path: "src", type: "list" };
+        return {
+          body: {
+            choices: [{ message: { content: JSON.stringify({
+              action,
+              summary: "Visible summary",
+            }) } }],
+            usage: { completion_tokens: 3, prompt_tokens: 7, total_tokens: 10 },
+          },
+        };
+      });
+      database.prepare("UPDATE providers SET base_url=? WHERE id='provider'")
+        .run(provider.baseUrl);
+
+      const results = await Promise.all([
+        advance.advanceExecution(
+          databasePath,
+          EXECUTION_ID,
+          { expectedVersion: 1, operationId: operationId(100) },
+          { fileAdapter: adapter },
+        ),
+        advance.advanceExecution(
+          databasePath,
+          SECOND_EXECUTION_ID,
+          { expectedVersion: 1, operationId: operationId(101) },
+          { fileAdapter: adapter },
+        ),
+      ]);
+
+      expect(results[0].status).toBe(200);
+      expect(results[1].status).toBe(failure === "provider" ? 502 : 409);
+      const facts = modelFacts();
+      expect(facts).toHaveLength(failure === "provider" ? 2 : 3);
+      expect(facts.every(({ finishedAt, status }) =>
+        finishedAt !== null && status !== "calling")).toBe(true);
+      expect(facts.every(({ actionStatus, operationStatus }) =>
+        ["succeeded", "failed"].includes(actionStatus) && operationStatus === "completed"))
+        .toBe(true);
+      expect(database.prepare(`
+        SELECT count(*) AS count FROM execution_model_calls WHERE status='calling'
+      `).get()).toEqual({ count: 0 });
+      expect(provider.requestCount()).toBe(failure === "provider" ? 2 : 3);
+    },
+    10_000,
+  );
+
+  it.each([
+    "before_call_terminal_update",
+    "after_call_terminal_update",
+    "after_call_terminal_commit",
+  ] as const)(
+    "reconciles a crash at %s and retries with a new call only",
+    async (faultPoint) => {
+      const provider = await localProvider(() => ({
+        body: {
+          choices: [{ message: { content: JSON.stringify({
+            action: { path: "src", type: "list" },
+            summary: "Visible summary",
+          }) } }],
+          usage: { completion_tokens: 3, prompt_tokens: 7, total_tokens: 10 },
+        },
+      }));
+      database.prepare("UPDATE providers SET base_url=? WHERE id='provider'")
+        .run(provider.baseUrl);
+      const fault = new Error(`fault:${faultPoint}`);
+      await expect(advance.advanceExecution(
+        databasePath,
+        EXECUTION_ID,
+        { expectedVersion: 1, operationId: operationId(110) },
+        {
+          fileAdapter: adapter,
+          modelFaultInjector: (point) => {
+            if (point === faultPoint) throw fault;
+          },
+        },
+      )).rejects.toBe(fault);
+      expect(provider.requestCount()).toBe(1);
+      expect(modelFacts()).toEqual([expect.objectContaining({
+        actionStatus: "running",
+        finishedAt: faultPoint === "after_call_terminal_commit" ? expect.any(String) : null,
+        operationStatus: "pending",
+        status: faultPoint === "after_call_terminal_commit" ? "succeeded" : "calling",
+      })]);
+
+      database.prepare(`
+        UPDATE execution_actions SET lease_expires_at='2000-01-01T00:00:00.000Z'
+        WHERE execution_id=? AND status='running'
+      `).run(EXECUTION_ID);
+      await expect(advance.advanceExecution(
+        databasePath,
+        EXECUTION_ID,
+        { expectedVersion: 2, operationId: operationId(111) },
+        { fileAdapter: adapter },
+      )).rejects.toMatchObject({ code: "EXECUTION_STATE_CONFLICT" });
+      expect(modelFacts()).toEqual([expect.objectContaining({
+        actionStatus: "interrupted",
+        finishedAt: expect.any(String),
+        operationStatus: "completed",
+        promptTokens: null,
+        status: "interrupted",
+        totalTokens: null,
+      })]);
+      expect(database.prepare(`
+        SELECT status,resume_target AS resumeTarget,reason_code AS reasonCode,version
+        FROM executions WHERE id=?
+      `).get(EXECUTION_ID)).toEqual({
+        reasonCode: "MODEL_ACTION_INTERRUPTED",
+        resumeTarget: "running",
+        status: "paused",
+        version: 3,
+      });
+
+      const retry = controlExecution(databasePath, EXECUTION_ID, {
+        action: "retry",
+        expectedVersion: 3,
+        operationId: operationId(112),
+      }, retryDependencies());
+      await expect(retry).rejects.toThrow("sandbox-ready");
+      const retriedVersion = Number((database.prepare(
+        "SELECT version FROM executions WHERE id=?",
+      ).get(EXECUTION_ID) as { version: number }).version);
+      const result = await advance.advanceExecution(
+        databasePath,
+        EXECUTION_ID,
+        { expectedVersion: retriedVersion, operationId: operationId(113) },
+        { fileAdapter: adapter },
+      );
+      expect(result.status).toBe(200);
+      expect(provider.requestCount()).toBe(2);
+      const calls = modelFacts();
+      expect(calls).toHaveLength(2);
+      expect(calls.find(({ status }) => status === "interrupted")).toMatchObject({
+        status: "interrupted",
+        promptTokens: null,
+        totalTokens: null,
+      });
+      expect(calls.find(({ status }) => status === "succeeded")).toMatchObject({
+        actionStatus: "succeeded",
+        operationStatus: "completed",
+        status: "succeeded",
+      });
+      expect(calls.every(({ finishedAt }) => finishedAt !== null)).toBe(true);
+      expect(database.prepare(`
+        SELECT count(*) AS count FROM execution_model_calls WHERE status='calling'
+      `).get()).toEqual({ count: 0 });
+    },
+    10_000,
+  );
+
   it("runs model primary/repair in one child, then executes its tool as a new operation", async () => {
     const invalid = new Response(JSON.stringify({
       choices: [{ message: { content: '{"summary":"invalid"}' } }],

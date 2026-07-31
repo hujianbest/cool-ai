@@ -15,6 +15,7 @@ import {
   acquireExecutionAction,
   finalizeExecutionAction,
   finalizeExecutionActionWithEffects,
+  reconcileExecutionAction,
 } from "@/src/server/execution/execution-actions";
 import type { ExecutionAction } from "@/src/server/execution/execution-action-schema";
 import {
@@ -24,6 +25,7 @@ import {
 } from "@/src/server/execution/execution-prompt-builder";
 import {
   executeStructuredExecutionAction,
+  type ExecutionStructuredFaultPoint,
 } from "@/src/server/execution/execution-structured-repair";
 import {
   executeListToolAction,
@@ -71,6 +73,7 @@ type AdvanceResult = { body: unknown; status: number };
 
 export type ExecutionOrchestratorDependencies = {
   fileAdapter: FileAdapter;
+  modelFaultInjector?: (point: ExecutionStructuredFaultPoint) => void;
   onModelStarted?: (executionId: string) => void;
   stagingAdapter?: ExecutionStagingAdapter;
 };
@@ -310,6 +313,31 @@ function requestHash(executionId: string, expectedVersion: number): string {
   return canonicalRequestHash({ executionId, expectedVersion, kind: "advance" });
 }
 
+function reconcileExpiredModelAction(database: DatabaseSync, executionId: string): void {
+  const expired = database.prepare(`
+    SELECT id,project_id AS projectId FROM execution_actions
+    WHERE execution_id=? AND kind='model' AND status='running'
+      AND (
+        lease_expires_at<=strftime('%Y-%m-%dT%H:%M:%fZ','now')
+        OR overall_deadline_at<=strftime('%Y-%m-%dT%H:%M:%fZ','now')
+      )
+    ORDER BY created_at,id LIMIT 1
+  `).get(executionId) as { id: string; projectId: string } | undefined;
+  if (!expired) return;
+  reconcileExecutionAction(database, {
+    actionId: expired.id,
+    body: {
+      error: {
+        code: "MODEL_ACTION_INTERRUPTED",
+        message: "The model action lease expired before its result was committed.",
+      },
+    },
+    errorCode: "MODEL_ACTION_INTERRUPTED",
+    httpStatus: 409,
+    projectId: expired.projectId,
+  });
+}
+
 function pauseAtBudgetBoundary(
   databasePath: string,
   database: DatabaseSync,
@@ -504,6 +532,7 @@ async function runModel(
     },
     database,
     leaseToken: acquired.leaseToken,
+    modelFaultInjector: dependencies.modelFaultInjector,
     permissions: frozenInput.currentAgent.permissions,
     projectId: row.projectId,
     request,
@@ -1049,6 +1078,7 @@ export async function advanceExecution(
   const hash = requestHash(executionId, input.expectedVersion);
   const database = openDatabase(databasePath);
   try {
+    reconcileExpiredModelAction(database, executionId);
     const row = stateRow(database, executionId);
     const replay = readExecutionOperation(database, {
       kind: "advance",

@@ -24,12 +24,12 @@ type BudgetRow = {
 
 const usageCte = `
   WITH all_calls AS (
-    SELECT c.prompt_tokens,c.completion_tokens,c.total_tokens
+    SELECT c.prompt_tokens,c.completion_tokens,c.total_tokens,c.status
     FROM collaboration_model_calls c
     JOIN collaboration_attempts a ON a.id=c.attempt_id
     WHERE a.run_id=:sourceRunId AND a.agent_id=:agentId
     UNION ALL
-    SELECT c.prompt_tokens,c.completion_tokens,c.total_tokens
+    SELECT c.prompt_tokens,c.completion_tokens,c.total_tokens,c.status
     FROM execution_model_calls c
     JOIN executions e ON e.id=c.execution_id
     WHERE e.source_collaboration_run_id=:sourceRunId AND e.agent_id=:agentId
@@ -42,12 +42,8 @@ const usageCte = `
         AND prompt_tokens>=0 AND completion_tokens>=0
         AND total_tokens=prompt_tokens+completion_tokens
         THEN total_tokens ELSE 0 END),0) AS totalTokens,
-      COALESCE(SUM(CASE WHEN
-        typeof(prompt_tokens)='integer' AND typeof(completion_tokens)='integer'
-        AND typeof(total_tokens)='integer'
-        AND prompt_tokens>=0 AND completion_tokens>=0
-        AND total_tokens=prompt_tokens+completion_tokens
-        THEN 0 ELSE 1 END),0) AS invalidUsageCount
+      COALESCE(SUM(CASE WHEN status='usage_invalid' THEN 1 ELSE 0 END),0)
+        AS invalidUsageCount
     FROM all_calls
   )
 `;

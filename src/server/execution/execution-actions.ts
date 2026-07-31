@@ -290,6 +290,14 @@ export function reconcileExecutionAction(
 ): CasResult {
   const bodyJson = serialize(input.body, "Public response");
   return transaction(database, () => {
+    const action = database.prepare(`
+      SELECT execution_id AS executionId,kind FROM execution_actions
+      WHERE project_id=? AND id=? AND status='running'
+        AND (lease_expires_at<=${DB_NOW} OR overall_deadline_at<=${DB_NOW})
+    `).get(input.projectId, input.actionId) as
+      | { executionId: string; kind: string }
+      | undefined;
+    if (!action) return { affectedRows: 0 };
     const reconciled = database.prepare(`
       UPDATE execution_actions
       SET status='interrupted',lease_token=NULL,lease_expires_at=NULL,
@@ -298,6 +306,28 @@ export function reconcileExecutionAction(
         AND (lease_expires_at<=${DB_NOW} OR overall_deadline_at<=${DB_NOW})
     `).run(input.errorCode, input.projectId, input.actionId);
     if (reconciled.changes !== 1) return { affectedRows: 0 };
+    if (action.kind === "model") {
+      database.prepare(`
+        UPDATE execution_model_calls
+        SET status='interrupted',prompt_tokens=NULL,completion_tokens=NULL,total_tokens=NULL,
+            error_category='model_action_interrupted',finished_at=coalesce(finished_at,${DB_NOW})
+        WHERE project_id=? AND action_id=?
+          AND status IN ('calling','succeeded','provider_failed','response_invalid','usage_invalid')
+      `).run(input.projectId, input.actionId);
+      const paused = database.prepare(`
+        UPDATE executions
+        SET status='paused',resume_target='running',reason_code='MODEL_ACTION_INTERRUPTED',
+            version=version+1,updated_at=${DB_NOW}
+        WHERE project_id=? AND id=? AND status='running'
+      `).run(input.projectId, action.executionId);
+      if (paused.changes !== 1) {
+        throw new ExecutionError(
+          "EXECUTION_STATE_CONFLICT",
+          409,
+          "Interrupted model execution could not be paused.",
+        );
+      }
+    }
     completeReceipt(database, {
       actionId: input.actionId,
       bodyJson,

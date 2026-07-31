@@ -28,6 +28,10 @@ const HEARTBEAT_INTERVAL_MILLISECONDS = 30_000;
 
 type CallKind = "primary" | "repair";
 type CallIndex = 1 | 2;
+export type ExecutionStructuredFaultPoint =
+  | "before_call_terminal_update"
+  | "after_call_terminal_update"
+  | "after_call_terminal_commit";
 
 export type ExecutionStructuredCall = {
   callIndex: CallIndex;
@@ -172,26 +176,32 @@ function finishCallingFact(
   callId: string,
   result: ModelCallResult,
   parsed: ExecutionActionParseResult | null,
+  faultInjector?: (point: ExecutionStructuredFaultPoint) => void,
 ): void {
   const status = persistedStatus(result, parsed);
   const usage = result.usage;
-  const updated = database.prepare(`
-    UPDATE execution_model_calls
-    SET status=?,prompt_tokens=?,completion_tokens=?,total_tokens=?,
-        error_category=?,finished_at=${DB_NOW}
-    WHERE id=? AND status='calling' AND finished_at IS NULL
-  `).run(
-    status,
-    usage?.promptTokens ?? null,
-    usage?.completionTokens ?? null,
-    usage?.totalTokens ?? null,
-    result.error?.category ?? (status === "response_invalid" ? "structured_output_invalid" : null),
-    callId,
-  );
-  if (updated.changes !== 1) {
-    throw new Error("MODEL_CALL_STATE_CONFLICT");
-  }
-  recordUsageEvent(database, callId, usage);
+  faultInjector?.("before_call_terminal_update");
+  transaction(database, () => {
+    const updated = database.prepare(`
+      UPDATE execution_model_calls
+      SET status=?,prompt_tokens=?,completion_tokens=?,total_tokens=?,
+          error_category=?,finished_at=${DB_NOW}
+      WHERE id=? AND status='calling' AND finished_at IS NULL
+    `).run(
+      status,
+      usage?.promptTokens ?? null,
+      usage?.completionTokens ?? null,
+      usage?.totalTokens ?? null,
+      result.error?.category ?? (status === "response_invalid" ? "structured_output_invalid" : null),
+      callId,
+    );
+    if (updated.changes !== 1) {
+      throw new Error("MODEL_CALL_STATE_CONFLICT");
+    }
+    recordUsageEvent(database, callId, usage);
+    faultInjector?.("after_call_terminal_update");
+  });
+  faultInjector?.("after_call_terminal_commit");
 }
 
 async function executeCall(
@@ -203,6 +213,7 @@ async function executeCall(
     context: OpenAiChatCallContext;
     kind: CallKind;
     leaseToken: string;
+    modelFaultInjector?: (point: ExecutionStructuredFaultPoint) => void;
     permissions: ExecutionPermissions;
     projectId: string;
     request: OpenAiChatRequest;
@@ -219,7 +230,7 @@ async function executeCall(
   const parsed = content === null
     ? null
     : parseExecutionActionContent(content, input.permissions);
-  finishCallingFact(database, inserted.callId, result, parsed);
+  finishCallingFact(database, inserted.callId, result, parsed, input.modelFaultInjector);
   return {
     stored: { id: inserted.callId, result },
     parsed,
@@ -301,6 +312,7 @@ export async function executeStructuredExecutionAction(input: {
   projectId: string;
   request: OpenAiChatRequest;
   context: OpenAiChatCallContext;
+  modelFaultInjector?: (point: ExecutionStructuredFaultPoint) => void;
 }): Promise<ExecutionStructuredResult> {
   const heartbeat = setInterval(() => {
     try {
