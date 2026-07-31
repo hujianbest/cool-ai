@@ -4,6 +4,7 @@ import type { DatabaseSync } from "node:sqlite";
 import { z } from "zod";
 
 import { openDatabase } from "@/src/server/db";
+import { normalizeCanonicalRelativePath } from "@/src/server/execution/execution-conflicts";
 import {
   ExecutionError,
   executionDtoFromDatabase,
@@ -32,21 +33,103 @@ type CursorPage<T> = {
   nextCursor: string | null;
 };
 
+type ManualBarrier = {
+  executionId: string;
+  journalId: string;
+};
+
+function classifyMergeBarrier(
+  database: DatabaseSync,
+  projectId: string,
+  executionId?: string,
+): { kind: "incomplete" } | { kind: "manual"; value: ManualBarrier } | { kind: "none" } {
+  const rows = database.prepare(`
+    SELECT j.id AS journalId,j.execution_id AS executionId,j.status,
+           e.manual_recovery_required AS manualRecoveryRequired
+    FROM execution_merge_journals j
+    JOIN executions e ON e.id=j.execution_id AND e.project_id=j.project_id
+    WHERE j.project_id=? AND j.status IN (
+      'prepared','applying','db_committed','rolling_back','rolling_forward','manual_recovery'
+    ) ORDER BY j.created_at,j.id LIMIT 2
+  `).all(projectId) as Array<{
+    executionId: string;
+    journalId: string;
+    manualRecoveryRequired: number;
+    status: string;
+  }>;
+  if (rows.length > 1) {
+    throw new ExecutionError("MERGE_INVARIANT_FAILED", 500, "Merge barrier facts are inconsistent.");
+  }
+  const target = executionId
+    ? database.prepare(`
+        SELECT manual_recovery_required AS manualRecoveryRequired
+        FROM executions WHERE project_id=? AND id=?
+      `).get(projectId, executionId) as { manualRecoveryRequired: number } | undefined
+    : undefined;
+  const row = rows[0];
+  if (!row) {
+    if (target?.manualRecoveryRequired === 1) {
+      throw new ExecutionError("MERGE_INVARIANT_FAILED", 500, "Manual recovery journal is missing.");
+    }
+    return { kind: "none" };
+  }
+  if (row.status !== "manual_recovery") return { kind: "incomplete" };
+  if (row.manualRecoveryRequired !== 1) {
+    throw new ExecutionError("MERGE_INVARIANT_FAILED", 500, "Manual recovery facts are inconsistent.");
+  }
+  if (executionId !== undefined && row.executionId === executionId) {
+    return {
+      kind: "manual",
+      value: { executionId: row.executionId, journalId: row.journalId },
+    };
+  }
+  return {
+    kind: "manual",
+    value: { executionId: row.executionId, journalId: row.journalId },
+  };
+}
+
 async function recoverMergeBarrier(
   database: DatabaseSync,
   projectId: string,
-  allowManualRecovery = false,
-): Promise<void> {
-  const unresolved = database.prepare(`
-    SELECT 1 FROM execution_merge_journals
-    WHERE project_id=? AND status IN (
-      'prepared','applying','db_committed','rolling_back','rolling_forward','manual_recovery'
-    ) LIMIT 1
-  `).get(projectId);
-  if (!unresolved) return;
+  executionId?: string,
+  allowExactManual = false,
+): Promise<ManualBarrier | null> {
+  let barrier = classifyMergeBarrier(database, projectId, executionId);
+  if (barrier.kind === "none") return null;
+  if (barrier.kind === "manual") {
+    if (allowExactManual && barrier.value.executionId === executionId) return barrier.value;
+    throw new ExecutionError(
+      "MERGE_RECOVERY_REQUIRED",
+      409,
+      "Incomplete merge recovery blocks public project facts.",
+    );
+  }
   const merge = await import("@/src/server/execution/merge-journal-service");
-  await merge.recoverIncompleteMergeJournals({ database, projectId });
-  if (!allowManualRecovery) merge.assertNoMergeBarrier(database, projectId);
+  try {
+    await merge.recoverIncompleteMergeJournals({ database, projectId });
+  } catch (error) {
+    if (!(error instanceof ExecutionError) || error.code !== "MANUAL_RECOVERY_REQUIRED") {
+      throw error;
+    }
+  }
+  barrier = classifyMergeBarrier(database, projectId, executionId);
+  if (barrier.kind === "none") return null;
+  if (
+    barrier.kind === "manual"
+    && allowExactManual
+    && barrier.value.executionId === executionId
+  ) {
+    return barrier.value;
+  }
+  if (barrier.kind === "incomplete") {
+    throw new ExecutionError("MERGE_INVARIANT_FAILED", 500, "Merge recovery did not reach a durable state.");
+  }
+  throw new ExecutionError(
+    "MERGE_RECOVERY_REQUIRED",
+    409,
+    "Incomplete merge recovery blocks public project facts.",
+  );
 }
 
 const HASH = z.string().regex(/^[0-9a-f]{64}$/u);
@@ -177,7 +260,9 @@ const executionDetailSchema = z.object({
   }).strict(),
   recovery: z.object({
     allowedResolutions: z.array(z.enum(["recovered_old", "recovered_new", "abandon"])).max(3),
+    journalId: z.string().nullable(),
     journalStatus: z.string().nullable(),
+    mismatchPathKey: z.string().nullable(),
     mismatchPhase: z.string().nullable(),
     observedManifestHash: HASH.nullable(),
     oldManifestHash: HASH.nullable(),
@@ -235,7 +320,11 @@ function decodeCursor(
       .update(`v1.${parts[1]}`, "utf8")
       .digest();
     const actual = Buffer.from(parts[2]!, "base64url");
-    if (actual.length !== expected.length || !timingSafeEqual(actual, expected)) {
+    if (
+      actual.toString("base64url") !== parts[2]
+      || actual.length !== expected.length
+      || !timingSafeEqual(actual, expected)
+    ) {
       throw new Error("signature");
     }
     const payload = JSON.parse(Buffer.from(parts[1]!, "base64url").toString("utf8")) as CursorPayload;
@@ -317,7 +406,12 @@ async function openForExecution(
   databasePath: string,
   executionId: string,
   allowManualRecovery = false,
-): Promise<{ database: DatabaseSync; projectId: string }> {
+): Promise<{
+  database: DatabaseSync;
+  manual: ManualBarrier | null;
+  projectId: string;
+  readTransaction: boolean;
+}> {
   const database = openDatabase(databasePath);
   try {
     const execution = database.prepare(
@@ -326,8 +420,68 @@ async function openForExecution(
     if (!execution) {
       throw new ExecutionError("EXECUTION_NOT_FOUND", 404, "Execution was not found.");
     }
-    await recoverMergeBarrier(database, execution.projectId, allowManualRecovery);
-    return { database, projectId: execution.projectId };
+    let manual = await recoverMergeBarrier(
+      database,
+      execution.projectId,
+      executionId,
+      allowManualRecovery,
+    );
+    if (!manual) {
+      return {
+        database,
+        manual: null,
+        projectId: execution.projectId,
+        readTransaction: false,
+      };
+    }
+    for (let attempt = 0; attempt < 2; attempt += 1) {
+      database.exec("BEGIN");
+      const snapshot = classifyMergeBarrier(database, execution.projectId, executionId);
+      if (snapshot.kind === "none") {
+        return {
+          database,
+          manual: null,
+          projectId: execution.projectId,
+          readTransaction: true,
+        };
+      }
+      if (snapshot.kind === "manual") {
+        if (snapshot.value.executionId !== executionId) {
+          database.exec("ROLLBACK");
+          throw new ExecutionError(
+            "MERGE_RECOVERY_REQUIRED",
+            409,
+            "Incomplete merge recovery blocks public project facts.",
+          );
+        }
+        return {
+          database,
+          manual: snapshot.value,
+          projectId: execution.projectId,
+          readTransaction: true,
+        };
+      }
+      database.exec("ROLLBACK");
+      manual = await recoverMergeBarrier(
+        database,
+        execution.projectId,
+        executionId,
+        allowManualRecovery,
+      );
+      if (!manual) {
+        return {
+          database,
+          manual: null,
+          projectId: execution.projectId,
+          readTransaction: false,
+        };
+      }
+    }
+    throw new ExecutionError(
+      "MERGE_INVARIANT_FAILED",
+      500,
+      "Merge barrier could not produce a stable read snapshot.",
+    );
   } catch (error) {
     database.close();
     throw error;
@@ -405,7 +559,12 @@ export async function readExecutionDetail(
   databasePath: string,
   executionId: string,
 ): Promise<z.infer<typeof executionDetailSchema>> {
-  const { database } = await openForExecution(databasePath, executionId);
+  const {
+    database,
+    manual,
+    projectId,
+    readTransaction,
+  } = await openForExecution(databasePath, executionId, true);
   try {
     const attempt = database.prepare(`
       SELECT frozen_public_json AS publicJson,frozen_private_json AS privateJson,
@@ -425,11 +584,50 @@ export async function readExecutionDetail(
         .get(...parameters as any[]) as { count: number }).count);
     const staged = stagedSummary(database, executionId);
     const journal = database.prepare(`
-      SELECT status,old_manifest_hash AS oldManifestHash,post_manifest_hash AS postManifestHash,
-             observed_manifest_hash AS observedManifestHash,mismatch_phase AS mismatchPhase
-      FROM execution_merge_journals WHERE execution_id=?
+      SELECT id,project_id AS projectId,execution_id AS executionId,status,
+             old_manifest_hash AS oldManifestHash,post_manifest_hash AS postManifestHash,
+             observed_manifest_hash AS observedManifestHash,mismatch_phase AS mismatchPhase,
+             mismatch_path_key AS mismatchPathKey
+      FROM execution_merge_journals WHERE project_id=? AND execution_id=?
       ORDER BY created_at DESC,id DESC LIMIT 1
-    `).get(executionId) as Record<string, unknown> | undefined;
+    `).get(projectId, executionId) as Record<string, unknown> | undefined;
+    const execution = executionDtoFromDatabase(database, executionId);
+    if (
+      manual
+      && (
+        !journal
+        || journal.id !== manual.journalId
+        || journal.projectId !== projectId
+        || journal.executionId !== executionId
+        || journal.status !== "manual_recovery"
+        || !execution.manualRecoveryRequired
+      )
+    ) {
+      throw new ExecutionError(
+        "MERGE_INVARIANT_FAILED",
+        500,
+        "Manual recovery detail facts are inconsistent.",
+      );
+    }
+    if (!manual && execution.manualRecoveryRequired) {
+      throw new ExecutionError("MERGE_INVARIANT_FAILED", 500, "Manual recovery journal is missing.");
+    }
+    if (journal?.mismatchPathKey !== null && journal?.mismatchPathKey !== undefined) {
+      const mismatchPathKey = String(journal.mismatchPathKey);
+      const path = database.prepare(`
+        SELECT path FROM execution_merge_files WHERE journal_id=? AND path_key=?
+      `).get(String(journal.id), mismatchPathKey) as { path: string } | undefined;
+      if (
+        !path
+        || normalizeCanonicalRelativePath(path.path) !== mismatchPathKey
+      ) {
+        throw new ExecutionError(
+          "MERGE_INVARIANT_FAILED",
+          500,
+          "Manual recovery mismatch path is invalid.",
+        );
+      }
+    }
     const detail = executionDetailSchema.parse({
       counts: {
         approvals: count("execution_approvals", "execution_id=?", executionId),
@@ -446,7 +644,7 @@ export async function readExecutionDetail(
           : 0,
         validations: count("execution_validation_results", "execution_id=?", executionId),
       },
-      execution: executionDtoFromDatabase(database, executionId),
+      execution,
       frozen: {
         agentVersion: Number(privateFacts.currentAgent?.version ?? facts.task?.version ?? 1),
         baselineManifestHash: attempt.baselineManifestHash ?? facts.workspaceBaselineHash ?? HASH.parse("0".repeat(64)),
@@ -466,7 +664,9 @@ export async function readExecutionDetail(
         allowedResolutions: journal?.status === "manual_recovery"
           ? ["recovered_old", "recovered_new", "abandon"]
           : [],
+        journalId: journal?.id ?? null,
         journalStatus: journal?.status ?? null,
+        mismatchPathKey: journal?.mismatchPathKey ?? null,
         mismatchPhase: journal?.mismatchPhase ?? null,
         observedManifestHash: journal?.observedManifestHash ?? null,
         oldManifestHash: journal?.oldManifestHash ?? null,
@@ -481,6 +681,7 @@ export async function readExecutionDetail(
     if (error instanceof ExecutionError) throw error;
     throw publicFailure();
   } finally {
+    if (readTransaction) database.exec("COMMIT");
     database.close();
   }
 }
@@ -970,11 +1171,12 @@ export async function listValidationChunks(
 }
 
 const recoveryFileSchema = z.object({
-  newHash: HASH,
+  isMismatch: z.boolean(),
   oldExists: z.boolean(),
   oldHash: HASH.nullable(),
   path: z.string().min(1),
   pathKey: z.string().min(1),
+  postHash: HASH,
   position: z.number().int().nonnegative(),
   status: z.enum(["pending", "applied", "rolled_back", "rolled_forward", "verified"]),
 }).strict();
@@ -985,43 +1187,101 @@ export async function listRecoveryFiles(
   query: ReadQuery,
 ): Promise<CursorPage<z.infer<typeof recoveryFileSchema>>> {
   const requested = limit(query.limit, 20);
-  const key = decodeCursor(databasePath, query.after, "recovery-files", executionId);
-  const position = key?.[0];
-  const pathKey = key?.[1];
-  if (key && (key.length !== 2 || !Number.isInteger(position) || typeof pathKey !== "string")) {
-    throw new ExecutionError("INVALID_CURSOR", 400, "The pagination cursor is invalid.");
-  }
-  const { database } = await openForExecution(databasePath, executionId, true);
+  const {
+    database,
+    manual,
+    projectId,
+    readTransaction,
+  } = await openForExecution(databasePath, executionId, true);
   try {
-    const journal = database.prepare(`
-      SELECT id,status FROM execution_merge_journals WHERE execution_id=?
-      ORDER BY created_at DESC,id DESC LIMIT 1
-    `).get(executionId) as { id: string; status: string } | undefined;
-    if (!journal || journal.status !== "manual_recovery") {
+    if (!manual) {
       throw new ExecutionError("MERGE_RECOVERY_REQUIRED", 409, "Manual recovery files are unavailable.");
     }
+    const journal = database.prepare(`
+      SELECT j.id,j.status,j.mismatch_path_key AS mismatchPathKey,
+             e.manual_recovery_required AS manualRecoveryRequired
+      FROM execution_merge_journals j
+      JOIN executions e ON e.project_id=j.project_id AND e.id=j.execution_id
+      WHERE j.project_id=? AND j.execution_id=? AND j.id=?
+    `).get(projectId, executionId, manual.journalId) as {
+      id: string;
+      manualRecoveryRequired: number;
+      mismatchPathKey: string | null;
+      status: string;
+    } | undefined;
+    if (
+      !journal
+      || journal.status !== "manual_recovery"
+      || journal.manualRecoveryRequired !== 1
+    ) {
+      throw new ExecutionError("MERGE_INVARIANT_FAILED", 500, "Manual recovery files are inconsistent.");
+    }
+    const parent = `${executionId}:${journal.id}`;
+    const key = decodeCursor(databasePath, query.after, "recovery-files", parent);
+    const position = key?.[0];
+    const pathKey = key?.[1];
+    if (key && (key.length !== 2 || !Number.isInteger(position) || typeof pathKey !== "string")) {
+      throw new ExecutionError("INVALID_CURSOR", 400, "The pagination cursor is invalid.");
+    }
+    const count = database.prepare(
+      "SELECT COUNT(*) AS count FROM execution_merge_files WHERE journal_id=?",
+    ).get(journal.id) as { count: number };
+    if (Number(count.count) > 100) {
+      throw new ExecutionError("MERGE_INVARIANT_FAILED", 500, "Recovery file count is invalid.");
+    }
     const rows = database.prepare(`
-      SELECT position,path,path_key AS pathKey,
-             json_extract(old_target_ref_json,'$.exists') AS oldExists,
-             json_extract(old_target_ref_json,'$.sha256') AS oldHash,
-             json_extract(post_target_ref_json,'$.sha256') AS newHash,status
-      FROM execution_merge_files WHERE journal_id=?
-        AND (? IS NULL OR position>? OR (position=? AND path_key>?))
-      ORDER BY position,path_key LIMIT ?
+      SELECT f.position,f.path,f.path_key AS pathKey,
+             json_extract(f.old_target_ref_json,'$.exists') AS oldExists,
+             json_extract(f.old_target_ref_json,'$.sha256') AS oldHash,
+             json_extract(f.durable_new_ref_json,'$.sha256') AS durablePostHash,
+             json_extract(f.post_target_ref_json,'$.sha256') AS targetPostHash,
+             o.observed_hash AS stagedPostHash,f.status
+      FROM execution_merge_files f
+      JOIN execution_merge_journals j ON j.id=f.journal_id
+      JOIN execution_staged_observations o
+        ON o.staged_result_id=j.staged_result_id AND o.path_key=f.path_key
+      WHERE f.journal_id=?
+        AND (? IS NULL OR f.position>? OR (f.position=? AND f.path_key>?))
+      ORDER BY f.position,f.path_key LIMIT ?
     `).all(
       journal.id, position ?? null, position ?? null, position ?? null,
       pathKey ?? null, requested + 1,
     ) as Array<Record<string, unknown>>;
-    const items = rows.map((row) => ({
-      ...row,
-      oldExists: row.oldExists === 1,
-    })) as Array<z.infer<typeof recoveryFileSchema>>;
+    const items = rows.map((row) => {
+      const path = String(row.path);
+      const storedPathKey = String(row.pathKey);
+      const postHash = String(row.durablePostHash);
+      if (
+        Buffer.byteLength(path, "utf8") > 4096
+        || normalizeCanonicalRelativePath(path) !== storedPathKey
+        || row.stagedPostHash !== postHash
+        || (row.targetPostHash !== null && row.targetPostHash !== postHash)
+      ) {
+        throw new ExecutionError(
+          "MERGE_INVARIANT_FAILED",
+          500,
+          "Stored recovery file facts are inconsistent.",
+        );
+      }
+      return {
+        isMismatch: journal.mismatchPathKey !== null
+          && storedPathKey === journal.mismatchPathKey,
+        oldExists: row.oldExists === 1,
+        oldHash: row.oldHash,
+        path,
+        pathKey: storedPathKey,
+        position: row.position,
+        postHash,
+        status: row.status,
+      };
+    }) as Array<z.infer<typeof recoveryFileSchema>>;
     return boundedPage(
-      databasePath, "recovery-files", executionId,
+      databasePath, "recovery-files", parent,
       items,
       requested, (row) => [row.position, row.pathKey], recoveryFileSchema,
     );
   } finally {
+    if (readTransaction) database.exec("COMMIT");
     database.close();
   }
 }

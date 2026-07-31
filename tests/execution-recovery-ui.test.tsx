@@ -82,6 +82,7 @@ function detail(observedManifestHash = OBSERVED) {
     recovery: {
       allowedResolutions: ["recovered_old", "recovered_new", "abandon"],
       journalStatus: "manual_recovery",
+      mismatchPathKey: null,
       mismatchPhase: "rollback_after_replace",
       observedManifestHash,
       oldManifestHash: OLD,
@@ -112,11 +113,12 @@ function installFetch(
       return Response.json(url.searchParams.has("after")
         ? {
             items: [{
-              newHash: POST,
+              isMismatch: false,
               oldExists: false,
               oldHash: null,
               path: "owned/item-21.tmp",
               pathKey: "owned/item-21.tmp",
+              postHash: POST,
               position: 20,
               status: "pending",
             }],
@@ -124,11 +126,12 @@ function installFetch(
           }
         : {
             items: [{
-              newHash: POST,
+              isMismatch: false,
               oldExists: true,
               oldHash: OLD,
               path: "src/changed.ts",
               pathKey: "src/changed.ts",
+              postHash: POST,
               position: 0,
               status: "applied",
             }],
@@ -183,6 +186,7 @@ describe("T-30 manual recovery UI", () => {
     const recovery = await within(card).findByRole("region", { name: "需要人工恢复" });
     await within(recovery).findByText("rollback_after_replace");
     expect(recovery).toHaveTextContent("rollback_after_replace");
+    expect(recovery).toHaveTextContent("整体不匹配");
     expect(recovery).toHaveTextContent(OLD.slice(0, 12));
     expect(recovery).toHaveTextContent(POST.slice(0, 12));
     expect(recovery).toHaveTextContent(OBSERVED.slice(0, 12));

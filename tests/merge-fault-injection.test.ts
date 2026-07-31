@@ -287,10 +287,16 @@ describe("merge fault injection integration", () => {
     expect(readFileSync(join(item.workspaceRoot, "src", "a.txt"), "utf8"))
       .toBe("external-writer");
     const state = item.database.prepare(`
-      SELECT e.version,j.observed_manifest_hash AS observedManifestHash
+      SELECT e.version,j.observed_manifest_hash AS observedManifestHash,
+             j.mismatch_path_key AS mismatchPathKey
       FROM executions e JOIN execution_merge_journals j ON j.execution_id=e.id
       WHERE e.id=?
-    `).get(EXECUTION_ID) as { observedManifestHash: string; version: number };
+    `).get(EXECUTION_ID) as {
+      mismatchPathKey: string | null;
+      observedManifestHash: string;
+      version: number;
+    };
+    expect(state.mismatchPathKey).toBe("src/a.txt");
     const resolution = {
       action: "abandon" as const,
       database: item.database,

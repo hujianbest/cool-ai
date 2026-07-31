@@ -1175,6 +1175,24 @@ async function enterManualRecovery(
 ): Promise<{ entries: ObservedManifestEntry[]; hash: string }> {
   const workspaceRoot = workspaceFor(database, journal.projectId);
   const observed = await observeJournalManifest(database, journal, workspaceRoot, fs);
+  const files = journalFiles(database, journal.id);
+  const pathMismatches = observed.entries.filter((entry) => {
+    if (entry.type === "special") return false;
+    const file = files.find(({ pathKey }) => pathKey === entry.pathKey);
+    if (!file) return false;
+    const matches = (target: ExpectedCanonicalFile | null) => {
+      if (!target) return false;
+      if (entry.exists !== target.exists) return false;
+      return !entry.exists || (
+        entry.hash === target.sha256
+        && entry.identity === target.fileIdentity
+      );
+    };
+    return !matches(file.oldTarget) && !matches(file.postTarget);
+  });
+  const mismatchPathKey = pathMismatches.length === 1
+    ? pathMismatches[0]!.pathKey
+    : null;
   transaction(database, () => {
     database.prepare(
       "DELETE FROM work_item_execution_results WHERE merge_journal_id=?",
@@ -1189,10 +1207,10 @@ async function enterManualRecovery(
     database.prepare(`
       UPDATE execution_merge_journals
       SET status='manual_recovery',observed_manifest_hash=?,mismatch_phase=?,
-          error_code='MANUAL_RECOVERY_REQUIRED',
+          mismatch_path_key=?,error_code='MANUAL_RECOVERY_REQUIRED',
           updated_at=strftime('%Y-%m-%dT%H:%M:%fZ','now')
       WHERE id=?
-    `).run(observed.hash, mismatchPhase, journal.id);
+    `).run(observed.hash, mismatchPhase, mismatchPathKey, journal.id);
     database.prepare(`
       UPDATE execution_actions
       SET status='failed',lease_token=NULL,lease_expires_at=NULL,
@@ -2154,6 +2172,26 @@ export async function resolveManualRecovery(input: {
     : [];
   let result!: MergeOperationResult;
   transaction(input.database, () => {
+    const current = input.database.prepare(`
+      SELECT j.id
+      FROM execution_merge_journals j
+      JOIN executions e ON e.project_id=j.project_id AND e.id=j.execution_id
+      WHERE j.project_id=? AND j.execution_id=? AND j.id=?
+        AND j.status='manual_recovery'
+        AND e.status='conflicted' AND e.manual_recovery_required=1 AND e.version=?
+    `).get(
+      input.projectId,
+      input.executionId,
+      journal.id,
+      input.expectedVersion,
+    ) as { id: string } | undefined;
+    if (!current) {
+      throw new ExecutionError(
+        "MANUAL_RECOVERY_REQUIRED",
+        409,
+        "Manual recovery state changed before resolution commit.",
+      );
+    }
     const execution = input.database.prepare(`
       SELECT mission_id AS missionId,work_item_id AS workItemId
       FROM executions WHERE project_id=? AND id=?
@@ -2183,7 +2221,7 @@ export async function resolveManualRecovery(input: {
       : input.action === "abandon"
         ? "stopped"
         : "conflicted";
-    input.database.prepare(`
+    const executionUpdate = input.database.prepare(`
       UPDATE executions
       SET status=?,manual_recovery_required=0,recovery_resolution=?,
           reason_code=NULL,merged_at=${input.action === "recovered_new"
@@ -2198,16 +2236,30 @@ export async function resolveManualRecovery(input: {
       input.executionId,
       input.expectedVersion,
     );
+    if (executionUpdate.changes !== 1) {
+      throw new ExecutionError(
+        "MANUAL_RECOVERY_REQUIRED",
+        409,
+        "Manual recovery execution changed before resolution commit.",
+      );
+    }
     const journalStatus = input.action === "recovered_old"
       ? "resolved_old"
       : input.action === "recovered_new"
         ? "resolved_new"
         : "abandoned";
-    input.database.prepare(`
+    const journalUpdate = input.database.prepare(`
       UPDATE execution_merge_journals
       SET status=?,error_code=NULL,updated_at=strftime('%Y-%m-%dT%H:%M:%fZ','now')
       WHERE id=? AND status='manual_recovery'
     `).run(journalStatus, journal.id);
+    if (journalUpdate.changes !== 1) {
+      throw new ExecutionError(
+        "MANUAL_RECOVERY_REQUIRED",
+        409,
+        "Manual recovery journal changed before resolution commit.",
+      );
+    }
     result = {
       body: {
         execution: {

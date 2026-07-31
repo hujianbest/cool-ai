@@ -132,3 +132,32 @@
 1. capability 已明确为 operation/action acquire 前无副作用、可安全重复的 preflight；低层失败保持 operation/action/journal=0，production service 以唯一 completed 422 拒绝 receipt 收口，并补齐 same-operation 并发、receipt commit 前崩溃、unique insert/CAS 失手重读与重放语义，D-5、异常矩阵和 T-45 判据一致。
 2. recovery 已明确选择既有 read barrier/helper 协议：只沿用原 journal、merge action 与 receipt，不新增 automatic recover route、`kind=recover` receipt 或 `merge_recover` action；T-45 收窄为同一 merge 调用进入 manual recovery 后经现有 `/recovery/resolve` 的公开可达性，T-46 与覆盖索引同步修正，任务粒度恢复为 route/service/UI 接线的一次 TDD。
 3. owner 契约已明确为本地单用户模型下 merge route 本身即与现有 execution mutation routes 相同的 owner mutation 边界，不新增 credential/header/actor 字段，并删除不可构造的 403 `OWNER_REQUIRED` 分支及对应测试要求。
+
+# 技术设计 评审 (第 25 轮)
+
+- 日期: 2026-07-31
+- 评审方式: subagent
+- 结论: 需修改
+
+## Findings
+
+1. [严重] GET reconcile 的 pre-write native/capability 终态与既有 D-5 矩阵及真实 helper 相冲突。design.md:303 规定在任何 canonical 写前发生 capability/native failure 时返回422 `SANDBOX_UNVERIFIABLE`、journal保持incomplete；但 design.md:154 已规定 journal 创建后任一 native load/call/ABI/identity 等不可验证必须进入 durable `manual_recovery` 并完成原receipt 409，现有 `recoverIncompleteMergeJournals` 也会在 capability/`SANDBOX_UNVERIFIABLE` 分支调用 `enterManualRecovery` 后抛 `MANUAL_RECOVERY_REQUIRED`。两种规则会令同一 durable journal 因由 GET 触发还是 merge 调用触发而得到不同终态，也使 T-46 的 RED/GREEN 不知道应断言422 incomplete还是200/409 manual。请选定唯一语义并同步 D-5 native矩阵、manual-aware barrier、错误映射和 T-46 判据；若确需修改既有 helper 的终态/CAS，T-46 测试命令还应纳入对应 `merge-recovery`/fault regression，而不能只称“既有 helper”并省略其行为变更。
+
+2. [严重] manual-aware 例外没有绑定 route execution 与 project-level unresolved journal 的 identity，可能绕过项目 read barrier或拼出不一致 tuple。D-5 的 unresolved journal 是每project唯一，`openForExecution` 也先按project检查；design.md:301 却只说分类“该project最新未解决journal”后读取请求的execution/journal，未规定 `journal.execution_id=:executionId`。当 execution A 处于manual recovery而同project请求 `GET execution B` 时，现有数据访问形态会得到A的project barrier、B的execution以及B自己的旧/空journal：实现既可能错误放行B的普通detail，也可能混合A的recovery摘要，而二者都违反“只有恢复事实只读放行”和完整manual tuple要求。请规定 manual detail/files 仅在 unresolved journal、`executions.manual_recovery_required=1` 与 route execution 三者 `(project_id,execution_id)` 精确一致时返回200；明确同project其他execution detail以及project list的HTTP结果，并把 sibling execution、resolve并发换journal/无journal场景加入T-46。
+
+3. [一般] `mismatchPathKey` 的持久来源与可空语义未定义，当前“可读”tuple/分页标记无法机械满足。design.md:305 要求完整manual tuple含 `mismatchPathKey`，306 又要求每个file标识是否等于它，但现有 `enterManualRecovery` 只持久 `observed_manifest_hash` 与 `mismatch_phase`，从未写已有DDL列 `mismatch_path_key`；整体manifest、capability或cleanup阶段本来也可能没有单一路径。若“tuple完整”要求非空，三种resolution会在这些合法manual分支全部不可见；若允许null，当前所有file的mismatch标记都为false且字段没有诊断价值。请明确该字段的 nullable 条件、由哪个 detection point 在进入manual的同一事务写入、无单一路径时的UI文案/分页表示，并在T-46覆盖path-specific与overall两类manual tuple。与此同时明确 recovery-file 的“post hash”应从始终存在的 staged/durable-new hash读取，而不是当前可能为NULL的 `post_target_ref_json.sha256`。
+
+# 技术设计 评审 (第 26 轮)
+
+- 日期: 2026-07-31
+- 评审方式: subagent
+- 结论: 通过
+- 用户确认: auto-approved 2026-07-31
+
+## Findings
+
+无。第 25 轮三项 findings 均已闭合：
+
+1. GET reconcile 的 native/capability/identity/cleanup 失败已统一沿用 D-5：进入 durable manual、终结原action并完成原receipt 409；manual-aware barrier只在持久化成功后捕获并重读，同execution GET返回200 manual detail。T-46 测试命令已补入 `merge-recovery` 与 `merge-fault-injection` 回归。
+2. manual 200例外已精确绑定project唯一未解决journal、route execution、journal execution及execution manual flag；sibling detail/project list固定409，identity/flag矛盾固定500，并补齐resolve换journal/无journal与late-CAS判据。
+3. `mismatchPathKey` 已定义为nullable，并规定path-specific detector在进入manual的同一事务写已验证path key，overall/capability/cleanup写NULL且UI显示整体不匹配；recovery-file post hash固定取staged hash并与durable-new descriptor交叉验证，不再依赖nullable post target。

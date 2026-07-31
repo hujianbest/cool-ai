@@ -7,6 +7,11 @@ import type { DatabaseSync } from "node:sqlite";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
 import { openDatabase } from "@/src/server/db";
+import { ExecutionError } from "@/src/server/execution/execution-service";
+import {
+  createWindowsVerifiedMergeAdapter,
+  type MergeVerifiedAdapter,
+} from "@/src/server/execution/merge-verified-adapter";
 
 vi.mock("server-only", () => ({}));
 
@@ -30,6 +35,7 @@ type MergeModule = {
   executeMergePrepare(input: MergeInput): Promise<{ actionId: string; journalId: string }>;
   recoverIncompleteMergeJournals(input: {
     database: DatabaseSync;
+    fs?: MergeVerifiedAdapter;
     projectId: string;
   }): Promise<Array<{ body: unknown; status: number }>>;
 };
@@ -242,6 +248,54 @@ describe("merge DB commit and restart recovery", () => {
     expect(fixture.database.prepare(
       "SELECT count(*) AS count FROM execution_events",
     ).get()).toEqual({ count: 3 });
+    fixture.database.close();
+  });
+
+  it("makes restart capability failure durably manual before returning", async () => {
+    const fixture = await createFixture("capability-manual");
+    const prepared = await mergeModule.executeMergePrepare(fixture.input);
+    await expect(mergeModule.executeMergeCommit({
+      database: fixture.database,
+      journalId: prepared.journalId,
+      hooks: {
+        point({ point }) {
+          if (point === "before_precommit_check") throw new Error("restart");
+        },
+      },
+    })).rejects.toThrow("restart");
+    fixture.restart();
+    const base = createWindowsVerifiedMergeAdapter();
+    await expect(mergeModule.recoverIncompleteMergeJournals({
+      database: fixture.database,
+      fs: {
+        ...base,
+        async assertCapability() {
+          throw new ExecutionError(
+            "SANDBOX_UNVERIFIABLE",
+            422,
+            "Injected restart capability failure.",
+          );
+        },
+      },
+      projectId: PROJECT_ID,
+    })).rejects.toMatchObject({ code: "MANUAL_RECOVERY_REQUIRED" });
+    expect(fixture.database.prepare(`
+      SELECT e.manual_recovery_required AS manualRecoveryRequired,
+             j.status,j.mismatch_path_key AS mismatchPathKey,
+             a.status AS actionStatus,o.status AS operationStatus,o.http_status AS httpStatus
+      FROM execution_merge_journals j
+      JOIN executions e ON e.id=j.execution_id
+      JOIN execution_actions a ON a.id=j.merge_action_id
+      JOIN execution_operations o ON o.project_id=j.project_id AND o.id=j.operation_id
+      WHERE j.id=?
+    `).get(prepared.journalId)).toEqual({
+      actionStatus: "failed",
+      httpStatus: 409,
+      manualRecoveryRequired: 1,
+      mismatchPathKey: null,
+      operationStatus: "completed",
+      status: "manual_recovery",
+    });
     fixture.database.close();
   });
 });

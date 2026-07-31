@@ -165,9 +165,27 @@ async function getDetail(executionId: string) {
   );
   expect(response.status).toBe(200);
   return response.json() as Promise<{
-    execution: { status: string; version: number };
+    execution: { manualRecoveryRequired: boolean; status: string; version: number };
+    recovery: {
+      journalId: string | null;
+      journalStatus: string | null;
+      mismatchPathKey: string | null;
+      mismatchPhase: string | null;
+      observedManifestHash: string | null;
+      oldManifestHash: string | null;
+      postManifestHash: string | null;
+      required: boolean;
+    };
     staged: { stagedHash: string } | null;
   }>;
+}
+
+async function getRecoveryFiles(executionId: string): Promise<Response> {
+  const route = await import("@/app/api/executions/[executionId]/recovery/files/route");
+  return route.GET(
+    new Request(`http://localhost/api/executions/${executionId}/recovery/files?limit=20`),
+    { params: Promise.resolve({ executionId }) },
+  );
 }
 
 async function postAdvance(
@@ -537,7 +555,7 @@ describe("T-45 production merge route", () => {
     database.close();
   });
 
-  it("enters manual recovery in one merge call and resolves only through the existing route", async () => {
+  it("reads durable manual detail and files before resolving only through public routes", async () => {
     const staged = await createRealStagedExecution();
     let injected = false;
     setMergeExecutionHooksForTests({
@@ -557,19 +575,59 @@ describe("T-45 production merge route", () => {
     expect(await merge.json()).toMatchObject({ error: { code: "MANUAL_RECOVERY_REQUIRED" } });
     expect(readFileSync(join(workspace, "src", "RESULT.md"), "utf8")).toBe("external\n");
 
-    const database = openDatabase(databasePath);
-    const recovery = database.prepare(`
-      SELECT e.version,j.observed_manifest_hash AS observedManifestHash
-      FROM executions e JOIN execution_merge_journals j ON j.execution_id=e.id
-      WHERE e.id=? AND j.status='manual_recovery'
-    `).get(staged.executionId) as { observedManifestHash: string; version: number };
-    database.close();
+    const recovery = await getDetail(staged.executionId);
+    expect(recovery).toMatchObject({
+      execution: {
+        manualRecoveryRequired: true,
+        status: "conflicted",
+      },
+      recovery: {
+        journalId: expect.any(String),
+        journalStatus: "manual_recovery",
+        mismatchPathKey: "src/result.md",
+        mismatchPhase: expect.any(String),
+        observedManifestHash: expect.stringMatching(/^[0-9a-f]{64}$/u),
+        oldManifestHash: expect.stringMatching(/^[0-9a-f]{64}$/u),
+        postManifestHash: expect.stringMatching(/^[0-9a-f]{64}$/u),
+        required: true,
+      },
+    });
+    const filesResponse = await getRecoveryFiles(staged.executionId);
+    expect(filesResponse.status).toBe(200);
+    expect(await filesResponse.json()).toMatchObject({
+      items: [{
+        isMismatch: true,
+        oldHash: null,
+        path: "src/RESULT.md",
+        pathKey: "src/result.md",
+        postHash: expect.stringMatching(/^[0-9a-f]{64}$/u),
+      }],
+    });
+
+    const ordinaryMutation = await postAdvance(
+      staged.executionId,
+      recovery.execution.version,
+      27,
+    );
+    expect(ordinaryMutation.status).toBe(409);
+    expect(await ordinaryMutation.json()).toMatchObject({
+      error: { code: "MANUAL_RECOVERY_REQUIRED" },
+    });
+    const listRoute = await import("@/app/api/projects/[projectId]/executions/route");
+    const listResponse = await listRoute.GET(
+      new Request(`http://localhost/api/projects/${PROJECT_ID}/executions`),
+      { params: Promise.resolve({ projectId: PROJECT_ID }) },
+    );
+    expect(listResponse.status).toBe(409);
+    expect(await listResponse.json()).toMatchObject({
+      error: { code: "MERGE_RECOVERY_REQUIRED" },
+    });
     setMergeExecutionHooksForTests(undefined);
 
     const resolved = await postRecovery(staged.executionId, {
       action: "abandon",
-      expectedVersion: recovery.version,
-      observedManifestHash: recovery.observedManifestHash,
+      expectedVersion: recovery.execution.version,
+      observedManifestHash: recovery.recovery.observedManifestHash,
       operationId: operationId(26),
     });
     expect(resolved.status).toBe(200);

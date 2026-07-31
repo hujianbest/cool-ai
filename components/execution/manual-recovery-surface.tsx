@@ -23,6 +23,7 @@ type Resolution = "recovered_old" | "recovered_new" | "abandon";
 type RecoveryDetail = {
   recovery: {
     allowedResolutions: Resolution[];
+    mismatchPathKey: string | null;
     mismatchPhase: string | null;
     observedManifestHash: string | null;
     oldManifestHash: string | null;
@@ -32,11 +33,12 @@ type RecoveryDetail = {
 };
 
 type RecoveryFile = {
-  newHash: string;
+  isMismatch: boolean;
   oldExists: boolean;
   oldHash: string | null;
   path: string;
   pathKey: string;
+  postHash: string;
   position: number;
   status: string;
 };
@@ -257,6 +259,10 @@ export function ManualRecoverySurface({
         <>
           <dl className="execution-review-facts">
             <div><dt>不匹配阶段</dt><dd>{recovery.mismatchPhase ?? "未知"}</dd></div>
+            <div>
+              <dt>不匹配范围</dt>
+              <dd>{recovery.mismatchPathKey ?? "整体不匹配"}</dd>
+            </div>
             <div><dt>旧版 manifest</dt><dd><code>{shortHash(recovery.oldManifestHash)}</code></dd></div>
             <div><dt>新版 manifest</dt><dd><code>{shortHash(recovery.postManifestHash)}</code></dd></div>
             <div><dt>Observed manifest</dt><dd><code>{shortHash(recovery.observedManifestHash)}</code></dd></div>
@@ -267,9 +273,9 @@ export function ManualRecoverySurface({
           <ol className="execution-review-list">
             {files.map((file) => (
               <li className="execution-review-item" key={file.pathKey}>
-                <strong>{file.path}</strong>
+                <strong>{file.path}{file.isMismatch ? "（不匹配）" : ""}</strong>
                 <p>
-                  {file.status} · old {shortHash(file.oldHash)} · post {shortHash(file.newHash)}
+                  {file.status} · old {shortHash(file.oldHash)} · post {shortHash(file.postHash)}
                 </p>
               </li>
             ))}
