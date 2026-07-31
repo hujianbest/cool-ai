@@ -34,6 +34,14 @@ export type ExecutionStagingAdapter = {
     attemptId: string;
     workspaceRoot: string;
   }): AsyncIterable<StagingEntry>;
+  refreshSandboxManifest?(input: {
+    attemptId: string;
+    sandboxRoot: string;
+  }): Promise<{
+    entries: Array<Pick<StagingEntry, "modeTag" | "path" | "sha256" | "size">>;
+    hash: string;
+    stagingEntries?: StagingEntry[];
+  }>;
   sandboxEntries(input: {
     attemptId: string;
     sandboxRoot: string;
@@ -641,6 +649,7 @@ export function persistComputedStage(
     body: unknown;
     contextHash: string;
     executionId: string;
+    expectedSandboxManifestHash?: string;
     expectedVersion: number;
     leaseToken: string;
     policyHash: string;
@@ -679,10 +688,31 @@ export function persistComputedStage(
         || current.status !== "running"
         || current.version !== input.expectedVersion
         || current.baselineHash !== input.baselineManifestHash
-        || current.sandboxHash !== input.sandboxManifestHash
+        || current.sandboxHash !== (
+          input.expectedSandboxManifestHash ?? input.sandboxManifestHash
+        )
         || current.contextHash !== input.contextHash
         || current.policyHash !== input.policyHash
       ) throw new ExecutionError("STALE_EXECUTION", 409, "Stage input changed before commit.");
+      if (current.sandboxHash !== input.sandboxManifestHash) {
+        const previousSandboxHash = input.expectedSandboxManifestHash;
+        if (!previousSandboxHash) {
+          throw new ExecutionError("STALE_EXECUTION", 409, "Stage manifest expectation is missing.");
+        }
+        const refreshed = currentDatabase.prepare(`
+          UPDATE execution_attempts
+          SET sandbox_manifest_hash=?
+          WHERE id=(SELECT attempt_id FROM execution_actions WHERE id=?)
+            AND status IN ('ready','acting') AND sandbox_manifest_hash=?
+        `).run(
+          input.sandboxManifestHash,
+          input.actionId,
+          previousSandboxHash,
+        );
+        if (refreshed.changes !== 1) {
+          throw new ExecutionError("STALE_EXECUTION", 409, "Stage manifest changed before commit.");
+        }
+      }
       if (currentDatabase.prepare(`
         SELECT 1 FROM execution_approvals
         WHERE execution_id=? AND status IN ('pending','approved')

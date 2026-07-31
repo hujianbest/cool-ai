@@ -522,7 +522,7 @@ function createRelativeHandle(
     ioStatus,
     null,
     0,
-    temp ? 0 : share.FILE_SHARE_READ | share.FILE_SHARE_WRITE | share.FILE_SHARE_DELETE,
+    share.FILE_SHARE_READ | share.FILE_SHARE_WRITE | share.FILE_SHARE_DELETE,
     temp
       ? WINDOWS_NATIVE_CONSTANTS.createDisposition.FILE_CREATE
       : WINDOWS_NATIVE_CONSTANTS.createDisposition.FILE_OPEN,
@@ -656,7 +656,9 @@ function renameRelative(
     information.length,
     WINDOWS_NATIVE_CONSTANTS.infoClass.FileRenameInformationEx,
   );
-  if (status !== 0) fail("NtSetInformationFile rename returned an uncertain status.");
+  if (status !== 0) {
+    fail(`NtSetInformationFile rename returned status 0x${(status >>> 0).toString(16)}.`);
+  }
 }
 
 export function createWindowsNativeWriteAdapter(

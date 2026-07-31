@@ -852,6 +852,7 @@ async function runCommandRequest(
   operationId: string,
   operationRequestHash: string,
   pending: PendingModelAction,
+  dependencies: ExecutionOrchestratorDependencies,
 ): Promise<AdvanceResult> {
   if (pending.action.type !== "command") {
     throw new ExecutionError("INVALID_INPUT", 400, "Command action is invalid.");
@@ -927,6 +928,7 @@ async function runCommandRequest(
       actionIndex: 0,
       authorizationSource: "standing_policy",
       database,
+      manifestAdapter: dependencies.fileAdapter,
       operationId,
       projectId: row.projectId,
       responseBody: commandBody,
@@ -1000,7 +1002,7 @@ function finalizeStageUnverifiable(
   return { body, status: 422 };
 }
 
-async function declareStaged(
+export async function declareStaged(
   databasePath: string,
   database: DatabaseSync,
   executionId: string,
@@ -1022,6 +1024,7 @@ async function declareStaged(
     policyRevisionId: string;
     sandboxHash: string | null;
   };
+  const expectedSandboxHash = manifest.sandboxHash;
   let noChanges = !manifest.sandboxHash || manifest.sandboxHash === manifest.baselineHash;
   if (database.prepare(`
     SELECT 1 FROM execution_approvals
@@ -1050,6 +1053,16 @@ async function declareStaged(
   if (acquired.affectedRows !== 1 || !acquired.leaseToken) {
     throw new ExecutionError("OPERATION_IN_PROGRESS", 409, "Stage declaration is in progress.");
   }
+  const refreshed = stagingAdapter?.refreshSandboxManifest
+    ? await stagingAdapter.refreshSandboxManifest({
+        attemptId: row.attemptId,
+        sandboxRoot: row.sandboxRoot,
+      })
+    : null;
+  if (refreshed) {
+    manifest.sandboxHash = refreshed.hash;
+    noChanges = !manifest.baselineHash || refreshed.hash === manifest.baselineHash;
+  }
   if (
     stagingAdapter
     && manifest.baselineHash
@@ -1066,10 +1079,11 @@ async function declareStaged(
       baselineManifestPath: manifest.baselinePath,
       sandboxRoot: row.sandboxRoot,
     }));
-    const sandboxEntries = await collectEntries(stagingAdapter.sandboxEntries({
-      attemptId: row.attemptId,
-      sandboxRoot: row.sandboxRoot,
-    }));
+    const sandboxEntries = refreshed?.stagingEntries
+      ?? await collectEntries(stagingAdapter.sandboxEntries({
+        attemptId: row.attemptId,
+        sandboxRoot: row.sandboxRoot,
+      }));
     const asEntries = async function* (values: StagingEntry[]) {
       yield* values;
     };
@@ -1202,6 +1216,7 @@ async function declareStaged(
         body,
         contextHash: manifest.contextHash,
         executionId,
+        expectedSandboxManifestHash: expectedSandboxHash ?? manifest.sandboxHash,
         expectedVersion: row.version,
         leaseToken: acquired.leaseToken,
         policyHash: manifest.policyHash,
@@ -1312,6 +1327,7 @@ export async function advanceExecution(
         actionIndex: 0,
         authorizationSource: "one_shot",
         database,
+        manifestAdapter: dependencies.fileAdapter,
         operationId: input.operationId,
         projectId: consumed.projectId,
         responseBody: body,
@@ -1387,6 +1403,7 @@ export async function advanceExecution(
         input.operationId,
         hash,
         pending,
+        dependencies,
       );
     }
     try {

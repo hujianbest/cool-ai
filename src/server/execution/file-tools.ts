@@ -79,9 +79,24 @@ export type SandboxNativeWriteAdapter<Handle = unknown> =
     }): { hash: string };
   };
 
-export type SandboxExecutionFileAdapter<Handle = unknown, Previous = unknown> =
+type SandboxManifestRefresh = {
+  refreshSandboxManifest?(input: {
+    sandboxRoot: string;
+  }): Promise<{
+    entries: Array<{ modeTag: string; path: string; sha256: string; size: number }>;
+    hash: string;
+  }>;
+};
+
+type SandboxManifestSnapshot = {
+  entries: Array<{ modeTag: string; path: string; sha256: string; size: number }>;
+  hash: string;
+};
+
+export type SandboxExecutionFileAdapter<Handle = unknown, Previous = unknown> = (
   | SandboxWriteAdapter<Handle, Previous>
-  | SandboxNativeWriteAdapter<Handle>;
+  | SandboxNativeWriteAdapter<Handle>
+) & SandboxManifestRefresh;
 
 export type PublicListEntry = {
   kind: "directory" | "file";
@@ -1400,7 +1415,29 @@ export async function executeWriteToolAction<Handle, Previous>(input: {
   if (!action) return { affectedRows: 0, result: null };
 
   let written: ReversibleWriteResult;
+  let preManifest: SandboxManifestSnapshot | null = null;
+  let postManifest: SandboxManifestSnapshot | null = null;
   try {
+    if (input.fs.refreshSandboxManifest) {
+      preManifest = await input.fs.refreshSandboxManifest({ sandboxRoot: input.sandboxRoot });
+      const current = input.database.prepare(`
+        SELECT sandbox_manifest_hash AS hash,status
+        FROM execution_attempts
+        WHERE project_id=? AND id=? AND execution_id=?
+      `).get(input.projectId, action.attemptId, action.executionId) as
+        | { hash: string | null; status: string }
+        | undefined;
+      if (
+        !current
+        || !["ready", "acting"].includes(current.status)
+        || current.hash !== preManifest.hash
+      ) {
+        throw new SandboxWriteError(
+          "SANDBOX_UNVERIFIABLE",
+          "The verified sandbox manifest changed before write.",
+        );
+      }
+    }
     written = "writeNativeVerifiedFile" in input.fs
       ? (() => {
         const bytes = encodeWriteContent(input.content);
@@ -1440,6 +1477,9 @@ export async function executeWriteToolAction<Handle, Previous>(input: {
           path: validated.path,
           sandboxRoot: input.sandboxRoot,
         });
+    if (input.fs.refreshSandboxManifest) {
+      postManifest = await input.fs.refreshSandboxManifest({ sandboxRoot: input.sandboxRoot });
+    }
   } catch (error) {
     if ((error as { code?: unknown })?.code === "SANDBOX_UNVERIFIABLE") {
       const mutationState = (error as { mutationState?: unknown }).mutationState;
@@ -1508,10 +1548,27 @@ export async function executeWriteToolAction<Handle, Previous>(input: {
           action.requestHash,
           publicRequest,
           publicResult,
-          result.beforeHash,
-          result.afterHash,
+          preManifest?.hash ?? result.beforeHash,
+          postManifest?.hash ?? result.afterHash,
           action.startedAt,
         );
+        if (preManifest && postManifest) {
+          const attempt = database.prepare(`
+            UPDATE execution_attempts
+            SET sandbox_manifest_hash=?
+            WHERE project_id=? AND id=? AND execution_id=?
+              AND status IN ('ready','acting') AND sandbox_manifest_hash=?
+          `).run(
+            postManifest.hash,
+            input.projectId,
+            action.attemptId,
+            action.executionId,
+            preManifest.hash,
+          );
+          if (attempt.changes !== 1) {
+            throw new Error("Sandbox manifest changed before the write result could commit.");
+          }
+        }
         const execution = database.prepare(`
           UPDATE executions
           SET tool_call_count=tool_call_count+1,

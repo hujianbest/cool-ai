@@ -86,6 +86,7 @@ type CommandActionRow = {
   executionId: string;
   publicRequestJson: string;
   requestHash: string;
+  sandboxManifestHash: string | null;
   sandboxRoot: string;
   sequence: number;
   toolCallId: string;
@@ -446,7 +447,13 @@ export async function runDirectProcess(input: {
 
   try {
     return await Promise.race([
-      exit.then(async ({ code }) => stopping ?? result("completed", code)),
+      exit.then(async ({ code }) => {
+        if (stopping) return stopping;
+        if (!child.pid || !await adapter.confirmTreeExited(child.pid)) {
+          return result("termination_unconfirmed", null);
+        }
+        return result("completed", code);
+      }),
       deadline,
       new Promise<DirectProcessResult>((resolvePromise) => {
         const observeStop = () => {
@@ -530,6 +537,7 @@ function insertOutputArtifact(
 function parseStoredCommandRequest(value: string): {
   args: string[];
   executable: string;
+  executableIdentity: string | null;
   workdir: string;
 } {
   let request: unknown;
@@ -554,8 +562,77 @@ function parseStoredCommandRequest(value: string): {
   return {
     args: [...(request as { args: string[] }).args],
     executable: (request as { executable: string }).executable,
+    executableIdentity: typeof (request as Record<string, unknown>).executableIdentity === "string"
+      ? (request as { executableIdentity: string }).executableIdentity
+      : null,
     workdir: (request as { workdir: string }).workdir,
   };
+}
+
+function finalizeCommandManifestFailure(
+  database: DatabaseSync,
+  input: {
+    leaseToken: string;
+    postAction: boolean;
+    preHash: string | null;
+    projectId: string;
+  },
+  action: CommandActionRow,
+): { affectedRows: 0 | 1; result: null } {
+  const body = { error: { code: "SANDBOX_UNVERIFIABLE" } };
+  const committed = finalizeExecutionActionWithEffects(database, {
+    actionId: action.actionId,
+    body,
+    effects(currentDatabase) {
+      const tool = currentDatabase.prepare(`
+        UPDATE execution_tool_calls
+        SET status='failed',error_code='SANDBOX_UNVERIFIABLE',
+            public_result_json=?,before_sandbox_hash=?,after_sandbox_hash=NULL,
+            finished_at=strftime('%Y-%m-%dT%H:%M:%fZ','now')
+        WHERE project_id=? AND id=? AND action_id=? AND status='requested'
+      `).run(
+        JSON.stringify({ code: "SANDBOX_UNVERIFIABLE" }),
+        input.preHash,
+        input.projectId,
+        action.toolCallId,
+        action.actionId,
+      );
+      const attempt = currentDatabase.prepare(`
+        UPDATE execution_attempts
+        SET status=?,finished_at=strftime('%Y-%m-%dT%H:%M:%fZ','now')
+        WHERE project_id=? AND id=? AND execution_id=? AND status IN ('ready','acting')
+      `).run(
+        input.postAction ? "failed" : "interrupted",
+        input.projectId,
+        action.attemptId,
+        action.executionId,
+      );
+      const execution = currentDatabase.prepare(`
+        UPDATE executions
+        SET status=?,resume_target=?,reason_code='SANDBOX_UNVERIFIABLE',
+            next_event_sequence=next_event_sequence+1,version=version+1,
+            updated_at=strftime('%Y-%m-%dT%H:%M:%fZ','now')
+        WHERE project_id=? AND id=? AND status='running'
+          AND current_attempt_no=? AND next_event_sequence=?
+      `).run(
+        input.postAction ? "failed" : "paused",
+        input.postAction ? null : "running",
+        input.projectId,
+        action.executionId,
+        action.attemptNo,
+        action.sequence,
+      );
+      if (tool.changes !== 1 || attempt.changes !== 1 || execution.changes !== 1) {
+        throw new Error("Manifest refresh failure lost its terminal CAS.");
+      }
+    },
+    httpStatus: 422,
+    leaseToken: input.leaseToken,
+    projectId: input.projectId,
+    result: { code: "SANDBOX_UNVERIFIABLE" },
+    status: "failed",
+  });
+  return { affectedRows: committed.affectedRows, result: null };
 }
 
 export async function executeCommandProcessAction(input: {
@@ -564,6 +641,11 @@ export async function executeCommandProcessAction(input: {
   clock?: ProcessRunnerClock;
   database: DatabaseSync;
   hooks?: { afterProcess?: () => void | Promise<void> };
+  manifestAdapter?: {
+    refreshSandboxManifest?(input: {
+      sandboxRoot: string;
+    }): Promise<{ hash: string }>;
+  };
   operationId: string;
   processAdapter?: ProcessRunnerAdapter;
   projectId: string;
@@ -582,6 +664,7 @@ export async function executeCommandProcessAction(input: {
     SELECT a.id AS actionId,a.execution_id AS executionId,a.attempt_id AS attemptId,
            a.request_hash AS requestHash,t.id AS toolCallId,
            t.public_request_json AS publicRequestJson,attempts.sandbox_root AS sandboxRoot,
+           attempts.sandbox_manifest_hash AS sandboxManifestHash,
            e.current_attempt_no AS attemptNo,e.next_event_sequence AS sequence
     FROM execution_actions a
     JOIN execution_tool_calls t
@@ -620,6 +703,33 @@ export async function executeCommandProcessAction(input: {
   }
 
   const request = parseStoredCommandRequest(action.publicRequestJson);
+  const refreshManifest = input.manifestAdapter?.refreshSandboxManifest?.bind(
+    input.manifestAdapter,
+  );
+  const manifestAdapter = action.sandboxManifestHash && refreshManifest
+    ? refreshManifest
+    : null;
+  let preManifest: { hash: string } | null = null;
+  try {
+    preManifest = manifestAdapter
+      ? await manifestAdapter({ sandboxRoot: action.sandboxRoot })
+      : null;
+  } catch {
+    return finalizeCommandManifestFailure(input.database, {
+      leaseToken: acquired.leaseToken,
+      postAction: false,
+      preHash: null,
+      projectId: input.projectId,
+    }, action);
+  }
+  if (preManifest && preManifest.hash !== action.sandboxManifestHash) {
+    return finalizeCommandManifestFailure(input.database, {
+      leaseToken: acquired.leaseToken,
+      postAction: false,
+      preHash: preManifest.hash,
+      projectId: input.projectId,
+    }, action);
+  }
   const processResult = await runDirectProcess({
     args: request.args,
     authorizationSource: input.authorizationSource,
@@ -639,6 +749,19 @@ export async function executeCommandProcessAction(input: {
     secretValues: input.secretValues,
     workdir: request.workdir,
   });
+  let postManifest: { hash: string } | null = null;
+  try {
+    postManifest = manifestAdapter && processResult.status !== "termination_unconfirmed"
+      ? await manifestAdapter({ sandboxRoot: action.sandboxRoot })
+      : null;
+  } catch {
+    return finalizeCommandManifestFailure(input.database, {
+      leaseToken: acquired.leaseToken,
+      postAction: true,
+      preHash: preManifest?.hash ?? null,
+      projectId: input.projectId,
+    }, action);
+  }
   await input.hooks?.afterProcess?.();
   const result = storedResult(processResult);
   const terminationUnconfirmed = processResult.status === "termination_unconfirmed";
@@ -655,16 +778,108 @@ export async function executeCommandProcessAction(input: {
     effects(database) {
       const updatedTool = database.prepare(`
         UPDATE execution_tool_calls
-        SET status=?,public_result_json=?,finished_at=strftime('%Y-%m-%dT%H:%M:%fZ','now')
+        SET status=?,public_result_json=?,before_sandbox_hash=?,after_sandbox_hash=?,
+            finished_at=strftime('%Y-%m-%dT%H:%M:%fZ','now')
         WHERE project_id=? AND id=? AND action_id=? AND status='requested'
       `).run(
         toolStatus,
         JSON.stringify(result),
+        preManifest?.hash ?? null,
+        postManifest?.hash ?? null,
         input.projectId,
         action.toolCallId,
         action.actionId,
       );
       if (updatedTool.changes !== 1) throw new Error("Command tool call changed before commit.");
+      const policyEntry = request.executableIdentity
+        ? database.prepare(`
+            SELECT entry.id,entry.required
+            FROM execution_attempts attempt
+            JOIN project_validation_policy_entries entry
+              ON entry.project_id=attempt.project_id
+             AND entry.revision_id=attempt.frozen_policy_revision_id
+            WHERE attempt.project_id=? AND attempt.id=? AND attempt.execution_id=?
+              AND entry.executable=? AND entry.executable_identity=?
+              AND entry.args_json=? AND entry.workdir=?
+          `).get(
+            input.projectId,
+            action.attemptId,
+            action.executionId,
+            request.executable,
+            request.executableIdentity,
+            JSON.stringify(request.args),
+            request.workdir,
+          ) as { id: string; required: number } | undefined
+        : undefined;
+      if (policyEntry && postManifest && processResult.exitCode !== null) {
+        const validationId = randomUUID();
+        database.prepare(`
+          INSERT INTO execution_validation_results (
+            id,project_id,execution_id,attempt_id,policy_revision_id,policy_entry_id,
+            tool_call_id,sandbox_manifest_hash,required,exit_code,succeeded,
+            stdout_bytes,stderr_bytes,stdout_sha256,stderr_sha256,
+            stdout_truncated,stderr_truncated,finished_at
+          )
+          SELECT ?,?,?,?,frozen_policy_revision_id,?,?,?, ?,?,?, ?,?,?,?, ?,?,
+            strftime('%Y-%m-%dT%H:%M:%fZ','now')
+          FROM execution_attempts WHERE id=?
+        `).run(
+          validationId,
+          input.projectId,
+          action.executionId,
+          action.attemptId,
+          policyEntry.id,
+          action.toolCallId,
+          postManifest.hash,
+          policyEntry.required,
+          processResult.exitCode,
+          toolStatus === "succeeded" ? 1 : 0,
+          processResult.stdout.bytes,
+          processResult.stderr.bytes,
+          processResult.stdout.sha256,
+          processResult.stderr.sha256,
+          processResult.stdout.truncated ? 1 : 0,
+          processResult.stderr.truncated ? 1 : 0,
+          action.attemptId,
+        );
+        const insertChunk = database.prepare(`
+          INSERT INTO execution_validation_output_chunks (
+            validation_id,stream,chunk_index,byte_offset,byte_length,text,sha256
+          ) VALUES (?,?,?,?,?,?,?)
+        `);
+        for (const [stream, output] of [
+          ["stdout", processResult.stdout],
+          ["stderr", processResult.stderr],
+        ] as const) {
+          for (const [index, chunk] of output.chunks.entries()) {
+            insertChunk.run(
+              validationId,
+              stream,
+              index,
+              chunk.byteOffset,
+              chunk.byteLength,
+              chunk.text,
+              chunk.sha256,
+            );
+          }
+        }
+      }
+      if (preManifest && postManifest) {
+        const attempt = database.prepare(`
+          UPDATE execution_attempts SET sandbox_manifest_hash=?
+          WHERE project_id=? AND id=? AND execution_id=?
+            AND status IN ('ready','acting') AND sandbox_manifest_hash=?
+        `).run(
+          postManifest.hash,
+          input.projectId,
+          action.attemptId,
+          action.executionId,
+          preManifest.hash,
+        );
+        if (attempt.changes !== 1) {
+          throw new Error("Sandbox manifest changed before the command result could commit.");
+        }
+      }
       insertOutputArtifact(database, {
         actionId: action.actionId,
         attemptId: action.attemptId,
@@ -720,7 +935,7 @@ export async function executeCommandProcessAction(input: {
         action.executionId,
         action.sequence,
         action.attemptNo,
-        terminationUnconfirmed ? "tool_failed" : "tool_succeeded",
+        toolStatus === "succeeded" ? "tool_succeeded" : "tool_failed",
         JSON.stringify({
           authorizationSource: result.authorizationSource,
           durationMs: result.durationMs,
@@ -737,7 +952,7 @@ export async function executeCommandProcessAction(input: {
     leaseToken: acquired.leaseToken,
     projectId: input.projectId,
     result,
-    status: terminationUnconfirmed || leaseLost ? "failed" : "succeeded",
+    status: toolStatus === "succeeded" ? "succeeded" : "failed",
   });
   return committed.affectedRows === 1
     ? { affectedRows: 1, result }

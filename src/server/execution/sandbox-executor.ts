@@ -72,7 +72,7 @@ function transaction<T>(database: DatabaseSync, operation: () => T): T {
 async function writeBaselineManifest(
   sandboxRoot: string,
   manifest: {
-    files: Array<{ hash: string; path: string; size: number }>;
+    entries: Array<{ modeTag: string; path: string; sha256: string; size: number }>;
     itemCount: number;
     totalBytes: number;
   },
@@ -307,7 +307,7 @@ export function createProductionSandboxExecutor(
       }));
     }
     const manifestPath = await writeBaselineManifest(input.sandboxRoot, {
-      files: snapshot.files,
+      entries: snapshot.files,
       itemCount: snapshot.itemCount,
       totalBytes: snapshot.totalBytes,
     });

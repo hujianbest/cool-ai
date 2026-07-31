@@ -34,8 +34,9 @@ export type SandboxSnapshotHooks = {
 };
 
 export type SandboxSnapshotFile = {
-  hash: string;
+  modeTag: string;
   path: string;
+  sha256: string;
   size: number;
 };
 
@@ -286,7 +287,12 @@ async function writeVerifiedSource(input: {
     await closePathHandles(platform, opened.handles);
     await rename(temporaryPath, destinationPath);
     await runHook(hooks, "destination-synced", entry.path);
-    return { hash: digest.digest("hex"), path: entry.path, size: total };
+    return {
+      modeTag: "file",
+      path: entry.path,
+      sha256: digest.digest("hex"),
+      size: total,
+    };
   } finally {
     stream?.destroy();
     await closePathHandles(platform, opened.handles).catch(() => undefined);
@@ -376,7 +382,7 @@ async function verifyBuildingManifest(input: {
           size += bytes.byteLength;
           digest.update(bytes);
         }
-        if (size !== file.size || digest.digest("hex") !== file.hash) {
+        if (size !== file.size || digest.digest("hex") !== file.sha256) {
           mismatch("The copied file does not match its verified source bytes.");
         }
         observedBytes += size;
@@ -495,9 +501,7 @@ export async function buildSandboxSnapshot(input: {
     ownedBuilding = false;
     ownedSandbox = true;
     await runHook(input.hooks, "sandbox-renamed");
-    const manifestHash = createHash("sha256")
-      .update(JSON.stringify({ files, itemCount: input.preflight.itemCount, totalBytes }))
-      .digest("hex");
+    const manifestHash = createHash("sha256").update(JSON.stringify(files)).digest("hex");
     return {
       files,
       itemCount: input.preflight.itemCount,
