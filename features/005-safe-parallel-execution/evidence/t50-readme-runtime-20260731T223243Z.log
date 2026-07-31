@@ -1,0 +1,6 @@
+# hf-gate-run
+# label: t50-readme-runtime
+# command: npm.cmd --version
+# started: 2026-07-31T22:32:43+00:00
+11.9.0
+# exit: 0

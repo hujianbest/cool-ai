@@ -1,0 +1,9 @@
+# hf-gate-run
+# label: t50-readme-doc
+# command: rg -n Node\.js 24\.x and the bundled npm 11\.x|npm test|npm run build|npm run smoke:execution README.md
+# started: 2026-07-31T22:32:43+00:00
+7:- Node.js 24.x and the bundled npm 11.x
+43:npm test
+49:npm run build
+95:npm run smoke:execution
+# exit: 0
