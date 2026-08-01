@@ -54,3 +54,89 @@
 
 - 第 1 项已闭合：`ReviewAttemptDto` 已纳入 `finalizing`，并以 strict discriminated contract 区分 `local-finalize-only`、`new-provider-attempt` 与 `none`；checkpoint、retry 是否调用 provider、workspace/history/detail refine、UI 动作及 T-16 判据一致。
 - 第 2 项已闭合：T-24 已恢复为普通任务，以缺失真实 provider/browser `smoke:review` harness contract 为 RED、实现公开全链为 GREEN，并在 green 后运行全量 test/build/smoke 收口，满足第 24 个任务的一次明确 TDD。
+
+# Design评审（第4轮）
+
+- 日期: 2026-08-01
+- 评审方式: subagent
+- 结论: 需修改
+
+## Findings
+
+- [严重] `design.md` §4.2 `ReviewMaterialV1.ownerAnswer`（第 619～621、635 行）、§5.2（第 760～775 行）与 T-25（第 1556 行）: 同一个 result 可以经历“升级 → `continue_review` → 新 attempt → 再次升级”的多轮链，但冻结契约只能携带一个 `ownerAnswer`，也没有定义选择规则、回答版本或前序回答是否仍是后续上下文。现有生产实现已经按“最新一条 answer”查询，这会让第二轮之后的冻结材料丢失早先 owner 约束，material hash 也无法证明 Agent 看过完整回答历史；T-25 只验一次 continue，未覆盖 spec FR-5 与 FR-12 要求的多轮升级/回答可恢复历史。→ 将冻结字段改为按稳定顺序、带 `escalationId/answerId/action/createdAt`（及必要版本）的回答链，或明确可证明安全的 supersede 规则；workspace 同时区分 current open issue 与 answered history，并在 T-25 覆盖至少两轮同 result continue、不同新 attempt、刷新/重启、旧回答不可改写及材料 hash 随回答链变化。
+
+- [严重] `design.md` §8.1“canonical vocabulary”约束（第 1042 行）、§8.5（第 1268～1296 行）与 T-24～T-26: 设计只说历史别名要显式映射，却没有列出当前已落库/可达生产别名及 payload 转换，也没有把每类 producer 的 canonical 验证分配给对应任务。当前代码可实际产生 `work_item_review_passed`、`review_escalated`、`mission_owner_terminated`、`delivery_generation_completed`、`delivery_generation_interrupted`、`mission_delivery_invalidated` 等非 DTO 名称；`escalation_answered` 等同名事件的 payload 也与 strict DTO 字段不一致。由于读取端对未知 type/extra key fail-closed，一条旧事件即可令整个公开 review-events page 返回 500，直接破坏 FR-12/FR-13，而 T-24 的三裁决路径不能覆盖 answer、delivery completion/interruption/invalidation。→ 增加“现有 producer/持久别名 → canonical type/payload”的穷尽迁移或读取适配表，规定未知值仍 fail-closed；把 review、answer、delivery、invalidation 各生产路径的 strict round-trip 测试分别落到 T-24/T-25/T-26（或拆出独立事件任务），并用含上述既有行的 v6 数据验证升级后历史可读。
+
+- [一般] `design.md` §4.4、§8.1 第 1023～1043 行及 T-24/T-26: 公开 route 的输入虽然已限制为 owner 可提交字段，但 route 到内部 primitive 的服务端组装契约仍未定义。当前 `runReviewOperation` 需要 `attemptId/frozenMaterialJson/providerRequest/validationContext/trustedTokens/provider/credential` 等可信内部输入，`acquireDeliveryGeneration` 仍要求调用方提供完整 `DeliveryBuildInput`；仅写“必须进入 orchestrator”或“服务端组装”不足以确定这些值在哪个事务快照读取、谁解密凭据/构造 prompt、operation hash 只绑定哪些公开字段、组装后如何防止 context 在 acquire 前漂移。实现者仍需自行发明关键安全边界，客户端防伪也无法仅靠当前任务判据证明。→ 为 review 与 delivery 各定义一个 public-input application-service 签名和逐字段 server derivation 表，明确 DB/事务/凭据边界、path/body 的 canonical operation hash、内部 DTO 不可由 route body 覆盖以及组装与 acquire 的 CAS identity；T-24/T-26 增加伪造内部字段、组装中 context 变化和 same operation replay 的 route 级测试。
+
+- [一般] `design.md` §12.1 第 1425 行、§14 T-24/T-28（第 1555、1559 行）与自检第 1590 行: TDD 边界和任务粒度仍不一致。现有 `evidence/t24-red-20260801T081018Z.log` 运行的是 `tests/review-browser-smoke.test.ts`，且 RED 明确断言已废弃的 project-review / attempt-escalation route；修订后该行为属于 T-28，而新的 T-24 判据是 `tests/review-production-orchestration.test.ts`。该日志既不能证明新 T-24 的行为缺失，也不能在修正 route contract 后充当 T-28 RED。与此同时 T-24 把 public adapter、两套 review 实现收口、三种 finalizer、memory 原子性、checkpoint replay 和跨域 canonical events 塞进一次 TDD，失败面彼此独立；T-28 又同时新增进程/provider/browser 基础设施、全业务链、重启和双 viewport/a11y，均不符合“一任务一次可控 TDD”。→ 明确旧 t24-red 作废；T-24 在任何产品代码变更前以其新专属测试重新 RED，T-28 在修正公开 route 断言后另取 RED。再把 T-24 至少拆为 production review application-service/finalizer 与 event compatibility 两个顺序任务，并把 T-28 拆为 smoke 基础设施+最薄真实 pass 链、其余 reject/escalate/restart/viewport 场景收口，随后同步覆盖索引。
+
+# Design评审（第5轮）
+
+- 日期: 2026-08-01
+- 评审方式: subagent
+- 结论: 需修改
+
+## Findings
+
+- [严重] 第 4 轮第 2 项未闭合（`design.md` §8.5 第 1286～1328 行、T-25）: 兼容表既漏掉现有 producer 的 `work_item_completion_invalidated`，也没有穷尽“type 已同 canonical、payload 仍不兼容”的既有行。当前生产代码还会写出：`work_item_review_passed {headVersion,workItemId}`、`work_item_passed {decisionId,resultId,workItemId}`、`review_escalated {escalationId,...}`、`escalation_answered {escalationId,answerId,action,resultId,workItemId}`、`mission_owner_terminated {escalationId,missionId}`、`delivery_generation_completed {deliveryId,inputFingerprint,reused,version}`、`delivery_generation_interrupted {errorCode,operationId}`、两种不同 payload 的 `mission_delivery_invalidated`、`review_attempt_discarded {attemptId,reason,workItemId}`，以及缺 `category` 或 `inputFingerprint` 的现有 `delivery_generation_started|failed`。表中却假定若干不存在的旧字段（例如 `work_item_review_passed` 的 `resultId/decisionId/reasonCode`、`review_escalated` 的 `issueId`、termination 的 `reason`、interrupted 的 `inputFingerprint`、invalidation 的 `reasonCode/workItemIds`），无法按所写规则转换为 strict DTO；一条这类历史行仍会使公开 events page fail-closed。→ 以所有现有 review event producer 和已落库 fixture 为全集，列出每个 type+payload variant 的精确转换；缺失 canonical 必填值时明确从哪份同事务持久事实可信派生，无法无歧义派生则定义可审计的 legacy canonical variant/迁移失败规则。把 `work_item_completion_invalidated` 及上述同名旧 payload 全部纳入 T-25，并分别覆盖 review、answer、delivery completion/failure/interruption/invalidation 的 DB→DTO 历史 round-trip。
+- [一般] 第 4 轮第 1 项未完全闭合（`design.md` §4.2 第 619～638 行、§8.2 第 1191～1204 行、T-26）: frozen material 已改为稳定排序的 `ownerAnswers[]`，含 escalation/answer/version/action/time，且明确全历史参与 hash；但 public `ReviewWorkspaceDto` 仍只有一个 `escalation` 及其单个 `answer`，没有正文所称的 `current open issue` 与 `answered history` 分离字段，也无法 strict 表达同一 result 两轮以上 continue 的回答历史。实现阶段仍需自行发明 workspace 契约，T-26 的“workspace 区分”没有 DTO 落点。→ 把 workspace 的 current open issue 与按稳定顺序返回的 immutable answered history 写成明确 strict DTO（包含 escalationId/answerId/action/version/createdAt，并绑定 result/attempt），并与 frozen `ownerAnswers` 的筛选、顺序和 hash 测试一一对应。
+- [一般] 第 4 轮第 3 项未完全闭合（`design.md` §4.4 第 697～705 行、§8.1 第 1046～1061 行）: review/delivery 的 public-input application service、可信服务端派生、vault 边界和 acquire CAS identity 已有明确落点，但 operation hash 契约自相矛盾：§4.4 要求 request hash 不含 `operationId`，§8.1 又说 hash 包含“strict body”，而两个 strict body 都包含 `operationId`。这会让 receipt 冲突/重放的 canonical 输入在实现时仍需二选一，也不满足本轮要求的精确 path/body hash 边界。→ 为两个 service 分别列出 canonical hash tuple，并明确 `operationId` 只作 receipt key 还是也进入 hash；同步 T-24/T-27 的 same-id same/different-content 与 path-id 变化断言。
+
+## 第 4 轮 Findings 闭合确认
+
+- 第 1 项部分闭合：冻结材料已保存稳定排序的全部 immutable continue answers，回答链参与 canonical material hash，T-26 也覆盖两轮 continue、不同 attempt、刷新/重启与不可改写；但 workspace strict DTO 尚未表达 answered history。
+- 第 2 项未闭合：已增加别名表并把事件兼容独立为 T-25，但表与现有 producer 的 type/payload 全集不一致，仍不能保证升级后历史可读。
+- 第 3 项部分闭合：review/delivery application service 的服务端派生、凭据边界、内部字段防伪和 acquire CAS 已明确；operation hash 是否包含 `operationId` 仍矛盾。
+- 第 4 项已闭合：旧 `t24-red-20260801T081018Z.log` 已明确仅作诊断且不计入任何新任务 RED；T-24～T-30 已拆成 review application、event compatibility、escalation 多轮链、delivery application/API、产品树 wiring、最薄 smoke 基础设施/pass 链、完整裁决/重启/双 viewport 链，均有独立先红后绿边界，且 T-24～T-30 inline 覆盖与覆盖索引一致。
+
+# Design评审（第6轮）
+
+- 日期: 2026-08-01
+- 评审方式: subagent
+- 结论: 需修改
+
+## Findings
+
+- [严重] 第 5 轮第 1 项仍未闭合（`design.md` §8.5 第 1329～1341 行）: type+payload variants 现已覆盖实际 producer，包括 `work_item_completion_invalidated`、同名不兼容的 pass/answer/discarded/started/failed、delivery completed/interrupted 及两种 invalidated；但关键历史派生仍不可信。`work_item_review_passed` 要从 review head“在该 headVersion 所指”事实派生 result/decision，`work_item_completion_invalidated` 要从该 work item 的 current head/“最近唯一 decision”派生，而两类事件之后 head 可继续递增、current result 可被返工新版替换，设计又没有 review-head 历史快照，重启后无法按所写查询恢复事件发生时的唯一 result/decision。两种 `mission_delivery_invalidated` 要与“当时 head”核对也有同样问题：current head 已在同事务被清空/递增，未定义可重建的持久时点。另有 `review_attempt_discarded.reason→category` 与 delivery `errorCode→category` 只引用未穷举的共享 mapping，尚未给出每个现有值的确定结果。→ 把派生锚定到不会漂移的持久事实，例如同 mission sequence 中严格在前且唯一匹配的 immutable decision/pass/started 事件、attempt/decision/delivery/operation row，并写出歧义与缺失判据；逐值列出 reason/errorCode mapping。若现存字段不足以唯一恢复，必须定义可审计 legacy canonical variant 或 migration `SCHEMA_DATA_INVALID`，不能查询当前 head 猜历史。T-25 应逐 variant 覆盖“事件后又发生返工/新版/再次交付再重启”的 DB→DTO round-trip。
+- [一般] 第 5 轮第 2 项仍有内部矛盾（`design.md` §5.2 第 756～759 行、§8.2 第 1192～1224 行）: strict DTO 已加入 workspace/detail 的 `currentEscalation` 与 `answeredEscalations`，answered history 对 current result 的筛选、`(answer.createdAt,answer.answerId)` 排序及 `continue_review` 投影到 `ownerAnswers`/material hash 已闭合；但 §5.2 明确 escalate 后 `head.currentAttemptId=null`，§8.2 又要求 `currentEscalation` 绑定 current result/**current attempt**。在 `waiting_owner` 正向状态下 `currentAttempt` 必为 null，因此该 refine 按字面无法成立。→ 明确 open escalation 绑定的是 current result 与产生它的 immutable escalated attempt，而不是 head 的 currentAttempt；分别写清 workspace 与 attempt detail 的筛选（detail 是否只在该 escalated attempt 返回 open/answered 记录），并让 T-26 断言 `waiting_owner.currentAttempt=null` 仍可 strict 返回 open issue。
+- [一般] 第 5 轮第 3 项只在正文闭合、任务验证未闭合（`design.md` §4.4 第 697～700 行、§8.1 第 1048～1061 行、T-24/T-27 第 1604、1607 行）: review/delivery 均已一致规定 `operationId` 仅作 receipt key，不进入 hash，canonical tuple 分别为 `["review.v1",workItemId,resultId,reviewerAgentId,expectedHeadVersion]` 与 `["delivery.v1",missionId,expectedHeadVersion]`，正文的 same/different/path 语义也一致；但 T-24 只要求 same-operation/checkpoint replay，T-27 只要求 same-operation 幂等，均没有第 5 轮要求的 same id + different tuple 以及仅 path id 变化的冲突/零副作用断言。→ 在 T-24、T-27 各自明确三组 route 级判据：same id + same tuple 返回原 receipt，same id + 任一非 path tuple 字段变化返回 `OPERATION_CONFLICT`，same id + path `workItemId|missionId` 变化也返回冲突；同时断言 provider/generation/attempt/receipt 之外业务副作用不增加。
+
+## 第 5 轮 Findings 闭合确认
+
+- 第 1 项部分闭合：现有 producer 的 type+payload variants 已列全，但若干转换仍依赖不可回溯的 current/“当时” head，reason/errorCode 的值域映射也未穷尽，不能证明历史 strict 可读。
+- 第 2 项部分闭合：strict DTO、answered history、ownerAnswers 筛选/排序/hash 已有明确落点，但 open escalation 与已被清空的 currentAttempt 约束冲突。
+- 第 3 项部分闭合：`operationId` receipt-only 与两个 canonical tuple 已统一；T-24/T-27 尚未同步 different-content/path-id 断言。
+
+# Design评审（第7轮）
+
+- 日期: 2026-08-01
+- 评审方式: subagent
+- 结论: 需修改
+
+## Findings
+
+- [一般] 新增阻塞（`design.md` §8.1 第 1059 行、§8.3 第 1240～1272 行）: `startPublicReview` 在服务端组装与 acquire 之间发生 head/material/reviewer config 漂移时明确返回 `REVIEW_CONTEXT_STALE`，但该 code 未进入设计声明的 S-6 唯一 error registry；错误矩阵没有它的 HTTP status、固定中文 message、event/blocker 与持久副作用，而相邻的 `MISSION_CONTEXT_CHANGED`、`DELIVERY_CONTEXT_CHANGED` 也不能按字面覆盖 review acquire 前的组装漂移。实现阶段仍需自行发明公开错误契约，且 strict route/receipt/UI 无法一一闭合。→ 将 `REVIEW_CONTEXT_STALE` 明确纳入 error matrix 和共享 mapping，并在 T-24 的组装漂移 route 判据中断言其 HTTP/code/message、零 provider/attempt/receipt/业务副作用；或改用已有且语义准确的 registry code，并同步正文与任务。
+
+## 第 6 轮 Findings 闭合确认
+
+- 第 1 项已闭合：两种 legacy canonical variant 明确保留旧投影而不猜 result/decision；每个实际 producer 的 payload variant 均以 payload 自身、同 mission 更小 sequence 的 immutable event，或 immutable attempt/operation/delivery row 转换，不读取 current head；唯一前驱缺失/重复或关联不一致 fail-closed。`reason`/`errorCode` 逐值闭合，未列值统一 `SCHEMA_DATA_INVALID`，T-25 覆盖后续返工、新 result、再次 delivery 与重启 round-trip。
+- 第 2 项已闭合：open escalation 明确绑定 current result 与产生它的 immutable `status="escalated"` attempt；workspace 允许 `waiting_owner.currentAttempt=null` 时返回唯一 open issue。attempt detail 只对该产生 issue 的 escalated attempt 返回对应 open/answered 记录，其他 attempt 返回 null/空数组；answered history 与 frozen ownerAnswers 的 result 筛选、稳定顺序及 hash 投影一致，T-26 有直接判据。
+- 第 3 项已闭合：T-24 与 T-27 均写明 route 级三组判据：same id + same tuple 返回原 receipt，same id + 非 path tuple 变化返回 `OPERATION_CONFLICT`，仅 path `workItemId|missionId` 变化也冲突；并分别约束 provider/attempt/receipt 外及 generation/delivery/receipt 外业务副作用不增加。
+
+# Design评审（第8轮）
+
+- 日期: 2026-08-01
+- 评审方式: subagent
+- 结论: 通过
+- 用户确认: auto-approved 2026-08-01
+
+## Findings
+
+无
+
+## 第7轮 Finding 闭合确认
+
+- 已闭合：`REVIEW_CONTEXT_STALE` 已进入 §8.3 声明的 S-6 唯一 error registry，固定为 HTTP 409、code `REVIEW_CONTEXT_STALE`、中文 message“复核上下文已变化，请基于最新内容重试”、无 event，并明确组装/acquire 间 CAS 失败时 provider、attempt、receipt 及业务写均为 0。
+- 已闭合：T-24 直接断言上述 HTTP/code/message 与零 provider/attempt/receipt/业务副作用，和 §8.1 application service 的漂移语义一致。
+- 本轮按复审范围未发现新增阻塞。

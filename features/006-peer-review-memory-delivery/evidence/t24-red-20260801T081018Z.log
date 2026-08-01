@@ -1,0 +1,99 @@
+# hf-gate-run
+# label: t24-red
+# command: npm test -- tests/review-browser-smoke.test.ts
+# started: 2026-08-01T08:10:18+00:00
+
+> collaboration-cockpit@0.1.0 test
+> vitest run tests/review-browser-smoke.test.ts
+
+
+ RUN  v4.1.10 D:/cool-ai
+
+ ❯ tests/review-browser-smoke.test.ts (4 tests | 4 failed) 14ms
+     × exposes the real provider and browser smoke command 8ms
+     × uses public product routes without interception or business SQLite writes 2ms
+     × drives reject, rework, escalation, pass, memory, delivery, and restart 1ms
+     × proves desktop and narrow keyboard paths with screenshots 1ms
+
+⎯⎯⎯⎯⎯⎯⎯ Failed Tests 4 ⎯⎯⎯⎯⎯⎯⎯
+
+ FAIL  tests/review-browser-smoke.test.ts > review browser smoke harness contract > exposes the real provider and browser smoke command
+AssertionError: expected undefined to be 'node tests/review-browser-smoke.mjs' // Object.is equality
+
+- Expected:
+"node tests/review-browser-smoke.mjs"
+
++ Received:
+undefined
+
+ ❯ tests/review-browser-smoke.test.ts:14:51
+     12| describe("review browser smoke harness contract", () => {
+     13|   it("exposes the real provider and browser smoke command", () => {
+     14|     expect(packageJson.scripts?.["smoke:review"]).toBe(
+       |                                                   ^
+     15|       "node tests/review-browser-smoke.mjs",
+     16|     );
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[1/4]⎯
+
+ FAIL  tests/review-browser-smoke.test.ts > review browser smoke harness contract > uses public product routes without interception or business SQLite writes
+AssertionError: expected '' to contain '/api/projects/${projectId}/reviews'
+
+- Expected
++ Received
+
+- /api/projects/${projectId}/reviews
+
+ ❯ tests/review-browser-smoke.test.ts:28:21
+     26|       /\b(?:INSERT(?:\s+OR\s+\w+)?\s+INTO|UPDATE|DELETE\s+FROM)\s+(?:r…
+     27|     );
+     28|     expect(harness).toContain("/api/projects/${projectId}/reviews");
+       |                     ^
+     29|     expect(harness).toContain("/api/reviews/${attemptId}");
+     30|     expect(harness).toContain("/api/reviews/${attemptId}/escalation");
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[2/4]⎯
+
+ FAIL  tests/review-browser-smoke.test.ts > review browser smoke harness contract > drives reject, rework, escalation, pass, memory, delivery, and restart
+AssertionError: expected '' to contain 'choice: "reject"'
+
+- Expected
++ Received
+
+- choice: "reject"
+
+ ❯ tests/review-browser-smoke.test.ts:35:21
+     33|
+     34|   it("drives reject, rework, escalation, pass, memory, delivery, and r…
+     35|     expect(harness).toContain('choice: "reject"');
+       |                     ^
+     36|     expect(harness).toContain('choice: "escalate"');
+     37|     expect(harness).toContain('choice: "pass"');
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[3/4]⎯
+
+ FAIL  tests/review-browser-smoke.test.ts > review browser smoke harness contract > proves desktop and narrow keyboard paths with screenshots
+AssertionError: expected '' to contain 'width: 1600'
+
+- Expected
++ Received
+
+- width: 1600
+
+ ❯ tests/review-browser-smoke.test.ts:46:21
+     44|
+     45|   it("proves desktop and narrow keyboard paths with screenshots", () =…
+     46|     expect(harness).toContain('width: 1600');
+       |                     ^
+     47|     expect(harness).toContain('width: 390');
+     48|     expect(harness).toContain('keyboard.press("Enter")');
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[4/4]⎯
+
+
+ Test Files  1 failed (1)
+      Tests  4 failed (4)
+   Start at  16:10:20
+   Duration  2.54s (transform 42ms, setup 415ms, import 20ms, tests 14ms, environment 1.77s)
+
+# exit: 1

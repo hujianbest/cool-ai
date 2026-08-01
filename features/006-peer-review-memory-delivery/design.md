@@ -616,9 +616,10 @@ type ReviewMaterialV1 = {
     id:string;version:number;type:string;content:string;
     source:{type:string;id:string;version:string|null};
   }>;
-  ownerAnswer: null|{
-    escalationId:string;answerId:string;answer:string;createdAt:string;
-  };
+  ownerAnswers: Array<{
+    escalationId:string;answerId:string;action:"continue_review";
+    answerVersion:number;answer:string;createdAt:string;
+  }>;
   sourceRefs: VersionRef[];
 };
 ```
@@ -632,7 +633,7 @@ type ReviewMaterialV1 = {
 - observations/blockers沿用 S-5 已持久 summary并附实际 diff；完整结构本身超过2 MiB同样 acquire失败，不静默删除数组。
 - `auditEvents`只读取与 result/merge/validation/artifact/manual-recovery有关的 strict public event payload；不在 allowlist的事件不进入 sourceRefs，不能被 Agent声称已读。
 - shared memory只含当前 active条目和 source tuple；不含 owner/Agent私有 prompt。
-- owner escalation answer仅在同 result继续复核时加入。
+- owner escalation answers仅收同 result 的 `continue_review` immutable answers，按 `(createdAt,answerId)` 稳定升序全部加入；`rework`/`terminate` 不进入下一 attempt。每个 escalation只能有一个 answerVersion=1，旧回答不可改写或被“最新回答”覆盖。workspace 分开返回 current open issue与 answered history；每次追加回答都会改变 canonical material hash。
 - acquire先分配 attempt id，再把 `{type:"review",id:attemptId,version:"1"}` 加入 sourceRefs；因此 Agent可把候选精确绑定到当前 review，而不引用尚未存在的 decision。
 - canonical material hash同时是 stale检查输入；任务、依赖、result、validation、artifact、memory active set或 owner answer任一版本变化都会改变 hash。
 - snapshot持久化的是上述 allowlist，不持久化生成的 OpenAI request、Authorization或 provider response。
@@ -695,7 +696,7 @@ type ReviewOutput = {
 
 Acquire `BEGIN IMMEDIATE`:
 
-1. strict解析 body、计算不含 operationId的 canonical request hash。
+1. strict解析 body；`operationId`只作同 project/operation kind 的 receipt key，不进入 request hash。review hash tuple固定为 `["review.v1",workItemId,resultId,reviewerAgentId,expectedHeadVersion]`。
 2. same operation/hash返回 receipt；same id/different hash → `OPERATION_CONFLICT`；pending且 lease仍有效 → `OPERATION_IN_PROGRESS`。
 3. reconcile该 work item已过期 calling attempt。
 4. CAS验证 head version/state/current result、无 current calling attempt、mission非terminated。
@@ -1034,6 +1035,31 @@ Mutation:
 
 所有 mutation body必须是 strict object、含 UUID operationId和 expected version（Agent config沿用自身 expectedVersion）。复用 S-5 请求≤128 KiB、mutation/detail≤256 KiB、list≤512 KiB、event page≤100、普通 history page≤20、24小时 scoped HMAC cursor；不引入新数字。
 
+生产 wiring 约束:
+
+- `POST /api/work-items/:workItemId/reviews` 必须进入 `runReviewOperation` 与 checkpoint finalizer；旧 `review-slice-service.startReview` 的 always-pass 路径不得作为生产裁决入口。
+- `POST /api/escalations/:escalationId/answer` 必须调用 `answerEscalation`，workspace 读取返回精确绑定当前 attempt/result 的 open/answered issue；`continue_review` 后由公开 review mutation 创建不同 attempt，同 result 复用冻结回答。
+- delivery GET/POST/history routes 必须只接受公开 operation/head version，由服务端从持久事实组装 `DeliveryBuildInput` 并调用 acquire/finalize；客户端不得提交 manifest、summary 或 actor。
+- 持久事件名与 strict DTO 使用同一 canonical vocabulary；历史别名只允许在迁移/读取适配层显式映射，未知事件继续 fail-closed。
+- 实际 `app/page.tsx` 产品树必须挂载 review workspace/outcomes/escalation/memory association 和 mission级 delivery surface；source href 导航到真实可达的 memory/task/result/review/validation/artifact 目标，不得保留孤立 story/test-only surface 或死链接。
+
+Public-input application services:
+
+```ts
+type StartPublicReviewInput = {
+  workItemId:string;
+  body:{operationId:string;resultId:string;reviewerAgentId:string;expectedHeadVersion:number};
+};
+type GeneratePublicDeliveryInput = {
+  missionId:string;
+  body:{operationId:string;expectedHeadVersion:number};
+};
+```
+
+- `startPublicReview(input,deps)` 在一个只读快照读取 route workItem/project/mission、current review head/result version、reviewer membership/capability/provider binding、当前 attempt/material sources；body不能提供 attemptId、material、prompt、validationContext、provider、credential、actor或 hash。服务端分配 attemptId，调用 frozen material builder与 prompt builder；事务外通过 vault按 provider credentialId解密并调用 server-only provider client。`operationId`只作 receipt key，canonical hash tuple精确为 `["review.v1",workItemId,resultId,reviewerAgentId,expectedHeadVersion]`；acquire再次 CAS `(headVersion,currentResultId,materialHash,reviewerConfigVersion)`，漂移返回 `REVIEW_CONTEXT_STALE`且不调用 provider。same operation+same tuple重放同 receipt/checkpoint/finalize；同 id但 tuple任一字段（包括 path workItemId）变化则冲突。
+- `generatePublicDelivery(input,deps)` 在只读快照读取 mission/context version、delivery head、全部 effective task/result/review、evidence与 active memory，服务端组装 `DeliveryBuildInput`；body不能提供 fingerprint、manifest、summary、evidence、memory或actor。`operationId`只作 receipt key，canonical hash tuple精确为 `["delivery.v1",missionId,expectedHeadVersion]`；acquire CAS `(headVersion,missionVersion,contextVersion,inputFingerprint)`，组装期间漂移则返回 `DELIVERY_CONTEXT_STALE`且不落 generating。same operation+same tuple复用 receipt/current result；同 id但 expected version或 path missionId变化则冲突。
+- route只负责 bounded body、strict parse、调用 application service与共享 error mapping；内部 primitive DTO永不由 JSON spread/body覆盖。测试必须注入 route body中的同名内部字段并断言 strict 422/零副作用。
+
 ### 8.2 Core DTO
 
 ```ts
@@ -1158,10 +1184,20 @@ type ReviewAttemptDto = ReviewAttemptBase & (
 type ReviewAttemptHistoryItemDto = ReviewAttemptDto;
 type ReviewAttemptDetailDto = ReviewAttemptDto & {
   frozenMaterial:unknown;
-  escalation:unknown|null;
+  currentEscalation:ReviewOpenEscalationDto|null;
+  answeredEscalations:ReviewAnsweredEscalationDto[];
   candidateAssociations:unknown[];
 };
 
+type ReviewOpenEscalationDto = {
+  escalationId:string;resultId:string;attemptId:string;
+  question:string;options:string[];createdAt:string;
+};
+type ReviewAnsweredEscalationDto = {
+  escalationId:string;resultId:string;attemptId:string;
+  answer:{answerId:string;action:"continue_review"|"rework"|"terminate_mission";
+    answerVersion:1;answer:string;createdAt:string};
+};
 type ReviewWorkspaceDto = {
   workItem:{id:string;title:string;version:number;boardStatus:string};
   effectiveStatus:EffectiveReviewStatus;
@@ -1169,10 +1205,8 @@ type ReviewWorkspaceDto = {
   result:null|{id:string;version:number;executorAgentId:string;createdAt:string};
   candidates:ReviewCandidateDto[];
   currentAttempt:ReviewAttemptDto|null;
-  escalation:null|{
-    id:string;question:string;options:string[];
-    answer:null|{id:string;answer:string;action:string;createdAt:string};
-  };
+  currentEscalation:ReviewOpenEscalationDto|null;
+  answeredEscalations:ReviewAnsweredEscalationDto[];
   blockers:Array<{code:string;refId:string|null}>;
   historyCount:number;
 };
@@ -1187,7 +1221,7 @@ type MissionCompletionDto = {
 };
 ```
 
-`ReviewAttemptDto.calls`按 callIndex稳定排序且最多是 primary、repair各一项；workspace `currentAttempt`、history page item和 detail顶层均复用上面的 discriminated union，detail只追加冻结材料/escalation/association，不重定义 status/finalize/retry。model-call refine：calling必须 `finishedAt=null/failure=null`；succeeded必须 `finishedAt!=null/failure=null`；其余终态必须 `finishedAt!=null/failure!=null`。provider/response/redaction失败的 `apiErrorCode`取上列对应唯一值；usage_invalid、interrupted、discarded使用 `apiErrorCode=null`并由 status+category表达，不能临场造新 public code。`reported=false`时三个 token必须全为null，不能用0冒充 provider已报告；`reported=true`时三个均为非负整数且 total相加一致。attempt aggregate只累加 reported call，未报告数量独立显示。
+`ReviewAttemptDto.calls`按 callIndex稳定排序且最多是 primary、repair各一项；workspace `currentAttempt`、history page item和 detail顶层均复用上面的 discriminated union，detail只追加冻结材料/escalation/association，不重定义 status/finalize/retry。`currentEscalation`只允许当前 head=`waiting_owner`、`currentAttempt=null`，并绑定 current result及产生该issue的 immutable `status="escalated"` attempt；workspace返回这条唯一open issue。attempt detail只在查询该产生issue的 escalated attempt时返回对应open/answered记录，其他attempt为null/空数组。`answeredEscalations`只返回同 current result的 immutable answers，按 `(answer.createdAt,answer.answerId)`升序。只有 action=`continue_review` 的 answered items按相同顺序投影为 frozen `ownerAnswers`并参与 material hash。model-call refine：calling必须 `finishedAt=null/failure=null`；succeeded必须 `finishedAt!=null/failure=null`；其余终态必须 `finishedAt!=null/failure!=null`。provider/response/redaction失败的 `apiErrorCode`取上列对应唯一值；usage_invalid、interrupted、discarded使用 `apiErrorCode=null`并由 status+category表达，不能临场造新 public code。`reported=false`时三个 token必须全为null，不能用0冒充 provider已报告；`reported=true`时三个均为非负整数且 total相加一致。attempt aggregate只累加 reported call，未报告数量独立显示。
 
 attempt/finalize refine矩阵:
 
@@ -1217,6 +1251,7 @@ attempt/finalize refine矩阵:
 | 409 | `ESCALATION_ALREADY_ANSWERED` | “该升级问题已被回答” | `escalation_answered` winner可导航 | 0或返回winner |
 | 409 | `MISSION_COMPLETION_BLOCKED` | “使命尚未满足最终完成条件” | completion blocker list | 0 |
 | 409 | `MISSION_CONTEXT_CHANGED`, `DELIVERY_CONTEXT_CHANGED` | “使命上下文已变化，请基于最新内容重试” | `review_attempt_discarded` / `delivery_invalidated` | 旧current失效 |
+| 409 | `REVIEW_CONTEXT_STALE` | “复核上下文已变化，请基于最新内容重试” | 无event | 组装/acquire间CAS失败；0 provider、attempt、receipt及业务写 |
 | 409 | `DELIVERY_INTERRUPTED` | “交付生成已中断，请显式重试” | `delivery_generation_failed` | head回ongoing |
 | 409 | `OPERATION_CONFLICT`, `OPERATION_IN_PROGRESS` | “操作标识与原请求冲突” / “操作仍在进行” | `operation_replayed`（replay） | 0或原receipt |
 | 409 | `MEMORY_NOT_ACTIVE`, `MEMORY_TYPE_MISMATCH` | “被取代的记忆不能再次取代” / “记忆类型不匹配” | `review_finalize_failed` | pass事务0 |
@@ -1276,16 +1311,39 @@ attempt/finalize refine矩阵:
 - `result_version_created {workItemId,resultId,resultVersion,executionId,supersedesResultId}`
 - `memory_reused|created|superseded {decisionId,memoryId,memoryVersion,candidateId}`
 - `work_item_passed|invalidated {workItemId,resultId,decisionId,reasonCode}`
+- `legacy_work_item_review_passed {workItemId,headVersion}`
+- `legacy_work_item_completion_invalidated {workItemId,reasonCode}`
 - `completion_write_rejected {workItemId,entryPoint,blockerCodes}`
-- `delivery_generation_started|failed {operationId,inputFingerprint,category}`
+- `delivery_generation_started {operationId,inputFingerprint}`
+- `delivery_generation_failed {operationId,inputFingerprint,category}`
 - `delivery_completed {deliveryId,deliveryVersion,inputFingerprint}`
-- `delivery_invalidated {deliveryId,reasonCode,workItemIds}`
+- `delivery_invalidated {deliveryId:string|null,reasonCode,workItemIds}`
 - `mission_review_initialized {missionId,headVersion,contextVersion}`
 - `mission_context_changed {missionId,missionVersion,contextVersion,reasonCode}`
 - `mission_terminated {reason}`
 - `operation_replayed {operationId,kind}`
 
 事件不含 review文本、memory正文、answer正文、raw evidence内容、provider错误或 lease token；详情通过 id导航。sequence在 mission delivery head事务内分配，严格递增。
+
+现有 producer/持久别名必须在 v6 migration 或单一读取适配层穷尽转换为上面的 canonical type/payload；转换后再进入 `.strict()`，未知 type/字段仍 fail-closed:
+
+| 现有持久 type | canonical type | payload转换 |
+|---|---|---|
+| `work_item_review_passed {headVersion,workItemId}` | `legacy_work_item_review_passed` | 两字段原样保留；它是旧 completion primitive 的可审计投影，不猜测后来已漂移的 result/decision |
+| `work_item_passed {decisionId,resultId,workItemId}` | `work_item_passed` | 原字段保留，固定 `reasonCode:"review_passed"` |
+| `work_item_completion_invalidated {reason,workItemId}` | `legacy_work_item_completion_invalidated` | `reason→reasonCode`并保留workItemId；允许值仅 `DOWNSTREAM_REWORK_REQUESTED|OWNER_REOPENED|AGENT_REOPENED|WORK_ITEM_MATERIAL_CHANGED`，其他值 `SCHEMA_DATA_INVALID` |
+| `review_escalated {escalationId,decisionId,resultId,workItemId}` | `escalation_opened` | 四字段原样映射 |
+| `escalation_answered {escalationId,answerId,action,resultId,workItemId}` | `escalation_answered` | 只选择 canonical `escalationId,answerId,action`；两个已知关联字段必须与 escalation row一致，否则 `SCHEMA_DATA_INVALID` |
+| `mission_owner_terminated {escalationId,missionId}` | `mission_terminated` | 两字段必须关联同一 terminate answer和当前mission，固定 `reason:"owner_terminated"`；不一致则失败 |
+| `review_attempt_discarded {attemptId,reason,workItemId}` | `review_attempt_discarded` | 当前唯一合法 `reason="MISSION_CONTEXT_CHANGED"` 映射 `category:"context_changed"`；只保留attemptId/category，workItemId须与immutable attempt row一致；其他reason失败 |
+| `delivery_generation_started {operationId,inputFingerprint}` | `delivery_generation_started` | 两字段原样映射 |
+| `delivery_generation_failed {errorCode,operationId}` | `delivery_generation_failed` | 从同 mission sequence严格在前、同operation且唯一的 immutable started event派生 inputFingerprint；唯一合法 `DELIVERY_GENERATION_FAILED→category:"generation_failed"`，无前驱/多义/其他code失败 |
+| `delivery_generation_completed {deliveryId,inputFingerprint,reused,version}` | `delivery_completed` | `version→deliveryVersion`，其余canonical字段保留；`reused`与delivery row核对后丢弃 |
+| `delivery_generation_interrupted {errorCode,operationId}` | `delivery_generation_failed` | 从同 mission sequence严格在前、同operation且唯一的 immutable started event派生inputFingerprint；只允许 `DELIVERY_GENERATION_INTERRUPTED→category:"interrupted"` |
+| `mission_delivery_invalidated {deliveryId,reason,workItemId}` | `delivery_invalidated` | payload自身足够：`reason→reasonCode`、`workItemIds=[workItemId]`、deliveryId可空；reason只允许上列四种completion reason |
+| `mission_delivery_invalidated {deliveryId,operationId,reason}` | `delivery_invalidated` | payload自身给出deliveryId/reason，`workItemIds=[]`；reason只允许 `MISSION_CONTEXT_CHANGED`，operationId只需关联 immutable generate_delivery receipt后丢弃，不查询current head |
+
+canonical producers只能写右列；适配器仅为升级前既有行服务，不得吞掉额外字段。legacy canonical variants在UI标成“旧完成投影/旧失效投影”，不能冒充Agent裁决。所有跨事件派生只查询同 mission较小sequence的immutable event或 immutable attempt/operation/delivery row，不查询current head；唯一前驱缺失/重复、关联不一致或未列出的 reason/errorCode一律 `SCHEMA_DATA_INVALID`。T-25逐variant覆盖事件后再返工、新result、再次delivery、关闭重启的 DB→public DTO round-trip。
 
 ## 9. Transaction 边界与并发
 
@@ -1414,7 +1472,9 @@ attempt/finalize refine矩阵:
 - Events/redaction: 每种 payload strict parse、sequence、actor/ref、拒绝/conflict/replay、中断；secret/CoT扫描。
 - Components: review workspace、candidate picker、attempt/call/usage、decision/rework/escalation、memory history、delivery progress/evidence。
 - Browser: 真实本地 provider、真实 SQLite和公开产品 API；owner选择非执行者→真实调用→三种裁决→返工/升级→新attempt→pass→memory→delivery，刷新和独立进程重启。
-- T-24 smoke harness contract: `tests/review-browser-smoke.test.ts`先断言 `package.json`存在 `smoke:review`、harness启动本地 OpenAI-compatible真实 HTTP provider与真实 Next进程、用 Playwright经产品 UI/API而非route interception或直接业务SQLite写入完成全链，并产出 desktop/narrow结果；缺脚本/harness或任一公开闭环缺失即为该任务 RED。GREEN实现 `tests/review-browser-smoke.mjs`及 script，覆盖退回、升级、通过三次真实 provider输出、memory/delivery和独立应用进程重启。
+- T-29 smoke infrastructure contract: `tests/review-browser-smoke.test.ts`先断言 `package.json`存在 `smoke:review`、harness启动本地 OpenAI-compatible真实 HTTP provider与真实 Next进程，并以Playwright经产品UI完成最薄 pass→memory→delivery；缺脚本/harness即 RED。GREEN实现 `tests/review-browser-smoke.mjs`及 script，不含 route interception/业务SQLite写入。
+- T-30 full-chain smoke contract: `tests/review-browser-full-chain.test.ts`先以现有最薄 harness断言 reject/escalate/restart/narrow场景尚未覆盖形成独立 RED；GREEN扩展 harness覆盖退回、升级、通过三次真实provider输出、owner answer/new attempt、memory/delivery、独立应用进程重启及desktop/narrow键盘截图。
+- `evidence/t24-red-20260801T081018Z.log` 基于已废弃的 project-review/attempt-escalation route断言，只是触发计划修订的诊断证据，不计入修订后任何任务 RED。T-24 必须在产品代码变更前以 `review-production-application.test.ts` 重新取得 RED；T-29修正 route contract后另取 RED，T-30再以场景覆盖缺失取得 RED。
 
 ### 12.2 必测边界
 
@@ -1544,28 +1604,34 @@ attempt/finalize refine矩阵:
 - [x] T-21 交付五类 memory actor/source/version/history UI (覆盖: FR-8, FR-9, FR-12, FR-14, NFR-4) — 判据: `npm test -- tests/review-memory-ui.test.tsx` 先红后绿；经验类、owner与Agent责任、source version/href、created/reused/superseded、active/history chain、loading/empty/error/disabled/success/focus且owner表单不能伪造actor通过
 - [x] T-22 交付 final delivery progress/summary/evidence UI (覆盖: FR-7, FR-10, FR-12, FR-14, NFR-4) — 判据: `npm test -- tests/delivery-ui.test.tsx` 先红后绿；blockers/generating/failure显式retry/completed/invalidated history、逐task refs、证据状态与影响、版本导航、无虚构summary、draft/error/live/focus通过
 - [x] T-23 交付窄屏单surface与完整 a11y/token纪律 (覆盖: FR-14, NFR-4) — 判据: `npm test -- tests/review-accessibility.test.tsx` 先红后绿；desktop+narrow仅键盘完成review/answer/memory/delivery，一次一个modal、trap/inert/Escape/restore、44px、WCAG AA、状态非仅颜色、无硬编码视觉值通过
-- [ ] T-24 新增真实 provider/browser `smoke:review` harness并收口全链 (覆盖: FR-1, FR-2, FR-3, FR-4, FR-5, FR-6, FR-7, FR-8, FR-9, FR-10, FR-11, FR-12, FR-13, FR-14, NFR-1, NFR-2, NFR-3, NFR-4) — 判据: `npm test -- tests/review-browser-smoke.test.ts`先红后绿；RED固定证明`smoke:review` script/harness contract缺失或不能经真实provider+browser完成公开闭环，GREEN新增`tests/review-browser-smoke.mjs`和package script，禁止route interception/直接业务SQLite写入，从全新v6 mission/首次merge经非执行者Agent真实读取正文依次覆盖退回→新result、升级→owner answer/new attempt、通过→memory→delivery，独立应用进程重启后历史完整，并以Playwright完成desktop/narrow键盘路径与截图；GREEN后再运行`npm test`、`npm run build`、`npm run smoke:review`收口
+- [ ] T-24 实现 public-input review application service 与生产 route/finalizer (覆盖: FR-1, FR-2, FR-3, FR-4, FR-6, FR-8, FR-11, FR-12, FR-13, NFR-1, NFR-2, NFR-3) — 判据: `npm test -- tests/review-production-application.test.ts` 先红后绿；route body只能给公开字段，服务端快照派生attempt/material/prompt/provider/credential/validation；组装/acquire间CAS漂移固定返回409 `REVIEW_CONTEXT_STALE`/“复核上下文已变化，请基于最新内容重试”且0 provider/attempt/receipt/业务写；真实POST不再走always-pass，经provider→checkpoint→finalizer分别产生reject/rework、escalate/waiting_owner、pass/done且pass memory原子落库；内部字段伪造422；same operation+same tuple返回原receipt且不重复provider，same id+任一非path tuple字段变化或仅path workItemId变化均 `OPERATION_CONFLICT`，attempt/provider/receipt外业务副作用不增加
+- [ ] T-25 统一生产 event canonical vocabulary 与历史兼容 (覆盖: FR-3, FR-5, FR-7, FR-10, FR-12, FR-13, NFR-2, NFR-3) — 判据: `npm test -- tests/review-event-compatibility.test.ts` 先红后绿；表8.5全部既有别名/payload经单一适配后strict round-trip，review/answer/delivery completion/interruption/invalidation producer只写canonical事件；含升级前旧行的v6 DB history可读，unknown type/字段仍fail-closed，sequence/actor/ref/redaction不变
+- [ ] T-26 收口 escalation answer API、workspace 与多轮 new-attempt 公开链 (覆盖: FR-3, FR-5, FR-6, FR-11, FR-12, FR-13, FR-14) — 判据: `npm test -- tests/review-escalation-route.test.ts tests/review-escalation-integration.test.ts` 先红后绿；strict answer route调用原子服务；`waiting_owner.currentAttempt=null`仍strict返回绑定产生它的escalated attempt之current open issue，detail筛选正确；至少两轮同result continue生成不同attempt，workspace answered history与冻结ownerAnswers按同一稳定顺序完整且hash递增，刷新/重启保持；rework创建新execution/result，terminate关闭mission；幂等/并发/stale/forgery/error与canonical answer/terminate event通过
+- [ ] T-27 实现 public-input delivery application service 与 read/mutation/history APIs (覆盖: FR-7, FR-8, FR-10, FR-11, FR-12, FR-13, NFR-1, NFR-2, NFR-3) — 判据: `npm test -- tests/delivery-route.test.ts tests/delivery-api-recovery.test.ts` 先红后绿；GET current/progress/blockers与cursor history strict，POST只收operation/head version，服务端快照组装manifest/summary/evidence/memory并以CAS阻止漂移；内部字段伪造422、失败显式retry；same operation+same tuple返回原receipt，same id+expectedHeadVersion变化或仅path missionId变化均 `OPERATION_CONFLICT`且generation/delivery/receipt外业务副作用不增加；并发、重启后current/history及canonical completion/interruption/invalidation events完整
+- [ ] T-28 把 review/escalation/memory/delivery surfaces 接入真实产品树 (覆盖: FR-1, FR-4, FR-5, FR-7, FR-8, FR-9, FR-10, FR-12, FR-14, NFR-4) — 判据: `npm test -- tests/review-product-wiring.test.tsx` 先红后绿；从实际 `app/page.tsx` 树可打开workspace/outcomes/escalation/memory，mission级delivery不在每张execution card重复；所有按钮调用真实route adapter，memory/source href到可达目标；desktop/narrow键盘、loading/empty/error/disabled/success、focus/live通过且没有test-only props伪造成功
+- [ ] T-29 新增真实 provider/browser `smoke:review` 基础设施与最薄 pass链 (覆盖: FR-1, FR-2, FR-3, FR-7, FR-8, FR-10, FR-13, FR-14, NFR-1, NFR-3, NFR-4) — 判据: 修正 `tests/review-browser-smoke.test.ts` route contract后先红后绿；RED只证明script/harness缺失，GREEN新增`tests/review-browser-smoke.mjs`和package script，启动真实provider/Next/SQLite，禁止route interception/直接业务SQLite写入，从全新v6 mission/首次merge经非执行者Agent真实读取正文完成pass→memory→delivery并以Playwright走desktop键盘路径
+- [ ] T-30 扩展真实 browser smoke 全链并收口 (覆盖: FR-1, FR-2, FR-3, FR-4, FR-5, FR-6, FR-7, FR-8, FR-9, FR-10, FR-11, FR-12, FR-13, FR-14, NFR-1, NFR-2, NFR-3, NFR-4) — 判据: `npm test -- tests/review-browser-full-chain.test.ts` 先红后绿；RED证明现有harness缺reject/escalate/restart/narrow场景，GREEN在无interception/业务DB写入下依次覆盖退回→新result、升级→owner answer/new attempt、通过→memory→delivery，独立应用进程重启历史完整并完成desktop/narrow键盘截图；GREEN后运行`npm test`、`npm run build`、`npm run smoke:review`
 
 任务覆盖索引:
 
-- FR-1 → T-1, T-3, T-17, T-19, T-24
-- FR-2 → T-1, T-6, T-7, T-8, T-17, T-18, T-19, T-24
-- FR-3 → T-1, T-6, T-7, T-8, T-9, T-10, T-16, T-17, T-18, T-19, T-24
-- FR-4 → T-2, T-4, T-7, T-9, T-16, T-18, T-20, T-24
-- FR-5 → T-2, T-4, T-7, T-10, T-16, T-18, T-20, T-24
-- FR-6 → T-2, T-4, T-5, T-6, T-9, T-12, T-13, T-18, T-20, T-24
-- FR-7 → T-2, T-5, T-10, T-14, T-15, T-18, T-22, T-24
-- FR-8 → T-2, T-6, T-7, T-11, T-12, T-13, T-16, T-17, T-18, T-21, T-24
-- FR-9 → T-2, T-12, T-13, T-16, T-18, T-21, T-24
-- FR-10 → T-2, T-5, T-6, T-14, T-15, T-16, T-17, T-18, T-22, T-24
-- FR-11 → T-2, T-3, T-4, T-5, T-6, T-8, T-9, T-10, T-12, T-13, T-14, T-15, T-18, T-24
-- FR-12 → T-2, T-4, T-5, T-8, T-10, T-11, T-13, T-15, T-16, T-18, T-20, T-21, T-22, T-24
-- FR-13 → T-2, T-3, T-5, T-6, T-7, T-8, T-9, T-10, T-11, T-13, T-14, T-15, T-16, T-17, T-18, T-24
-- FR-14 → T-1, T-19, T-20, T-21, T-22, T-23, T-24
-- NFR-1 → T-1, T-2, T-8, T-9, T-12, T-15, T-18, T-24
-- NFR-2 → T-2, T-8, T-15, T-18, T-24
-- NFR-3 → T-1, T-2, T-6, T-7, T-17, T-18, T-24
-- NFR-4 → T-1, T-19, T-20, T-21, T-22, T-23, T-24
+- FR-1 → T-1, T-3, T-17, T-19, T-24, T-28, T-29, T-30
+- FR-2 → T-1, T-6, T-7, T-8, T-17, T-18, T-19, T-24, T-29, T-30
+- FR-3 → T-1, T-6, T-7, T-8, T-9, T-10, T-16, T-17, T-18, T-19, T-24, T-25, T-26, T-29, T-30
+- FR-4 → T-2, T-4, T-7, T-9, T-16, T-18, T-20, T-24, T-28, T-30
+- FR-5 → T-2, T-4, T-7, T-10, T-16, T-18, T-20, T-25, T-26, T-28, T-30
+- FR-6 → T-2, T-4, T-5, T-6, T-9, T-12, T-13, T-18, T-20, T-24, T-26, T-30
+- FR-7 → T-2, T-5, T-10, T-14, T-15, T-18, T-22, T-25, T-27, T-28, T-29, T-30
+- FR-8 → T-2, T-6, T-7, T-11, T-12, T-13, T-16, T-17, T-18, T-21, T-24, T-27, T-28, T-29, T-30
+- FR-9 → T-2, T-12, T-13, T-16, T-18, T-21, T-28, T-30
+- FR-10 → T-2, T-5, T-6, T-14, T-15, T-16, T-17, T-18, T-22, T-25, T-27, T-28, T-29, T-30
+- FR-11 → T-2, T-3, T-4, T-5, T-6, T-8, T-9, T-10, T-12, T-13, T-14, T-15, T-18, T-24, T-26, T-27, T-30
+- FR-12 → T-2, T-4, T-5, T-8, T-10, T-11, T-13, T-15, T-16, T-18, T-20, T-21, T-22, T-24, T-25, T-26, T-27, T-28, T-30
+- FR-13 → T-2, T-3, T-5, T-6, T-7, T-8, T-9, T-10, T-11, T-13, T-14, T-15, T-16, T-17, T-18, T-24, T-25, T-26, T-27, T-29, T-30
+- FR-14 → T-1, T-19, T-20, T-21, T-22, T-23, T-26, T-28, T-29, T-30
+- NFR-1 → T-1, T-2, T-8, T-9, T-12, T-15, T-18, T-24, T-27, T-29, T-30
+- NFR-2 → T-2, T-8, T-15, T-18, T-24, T-25, T-26, T-27, T-30
+- NFR-3 → T-1, T-2, T-6, T-7, T-17, T-18, T-24, T-25, T-27, T-29, T-30
+- NFR-4 → T-1, T-19, T-20, T-21, T-22, T-23, T-28, T-29, T-30
 
 ## 15. Design Checklist 自检
 
@@ -1575,4 +1641,4 @@ attempt/finalize refine矩阵:
 - [x] 接口、数据契约、错误、事件、事务、CAS、状态机和故障恢复具体到 build阶段无需再发明。
 - [x] 所有资源数字沿用现有事实：90秒 provider call、120秒 lease、30秒 heartbeat、一次 repair、1 MiB provider response、2 MiB frozen context、20,000 grapheme公开文本/记忆、128/256/512 KiB API envelope、20/100分页、24小时cursor、44px与WCAG AA；未新增性能/容量阈值。
 - [x] ext-ui-design章节位于测试策略后、任务清单前，覆盖 desktop/narrow、loading/empty/error/disabled/success/focus、token和a11y。
-- [x] T-1先打通 owner→真实review→decision→UI最薄切片；普通 T-1 至 T-24均有一次明确先红后绿边界，T-24以缺失的真实 `smoke:review` provider/browser harness contract为RED、实现公开全链为GREEN；inline覆盖与逐项索引一致。
+- [x] T-1先打通 owner→真实review→decision→UI最薄切片；普通 T-1 至 T-30均有一次明确先红后绿边界，T-24 至 T-28收口 RED 暴露的生产调用点、事件兼容与真实产品树，T-29实现最薄真实 smoke基础设施，T-30独立扩展完整裁决/重启/双viewport链；inline覆盖与逐项索引一致。
