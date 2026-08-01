@@ -12,6 +12,21 @@ const RUN_ID = "run-review-ui";
 const HASH = "a".repeat(64);
 const STAGED_HASH = "b".repeat(64);
 
+function stagedApproval(status: "pending" | "approved" = "pending") {
+  return {
+    command: null,
+    consumedAt: null,
+    createdAt: "2026-07-30T08:04:00.000Z",
+    decidedAt: status === "approved" ? "2026-07-30T08:05:00.000Z" : null,
+    id: "staged-approval-current",
+    inputHash: HASH,
+    kind: "staged_merge",
+    requestHash: HASH,
+    stagedHash: STAGED_HASH,
+    status,
+  } as const;
+}
+
 function execution(
   status: "running" | "waiting_approval" | "staged" | "stale" | "conflicted" = "staged",
 ) {
@@ -93,6 +108,7 @@ function detail(
       required: false,
     },
     staged: {
+      activeApproval: null,
       blockReasons: classification === "blocked" ? ["unsupported_change"] : [],
       blockerCount: classification === "blocked" ? 101 : 0,
       blockerCounts: classification === "blocked" ? { binary: 101 } : {},
@@ -113,7 +129,7 @@ function detail(
 }
 
 type Handler = (url: URL, init?: RequestInit) =>
-  Response | Promise<Response> | undefined;
+  Response | Promise<Response | undefined> | undefined;
 
 function installFetch(
   status: Parameters<typeof execution>[0] = "staged",
@@ -442,6 +458,115 @@ describe("T-29 execution review UI", () => {
     expect(within(dialog).getByText(/审批已更新/)).toHaveAttribute("aria-live", "polite");
   });
 
+  it("uses the detail-bound staged approval beyond ten command approvals and wires its handler", async () => {
+    const user = userEvent.setup();
+    const actions: string[] = [];
+    installFetch("staged", "approval_required", (url, init) => {
+      if (url.pathname === "/api/executions/execution-a") {
+        const response = detail("staged", "approval_required");
+        return Response.json({
+          ...response,
+          counts: { ...response.counts, approvals: 12, events: 0, validations: 0 },
+          staged: { ...response.staged!, activeApproval: stagedApproval() },
+        });
+      }
+      if (url.pathname.endsWith("/approvals") && init?.method !== "POST") {
+        return Response.json({
+          items: Array.from({ length: 10 }, (_, index) => ({
+            command: {
+              args: [],
+              executable: `history-${index}`,
+              expectedEffect: "historical command",
+              permission: "execute",
+              riskReasons: [],
+              workdir: ".",
+            },
+            consumedAt: null,
+            createdAt: `2026-07-30T07:59:${String(index).padStart(2, "0")}.000Z`,
+            decidedAt: "2026-07-30T08:00:00.000Z",
+            id: `historical-command-${index}`,
+            inputHash: HASH,
+            kind: "command",
+            requestHash: HASH,
+            stagedHash: null,
+            status: "rejected",
+          })),
+          nextCursor: "historical-page-2",
+        });
+      }
+      if (url.pathname.endsWith("/approvals/staged-approval-current") && init?.method === "POST") {
+        actions.push((JSON.parse(String(init.body)) as { action: string }).action);
+        return Response.json({
+          approval: stagedApproval("approved"),
+          execution: { ...execution("staged"), version: 4 },
+        });
+      }
+      if (url.pathname.endsWith("/events")
+        || url.pathname.endsWith("/observations")
+        || url.pathname.endsWith("/blockers")) {
+        return Response.json({ items: [], nextCursor: null });
+      }
+      return undefined;
+    });
+
+    render(createElement(ExecutionPanel, { projectId: PROJECT_ID }));
+    const card = await screen.findByRole("region", { name: "Task A" });
+    await user.click(await within(card).findByRole("tab", { name: "变更" }));
+    const approval = await within(card).findByRole("dialog", { name: "staged hash 单次审批" });
+    expect(approval).toHaveTextContent(STAGED_HASH.slice(0, 12));
+    await user.click(within(approval).getByRole("button", { name: "批准当前 staged hash" }));
+    expect(await within(approval).findByText("审批状态：已批准")).toBeInTheDocument();
+    expect(actions).toEqual(["approve"]);
+  });
+
+  it("shows explicit staged approval loading, failure retry, and no handlerless action", async () => {
+    const user = userEvent.setup();
+    let detailRequests = 0;
+    let releaseFirstDetail: (() => void) | undefined;
+    const firstDetailPending = new Promise<void>((resolve) => {
+      releaseFirstDetail = resolve;
+    });
+    installFetch("staged", "approval_required", async (url) => {
+      if (url.pathname === "/api/executions/execution-a") {
+        detailRequests += 1;
+        if (detailRequests === 1) {
+          await firstDetailPending;
+          return Response.json(
+            { error: { code: "STORAGE_UNAVAILABLE", message: "down" } },
+            { status: 503 },
+          );
+        }
+        const response = detail("staged", "approval_required");
+        return Response.json({
+          ...response,
+          counts: { ...response.counts, approvals: 0, events: 0, validations: 0 },
+          staged: { ...response.staged!, activeApproval: null },
+        });
+      }
+      if (url.pathname.endsWith("/observations") || url.pathname.endsWith("/blockers")) {
+        return Response.json({ items: [], nextCursor: null });
+      }
+      return undefined;
+    });
+
+    render(createElement(ExecutionPanel, { projectId: PROJECT_ID }));
+    const card = await screen.findByRole("region", { name: "Task A" });
+    expect(await within(card).findByText("正在加载执行审阅与当前审批…")).toHaveAttribute(
+      "aria-busy",
+      "true",
+    );
+    expect(within(card).queryByRole("button", { name: /批准当前 staged hash/ })).not.toBeInTheDocument();
+
+    releaseFirstDetail?.();
+    const retry = await within(card).findByRole("button", { name: "重试加载执行审阅与当前审批" });
+    expect(within(card).getByRole("alert")).toHaveTextContent("执行审阅与当前审批");
+    await user.click(retry);
+    await user.click(await within(card).findByRole("tab", { name: "变更" }));
+    expect(await within(card).findByRole("alert")).toHaveTextContent("当前 staged hash 的审批尚未就绪");
+    expect(within(card).getByRole("button", { name: "重试加载当前审批" })).toBeEnabled();
+    expect(within(card).queryByRole("button", { name: /批准当前 staged hash/ })).not.toBeInTheDocument();
+  });
+
   it.each(["blocked", "stale", "conflicted"] as const)(
     "never presents auto merge for %s review state and keeps staged-hash approval separate",
     async (state) => {
@@ -465,7 +590,11 @@ describe("T-29 execution review UI", () => {
       if (state === "blocked") {
         expect(within(card).queryByRole("button", { name: /批准当前 staged hash/ })).not.toBeInTheDocument();
       } else {
-        expect(within(card).getByRole("button", { name: /批准当前 staged hash/ })).toBeDisabled();
+        expect(within(card).queryByRole("button", { name: /批准当前 staged hash/ })).not.toBeInTheDocument();
+        expect(within(card).getByText(/当前 staged hash 的审批尚未就绪/)).toHaveAttribute(
+          "role",
+          "alert",
+        );
       }
       expect(within(card).queryByRole("button", { name: "批准命令" })).not.toBeInTheDocument();
     },

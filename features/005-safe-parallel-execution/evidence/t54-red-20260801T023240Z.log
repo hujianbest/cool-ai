@@ -1,0 +1,854 @@
+# hf-gate-run
+# label: t54-red
+# command: npm.cmd test -- tests/execution-read-api.test.ts tests/execution-review-ui.test.tsx
+# started: 2026-08-01T02:32:40+00:00
+
+> collaboration-cockpit@0.1.0 test
+> vitest run tests/execution-read-api.test.ts tests/execution-review-ui.test.tsx
+
+
+ RUN  v4.1.10 D:/cool-ai
+
+(node:9052) ExperimentalWarning: SQLite is an experimental feature and might change at any time
+(Use `node --trace-warnings ...` to show where the warning was created)
+ ❯ tests/execution-review-ui.test.tsx (12 tests | 4 failed) 3123ms
+     × uses the detail-bound staged approval beyond ten command approvals and wires its handler 1108ms
+     × shows explicit staged approval loading, failure retry, and no handlerless action 1019ms
+     × never presents auto merge for stale review state and keeps staged-hash approval separate 51ms
+     × never presents auto merge for conflicted review state and keeps staged-hash approval separate 50ms
+ ❯ tests/execution-read-api.test.ts (9 tests | 1 failed) 23807ms
+     × returns the active approval bound to the current staged hash beyond ten historical approvals 2248ms
+
+⎯⎯⎯⎯⎯⎯⎯ Failed Tests 5 ⎯⎯⎯⎯⎯⎯⎯
+
+ FAIL  tests/execution-read-api.test.ts > bounded execution read APIs > returns the active approval bound to the current staged hash beyond ten historical approvals
+AssertionError: expected undefined to match object { command: null, …(4) }
+
+- Expected:
+{
+  "command": null,
+  "id": "current-staged-approval",
+  "kind": "staged_merge",
+  "stagedHash": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+  "status": "pending",
+}
+
++ Received:
+undefined
+
+ ❯ tests/execution-read-api.test.ts:330:43
+    328|     expect(firstPage.items).toHaveLength(10);
+    329|     expect(firstPage.items.every(({ kind }) => kind === "command")).to…
+    330|     expect(detail.staged?.activeApproval).toMatchObject({
+       |                                           ^
+    331|       command: null,
+    332|       id: "current-staged-approval",
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[1/5]⎯
+
+ FAIL  tests/execution-review-ui.test.tsx > T-29 execution review UI > uses the detail-bound staged approval beyond ten command approvals and wires its handler
+TestingLibraryElementError: Unable to find role="dialog" and name "staged hash 单次审批"
+
+Ignored nodes: comments, script, style
+[36m<section[39m
+  [33maria-labelledby[39m=[32m"execution-execution-a-title"[39m
+  [33mclass[39m=[32m"run-detail execution-card"[39m
+  [33mdata-accent[39m=[32m"sage"[39m
+  [33mrole[39m=[32m"region"[39m
+[36m>[39m
+  [36m<div[39m
+    [33mclass[39m=[32m"panel-heading"[39m
+  [36m>[39m
+    [36m<div>[39m
+      [36m<p[39m
+        [33mclass[39m=[32m"eyebrow"[39m
+      [36m>[39m
+        [0mA[0m
+      [36m</p>[39m
+      [36m<p>[39m
+        [0mAlpha[0m
+      [36m</p>[39m
+      [36m<h3[39m
+        [33mid[39m=[32m"execution-execution-a-title"[39m
+        [33mtabindex[39m=[32m"-1"[39m
+      [36m>[39m
+        [0mTask A[0m
+      [36m</h3>[39m
+    [36m</div>[39m
+    [36m<span[39m
+      [33mclass[39m=[32m"status-label status-staged"[39m
+    [36m>[39m
+      [0m变更待审阅[0m
+    [36m</span>[39m
+  [36m</div>[39m
+  [36m<p[39m
+    [33mrole[39m=[32m"status"[39m
+  [36m>[39m
+    [0m当前没有进行中的动作[0m
+  [36m</p>[39m
+  [36m<div[39m
+    [33mclass[39m=[32m"execution-progress-list"[39m
+  [36m>[39m
+    [36m<div[39m
+      [33mclass[39m=[32m"execution-progress"[39m
+    [36m>[39m
+      [36m<span>[39m
+        [0m业务回合[0m
+        [0m [0m
+        [0m4[0m
+        [0m/[0m
+        [0m20[0m
+      [36m</span>[39m
+      [36m<progress[39m
+        [33maria-label[39m=[32m"业务回合进度"[39m
+        [33maria-valuemax[39m=[32m"20"[39m
+        [33maria-valuemin[39m=[32m"0"[39m
+        [33maria-valuenow[39m=[32m"4"[39m
+        [33mmax[39m=[32m"20"[39m
+        [33mvalue[39m=[32m"4"[39m
+      [36m/>[39m
+    [36m</div>[39m
+    [36m<div[39m
+      [33mclass[39m=[32m"execution-progress"[39m
+    [36m>[39m
+      [36m<span>[39m
+        [0m工具调用[0m
+        [0m [0m
+        [0m7[0m
+        [0m/[0m
+        [0m40[0m
+      [36m</span>[39m
+      [36m<progress[39m
+        [33maria-label[39m=[32m"工具调用进度"[39m
+        [33maria-valuemax[39m=[32m"40"[39m
+        [33maria-valuemin[39m=[32m"0"[39m
+        [33maria-valuenow[39m=[32m"7"[39m
+        [33mmax[39m=[32m"40"[39m
+        [33mvalue[39m=[32m"7"[39m
+      [36m/>[39m
+    [36m</div>[39m
+    [36m<div[39m
+      [33mclass[39m=[32m"execution-progress"[39m
+    [36m>[39m
+      [36m<span>[39m
+        [0mToken [0m
+        [0m [0m
+        [0m900[0m
+        [0m/[0m
+        [0m2000[0m
+      [36m</span>[39m
+      [36m<progress[39m
+        [33maria-label[39m=[32m"Token 进度"[39m
+        [33maria-valuemax[39m=[32m"2000"[39m
+        [33maria-valuemin[39m=[32m"0"[39m
+        [33maria-valuenow[39m=[32m"900"[39m
+        [33mmax[39m=[32m"2000"[39m
+        [33mvalue[39m=[32m"900"[39m
+      [36m/>[39m
+    [36m</div>[39m
+  [36m</div>[39m
+  [36m<div[39m
+    [33mclass[39m=[32m"execution-review stack"[39m
+  [36m>[39m
+    [36m<section[39m
+      [33maria-describedby[39m=[32m"approval-warning-historical-command-0"[39m
+      [33maria-label[39m=[32m"命令一次性审批"[39m
+      [33mclass[39m=[32m"execution-approval stack"[39m
+      [33mrole[39m=[32m"dialog"[39m
+    [36m>[39m
+      [36m<h4>[39m
+        [0m命令一次性审批[0m
+      [36m</h4>[39m
+      [36m<p>[39m
+        [0m审批状态：[0m
+        [0m已拒绝[0m
+      [36m</p>[39m
+      [36m<p>[39m
+        [0m方式：一次性，仅此 attempt [0m
+        [0m2[0m
+      [36m</p>[39m
+      [36m<p>[39m
+        [0mrequest hash：[0m
+        [0maaaaaaaaaaaa[0m
+      [36m</p>[39m
+      [36m<p>[39m
+        [0minput hash：[0m
+        [0maaaaaaaaaaaa[0m
+      [36m</p>[39m
+      [36m<dl[39m
+        [33mclass[39m=[32m"execution-review-facts"[39m
+      [36m>[39m
+        [36m<div>[39m
+          [36m<dt>[39m
+            [0m可执行文件：[0m
+          [36m</dt>[39m
+          [36m<dd>[39m
+            [36m<code>[39m
+              [0mhistory-0[0m
+            [36m</code>[39m
+          [36m</dd>[39m
+        [36m</div>[39m
+        [36m<div>[39m
+          [36m<dt>[39m
+            [0m参数：[0m
+          [36m</dt>[39m
+          [36m<dd>[39m
+            [0m无[0m
+          [36m</dd>[39m
+        [36m</div>[39m
+        [36m<div>[39m
+          [36m<dt>[39m
+            [0m工作目录：[0m
+          [36m</dt>[39m
+          [36m<dd>[39m
+            [36m<code>[39m
+              [0m.[0m
+            [36m</code>[39m
+          [36m</dd>[39m
+        [36m</div>[39m
+        [36m<div>[39m
+          [36m<dt>[39m
+            [0m预期效果：[0m
+          [36m</dt>[39m
+          [36m<dd>[39m
+            [0mhistorical command[0m
+          [36m</dd>[39m
+        [36m</div>[39m
+        [36m<div>[39m
+          [36m<dt>[39m
+            [0m权限：[0m
+          [36m</dt>[39m
+          [36m<dd>[39m
+            [0mexecute[0m
+          [36m</dd>[39m
+        [36m</div>[39m
+        [36m<div>[39m
+          [36m<dt>[39m
+            [0m风险：[0m
+          [36m</dt>[39m
+          [36m<dd>[39m
+            [0m未报告[0m
+          [36m</dd>[39m
+        [36m</div>[39m
+      [36m</dl>[39m
+      [36m<p[39m
+        [33mclass[39m=[32m"warning-text"[39m
+        [33mid[39m=[32m"approval-warning-historical-command-0"[39m
+      [36m>[39m
+        [0m此 guardrail 不是 hostile OS sandbox。获批的本地程序仍可能产生平台无法隔离的本机、网络、进程或服务副作用。[0m
+      [36m</p>[39m
+      [36m<div[39m
+        [33mclass[39m=[32m"execution-review-actions"[39m
+      [36m/>[39m
+    [36m</section>[39m
+    [36m<section[39m
+      [33maria-describedby[39m=[32m"approval-warning-historical-command-1"[39m
+      [33maria-label[39m=[32m"命令一次性审批"[39m
+      [33mclass[39m=[32m"execution-approval stack"[39m
+      [33mrole[39m=[32m"dialog"[39m
+    [36m>[39m
+      [36m<h4>[39m
+        [0m命令一次性审批[0m
+      [36m</h4>[39m
+      [36m<p>[39m
+        [0m审批状态：[0m
+        [0m已拒绝[0m
+      [36m</p>[39m
+      [36m<p>[39m
+        [0m方式：一次性，仅此 attempt [0m
+        [0m2[0m
+      [36m</p>[39m
+      [36m<p>[39m
+        [0mrequest hash：[0m
+        [0maaaaaaaaaaaa[0m
+      [36m</p>[39m
+      [36m<p>[39m
+        [0minput hash：[0m
+        [0maaaaaaaaaaaa[0m
+      [36m</p>[39m
+      [36m<dl[39m
+        [33mclass[39m=[32m"execution-review-facts"[39m
+      [36m>[39m
+        [36m<div>[39m
+          [36m<dt>[39m
+            [0m可执行文件：[0m
+          [36m</dt>[39m
+          [36m<dd>[39m
+            [36m<code>[39m
+              [0mhistory-1[0m
+            [36m</code>[39m
+          [36m</dd>[39m
+        [36m</div>[39m
+        [36m<div>[39m
+          [36m<dt>[39m
+            [0m参数：[0m
+          [36m</dt>[39m
+          [36m<dd>[39m
+            [0m无[0m
+          [36m</dd>[39m
+        [36m</div>[39m
+        [36m<div>[39m
+          [36m<dt>[39m
+            [0m工作目录：[0m
+          [36m</dt>[39m
+          [36m<dd>[39m
+            [36m<code>[39m
+              [0m.[0m
+            [36m</code>[39m
+          [36m</dd>[39m
+        [36m</div>[39m
+        [36m<div>[39m
+          [36m<dt...
+
+Ignored nodes: comments, script, style
+[36m<section[39m
+  [33maria-labelledby[39m=[32m"execution-execution-a-title"[39m
+  [33mclass[39m=[32m"run-detail execution-card"[39m
+  [33mdata-accent[39m=[32m"sage"[39m
+  [33mrole[39m=[32m"region"[39m
+[36m>[39m
+  [36m<div[39m
+    [33mclass[39m=[32m"panel-heading"[39m
+  [36m>[39m
+    [36m<div>[39m
+      [36m<p[39m
+        [33mclass[39m=[32m"eyebrow"[39m
+      [36m>[39m
+        [0mA[0m
+      [36m</p>[39m
+      [36m<p>[39m
+        [0mAlpha[0m
+      [36m</p>[39m
+      [36m<h3[39m
+        [33mid[39m=[32m"execution-execution-a-title"[39m
+        [33mtabindex[39m=[32m"-1"[39m
+      [36m>[39m
+        [0mTask A[0m
+      [36m</h3>[39m
+    [36m</div>[39m
+    [36m<span[39m
+      [33mclass[39m=[32m"status-label status-staged"[39m
+    [36m>[39m
+      [0m变更待审阅[0m
+    [36m</span>[39m
+  [36m</div>[39m
+  [36m<p[39m
+    [33mrole[39m=[32m"status"[39m
+  [36m>[39m
+    [0m当前没有进行中的动作[0m
+  [36m</p>[39m
+  [36m<div[39m
+    [33mclass[39m=[32m"execution-progress-list"[39m
+  [36m>[39m
+    [36m<div[39m
+      [33mclass[39m=[32m"execution-progress"[39m
+    [36m>[39m
+      [36m<span>[39m
+        [0m业务回合[0m
+        [0m [0m
+        [0m4[0m
+        [0m/[0m
+        [0m20[0m
+      [36m</span>[39m
+      [36m<progress[39m
+        [33maria-label[39m=[32m"业务回合进度"[39m
+        [33maria-valuemax[39m=[32m"20"[39m
+        [33maria-valuemin[39m=[32m"0"[39m
+        [33maria-valuenow[39m=[32m"4"[39m
+        [33mmax[39m=[32m"20"[39m
+        [33mvalue[39m=[32m"4"[39m
+      [36m/>[39m
+    [36m</div>[39m
+    [36m<div[39m
+      [33mclass[39m=[32m"execution-progress"[39m
+    [36m>[39m
+      [36m<span>[39m
+        [0m工具调用[0m
+        [0m [0m
+        [0m7[0m
+        [0m/[0m
+        [0m40[0m
+      [36m</span>[39m
+      [36m<progress[39m
+        [33maria-label[39m=[32m"工具调用进度"[39m
+        [33maria-valuemax[39m=[32m"40"[39m
+        [33maria-valuemin[39m=[32m"0"[39m
+        [33maria-valuenow[39m=[32m"7"[39m
+        [33mmax[39m=[32m"40"[39m
+        [33mvalue[39m=[32m"7"[39m
+      [36m/>[39m
+    [36m</div>[39m
+    [36m<div[39m
+      [33mclass[39m=[32m"execution-progress"[39m
+    [36m>[39m
+      [36m<span>[39m
+        [0mToken [0m
+        [0m [0m
+        [0m900[0m
+        [0m/[0m
+        [0m2000[0m
+      [36m</span>[39m
+      [36m<progress[39m
+        [33maria-label[39m=[32m"Token 进度"[39m
+        [33maria-valuemax[39m=[32m"2000"[39m
+        [33maria-valuemin[39m=[32m"0"[39m
+        [33maria-valuenow[39m=[32m"900"[39m
+        [33mmax[39m=[32m"2000"[39m
+        [33mvalue[39m=[32m"900"[39m
+      [36m/>[39m
+    [36m</div>[39m
+  [36m</div>[39m
+  [36m<div[39m
+    [33mclass[39m=[32m"execution-review stack"[39m
+  [36m>[39m
+    [36m<section[39m
+      [33maria-describedby[39m=[32m"approval-warning-historical-command-0"[39m
+      [33maria-label[39m=[32m"命令一次性审批"[39m
+      [33mclass[39m=[32m"execution-approval stack"[39m
+      [33mrole[39m=[32m"dialog"[39m
+    [36m>[39m
+      [36m<h4>[39m
+        [0m命令一次性审批[0m
+      [36m</h4>[39m
+      [36m<p>[39m
+        [0m审批状态：[0m
+        [0m已拒绝[0m
+      [36m</p>[39m
+      [36m<p>[39m
+        [0m方式：一次性，仅此 attempt [0m
+        [0m2[0m
+      [36m</p>[39m
+      [36m<p>[39m
+        [0mrequest hash：[0m
+        [0maaaaaaaaaaaa[0m
+      [36m</p>[39m
+      [36m<p>[39m
+        [0minput hash：[0m
+        [0maaaaaaaaaaaa[0m
+      [36m</p>[39m
+      [36m<dl[39m
+        [33mclass[39m=[32m"execution-review-facts"[39m
+      [36m>[39m
+        [36m<div>[39m
+          [36m<dt>[39m
+            [0m可执行文件：[0m
+          [36m</dt>[39m
+          [36m<dd>[39m
+            [36m<code>[39m
+              [0mhistory-0[0m
+            [36m</code>[39m
+          [36m</dd>[39m
+        [36m</div>[39m
+        [36m<div>[39m
+          [36m<dt>[39m
+            [0m参数：[0m
+          [36m</dt>[39m
+          [36m<dd>[39m
+            [0m无[0m
+          [36m</dd>[39m
+        [36m</div>[39m
+        [36m<div>[39m
+          [36m<dt>[39m
+            [0m工作目录：[0m
+          [36m</dt>[39m
+          [36m<dd>[39m
+            [36m<code>[39m
+              [0m.[0m
+            [36m</code>[39m
+          [36m</dd>[39m
+        [36m</div>[39m
+        [36m<div>[39m
+          [36m<dt>[39m
+            [0m预期效果：[0m
+          [36m</dt>[39m
+          [36m<dd>[39m
+            [0mhistorical command[0m
+          [36m</dd>[39m
+        [36m</div>[39m
+        [36m<div>[39m
+          [36m<dt>[39m
+            [0m权限：[0m
+          [36m</dt>[39m
+          [36m<dd>[39m
+            [0mexecute[0m
+          [36m</dd>[39m
+        [36m</div>[39m
+        [36m<div>[39m
+          [36m<dt>[39m
+            [0m风险：[0m
+          [36m</dt>[39m
+          [36m<dd>[39m
+            [0m未报告[0m
+          [36m</dd>[39m
+        [36m</div>[39m
+      [36m</dl>[39m
+      [36m<p[39m
+        [33mclass[39m=[32m"warning-text"[39m
+        [33mid[39m=[32m"approval-warning-historical-command-0"[39m
+      [36m>[39m
+        [0m此 guardrail 不是 hostile OS sandbox。获批的本地程序仍可能产生平台无法隔离的本机、网络、进程或服务副作用。[0m
+      [36m</p>[39m
+      [36m<div[39m
+        [33mclass[39m=[32m"execution-review-actions"[39m
+      [36m/>[39m
+    [36m</section>[39m
+    [36m<section[39m
+      [33maria-describedby[39m=[32m"approval-warning-historical-command-1"[39m
+      [33maria-label[39m=[32m"命令一次性审批"[39m
+      [33mclass[39m=[32m"execution-approval stack"[39m
+      [33mrole[39m=[32m"dialog"[39m
+    [36m>[39m
+      [36m<h4>[39m
+        [0m命令一次性审批[0m
+      [36m</h4>[39m
+      [36m<p>[39m
+        [0m审批状态：[0m
+        [0m已拒绝[0m
+      [36m</p>[39m
+      [36m<p>[39m
+        [0m方式：一次性，仅此 attempt [0m
+        [0m2[0m
+      [36m</p>[39m
+      [36m<p>[39m
+        [0mrequest hash：[0m
+        [0maaaaaaaaaaaa[0m
+      [36m</p>[39m
+      [36m<p>[39m
+        [0minput hash：[0m
+        [0maaaaaaaaaaaa[0m
+      [36m</p>[39m
+      [36m<dl[39m
+        [33mclass[39m=[32m"execution-review-facts"[39m
+      [36m>[39m
+        [36m<div>[39m
+          [36m<dt>[39m
+            [0m可执行文件：[0m
+          [36m</dt>[39m
+          [36m<dd>[39m
+            [36m<code>[39m
+              [0mhistory-1[0m
+            [36m</code>[39m
+          [36m</dd>[39m
+        [36m</div>[39m
+        [36m<div>[39m
+          [36m<dt>[39m
+            [0m参数：[0m
+          [36m</dt>[39m
+          [36m<dd>[39m
+            [0m无[0m
+          [36m</dd>[39m
+        [36m</div>[39m
+        [36m<div>[39m
+          [36m<dt>[39m
+            [0m工作目录：[0m
+          [36m</dt>[39m
+          [36m<dd>[39m
+            [36m<code>[39m
+              [0m.[0m
+            [36m</code>[39m
+          [36m</dd>[39m
+        [36m</div>[39m
+        [36m<div>[39m
+          [36m<dt...
+ ❯ waitForWrapper node_modules/@testing-library/dom/dist/wait-for.js:163:27
+ ❯ node_modules/@testing-library/dom/dist/query-helpers.js:86:33
+ ❯ tests/execution-review-ui.test.tsx:515:41
+    513|     const card = await screen.findByRole("region", { name: "Task A" });
+    514|     await user.click(await within(card).findByRole("tab", { name: "变更"…
+    515|     const approval = await within(card).findByRole("dialog", { name: "…
+       |                                         ^
+    516|     expect(approval).toHaveTextContent(STAGED_HASH.slice(0, 12));
+    517|     await user.click(within(approval).getByRole("button", { name: "批准当…
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[2/5]⎯
+
+ FAIL  tests/execution-review-ui.test.tsx > T-29 execution review UI > shows explicit staged approval loading, failure retry, and no handlerless action
+TestingLibraryElementError: Unable to find an element with the text: 正在加载执行审阅与当前审批…. This could be because the text is broken up by multiple elements. In this case, you can provide a function for your text matcher to make your matcher more flexible.
+
+Ignored nodes: comments, script, style
+[36m<section[39m
+  [33maria-labelledby[39m=[32m"execution-execution-a-title"[39m
+  [33mclass[39m=[32m"run-detail execution-card"[39m
+  [33mdata-accent[39m=[32m"sage"[39m
+  [33mrole[39m=[32m"region"[39m
+[36m>[39m
+  [36m<div[39m
+    [33mclass[39m=[32m"panel-heading"[39m
+  [36m>[39m
+    [36m<div>[39m
+      [36m<p[39m
+        [33mclass[39m=[32m"eyebrow"[39m
+      [36m>[39m
+        [0mA[0m
+      [36m</p>[39m
+      [36m<p>[39m
+        [0mAlpha[0m
+      [36m</p>[39m
+      [36m<h3[39m
+        [33mid[39m=[32m"execution-execution-a-title"[39m
+        [33mtabindex[39m=[32m"-1"[39m
+      [36m>[39m
+        [0mTask A[0m
+      [36m</h3>[39m
+    [36m</div>[39m
+    [36m<span[39m
+      [33mclass[39m=[32m"status-label status-staged"[39m
+    [36m>[39m
+      [0m变更待审阅[0m
+    [36m</span>[39m
+  [36m</div>[39m
+  [36m<p[39m
+    [33mrole[39m=[32m"status"[39m
+  [36m>[39m
+    [0m当前没有进行中的动作[0m
+  [36m</p>[39m
+  [36m<div[39m
+    [33mclass[39m=[32m"execution-progress-list"[39m
+  [36m>[39m
+    [36m<div[39m
+      [33mclass[39m=[32m"execution-progress"[39m
+    [36m>[39m
+      [36m<span>[39m
+        [0m业务回合[0m
+        [0m [0m
+        [0m4[0m
+        [0m/[0m
+        [0m20[0m
+      [36m</span>[39m
+      [36m<progress[39m
+        [33maria-label[39m=[32m"业务回合进度"[39m
+        [33maria-valuemax[39m=[32m"20"[39m
+        [33maria-valuemin[39m=[32m"0"[39m
+        [33maria-valuenow[39m=[32m"4"[39m
+        [33mmax[39m=[32m"20"[39m
+        [33mvalue[39m=[32m"4"[39m
+      [36m/>[39m
+    [36m</div>[39m
+    [36m<div[39m
+      [33mclass[39m=[32m"execution-progress"[39m
+    [36m>[39m
+      [36m<span>[39m
+        [0m工具调用[0m
+        [0m [0m
+        [0m7[0m
+        [0m/[0m
+        [0m40[0m
+      [36m</span>[39m
+      [36m<progress[39m
+        [33maria-label[39m=[32m"工具调用进度"[39m
+        [33maria-valuemax[39m=[32m"40"[39m
+        [33maria-valuemin[39m=[32m"0"[39m
+        [33maria-valuenow[39m=[32m"7"[39m
+        [33mmax[39m=[32m"40"[39m
+        [33mvalue[39m=[32m"7"[39m
+      [36m/>[39m
+    [36m</div>[39m
+    [36m<div[39m
+      [33mclass[39m=[32m"execution-progress"[39m
+    [36m>[39m
+      [36m<span>[39m
+        [0mToken [0m
+        [0m [0m
+        [0m900[0m
+        [0m/[0m
+        [0m2000[0m
+      [36m</span>[39m
+      [36m<progress[39m
+        [33maria-label[39m=[32m"Token 进度"[39m
+        [33maria-valuemax[39m=[32m"2000"[39m
+        [33maria-valuemin[39m=[32m"0"[39m
+        [33maria-valuenow[39m=[32m"900"[39m
+        [33mmax[39m=[32m"2000"[39m
+        [33mvalue[39m=[32m"900"[39m
+      [36m/>[39m
+    [36m</div>[39m
+  [36m</div>[39m
+  [36m<p[39m
+    [33maria-busy[39m=[32m"true"[39m
+  [36m>[39m
+    [0m正在加载执行审阅…[0m
+  [36m</p>[39m
+  [36m<div[39m
+    [33mclass[39m=[32m"execution-card-controls"[39m
+  [36m>[39m
+    [36m<button[39m
+      [33mstyle[39m=[32m"min-height: var(--control-min);"[39m
+      [33mtype[39m=[32m"button"[39m
+    [36m>[39m
+      [0m停止[0m
+      [0m [0m
+      [0mTask A[0m
+    [36m</button>[39m
+    [36m<button[39m
+      [33mstyle[39m=[32m"min-height: var(--control-min);"[39m
+      [33mtype[39m=[32m"button"[39m
+    [36m>[39m
+      [0m刷新 [0m
+      [0mTask A[0m
+    [36m</button>[39m
+  [36m</div>[39m
+[36m</section>[39m
+
+Ignored nodes: comments, script, style
+[36m<section[39m
+  [33maria-labelledby[39m=[32m"execution-execution-a-title"[39m
+  [33mclass[39m=[32m"run-detail execution-card"[39m
+  [33mdata-accent[39m=[32m"sage"[39m
+  [33mrole[39m=[32m"region"[39m
+[36m>[39m
+  [36m<div[39m
+    [33mclass[39m=[32m"panel-heading"[39m
+  [36m>[39m
+    [36m<div>[39m
+      [36m<p[39m
+        [33mclass[39m=[32m"eyebrow"[39m
+      [36m>[39m
+        [0mA[0m
+      [36m</p>[39m
+      [36m<p>[39m
+        [0mAlpha[0m
+      [36m</p>[39m
+      [36m<h3[39m
+        [33mid[39m=[32m"execution-execution-a-title"[39m
+        [33mtabindex[39m=[32m"-1"[39m
+      [36m>[39m
+        [0mTask A[0m
+      [36m</h3>[39m
+    [36m</div>[39m
+    [36m<span[39m
+      [33mclass[39m=[32m"status-label status-staged"[39m
+    [36m>[39m
+      [0m变更待审阅[0m
+    [36m</span>[39m
+  [36m</div>[39m
+  [36m<p[39m
+    [33mrole[39m=[32m"status"[39m
+  [36m>[39m
+    [0m当前没有进行中的动作[0m
+  [36m</p>[39m
+  [36m<div[39m
+    [33mclass[39m=[32m"execution-progress-list"[39m
+  [36m>[39m
+    [36m<div[39m
+      [33mclass[39m=[32m"execution-progress"[39m
+    [36m>[39m
+      [36m<span>[39m
+        [0m业务回合[0m
+        [0m [0m
+        [0m4[0m
+        [0m/[0m
+        [0m20[0m
+      [36m</span>[39m
+      [36m<progress[39m
+        [33maria-label[39m=[32m"业务回合进度"[39m
+        [33maria-valuemax[39m=[32m"20"[39m
+        [33maria-valuemin[39m=[32m"0"[39m
+        [33maria-valuenow[39m=[32m"4"[39m
+        [33mmax[39m=[32m"20"[39m
+        [33mvalue[39m=[32m"4"[39m
+      [36m/>[39m
+    [36m</div>[39m
+    [36m<div[39m
+      [33mclass[39m=[32m"execution-progress"[39m
+    [36m>[39m
+      [36m<span>[39m
+        [0m工具调用[0m
+        [0m [0m
+        [0m7[0m
+        [0m/[0m
+        [0m40[0m
+      [36m</span>[39m
+      [36m<progress[39m
+        [33maria-label[39m=[32m"工具调用进度"[39m
+        [33maria-valuemax[39m=[32m"40"[39m
+        [33maria-valuemin[39m=[32m"0"[39m
+        [33maria-valuenow[39m=[32m"7"[39m
+        [33mmax[39m=[32m"40"[39m
+        [33mvalue[39m=[32m"7"[39m
+      [36m/>[39m
+    [36m</div>[39m
+    [36m<div[39m
+      [33mclass[39m=[32m"execution-progress"[39m
+    [36m>[39m
+      [36m<span>[39m
+        [0mToken [0m
+        [0m [0m
+        [0m900[0m
+        [0m/[0m
+        [0m2000[0m
+      [36m</span>[39m
+      [36m<progress[39m
+        [33maria-label[39m=[32m"Token 进度"[39m
+        [33maria-valuemax[39m=[32m"2000"[39m
+        [33maria-valuemin[39m=[32m"0"[39m
+        [33maria-valuenow[39m=[32m"900"[39m
+        [33mmax[39m=[32m"2000"[39m
+        [33mvalue[39m=[32m"900"[39m
+      [36m/>[39m
+    [36m</div>[39m
+  [36m</div>[39m
+  [36m<p[39m
+    [33maria-busy[39m=[32m"true"[39m
+  [36m>[39m
+    [0m正在加载执行审阅…[0m
+  [36m</p>[39m
+  [36m<div[39m
+    [33mclass[39m=[32m"execution-card-controls"[39m
+  [36m>[39m
+    [36m<button[39m
+      [33mstyle[39m=[32m"min-height: var(--control-min);"[39m
+      [33mtype[39m=[32m"button"[39m
+    [36m>[39m
+      [0m停止[0m
+      [0m [0m
+      [0mTask A[0m
+    [36m</button>[39m
+    [36m<button[39m
+      [33mstyle[39m=[32m"min-height: var(--control-min);"[39m
+      [33mtype[39m=[32m"button"[39m
+    [36m>[39m
+      [0m刷新 [0m
+      [0mTask A[0m
+    [36m</button>[39m
+  [36m</div>[39m
+[36m</section>[39m
+ ❯ waitForWrapper node_modules/@testing-library/dom/dist/wait-for.js:163:27
+ ❯ node_modules/@testing-library/dom/dist/query-helpers.js:86:33
+ ❯ tests/execution-review-ui.test.tsx:554:31
+    552|     render(createElement(ExecutionPanel, { projectId: PROJECT_ID }));
+    553|     const card = await screen.findByRole("region", { name: "Task A" });
+    554|     expect(await within(card).findByText("正在加载执行审阅与当前审批…")).toHaveAttr…
+       |                               ^
+    555|       "aria-busy",
+    556|       "true",
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[3/5]⎯
+
+ FAIL  tests/execution-review-ui.test.tsx > T-29 execution review UI > never presents auto merge for stale review state and keeps staged-hash approval separate
+ FAIL  tests/execution-review-ui.test.tsx > T-29 execution review UI > never presents auto merge for conflicted review state and keeps staged-hash approval separate
+Error: expect(element).not.toBeInTheDocument()
+
+expected document not to contain element, found <button
+  disabled=""
+  type="button"
+>
+  批准当前 staged hash 
+  bbbbbbbbbbbb
+</button> instead
+ ❯ tests/execution-review-ui.test.tsx:593:86
+    591|         expect(within(card).queryByRole("button", { name: /批准当前 staged…
+    592|       } else {
+    593|         expect(within(card).queryByRole("button", { name: /批准当前 staged…
+       |                                                                                      ^
+    594|         expect(within(card).getByRole("alert")).toHaveTextContent("当前 …
+    595|       }
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[4/5]⎯
+
+
+ Test Files  2 failed (2)
+      Tests  5 failed | 16 passed (21)
+   Start at  10:32:41
+   Duration  26.79s (transform 491ms, setup 866ms, import 917ms, tests 26.93s, environment 3.70s)
+
+# exit: 1

@@ -45,6 +45,7 @@ type ExecutionDetail = {
 };
 
 type StagedSummary = {
+  activeApproval: ExecutionApprovalDto | null;
   blockReasons: string[];
   blockerCount: number;
   blockerCounts: Record<string, number>;
@@ -526,11 +527,14 @@ export function ExecutionReview({
       const response = await fetch(`/api/executions/${execution.id}`);
       setDetail(await readResponse<ExecutionDetail>(
         response,
-        "无法加载执行审阅，请重试。",
+        "无法加载执行审阅与当前审批，请重试。",
       ));
     } catch (cause: unknown) {
       setDetailError(
-        `执行审阅：${caughtApiErrorCopy(cause, "无法加载执行审阅，请重试。")}`,
+        `执行审阅与当前审批：${caughtApiErrorCopy(
+          cause,
+          "无法加载执行审阅与当前审批，请重试。",
+        )}`,
       );
     } finally {
       setDetailLoading(false);
@@ -580,11 +584,7 @@ export function ExecutionReview({
 
   const approvalItems = approvals.items.map((item) => approvalOverrides[item.id] ?? item);
   const commandApprovals = approvalItems.filter(({ kind }) => kind === "command");
-  const stagedApproval = approvalItems.find(({ kind }) => kind === "staged_merge");
-  const readError = Boolean(
-    detailError || events.error || approvals.error || validations.error
-    || artifacts.error || observations.error || blockers.error,
-  );
+  const stagedApproval = detail?.staged?.activeApproval ?? null;
 
   function changeTab(next: typeof activeTab, focus = false) {
     setActiveTab(next);
@@ -609,12 +609,16 @@ export function ExecutionReview({
     tabRefs.current[next]?.focus();
   }
 
-  if (detailLoading) return <p aria-busy="true">正在加载执行审阅…</p>;
+  if (detailLoading) return <p aria-busy="true">正在加载执行审阅与当前审批…</p>;
   if (detailError || !detail) {
     return (
       <div>
-        <p className="error-text" role="alert">{detailError ?? "执行审阅不可用。"}</p>
-        <button onClick={() => void loadDetail()} type="button">重试加载执行审阅</button>
+        <p className="error-text" role="alert">
+          {detailError ?? "执行审阅与当前审批不可用。"}
+        </p>
+        <button onClick={() => void loadDetail()} type="button">
+          重试加载执行审阅与当前审批
+        </button>
       </div>
     );
   }
@@ -814,17 +818,14 @@ export function ExecutionReview({
                       }}
                     />
                   ) : (
-                    <button
-                      disabled={
-                        execution.status !== "staged"
-                        || readError
-                        || validations.loading
-                        || !detail.staged!.requiredValidations.ready
-                      }
-                      type="button"
-                    >
-                      批准当前 staged hash {shortHash(detail.staged.stagedHash)}
-                    </button>
+                    <div>
+                      <p className="error-text" role="alert">
+                        当前 staged hash 的审批尚未就绪，无法执行批准。
+                      </p>
+                      <button onClick={() => void loadDetail()} type="button">
+                        重试加载当前审批
+                      </button>
+                    </div>
                   )
                 ) : null}
               </div>

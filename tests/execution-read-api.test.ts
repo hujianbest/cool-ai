@@ -244,6 +244,99 @@ describe("bounded execution read APIs", () => {
     );
   });
 
+  it("returns the active approval bound to the current staged hash beyond ten historical approvals", async () => {
+    const insertTool = database.prepare(`
+      INSERT INTO execution_tool_calls (
+        id,project_id,execution_id,attempt_id,action_id,business_round,type,
+        request_hash,status,error_code,public_request_json,public_result_json,
+        before_sandbox_hash,after_sandbox_hash,started_at,finished_at
+      ) VALUES (?, ?, ?, ?, NULL, ?, 'command', ?, 'rejected', NULL, ?, NULL,
+        ?, NULL, ?, ?)
+    `);
+    const insertCommandApproval = database.prepare(`
+      INSERT INTO execution_approvals (
+        id,project_id,execution_id,attempt_id,tool_call_id,kind,status,
+        request_hash,input_hash,staged_hash,public_request_json,
+        decided_at,consumed_at,created_at
+      ) VALUES (?, ?, ?, ?, ?, 'command', 'rejected', ?, ?, NULL, ?, ?, NULL, ?)
+    `);
+    for (let index = 0; index < 11; index += 1) {
+      const suffix = String(index).padStart(2, "0");
+      const toolId = `historical-tool-${suffix}`;
+      const createdAt = `2026-07-30T07:59:${suffix}.000Z`;
+      insertTool.run(
+        toolId,
+        PROJECT_ID,
+        EXECUTION_ID,
+        ATTEMPT_ID,
+        index + 10,
+        HASH,
+        JSON.stringify({ args: [], executable: "test", expectedEffect: "history", riskReasons: [], workdir: "." }),
+        HASH,
+        createdAt,
+        createdAt,
+      );
+      insertCommandApproval.run(
+        `historical-approval-${suffix}`,
+        PROJECT_ID,
+        EXECUTION_ID,
+        ATTEMPT_ID,
+        toolId,
+        HASH,
+        HASH,
+        JSON.stringify({ args: [], executable: "test", expectedEffect: "history", riskReasons: [], workdir: "." }),
+        createdAt,
+        createdAt,
+      );
+    }
+    database.prepare(`
+      INSERT INTO execution_approvals (
+        id,project_id,execution_id,attempt_id,tool_call_id,kind,status,
+        request_hash,input_hash,staged_hash,public_request_json,
+        decided_at,consumed_at,created_at
+      ) VALUES (
+        'stale-staged-approval',?,?,?,NULL,'staged_merge','expired',
+        ?,?,?,?,NULL,NULL,'2026-07-30T07:59:30.000Z'
+      )
+    `).run(
+      PROJECT_ID,
+      EXECUTION_ID,
+      ATTEMPT_ID,
+      HASH,
+      HASH,
+      "c".repeat(64),
+      "{}",
+    );
+    database.prepare(`
+      INSERT INTO execution_approvals (
+        id,project_id,execution_id,attempt_id,tool_call_id,kind,status,
+        request_hash,input_hash,staged_hash,public_request_json,
+        decided_at,consumed_at,created_at
+      ) VALUES (
+        'current-staged-approval',?,?,?,NULL,'staged_merge','pending',
+        ?,?,?,?,NULL,NULL,'2026-07-30T08:01:00.000Z'
+      )
+    `).run(PROJECT_ID, EXECUTION_ID, ATTEMPT_ID, HASH, HASH, HASH, "{}");
+
+    const firstPage = await reads.listExecutionApprovals(
+      databasePath,
+      EXECUTION_ID,
+      { limit: "10" },
+    );
+    const detail = await reads.readExecutionDetail(databasePath, EXECUTION_ID);
+
+    expect(firstPage.items).toHaveLength(10);
+    expect(firstPage.items.every(({ kind }) => kind === "command")).toBe(true);
+    expect(detail.staged?.activeApproval).toMatchObject({
+      command: null,
+      id: "current-staged-approval",
+      kind: "staged_merge",
+      stagedHash: HASH,
+      status: "pending",
+    });
+    expect(detail.staged?.activeApproval?.stagedHash).toBe(detail.staged?.stagedHash);
+  });
+
   it("strictly summarizes every required validation when the policy exceeds one page", async () => {
     database.exec(`
       DROP TRIGGER validation_policy_revision_no_update;

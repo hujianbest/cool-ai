@@ -224,6 +224,7 @@ const stagedBlockerSchema = z.object({
 }).strict();
 
 const stagedSummarySchema = z.object({
+  activeApproval: executionApprovalDtoSchema.nullable(),
   blockReasons: z.array(z.string()),
   blockerCount: z.number().int().nonnegative(),
   blockerCounts: z.record(z.string(), z.number().int().nonnegative()),
@@ -501,6 +502,28 @@ function hashJson(value: unknown): string {
   return createHash("sha256").update(JSON.stringify(value), "utf8").digest("hex");
 }
 
+function approvalDtoFromRow(
+  row: Record<string, unknown>,
+): z.infer<typeof executionApprovalDtoSchema> {
+  const { publicRequestJson, ...approval } = row;
+  const request = row.kind === "command"
+    ? JSON.parse(publicRequestJson as string) as Record<string, unknown>
+    : null;
+  return executionApprovalDtoSchema.parse({
+    ...approval,
+    command: request
+      ? {
+          args: request.args,
+          executable: request.executable,
+          expectedEffect: request.expectedEffect,
+          permission: "execute",
+          riskReasons: request.riskReasons,
+          workdir: request.workdir,
+        }
+      : null,
+  });
+}
+
 function stagedSummary(database: DatabaseSync, executionId: string) {
   const row = database.prepare(`
     SELECT s.id,s.staged_hash AS stagedHash,s.classification,
@@ -528,6 +551,19 @@ function stagedSummary(database: DatabaseSync, executionId: string) {
   const stagedPolicyRevisionId = String(policyRevisionId);
   const stagedProjectId = String(projectId);
   const stagedSandboxManifestHash = String(sandboxManifestHash);
+  const activeApprovalRow = database.prepare(`
+    SELECT id,kind,status,request_hash AS requestHash,input_hash AS inputHash,
+           staged_hash AS stagedHash,public_request_json AS publicRequestJson,
+           created_at AS createdAt,decided_at AS decidedAt,consumed_at AS consumedAt
+    FROM execution_approvals
+    WHERE execution_id=? AND attempt_id=? AND kind='staged_merge'
+      AND status IN ('pending','approved') AND staged_hash=?
+    LIMIT 1
+  `).get(
+    executionId,
+    stagedAttemptId,
+    String(summaryRow.stagedHash),
+  ) as Record<string, unknown> | undefined;
   const counts = database.prepare(`
     SELECT kind,COUNT(*) AS count FROM execution_staged_blockers
     WHERE staged_result_id=? GROUP BY kind ORDER BY kind
@@ -557,6 +593,7 @@ function stagedSummary(database: DatabaseSync, executionId: string) {
   ) as { count: number }).count);
   return stagedSummarySchema.parse({
     ...summaryRow,
+    activeApproval: activeApprovalRow ? approvalDtoFromRow(activeApprovalRow) : null,
     blockReasons: JSON.parse(blockReasonsJson as string),
     blockerCounts: Object.fromEntries(counts.map((item) => [item.kind, item.count])),
     requiredValidations: {
@@ -1079,22 +1116,7 @@ export async function listExecutionApprovals(
       executionId, createdAt ?? null, createdAt ?? null, createdAt ?? null,
       id ?? null, requested + 1,
     ) as Array<Record<string, unknown>>;
-    const items = rows.map(({ publicRequestJson, ...row }) => {
-      const request = JSON.parse(publicRequestJson as string) as Record<string, unknown>;
-      return {
-        ...row,
-        command: row.kind === "command"
-          ? {
-              args: request.args,
-              executable: request.executable,
-              expectedEffect: request.expectedEffect,
-              permission: "execute",
-              riskReasons: request.riskReasons,
-              workdir: request.workdir,
-            }
-          : null,
-      };
-    }) as Array<z.infer<typeof executionApprovalDtoSchema>>;
+    const items = rows.map(approvalDtoFromRow);
     return boundedPage(
       databasePath, "approvals", executionId, items, requested,
       (row) => [row.createdAt, row.id], executionApprovalDtoSchema,
