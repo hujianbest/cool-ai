@@ -1,0 +1,60 @@
+# hf-gate-run
+# label: t22-red
+# command: npm test -- tests/delivery-ui.test.tsx
+# started: 2026-08-01T07:57:44+00:00
+
+> collaboration-cockpit@0.1.0 test
+> vitest run tests/delivery-ui.test.tsx
+
+
+ RUN  v4.1.10 D:/cool-ai
+
+ ❯ tests/delivery-ui.test.tsx (7 tests | 7 failed) 42ms
+     × shows stable blockers and never invents a summary while ongoing 27ms
+     × renders generating and failed states with explicit retry only 3ms
+     × shows completed task facts, exact refs, evidence status and impact 2ms
+     × navigates immutable versions and marks invalidated history 2ms
+     × preserves selected version on mutation error and supports reload 3ms
+     × announces generation success and moves focus to the completed heading 2ms
+     × covers loading and read error without showing false empty content 2ms
+
+⎯⎯⎯⎯⎯⎯⎯ Failed Tests 7 ⎯⎯⎯⎯⎯⎯⎯
+
+ FAIL  tests/delivery-ui.test.tsx > final delivery UI > shows stable blockers and never invents a summary while ongoing
+ FAIL  tests/delivery-ui.test.tsx > final delivery UI > renders generating and failed states with explicit retry only
+ FAIL  tests/delivery-ui.test.tsx > final delivery UI > shows completed task facts, exact refs, evidence status and impact
+ FAIL  tests/delivery-ui.test.tsx > final delivery UI > navigates immutable versions and marks invalidated history
+ FAIL  tests/delivery-ui.test.tsx > final delivery UI > preserves selected version on mutation error and supports reload
+ FAIL  tests/delivery-ui.test.tsx > final delivery UI > announces generation success and moves focus to the completed heading
+ FAIL  tests/delivery-ui.test.tsx > final delivery UI > covers loading and read error without showing false empty content
+AssertionError: T-22 delivery panel must exist: expected undefined to be type of 'function'
+
+Expected: "function"
+Received: "undefined"
+
+ ❯ DeliveryPanel tests/delivery-ui.test.tsx:44:55
+     42| function DeliveryPanel(props: DeliveryPanelProps) {
+     43|   const Component = optionalComponents.DeliveryPanel;
+     44|   expect(Component, "T-22 delivery panel must exist").toBeTypeOf("func…
+       |                                                       ^
+     45|   return <Component {...props} />;
+     46| }
+ ❯ Object.react_stack_bottom_frame node_modules/react-dom/cjs/react-dom-client.development.js:25904:20
+ ❯ renderWithHooks node_modules/react-dom/cjs/react-dom-client.development.js:7662:22
+ ❯ updateFunctionComponent node_modules/react-dom/cjs/react-dom-client.development.js:10166:19
+ ❯ beginWork node_modules/react-dom/cjs/react-dom-client.development.js:11778:18
+ ❯ runWithFiberInDEV node_modules/react-dom/cjs/react-dom-client.development.js:874:13
+ ❯ performUnitOfWork node_modules/react-dom/cjs/react-dom-client.development.js:17641:22
+ ❯ workLoopSync node_modules/react-dom/cjs/react-dom-client.development.js:17469:41
+ ❯ renderRootSync node_modules/react-dom/cjs/react-dom-client.development.js:17450:11
+ ❯ performWorkOnRoot node_modules/react-dom/cjs/react-dom-client.development.js:16583:35
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[1/7]⎯
+
+
+ Test Files  1 failed (1)
+      Tests  7 failed (7)
+   Start at  15:57:45
+   Duration  3.30s (transform 142ms, setup 419ms, import 291ms, tests 42ms, environment 1.79s)
+
+# exit: 1

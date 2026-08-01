@@ -1,0 +1,18 @@
+# hf-gate-run
+# label: t22-green
+# command: npm test -- tests/delivery-ui.test.tsx
+# started: 2026-08-01T08:02:27+00:00
+
+> collaboration-cockpit@0.1.0 test
+> vitest run tests/delivery-ui.test.tsx
+
+
+ RUN  v4.1.10 D:/cool-ai
+
+
+ Test Files  1 passed (1)
+      Tests  7 passed (7)
+   Start at  16:02:29
+   Duration  6.37s (transform 292ms, setup 701ms, import 542ms, tests 638ms, environment 4.17s)
+
+# exit: 0

@@ -5,6 +5,12 @@ import { useCallback, useEffect, useRef, useState } from "react";
 import type { ReviewWorkspaceDto } from "@/src/shared/review-contracts";
 
 export {
+  DeliveryPanel,
+  type DeliveryPanelProps,
+  type DeliveryVersionDto,
+  type MissionCompletionDto,
+} from "@/components/review/delivery-panel";
+export {
   ReviewAttemptPanel,
   type ReviewAttemptPanelProps,
 } from "@/components/review/review-attempt-panel";
