@@ -1617,6 +1617,7 @@ canonical producers只能写右列；适配器仅为升级前既有行服务，�
 - [x] T-31 修复终态裁决历史被 empty surface 隐藏 (覆盖: FR-4, FR-5, FR-12, FR-14, NFR-4) — 判据: `npm test -- tests/review-product-wiring.test.tsx` 先红后绿；`rework+currentAttempt=null+currentEscalation=null+rejected history`切到回答页必须ready并展示逐attempt历史、唯一reject裁决与返工要求；有open issue/成功动作仍ready，只有加载完成且无issue/无history才empty；loading/error/focus/live与窄屏不回归
 - [x] T-32 修复双次无效复核输出后的 head 终态投影 (覆盖: FR-3, FR-11, FR-12, NFR-1, NFR-2) — 判据: `npm test -- tests/review-production-application.test.ts` 产生晚于封闭8份诊断日志的新RED/GREEN；primary+repair均invalid时逐一断言attempt完整predicate含lease、operation完整 `(project,id,kind,parentId,requestHash,status)+correlated attempt EXISTS`、head完整 `(project,mission,workItem,currentResult,currentAttempt,state,acquiredVersion)`，各CAS恰好1行后才得到failed/completed/pending_review且零裁决；任一CAS=0整笔rollback并返回durable winner，较新attempt/head不被回退；same operation replay/late finalizer不新增副作用；`validateV6`与关闭重开通过，projects/tasks/context/review reads不再5xx
 - [x] T-33 扩展真实 browser smoke 全链并收口 (覆盖: FR-1, FR-2, FR-3, FR-4, FR-5, FR-6, FR-7, FR-8, FR-9, FR-10, FR-11, FR-12, FR-13, FR-14, NFR-1, NFR-2, NFR-3, NFR-4) — 判据: 先恢复已提交T-29最薄harness，再由 `tests/review-browser-full-chain.test.ts`真实spawn `npm run smoke:review -- --full`取得新t33 RED；GREEN harness的reject/escalate/pass均为strict合法provider输出（escalate 2..8 options），在无interception/业务DB写入下覆盖退回→新result、升级→owner answer/new attempt、通过→memory→delivery，独立应用进程重启历史完整并完成desktop/narrow键盘截图，输出唯一PASS sentinel；旧t30/t32诊断证据均不计；GREEN后运行`npm test`、`npm run build`、`npm run smoke:review -- --full`
+- [x] T-34 修复代码评审发现的 review mutation 请求体上限 (覆盖: NFR-3) — 判据: `npm test -- tests/review-mutation-body-limits.test.ts` 先红后绿；`POST /api/work-items/:workItemId/reviews` 在 strict DTO前以流式累计UTF-8字节执行128 KiB上限，exact boundary继续解析，boundary+1及chunked/多字节超限返回413 `REQUEST_LIMIT_EXCEEDED`固定中文且0 operation/attempt/provider/业务副作用；invalid JSON与schema错误仍走既有映射
 
 任务覆盖索引:
 
@@ -1636,7 +1637,7 @@ canonical producers只能写右列；适配器仅为升级前既有行服务，�
 - FR-14 → T-1, T-19, T-20, T-21, T-22, T-23, T-26, T-28, T-29, T-31, T-33
 - NFR-1 → T-1, T-2, T-8, T-9, T-12, T-15, T-18, T-24, T-27, T-29, T-32, T-33
 - NFR-2 → T-2, T-8, T-15, T-18, T-24, T-25, T-26, T-27, T-30, T-32, T-33
-- NFR-3 → T-1, T-2, T-6, T-7, T-17, T-18, T-24, T-25, T-27, T-29, T-33
+- NFR-3 → T-1, T-2, T-6, T-7, T-17, T-18, T-24, T-25, T-27, T-29, T-33, T-34
 - NFR-4 → T-1, T-19, T-20, T-21, T-22, T-23, T-28, T-29, T-31, T-33
 
 ## 15. Design Checklist 自检
@@ -1647,4 +1648,4 @@ canonical producers只能写右列；适配器仅为升级前既有行服务，�
 - [x] 接口、数据契约、错误、事件、事务、CAS、状态机和故障恢复具体到 build阶段无需再发明。
 - [x] 所有资源数字沿用现有事实：90秒 provider call、120秒 lease、30秒 heartbeat、一次 repair、1 MiB provider response、2 MiB frozen context、20,000 grapheme公开文本/记忆、128/256/512 KiB API envelope、20/100分页、24小时cursor、44px与WCAG AA；未新增性能/容量阈值。
 - [x] ext-ui-design章节位于测试策略后、任务清单前，覆盖 desktop/narrow、loading/empty/error/disabled/success/focus、token和a11y。
-- [x] T-1先打通 owner→真实review→decision→UI最薄切片；普通 T-1 至 T-33均有一次明确先红后绿边界，T-24 至 T-28收口生产调用点、事件兼容与真实产品树，T-29实现最薄真实 smoke，T-30收口v6 fixture与全量套件，T-31修复终态历史surface，T-32修复失败终态head投影，T-33独立扩展完整裁决/重启/双viewport链；inline覆盖与逐项索引一致。
+- [x] T-1先打通 owner→真实review→decision→UI最薄切片；普通 T-1 至 T-34均有一次明确先红后绿边界，T-24 至 T-28收口生产调用点、事件兼容与真实产品树，T-29实现最薄真实 smoke，T-30收口v6 fixture与全量套件，T-31修复终态历史surface，T-32修复失败终态head投影，T-33扩展完整裁决/重启/双viewport链，T-34闭合独立代码评审请求体边界finding；inline覆盖与逐项索引一致。
