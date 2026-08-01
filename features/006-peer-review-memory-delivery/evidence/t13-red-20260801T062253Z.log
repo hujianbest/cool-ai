@@ -1,0 +1,104 @@
+# hf-gate-run
+# label: t13-red
+# command: npm test -- tests/review-memory-supersedes.test.ts
+# started: 2026-08-01T06:22:53+00:00
+
+> collaboration-cockpit@0.1.0 test
+> vitest run tests/review-memory-supersedes.test.ts
+
+
+ RUN  v4.1.10 D:/cool-ai
+
+(node:15732) ExperimentalWarning: SQLite is an experimental feature and might change at any time
+(Use `node --trace-warnings ...` to show where the warning was created)
+ ❯ tests/review-memory-supersedes.test.ts (4 tests | 4 failed) 1275ms
+     × requires an explicit same-project same-type unique active predecessor 386ms
+     × creates an immutable continuous chain and preserves versioned navigation after restart 278ms
+     × allows exactly one concurrent supersede winner without a fork 331ms
+     × rolls back the whole pass when a fault follows supersede writes 278ms
+
+⎯⎯⎯⎯⎯⎯⎯ Failed Tests 4 ⎯⎯⎯⎯⎯⎯⎯
+
+ FAIL  tests/review-memory-supersedes.test.ts > review memory immutable supersedes chains > requires an explicit same-project same-type unique active predecessor
+AssertionError: expected Error: Memory supersedes is not part of d… to match object { code: 'MEMORY_TYPE_MISMATCH' }
+
+- Expected
++ Received
+
+- {
+-   "code": "MEMORY_TYPE_MISMATCH",
++ Error {
++   "message": "Memory supersedes is not part of deterministic dedupe.",
+  }
+
+ ❯ expectCode tests/review-memory-supersedes.test.ts:247:19
+    245|     throw new Error(`Expected ${code}`);
+    246|   } catch (error) {
+    247|     expect(error).toMatchObject({ code });
+       |                   ^
+    248|   }
+    249| }
+ ❯ tests/review-memory-supersedes.test.ts:282:5
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[1/4]⎯
+
+ FAIL  tests/review-memory-supersedes.test.ts > review memory immutable supersedes chains > creates an immutable continuous chain and preserves versioned navigation after restart
+Error: Memory supersedes is not part of deterministic dedupe.
+ ❯ commitReviewMemoryCandidateTx src/server/review/memory-committer.ts:78:11
+     76| ): ReviewMemoryAssociation {
+     77|   if (input.candidate.supersedesMemoryId !== null) {
+     78|     throw new Error("Memory supersedes is not part of deterministic de…
+       |           ^
+     79|   }
+     80|
+ ❯ src/server/review/review-finalizer.ts:338:9
+ ❯ src/server/review/review-finalizer.ts:318:31
+ ❯ transaction src/server/review/review-finalizer.ts:68:20
+ ❯ finalizeCheckpointedReview src/server/review/review-finalizer.ts:256:10
+ ❯ finalize tests/review-memory-supersedes.test.ts:232:3
+ ❯ tests/review-memory-supersedes.test.ts:310:5
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[2/4]⎯
+
+ FAIL  tests/review-memory-supersedes.test.ts > review memory immutable supersedes chains > allows exactly one concurrent supersede winner without a fork
+AssertionError: expected [] to have a length of 1 but got +0
+
+- Expected
++ Received
+
+- 1
++ 0
+
+ ❯ tests/review-memory-supersedes.test.ts:392:70
+    390|         Promise.resolve().then(() => finalize(2, secondHash, second)),
+    391|       ]);
+    392|       expect(results.filter(({ status }) => status === "fulfilled")).t…
+       |                                                                      ^
+    393|       expect(results.filter(({ status }) => status === "rejected")).to…
+    394|       expect(database.prepare(
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[3/4]⎯
+
+ FAIL  tests/review-memory-supersedes.test.ts > review memory immutable supersedes chains > rolls back the whole pass when a fault follows supersede writes
+AssertionError: expected [Function] to throw error including 'fault after memory' but got 'Memory supersedes is not part of dete…'
+
+Expected: "fault after memory"
+Received: "Memory supersedes is not part of deterministic dedupe."
+
+ ❯ tests/review-memory-supersedes.test.ts:413:9
+    411|     expect(() => finalize(1, hash, database, (step) => {
+    412|       if (step === "head") throw new Error("fault after memory");
+    413|     })).toThrow("fault after memory");
+       |         ^
+    414|
+    415|     expect(database.prepare(
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[4/4]⎯
+
+
+ Test Files  1 failed (1)
+      Tests  4 failed (4)
+   Start at  14:22:55
+   Duration  4.12s (transform 193ms, setup 411ms, import 377ms, tests 1.27s, environment 1.77s)
+
+# exit: 1

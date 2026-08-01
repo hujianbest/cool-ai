@@ -313,6 +313,12 @@ export function finalizeCheckpointedReview(
       );
     }
 
+    const memoryEvents: Array<{
+      candidateId: string;
+      memoryId: string;
+      memoryVersion: number;
+      outcome: "created" | "reused" | "superseded";
+    }> = [];
     before("memory-candidates");
     if (output.decision.choice === "pass") {
       output.memoryCandidates.forEach((candidate, position) => {
@@ -335,7 +341,7 @@ export function finalizeCheckpointedReview(
           candidate.supersedesMemoryId,
           now,
         );
-        commitReviewMemoryCandidateTx(database, {
+        const association = commitReviewMemoryCandidateTx(database, {
           attemptId: row.attemptId,
           candidate: {
             content,
@@ -352,6 +358,7 @@ export function finalizeCheckpointedReview(
           projectId: row.projectId,
           reviewerAgentId: row.reviewerAgentId,
         });
+        memoryEvents.push({ candidateId, ...association });
       });
     }
 
@@ -435,6 +442,14 @@ export function finalizeCheckpointedReview(
       randomUUID(),
       now,
     );
+    for (const memory of memoryEvents) {
+      appendEvent(database, row, `memory_${memory.outcome}`, {
+        candidateId: memory.candidateId,
+        decisionId,
+        memoryId: memory.memoryId,
+        memoryVersion: memory.memoryVersion,
+      }, randomUUID(), now);
+    }
 
     before("attempt");
     const finalized = database.prepare(`
