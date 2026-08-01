@@ -1,0 +1,139 @@
+# hf-gate-run
+# label: t16-red
+# command: npm test -- tests/review-read-api.test.ts tests/review-events.test.ts tests/review-errors.test.ts
+# started: 2026-08-01T06:51:04+00:00
+
+> collaboration-cockpit@0.1.0 test
+> vitest run tests/review-read-api.test.ts tests/review-events.test.ts tests/review-errors.test.ts
+
+
+ RUN  v4.1.10 D:/cool-ai
+
+ ❯ tests/review-errors.test.ts (2 tests | 2 failed) 12ms
+     × maps every designed code to one HTTP status, fixed Chinese copy, and typed event 9ms
+     × creates only sanitized envelopes and never reflects unknown database/provider text 1ms
+ ❯ tests/review-events.test.ts (2 tests | 2 failed) 183ms
+     × covers every designed event with an exact strict payload 180ms
+     × rejects sequence, usage nullability, and unknown event drift 1ms
+ ❯ tests/review-read-api.test.ts (4 tests | 4 failed) 168ms
+     × shares one strict attempt union across workspace, history, and detail 161ms
+     × rejects every unsafe checkpoint/retry/decision combination fail closed 1ms
+     × keeps primary and repair call usage/failure nullable and fully discriminated 1ms
+     × publishes bounded route-scoped history/detail/event reads 4ms
+
+⎯⎯⎯⎯⎯⎯⎯ Failed Tests 8 ⎯⎯⎯⎯⎯⎯⎯
+
+ FAIL  tests/review-errors.test.ts > review error registry > maps every designed code to one HTTP status, fixed Chinese copy, and typed event
+AssertionError: expected undefined to be type of 'function'
+
+Expected: "function"
+Received: "undefined"
+
+ ❯ tests/review-errors.test.ts:65:18
+     63|   it("maps every designed code to one HTTP status, fixed Chinese copy,…
+     64|     const load = modules["../src/server/review/review-errors.ts"];
+     65|     expect(load).toBeTypeOf("function");
+       |                  ^
+     66|     const module = await load!() as {
+     67|       REVIEW_ERROR_REGISTRY?: Record<string, { eventType: string | nul…
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[1/8]⎯
+
+ FAIL  tests/review-errors.test.ts > review error registry > creates only sanitized envelopes and never reflects unknown database/provider text
+TypeError: load is not a function
+ ❯ tests/review-errors.test.ts:78:26
+     76|   it("creates only sanitized envelopes and never reflects unknown data…
+     77|     const load = modules["../src/server/review/review-errors.ts"];
+     78|     const module = await load!() as {
+       |                          ^
+     79|       reviewErrorResponse?: (error: unknown, route: string) => Respons…
+     80|     };
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[2/8]⎯
+
+ FAIL  tests/review-events.test.ts > typed review events > covers every designed event with an exact strict payload
+AssertionError: expected undefined to be defined
+ ❯ tests/review-events.test.ts:53:41
+     51|       reviewEventTypeSchema?: { options: string[] };
+     52|     };
+     53|     expect(module.reviewEventDtoSchema).toBeDefined();
+       |                                         ^
+     54|     expect(module.reviewEventTypeSchema).toBeDefined();
+     55|     expect([...module.reviewEventTypeSchema!.options].sort()).toEqual(
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[3/8]⎯
+
+ FAIL  tests/review-events.test.ts > typed review events > rejects sequence, usage nullability, and unknown event drift
+TypeError: Cannot read properties of undefined (reading 'safeParse')
+ ❯ tests/review-events.test.ts:88:40
+     86|       sequence: 1,
+     87|     };
+     88|     expect(module.reviewEventDtoSchema.safeParse({
+       |                                        ^
+     89|       ...envelope,
+     90|       payload: { completionTokens: 0, modelCallId: "call", promptToken…
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[4/8]⎯
+
+ FAIL  tests/review-read-api.test.ts > strict review read API > shares one strict attempt union across workspace, history, and detail
+AssertionError: expected undefined to be defined
+ ❯ contracts tests/review-read-api.test.ts:54:41
+     52|   expect(load).toBeTypeOf("function");
+     53|   const module = await load!();
+     54|   expect(module.reviewAttemptDtoSchema).toBeDefined();
+       |                                         ^
+     55|   expect(module.reviewAttemptDetailDtoSchema).toBeDefined();
+     56|   expect(module.reviewWorkspaceDtoSchema).toBeDefined();
+ ❯ tests/review-read-api.test.ts:65:70
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[5/8]⎯
+
+ FAIL  tests/review-read-api.test.ts > strict review read API > rejects every unsafe checkpoint/retry/decision combination fail closed
+AssertionError: expected undefined to be defined
+ ❯ contracts tests/review-read-api.test.ts:54:41
+     52|   expect(load).toBeTypeOf("function");
+     53|   const module = await load!();
+     54|   expect(module.reviewAttemptDtoSchema).toBeDefined();
+       |                                         ^
+     55|   expect(module.reviewAttemptDetailDtoSchema).toBeDefined();
+     56|   expect(module.reviewWorkspaceDtoSchema).toBeDefined();
+ ❯ tests/review-read-api.test.ts:138:40
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[6/8]⎯
+
+ FAIL  tests/review-read-api.test.ts > strict review read API > keeps primary and repair call usage/failure nullable and fully discriminated
+AssertionError: expected undefined to be defined
+ ❯ contracts tests/review-read-api.test.ts:54:41
+     52|   expect(load).toBeTypeOf("function");
+     53|   const module = await load!();
+     54|   expect(module.reviewAttemptDtoSchema).toBeDefined();
+       |                                         ^
+     55|   expect(module.reviewAttemptDetailDtoSchema).toBeDefined();
+     56|   expect(module.reviewWorkspaceDtoSchema).toBeDefined();
+ ❯ tests/review-read-api.test.ts:176:40
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[7/8]⎯
+
+ FAIL  tests/review-read-api.test.ts > strict review read API > publishes bounded route-scoped history/detail/event reads
+AssertionError: ../app/api/reviews/[attemptId]/route.ts must exist: expected undefined to be type of 'function'
+
+Expected: "function"
+Received: "undefined"
+
+ ❯ tests/review-read-api.test.ts:244:56
+    242|       "../app/api/missions/[missionId]/review-events/route.ts",
+    243|     ]) {
+    244|       expect(routeModules[path], `${path} must exist`).toBeTypeOf("fun…
+       |                                                        ^
+    245|     }
+    246|     const load = readModules["../src/server/review/review-read-service…
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[8/8]⎯
+
+
+ Test Files  3 failed (3)
+      Tests  8 failed (8)
+   Start at  14:51:05
+   Duration  3.23s (transform 143ms, setup 1.34s, import 129ms, tests 362ms, environment 6.73s)
+
+# exit: 1
