@@ -2,48 +2,50 @@ import { internalErrorResponse, storageErrorResponse } from "@/src/server/api-er
 import { ExecutionError } from "@/src/server/execution/execution-service";
 import { SchemaMigrationError } from "@/src/server/migrations";
 
-export async function readExecutionJson(
-  request: Request,
-): Promise<{ ok: true; value: unknown } | { ok: false; response: Response }> {
-  try {
-    return { ok: true, value: await request.json() };
-  } catch {
-    return {
-      ok: false,
-      response: Response.json(
-        { error: { code: "INVALID_JSON", message: "Request body must be valid JSON." } },
-        { status: 400 },
-      ),
-    };
-  }
-}
-
 export async function readBoundedExecutionJson(
   request: Request,
   maximumBytes = 128 * 1024,
 ): Promise<{ ok: true; value: unknown } | { ok: false; response: Response }> {
-  const declared = Number(request.headers.get("content-length"));
-  if (Number.isFinite(declared) && declared > maximumBytes) {
+  const declaredHeader = request.headers.get("content-length");
+  const declaredBytes = declaredHeader === null ? null : Number(declaredHeader);
+  const oversizedResponse = () => Response.json(
+    { error: { code: "INVALID_INPUT", message: "Request body exceeds its limit." } },
+    { status: 400 },
+  );
+  if (declaredBytes !== null && Number.isFinite(declaredBytes) && declaredBytes > maximumBytes) {
     return {
       ok: false,
-      response: Response.json(
-        { error: { code: "INVALID_INPUT", message: "Request body exceeds its limit." } },
-        { status: 400 },
-      ),
+      response: oversizedResponse(),
     };
   }
+
   try {
-    const text = await request.text();
-    if (Buffer.byteLength(text, "utf8") > maximumBytes) {
-      return {
-        ok: false,
-        response: Response.json(
-          { error: { code: "INVALID_INPUT", message: "Request body exceeds its limit." } },
-          { status: 400 },
-        ),
-      };
+    const reader = request.body?.getReader();
+    const chunks: Uint8Array[] = [];
+    let receivedBytes = 0;
+    if (reader) {
+      while (true) {
+        const { done, value } = await reader.read();
+        if (done) break;
+        receivedBytes += value.byteLength;
+        if (receivedBytes > maximumBytes) {
+          await reader.cancel().catch(() => undefined);
+          return { ok: false, response: oversizedResponse() };
+        }
+        chunks.push(value);
+      }
     }
-    return { ok: true, value: JSON.parse(text) as unknown };
+
+    const body = new Uint8Array(receivedBytes);
+    let offset = 0;
+    for (const chunk of chunks) {
+      body.set(chunk, offset);
+      offset += chunk.byteLength;
+    }
+    return {
+      ok: true,
+      value: JSON.parse(new TextDecoder().decode(body)) as unknown,
+    };
   } catch {
     return {
       ok: false,

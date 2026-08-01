@@ -1,0 +1,362 @@
+# hf-gate-run
+# label: t52-red
+# command: npm.cmd test -- tests/execution-mutation-body-limits.test.ts
+# started: 2026-08-01T02:19:33+00:00
+
+> collaboration-cockpit@0.1.0 test
+> vitest run tests/execution-mutation-body-limits.test.ts
+
+
+ RUN  v4.1.10 D:/cool-ai
+
+(node:13848) ExperimentalWarning: SQLite is an experimental feature and might change at any time
+(Use `node --trace-warnings ...` to show where the warning was created)
+ ❯ tests/execution-mutation-body-limits.test.ts (28 tests | 19 failed) 61ms
+     × start rejects Content-Length one byte above 128 KiB before schema validation 10ms
+     × start rejects an oversized body without Content-Length before schema validation 3ms
+     × start rejects oversized chunked transfer before schema validation 3ms
+     × advance rejects Content-Length one byte above 128 KiB before schema validation 2ms
+     × advance rejects an oversized body without Content-Length before schema validation 2ms
+     × advance rejects oversized chunked transfer before schema validation 1ms
+     × control rejects Content-Length one byte above 128 KiB before schema validation 2ms
+     × control rejects an oversized body without Content-Length before schema validation 2ms
+     × control rejects oversized chunked transfer before schema validation 1ms
+     × approval rejects Content-Length one byte above 128 KiB before schema validation 2ms
+     × approval rejects an oversized body without Content-Length before schema validation 1ms
+     × approval rejects oversized chunked transfer before schema validation 1ms
+     × recovery resolve rejects Content-Length one byte above 128 KiB before schema validation 1ms
+     × recovery resolve rejects an oversized body without Content-Length before schema validation 1ms
+     × recovery resolve rejects oversized chunked transfer before schema validation 1ms
+     × validation policy rejects Content-Length one byte above 128 KiB before schema validation 1ms
+     × validation policy rejects an oversized body without Content-Length before schema validation 1ms
+     × validation policy rejects oversized chunked transfer before schema validation 1ms
+     × merge rejects oversized chunked transfer before schema validation 2ms
+
+⎯⎯⎯⎯⎯⎯ Failed Tests 19 ⎯⎯⎯⎯⎯⎯⎯
+
+ FAIL  tests/execution-mutation-body-limits.test.ts > S-5 execution mutation request body boundary > start rejects Content-Length one byte above 128 KiB before schema validation
+AssertionError: expected { error: { …(2) } } to deeply equal { error: { …(2) } }
+
+- Expected
++ Received
+
+  {
+    "error": {
+      "code": "INVALID_INPUT",
+-     "message": "Request body exceeds its limit.",
++     "message": "Execution input is invalid.",
+    },
+  }
+
+ ❯ tests/execution-mutation-body-limits.test.ts:141:37
+    139|
+    140|       expect(response.status).toBe(400);
+    141|       expect(await response.json()).toEqual(OVERSIZED_ERROR);
+       |                                     ^
+    142|     });
+    143|
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[1/19]⎯
+
+ FAIL  tests/execution-mutation-body-limits.test.ts > S-5 execution mutation request body boundary > start rejects an oversized body without Content-Length before schema validation
+AssertionError: expected { error: { …(2) } } to deeply equal { error: { …(2) } }
+
+- Expected
++ Received
+
+  {
+    "error": {
+      "code": "INVALID_INPUT",
+-     "message": "Request body exceeds its limit.",
++     "message": "Execution input is invalid.",
+    },
+  }
+
+ ❯ tests/execution-mutation-body-limits.test.ts:149:37
+    147|
+    148|       expect(response.status).toBe(400);
+    149|       expect(await response.json()).toEqual(OVERSIZED_ERROR);
+       |                                     ^
+    150|     });
+    151|
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[2/19]⎯
+
+ FAIL  tests/execution-mutation-body-limits.test.ts > S-5 execution mutation request body boundary > start rejects oversized chunked transfer before schema validation
+ FAIL  tests/execution-mutation-body-limits.test.ts > S-5 execution mutation request body boundary > advance rejects oversized chunked transfer before schema validation
+ FAIL  tests/execution-mutation-body-limits.test.ts > S-5 execution mutation request body boundary > control rejects oversized chunked transfer before schema validation
+ FAIL  tests/execution-mutation-body-limits.test.ts > S-5 execution mutation request body boundary > approval rejects oversized chunked transfer before schema validation
+ FAIL  tests/execution-mutation-body-limits.test.ts > S-5 execution mutation request body boundary > recovery resolve rejects oversized chunked transfer before schema validation
+ FAIL  tests/execution-mutation-body-limits.test.ts > S-5 execution mutation request body boundary > validation policy rejects oversized chunked transfer before schema validation
+ FAIL  tests/execution-mutation-body-limits.test.ts > S-5 execution mutation request body boundary > merge rejects oversized chunked transfer before schema validation
+AssertionError: expected { error: { …(2) } } to deeply equal { error: { …(2) } }
+
+- Expected
++ Received
+
+  {
+    "error": {
+-     "code": "INVALID_INPUT",
+-     "message": "Request body exceeds its limit.",
++     "code": "INVALID_JSON",
++     "message": "Request body must be valid JSON.",
+    },
+  }
+
+ ❯ tests/execution-mutation-body-limits.test.ts:162:37
+    160|
+    161|       expect(response.status).toBe(400);
+    162|       expect(await response.json()).toEqual(OVERSIZED_ERROR);
+       |                                     ^
+    163|     });
+    164|   }
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[3/19]⎯
+
+ FAIL  tests/execution-mutation-body-limits.test.ts > S-5 execution mutation request body boundary > advance rejects Content-Length one byte above 128 KiB before schema validation
+AssertionError: expected { error: { …(2) } } to deeply equal { error: { …(2) } }
+
+- Expected
++ Received
+
+  {
+    "error": {
+      "code": "INVALID_INPUT",
+-     "message": "Request body exceeds its limit.",
++     "message": "Advance input is invalid.",
+    },
+  }
+
+ ❯ tests/execution-mutation-body-limits.test.ts:141:37
+    139|
+    140|       expect(response.status).toBe(400);
+    141|       expect(await response.json()).toEqual(OVERSIZED_ERROR);
+       |                                     ^
+    142|     });
+    143|
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[4/19]⎯
+
+ FAIL  tests/execution-mutation-body-limits.test.ts > S-5 execution mutation request body boundary > advance rejects an oversized body without Content-Length before schema validation
+AssertionError: expected { error: { …(2) } } to deeply equal { error: { …(2) } }
+
+- Expected
++ Received
+
+  {
+    "error": {
+      "code": "INVALID_INPUT",
+-     "message": "Request body exceeds its limit.",
++     "message": "Advance input is invalid.",
+    },
+  }
+
+ ❯ tests/execution-mutation-body-limits.test.ts:149:37
+    147|
+    148|       expect(response.status).toBe(400);
+    149|       expect(await response.json()).toEqual(OVERSIZED_ERROR);
+       |                                     ^
+    150|     });
+    151|
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[5/19]⎯
+
+ FAIL  tests/execution-mutation-body-limits.test.ts > S-5 execution mutation request body boundary > control rejects Content-Length one byte above 128 KiB before schema validation
+AssertionError: expected { error: { …(2) } } to deeply equal { error: { …(2) } }
+
+- Expected
++ Received
+
+  {
+    "error": {
+      "code": "INVALID_INPUT",
+-     "message": "Request body exceeds its limit.",
++     "message": "Execution control input is invalid.",
+    },
+  }
+
+ ❯ tests/execution-mutation-body-limits.test.ts:141:37
+    139|
+    140|       expect(response.status).toBe(400);
+    141|       expect(await response.json()).toEqual(OVERSIZED_ERROR);
+       |                                     ^
+    142|     });
+    143|
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[6/19]⎯
+
+ FAIL  tests/execution-mutation-body-limits.test.ts > S-5 execution mutation request body boundary > control rejects an oversized body without Content-Length before schema validation
+AssertionError: expected { error: { …(2) } } to deeply equal { error: { …(2) } }
+
+- Expected
++ Received
+
+  {
+    "error": {
+      "code": "INVALID_INPUT",
+-     "message": "Request body exceeds its limit.",
++     "message": "Execution control input is invalid.",
+    },
+  }
+
+ ❯ tests/execution-mutation-body-limits.test.ts:149:37
+    147|
+    148|       expect(response.status).toBe(400);
+    149|       expect(await response.json()).toEqual(OVERSIZED_ERROR);
+       |                                     ^
+    150|     });
+    151|
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[7/19]⎯
+
+ FAIL  tests/execution-mutation-body-limits.test.ts > S-5 execution mutation request body boundary > approval rejects Content-Length one byte above 128 KiB before schema validation
+AssertionError: expected { error: { …(2) } } to deeply equal { error: { …(2) } }
+
+- Expected
++ Received
+
+  {
+    "error": {
+      "code": "INVALID_INPUT",
+-     "message": "Request body exceeds its limit.",
++     "message": "Approval input is invalid.",
+    },
+  }
+
+ ❯ tests/execution-mutation-body-limits.test.ts:141:37
+    139|
+    140|       expect(response.status).toBe(400);
+    141|       expect(await response.json()).toEqual(OVERSIZED_ERROR);
+       |                                     ^
+    142|     });
+    143|
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[8/19]⎯
+
+ FAIL  tests/execution-mutation-body-limits.test.ts > S-5 execution mutation request body boundary > approval rejects an oversized body without Content-Length before schema validation
+AssertionError: expected { error: { …(2) } } to deeply equal { error: { …(2) } }
+
+- Expected
++ Received
+
+  {
+    "error": {
+      "code": "INVALID_INPUT",
+-     "message": "Request body exceeds its limit.",
++     "message": "Approval input is invalid.",
+    },
+  }
+
+ ❯ tests/execution-mutation-body-limits.test.ts:149:37
+    147|
+    148|       expect(response.status).toBe(400);
+    149|       expect(await response.json()).toEqual(OVERSIZED_ERROR);
+       |                                     ^
+    150|     });
+    151|
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[9/19]⎯
+
+ FAIL  tests/execution-mutation-body-limits.test.ts > S-5 execution mutation request body boundary > recovery resolve rejects Content-Length one byte above 128 KiB before schema validation
+AssertionError: expected { error: { …(2) } } to deeply equal { error: { …(2) } }
+
+- Expected
++ Received
+
+  {
+    "error": {
+      "code": "INVALID_INPUT",
+-     "message": "Request body exceeds its limit.",
++     "message": "Manual recovery input is invalid.",
+    },
+  }
+
+ ❯ tests/execution-mutation-body-limits.test.ts:141:37
+    139|
+    140|       expect(response.status).toBe(400);
+    141|       expect(await response.json()).toEqual(OVERSIZED_ERROR);
+       |                                     ^
+    142|     });
+    143|
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[10/19]⎯
+
+ FAIL  tests/execution-mutation-body-limits.test.ts > S-5 execution mutation request body boundary > recovery resolve rejects an oversized body without Content-Length before schema validation
+AssertionError: expected { error: { …(2) } } to deeply equal { error: { …(2) } }
+
+- Expected
++ Received
+
+  {
+    "error": {
+      "code": "INVALID_INPUT",
+-     "message": "Request body exceeds its limit.",
++     "message": "Manual recovery input is invalid.",
+    },
+  }
+
+ ❯ tests/execution-mutation-body-limits.test.ts:149:37
+    147|
+    148|       expect(response.status).toBe(400);
+    149|       expect(await response.json()).toEqual(OVERSIZED_ERROR);
+       |                                     ^
+    150|     });
+    151|
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[11/19]⎯
+
+ FAIL  tests/execution-mutation-body-limits.test.ts > S-5 execution mutation request body boundary > validation policy rejects Content-Length one byte above 128 KiB before schema validation
+AssertionError: expected { error: { …(2) } } to deeply equal { error: { …(2) } }
+
+- Expected
++ Received
+
+  {
+    "error": {
+      "code": "INVALID_INPUT",
+-     "message": "Request body exceeds its limit.",
++     "message": "Validation policy input is invalid.",
+    },
+  }
+
+ ❯ tests/execution-mutation-body-limits.test.ts:141:37
+    139|
+    140|       expect(response.status).toBe(400);
+    141|       expect(await response.json()).toEqual(OVERSIZED_ERROR);
+       |                                     ^
+    142|     });
+    143|
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[12/19]⎯
+
+ FAIL  tests/execution-mutation-body-limits.test.ts > S-5 execution mutation request body boundary > validation policy rejects an oversized body without Content-Length before schema validation
+AssertionError: expected { error: { …(2) } } to deeply equal { error: { …(2) } }
+
+- Expected
++ Received
+
+  {
+    "error": {
+      "code": "INVALID_INPUT",
+-     "message": "Request body exceeds its limit.",
++     "message": "Validation policy input is invalid.",
+    },
+  }
+
+ ❯ tests/execution-mutation-body-limits.test.ts:149:37
+    147|
+    148|       expect(response.status).toBe(400);
+    149|       expect(await response.json()).toEqual(OVERSIZED_ERROR);
+       |                                     ^
+    150|     });
+    151|
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[13/19]⎯
+
+
+ Test Files  1 failed (1)
+      Tests  19 failed | 9 passed (28)
+   Start at  10:19:34
+   Duration  3.45s (transform 623ms, setup 424ms, import 874ms, tests 61ms, environment 1.78s)
+
+# exit: 1

@@ -2,7 +2,7 @@ import { join } from "node:path";
 
 import {
   executionErrorResponse,
-  readExecutionJson,
+  readBoundedExecutionJson,
 } from "@/src/server/execution/execution-api";
 import {
   executionDatabasePath,
@@ -45,7 +45,7 @@ export async function POST(
   context: RouteContext,
 ): Promise<Response> {
   const { projectId } = await context.params;
-  const parsed = await readExecutionJson(request);
+  const parsed = await readBoundedExecutionJson(request);
   if (!parsed.ok) return parsed.response;
   const input = startExecutionInputSchema.safeParse(parsed.value);
   if (!input.success) {

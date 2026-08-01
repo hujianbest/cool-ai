@@ -1,7 +1,7 @@
 import { join } from "node:path";
 import { z } from "zod";
 
-import { readExecutionJson } from "@/src/server/execution/execution-api";
+import { readBoundedExecutionJson } from "@/src/server/execution/execution-api";
 import {
   getValidationPolicy,
   saveValidationPolicy,
@@ -78,7 +78,7 @@ export async function PUT(
   context: RouteContext,
 ): Promise<Response> {
   const { projectId } = await context.params;
-  const parsed = await readExecutionJson(request);
+  const parsed = await readBoundedExecutionJson(request);
   if (!parsed.ok) return parsed.response;
   const input = inputSchema.safeParse(parsed.value);
   if (!input.success) {

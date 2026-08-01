@@ -3,7 +3,7 @@ import { join } from "node:path";
 import { controlExecution } from "@/src/server/execution/execution-control-service";
 import {
   executionErrorResponse,
-  readExecutionJson,
+  readBoundedExecutionJson,
 } from "@/src/server/execution/execution-api";
 import { requestExecutionProcessTermination } from "@/src/server/execution/process-runner";
 import { sandboxExecutor } from "@/src/server/execution/sandbox-executor";
@@ -25,7 +25,7 @@ export async function POST(
   context: RouteContext,
 ): Promise<Response> {
   const { executionId } = await context.params;
-  const parsed = await readExecutionJson(request);
+  const parsed = await readBoundedExecutionJson(request);
   if (!parsed.ok) return parsed.response;
   const input = executionControlInputSchema.safeParse(parsed.value);
   if (!input.success) {

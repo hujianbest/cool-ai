@@ -3,7 +3,7 @@ import { join } from "node:path";
 import { decideExecutionApproval } from "@/src/server/execution/execution-approval-service";
 import {
   executionErrorResponse,
-  readExecutionJson,
+  readBoundedExecutionJson,
 } from "@/src/server/execution/execution-api";
 import { executionApprovalInputSchema } from "@/src/shared/execution-contracts";
 
@@ -20,7 +20,7 @@ export async function POST(
   context: RouteContext,
 ): Promise<Response> {
   const { approvalId, executionId } = await context.params;
-  const parsed = await readExecutionJson(request);
+  const parsed = await readBoundedExecutionJson(request);
   if (!parsed.ok) return parsed.response;
   const input = executionApprovalInputSchema.safeParse(parsed.value);
   if (!input.success) {

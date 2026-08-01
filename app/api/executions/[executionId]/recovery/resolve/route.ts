@@ -4,7 +4,7 @@ import { z } from "zod";
 import { openDatabase } from "@/src/server/db";
 import {
   executionErrorResponse,
-  readExecutionJson,
+  readBoundedExecutionJson,
 } from "@/src/server/execution/execution-api";
 import {
   executionDtoFromDatabase,
@@ -29,7 +29,7 @@ export async function POST(
   context: RouteContext,
 ): Promise<Response> {
   const { executionId } = await context.params;
-  const parsedBody = await readExecutionJson(request);
+  const parsedBody = await readBoundedExecutionJson(request);
   if (!parsedBody.ok) return parsedBody.response;
   const input = inputSchema.safeParse(parsedBody.value);
   if (!input.success) {

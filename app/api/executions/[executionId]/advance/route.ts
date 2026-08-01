@@ -3,7 +3,7 @@ import { join } from "node:path";
 import { advanceExecution } from "@/src/server/execution/action-orchestrator";
 import {
   executionErrorResponse,
-  readExecutionJson,
+  readBoundedExecutionJson,
 } from "@/src/server/execution/execution-api";
 import {
   createWindowsVerifiedExecutionAdapters,
@@ -21,7 +21,7 @@ export async function POST(
   context: RouteContext,
 ): Promise<Response> {
   const { executionId } = await context.params;
-  const parsed = await readExecutionJson(request);
+  const parsed = await readBoundedExecutionJson(request);
   if (!parsed.ok) return parsed.response;
   const input = advanceExecutionInputSchema.safeParse(parsed.value);
   if (!input.success) {

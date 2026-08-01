@@ -1,0 +1,20 @@
+# hf-gate-run
+# label: t52-green
+# command: npm.cmd test -- tests/execution-mutation-body-limits.test.ts
+# started: 2026-08-01T02:22:10+00:00
+
+> collaboration-cockpit@0.1.0 test
+> vitest run tests/execution-mutation-body-limits.test.ts
+
+
+ RUN  v4.1.10 D:/cool-ai
+
+(node:1184) ExperimentalWarning: SQLite is an experimental feature and might change at any time
+(Use `node --trace-warnings ...` to show where the warning was created)
+
+ Test Files  1 passed (1)
+      Tests  28 passed (28)
+   Start at  10:22:12
+   Duration  3.62s (transform 628ms, setup 420ms, import 886ms, tests 42ms, environment 1.99s)
+
+# exit: 0
