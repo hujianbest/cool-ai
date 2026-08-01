@@ -1,0 +1,1484 @@
+# hf-gate-run
+# label: t3-red
+# command: npm test -- tests/review-qualification.test.ts tests/agent-review-capability-ui.test.tsx
+# started: 2026-08-01T04:36:49+00:00
+
+> collaboration-cockpit@0.1.0 test
+> vitest run tests/review-qualification.test.ts tests/agent-review-capability-ui.test.tsx
+
+
+ RUN  v4.1.10 D:/cool-ai
+
+(node:8400) ExperimentalWarning: SQLite is an experimental feature and might change at any time
+(Use `node --trace-warnings ...` to show where the warning was created)
+ ❯ tests/agent-review-capability-ui.test.tsx (3 tests | 2 failed) 582ms
+     × preselects only the reviewer template, resets blank to false, and saves a strict boolean 211ms
+     × loads owner-edited false, preserves a failed true draft, and restores focus after save 161ms
+ ❯ tests/review-qualification.test.ts (4 tests | 4 failed) 975ms
+     × returns multiple current capable non-executors with auditable reasons and no selection 253ms
+     × never selects the sole candidate and reports the zero-candidate blocker 243ms
+     × recomputes after membership, capability, and executor changes 249ms
+     × rejects stale or non-current result ids instead of authorizing from a cached list 229ms
+
+⎯⎯⎯⎯⎯⎯⎯ Failed Tests 6 ⎯⎯⎯⎯⎯⎯⎯
+
+ FAIL  tests/agent-review-capability-ui.test.tsx > Agent review capability UI > preselects only the reviewer template, resets blank to false, and saves a strict boolean
+TestingLibraryElementError: Unable to find an accessible element with the role "checkbox" and name "可独立复核结果"
+
+Here are the accessible roles:
+
+  tabpanel:
+
+  Name "":
+  [36m<main[39m
+    [33maria-labelledby[39m=[32m"agent-resource-tab"[39m
+    [33mclass[39m=[32m"cockpit-flow"[39m
+    [33mid[39m=[32m"agent-resource-panel"[39m
+    [33mrole[39m=[32m"tabpanel"[39m
+  [36m/>[39m
+
+  --------------------------------------------------
+  banner:
+
+  Name "":
+  [36m<header[39m
+    [33mclass[39m=[32m"panel-heading"[39m
+  [36m/>[39m
+
+  --------------------------------------------------
+  paragraph:
+
+  Name "":
+  [36m<p[39m
+    [33mclass[39m=[32m"eyebrow"[39m
+  [36m/>[39m
+
+  Name "":
+  [36m<p[39m
+    [33mclass[39m=[32m"muted"[39m
+  [36m/>[39m
+
+  Name "":
+  [36m<p[39m
+    [33mclass[39m=[32m"eyebrow"[39m
+  [36m/>[39m
+
+  Name "":
+  [36m<p[39m
+    [33mclass[39m=[32m"muted"[39m
+  [36m/>[39m
+
+  Name "":
+  [36m<p[39m
+    [33mclass[39m=[32m"muted"[39m
+    [33mid[39m=[32m"agent-max-tokens-help"[39m
+  [36m/>[39m
+
+  --------------------------------------------------
+  heading:
+
+  Name "Agent":
+  [36m<h2 />[39m
+
+  Name "创建 Agent":
+  [36m<h2[39m
+    [33mid[39m=[32m"agent-editor-title"[39m
+  [36m/>[39m
+
+  --------------------------------------------------
+  button:
+
+  Name "创建 Agent":
+  [36m<button[39m
+    [33mtype[39m=[32m"button"[39m
+  [36m/>[39m
+
+  Name "重试加载 Agent":
+  [36m<button[39m
+    [33mtype[39m=[32m"button"[39m
+  [36m/>[39m
+
+  Name "关闭 Agent 编辑器":
+  [36m<button[39m
+    [33maria-label[39m=[32m"关闭 Agent 编辑器"[39m
+    [33mclass[39m=[32m"drawer-close"[39m
+    [33mdata-dialog-close[39m=[32m"true"[39m
+    [33mtype[39m=[32m"button"[39m
+  [36m/>[39m
+
+  Name "保存 Agent":
+  [36m<button[39m
+    [33mdisabled[39m=[32m""[39m
+    [33mtype[39m=[32m"submit"[39m
+  [36m/>[39m
+
+  --------------------------------------------------
+  complementary:
+
+  Name "创建 Agent":
+  [36m<aside[39m
+    [33maria-labelledby[39m=[32m"agent-editor-title"[39m
+    [33mclass[39m=[32m"cockpit-context agent-editor"[39m
+  [36m/>[39m
+
+  --------------------------------------------------
+  combobox:
+
+  Name "创建方式":
+  [36m<select[39m
+    [33mid[39m=[32m"agent-template"[39m
+  [36m/>[39m
+
+  Name "模型服务":
+  [36m<select[39m
+    [33mid[39m=[32m"agent-provider"[39m
+  [36m/>[39m
+
+  Name "强调色":
+  [36m<select[39m
+    [33mid[39m=[32m"agent-accent"[39m
+  [36m/>[39m
+
+  --------------------------------------------------
+  option:
+
+  Name "空白":
+  [36m<option[39m
+    [33mvalue[39m=[32m"blank"[39m
+  [36m/>[39m
+
+  Name "规划模板":
+  [36m<option[39m
+    [33mvalue[39m=[32m"planner"[39m
+  [36m/>[39m
+
+  Name "复核模板":
+  [36m<option[39m
+    [33mvalue[39m=[32m"reviewer"[39m
+  [36m/>[39m
+
+  Name "请选择已验证服务":
+  [36m<option[39m
+    [33mvalue[39m=[32m""[39m
+  [36m/>[39m
+
+  Name "Provider":
+  [36m<option[39m
+    [33mvalue[39m=[32m"provider"[39m
+  [36m/>[39m
+
+  Name "鼠尾草":
+  [36m<option[39m
+    [33mvalue[39m=[32m"sage"[39m
+  [36m/>[39m
+
+  Name "陶土":
+  [36m<option[39m
+    [33mvalue[39m=[32m"terracotta"[39m
+  [36m/>[39m
+
+  Name "金色":
+  [36m<option[39m
+    [33mvalue[39m=[32m"gold"[39m
+  [36m/>[39m
+
+  Name "石板":
+  [36m<option[39m
+    [33mvalue[39m=[32m"slate"[39m
+  [36m/>[39m
+
+  Name "玫瑰":
+  [36m<option[39m
+    [33mvalue[39m=[32m"rose"[39m
+  [36m/>[39m
+
+  Name "橄榄":
+  [36m<option[39m
+    [33mvalue[39m=[32m"olive"[39m
+  [36m/>[39m
+
+  --------------------------------------------------
+  textbox:
+
+  Name "Agent 名称":
+  [36m<input[39m
+    [33mid[39m=[32m"agent-name"[39m
+    [33mmaxlength[39m=[32m"80"[39m
+    [33mrequired[39m=[32m""[39m
+    [33mvalue[39m=[32m""[39m
+  [36m/>[39m
+
+  Name "职责":
+  [36m<textarea[39m
+    [33mid[39m=[32m"agent-role"[39m
+    [33mmaxlength[39m=[32m"160"[39m
+    [33mrequired[39m=[32m""[39m
+  [36m/>[39m
+
+  Name "系统提示":
+  [36m<textarea[39m
+    [33mid[39m=[32m"agent-system-prompt"[39m
+    [33mmaxlength[39m=[32m"20000"[39m
+    [33mrequired[39m=[32m""[39m
+  [36m/>[39m
+
+  Name "模型":
+  [36m<input[39m
+    [33mid[39m=[32m"agent-model"[39m
+    [33mreadonly[39m=[32m""[39m
+    [33mvalue[39m=[32m""[39m
+  [36m/>[39m
+
+  Name "头像文字":
+  [36m<input[39m
+    [33mid[39m=[32m"agent-avatar"[39m
+    [33mrequired[39m=[32m""[39m
+    [33mvalue[39m=[32m""[39m
+  [36m/>[39m
+
+  --------------------------------------------------
+  group:
+
+  Name "技能":
+  [36m<fieldset[39m
+    [33mclass[39m=[32m"stack"[39m
+    [33mid[39m=[32m"agent-skills"[39m
+    [33mtabindex[39m=[32m"-1"[39m
+  [36m/>[39m
+
+  Name "工具权限":
+  [36m<fieldset[39m
+    [33mclass[39m=[32m"stack"[39m
+    [33mid[39m=[32m"agent-permissions"[39m
+    [33mtabindex[39m=[32m"-1"[39m
+  [36m/>[39m
+
+  --------------------------------------------------
+  checkbox:
+
+  Name "读取文件":
+  [36m<input[39m
+    [33mchecked[39m=[32m""[39m
+    [33mid[39m=[32m"agent-permission-readFiles"[39m
+    [33mtype[39m=[32m"checkbox"[39m
+  [36m/>[39m
+
+  Name "写入文件":
+  [36m<input[39m
+    [33mid[39m=[32m"agent-permission-writeFiles"[39m
+    [33mtype[39m=[32m"checkbox"[39m
+  [36m/>[39m
+
+  Name "运行命令":
+  [36m<input[39m
+    [33mid[39m=[32m"agent-permission-runCommands"[39m
+    [33mtype[39m=[32m"checkbox"[39m
+  [36m/>[39m
+
+  --------------------------------------------------
+  spinbutton:
+
+  Name "Token 预算":
+  [36m<input[39m
+    [33maria-describedby[39m=[32m"agent-max-tokens-help"[39m
+    [33mid[39m=[32m"agent-max-tokens"[39m
+    [33mmax[39m=[32m"1000000"[39m
+    [33mmin[39m=[32m"1"[39m
+    [33mstep[39m=[32m"1"[39m
+    [33mtype[39m=[32m"number"[39m
+    [33mvalue[39m=[32m"16000"[39m
+  [36m/>[39m
+
+  Name "接力轮次":
+  [36m<input[39m
+    [33mid[39m=[32m"agent-max-handoffs"[39m
+    [33mmax[39m=[32m"100"[39m
+    [33mmin[39m=[32m"1"[39m
+    [33mstep[39m=[32m"1"[39m
+    [33mtype[39m=[32m"number"[39m
+    [33mvalue[39m=[32m"8"[39m
+  [36m/>[39m
+
+  --------------------------------------------------
+
+Ignored nodes: comments, script, style
+[36m<body>[39m
+  [36m<div>[39m
+    [36m<main[39m
+      [33maria-labelledby[39m=[32m"agent-resource-tab"[39m
+      [33mclass[39m=[32m"cockpit-flow"[39m
+      [33mid[39m=[32m"agent-resource-panel"[39m
+      [33mrole[39m=[32m"tabpanel"[39m
+    [36m>[39m
+      [36m<header[39m
+        [33mclass[39m=[32m"panel-heading"[39m
+      [36m>[39m
+        [36m<div[39m
+          [33mclass[39m=[32m"stack"[39m
+        [36m>[39m
+          [36m<p[39m
+            [33mclass[39m=[32m"eyebrow"[39m
+          [36m>[39m
+            [0m团队资源[0m
+          [36m</p>[39m
+          [36m<h2>[39m
+            [0mAgent[0m
+          [36m</h2>[39m
+        [36m</div>[39m
+        [36m<button[39m
+          [33mtype[39m=[32m"button"[39m
+        [36m>[39m
+          [0m创建 Agent[0m
+        [36m</button>[39m
+      [36m</header>[39m
+      [36m<div[39m
+        [33mclass[39m=[32m"stack"[39m
+      [36m>[39m
+        [36m<p[39m
+          [33mclass[39m=[32m"muted"[39m
+        [36m>[39m
+          [0m暂无 Agent。[0m
+        [36m</p>[39m
+        [36m<button[39m
+          [33mtype[39m=[32m"button"[39m
+        [36m>[39m
+          [0m重试加载 Agent[0m
+        [36m</button>[39m
+      [36m</div>[39m
+    [36m</main>[39m
+    [36m<aside[39m
+      [33maria-labelledby[39m=[32m"agent-editor-title"[39m
+      [33mclass[39m=[32m"cockpit-context agent-editor"[39m
+    [36m>[39m
+      [36m<button[39m
+        [33maria-label[39m=[32m"关闭 Agent 编辑器"[39m
+        [33mclass[39m=[32m"drawer-close"[39m
+        [33mdata-dialog-close[39m=[32m"true"[39m
+        [33mtype[39m=[32m"button"[39m
+      [36m>[39m
+        [0m关闭[0m
+      [36m</button>[39m
+      [36m<div[39m
+        [33mclass[39m=[32m"stack"[39m
+      [36m>[39m
+        [36m<p[39m
+          [33mclass[39m=[32m"eyebrow"[39m
+        [36m>[39m
+          [0m角色配置[0m
+        [36m</p>[39m
+        [36m<h2[39m
+          [33mid[39m=[32m"agent-editor-title"[39m
+        [36m>[39m
+          [0m创建 Agent[0m
+        [36m</h2>[39m
+      [36m</div>[39m
+      [36m<form[39m
+        [33mclass[39m=[32m"stack"[39m
+      [36m>[39m
+        [36m<div[39m
+          [33mclass[39m=[32m"form-field"[39m
+        [36m>[39m
+          [36m<label[39m
+            [33mfor[39m=[32m"agent-template"[39m
+          [36m>[39m
+            [0m创建方式[0m
+          [36m</label>[39m
+          [36m<select[39m
+            [33mid[39m=[32m"agent-template"[39m
+          [36m>[39m
+            [36m<option[39m
+              [33mvalue[39m=[32m"blank"[39m
+            [36m>[39m
+              [0m空白[0m
+            [36m</option>[39m
+            [36m<option[39m
+              [33mvalue[39m=[32m"planner"[39m
+            [36m>[39m
+              [0m规划[0m
+              [0m模板[0m
+            [36m</option>[39m
+            [36m<option[39m
+              [33mvalue[39m=[32m"reviewer"[39m
+            [36m>[39m
+              [0m复核[0m
+              [0m模板[0m
+            [36m</option>[39m
+          [36m</select>[39m
+        [36m</div>[39m
+        [36m<div[39m
+          [33mclass[39m=[32m"form-field"[39m
+        [36m>[39m
+          [36m<label[39m
+            [33mfor[39m=[32m"agent-name"[39m
+          [36m>[39m
+            [0mAgent 名称[0m
+          [36m</label>[39m
+          [36m<input[39m
+            [33mid[39m=[32m"agent-name"[39m
+            [33mmaxlength[39m=[32m"80"[39m
+            [33mrequired[39m=[32m""[39m
+            [33mvalue[39m=[32m""[39m
+          [36m/>[39m
+        [36m</div>[39m
+        [36m<div[39m
+          [33mclass[39m=[32m"form-field"[39m
+        [36m>[39m
+          [36m<label[39m
+            [33mfor[39m=[32m"agent-role"[39m
+          [36m>[39m
+            [0m职责[0m
+          [36m</label>[39m
+          [36m<textarea[39m
+            [33mid[39m=[32m"agent-role"[39m
+            [33mmaxlength[39m=[32m"160"[39m
+            [33mrequired[39m=[32m""[39m
+          [36m/>[39m
+        [36m</div>[39m
+        [36m<div[39m
+          [33mclass[39m=[32m"form-field"[39m
+        [36m>[39m
+          [36m<label[39m
+            [33mfor[39m=[32m"agent-system-prompt"[39m
+          [36m>[39m
+            [0m系统提示[0m
+          [36m</label>[39m
+          [36m<textarea[39m
+            [33mid[39m=[32m"agent-system-prompt"[39m
+            [33mmaxlength[39m=[32m"20000"[39m
+            [33mrequired[39m=[32m""[39m
+          [36m/>[39m
+        [36m</div>[39m
+        [36m<div[39m
+          [33mclass[39m=[32m"form-field"[39m
+        [36m>[39m
+          [36m<label[39m
+            [33mfor[39m=[32m"agent-provider"[39m
+          [36m>[39m
+            [0m模型服务[0m
+          [36m</label>[39m
+          [36m<select[39m
+            [33mid[39m=[32m"agent-provider"[39m
+          [36m>[39m
+            [36m<option[39m
+              [33mvalue[39m=[32m""[39m
+            [36m>[39m
+              [0m请选择已验证服务[0m
+            [36m</option>[39m
+            [36m<option[39m
+              [33mvalue[39m=[32m"provider"[39m
+            [36m>[39m
+              [0mProvider[0m
+            [36m</option>[39m
+          [36m</select>[39m
+        [36m</div>[39m
+        [36m<div[39m
+          [33mclass[39m=[32m"form-field"[39m
+        [36m>[39m
+          [36m<label[39m
+            [33mfor[39m=[32m"agent-model"[39m
+          [36m>[39m
+            [0m模型[0m
+          [36m</label>[39m
+          [36m<input[39m
+            [33mid[39m=[32m"agent-model"[39m
+            [33mreadonly[39m=[32m""[39m
+            [33mvalue[39m=[32m""[39m
+          [36m/>[39m
+        [36m</div>[39m
+        [36m<fieldset[39m
+          [33mclass[39m=[32m"stack"[39m
+          [33mid[39m=[32m"agent-skills"[39m
+          [33mtabindex[39m=[32m"-1"[39m
+        [36m>[39m
+          [36m<legend>[39m
+            [0m技能[0m
+          [36m</legend>[39m
+          [36m<p[39m
+            [33mclass[39m=[32m"muted"[39m
+          [36m>[39m
+            [0m暂无技能，请先创建技能。[0m
+          [36m</p>[39m
+        [36m</fieldset>[39m
+        [36m<fieldset[39m
+          [33mclass[39m=[32m"stack"[39m
+          [33mid[39m=[32m"agent-permissions"[39m
+          [33mtabindex[39m=[32m"-1"[39m
+        [36m>[39m
+          [36m<legend>[39m
+            [0m工具权限[0m
+          [36m</legend>[39m
+          [36m<div[39m
+            [33mclass[39m=[32m"stack"[39m
+          [36m>[39m
+            [36m<label[39m
+              [33mclass[39m=[32m"check-row"[39m
+            [36m>[39m
+              [36m<input[39m
+                [33mchecked[39m=[32m""[39m
+                [33mid[39m=[32m"agent-permission-readFiles"[39m
+                [33mtype[39m=[32m"checkbox"[39m
+              [36m/>[39m
+              [0m读取文件[0m
+            [36m</label>[39m
+          [36m</div>[39m
+          [36m<div[39m
+            [33mclass[39m=[32m"stack"[39m
+          [36m>[39m
+            [36m<label[39m
+              [33mclass[39m=[32m"check-row"[39m
+            [36m>[39m
+              [36m<input[39m
+                [33mid[39m=[32m"agent-permission-writeFiles"[39m
+                [33mtype[39m=[32m"checkbox"[39m
+              [36m/>[39m
+              [0m写入文件[0m
+            [36m</label>[39m
+          [36m</div>[39m
+          [36m<div[39m
+            [33mclass[39m=[32m"stack"[39m
+          [36m>[39m
+            [36m<label[39m
+              [33mclass[39m=[32m"check-row"[39m
+            [36m>[39m
+              [36m<input[39m
+                [33mid[39m=[32m"agent-permission-runCommands"[39m
+                [33mtype[39m=[32m"checkbox"[39m
+              [36m/>[39m
+              [0m运行命令[0m
+            [36m</label>[39m
+          [36m</div>[39m
+        [36m</fieldset>[39m
+        [36m<div[39m
+          [33mclass[39m=[32m"form-field"[39m
+        [36m>[39m
+          [36m<label[39m
+            [33mfor[39m=[32m"agent-max-tokens"[39m
+          [36m>[39m
+            [0mToken 预算[0m
+          [36m</label>[39m
+          [36m<input[39m
+            [33maria-describedby[39m=[32m"agent-max-tokens-help"[39m
+            [33mid[39m=[32m"agent-max-tokens"[39m
+            [33mmax[39m=[32m"1000000"[39m
+            [33mmin[39m=[32m"1"[39m
+            [33mstep[39m=[32m"1"[39m
+            [33mtype[39m=[32m"number"[39m
+            [33mvalue[39m=[32m"16000"[39m
+          [36m/>[39m
+          [36m<p[39m
+            [33mclass[39m=[32m"muted"[39m
+            [33mid[39m=[32m"agent-max-tokens-help"[39m
+          [36m>[39m
+            [0m每次运行 1–1000000 tokens。[0m
+          [36m</p>[39m
+        [36m</div>[39m
+        [36m<div[39m
+          [33mclass[39m=[32m"form-field"[39m
+        [36m>[39m
+          [36m<label[39m
+            [33mfor[39m=[32m"agent-max-handoffs"[39m
+          [36m>[39m
+            [0m接力轮次[0m
+          [36m</label>[39m
+          [36m<input[39m
+            [33mid[39m=[32m"agent-max-handoffs"[39m
+            [33mmax[39m=[32m"100"[39m
+            [33mmin[39m=[32m"1"[39m
+            [33mstep[39m=[32m"1"[39m
+            [33mtype[39m=[32m"number"[39m
+            [33mvalue[39m=[32m"8"[39m
+          [36m/>[39m
+        [36m</div>[39m
+        [36m<div[39m
+          [33mclass[39m=[32m"form-field"[39m
+        [36m>[39m
+          [36m<label[39m
+            [33mfor[39m=[32m"agent-avatar"[39m
+          [36m>[39m
+            [0m头像文字[0m
+          [36m</label>[39m
+          [36m<input[39m
+            [33mid[39m=[32m"agent-avatar"[39m
+            [33mrequired[39m=[32m""[39m
+            [33mvalue[39m=[32m""[39m
+          [36m/>[39m
+        [36m</div>[39m
+        [36m<div[39m
+          [33mclass[39m=[32m"form-field"[39m
+        [36m>[39m
+          [36m<label[39m
+            [33mfor[39m=[32m"agent-accent"[39m
+          [36m>[39m
+            [0m强调色[0m
+          [36m</label>[39m
+          [36m<select[39m
+            [33mid[39m=[32m"agent-accent"[39m
+          [36m>[39m
+            [36m<option[39m
+              [33mvalue[39m=[32m"sage"[39m
+            [36m>[39m
+              [0m鼠尾草[0m
+            [36m</option>[39m
+            [36m<option[39m
+              [33mvalue[39m=[32m"terracotta"[39m
+            [36m>[39m
+              [0m陶土[0m
+            [36m</option>[39m
+            [36m<option[39m
+              [33mvalue[39m=[32m"gold"[39m
+            [36m>[39m
+              [0m金色[0m
+            [36m</option>[39m
+            [36m<option[39m
+              [33mvalue[39m=[32m"slate"[39m
+            [36m>[39m
+              [0m石板[0m
+            [36m</option>[39m
+            [36m<option[39m
+              [33mvalue[39m=[32m"rose"[39m
+            [36m>[39m
+              [0m玫瑰[0m
+            [36m</option>[39m
+            [36m<option[39m
+              [33mvalue[39m=[32m"olive"[39m
+            [36m>[39m
+              [0m橄榄[0m
+            [36m</option>[39m
+          [36m</select>[39m
+        [36m</div>[39m
+        [36m<button[39m
+          [33mdisabled[39m=[32m""[39m
+          [33mtype[39m=[32m"submit"[39m
+        [36m>[39m
+          [0m保存 Agent[0m
+        [36m</button>[39m
+      [36m</form>[39m
+    [36m</aside>[39m
+  [36m</div>[39m
+[36m</body>[39m
+ ❯ Object.getElementError node_modules/@testing-library/dom/dist/config.js:37:19
+ ❯ node_modules/@testing-library/dom/dist/query-helpers.js:76:38
+ ❯ node_modules/@testing-library/dom/dist/query-helpers.js:52:17
+ ❯ node_modules/@testing-library/dom/dist/query-helpers.js:95:19
+ ❯ tests/agent-review-capability-ui.test.tsx:117:31
+    115|     await screen.findByText("暂无 Agent。");
+    116|     await user.click(screen.getByRole("button", { name: "创建 Agent" }));
+    117|     const capability = screen.getByRole("checkbox", { name: "可独立复核结果" …
+       |                               ^
+    118|     expect(capability).not.toBeChecked();
+    119|     expect(capability).toHaveAccessibleDescription(
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[1/6]⎯
+
+ FAIL  tests/agent-review-capability-ui.test.tsx > Agent review capability UI > loads owner-edited false, preserves a failed true draft, and restores focus after save
+TestingLibraryElementError: Unable to find an accessible element with the role "checkbox" and name "可独立复核结果"
+
+Here are the accessible roles:
+
+  tabpanel:
+
+  Name "":
+  [36m<main[39m
+    [33maria-labelledby[39m=[32m"agent-resource-tab"[39m
+    [33mclass[39m=[32m"cockpit-flow"[39m
+    [33mid[39m=[32m"agent-resource-panel"[39m
+    [33mrole[39m=[32m"tabpanel"[39m
+  [36m/>[39m
+
+  --------------------------------------------------
+  banner:
+
+  Name "":
+  [36m<header[39m
+    [33mclass[39m=[32m"panel-heading"[39m
+  [36m/>[39m
+
+  --------------------------------------------------
+  paragraph:
+
+  Name "":
+  [36m<p[39m
+    [33mclass[39m=[32m"eyebrow"[39m
+  [36m/>[39m
+
+  Name "":
+  [36m<p />[39m
+
+  Name "":
+  [36m<p[39m
+    [33mclass[39m=[32m"muted"[39m
+  [36m/>[39m
+
+  Name "":
+  [36m<p />[39m
+
+  Name "":
+  [36m<p[39m
+    [33mclass[39m=[32m"muted"[39m
+  [36m/>[39m
+
+  Name "":
+  [36m<p[39m
+    [33mclass[39m=[32m"eyebrow"[39m
+  [36m/>[39m
+
+  Name "":
+  [36m<p[39m
+    [33mclass[39m=[32m"muted"[39m
+  [36m/>[39m
+
+  Name "":
+  [36m<p[39m
+    [33mclass[39m=[32m"muted"[39m
+    [33mid[39m=[32m"agent-max-tokens-help"[39m
+  [36m/>[39m
+
+  --------------------------------------------------
+  heading:
+
+  Name "Agent":
+  [36m<h2 />[39m
+
+  Name "Agent":
+  [36m<h3[39m
+    [33mtabindex[39m=[32m"-1"[39m
+  [36m/>[39m
+
+  Name "编辑 Agent":
+  [36m<h2[39m
+    [33mid[39m=[32m"agent-editor-title"[39m
+  [36m/>[39m
+
+  --------------------------------------------------
+  button:
+
+  Name "创建 Agent":
+  [36m<button[39m
+    [33mtype[39m=[32m"button"[39m
+  [36m/>[39m
+
+  Name "编辑 Agent":
+  [36m<button[39m
+    [33maria-label[39m=[32m"编辑 Agent"[39m
+    [33mtype[39m=[32m"button"[39m
+  [36m/>[39m
+
+  Name "关闭 Agent 编辑器":
+  [36m<button[39m
+    [33maria-label[39m=[32m"关闭 Agent 编辑器"[39m
+    [33mclass[39m=[32m"drawer-close"[39m
+    [33mdata-dialog-close[39m=[32m"true"[39m
+    [33mtype[39m=[32m"button"[39m
+  [36m/>[39m
+
+  Name "保存 Agent":
+  [36m<button[39m
+    [33mtype[39m=[32m"submit"[39m
+  [36m/>[39m
+
+  --------------------------------------------------
+  list:
+
+  Name "":
+  [36m<ul[39m
+    [33mclass[39m=[32m"timeline"[39m
+  [36m/>[39m
+
+  --------------------------------------------------
+  listitem:
+
+  Name "":
+  [36m<li[39m
+    [33mclass[39m=[32m"timeline-item"[39m
+  [36m/>[39m
+
+  --------------------------------------------------
+  article:
+
+  Name "":
+  [36m<article[39m
+    [33mclass[39m=[32m"stack"[39m
+    [33mdata-accent[39m=[32m"sage"[39m
+  [36m/>[39m
+
+  --------------------------------------------------
+  complementary:
+
+  Name "编辑 Agent":
+  [36m<aside[39m
+    [33maria-labelledby[39m=[32m"agent-editor-title"[39m
+    [33mclass[39m=[32m"cockpit-context agent-editor"[39m
+  [36m/>[39m
+
+  --------------------------------------------------
+  combobox:
+
+  Name "创建方式":
+  [36m<select[39m
+    [33mid[39m=[32m"agent-template"[39m
+  [36m/>[39m
+
+  Name "模型服务":
+  [36m<select[39m
+    [33mid[39m=[32m"agent-provider"[39m
+  [36m/>[39m
+
+  Name "强调色":
+  [36m<select[39m
+    [33mid[39m=[32m"agent-accent"[39m
+  [36m/>[39m
+
+  --------------------------------------------------
+  option:
+
+  Name "空白":
+  [36m<option[39m
+    [33mvalue[39m=[32m"blank"[39m
+  [36m/>[39m
+
+  Name "规划模板":
+  [36m<option[39m
+    [33mvalue[39m=[32m"planner"[39m
+  [36m/>[39m
+
+  Name "复核模板":
+  [36m<option[39m
+    [33mvalue[39m=[32m"reviewer"[39m
+  [36m/>[39m
+
+  Name "请选择已验证服务":
+  [36m<option[39m
+    [33mvalue[39m=[32m""[39m
+  [36m/>[39m
+
+  Name "Provider":
+  [36m<option[39m
+    [33mvalue[39m=[32m"provider"[39m
+  [36m/>[39m
+
+  Name "鼠尾草":
+  [36m<option[39m
+    [33mvalue[39m=[32m"sage"[39m
+  [36m/>[39m
+
+  Name "陶土":
+  [36m<option[39m
+    [33mvalue[39m=[32m"terracotta"[39m
+  [36m/>[39m
+
+  Name "金色":
+  [36m<option[39m
+    [33mvalue[39m=[32m"gold"[39m
+  [36m/>[39m
+
+  Name "石板":
+  [36m<option[39m
+    [33mvalue[39m=[32m"slate"[39m
+  [36m/>[39m
+
+  Name "玫瑰":
+  [36m<option[39m
+    [33mvalue[39m=[32m"rose"[39m
+  [36m/>[39m
+
+  Name "橄榄":
+  [36m<option[39m
+    [33mvalue[39m=[32m"olive"[39m
+  [36m/>[39m
+
+  --------------------------------------------------
+  textbox:
+
+  Name "Agent 名称":
+  [36m<input[39m
+    [33mid[39m=[32m"agent-name"[39m
+    [33mmaxlength[39m=[32m"80"[39m
+    [33mrequired[39m=[32m""[39m
+    [33mvalue[39m=[32m"Agent"[39m
+  [36m/>[39m
+
+  Name "职责":
+  [36m<textarea[39m
+    [33mid[39m=[32m"agent-role"[39m
+    [33mmaxlength[39m=[32m"160"[39m
+    [33mrequired[39m=[32m""[39m
+  [36m/>[39m
+
+  Name "系统提示":
+  [36m<textarea[39m
+    [33mid[39m=[32m"agent-system-prompt"[39m
+    [33mmaxlength[39m=[32m"20000"[39m
+    [33mrequired[39m=[32m""[39m
+  [36m/>[39m
+
+  Name "模型":
+  [36m<input[39m
+    [33mid[39m=[32m"agent-model"[39m
+    [33mreadonly[39m=[32m""[39m
+    [33mvalue[39m=[32m"model-a"[39m
+  [36m/>[39m
+
+  Name "头像文字":
+  [36m<input[39m
+    [33mid[39m=[32m"agent-avatar"[39m
+    [33mrequired[39m=[32m""[39m
+    [33mvalue[39m=[32m"A"[39m
+  [36m/>[39m
+
+  --------------------------------------------------
+  group:
+
+  Name "技能":
+  [36m<fieldset[39m
+    [33mclass[39m=[32m"stack"[39m
+    [33mid[39m=[32m"agent-skills"[39m
+    [33mtabindex[39m=[32m"-1"[39m
+  [36m/>[39m
+
+  Name "工具权限":
+  [36m<fieldset[39m
+    [33mclass[39m=[32m"stack"[39m
+    [33mid[39m=[32m"agent-permissions"[39m
+    [33mtabindex[39m=[32m"-1"[39m
+  [36m/>[39m
+
+  --------------------------------------------------
+  checkbox:
+
+  Name "读取文件":
+  [36m<input[39m
+    [33mchecked[39m=[32m""[39m
+    [33mid[39m=[32m"agent-permission-readFiles"[39m
+    [33mtype[39m=[32m"checkbox"[39m
+  [36m/>[39m
+
+  Name "写入文件":
+  [36m<input[39m
+    [33mid[39m=[32m"agent-permission-writeFiles"[39m
+    [33mtype[39m=[32m"checkbox"[39m
+  [36m/>[39m
+
+  Name "运行命令":
+  [36m<input[39m
+    [33mid[39m=[32m"agent-permission-runCommands"[39m
+    [33mtype[39m=[32m"checkbox"[39m
+  [36m/>[39m
+
+  --------------------------------------------------
+  spinbutton:
+
+  Name "Token 预算":
+  [36m<input[39m
+    [33maria-describedby[39m=[32m"agent-max-tokens-help"[39m
+    [33mid[39m=[32m"agent-max-tokens"[39m
+    [33mmax[39m=[32m"1000000"[39m
+    [33mmin[39m=[32m"1"[39m
+    [33mstep[39m=[32m"1"[39m
+    [33mtype[39m=[32m"number"[39m
+    [33mvalue[39m=[32m"8000"[39m
+  [36m/>[39m
+
+  Name "接力轮次":
+  [36m<input[39m
+    [33mid[39m=[32m"agent-max-handoffs"[39m
+    [33mmax[39m=[32m"100"[39m
+    [33mmin[39m=[32m"1"[39m
+    [33mstep[39m=[32m"1"[39m
+    [33mtype[39m=[32m"number"[39m
+    [33mvalue[39m=[32m"4"[39m
+  [36m/>[39m
+
+  --------------------------------------------------
+
+Ignored nodes: comments, script, style
+[36m<body>[39m
+  [36m<div>[39m
+    [36m<main[39m
+      [33maria-labelledby[39m=[32m"agent-resource-tab"[39m
+      [33mclass[39m=[32m"cockpit-flow"[39m
+      [33mid[39m=[32m"agent-resource-panel"[39m
+      [33mrole[39m=[32m"tabpanel"[39m
+    [36m>[39m
+      [36m<header[39m
+        [33mclass[39m=[32m"panel-heading"[39m
+      [36m>[39m
+        [36m<div[39m
+          [33mclass[39m=[32m"stack"[39m
+        [36m>[39m
+          [36m<p[39m
+            [33mclass[39m=[32m"eyebrow"[39m
+          [36m>[39m
+            [0m团队资源[0m
+          [36m</p>[39m
+          [36m<h2>[39m
+            [0mAgent[0m
+          [36m</h2>[39m
+        [36m</div>[39m
+        [36m<button[39m
+          [33mtype[39m=[32m"button"[39m
+        [36m>[39m
+          [0m创建 Agent[0m
+        [36m</button>[39m
+      [36m</header>[39m
+      [36m<ul[39m
+        [33mclass[39m=[32m"timeline"[39m
+      [36m>[39m
+        [36m<li[39m
+          [33mclass[39m=[32m"timeline-item"[39m
+        [36m>[39m
+          [36m<article[39m
+            [33mclass[39m=[32m"stack"[39m
+            [33mdata-accent[39m=[32m"sage"[39m
+          [36m>[39m
+            [36m<div[39m
+              [33mclass[39m=[32m"agent-identity"[39m
+            [36m>[39m
+              [36m<span[39m
+                [33maria-hidden[39m=[32m"true"[39m
+                [33mclass[39m=[32m"agent-avatar"[39m
+              [36m>[39m
+                [0mA[0m
+              [36m</span>[39m
+              [36m<h3[39m
+                [33mtabindex[39m=[32m"-1"[39m
+              [36m>[39m
+                [0mAgent[0m
+              [36m</h3>[39m
+            [36m</div>[39m
+            [36m<p>[39m
+              [0mRole[0m
+            [36m</p>[39m
+            [36m<p[39m
+              [33mclass[39m=[32m"muted"[39m
+            [36m>[39m
+              [0mmodel-a[0m
+            [36m</p>[39m
+            [36m<p>[39m
+              [0m无技能[0m
+            [36m</p>[39m
+            [36m<p[39m
+              [33mclass[39m=[32m"muted"[39m
+            [36m>[39m
+              [0m读取[0m
+            [36m</p>[39m
+            [36m<button[39m
+              [33maria-label[39m=[32m"编辑 Agent"[39m
+              [33mtype[39m=[32m"button"[39m
+            [36m>[39m
+              [0m编辑[0m
+            [36m</button>[39m
+          [36m</article>[39m
+        [36m</li>[39m
+      [36m</ul>[39m
+    [36m</main>[39m
+    [36m<aside[39m
+      [33maria-labelledby[39m=[32m"agent-editor-title"[39m
+      [33mclass[39m=[32m"cockpit-context agent-editor"[39m
+    [36m>[39m
+      [36m<button[39m
+        [33maria-label[39m=[32m"关闭 Agent 编辑器"[39m
+        [33mclass[39m=[32m"drawer-close"[39m
+        [33mdata-dialog-close[39m=[32m"true"[39m
+        [33mtype[39m=[32m"button"[39m
+      [36m>[39m
+        [0m关闭[0m
+      [36m</button>[39m
+      [36m<div[39m
+        [33mclass[39m=[32m"stack"[39m
+      [36m>[39m
+        [36m<p[39m
+          [33mclass[39m=[32m"eyebrow"[39m
+        [36m>[39m
+          [0m角色配置[0m
+        [36m</p>[39m
+        [36m<h2[39m
+          [33mid[39m=[32m"agent-editor-title"[39m
+        [36m>[39m
+          [0m编辑 Agent[0m
+        [36m</h2>[39m
+      [36m</div>[39m
+      [36m<form[39m
+        [33mclass[39m=[32m"stack"[39m
+      [36m>[39m
+        [36m<div[39m
+          [33mclass[39m=[32m"form-field"[39m
+        [36m>[39m
+          [36m<label[39m
+            [33mfor[39m=[32m"agent-template"[39m
+          [36m>[39m
+            [0m创建方式[0m
+          [36m</label>[39m
+          [36m<select[39m
+            [33mid[39m=[32m"agent-template"[39m
+          [36m>[39m
+            [36m<option[39m
+              [33mvalue[39m=[32m"blank"[39m
+            [36m>[39m
+              [0m空白[0m
+            [36m</option>[39m
+            [36m<option[39m
+              [33mvalue[39m=[32m"planner"[39m
+            [36m>[39m
+              [0m规划[0m
+              [0m模板[0m
+            [36m</option>[39m
+            [36m<option[39m
+              [33mvalue[39m=[32m"reviewer"[39m
+            [36m>[39m
+              [0m复核[0m
+              [0m模板[0m
+            [36m</option>[39m
+          [36m</select>[39m
+        [36m</div>[39m
+        [36m<div[39m
+          [33mclass[39m=[32m"form-field"[39m
+        [36m>[39m
+          [36m<label[39m
+            [33mfor[39m=[32m"agent-name"[39m
+          [36m>[39m
+            [0mAgent 名称[0m
+          [36m</label>[39m
+          [36m<input[39m
+            [33mid[39m=[32m"agent-name"[39m
+            [33mmaxlength[39m=[32m"80"[39m
+            [33mrequired[39m=[32m""[39m
+            [33mvalue[39m=[32m"Agent"[39m
+          [36m/>[39m
+        [36m</div>[39m
+        [36m<div[39m
+          [33mclass[39m=[32m"form-field"[39m
+        [36m>[39m
+          [36m<label[39m
+            [33mfor[39m=[32m"agent-role"[39m
+          [36m>[39m
+            [0m职责[0m
+          [36m</label>[39m
+          [36m<textarea[39m
+            [33mid[39m=[32m"agent-role"[39m
+            [33mmaxlength[39m=[32m"160"[39m
+            [33mrequired[39m=[32m""[39m
+          [36m>[39m
+            [0mRole[0m
+          [36m</textarea>[39m
+        [36m</div>[39m
+        [36m<div[39m
+          [33mclass[39m=[32m"form-field"[39m
+        [36m>[39m
+          [36m<label[39m
+            [33mfor[39m=[32m"agent-system-prompt"[39m
+          [36m>[39m
+            [0m系统提示[0m
+          [36m</label>[39m
+          [36m<textarea[39m
+            [33mid[39m=[32m"agent-system-prompt"[39m
+            [33mmaxlength[39m=[32m"20000"[39m
+            [33mrequired[39m=[32m""[39m
+          [36m>[39m
+            [0mPrompt[0m
+          [36m</textarea>[39m
+        [36m</div>[39m
+        [36m<div[39m
+          [33mclass[39m=[32m"form-field"[39m
+        [36m>[39m
+          [36m<label[39m
+            [33mfor[39m=[32m"agent-provider"[39m
+          [36m>[39m
+            [0m模型服务[0m
+          [36m</label>[39m
+          [36m<select[39m
+            [33mid[39m=[32m"agent-provider"[39m
+          [36m>[39m
+            [36m<option[39m
+              [33mvalue[39m=[32m""[39m
+            [36m>[39m
+              [0m请选择已验证服务[0m
+            [36m</option>[39m
+            [36m<option[39m
+              [33mvalue[39m=[32m"provider"[39m
+            [36m>[39m
+              [0mProvider[0m
+            [36m</option>[39m
+          [36m</select>[39m
+        [36m</div>[39m
+        [36m<div[39m
+          [33mclass[39m=[32m"form-field"[39m
+        [36m>[39m
+          [36m<label[39m
+            [33mfor[39m=[32m"agent-model"[39m
+          [36m>[39m
+            [0m模型[0m
+          [36m</label>[39m
+          [36m<input[39m
+            [33mid[39m=[32m"agent-model"[39m
+            [33mreadonly[39m=[32m""[39m
+            [33mvalue[39m=[32m"model-a"[39m
+          [36m/>[39m
+        [36m</div>[39m
+        [36m<fieldset[39m
+          [33mclass[39m=[32m"stack"[39m
+          [33mid[39m=[32m"agent-skills"[39m
+          [33mtabindex[39m=[32m"-1"[39m
+        [36m>[39m
+          [36m<legend>[39m
+            [0m技能[0m
+          [36m</legend>[39m
+          [36m<p[39m
+            [33mclass[39m=[32m"muted"[39m
+          [36m>[39m
+            [0m暂无技能，请先创建技能。[0m
+          [36m</p>[39m
+        [36m</fieldset>[39m
+        [36m<fieldset[39m
+          [33mclass[39m=[32m"stack"[39m
+          [33mid[39m=[32m"agent-permissions"[39m
+          [33mtabindex[39m=[32m"-1"[39m
+        [36m>[39m
+          [36m<legend>[39m
+            [0m工具权限[0m
+          [36m</legend>[39m
+          [36m<div[39m
+            [33mclass[39m=[32m"stack"[39m
+          [36m>[39m
+            [36m<label[39m
+              [33mclass[39m=[32m"check-row"[39m
+            [36m>[39m
+              [36m<input[39m
+                [33mchecked[39m=[32m""[39m
+                [33mid[39m=[32m"agent-permission-readFiles"[39m
+                [33mtype[39m=[32m"checkbox"[39m
+              [36m/>[39m
+              [0m读取文件[0m
+            [36m</label>[39m
+          [36m</div>[39m
+          [36m<div[39m
+            [33mclass[39m=[32m"stack"[39m
+          [36m>[39m
+            [36m<label[39m
+              [33mclass[39m=[32m"check-row"[39m
+            [36m>[39m
+              [36m<input[39m
+                [33mid[39m=[32m"agent-permission-writeFiles"[39m
+                [33mtype[39m=[32m"checkbox"[39m
+              [36m/>[39m
+              [0m写入文件[0m
+            [36m</label>[39m
+          [36m</div>[39m
+          [36m<div[39m
+            [33mclass[39m=[32m"stack"[39m
+          [36m>[39m
+            [36m<label[39m
+              [33mclass[39m=[32m"check-row"[39m
+            [36m>[39m
+              [36m<input[39m
+                [33mid[39m=[32m"agent-permission-runCommands"[39m
+                [33mtype[39m=[32m"checkbox"[39m
+              [36m/>[39m
+              [0m运行命令[0m
+            [36m</label>[39m
+          [36m</div>[39m
+        [36m</fieldset>[39m
+        [36m<div[39m
+          [33mclass[39m=[32m"form-field"[39m
+        [36m>[39m
+          [36m<label[39m
+            [33mfor[39m=[32m"agent-max-tokens"[39m
+          [36m>[39m
+            [0mToken 预算[0m
+          [36m</label>[39m
+          [36m<input[39m
+            [33maria-describedby[39m=[32m"agent-max-tokens-help"[39m
+            [33mid[39m=[32m"agent-max-tokens"[39m
+            [33mmax[39m=[32m"1000000"[39m
+            [33mmin[39m=[32m"1"[39m
+            [33mstep[39m=[32m"1"[39m
+            [33mtype[39m=[32m"number"[39m
+            [33mvalue[39m=[32m"8000"[39m
+          [36m/>[39m
+          [36m<p[39m
+            [33mclass[39m=[32m"muted"[39m
+            [33mid[39m=[32m"agent-max-tokens-help"[39m
+          [36m>[39m
+            [0m每次运行 1–1000000 tokens。[0m
+          [36m</p>[39m
+        [36m</div>[39m
+        [36m<div[39m
+          [33mclass[39m=[32m"form-field"[39m
+        [36m>[39m
+          [36m<label[39m
+            [33mfor[39m=[32m"agent-max-handoffs"[39m
+          [36m>[39m
+            [0m接力轮次[0m
+          [36m</label>[39m
+          [36m<input[39m
+            [33mid[39m=[32m"agent-max-handoffs"[39m
+            [33mmax[39m=[32m"100"[39m
+            [33mmin[39m=[32m"1"[39m
+            [33mstep[39m=[32m"1"[39m
+            [33mtype[39m=[32m"number"[39m
+            [33mvalue[39m=[32m"4"[39m
+          [36m/>[39m
+        [36m</div>[39m
+        [36m<div[39m
+          [33mclass[39m=[32m"form-field"[39m
+        [36m>[39m
+          [36m<label[39m
+            [33mfor[39m=[32m"agent-avatar"[39m
+          [36m>[39m
+            [0m头像文字[0m
+          [36m</label>[39m
+          [36m<input[39m
+            [33mid[39m=[32m"agent-avatar"[39m
+            [33mrequired[39m=[32m""[39m
+            [33mvalue[39m=[32m"A"[39m
+          [36m/>[39m
+        [36m</div>[39m
+        [36m<div[39m
+          [33mclass[39m=[32m"form-field"[39m
+        [36m>[39m
+          [36m<label[39m
+            [33mfor[39m=[32m"agent-accent"[39m
+          [36m>[39m
+            [0m强调色[0m
+          [36m</label>[39m
+          [36m<select[39m
+            [33mid[39m=[32m"agent-accent"[39m
+          [36m>[39m
+            [36m<option[39m
+              [33mvalue[39m=[32m"sage"[39m
+            [36m>[39m
+              [0m鼠尾草[0m
+            [36m</option>[39m
+            [36m<option[39m
+              [33mvalue[39m=[32m"terracotta"[39m
+            [36m>[39m
+              [0m陶土[0m
+            [36m</option>[39m
+            [36m<option[39m
+              [33mvalue[39m=[32m"gold"[39m
+            [36m>[39m
+              [0m金色[0m
+            [36m</option>[39m
+            [36m<option[39m
+              [33mvalue[39m=[32m"slate"[39m
+            [36m>[39m
+              [0m石板[0m
+            [36m</option>[39m
+            [36m<option[39m
+              [33mvalue[39m=[32m"rose"[39m
+            [36m>[39m
+              [0m玫瑰[0m
+            [36m</option>[39m
+            [36m<option[39m
+              [33mvalue[39m=[32m"olive"[39m
+            [36m>[39m
+              [0m橄榄[0m
+            [36m</option>[39m
+          [36m</select>[39m
+        [36m</div>[39m
+        [36m<button[39m
+          [33mtype[39m=[32m"submit"[39m
+        [36m>[39m
+          [0m保存 Agent[0m
+        [36m</button>[39m
+      [36m</form>[39m
+    [36m</aside>[39m
+  [36m</div>[39m
+[36m</body>[39m
+ ❯ Object.getElementError node_modules/@testing-library/dom/dist/config.js:37:19
+ ❯ node_modules/@testing-library/dom/dist/query-helpers.js:76:38
+ ❯ node_modules/@testing-library/dom/dist/query-helpers.js:52:17
+ ❯ node_modules/@testing-library/dom/dist/query-helpers.js:95:19
+ ❯ tests/agent-review-capability-ui.test.tsx:150:31
+    148|     render(<AgentPanel />);
+    149|     await user.click(await screen.findByRole("button", { name: "编辑 Age…
+    150|     const capability = screen.getByRole("checkbox", { name: "可独立复核结果" …
+       |                               ^
+    151|     expect(capability).not.toBeChecked();
+    152|     await user.click(capability);
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[2/6]⎯
+
+ FAIL  tests/review-qualification.test.ts > review candidate qualification > returns multiple current capable non-executors with auditable reasons and no selection
+AssertionError: review qualification must be a reusable service: expected undefined to be type of 'function'
+
+Expected: "function"
+Received: "undefined"
+
+ ❯ list tests/review-qualification.test.ts:92:5
+     90|     qualification.listReviewCandidatesTx,
+     91|     "review qualification must be a reusable service",
+     92|   ).toBeTypeOf("function");
+       |     ^
+     93|   return qualification.listReviewCandidatesTx!(database, "work", resul…
+     94| }
+ ❯ tests/review-qualification.test.ts:109:12
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[3/6]⎯
+
+ FAIL  tests/review-qualification.test.ts > review candidate qualification > never selects the sole candidate and reports the zero-candidate blocker
+AssertionError: review qualification must be a reusable service: expected undefined to be type of 'function'
+
+Expected: "function"
+Received: "undefined"
+
+ ❯ list tests/review-qualification.test.ts:92:5
+     90|     qualification.listReviewCandidatesTx,
+     91|     "review qualification must be a reusable service",
+     92|   ).toBeTypeOf("function");
+       |     ^
+     93|   return qualification.listReviewCandidatesTx!(database, "work", resul…
+     94| }
+ ❯ tests/review-qualification.test.ts:127:12
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[4/6]⎯
+
+ FAIL  tests/review-qualification.test.ts > review candidate qualification > recomputes after membership, capability, and executor changes
+AssertionError: review qualification must be a reusable service: expected undefined to be type of 'function'
+
+Expected: "function"
+Received: "undefined"
+
+ ❯ list tests/review-qualification.test.ts:92:5
+     90|     qualification.listReviewCandidatesTx,
+     91|     "review qualification must be a reusable service",
+     92|   ).toBeTypeOf("function");
+       |     ^
+     93|   return qualification.listReviewCandidatesTx!(database, "work", resul…
+     94| }
+ ❯ tests/review-qualification.test.ts:144:12
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[5/6]⎯
+
+ FAIL  tests/review-qualification.test.ts > review candidate qualification > rejects stale or non-current result ids instead of authorizing from a cached list
+AssertionError: expected error to match asymmetric matcher
+
+- Expected
++ Received
+
+- ObjectContaining {
+-   "code": "REVIEW_STATE_CONFLICT",
++ AssertionError {
++   "message": "review qualification must be a reusable service: expected undefined to be type of 'function'",
++   "actual": "undefined",
++   "expected": "function",
++   "showDiff": true,
++   "operator": "strictEqual",
+  }
+
+ ❯ tests/review-qualification.test.ts:159:36
+    157|
+    158|   it("rejects stale or non-current result ids instead of authorizing f…
+    159|     expect(() => list("result-2")).toThrowError(
+       |                                    ^
+    160|       expect.objectContaining({ code: "REVIEW_STATE_CONFLICT" }),
+    161|     );
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[6/6]⎯
+
+
+ Test Files  2 failed (2)
+      Tests  6 failed | 1 passed (7)
+   Start at  12:36:50
+   Duration  3.91s (transform 265ms, setup 882ms, import 581ms, tests 1.56s, environment 3.70s)
+
+# exit: 1

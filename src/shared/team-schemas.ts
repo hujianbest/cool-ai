@@ -98,6 +98,7 @@ export const agentInputSchema = z
       })
       .strict(),
     providerId: z.string().trim().min(1),
+    reviewCapable: z.boolean().default(false),
     role: z.string().trim().min(1).max(160),
     skillIds: z
       .array(z.string().min(1))

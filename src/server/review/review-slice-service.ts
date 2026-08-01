@@ -80,7 +80,11 @@ function head(database: DatabaseSync, workItemId: string): HeadRow {
   return row;
 }
 
-function candidates(database: DatabaseSync, row: HeadRow): ReviewCandidateDto[] {
+function qualifiedCandidates(
+  database: DatabaseSync,
+  projectId: string,
+  executorAgentId: string,
+): ReviewCandidateDto[] {
   return (database.prepare(`
     SELECT a.id,a.name,a.role,a.avatar_text AS avatarText,
            a.accent_token AS accentToken,p.id AS providerId,
@@ -90,7 +94,7 @@ function candidates(database: DatabaseSync, row: HeadRow): ReviewCandidateDto[] 
     JOIN providers p ON p.id=a.provider_id
     WHERE m.project_id=? AND a.review_capable=1 AND a.id<>?
     ORDER BY a.created_at,a.id
-  `).all(row.projectId, row.executorAgentId) as Array<{
+  `).all(projectId, executorAgentId) as Array<{
     accentToken: string;
     avatarText: string;
     id: string;
@@ -114,6 +118,53 @@ function candidates(database: DatabaseSync, row: HeadRow): ReviewCandidateDto[] 
     },
     qualification: ["current_member", "review_capable", "not_executor"],
   }));
+}
+
+export function listReviewCandidatesTx(
+  database: DatabaseSync,
+  workItemId: string,
+  resultId: string,
+): {
+  blockers: Array<{ code: string }>;
+  candidates: ReviewCandidateDto[];
+  selectedReviewerAgentId: null;
+} {
+  const current = database.prepare(`
+    SELECT h.project_id AS projectId,h.current_result_id AS resultId,h.state,
+           r.executor_agent_id AS executorAgentId
+    FROM work_item_review_heads h
+    JOIN work_item_result_versions r
+      ON r.work_item_id=h.work_item_id AND r.id=h.current_result_id
+    WHERE h.work_item_id=?
+  `).get(workItemId) as {
+    executorAgentId: string;
+    projectId: string;
+    resultId: string;
+    state: string;
+  } | undefined;
+  if (
+    !current
+    || current.state !== "pending_review"
+    || current.resultId !== resultId
+  ) {
+    throw new ReviewSliceError(
+      "REVIEW_STATE_CONFLICT",
+      409,
+      "复核结果或状态已变化",
+    );
+  }
+  const candidates = qualifiedCandidates(
+    database,
+    current.projectId,
+    current.executorAgentId,
+  );
+  return {
+    blockers: candidates.length === 0
+      ? [{ code: "NO_INDEPENDENT_REVIEWER" }]
+      : [],
+    candidates,
+    selectedReviewerAgentId: null,
+  };
 }
 
 function attemptDto(database: DatabaseSync, attemptId: string | null): ReviewAttemptDto | null {
@@ -261,7 +312,7 @@ export function readReviewWorkspace(
   const database = openDatabase(databasePath);
   try {
     const row = head(database, workItemId);
-    const eligible = candidates(database, row);
+    const eligible = qualifiedCandidates(database, row.projectId, row.executorAgentId);
     return {
       blockers: eligible.length === 0 ? [{ code: "NO_INDEPENDENT_REVIEWER" }] : [],
       candidates: eligible,
@@ -372,7 +423,11 @@ export async function startReview(
       ) {
         throw new ReviewSliceError("REVIEW_STATE_CONFLICT", 409, "复核状态已变化");
       }
-      const eligible = candidates(database, row);
+      const eligible = listReviewCandidatesTx(
+        database,
+        workItemId,
+        parsed.data.resultId,
+      ).candidates;
       if (!eligible.some(({ agent }) => agent.id === parsed.data.reviewerAgentId)) {
         throw new ReviewSliceError("REVIEWER_INELIGIBLE", 403, "所选 Agent 不具备独立复核资格");
       }

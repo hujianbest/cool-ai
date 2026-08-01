@@ -31,6 +31,7 @@ type AgentRow = {
   canRead: number;
   canWrite: number;
   canExecute: number;
+  reviewCapable: number;
   maxTokens: number;
   maxHandoffs: number;
   version: number;
@@ -57,6 +58,7 @@ const TEMPLATE_DEFAULTS: readonly AgentTemplate[] = Object.freeze([
     id: "planner",
     name: "规划",
     role: "拆解目标并制定可验证计划",
+    reviewCapable: false,
     systemPrompt: "澄清目标、识别风险，并把工作拆成可验证步骤。",
   }),
   Object.freeze({
@@ -65,6 +67,7 @@ const TEMPLATE_DEFAULTS: readonly AgentTemplate[] = Object.freeze([
     id: "builder",
     name: "实施",
     role: "按批准计划实现并验证",
+    reviewCapable: false,
     systemPrompt: "按批准的计划实施变更，并用自动化验证结果。",
   }),
   Object.freeze({
@@ -73,6 +76,7 @@ const TEMPLATE_DEFAULTS: readonly AgentTemplate[] = Object.freeze([
     id: "reviewer",
     name: "复核",
     role: "独立检查正确性与风险",
+    reviewCapable: true,
     systemPrompt: "独立检查实现、测试证据和未覆盖风险。",
   }),
 ]);
@@ -243,6 +247,7 @@ function selectAgent(
         can_read AS canRead,
         can_write AS canWrite,
         can_execute AS canExecute,
+        review_capable AS reviewCapable,
         max_tokens AS maxTokens,
         max_handoffs AS maxHandoffs,
         version,
@@ -282,6 +287,7 @@ function toAgent(database: DatabaseSync, row: AgentRow): AgentProfile {
       writeFiles: row.canWrite === 1,
     },
     providerId: row.providerId,
+    reviewCapable: row.reviewCapable === 1,
     role: row.role,
     skillIds: skillIdsFor(database, row.id),
     systemPrompt: row.systemPrompt,
@@ -327,8 +333,8 @@ export function createAgent(
           INSERT INTO agents (
             id, name, role, system_prompt, provider_id, model,
             avatar_text, accent_token, can_read, can_write, can_execute,
-            max_tokens, max_handoffs, version, created_at, updated_at
-          ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 1, ?, ?)
+            review_capable, max_tokens, max_handoffs, version, created_at, updated_at
+          ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 1, ?, ?)
         `)
         .run(
           id,
@@ -342,6 +348,7 @@ export function createAgent(
           Number(parsed.permissions.readFiles),
           Number(parsed.permissions.writeFiles),
           Number(parsed.permissions.runCommands),
+          Number(parsed.reviewCapable),
           parsed.maxTokens,
           parsed.maxHandoffs,
           timestamp,
@@ -372,6 +379,7 @@ export function listAgents(databasePath: string): AgentProfile[] {
           can_read AS canRead,
           can_write AS canWrite,
           can_execute AS canExecute,
+          review_capable AS reviewCapable,
           max_tokens AS maxTokens,
           max_handoffs AS maxHandoffs,
           version,
@@ -424,6 +432,7 @@ export function updateAgent(
               can_read = ?,
               can_write = ?,
               can_execute = ?,
+              review_capable = ?,
               max_tokens = ?,
               max_handoffs = ?,
               version = version + 1,
@@ -441,6 +450,7 @@ export function updateAgent(
           Number(parsed.permissions.readFiles),
           Number(parsed.permissions.writeFiles),
           Number(parsed.permissions.runCommands),
+          Number(parsed.reviewCapable),
           parsed.maxTokens,
           parsed.maxHandoffs,
           updatedAt,

@@ -28,6 +28,7 @@ type AgentField =
   | "systemPrompt"
   | "providerId"
   | "model"
+  | "reviewCapable"
   | "skillIds"
   | "permissions.readFiles"
   | "permissions.writeFiles"
@@ -92,6 +93,7 @@ const AGENT_FIELD_IDS: Record<AgentField, string> = {
   maxTokens: "agent-max-tokens",
   model: "agent-model",
   name: "agent-name",
+  reviewCapable: "agent-review-capable",
   "permissions.readFiles": "agent-permission-readFiles",
   "permissions.runCommands": "agent-permission-runCommands",
   "permissions.writeFiles": "agent-permission-writeFiles",
@@ -126,6 +128,7 @@ export function AgentPanel() {
   const [systemPrompt, setSystemPrompt] = useState("");
   const [providerId, setProviderId] = useState("");
   const [model, setModel] = useState("");
+  const [reviewCapable, setReviewCapable] = useState(false);
   const [skillIds, setSkillIds] = useState<string[]>([]);
   const [permissions, setPermissions] = useState<ToolPermissions>({
     readFiles: true,
@@ -237,6 +240,7 @@ export function AgentPanel() {
     setSystemPrompt("");
     setProviderId("");
     setModel("");
+    setReviewCapable(false);
     setSkillIds([]);
     setPermissions({ readFiles: true, runCommands: false, writeFiles: false });
     setMaxTokens("16000");
@@ -265,6 +269,7 @@ export function AgentPanel() {
     setSystemPrompt(agent.systemPrompt);
     setProviderId(agent.providerId);
     setModel(agent.model);
+    setReviewCapable(agent.reviewCapable);
     setSkillIds(agent.skillIds);
     setPermissions(agent.permissions);
     setMaxTokens(String(agent.maxTokens));
@@ -291,6 +296,7 @@ export function AgentPanel() {
       setSystemPrompt("");
       setAvatarText("");
       setAccentToken("sage");
+      setReviewCapable(false);
       return;
     }
     const template = templates.find(({ id }) => id === nextId);
@@ -300,6 +306,7 @@ export function AgentPanel() {
     setSystemPrompt(template.systemPrompt);
     setAvatarText(template.avatarText);
     setAccentToken(template.accentToken);
+    setReviewCapable(template.reviewCapable);
   }
 
   function toggleSkill(skillId: string, checked: boolean) {
@@ -327,6 +334,7 @@ export function AgentPanel() {
       name,
       permissions,
       providerId,
+      reviewCapable,
       role,
       skillIds,
       systemPrompt,
@@ -534,6 +542,22 @@ export function AgentPanel() {
           {fieldErrors.skillIds ? (
             <p className="error-text" id="agent-skills-error">{fieldErrors.skillIds}</p>
           ) : null}
+        </fieldset>
+        <fieldset className="stack">
+          <legend>复核能力</legend>
+          <label className="check-row">
+            <input
+              aria-describedby="agent-review-capable-help"
+              checked={reviewCapable}
+              id="agent-review-capable"
+              onChange={(event) => setReviewCapable(event.target.checked)}
+              type="checkbox"
+            />
+            可独立复核结果
+          </label>
+          <p className="muted" id="agent-review-capable-help">
+            仅明确开启后，且 Agent 当前属于项目并非结果执行者时，才可成为复核候选。
+          </p>
         </fieldset>
         <fieldset
           aria-describedby={
@@ -761,6 +785,9 @@ export function AgentPanel() {
                       .join(" · ") || "无技能"}
                   </p>
                   <p className="muted">{permissionText(agent.permissions)}</p>
+                  <p className="muted">
+                    {agent.reviewCapable ? "可独立复核" : "未开启独立复核"}
+                  </p>
                   <button
                     aria-label={`编辑 ${agent.name}`}
                     onClick={(event) => startEdit(agent, event.currentTarget)}

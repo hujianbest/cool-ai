@@ -1,0 +1,30 @@
+# hf-gate-run
+# label: t3-regression
+# command: npm test -- tests/agents.service.test.ts tests/agents.api.test.ts tests/agent-panel.test.tsx tests/projects.service.test.ts tests/projects.api.test.ts tests/project-panel.test.tsx tests/project-setup-panel.test.tsx tests/review-slice.test.tsx tests/review-qualification.test.ts tests/agent-review-capability-ui.test.tsx
+# started: 2026-08-01T04:39:57+00:00
+
+> collaboration-cockpit@0.1.0 test
+> vitest run tests/agents.service.test.ts tests/agents.api.test.ts tests/agent-panel.test.tsx tests/projects.service.test.ts tests/projects.api.test.ts tests/project-panel.test.tsx tests/project-setup-panel.test.tsx tests/review-slice.test.tsx tests/review-qualification.test.ts tests/agent-review-capability-ui.test.tsx
+
+
+ RUN  v4.1.10 D:/cool-ai
+
+(node:11828) ExperimentalWarning: SQLite is an experimental feature and might change at any time
+(Use `node --trace-warnings ...` to show where the warning was created)
+(node:15932) ExperimentalWarning: SQLite is an experimental feature and might change at any time
+(Use `node --trace-warnings ...` to show where the warning was created)
+(node:15000) ExperimentalWarning: SQLite is an experimental feature and might change at any time
+(Use `node --trace-warnings ...` to show where the warning was created)
+(node:16244) ExperimentalWarning: SQLite is an experimental feature and might change at any time
+(Use `node --trace-warnings ...` to show where the warning was created)
+(node:13376) ExperimentalWarning: SQLite is an experimental feature and might change at any time
+(Use `node --trace-warnings ...` to show where the warning was created)
+(node:9084) ExperimentalWarning: SQLite is an experimental feature and might change at any time
+(Use `node --trace-warnings ...` to show where the warning was created)
+
+ Test Files  10 passed (10)
+      Tests  50 passed (50)
+   Start at  12:39:58
+   Duration  10.07s (transform 2.08s, setup 5.41s, import 4.74s, tests 15.28s, environment 22.71s)
+
+# exit: 0

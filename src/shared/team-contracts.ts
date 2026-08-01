@@ -81,6 +81,7 @@ export type AgentInput = {
   name: string;
   role: string;
   systemPrompt: string;
+  reviewCapable?: boolean;
   providerId: string;
   model: string;
   skillIds: string[];
@@ -95,8 +96,9 @@ export type UpdateAgentInput = AgentInput & {
   expectedVersion: number;
 };
 
-export type AgentProfile = AgentInput & {
+export type AgentProfile = Omit<AgentInput, "reviewCapable"> & {
   id: string;
+  reviewCapable: boolean;
   version: number;
   createdAt: string;
   updatedAt: string;
@@ -107,4 +109,5 @@ export type AgentTemplate = Pick<
   "name" | "role" | "systemPrompt" | "avatarText" | "accentToken"
 > & {
   id: "planner" | "builder" | "reviewer";
+  reviewCapable: boolean;
 };
