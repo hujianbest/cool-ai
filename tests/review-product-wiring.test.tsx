@@ -258,6 +258,99 @@ describe("review product wiring", () => {
     );
   });
 
+  it("keeps rejected terminal history ready when no current attempt or escalation remains", async () => {
+    const { ReviewProductSurface } = await productSurfaces();
+    const current = {
+      ...workspace("pending_review"),
+      effectiveStatus: "rework",
+      historyCount: 1,
+    };
+    const rejectedAttempt = {
+      calls: [],
+      decision: {
+        choice: "reject",
+        evidenceRefs: [],
+        findings: [{
+          requirement: "补齐失败路径测试",
+          severity: "blocking",
+        }],
+        id: "decision-reject",
+        publicSummary: "需要补齐失败路径后重新执行。",
+      },
+      errorCategory: null,
+      finalize: {
+        checkpoint: { checkpointedAt: NOW, publicOutputHash: HASH },
+        lastErrorCode: null,
+        mode: "none",
+        retryRequiresProvider: false,
+      },
+      finishedAt: NOW,
+      id: "attempt-reject",
+      material: { hash: HASH, resultVersion: 1, sourceCount: 1 },
+      provider: {
+        id: "provider-1",
+        model: "review-model",
+        name: "Local",
+        version: 1,
+      },
+      result: { id: "result-1", version: 1 },
+      reviewer: {
+        accentToken: "sage",
+        avatarText: "R",
+        id: "reviewer-1",
+        name: "Reviewer",
+      },
+      startedAt: NOW,
+      status: "rejected",
+      usageTotal: {
+        completionTokens: 0,
+        promptTokens: 0,
+        repairCalls: 0,
+        reportedCalls: 0,
+        totalTokens: 0,
+        unreportedCalls: 0,
+      },
+    };
+    vi.stubGlobal("fetch", vi.fn(async (input: RequestInfo | URL) => {
+      const url = String(input);
+      if (url === "/api/work-items/work-1/review") {
+        return Response.json(current);
+      }
+      if (url === "/api/work-items/work-1/reviews?limit=20") {
+        return Response.json({ items: [rejectedAttempt], nextCursor: null });
+      }
+      if (url === "/api/projects/project-1/memories?includeInactive=0") {
+        return Response.json({ memories: [] });
+      }
+      throw new Error(`Unexpected request: ${url}`);
+    }));
+    const user = userEvent.setup();
+
+    render(
+      <ReviewProductSurface
+        missionId="mission-1"
+        projectId="project-1"
+        workItemId="work-1"
+      />,
+    );
+    const navigation = await screen.findByRole("tablist", {
+      name: "接入产品树 复核闭环导航",
+    });
+    await user.click(within(navigation).getByRole("tab", { name: "回答" }));
+
+    expect(await screen.findByText("状态：ready")).toBeInTheDocument();
+    expect(screen.getByRole("heading", {
+      name: "复核结果与逐 attempt 历史",
+    })).toBeInTheDocument();
+    const rejected = screen.getByRole("listitem", {
+      name: "attempt attempt-reject",
+    });
+    expect(within(rejected).getByText(/唯一裁决：reject/u)).toBeInTheDocument();
+    expect(within(rejected).getByRole("heading", { name: "退回要求" }))
+      .toBeInTheDocument();
+    expect(within(rejected).getByText("补齐失败路径测试")).toBeInTheDocument();
+  });
+
   it("loads and generates delivery through mission routes without fictional success", async () => {
     const { MissionDeliverySurface } = await productSurfaces();
     const completion = {

@@ -4,5 +4,5 @@
 - 当前阶段: build
 - 执行模式: auto
 - 已加载扩展: ext-ui-design
-- 下一步: 执行 T-31：修复终态裁决历史被 empty surface 隐藏
+- 下一步: 执行 T-32：扩展真实 browser smoke 全链并收口
 - 门禁输出: RESULT: PASS — 可进入 build

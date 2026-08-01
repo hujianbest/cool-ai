@@ -204,6 +204,8 @@ export function ReviewProductSurface({
           ? { kind: "ready", message: answerSuccess }
           : escalation
           ? { kind: "ready", message: "有待 Owner 回答的升级问题" }
+          : history.length > 0
+          ? { kind: "ready", message: "复核裁决历史可查看" }
           : { kind: "empty", message: "尚无待回答问题" },
         delivery: { kind: "ready", message: "使命级交付入口可用" },
         memory: { kind: "ready", message: "共享记忆可查看与维护" },

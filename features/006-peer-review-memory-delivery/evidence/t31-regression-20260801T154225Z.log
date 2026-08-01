@@ -1,0 +1,18 @@
+# hf-gate-run
+# label: t31-regression
+# command: npm test -- tests/review-product-wiring.test.tsx tests/review-outcomes-ui.test.tsx tests/review-accessibility.test.tsx
+# started: 2026-08-01T15:42:25+00:00
+
+> collaboration-cockpit@0.1.0 test
+> vitest run tests/review-product-wiring.test.tsx tests/review-outcomes-ui.test.tsx tests/review-accessibility.test.tsx
+
+
+ RUN  v4.1.10 D:/cool-ai
+
+
+ Test Files  3 passed (3)
+      Tests  17 passed (17)
+   Start at  23:42:26
+   Duration  5.70s (transform 528ms, setup 1.41s, import 986ms, tests 3.60s, environment 8.79s)
+
+# exit: 0
