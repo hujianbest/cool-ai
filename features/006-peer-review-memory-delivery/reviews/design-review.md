@@ -140,3 +140,55 @@
 - 已闭合：`REVIEW_CONTEXT_STALE` 已进入 §8.3 声明的 S-6 唯一 error registry，固定为 HTTP 409、code `REVIEW_CONTEXT_STALE`、中文 message“复核上下文已变化，请基于最新内容重试”、无 event，并明确组装/acquire 间 CAS 失败时 provider、attempt、receipt 及业务写均为 0。
 - 已闭合：T-24 直接断言上述 HTTP/code/message 与零 provider/attempt/receipt/业务副作用，和 §8.1 application service 的漂移语义一致。
 - 本轮按复审范围未发现新增阻塞。
+
+# Design评审（第9轮）
+
+- 日期: 2026-08-01
+- 评审方式: subagent
+- 结论: 需修改
+
+## Findings
+
+- [严重] `design.md` §12.1 T-30 fixture contract（第 1476 行）与任务 T-30（第 1615 行）: 所写 RED “旧测试自建 `user_version=6` 数据库缺 head 而被生产 validator 拒绝”在当前 WIP 前已经是生产既有行为，而 WIP 中 `tests/v6-fixture-db.ts` helper 也已经存在，因此按当前判据直接开始不会得到一个证明 helper 行为缺失的独立 RED。更重要的是，设计只靠“故意坏库、migration/invariant 测试绕过 helper”约束调用方；现有 helper 会捕获生产 `SCHEMA_DATA_INVALID`，对任意文件库补缺失 mission head 后再次调用生产 `openDatabase`，没有 fixture 身份、精确缺口 allowlist 或修复前完整前置校验。一旦故意坏库误经 helper，恰好缺 head 的生产不变量失败可被掩盖，不能证明 helper 与生产 validator 隔离。→ 把 helper 设计成显式 opt-in 的合法 fixture 构造/补种 primitive，而不是包裹生产 `openDatabase` 的通用自动修复入口；规定它只接受可机械识别的测试 fixture，并在补种前验证除明确允许缺口外的完整 schema/data，不得吞掉或改写其他 `SCHEMA_DATA_INVALID`。T-30 增加同一批故意坏库分别直连生产入口和误经 helper 仍 fail-closed、生产模块不导入 helper、helper 不改生产 validator/DB 的断言；同时明确如何撤销既有 WIP helper/迁移后先取得新 `t30-red`，或改用一个当前确实失败且先于修复的隔离契约作为 RED。
+
+- [严重] `design.md` §12.1 证据说明（第 1479 行）、T-32（第 1617 行）与 Design Checklist 自检（第 1648 行）: 旧 T-30 WIP 的作废边界和重新 TDD 链没有闭合。第 1479 行仍写“T-30 再以场景覆盖缺失取得 RED”，与当前 T-30=fixture、T-32=full-chain 冲突；T-32 只声明旧 `t30-red/green` 为诊断，未覆盖同轮 `t30-build` 及随后失败的真实 `smoke`，也未防止旧精确 `t30-red/green` 被机械门禁误认成新 fixture 任务证据。当前 `tests/review-browser-full-chain.test.ts` 只是读取 harness 并匹配字符串，旧 RED/green 已证明这种 contract 可绿而真实 `smoke:review` 仍在 reject 终态 UI empty 处失败；而完整 reject/escalate/restart/narrow harness 代码也已由原 WIP 写入，T-31 修复后 T-32 按现有描述未必还能重新取得 RED。→ 明确列出原 T-30 全部 red/green/build 与对应 suite/smoke 的归属和作废语义，要求新 T-30、新 T-31、新 T-32 各自在本任务产品/测试改动前产生时间更晚、测试文件与行为唯一对应的新 RED，并规定人工复核不得仅凭 gate 对旧同名 label 的命中推进。T-32 的 RED 必须实际启动并执行真实 provider/Next/SQLite/browser 链，在缺少完整 reject→新 result→escalate→answer/new attempt→pass→memory→delivery→独立进程重启→desktop/narrow 键盘/截图任一运行行为时失败，不能再用源码字符串存在性代替；同时明确先撤销原 WIP full-chain 实现或选择一个当前真实缺失的运行行为取得 RED。同步修正第 1479 行和第 1648 行后，才能声称 T-1 至 T-32 均有明确独立红绿边界且覆盖索引/自检一致。
+
+## 本轮其余核对
+
+- T-31 的产品 surface 判定范围是最小且与故障事实一致：加载完成后，`currentEscalation`、成功动作或非空 terminal history 任一存在即为 ready；只有无 issue、无 history 才为 empty，同时保留 loading/error 优先级。其 inline 覆盖与任务覆盖索引一致。
+- T-30、T-31、T-32 的 inline FR/NFR 覆盖与第 1619～1638 行逐项索引在集合上相互一致；当前不一致发生在第 1479 行任务编号、旧证据归属及第 1648 行“均有独立 RED”的自检结论。
+
+# Design评审（第10轮）
+
+- 日期: 2026-08-01
+- 评审方式: subagent
+- 结论: 需修改
+
+## Findings
+
+- [严重] 第 9 轮第 1 项未完全闭合（`design.md` §12.1 第 1476 行、T-30 第 1615 行）: 修订已要求 helper 为 test-only 显式 opt-in、仅处理 v6 head 缺口、在同一事务补种后调用生产 `validateV6`，并让带“额外”schema/data 损坏的库经 helper 仍回滚失败；当前 WIP 也确实能用这些新隔离断言取得 RED。但设计仍未定义可机械识别的 fixture 身份或允许缺口的精确实例集合，只写“唯一缺口为 mission delivery/review head”。因此一个故意验证“仅缺 mission/review head”生产不变量的坏库若误经 helper，恰好会被当成合法 fixture 补种并通过，而不是按第 9 轮要求仍 fail-closed；实现者仍需自行发明 fixture 标记、opt-in 签名以及哪些 mission/latest result head 可缺。→ 明确 helper 的公开测试签名与不可伪混的 fixture 身份（例如构造时生成并校验的 test-fixture marker/handle），把 allowlist 写成可判定的缺失 tuple：哪些 mission 可缺唯一 delivery head、哪些 work item 的当前 latest result 可缺唯一 review head，除此之外少/多/错配/已有部分 head 均拒绝；补种前先在同一事务验证 marker、`user_version=6`、完整 schema 与“仅这些精确缺口”数据谓词，补种后再以生产 `validateV6` 复核，任一步失败整笔回滚并原样抛错。T-30 必须包含“唯一损坏就是允许形状的缺 head、但没有合法 fixture 身份”的故意坏库，直连生产和误经 helper 都失败且行数不变。
+
+## 第 9 轮 Findings 闭合确认
+
+- 第 1 项部分闭合：显式 opt-in、事务补种后生产 `validateV6`、额外损坏回滚、生产模块不导入 helper，以及针对当前 WIP 可取得的新安全契约 RED 已落到 T-30；但 fixture 身份、精确实例 allowlist 与“仅缺 head 的故意坏库误经 helper仍失败”尚未闭合。
+- 第 2 项已闭合：原 T-30 的全部 `t30-red/green/build`、对应三份 suite 与两份 smoke 已明确只作诊断；T-30/T-31/T-32 各需更晚且行为唯一的新 RED/GREEN。T-32 先恢复已提交 T-29 最薄 harness，再由测试真实 spawn `npm run smoke:review -- --full`，不再读取源码字符串，并覆盖完整 provider/Next/SQLite/browser、重启、desktop/narrow 与截图链。
+- T-31 仍具有独立测试与 RED/GREEN 边界；T-30/T-31/T-32 inline 覆盖与任务索引一致，测试策略、任务描述和自检除上述 T-30 未闭合点外未发现冲突。
+
+# Design评审（第11轮）
+
+- 日期: 2026-08-01
+- 评审方式: subagent
+- 结论: 通过
+- 用户确认: auto-approved 2026-08-01
+
+## Findings
+
+无
+
+## 第10轮 Finding 闭合确认
+
+- 已闭合：`design.md` §12.1 与 T-30 已固定测试 helper 签名为 `createV6FixtureHandle(path,{missingDeliveryHeadMissionIds,missingReviewHeadResultIds})` 返回由 module-private `WeakSet` 认证的 branded handle，且只有 `openV6FixtureDatabase(handle)` 可进入补种；普通 path/plain object 与无合法 handle 的库不能获得修复路径。
+- 已闭合：allowlist 已收紧为实际缺口集合全等的精确 mission/result id 集合；mission 必须存在且唯一缺 delivery head，result 必须属于对应 project/work item、是当前 latest 且唯一缺 review head。少报、多报、重复、已有部分 head、非 latest 及跨 project/work-item/result 错配均拒绝。
+- 已闭合：helper 在同一事务内依次验证 brand、`user_version=6`、完整 schema、实际缺口与 allowlist 全等，补种后调用生产 `validateV6`；任一步失败整体回滚并保持行数不变。T-30 明确覆盖仅缺 head 但无合法 handle 的故意坏库直连生产入口和误经 helper 均失败，且当前通用自动修复 WIP 恰能为该新隔离契约提供独立 RED。
+- 可实现性成立：handle 身份、输入边界、缺口谓词、事务顺序、失败原子性、生产 validator 复核及测试命令均已具体到实现无需再发明关键安全语义，并与 T-30 的新 RED/GREEN 边界一致。
+- T-31/T-32 无回归：T-31 的 terminal history ready/empty 判定与独立 RED/GREEN 保持不变；T-32 仍要求恢复 T-29 最薄 harness 后真实 spawn 完整 provider/Next/SQLite/browser 链取得新 RED，旧 T-30 证据只作诊断，任务覆盖索引与自检仍一致。
