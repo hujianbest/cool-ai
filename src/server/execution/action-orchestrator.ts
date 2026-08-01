@@ -52,7 +52,10 @@ import {
   preExecutionBoundary,
   type ExecutionBudgetBoundary,
 } from "@/src/server/execution/execution-usage-budget";
-import { staleExecutionIfFrozenInputChanged } from "@/src/server/execution/execution-frozen-input";
+import {
+  parseFrozenPrivateEnvelope,
+  staleExecutionIfFrozenInputChanged,
+} from "@/src/server/execution/execution-frozen-input";
 import { compareCanonicalPathStates } from "@/src/server/execution/execution-conflicts";
 import {
   computeStagedSnapshot,
@@ -154,17 +157,15 @@ function stateRow(database: DatabaseSync, executionId: string): StateRow {
 }
 
 function parseFrozenPrompt(row: StateRow): FrozenExecutionPromptInput {
-  let stored: unknown;
   try {
-    stored = JSON.parse(row.frozenPrivateJson);
+    return parseFrozenPrivateEnvelope(row.frozenPrivateJson).promptInput;
   } catch {
-    throw new ExecutionError("INTERNAL_ERROR", 500, "Frozen execution input is unavailable.");
+    throw new ExecutionError(
+      "FROZEN_INPUT_INVALID",
+      500,
+      "Frozen execution input failed integrity validation.",
+    );
   }
-  const promptInput = (stored as { promptInput?: unknown })?.promptInput;
-  if (!promptInput || typeof promptInput !== "object") {
-    throw new ExecutionError("INTERNAL_ERROR", 500, "Frozen execution input is unavailable.");
-  }
-  return promptInput as FrozenExecutionPromptInput;
 }
 
 function providerConnection(database: DatabaseSync, agentId: string) {

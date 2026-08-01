@@ -8,6 +8,7 @@ import { canonicalRequestHash } from "@/src/server/collaboration/operation-recei
 import { createCredentialVault } from "@/src/server/credential-vault";
 import { openDatabase } from "@/src/server/db";
 import { controlExecution } from "@/src/server/execution/execution-control-service";
+import { refreshExecutionFrozenFixture } from "./execution-frozen-fixture";
 
 type ApprovalModule = {
   createStagedMergeApproval(input: {
@@ -59,7 +60,7 @@ const EXECUTION_ID = "approval-execution";
 const ATTEMPT_ID = "approval-attempt";
 const TOOL_CALL_ID = "approval-tool-call";
 const APPROVAL_ID = "approval-command";
-const CONTEXT_HASH = "c".repeat(64);
+const INITIAL_CONTEXT_HASH = "c".repeat(64);
 const REQUEST_HASH = "a".repeat(64);
 const MANIFEST_HASH = "b".repeat(64);
 const MASTER_KEY = Buffer.alloc(32, 43).toString("base64url");
@@ -72,6 +73,7 @@ let databasePath: string;
 let database: DatabaseSync;
 let approvals: ApprovalModule;
 let advance: AdvanceModule;
+let contextHash: string;
 let sequence: number;
 
 function operationId(): string {
@@ -147,10 +149,11 @@ function seed(): void {
       started_at,finished_at
     ) VALUES (
       '${ATTEMPT_ID}','${PROJECT_ID}','${EXECUTION_ID}',1,'ready','${sandboxRoot}',
-      NULL,'${MANIFEST_HASH}','${MANIFEST_HASH}','{}','{}','${CONTEXT_HASH}',
+      NULL,'${MANIFEST_HASH}','${MANIFEST_HASH}','{}','{}','${INITIAL_CONTEXT_HASH}',
       'approval-policy',1,'${POLICY_HASH}','${NOW}',NULL
     );
   `);
+  contextHash = refreshExecutionFrozenFixture(database, EXECUTION_ID);
   seedCommandApproval();
 }
 
@@ -162,7 +165,7 @@ function commandPublicRequest() {
     attemptId: ATTEMPT_ID,
     attemptNo: 1,
     classifierVersion: 1,
-    contextHash: CONTEXT_HASH,
+    contextHash,
     executable: process.execPath,
     executableIdentity: "f".repeat(64),
     expectedEffect: "Run tests",
@@ -536,7 +539,7 @@ describe("execution approvals", () => {
         blocker_count,classification,block_reasons_json,created_at
       ) VALUES (
         'staged-result','${PROJECT_ID}','${EXECUTION_ID}','${ATTEMPT_ID}','stage-action',
-        '${MANIFEST_HASH}','${MANIFEST_HASH}','${CONTEXT_HASH}','${POLICY_HASH}',
+        '${MANIFEST_HASH}','${MANIFEST_HASH}','${contextHash}','${POLICY_HASH}',
         '${STAGED_HASH}',1,1,1,1,0,'approval_required','[]','${NOW}'
       );
       INSERT INTO execution_staged_observations (
@@ -557,7 +560,7 @@ describe("execution approvals", () => {
 
     const created = approvals.createStagedMergeApproval({
       attemptId: ATTEMPT_ID,
-      contextHash: CONTEXT_HASH,
+      contextHash,
       database,
       executionId: EXECUTION_ID,
       inputHash: MANIFEST_HASH,

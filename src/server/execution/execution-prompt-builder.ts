@@ -1,4 +1,5 @@
 import { createHash } from "node:crypto";
+import { z } from "zod";
 
 import { EXECUTION_ACTION_SCHEMA_INSTRUCTIONS } from "./execution-action-schema";
 
@@ -10,107 +11,128 @@ export type ExecutionPromptMessage = {
   content: string;
 };
 
-export type FrozenExecutionPromptInput = {
-  task: {
-    id: string;
-    title: string;
-    description: string;
-    version: number;
-    status: "todo" | "in_progress" | "blocked" | "done";
-    assigneeAgentId: string | null;
-  };
-  dependencies: Array<{
-    id: string;
-    title: string;
-    status: "todo" | "in_progress" | "blocked" | "done";
-    version: number;
-  }>;
-  mission: {
-    id: string;
-    title: string;
-    goal: string;
-    version: number;
-  };
-  sharedContext: Array<{
-    id: string;
-    type: "goal" | "decision" | "fact" | "artifact";
-    content: string;
-    sourceRef: string;
-  }>;
-  members: Array<{
-    agentId: string;
-    name: string;
-    role: string;
-    avatarText: string;
-    accentToken: string;
-    skillNames: string[];
-    permissions: { read: boolean; write: boolean; execute: boolean };
-  }>;
-  publicCollaboration: Array<{
-    sequence: number;
-    authorType: "owner" | "agent";
-    authorAgentId: string | null;
-    authorDisplayName: string;
-    content: string;
-  }>;
-  currentAgent: {
-    id: string;
-    name: string;
-    role: string;
-    systemPrompt: string;
-    skills: Array<{
-      position: number;
-      id: string;
-      version: number;
-      name: string;
-      instructions: string;
-    }>;
-    permissions: { read: boolean; write: boolean; execute: boolean };
-  };
-  validationPolicy: {
-    revisionId: string;
-    version: number;
-    policyHash: string;
-    classifierVersion: number;
-    entries: Array<{
-      position: number;
-      id: string;
-      executable: string;
-      executableIdentity: string;
-      args: string[];
-      workdir: string;
-      required: boolean;
-      tupleHash: string;
-    }>;
-  };
-  manifests: {
-    baseline: { hash: string; fileCount: number; totalBytes: number };
-    sandbox: { hash: string; fileCount: number; totalBytes: number } | null;
-  };
-  priorToolResults: ExecutionTypedToolResult[];
-  publicSummaries: Array<{ sequence: number; summary: string }>;
-};
+const storedIntegerSchema = z.number().int();
+const permissionsSchema = z.object({
+  execute: z.boolean(),
+  read: z.boolean(),
+  write: z.boolean(),
+}).strict();
+const workItemStatusSchema = z.enum(["todo", "in_progress", "blocked", "done"]);
+const manifestSummarySchema = z.object({
+  fileCount: storedIntegerSchema,
+  hash: z.string(),
+  totalBytes: storedIntegerSchema,
+}).strict();
 
-export type ExecutionTypedToolResult = {
-  toolCallId: string;
-  type: "list" | "read" | "write" | "command";
-  status: "succeeded" | "rejected" | "failed" | "interrupted";
-  code: string | null;
-  path?: string;
-  entries?: Array<{
-    name: string;
-    kind: "file" | "directory";
-    size: number | null;
-  }>;
-  content?: string;
-  beforeHash?: string | null;
-  afterHash?: string | null;
-  exitCode?: number | null;
-  durationMs?: number;
-  stdout?: string;
-  stderr?: string;
-  truncated?: boolean;
-};
+export const executionTypedToolResultSchema = z.object({
+  afterHash: z.string().nullable().optional(),
+  beforeHash: z.string().nullable().optional(),
+  code: z.string().nullable(),
+  content: z.string().optional(),
+  durationMs: z.number().optional(),
+  entries: z.array(z.object({
+    kind: z.enum(["file", "directory"]),
+    name: z.string(),
+    size: z.number().nullable(),
+  }).strict()).optional(),
+  exitCode: z.number().int().nullable().optional(),
+  path: z.string().optional(),
+  status: z.enum(["succeeded", "rejected", "failed", "interrupted"]),
+  stderr: z.string().optional(),
+  stdout: z.string().optional(),
+  toolCallId: z.string(),
+  truncated: z.boolean().optional(),
+  type: z.enum(["list", "read", "write", "command"]),
+}).strict();
+
+export type ExecutionTypedToolResult = z.infer<typeof executionTypedToolResultSchema>;
+
+export const frozenExecutionPromptInputSchema = z.object({
+  currentAgent: z.object({
+    id: z.string(),
+    name: z.string(),
+    permissions: permissionsSchema,
+    role: z.string(),
+    skills: z.array(z.object({
+      id: z.string(),
+      instructions: z.string(),
+      name: z.string(),
+      position: storedIntegerSchema,
+      version: storedIntegerSchema,
+    }).strict()),
+    systemPrompt: z.string(),
+  }).strict(),
+  dependencies: z.array(z.object({
+    id: z.string(),
+    status: workItemStatusSchema,
+    title: z.string(),
+    version: storedIntegerSchema,
+  }).strict()),
+  manifests: z.object({
+    baseline: manifestSummarySchema,
+    sandbox: manifestSummarySchema.nullable(),
+  }).strict(),
+  members: z.array(z.object({
+    accentToken: z.string(),
+    agentId: z.string(),
+    avatarText: z.string(),
+    name: z.string(),
+    permissions: permissionsSchema,
+    role: z.string(),
+    skillNames: z.array(z.string()),
+  }).strict()),
+  mission: z.object({
+    goal: z.string(),
+    id: z.string(),
+    title: z.string(),
+    version: storedIntegerSchema,
+  }).strict(),
+  priorToolResults: z.array(executionTypedToolResultSchema),
+  publicCollaboration: z.array(z.object({
+    authorAgentId: z.string().nullable(),
+    authorDisplayName: z.string(),
+    authorType: z.enum(["owner", "agent"]),
+    content: z.string(),
+    sequence: storedIntegerSchema,
+  }).strict()),
+  publicSummaries: z.array(z.object({
+    sequence: storedIntegerSchema,
+    summary: z.string(),
+  }).strict()),
+  schemaVersion: z.literal(5),
+  sharedContext: z.array(z.object({
+    content: z.string(),
+    id: z.string(),
+    sourceRef: z.string(),
+    type: z.enum(["goal", "decision", "fact", "artifact"]),
+  }).strict()),
+  task: z.object({
+    assigneeAgentId: z.string().nullable(),
+    description: z.string(),
+    id: z.string(),
+    status: workItemStatusSchema,
+    title: z.string(),
+    version: storedIntegerSchema,
+  }).strict(),
+  validationPolicy: z.object({
+    classifierVersion: storedIntegerSchema,
+    entries: z.array(z.object({
+      args: z.array(z.string()),
+      executable: z.string(),
+      executableIdentity: z.string(),
+      id: z.string(),
+      position: storedIntegerSchema,
+      required: z.boolean(),
+      tupleHash: z.string(),
+      workdir: z.string(),
+    }).strict()),
+    policyHash: z.string(),
+    revisionId: z.string(),
+    version: storedIntegerSchema,
+  }).strict(),
+}).strict();
+
+export type FrozenExecutionPromptInput = z.infer<typeof frozenExecutionPromptInputSchema>;
 
 export type ExecutionToolResultSummary = {
   entries: ExecutionTypedToolResult[];

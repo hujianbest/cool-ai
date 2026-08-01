@@ -18,6 +18,7 @@ import {
   createWindowsVerifiedMergeAdapter,
   type MergeVerifiedAdapter,
 } from "@/src/server/execution/merge-verified-adapter";
+import { refreshExecutionFrozenFixture } from "./execution-frozen-fixture";
 
 vi.mock("server-only", () => ({}));
 
@@ -481,4 +482,5 @@ function seedDatabase(
     ) VALUES ('merge-approval','${PROJECT_ID}','${EXECUTION_ID}','${ATTEMPT_ID}',NULL,
       'staged_merge','approved','${HASH}','${HASH}','${STAGED_HASH}','{}','${NOW}',NULL,'${NOW}');
   `);
+  refreshExecutionFrozenFixture(database, EXECUTION_ID);
 }

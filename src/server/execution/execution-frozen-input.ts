@@ -1,7 +1,12 @@
 import { createHash, randomUUID } from "node:crypto";
 import type { DatabaseSync } from "node:sqlite";
+import { z } from "zod";
 
-import type { FrozenExecutionPromptInput } from "./execution-prompt-builder";
+import { ExecutionError } from "./execution-service";
+import {
+  frozenExecutionPromptInputSchema,
+  type FrozenExecutionPromptInput,
+} from "./execution-prompt-builder";
 
 type CaptureInput = {
   agentId: string;
@@ -12,16 +17,57 @@ type CaptureInput = {
   workItemId: string;
 };
 
-type FrozenPublicEnvelope = {
-  fingerprintVersion: 1;
-  facts: Record<string, unknown>;
-};
+const publicFactsSchema = z.object({
+  dependencies: frozenExecutionPromptInputSchema.shape.dependencies,
+  members: z.array(z.object({
+    accentToken: z.string(),
+    agentId: z.string(),
+    avatarText: z.string(),
+    joinedAt: z.string(),
+    model: z.string(),
+    name: z.string(),
+    permissions: frozenExecutionPromptInputSchema.shape.currentAgent.shape.permissions,
+    role: z.string(),
+    skills: z.array(z.object({
+      id: z.string(),
+      name: z.string(),
+      version: z.number().int(),
+    }).strict()),
+  }).strict()),
+  mission: frozenExecutionPromptInputSchema.shape.mission,
+  provider: z.object({
+    baseUrl: z.string(),
+    defaultModel: z.string(),
+    id: z.string(),
+    model: z.string(),
+    name: z.string(),
+  }).strict(),
+  sharedMemory: frozenExecutionPromptInputSchema.shape.sharedContext,
+  sourceCollaborationRunId: z.string(),
+  task: frozenExecutionPromptInputSchema.shape.task,
+  validationPolicy: frozenExecutionPromptInputSchema.shape.validationPolicy,
+  workspaceBaselineHash: z.string().nullable(),
+}).strict();
 
-type FrozenPrivateEnvelope = {
-  fingerprintVersion: 1;
-  facts: Record<string, unknown>;
-  promptInput: FrozenExecutionPromptInput;
-};
+const privateFactsSchema = z.object({
+  currentAgent: frozenExecutionPromptInputSchema.shape.currentAgent,
+}).strict();
+
+export const frozenPublicEnvelopeSchema = z.object({
+  facts: publicFactsSchema,
+  fingerprintVersion: z.literal(1),
+  schemaVersion: z.literal(5),
+}).strict();
+
+export const frozenPrivateEnvelopeSchema = z.object({
+  facts: privateFactsSchema,
+  fingerprintVersion: z.literal(1),
+  promptInput: frozenExecutionPromptInputSchema,
+  schemaVersion: z.literal(5),
+}).strict();
+
+type FrozenPublicEnvelope = z.infer<typeof frozenPublicEnvelopeSchema>;
+type FrozenPrivateEnvelope = z.infer<typeof frozenPrivateEnvelopeSchema>;
 
 export type CapturedExecutionFrozenInput = {
   contextHash: string;
@@ -36,8 +82,7 @@ export type FrozenInputBoundary =
       categories: string[];
       disposition: "stale";
       frozenHash: string;
-    }
-  | { categories: []; disposition: "legacy"; frozenHash: string };
+    };
 
 function compareUtf8(left: string, right: string): number {
   return Buffer.from(left, "utf8").compare(Buffer.from(right, "utf8"));
@@ -258,6 +303,7 @@ export function captureExecutionFrozenInput(
     priorToolResults: [],
     publicCollaboration: [],
     publicSummaries: [],
+    schemaVersion: 5,
     sharedContext: memory,
     task,
     validationPolicy,
@@ -282,28 +328,42 @@ export function captureExecutionFrozenInput(
   const privateFacts = {
     currentAgent: promptInput.currentAgent,
   };
-  const publicEnvelope: FrozenPublicEnvelope = {
+  const publicEnvelope = frozenPublicEnvelopeSchema.parse({
     facts: publicFacts,
     fingerprintVersion: 1,
-  };
-  const privateEnvelope: FrozenPrivateEnvelope = {
+    schemaVersion: 5,
+  });
+  const privateEnvelope = frozenPrivateEnvelopeSchema.parse({
     facts: privateFacts,
     fingerprintVersion: 1,
     promptInput,
-  };
+    schemaVersion: 5,
+  });
   return {
-    contextHash: hash({ privateFacts, publicFacts }),
+    contextHash: hash({ privateFacts, promptInput, publicFacts }),
     privateEnvelope,
     publicEnvelope,
   };
 }
 
-function parseEnvelope<T>(value: string): T | null {
+function invalidFrozenInput(): ExecutionError {
+  return new ExecutionError(
+    "FROZEN_INPUT_INVALID",
+    500,
+    "Stored frozen execution input failed integrity validation.",
+  );
+}
+
+function parseEnvelope<T>(value: string, schema: z.ZodType<T>): T {
   try {
-    return JSON.parse(value) as T;
+    return schema.parse(JSON.parse(value) as unknown);
   } catch {
-    return null;
+    throw invalidFrozenInput();
   }
+}
+
+export function parseFrozenPrivateEnvelope(value: string): FrozenPrivateEnvelope {
+  return parseEnvelope(value, frozenPrivateEnvelopeSchema);
 }
 
 function changedCategories(
@@ -348,16 +408,14 @@ export function staleExecutionIfFrozenInputChanged(
       workItemId: string;
     } | undefined;
     if (!row) throw new Error("Execution was not found.");
-    const frozenPublic = parseEnvelope<FrozenPublicEnvelope>(row.publicJson);
-    const frozenPrivate = parseEnvelope<FrozenPrivateEnvelope>(row.privateJson);
-    if (
-      frozenPublic?.fingerprintVersion !== 1
-      || frozenPrivate?.fingerprintVersion !== 1
-      || !frozenPublic.facts
-      || !frozenPrivate.facts
-    ) {
-      database.exec("COMMIT");
-      return { categories: [], disposition: "legacy", frozenHash: row.contextHash };
+    const frozenPublic = parseEnvelope(row.publicJson, frozenPublicEnvelopeSchema);
+    const frozenPrivate = parseFrozenPrivateEnvelope(row.privateJson);
+    if (hash({
+      privateFacts: frozenPrivate.facts,
+      promptInput: frozenPrivate.promptInput,
+      publicFacts: frozenPublic.facts,
+    }) !== row.contextHash) {
+      throw invalidFrozenInput();
     }
     const frozenBaseline = (frozenPublic.facts as {
       workspaceBaselineHash?: unknown;

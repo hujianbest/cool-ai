@@ -14,6 +14,7 @@ import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
 import { openDatabase } from "@/src/server/db";
 import { createWindowsVerifiedMergeAdapter } from "@/src/server/execution/merge-verified-adapter";
+import { refreshExecutionFrozenFixture } from "./execution-frozen-fixture";
 
 vi.mock("server-only", () => ({}));
 
@@ -575,4 +576,5 @@ function seedDatabase(
     ) VALUES ('file-a','${STAGED_ID}','obs-a',0,'src/a.txt','src/a.txt','modified',
       '${sha256("old-a")}','${sha256("new-a")}',5);
   `);
+  refreshExecutionFrozenFixture(database, EXECUTION_ID);
 }

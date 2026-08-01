@@ -12,6 +12,7 @@ import {
   createWindowsVerifiedMergeAdapter,
   type MergeVerifiedAdapter,
 } from "@/src/server/execution/merge-verified-adapter";
+import { refreshExecutionFrozenFixture } from "./execution-frozen-fixture";
 
 vi.mock("server-only", () => ({}));
 
@@ -457,4 +458,5 @@ function seedDatabase(
       ('file-z','${STAGED_ID}','obs-z',1,'src/z.txt','src/z.txt','added',
        NULL,'${sha256("new-z")}',5);
   `);
+  refreshExecutionFrozenFixture(database, EXECUTION_ID);
 }

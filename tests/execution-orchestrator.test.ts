@@ -8,6 +8,7 @@ import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
 import { createCredentialVault } from "@/src/server/credential-vault";
 import { openDatabase } from "@/src/server/db";
+import { captureExecutionFrozenInput } from "@/src/server/execution/execution-frozen-input";
 import {
   controlExecution,
   type ExecutionControlDependencies,
@@ -100,53 +101,6 @@ function identity(value: string, kind: Identity["kind"], finalPath: string, size
   return { finalPath, identity: value, kind, size };
 }
 
-function frozenPromptInput(agentId: string, workItemId: string) {
-  return {
-    currentAgent: {
-      id: agentId,
-      name: agentId,
-      permissions: { execute: true, read: true, write: true },
-      role: "Builder",
-      skills: [],
-      systemPrompt: `private-${agentId}`,
-    },
-    dependencies: [],
-    manifests: {
-      baseline: { fileCount: 1, hash: HASH, totalBytes: 5 },
-      sandbox: { fileCount: 1, hash: HASH, totalBytes: 5 },
-    },
-    members: [{
-      accentToken: "sage",
-      agentId,
-      avatarText: "A",
-      name: agentId,
-      permissions: { execute: true, read: true, write: true },
-      role: "Builder",
-      skillNames: [],
-    }],
-    mission: { goal: "Ship", id: "mission", title: "Mission", version: 1 },
-    priorToolResults: [],
-    publicCollaboration: [],
-    publicSummaries: [],
-    sharedContext: [],
-    task: {
-      assigneeAgentId: agentId,
-      description: "Inspect files",
-      id: workItemId,
-      status: "in_progress",
-      title: workItemId,
-      version: 1,
-    },
-    validationPolicy: {
-      classifierVersion: 1,
-      entries: [],
-      policyHash: "4f53cda18c2baa0c0354bb5f9a3ecbe5ed12ab4d8e11ba873c2f11161202b945",
-      revisionId: "policy",
-      version: 1,
-    },
-  };
-}
-
 function seed(): void {
   const credential = createCredentialVault().encrypt("provider", "provider-secret");
   database.exec(`
@@ -209,8 +163,6 @@ function insertExecution(
   workItemId: string,
   attemptId: string,
 ): void {
-  const frozen = JSON.stringify({ promptInput: frozenPromptInput(agentId, workItemId) })
-    .replaceAll("'", "''");
   database.exec(`
     INSERT INTO executions (
       id,project_id,source_collaboration_run_id,mission_id,work_item_id,agent_id,
@@ -231,11 +183,42 @@ function insertExecution(
       started_at,finished_at
     ) VALUES (
       '${attemptId}','${PROJECT_ID}','${executionId}',1,'ready','${SANDBOX_ROOT}',
-      NULL,'${HASH}','${HASH}','{}','${frozen}','${HASH}','policy',1,
+      NULL,'${HASH}','${HASH}','{}','{}','${HASH}','policy',1,
       '4f53cda18c2baa0c0354bb5f9a3ecbe5ed12ab4d8e11ba873c2f11161202b945',
       strftime('%Y-%m-%dT%H:%M:%fZ','now'),NULL
     );
   `);
+  refreshFrozenExecution(agentId, workItemId, attemptId);
+}
+
+function refreshFrozenExecution(
+  agentId: string,
+  workItemId: string,
+  attemptId: string,
+): void {
+  const frozen = captureExecutionFrozenInput(database, {
+    agentId,
+    baselineManifestHash: HASH,
+    missionId: "mission",
+    projectId: PROJECT_ID,
+    sourceCollaborationRunId: "run",
+    workItemId,
+  });
+  database.prepare(`
+    UPDATE execution_attempts
+    SET frozen_public_json=?,frozen_private_json=?,frozen_context_hash=?
+    WHERE id=?
+  `).run(
+    JSON.stringify(frozen.publicEnvelope),
+    JSON.stringify(frozen.privateEnvelope),
+    frozen.contextHash,
+    attemptId,
+  );
+}
+
+function refreshAllFrozenExecutions(): void {
+  refreshFrozenExecution("agent-a", "work-a", "attempt-a");
+  refreshFrozenExecution("agent-b", "work-b", "attempt-b");
 }
 
 function providerResponse(action: Record<string, unknown>): Response {
@@ -392,6 +375,7 @@ describe("client-driven execution advance orchestration", () => {
       });
       database.prepare("UPDATE providers SET base_url=? WHERE id='provider'")
         .run(provider.baseUrl);
+      refreshAllFrozenExecutions();
 
       const results = await Promise.all([
         advance.advanceExecution(
@@ -443,6 +427,7 @@ describe("client-driven execution advance orchestration", () => {
       }));
       database.prepare("UPDATE providers SET base_url=? WHERE id='provider'")
         .run(provider.baseUrl);
+      refreshAllFrozenExecutions();
       const fault = new Error(`fault:${faultPoint}`);
       await expect(advance.advanceExecution(
         databasePath,

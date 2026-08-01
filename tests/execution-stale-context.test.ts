@@ -188,6 +188,111 @@ afterEach(() => {
 });
 
 describe("execution frozen-input staleness", () => {
+  function frozenJson(column: "frozen_private_json" | "frozen_public_json"): unknown {
+    const row = database.prepare(`
+      SELECT ${column} AS value FROM execution_attempts WHERE id=?
+    `).get(ATTEMPT_ID) as { value: string };
+    return JSON.parse(row.value) as unknown;
+  }
+
+  function replaceFrozenJson(
+    column: "frozen_private_json" | "frozen_public_json",
+    value: unknown,
+  ): void {
+    database.prepare(`
+      UPDATE execution_attempts SET ${column}=? WHERE id=?
+    `).run(typeof value === "string" ? value : JSON.stringify(value), ATTEMPT_ID);
+  }
+
+  it("accepts a complete current v5 frozen envelope", () => {
+    expect(staleExecutionIfFrozenInputChanged(database, EXECUTION_ID)).toMatchObject({
+      categories: [],
+      disposition: "current",
+    });
+  });
+
+  it.each([
+    ["malformed public JSON shape", "frozen_public_json", "[]", false],
+    ["non-object private JSON", "frozen_private_json", "null", false],
+    ["missing public field", "frozen_public_json", "facts", true],
+    ["extra private field", "frozen_private_json", "unexpected", true],
+    ["wrong envelope field type", "frozen_public_json", "fingerprintVersion", true],
+    ["wrong envelope version", "frozen_private_json", "schemaVersion", true],
+  ] as const)(
+    "fails closed for %s",
+    (_label, column, fieldOrValue, mutateObject) => {
+      if (!mutateObject) {
+        replaceFrozenJson(column, fieldOrValue);
+      } else {
+        const envelope = frozenJson(column) as Record<string, unknown>;
+        if (fieldOrValue === "facts") delete envelope.facts;
+        if (fieldOrValue === "unexpected") envelope.unexpected = true;
+        if (fieldOrValue === "fingerprintVersion") envelope.fingerprintVersion = "1";
+        if (fieldOrValue === "schemaVersion") envelope.schemaVersion = 4;
+        replaceFrozenJson(column, envelope);
+      }
+
+      expect(() => staleExecutionIfFrozenInputChanged(database, EXECUTION_ID))
+        .toThrowError(expect.objectContaining({ code: "FROZEN_INPUT_INVALID" }));
+      expect(database.prepare(`
+        SELECT status FROM executions WHERE id=?
+      `).get(EXECUTION_ID)).toEqual({ status: "queued" });
+    },
+  );
+
+  it.each([
+    ["missing field", (prompt: Record<string, unknown>) => delete prompt.task],
+    ["extra field", (prompt: Record<string, unknown>) => {
+      prompt.unexpected = true;
+    }],
+    ["wrong field type", (prompt: Record<string, unknown>) => {
+      prompt.dependencies = "not-an-array";
+    }],
+    ["wrong version", (prompt: Record<string, unknown>) => {
+      prompt.schemaVersion = 4;
+    }],
+    ["tampered task", (prompt: Record<string, unknown>) => {
+      const task = prompt.task as Record<string, unknown>;
+      task.title = "tampered prompt only";
+    }],
+  ])("rejects promptInput %s before model progression", async (_label, mutate) => {
+    const envelope = frozenJson("frozen_private_json") as {
+      promptInput: Record<string, unknown>;
+    };
+    mutate(envelope.promptInput);
+    replaceFrozenJson("frozen_private_json", envelope);
+    const fetchMock = vi.fn();
+    vi.stubGlobal("fetch", fetchMock);
+
+    await expect(advance.advanceExecution(
+      databasePath,
+      EXECUTION_ID,
+      { expectedVersion: 1, operationId: operationId(90) },
+      { fileAdapter: {} },
+    )).rejects.toMatchObject({ code: "FROZEN_INPUT_INVALID", httpStatus: 500 });
+
+    expect(fetchMock).not.toHaveBeenCalled();
+    expect(database.prepare(`
+      SELECT status FROM executions WHERE id=?
+    `).get(EXECUTION_ID)).toEqual({ status: "queued" });
+    expect(database.prepare(`
+      SELECT status FROM execution_attempts WHERE id=?
+    `).get(ATTEMPT_ID)).toEqual({ status: "ready" });
+    expect(database.prepare("SELECT COUNT(*) AS count FROM execution_actions").get())
+      .toEqual({ count: 0 });
+    expect(database.prepare("SELECT COUNT(*) AS count FROM execution_operations").get())
+      .toEqual({ count: 0 });
+  });
+
+  it("rejects a stored frozen fingerprint mismatch", () => {
+    database.prepare(`
+      UPDATE execution_attempts SET frozen_context_hash=? WHERE id=?
+    `).run("b".repeat(64), ATTEMPT_ID);
+
+    expect(() => staleExecutionIfFrozenInputChanged(database, EXECUTION_ID))
+      .toThrowError(expect.objectContaining({ code: "FROZEN_INPUT_INVALID" }));
+  });
+
   it("atomically stales before a model action when task input changes", async () => {
     database.prepare(`
       UPDATE work_items SET title='Changed title',version=version+1 WHERE id='work'

@@ -6,6 +6,7 @@ import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
 import { createCredentialVault } from "@/src/server/credential-vault";
 import { openDatabase } from "@/src/server/db";
+import { refreshExecutionFrozenFixture } from "./execution-frozen-fixture";
 
 type AdvanceModule = {
   advanceExecution(
@@ -28,55 +29,6 @@ let directory: string;
 let databasePath: string;
 let database: DatabaseSync;
 let advance: AdvanceModule;
-
-function frozenPrompt(agentId: string, workItemId: string): string {
-  return JSON.stringify({
-    promptInput: {
-      currentAgent: {
-        id: agentId,
-        name: agentId,
-        permissions: { execute: true, read: true, write: true },
-        role: "Builder",
-        skills: [],
-        systemPrompt: "private",
-      },
-      dependencies: [],
-      manifests: {
-        baseline: { fileCount: 1, hash: HASH, totalBytes: 1 },
-        sandbox: { fileCount: 1, hash: HASH, totalBytes: 1 },
-      },
-      members: [{
-        accentToken: "sage",
-        agentId,
-        avatarText: "A",
-        name: agentId,
-        permissions: { execute: true, read: true, write: true },
-        role: "Builder",
-        skillNames: [],
-      }],
-      mission: { goal: "Ship", id: "mission", title: "Mission", version: 1 },
-      priorToolResults: [],
-      publicCollaboration: [],
-      publicSummaries: [],
-      sharedContext: [],
-      task: {
-        assigneeAgentId: agentId,
-        description: "Work",
-        id: workItemId,
-        status: "in_progress",
-        title: workItemId,
-        version: 1,
-      },
-      validationPolicy: {
-        classifierVersion: 1,
-        entries: [],
-        policyHash: "4f53cda18c2baa0c0354bb5f9a3ecbe5ed12ab4d8e11ba873c2f11161202b945",
-        revisionId: "policy",
-        version: 1,
-      },
-    },
-  });
-}
 
 function insertExecution(
   executionId: string,
@@ -105,7 +57,8 @@ function insertExecution(
     ) VALUES (?, ?, ?, 1, 'ready', 'verified://sandbox', NULL, ?, ?, '{}', ?, ?,
       'policy',1,'4f53cda18c2baa0c0354bb5f9a3ecbe5ed12ab4d8e11ba873c2f11161202b945',
       strftime('%Y-%m-%dT%H:%M:%fZ','now'),NULL)
-  `).run(attemptId, PROJECT_ID, executionId, HASH, HASH, frozenPrompt(agentId, workItemId), HASH);
+  `).run(attemptId, PROJECT_ID, executionId, HASH, HASH, "{}", HASH);
+  refreshExecutionFrozenFixture(database, executionId);
 }
 
 function seed(): void {

@@ -21,6 +21,7 @@ import {
   recoverIncompleteMergeJournals,
   resolveManualRecovery,
 } from "@/src/server/execution/merge-journal-service";
+import { refreshExecutionFrozenFixture } from "./execution-frozen-fixture";
 
 vi.mock("server-only", () => ({}));
 
@@ -104,7 +105,7 @@ function seed(database: DatabaseSync, workspaceRoot: string, sandboxRoot: string
     INSERT INTO agents (
       id,name,role,system_prompt,provider_id,model,avatar_text,accent_token,
       can_read,can_write,can_execute,max_tokens,max_handoffs,version,created_at,updated_at
-    ) VALUES ('agent','Agent','Builder','hidden-chain-of-thought','provider','model','A','sage',
+    ) VALUES ('agent','Agent','Builder','private','provider','model','A','sage',
       1,1,1,1000,5,1,'${NOW}','${NOW}');
     INSERT INTO project_memberships (project_id,agent_id,joined_at)
     VALUES ('${PROJECT_ID}','agent','${NOW}');
@@ -173,6 +174,7 @@ function seed(database: DatabaseSync, workspaceRoot: string, sandboxRoot: string
     ) VALUES ('file','staged','observation',0,'src/a.txt','src/a.txt','modified',
       '${sha256("old-a")}','${sha256("new-a")}',5);
   `);
+  refreshExecutionFrozenFixture(database, EXECUTION_ID);
 }
 
 function databaseSecurityScan(database: DatabaseSync): string {
