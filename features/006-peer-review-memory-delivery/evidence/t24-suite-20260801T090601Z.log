@@ -1,0 +1,2845 @@
+# hf-gate-run
+# label: t24-suite
+# command: npm test
+# started: 2026-08-01T09:06:01+00:00
+
+> collaboration-cockpit@0.1.0 test
+> vitest run
+
+
+ RUN  v4.1.10 D:/cool-ai
+
+(node:11268) ExperimentalWarning: SQLite is an experimental feature and might change at any time
+(Use `node --trace-warnings ...` to show where the warning was created)
+(node:5172) ExperimentalWarning: SQLite is an experimental feature and might change at any time
+(Use `node --trace-warnings ...` to show where the warning was created)
+(node:13928) ExperimentalWarning: SQLite is an experimental feature and might change at any time
+(Use `node --trace-warnings ...` to show where the warning was created)
+(node:16844) ExperimentalWarning: SQLite is an experimental feature and might change at any time
+(Use `node --trace-warnings ...` to show where the warning was created)
+(node:2520) ExperimentalWarning: SQLite is an experimental feature and might change at any time
+(Use `node --trace-warnings ...` to show where the warning was created)
+(node:7836) ExperimentalWarning: SQLite is an experimental feature and might change at any time
+(Use `node --trace-warnings ...` to show where the warning was created)
+(node:13144) ExperimentalWarning: SQLite is an experimental feature and might change at any time
+(Use `node --trace-warnings ...` to show where the warning was created)
+ ❯ tests/collaboration-recovery.api.test.ts (4 tests | 4 failed) 1362ms
+     × reconciles an expired attempt before returning collaboration read facts 348ms
+     × reconciles before a relevant mutation and still durably completes that mutation 334ms
+     × explicit recover completes and replays its own receipt without duplicating facts 330ms
+     × rejects reusing an advance operation id at the recover endpoint 349ms
+ ❯ tests/members.service.test.ts (3 tests | 1 failed) 1712ms
+     × prevents removing a member assigned to a project work item 503ms
+ ❯ tests/collaboration-context-guards.test.ts (9 tests | 9 failed) 3036ms
+     × marks acquired context discarded after mission and task fact changes 381ms
+     × changes the roster fingerprint when a member is added 362ms
+     × rejects member removal or replacement while the run is running 329ms
+     × rejects member removal or replacement while the run is waiting_owner 329ms
+     × rejects member removal or replacement while the run is paused 347ms
+     × rejects member removal or replacement while the run is failed 304ms
+     × rejects deleting an active member or the provider used by any active member 319ms
+     × allows Agent and provider configuration updates for the next attempt 339ms
+     × preserves roster replacement behavior when no nonterminal run exists 324ms
+(node:16840) ExperimentalWarning: SQLite is an experimental feature and might change at any time
+(Use `node --trace-warnings ...` to show where the warning was created)
+(node:1764) ExperimentalWarning: SQLite is an experimental feature and might change at any time
+(Use `node --trace-warnings ...` to show where the warning was created)
+ ❯ tests/process-runner.test.ts (14 tests | 9 failed) 4780ms
+     × persists redacted chunks and exact receipt only inside the winning terminal CAS 401ms
+     × terminalizes a synchronous spawn exception without orphaning the action or receipt 411ms
+     × rejects approval input tamper before spawn and terminalizes authorization 408ms
+     × rejects tool input tamper before spawn and terminalizes authorization 391ms
+     × rejects action request tamper before spawn and terminalizes authorization 432ms
+     × rejects tool action link tamper before spawn and terminalizes authorization 420ms
+     × drops late process facts after stop wins and preserves its exact receipt 405ms
+     × drops late process facts after reconcile wins and preserves its exact receipt 388ms
+     × fails the attempt closed and creates no validation or stage when tree termination is unconfirmed 431ms
+ ❯ tests/execution-write-stage-integration.test.ts (12 tests | 5 failed) 5724ms
+     × persists strict baseline and current manifest identities across reopen 446ms
+     × marks same bytes with a new canonical identity stale after reopen 405ms
+     × reconciles lease loss, transaction injection, and a late finalizer 483ms
+     × refreshes a real write before/after and stages the refreshed tree exactly once 508ms
+     × drops a refreshed stage when the cached manifest CAS loses 450ms
+(node:16480) ExperimentalWarning: SQLite is an experimental feature and might change at any time
+(Use `node --trace-warnings ...` to show where the warning was created)
+(node:16596) ExperimentalWarning: SQLite is an experimental feature and might change at any time
+(Use `node --trace-warnings ...` to show where the warning was created)
+ ❯ tests/execution-stale-context.test.ts (30 tests | 11 failed) 11512ms
+     × rejects promptInput missing field before model progression 378ms
+     × rejects promptInput extra field before model progression 391ms
+     × rejects promptInput wrong field type before model progression 356ms
+     × rejects promptInput wrong version before model progression 398ms
+     × rejects promptInput tampered task before model progression 367ms
+     × atomically stales before a model action when task input changes 419ms
+     × stales when shared memory changes 289ms
+     × ignores pure credential rotation and acquires the latest verified key 385ms
+     × pauses without creating an action when the current credential is unavailable 346ms
+     × keeps an acquired key in flight and discards a late result after noncredential change 1337ms
+     × checks frozen input before a staged action and exposes the same merge boundary 485ms
+ ❯ tests/merge-external-writer.test.ts (7 tests | 3 failed) 8013ms
+     × resolves exact old/new manifests and replays each operation exactly 615ms
+     × detects every postcheck-to-receipt window without overwriting external bytes 519ms
+     × detects restart roll-forward races for every external path shape 538ms
+(node:12692) ExperimentalWarning: SQLite is an experimental feature and might change at any time
+(Use `node --trace-warnings ...` to show where the warning was created)
+ ❯ tests/turn-finalize.test.ts (18 tests | 18 failed) 6026ms
+     × commits only with calling status, token, live lease, running epoch, and recomputed context hash 374ms
+     × pause discards business results while retaining allowed call audit 326ms
+     × stop discards business results while retaining allowed call audit 354ms
+     × epoch discards business results while retaining allowed call audit 318ms
+     × expired discards business results while retaining allowed call audit 307ms
+     × discards on recomputed context hash mismatch and pauses the running run 317ms
+     × rejects a mismatched lease token with affected rows zero and no durable writes 424ms
+     × persists exact public provider failure, completes pending receipt, and records every call/valid usage 323ms
+     × persists exact public usage failure, completes pending receipt, and records every call/valid usage 357ms
+     × persists exact public schema failure, completes pending receipt, and records every call/valid usage 333ms
+     × rolls back a business failure, then completes the pending receipt in a short failure transaction 345ms
+     × durably sanitizes unexpected business exception as failed/internal_failure and makes a late finalizer a no-op 322ms
+     × durably sanitizes SQLite persistence exception as failed/internal_failure and makes a late finalizer a no-op 324ms
+     × persists provider credential and verification generations on auth failure 329ms
+     × a late finalizer after a committed terminal attempt reads the durable receipt and changes nothing 327ms
+     × a late finalizer after a failed terminal attempt reads the durable receipt and changes nothing 309ms
+     × a late finalizer after a discarded terminal attempt reads the durable receipt and changes nothing 319ms
+     × keeps the advance receipt request hash and identity unchanged 316ms
+(node:4588) ExperimentalWarning: SQLite is an experimental feature and might change at any time
+(Use `node --trace-warnings ...` to show where the warning was created)
+(node:8416) ExperimentalWarning: SQLite is an experimental feature and might change at any time
+(Use `node --trace-warnings ...` to show where the warning was created)
+(node:13804) ExperimentalWarning: SQLite is an experimental feature and might change at any time
+(Use `node --trace-warnings ...` to show where the warning was created)
+(node:12220) ExperimentalWarning: SQLite is an experimental feature and might change at any time
+(Use `node --trace-warnings ...` to show where the warning was created)
+(node:14500) ExperimentalWarning: SQLite is an experimental feature and might change at any time
+(Use `node --trace-warnings ...` to show where the warning was created)
+(node:14956) ExperimentalWarning: SQLite is an experimental feature and might change at any time
+(Use `node --trace-warnings ...` to show where the warning was created)
+(node:2528) ExperimentalWarning: SQLite is an experimental feature and might change at any time
+(Use `node --trace-warnings ...` to show where the warning was created)
+(node:14512) ExperimentalWarning: SQLite is an experimental feature and might change at any time
+(Use `node --trace-warnings ...` to show where the warning was created)
+ ❯ tests/collaboration-controls.service.test.ts (10 tests | 10 failed) 3090ms
+     × pauses and continues only a manual pause while incrementing version and epoch 317ms
+     × requires a later provider re-verification before retrying provider auth 304ms
+     × rejects provider auth retry after only non-connection provider fields change 299ms
+     × requires credential-unavailable recovery to replace a still-corrupt credential 334ms
+     × requires retry, not continue, for internal failures 310ms
+     × blocks budget retry until the configured token boundary is raised 299ms
+     × keeps a planned run terminal for every control action 320ms
+     × keeps a stopped run terminal for every control action 300ms
+     × enforces expectedVersion and exactly replays a completed operation 313ms
+     × allows only one concurrent expectedVersion CAS winner 292ms
+ ❯ tests/agent-task-actions.test.ts (15 tests | 1 failed) 9584ms
+     × claims an existing todo only when unassigned, dependencies are done, and its current version wins 670ms
+ ❯ tests/merge-journal-prepare.test.ts (6 tests | 2 failed) 9259ms
+     × turns a post-journal native uncertainty into a zero-result manual barrier 612ms
+     × durably prepares full manifests and applies modified/added paths in stable order 565ms
+(node:6824) ExperimentalWarning: SQLite is an experimental feature and might change at any time
+(Use `node --trace-warnings ...` to show where the warning was created)
+(node:16612) ExperimentalWarning: SQLite is an experimental feature and might change at any time
+(Use `node --trace-warnings ...` to show where the warning was created)
+ ❯ tests/execution-approvals.test.ts (16 tests | 15 failed) 6724ms
+     × advances an approved one-shot command through consume and executes it exactly once 461ms
+     × approves an exact command once and atomically consumes it into one command action 402ms
+     × reject permanently invalidates the request and pauses for exact running resume 418ms
+     × replace permanently invalidates the request and pauses for exact running resume 415ms
+     × revokes an approved request before consumption and cannot revoke consumed authorization 440ms
+     × continues after rejection so the next model step can receive the typed outcome 404ms
+     × stop permanently expires approved authorization and terminal decisions stay denied 432ms
+     × persists same-operation success/failure receipts and rejects different input or stale versions 410ms
+     × expires and denies approval after execution attempt changes 433ms
+     × expires and denies approval after attempt context changes 422ms
+     × expires and denies approval after sandbox input changes 409ms
+     × expires and denies approval after command tuple changes 393ms
+     × expires an approved command when the manifest changes before public advance 401ms
+     × creates a distinct exact staged approval and denies tamper, conflict, stale, and terminal use 467ms
+     × exposes the owner-only mutation route with strict input 421ms
+(node:12324) ExperimentalWarning: SQLite is an experimental feature and might change at any time
+(Use `node --trace-warnings ...` to show where the warning was created)
+(node:7224) ExperimentalWarning: SQLite is an experimental feature and might change at any time
+(Use `node --trace-warnings ...` to show where the warning was created)
+(node:10632) ExperimentalWarning: SQLite is an experimental feature and might change at any time
+(Use `node --trace-warnings ...` to show where the warning was created)
+(node:7584) ExperimentalWarning: SQLite is an experimental feature and might change at any time
+(Use `node --trace-warnings ...` to show where the warning was created)
+ ❯ tests/execution-controls.test.ts (13 tests | 13 failed) 5874ms
+     × pauses queued with its exact resume target 417ms
+     × pauses running with its exact resume target 372ms
+     × pauses waiting_approval with its exact resume target 371ms
+     × discards an in-flight action, requests command termination, and fences late results 446ms
+     × continues only to the recorded target with target-specific preconditions 385ms
+     × retries stale execution as a new attempt and sandbox without resetting history or deadline 1383ms
+     × rejects retry when current eligibility, workspace, context, or budget preconditions fail 379ms
+     × stops a single execution, expires approvals, and never mutates the other execution 400ms
+     × keeps stopped terminal 350ms
+     × keeps merged terminal 354ms
+     × blocks every ordinary control while manual recovery is required 350ms
+     × durably replays the exact receipt and conflicts on reused operation content 337ms
+     × persists stale-version conflicts without overwriting newer owner actions 329ms
+ ❯ tests/execution-read-api.test.ts (17 tests | 15 failed) 47390ms
+     × round-trips the complete persisted event union in sequence order across pages 2974ms
+     × fails closed when every persisted event payload is tampered in the database 2524ms
+     × fails closed on unknown type without reflecting stored data 2769ms
+     × fails closed on missing payload field without reflecting stored data 2610ms
+     × fails closed on extra payload field without reflecting stored data 2618ms
+     × fails closed on wrong payload type without reflecting stored data 2505ms
+     × fails closed with the same stable error for a non-object stored event payload 2523ms
+     × returns strict list/detail summaries without private or absolute host facts 2600ms
+     × returns the active approval bound to the current staged hash beyond ten historical approvals 2922ms
+     × strictly summarizes every required validation when the policy exceeds one page 3059ms
+     × uses independent tamper-proof cursors and bounded pages for events and 101+ staged facts 2579ms
+     × keeps the maximum 100000 observation and blocker set behind bounded pages 4608ms
+     × reads a legal multibyte 1 MiB artifact through contiguous <=64KiB chunks 2590ms
+     × rejects chunk gaps/hash corruption and keeps diff responses <=64KiB 2642ms
+     × rejects oversized limits and remains stable after reopening the database 2546ms
+(node:14772) ExperimentalWarning: SQLite is an experimental feature and might change at any time
+(Use `node --trace-warnings ...` to show where the warning was created)
+(node:12072) ExperimentalWarning: SQLite is an experimental feature and might change at any time
+(Use `node --trace-warnings ...` to show where the warning was created)
+(node:3336) ExperimentalWarning: SQLite is an experimental feature and might change at any time
+(Use `node --trace-warnings ...` to show where the warning was created)
+(node:8584) ExperimentalWarning: SQLite is an experimental feature and might change at any time
+(Use `node --trace-warnings ...` to show where the warning was created)
+(node:8172) ExperimentalWarning: SQLite is an experimental feature and might change at any time
+(Use `node --trace-warnings ...` to show where the warning was created)
+(node:10120) ExperimentalWarning: SQLite is an experimental feature and might change at any time
+(Use `node --trace-warnings ...` to show where the warning was created)
+(node:6748) ExperimentalWarning: SQLite is an experimental feature and might change at any time
+(Use `node --trace-warnings ...` to show where the warning was created)
+ ❯ tests/turn-acquire.test.ts (10 tests | 10 failed) 3394ms
+     × atomically stores an immutable prompt snapshot, hashes, epoch, sequence, lease, event, and pending receipt 354ms
+     × returns operation in progress for a repeated pending advance without duplicating work 302ms
+     × guards a paused run before creating an attempt 324ms
+     × guards a waiting_owner run before creating an attempt 338ms
+     × guards a stopped run before creating an attempt 339ms
+     × guards an open decision and another calling attempt 323ms
+     × serializes concurrent advances so exactly one calling attempt is acquired 423ms
+     × pauses at the rounds pre-boundary, completes the receipt, and starts no call 315ms
+     × pauses at the tokens pre-boundary, completes the receipt, and starts no call 325ms
+     × pauses at the handoffs pre-boundary, completes the receipt, and starts no call 348ms
+ ❯ tests/collaboration-prompt.test.ts (4 tests | 4 failed) 1135ms
+     × gives both Agents identical shared context and only the current private configuration 305ms
+     × selects the newest 30 public messages in stable order with stored name snapshots 279ms
+     × keeps whole messages at the 60000 character boundary without skipping older entries 280ms
+     × returns an immutable acquire snapshot with deterministic canonical hashes 269ms
+ ❯ tests/execution-eligibility.test.ts (8 tests | 7 failed) 3438ms
+     × strictly rejects task arrays without creating work 417ms
+     × persists and exactly replays the missing rejection 398ms
+     × persists and exactly replays the todo rejection 379ms
+     × persists and exactly replays the unassigned rejection 366ms
+     × requires current membership, done dependencies, latest planned run, and project readiness 419ms
+     × atomically enforces project two, task one, Agent one, and DAG-unrelated selections 374ms
+     × rejects a dependency relationship introduced beside an active execution 373ms
+ ❯ tests/collaboration-read-api.test.ts (8 tests | 4 failed) 4526ms
+     × pages project messages and run events independently while restoring current facts and snapshots after reopen 649ms
+     × returns every designed event as an exact strict payload and supports a missing after sequence 591ms
+     × rejects unknown payload key with only a sanitized public error 564ms
+     × rejects wrong payload type with only a sanitized public error 586ms
+(node:9328) ExperimentalWarning: SQLite is an experimental feature and might change at any time
+(Use `node --trace-warnings ...` to show where the warning was created)
+(node:1108) ExperimentalWarning: SQLite is an experimental feature and might change at any time
+(Use `node --trace-warnings ...` to show where the warning was created)
+ ❯ tests/execution-usage-budget.test.ts (5 tests | 5 failed) 2245ms
+     × aggregates S-4 primary plus S-5 primary/repair and pauses after crossing without a tool 510ms
+     × does no HTTP or action when trusted same-Agent usage is already at max 452ms
+     × counts valid provider-failure usage and keeps it across retry 442ms
+     × pauses with no requested action for missing, negative, noninteger, and inconsistent usage 424ms
+     × enforces exact round, tool, and wall-clock prechecks while keeping Agents independent 415ms
+(node:7004) ExperimentalWarning: SQLite is an experimental feature and might change at any time
+(Use `node --trace-warnings ...` to show where the warning was created)
+(node:9252) ExperimentalWarning: SQLite is an experimental feature and might change at any time
+(Use `node --trace-warnings ...` to show where the warning was created)
+(node:5720) ExperimentalWarning: SQLite is an experimental feature and might change at any time
+(Use `node --trace-warnings ...` to show where the warning was created)
+(node:12284) ExperimentalWarning: SQLite is an experimental feature and might change at any time
+(Use `node --trace-warnings ...` to show where the warning was created)
+(node:13060) ExperimentalWarning: SQLite is an experimental feature and might change at any time
+(Use `node --trace-warnings ...` to show where the warning was created)
+(node:5332) ExperimentalWarning: SQLite is an experimental feature and might change at any time
+(Use `node --trace-warnings ...` to show where the warning was created)
+(node:9256) ExperimentalWarning: SQLite is an experimental feature and might change at any time
+(Use `node --trace-warnings ...` to show where the warning was created)
+(node:16708) ExperimentalWarning: SQLite is an experimental feature and might change at any time
+(Use `node --trace-warnings ...` to show where the warning was created)
+(node:10040) ExperimentalWarning: SQLite is an experimental feature and might change at any time
+(Use `node --trace-warnings ...` to show where the warning was created)
+(node:8816) ExperimentalWarning: SQLite is an experimental feature and might change at any time
+(Use `node --trace-warnings ...` to show where the warning was created)
+ ❯ tests/collaboration-advance.api.test.ts (5 tests | 4 failed) 1908ms
+     × executes the acquired immutable prompt through the configured provider and replays exactly 509ms
+     × uses exactly one repair call and persists only the repaired public turn 345ms
+     × maps provider failures, sanitizes every surface, and durably replays the error 382ms
+     × durably maps an unavailable server-side vault without calling the provider 382ms
+(node:376) ExperimentalWarning: SQLite is an experimental feature and might change at any time
+(Use `node --trace-warnings ...` to show where the warning was created)
+ ❯ tests/project-chat.api.test.ts (6 tests | 6 failed) 1976ms
+     × stores a project message with no active run without creating one 399ms
+     × appends a project message to the active run and deduplicates it 318ms
+     × rejects a reused project-message operation id with different content 352ms
+     × does not revive a planned run when posting a project message 287ms
+     × does not revive a stopped run when posting a project message 326ms
+     × starts an explicit new run after a terminal run 293ms
+(node:7700) ExperimentalWarning: SQLite is an experimental feature and might change at any time
+(Use `node --trace-warnings ...` to show where the warning was created)
+(node:2452) ExperimentalWarning: SQLite is an experimental feature and might change at any time
+(Use `node --trace-warnings ...` to show where the warning was created)
+(node:7088) ExperimentalWarning: SQLite is an experimental feature and might change at any time
+(Use `node --trace-warnings ...` to show where the warning was created)
+(node:14632) ExperimentalWarning: SQLite is an experimental feature and might change at any time
+(Use `node --trace-warnings ...` to show where the warning was created)
+(node:11644) ExperimentalWarning: SQLite is an experimental feature and might change at any time
+(Use `node --trace-warnings ...` to show where the warning was created)
+ ❯ tests/execution-actions.test.ts (7 tests | 7 failed) 2560ms
+     × starts the business clock from SQLite once and never resets or extends it 394ms
+     × uses a random 120 second lease and heartbeat renews from DB time without extending overall deadline 363ms
+     × enforces the DB-time boundary at now=deadline-1 354ms
+     × enforces the DB-time boundary at now=deadline 354ms
+     × enforces the DB-time boundary at now=deadline+1 345ms
+     × lets heartbeat, finalize, reconcile, or control win one terminal CAS with durable receipt and late no-op 369ms
+     × ignores caller-skew fields and uses only SQLite time 380ms
+(node:1216) ExperimentalWarning: SQLite is an experimental feature and might change at any time
+(Use `node --trace-warnings ...` to show where the warning was created)
+(node:5488) ExperimentalWarning: SQLite is an experimental feature and might change at any time
+(Use `node --trace-warnings ...` to show where the warning was created)
+ ❯ tests/collaboration-slice.test.tsx (4 tests | 4 failed) 3407ms
+     × migrates a valid database to the necessary v4 collaboration facts 240ms
+     × deduplicates create-or-append and preserves stable message/event sequences and first baton 496ms
+     × renders route-backed loading, empty, and recoverable error states 1355ms
+     × sends through the real route and reloads the persisted owner echo 1308ms
+(node:4016) ExperimentalWarning: SQLite is an experimental feature and might change at any time
+(Use `node --trace-warnings ...` to show where the warning was created)
+(node:12856) ExperimentalWarning: SQLite is an experimental feature and might change at any time
+(Use `node --trace-warnings ...` to show where the warning was created)
+(node:9992) ExperimentalWarning: SQLite is an experimental feature and might change at any time
+(Use `node --trace-warnings ...` to show where the warning was created)
+ ❯ tests/validation-policy.test.ts (6 tests | 2 failed) 2452ms
+     × retains history and frozen references across restart until project deletion 497ms
+     × rejects validation facts that do not belong to the attempt's frozen revision 501ms
+(node:3976) ExperimentalWarning: SQLite is an experimental feature and might change at any time
+(Use `node --trace-warnings ...` to show where the warning was created)
+(node:1712) ExperimentalWarning: SQLite is an experimental feature and might change at any time
+(Use `node --trace-warnings ...` to show where the warning was created)
+(node:3844) ExperimentalWarning: SQLite is an experimental feature and might change at any time
+(Use `node --trace-warnings ...` to show where the warning was created)
+(node:15208) ExperimentalWarning: SQLite is an experimental feature and might change at any time
+(Use `node --trace-warnings ...` to show where the warning was created)
+(node:8020) ExperimentalWarning: SQLite is an experimental feature and might change at any time
+(Use `node --trace-warnings ...` to show where the warning was created)
+(node:2592) ExperimentalWarning: SQLite is an experimental feature and might change at any time
+(Use `node --trace-warnings ...` to show where the warning was created)
+(node:792) ExperimentalWarning: SQLite is an experimental feature and might change at any time
+(Use `node --trace-warnings ...` to show where the warning was created)
+ ❯ tests/collaboration-operations.test.ts (6 tests | 3 failed) 1605ms
+     × rejects the same operation id with a different request hash 348ms
+     × returns the stable in-progress envelope for a matching pending receipt 338ms
+     × persists and exactly replays mapped domain errors 485ms
+(node:10672) ExperimentalWarning: SQLite is an experimental feature and might change at any time
+(Use `node --trace-warnings ...` to show where the warning was created)
+(node:12500) ExperimentalWarning: SQLite is an experimental feature and might change at any time
+(Use `node --trace-warnings ...` to show where the warning was created)
+(node:2544) ExperimentalWarning: SQLite is an experimental feature and might change at any time
+(Use `node --trace-warnings ...` to show where the warning was created)
+ ❯ tests/execution-operations.test.ts (5 tests | 5 failed) 1909ms
+     × keeps the receipt pending across contiguous children and completes only on the final public outcome 432ms
+     × replays exact status/body and conflicts on either kind or canonical request hash 367ms
+     × allows at most one running child for an operation and its execution 399ms
+     × uses CAS so final completion occurs exactly once and duplicate finalizers replay deterministically 346ms
+     × rejects gaps, stale action_count, and appending behind a nonterminal child 363ms
+(node:3384) ExperimentalWarning: SQLite is an experimental feature and might change at any time
+(Use `node --trace-warnings ...` to show where the warning was created)
+(node:1148) ExperimentalWarning: SQLite is an experimental feature and might change at any time
+(Use `node --trace-warnings ...` to show where the warning was created)
+(node:15736) ExperimentalWarning: SQLite is an experimental feature and might change at any time
+(Use `node --trace-warnings ...` to show where the warning was created)
+(node:12556) ExperimentalWarning: SQLite is an experimental feature and might change at any time
+(Use `node --trace-warnings ...` to show where the warning was created)
+ ❯ tests/execution-slice.test.tsx (2 tests | 2 failed) 1101ms
+     × persists queued execution, preparing attempt, pending receipt, and running sandbox action before start returns 466ms
+     × renders route-backed loading, empty, error recovery, queued preparation, and refresh rehydration 633ms
+(node:9224) ExperimentalWarning: SQLite is an experimental feature and might change at any time
+(Use `node --trace-warnings ...` to show where the warning was created)
+(node:7016) ExperimentalWarning: SQLite is an experimental feature and might change at any time
+(Use `node --trace-warnings ...` to show where the warning was created)
+(node:6932) ExperimentalWarning: SQLite is an experimental feature and might change at any time
+(Use `node --trace-warnings ...` to show where the warning was created)
+(node:15344) ExperimentalWarning: SQLite is an experimental feature and might change at any time
+(Use `node --trace-warnings ...` to show where the warning was created)
+(node:15260) ExperimentalWarning: SQLite is an experimental feature and might change at any time
+(Use `node --trace-warnings ...` to show where the warning was created)
+(node:4584) ExperimentalWarning: SQLite is an experimental feature and might change at any time
+(Use `node --trace-warnings ...` to show where the warning was created)
+ ❯ tests/sandbox-snapshot.test.ts (10 tests | 1 failed) 1415ms
+     × reconciles a restarted expired build to paused only after owned cleanup 431ms
+(node:3060) ExperimentalWarning: SQLite is an experimental feature and might change at any time
+(Use `node --trace-warnings ...` to show where the warning was created)
+(node:10584) ExperimentalWarning: SQLite is an experimental feature and might change at any time
+(Use `node --trace-warnings ...` to show where the warning was created)
+(node:13144) ExperimentalWarning: SQLite is an experimental feature and might change at any time
+(Use `node --trace-warnings ...` to show where the warning was created)
+(node:5612) ExperimentalWarning: SQLite is an experimental feature and might change at any time
+(Use `node --trace-warnings ...` to show where the warning was created)
+(node:5220) ExperimentalWarning: SQLite is an experimental feature and might change at any time
+(Use `node --trace-warnings ...` to show where the warning was created)
+(node:16668) ExperimentalWarning: SQLite is an experimental feature and might change at any time
+(Use `node --trace-warnings ...` to show where the warning was created)
+(node:12860) ExperimentalWarning: SQLite is an experimental feature and might change at any time
+(Use `node --trace-warnings ...` to show where the warning was created)
+(node:13452) ExperimentalWarning: SQLite is an experimental feature and might change at any time
+(Use `node --trace-warnings ...` to show where the warning was created)
+(node:12328) ExperimentalWarning: SQLite is an experimental feature and might change at any time
+(Use `node --trace-warnings ...` to show where the warning was created)
+(node:12544) ExperimentalWarning: SQLite is an experimental feature and might change at any time
+(Use `node --trace-warnings ...` to show where the warning was created)
+(node:5680) ExperimentalWarning: SQLite is an experimental feature and might change at any time
+(Use `node --trace-warnings ...` to show where the warning was created)
+(node:1548) ExperimentalWarning: SQLite is an experimental feature and might change at any time
+(Use `node --trace-warnings ...` to show where the warning was created)
+(node:12820) ExperimentalWarning: SQLite is an experimental feature and might change at any time
+(Use `node --trace-warnings ...` to show where the warning was created)
+(node:6168) ExperimentalWarning: SQLite is an experimental feature and might change at any time
+(Use `node --trace-warnings ...` to show where the warning was created)
+(node:10728) ExperimentalWarning: SQLite is an experimental feature and might change at any time
+(Use `node --trace-warnings ...` to show where the warning was created)
+(node:15164) ExperimentalWarning: SQLite is an experimental feature and might change at any time
+(Use `node --trace-warnings ...` to show where the warning was created)
+(node:15396) ExperimentalWarning: SQLite is an experimental feature and might change at any time
+(Use `node --trace-warnings ...` to show where the warning was created)
+(node:15748) ExperimentalWarning: SQLite is an experimental feature and might change at any time
+(Use `node --trace-warnings ...` to show where the warning was created)
+(node:11188) ExperimentalWarning: SQLite is an experimental feature and might change at any time
+(Use `node --trace-warnings ...` to show where the warning was created)
+(node:15320) ExperimentalWarning: SQLite is an experimental feature and might change at any time
+(Use `node --trace-warnings ...` to show where the warning was created)
+(node:10416) ExperimentalWarning: SQLite is an experimental feature and might change at any time
+(Use `node --trace-warnings ...` to show where the warning was created)
+(node:15760) ExperimentalWarning: SQLite is an experimental feature and might change at any time
+(Use `node --trace-warnings ...` to show where the warning was created)
+(node:12368) ExperimentalWarning: SQLite is an experimental feature and might change at any time
+(Use `node --trace-warnings ...` to show where the warning was created)
+(node:9272) ExperimentalWarning: SQLite is an experimental feature and might change at any time
+(Use `node --trace-warnings ...` to show where the warning was created)
+(node:6200) ExperimentalWarning: SQLite is an experimental feature and might change at any time
+(Use `node --trace-warnings ...` to show where the warning was created)
+(node:8740) ExperimentalWarning: SQLite is an experimental feature and might change at any time
+(Use `node --trace-warnings ...` to show where the warning was created)
+(node:11992) ExperimentalWarning: SQLite is an experimental feature and might change at any time
+(Use `node --trace-warnings ...` to show where the warning was created)
+(node:13076) ExperimentalWarning: SQLite is an experimental feature and might change at any time
+(Use `node --trace-warnings ...` to show where the warning was created)
+
+⎯⎯⎯⎯⎯⎯ Failed Tests 180 ⎯⎯⎯⎯⎯⎯
+
+ FAIL  tests/agent-task-actions.test.ts > Agent task action committer > claims an existing todo only when unassigned, dependencies are done, and its current version wins
+SchemaMigrationError: Database version 6 schema is invalid.
+ ❯ migrateDatabase src/server/migrations.ts:1375:13
+    1373|     const validation = validateV6(database);
+    1374|     if (validation) {
+    1375|       throw new SchemaMigrationError(
+       |             ^
+    1376|         validation,
+    1377|         "Database version 6 schema is invalid.",
+ ❯ openDatabase src/server/db.ts:14:5
+ ❯ commit tests/agent-task-actions.test.ts:181:20
+ ❯ tests/agent-task-actions.test.ts:428:20
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[1/185]⎯
+
+ FAIL  tests/collaboration-advance.api.test.ts > collaboration advance route > executes the acquired immutable prompt through the configured provider and replays exactly
+AssertionError: expected 503 to be 200 // Object.is equality
+
+- Expected
++ Received
+
+- 200
++ 503
+
+ ❯ tests/collaboration-advance.api.test.ts:231:26
+    229|     const replayBody = await replay.json();
+    230|
+    231|     expect(first.status).toBe(200);
+       |                          ^
+    232|     expect(firstBody).toMatchObject({
+    233|       attempt: { status: "committed" },
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[2/185]⎯
+
+ FAIL  tests/collaboration-advance.api.test.ts > collaboration advance route > uses exactly one repair call and persists only the repaired public turn
+AssertionError: expected 503 to be 200 // Object.is equality
+
+- Expected
++ Received
+
+- 200
++ 503
+
+ ❯ tests/collaboration-advance.api.test.ts:283:27
+    281|
+    282|     const result = await postAdvance();
+    283|     expect(result.status).toBe(200);
+       |                           ^
+    284|     expect(providerRequests).toHaveLength(2);
+    285|     expect(await result.json()).toMatchObject({ attemptStatus: "commit…
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[3/185]⎯
+
+ FAIL  tests/collaboration-advance.api.test.ts > collaboration advance route > maps provider failures, sanitizes every surface, and durably replays the error
+AssertionError: expected 503 to be 401 // Object.is equality
+
+- Expected
++ Received
+
+- 401
++ 503
+
+ ❯ tests/collaboration-advance.api.test.ts:314:26
+    312|     const replay = await postAdvance();
+    313|
+    314|     expect(first.status).toBe(401);
+       |                          ^
+    315|     expect(firstBody).toEqual({
+    316|       error: {
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[4/185]⎯
+
+ FAIL  tests/collaboration-advance.api.test.ts > collaboration advance route > durably maps an unavailable server-side vault without calling the provider
+AssertionError: expected { error: { …(2) } } to deeply equal { error: { …(3) } }
+
+- Expected
++ Received
+
+  {
+    "error": {
+-     "category": "credential_unavailable",
+-     "code": "CREDENTIAL_UNAVAILABLE",
+-     "message": "Provider credential is unavailable.",
++     "code": "STORAGE_UNAVAILABLE",
++     "message": "Storage is unavailable.",
+    },
+  }
+
+ ❯ tests/collaboration-advance.api.test.ts:343:23
+    341|
+    342|     expect(first.status).toBe(503);
+    343|     expect(firstBody).toEqual({
+       |                       ^
+    344|       error: {
+    345|         category: "credential_unavailable",
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[5/185]⎯
+
+ FAIL  tests/collaboration-context-guards.test.ts > collaboration context fingerprint > marks acquired context discarded after mission and task fact changes
+ FAIL  tests/collaboration-context-guards.test.ts > collaboration context fingerprint > changes the roster fingerprint when a member is added
+ FAIL  tests/collaboration-context-guards.test.ts > active collaboration mutation guards > rejects member removal or replacement while the run is running
+ FAIL  tests/collaboration-context-guards.test.ts > active collaboration mutation guards > rejects member removal or replacement while the run is waiting_owner
+ FAIL  tests/collaboration-context-guards.test.ts > active collaboration mutation guards > rejects member removal or replacement while the run is paused
+ FAIL  tests/collaboration-context-guards.test.ts > active collaboration mutation guards > rejects member removal or replacement while the run is failed
+ FAIL  tests/collaboration-context-guards.test.ts > active collaboration mutation guards > rejects deleting an active member or the provider used by any active member
+ FAIL  tests/collaboration-context-guards.test.ts > active collaboration mutation guards > allows Agent and provider configuration updates for the next attempt
+ FAIL  tests/collaboration-context-guards.test.ts > active collaboration mutation guards > preserves roster replacement behavior when no nonterminal run exists
+SchemaMigrationError: Database version 6 schema is invalid.
+ ❯ migrateDatabase src/server/migrations.ts:1375:13
+    1373|     const validation = validateV6(database);
+    1374|     if (validation) {
+    1375|       throw new SchemaMigrationError(
+       |             ^
+    1376|         validation,
+    1377|         "Database version 6 schema is invalid.",
+ ❯ openDatabase src/server/db.ts:14:5
+ ❯ reconcileProjectExpiredAttempt src/server/collaboration/turn-orchestrator.ts:615:20
+ ❯ createOrAppendRun src/server/collaboration/run-service.ts:1089:3
+ ❯ seedReadyRun tests/collaboration-context-guards.test.ts:135:11
+ ❯ tests/collaboration-context-guards.test.ts:158:3
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[6/185]⎯
+
+ FAIL  tests/collaboration-controls.service.test.ts > collaboration run control service > pauses and continues only a manual pause while incrementing version and epoch
+ FAIL  tests/collaboration-controls.service.test.ts > collaboration run control service > requires a later provider re-verification before retrying provider auth
+ FAIL  tests/collaboration-controls.service.test.ts > collaboration run control service > rejects provider auth retry after only non-connection provider fields change
+ FAIL  tests/collaboration-controls.service.test.ts > collaboration run control service > requires credential-unavailable recovery to replace a still-corrupt credential
+ FAIL  tests/collaboration-controls.service.test.ts > collaboration run control service > requires retry, not continue, for internal failures
+ FAIL  tests/collaboration-controls.service.test.ts > collaboration run control service > blocks budget retry until the configured token boundary is raised
+ FAIL  tests/collaboration-controls.service.test.ts > collaboration run control service > keeps a planned run terminal for every control action
+ FAIL  tests/collaboration-controls.service.test.ts > collaboration run control service > keeps a stopped run terminal for every control action
+ FAIL  tests/collaboration-controls.service.test.ts > collaboration run control service > enforces expectedVersion and exactly replays a completed operation
+ FAIL  tests/collaboration-controls.service.test.ts > collaboration run control API > allows only one concurrent expectedVersion CAS winner
+SchemaMigrationError: Database version 6 schema is invalid.
+ ❯ migrateDatabase src/server/migrations.ts:1375:13
+    1373|     const validation = validateV6(database);
+    1374|     if (validation) {
+    1375|       throw new SchemaMigrationError(
+       |             ^
+    1376|         validation,
+    1377|         "Database version 6 schema is invalid.",
+ ❯ openDatabase src/server/db.ts:14:5
+ ❯ reconcileProjectExpiredAttempt src/server/collaboration/turn-orchestrator.ts:615:20
+ ❯ Module.createOrAppendRun src/server/collaboration/run-service.ts:1089:3
+ ❯ seedReadyRun tests/collaboration-controls.service.test.ts:96:22
+ ❯ tests/collaboration-controls.service.test.ts:214:3
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[7/185]⎯
+
+ FAIL  tests/collaboration-operations.test.ts > generalized collaboration operation receipts > rejects the same operation id with a different request hash
+AssertionError: expected 503 to be 409 // Object.is equality
+
+- Expected
++ Received
+
+- 409
++ 503
+
+ ❯ tests/collaboration-operations.test.ts:133:29
+    131|     const conflict = await post({ message: "Different body", operation…
+    132|
+    133|     expect(conflict.status).toBe(409);
+       |                             ^
+    134|     await expect(conflict.json()).resolves.toEqual({
+    135|       error: {
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[8/185]⎯
+
+ FAIL  tests/collaboration-operations.test.ts > generalized collaboration operation receipts > returns the stable in-progress envelope for a matching pending receipt
+SchemaMigrationError: Database version 6 schema is invalid.
+ ❯ migrateDatabase src/server/migrations.ts:1375:13
+    1373|     const validation = validateV6(database);
+    1374|     if (validation) {
+    1375|       throw new SchemaMigrationError(
+       |             ^
+    1376|         validation,
+    1377|         "Database version 6 schema is invalid.",
+ ❯ openDatabase src/server/db.ts:14:5
+ ❯ tests/collaboration-operations.test.ts:149:22
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[9/185]⎯
+
+ FAIL  tests/collaboration-operations.test.ts > generalized collaboration operation receipts > persists and exactly replays mapped domain errors
+AssertionError: expected 503 to be 409 // Object.is equality
+
+- Expected
++ Received
+
+- 409
++ 503
+
+ ❯ tests/collaboration-operations.test.ts:208:27
+    206|
+    207|     expect(first.status).toBe(409);
+    208|     expect(replay.status).toBe(first.status);
+       |                           ^
+    209|     await expect(replay.json()).resolves.toEqual(firstBody);
+    210|     expect(firstBody).toEqual({
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[10/185]⎯
+
+ FAIL  tests/collaboration-prompt.test.ts > collaboration prompt allowlist > gives both Agents identical shared context and only the current private configuration
+ FAIL  tests/collaboration-prompt.test.ts > collaboration prompt allowlist > selects the newest 30 public messages in stable order with stored name snapshots
+ FAIL  tests/collaboration-prompt.test.ts > collaboration prompt allowlist > keeps whole messages at the 60000 character boundary without skipping older entries
+ FAIL  tests/collaboration-prompt.test.ts > collaboration prompt allowlist > returns an immutable acquire snapshot with deterministic canonical hashes
+Error: table memory_entries has no column named source_ref
+ ❯ seedReadyProject tests/collaboration-prompt.test.ts:140:14
+    138|         timestamp,
+    139|       );
+    140|     database.exec(`
+       |              ^
+    141|       INSERT INTO skills (
+    142|         id, name, description, instructions, version, created_at, upda…
+ ❯ tests/collaboration-prompt.test.ts:248:3
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[11/185]⎯
+
+ FAIL  tests/collaboration-read-api.test.ts > typed collaboration read API > pages project messages and run events independently while restoring current facts and snapshots after reopen
+AssertionError: expected 503 to be 200 // Object.is equality
+
+- Expected
++ Received
+
+- 200
++ 503
+
+ ❯ tests/collaboration-read-api.test.ts:222:26
+    220|   it("pages project messages and run events independently while restor…
+    221|     const first = await collaboration("?messageAfter=0&messageLimit=1&…
+    222|     expect(first.status).toBe(200);
+       |                          ^
+    223|     const body = await first.json();
+    224|
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[12/185]⎯
+
+ FAIL  tests/collaboration-read-api.test.ts > typed collaboration read API > returns every designed event as an exact strict payload and supports a missing after sequence
+AssertionError: expected 503 to be 200 // Object.is equality
+
+- Expected
++ Received
+
+- 200
++ 503
+
+ ❯ tests/collaboration-read-api.test.ts:280:29
+    278|   it("returns every designed event as an exact strict payload and supp…
+    279|     const response = await timeline("?after=3&limit=200");
+    280|     expect(response.status).toBe(200);
+       |                             ^
+    281|     const body = await response.json();
+    282|
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[13/185]⎯
+
+ FAIL  tests/collaboration-read-api.test.ts > typed collaboration read API > rejects unknown payload key with only a sanitized public error
+ FAIL  tests/collaboration-read-api.test.ts > typed collaboration read API > rejects wrong payload type with only a sanitized public error
+SchemaMigrationError: Database version 6 schema is invalid.
+ ❯ migrateDatabase src/server/migrations.ts:1375:13
+    1373|     const validation = validateV6(database);
+    1374|     if (validation) {
+    1375|       throw new SchemaMigrationError(
+       |             ^
+    1376|         validation,
+    1377|         "Database version 6 schema is invalid.",
+ ❯ openDatabase src/server/db.ts:14:5
+ ❯ tests/collaboration-read-api.test.ts:302:22
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[14/185]⎯
+
+ FAIL  tests/collaboration-recovery.api.test.ts > collaboration recovery API triggers > reconciles an expired attempt before returning collaboration read facts
+SchemaMigrationError: Database version 6 schema is invalid.
+ ❯ migrateDatabase src/server/migrations.ts:1375:13
+    1373|     const validation = validateV6(database);
+    1374|     if (validation) {
+    1375|       throw new SchemaMigrationError(
+       |             ^
+    1376|         validation,
+    1377|         "Database version 6 schema is invalid.",
+ ❯ openDatabase src/server/db.ts:14:5
+ ❯ reconcileExpiredAttempt src/server/collaboration/turn-orchestrator.ts:600:20
+ ❯ acquireAdvance src/server/collaboration/turn-orchestrator.ts:1212:3
+ ❯ acquireExpired tests/collaboration-recovery.api.test.ts:104:3
+ ❯ tests/collaboration-recovery.api.test.ts:208:5
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[15/185]⎯
+
+ FAIL  tests/collaboration-recovery.api.test.ts > collaboration recovery API triggers > reconciles before a relevant mutation and still durably completes that mutation
+SchemaMigrationError: Database version 6 schema is invalid.
+ ❯ migrateDatabase src/server/migrations.ts:1375:13
+    1373|     const validation = validateV6(database);
+    1374|     if (validation) {
+    1375|       throw new SchemaMigrationError(
+       |             ^
+    1376|         validation,
+    1377|         "Database version 6 schema is invalid.",
+ ❯ openDatabase src/server/db.ts:14:5
+ ❯ reconcileExpiredAttempt src/server/collaboration/turn-orchestrator.ts:600:20
+ ❯ acquireAdvance src/server/collaboration/turn-orchestrator.ts:1212:3
+ ❯ acquireExpired tests/collaboration-recovery.api.test.ts:104:3
+ ❯ tests/collaboration-recovery.api.test.ts:225:5
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[16/185]⎯
+
+ FAIL  tests/collaboration-recovery.api.test.ts > collaboration recovery API triggers > explicit recover completes and replays its own receipt without duplicating facts
+SchemaMigrationError: Database version 6 schema is invalid.
+ ❯ migrateDatabase src/server/migrations.ts:1375:13
+    1373|     const validation = validateV6(database);
+    1374|     if (validation) {
+    1375|       throw new SchemaMigrationError(
+       |             ^
+    1376|         validation,
+    1377|         "Database version 6 schema is invalid.",
+ ❯ openDatabase src/server/db.ts:14:5
+ ❯ reconcileExpiredAttempt src/server/collaboration/turn-orchestrator.ts:600:20
+ ❯ acquireAdvance src/server/collaboration/turn-orchestrator.ts:1212:3
+ ❯ acquireExpired tests/collaboration-recovery.api.test.ts:104:3
+ ❯ tests/collaboration-recovery.api.test.ts:246:5
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[17/185]⎯
+
+ FAIL  tests/collaboration-recovery.api.test.ts > collaboration recovery API triggers > rejects reusing an advance operation id at the recover endpoint
+SchemaMigrationError: Database version 6 schema is invalid.
+ ❯ migrateDatabase src/server/migrations.ts:1375:13
+    1373|     const validation = validateV6(database);
+    1374|     if (validation) {
+    1375|       throw new SchemaMigrationError(
+       |             ^
+    1376|         validation,
+    1377|         "Database version 6 schema is invalid.",
+ ❯ openDatabase src/server/db.ts:14:5
+ ❯ reconcileExpiredAttempt src/server/collaboration/turn-orchestrator.ts:600:20
+ ❯ acquireAdvance src/server/collaboration/turn-orchestrator.ts:1212:3
+ ❯ acquireExpired tests/collaboration-recovery.api.test.ts:104:3
+ ❯ tests/collaboration-recovery.api.test.ts:268:5
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[18/185]⎯
+
+ FAIL  tests/collaboration-slice.test.tsx > collaboration T-1 vertical slice > migrates a valid database to the necessary v4 collaboration facts
+AssertionError: expected { user_version: 6 } to deeply equal { user_version: 5 }
+
+- Expected
++ Received
+
+  {
+-   "user_version": 5,
++   "user_version": 6,
+  }
+
+ ❯ tests/collaboration-slice.test.tsx:149:61
+    147|     const database = openDatabase(databasePath);
+    148|     try {
+    149|       expect(database.prepare("PRAGMA user_version").get()).toEqual({ …
+       |                                                             ^
+    150|       const tables = (
+    151|         database
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[19/185]⎯
+
+ FAIL  tests/collaboration-slice.test.tsx > collaboration T-1 vertical slice > deduplicates create-or-append and preserves stable message/event sequences and first baton
+AssertionError: expected 503 to be 201 // Object.is equality
+
+- Expected
++ Received
+
+- 201
++ 503
+
+ ❯ tests/collaboration-slice.test.tsx:187:26
+    185|     const duplicateBody = await duplicate.json();
+    186|
+    187|     expect(first.status).toBe(201);
+       |                          ^
+    188|     expect(duplicate.status).toBe(201);
+    189|     expect(duplicateBody).toEqual(firstBody);
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[20/185]⎯
+
+ FAIL  tests/collaboration-slice.test.tsx > collaboration T-1 vertical slice > renders route-backed loading, empty, and recoverable error states
+TestingLibraryElementError: Unable to find an element with the text: 尚无协作消息。. This could be because the text is broken up by multiple elements. In this case, you can provide a function for your text matcher to make your matcher more flexible.
+
+Ignored nodes: comments, script, style
+[36m<body>[39m
+  [36m<div>[39m
+    [36m<section[39m
+      [33maria-labelledby[39m=[32m"collaboration-title"[39m
+      [33mclass[39m=[32m"stack"[39m
+    [36m>[39m
+      [36m<div[39m
+        [33mclass[39m=[32m"panel-heading"[39m
+      [36m>[39m
+        [36m<div>[39m
+          [36m<p[39m
+            [33mclass[39m=[32m"eyebrow"[39m
+          [36m>[39m
+            [0m平等协作[0m
+          [36m</p>[39m
+          [36m<h3[39m
+            [33mid[39m=[32m"collaboration-title"[39m
+          [36m>[39m
+            [0m项目群聊[0m
+          [36m</h3>[39m
+        [36m</div>[39m
+      [36m</div>[39m
+      [36m<div[39m
+        [33mclass[39m=[32m"state-message"[39m
+      [36m>[39m
+        [36m<p[39m
+          [33mclass[39m=[32m"error-text"[39m
+          [33mrole[39m=[32m"alert"[39m
+        [36m>[39m
+          [0m服务暂时不可用，请稍后重试。[0m
+        [36m</p>[39m
+        [36m<button[39m
+          [33mtype[39m=[32m"button"[39m
+        [36m>[39m
+          [0m重试加载群聊[0m
+        [36m</button>[39m
+      [36m</div>[39m
+    [36m</section>[39m
+  [36m</div>[39m
+[36m</body>[39m
+
+Ignored nodes: comments, script, style
+[36m<body>[39m
+  [36m<div>[39m
+    [36m<section[39m
+      [33maria-labelledby[39m=[32m"collaboration-title"[39m
+      [33mclass[39m=[32m"stack"[39m
+    [36m>[39m
+      [36m<div[39m
+        [33mclass[39m=[32m"panel-heading"[39m
+      [36m>[39m
+        [36m<div>[39m
+          [36m<p[39m
+            [33mclass[39m=[32m"eyebrow"[39m
+          [36m>[39m
+            [0m平等协作[0m
+          [36m</p>[39m
+          [36m<h3[39m
+            [33mid[39m=[32m"collaboration-title"[39m
+          [36m>[39m
+            [0m项目群聊[0m
+          [36m</h3>[39m
+        [36m</div>[39m
+      [36m</div>[39m
+      [36m<div[39m
+        [33mclass[39m=[32m"state-message"[39m
+      [36m>[39m
+        [36m<p[39m
+          [33mclass[39m=[32m"error-text"[39m
+          [33mrole[39m=[32m"alert"[39m
+        [36m>[39m
+          [0m服务暂时不可用，请稍后重试。[0m
+        [36m</p>[39m
+        [36m<button[39m
+          [33mtype[39m=[32m"button"[39m
+        [36m>[39m
+          [0m重试加载群聊[0m
+        [36m</button>[39m
+      [36m</div>[39m
+    [36m</section>[39m
+  [36m</div>[39m
+[36m</body>[39m
+ ❯ waitForWrapper node_modules/@testing-library/dom/dist/wait-for.js:163:27
+ ❯ node_modules/@testing-library/dom/dist/query-helpers.js:86:33
+ ❯ tests/collaboration-slice.test.tsx:265:25
+    263|     expect(screen.queryByText("尚无协作消息。")).not.toBeInTheDocument();
+    264|     releaseLoad();
+    265|     expect(await screen.findByText("尚无协作消息。")).toBeInTheDocument();
+       |                         ^
+    266|     loadingView.unmount();
+    267|
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[21/185]⎯
+
+ FAIL  tests/collaboration-slice.test.tsx > collaboration T-1 vertical slice > sends through the real route and reloads the persisted owner echo
+TestingLibraryElementError: Unable to find an element with the text: 尚无协作消息。. This could be because the text is broken up by multiple elements. In this case, you can provide a function for your text matcher to make your matcher more flexible.
+
+Ignored nodes: comments, script, style
+[36m<body>[39m
+  [36m<div>[39m
+    [36m<section[39m
+      [33maria-labelledby[39m=[32m"collaboration-title"[39m
+      [33mclass[39m=[32m"stack"[39m
+    [36m>[39m
+      [36m<div[39m
+        [33mclass[39m=[32m"panel-heading"[39m
+      [36m>[39m
+        [36m<div>[39m
+          [36m<p[39m
+            [33mclass[39m=[32m"eyebrow"[39m
+          [36m>[39m
+            [0m平等协作[0m
+          [36m</p>[39m
+          [36m<h3[39m
+            [33mid[39m=[32m"collaboration-title"[39m
+          [36m>[39m
+            [0m项目群聊[0m
+          [36m</h3>[39m
+        [36m</div>[39m
+      [36m</div>[39m
+      [36m<div[39m
+        [33mclass[39m=[32m"state-message"[39m
+      [36m>[39m
+        [36m<p[39m
+          [33mclass[39m=[32m"error-text"[39m
+          [33mrole[39m=[32m"alert"[39m
+        [36m>[39m
+          [0m服务暂时不可用，请稍后重试。[0m
+        [36m</p>[39m
+        [36m<button[39m
+          [33mtype[39m=[32m"button"[39m
+        [36m>[39m
+          [0m重试加载群聊[0m
+        [36m</button>[39m
+      [36m</div>[39m
+    [36m</section>[39m
+  [36m</div>[39m
+[36m</body>[39m
+
+Ignored nodes: comments, script, style
+[36m<body>[39m
+  [36m<div>[39m
+    [36m<section[39m
+      [33maria-labelledby[39m=[32m"collaboration-title"[39m
+      [33mclass[39m=[32m"stack"[39m
+    [36m>[39m
+      [36m<div[39m
+        [33mclass[39m=[32m"panel-heading"[39m
+      [36m>[39m
+        [36m<div>[39m
+          [36m<p[39m
+            [33mclass[39m=[32m"eyebrow"[39m
+          [36m>[39m
+            [0m平等协作[0m
+          [36m</p>[39m
+          [36m<h3[39m
+            [33mid[39m=[32m"collaboration-title"[39m
+          [36m>[39m
+            [0m项目群聊[0m
+          [36m</h3>[39m
+        [36m</div>[39m
+      [36m</div>[39m
+      [36m<div[39m
+        [33mclass[39m=[32m"state-message"[39m
+      [36m>[39m
+        [36m<p[39m
+          [33mclass[39m=[32m"error-text"[39m
+          [33mrole[39m=[32m"alert"[39m
+        [36m>[39m
+          [0m服务暂时不可用，请稍后重试。[0m
+        [36m</p>[39m
+        [36m<button[39m
+          [33mtype[39m=[32m"button"[39m
+        [36m>[39m
+          [0m重试加载群聊[0m
+        [36m</button>[39m
+      [36m</div>[39m
+    [36m</section>[39m
+  [36m</div>[39m
+[36m</body>[39m
+ ❯ waitForWrapper node_modules/@testing-library/dom/dist/wait-for.js:163:27
+ ❯ node_modules/@testing-library/dom/dist/query-helpers.js:86:33
+ ❯ tests/collaboration-slice.test.tsx:300:18
+    298|     const user = userEvent.setup();
+    299|     const firstView = render(createElement(Panel, { projectId: "projec…
+    300|     await screen.findByText("尚无协作消息。");
+       |                  ^
+    301|
+    302|     await user.type(screen.getByLabelText("发送给项目群聊"), "Ship the smalle…
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[22/185]⎯
+
+ FAIL  tests/execution-actions.test.ts > generic execution child action CAS > starts the business clock from SQLite once and never resets or extends it
+SchemaMigrationError: Database version 6 schema is invalid.
+ ❯ migrateDatabase src/server/migrations.ts:1375:13
+    1373|     const validation = validateV6(database);
+    1374|     if (validation) {
+    1375|       throw new SchemaMigrationError(
+       |             ^
+    1376|         validation,
+    1377|         "Database version 6 schema is invalid.",
+ ❯ openDatabase src/server/db.ts:14:5
+ ❯ tests/execution-actions.test.ts:198:22
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[23/185]⎯
+
+ FAIL  tests/execution-actions.test.ts > generic execution child action CAS > uses a random 120 second lease and heartbeat renews from DB time without extending overall deadline
+SchemaMigrationError: Database version 6 schema is invalid.
+ ❯ migrateDatabase src/server/migrations.ts:1375:13
+    1373|     const validation = validateV6(database);
+    1374|     if (validation) {
+    1375|       throw new SchemaMigrationError(
+       |             ^
+    1376|         validation,
+    1377|         "Database version 6 schema is invalid.",
+ ❯ openDatabase src/server/db.ts:14:5
+ ❯ tests/execution-actions.test.ts:267:22
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[24/185]⎯
+
+ FAIL  tests/execution-actions.test.ts > generic execution child action CAS > enforces the DB-time boundary at now=deadline-1
+ FAIL  tests/execution-actions.test.ts > generic execution child action CAS > enforces the DB-time boundary at now=deadline
+ FAIL  tests/execution-actions.test.ts > generic execution child action CAS > enforces the DB-time boundary at now=deadline+1
+SchemaMigrationError: Database version 6 schema is invalid.
+ ❯ migrateDatabase src/server/migrations.ts:1375:13
+    1373|     const validation = validateV6(database);
+    1374|     if (validation) {
+    1375|       throw new SchemaMigrationError(
+       |             ^
+    1376|         validation,
+    1377|         "Database version 6 schema is invalid.",
+ ❯ openDatabase src/server/db.ts:14:5
+ ❯ tests/execution-actions.test.ts:316:22
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[25/185]⎯
+
+ FAIL  tests/execution-actions.test.ts > generic execution child action CAS > lets heartbeat, finalize, reconcile, or control win one terminal CAS with durable receipt and late no-op
+SchemaMigrationError: Database version 6 schema is invalid.
+ ❯ migrateDatabase src/server/migrations.ts:1375:13
+    1373|     const validation = validateV6(database);
+    1374|     if (validation) {
+    1375|       throw new SchemaMigrationError(
+       |             ^
+    1376|         validation,
+    1377|         "Database version 6 schema is invalid.",
+ ❯ openDatabase src/server/db.ts:14:5
+ ❯ tests/execution-actions.test.ts:329:22
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[26/185]⎯
+
+ FAIL  tests/execution-actions.test.ts > generic execution child action CAS > ignores caller-skew fields and uses only SQLite time
+SchemaMigrationError: Database version 6 schema is invalid.
+ ❯ migrateDatabase src/server/migrations.ts:1375:13
+    1373|     const validation = validateV6(database);
+    1374|     if (validation) {
+    1375|       throw new SchemaMigrationError(
+       |             ^
+    1376|         validation,
+    1377|         "Database version 6 schema is invalid.",
+ ❯ openDatabase src/server/db.ts:14:5
+ ❯ tests/execution-actions.test.ts:428:22
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[27/185]⎯
+
+ FAIL  tests/execution-approvals.test.ts > execution approvals > advances an approved one-shot command through consume and executes it exactly once
+SchemaMigrationError: Database version 6 schema is invalid.
+ ❯ migrateDatabase src/server/migrations.ts:1375:13
+    1373|     const validation = validateV6(database);
+    1374|     if (validation) {
+    1375|       throw new SchemaMigrationError(
+       |             ^
+    1376|         validation,
+    1377|         "Database version 6 schema is invalid.",
+ ❯ openDatabase src/server/db.ts:14:5
+ ❯ Module.decideExecutionApproval src/server/execution/execution-approval-service.ts:367:20
+ ❯ decide tests/execution-approvals.test.ts:234:20
+ ❯ tests/execution-approvals.test.ts:267:11
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[28/185]⎯
+
+ FAIL  tests/execution-approvals.test.ts > execution approvals > approves an exact command once and atomically consumes it into one command action
+SchemaMigrationError: Database version 6 schema is invalid.
+ ❯ migrateDatabase src/server/migrations.ts:1375:13
+    1373|     const validation = validateV6(database);
+    1374|     if (validation) {
+    1375|       throw new SchemaMigrationError(
+       |             ^
+    1376|         validation,
+    1377|         "Database version 6 schema is invalid.",
+ ❯ openDatabase src/server/db.ts:14:5
+ ❯ Module.decideExecutionApproval src/server/execution/execution-approval-service.ts:367:20
+ ❯ decide tests/execution-approvals.test.ts:234:20
+ ❯ tests/execution-approvals.test.ts:298:28
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[29/185]⎯
+
+ FAIL  tests/execution-approvals.test.ts > execution approvals > reject permanently invalidates the request and pauses for exact running resume
+ FAIL  tests/execution-approvals.test.ts > execution approvals > replace permanently invalidates the request and pauses for exact running resume
+SchemaMigrationError: Database version 6 schema is invalid.
+ ❯ migrateDatabase src/server/migrations.ts:1375:13
+    1373|     const validation = validateV6(database);
+    1374|     if (validation) {
+    1375|       throw new SchemaMigrationError(
+       |             ^
+    1376|         validation,
+    1377|         "Database version 6 schema is invalid.",
+ ❯ openDatabase src/server/db.ts:14:5
+ ❯ Module.decideExecutionApproval src/server/execution/execution-approval-service.ts:367:20
+ ❯ decide tests/execution-approvals.test.ts:234:20
+ ❯ tests/execution-approvals.test.ts:351:26
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[30/185]⎯
+
+ FAIL  tests/execution-approvals.test.ts > execution approvals > revokes an approved request before consumption and cannot revoke consumed authorization
+SchemaMigrationError: Database version 6 schema is invalid.
+ ❯ migrateDatabase src/server/migrations.ts:1375:13
+    1373|     const validation = validateV6(database);
+    1374|     if (validation) {
+    1375|       throw new SchemaMigrationError(
+       |             ^
+    1376|         validation,
+    1377|         "Database version 6 schema is invalid.",
+ ❯ openDatabase src/server/db.ts:14:5
+ ❯ Module.decideExecutionApproval src/server/execution/execution-approval-service.ts:367:20
+ ❯ decide tests/execution-approvals.test.ts:234:20
+ ❯ tests/execution-approvals.test.ts:367:11
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[31/185]⎯
+
+ FAIL  tests/execution-approvals.test.ts > execution approvals > continues after rejection so the next model step can receive the typed outcome
+SchemaMigrationError: Database version 6 schema is invalid.
+ ❯ migrateDatabase src/server/migrations.ts:1375:13
+    1373|     const validation = validateV6(database);
+    1374|     if (validation) {
+    1375|       throw new SchemaMigrationError(
+       |             ^
+    1376|         validation,
+    1377|         "Database version 6 schema is invalid.",
+ ❯ openDatabase src/server/db.ts:14:5
+ ❯ Module.decideExecutionApproval src/server/execution/execution-approval-service.ts:367:20
+ ❯ decide tests/execution-approvals.test.ts:234:20
+ ❯ tests/execution-approvals.test.ts:388:11
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[32/185]⎯
+
+ FAIL  tests/execution-approvals.test.ts > execution approvals > stop permanently expires approved authorization and terminal decisions stay denied
+SchemaMigrationError: Database version 6 schema is invalid.
+ ❯ migrateDatabase src/server/migrations.ts:1375:13
+    1373|     const validation = validateV6(database);
+    1374|     if (validation) {
+    1375|       throw new SchemaMigrationError(
+       |             ^
+    1376|         validation,
+    1377|         "Database version 6 schema is invalid.",
+ ❯ openDatabase src/server/db.ts:14:5
+ ❯ Module.decideExecutionApproval src/server/execution/execution-approval-service.ts:367:20
+ ❯ decide tests/execution-approvals.test.ts:234:20
+ ❯ tests/execution-approvals.test.ts:409:11
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[33/185]⎯
+
+ FAIL  tests/execution-approvals.test.ts > execution approvals > persists same-operation success/failure receipts and rejects different input or stale versions
+SchemaMigrationError: Database version 6 schema is invalid.
+ ❯ migrateDatabase src/server/migrations.ts:1375:13
+    1373|     const validation = validateV6(database);
+    1374|     if (validation) {
+    1375|       throw new SchemaMigrationError(
+       |             ^
+    1376|         validation,
+    1377|         "Database version 6 schema is invalid.",
+ ❯ openDatabase src/server/db.ts:14:5
+ ❯ Module.decideExecutionApproval src/server/execution/execution-approval-service.ts:367:20
+ ❯ decide tests/execution-approvals.test.ts:234:20
+ ❯ tests/execution-approvals.test.ts:427:25
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[34/185]⎯
+
+ FAIL  tests/execution-approvals.test.ts > execution approvals > expires and denies approval after execution attempt changes
+ FAIL  tests/execution-approvals.test.ts > execution approvals > expires and denies approval after attempt context changes
+ FAIL  tests/execution-approvals.test.ts > execution approvals > expires and denies approval after sandbox input changes
+ FAIL  tests/execution-approvals.test.ts > execution approvals > expires and denies approval after command tuple changes
+AssertionError: expected SchemaMigrationError: Database version 6 … { code: '…' } to match object { code: 'APPROVAL_STALE' }
+(1 matching property omitted from actual)
+
+- Expected
++ Received
+
+- {
+-   "code": "APPROVAL_STALE",
++ SchemaMigrationError {
++   "code": "SCHEMA_DATA_INVALID",
+  }
+
+ ❯ tests/execution-approvals.test.ts:474:36
+    472|   ])("expires and denies approval after %s changes", async (_label, ta…
+    473|     tamper();
+    474|     await expect(decide("approve")).rejects.toMatchObject({ code: "APP…
+       |                                    ^
+    475|     expect(row("execution_approvals", "id=?", APPROVAL_ID).status).toB…
+    476|   });
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[35/185]⎯
+
+ FAIL  tests/execution-approvals.test.ts > execution approvals > expires an approved command when the manifest changes before public advance
+SchemaMigrationError: Database version 6 schema is invalid.
+ ❯ migrateDatabase src/server/migrations.ts:1375:13
+    1373|     const validation = validateV6(database);
+    1374|     if (validation) {
+    1375|       throw new SchemaMigrationError(
+       |             ^
+    1376|         validation,
+    1377|         "Database version 6 schema is invalid.",
+ ❯ openDatabase src/server/db.ts:14:5
+ ❯ Module.decideExecutionApproval src/server/execution/execution-approval-service.ts:367:20
+ ❯ decide tests/execution-approvals.test.ts:234:20
+ ❯ tests/execution-approvals.test.ts:479:11
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[36/185]⎯
+
+ FAIL  tests/execution-approvals.test.ts > execution approvals > creates a distinct exact staged approval and denies tamper, conflict, stale, and terminal use
+SchemaMigrationError: Database version 6 schema is invalid.
+ ❯ migrateDatabase src/server/migrations.ts:1375:13
+    1373|     const validation = validateV6(database);
+    1374|     if (validation) {
+    1375|       throw new SchemaMigrationError(
+       |             ^
+    1376|         validation,
+    1377|         "Database version 6 schema is invalid.",
+ ❯ openDatabase src/server/db.ts:14:5
+ ❯ Module.decideExecutionApproval src/server/execution/execution-approval-service.ts:367:20
+ ❯ tests/execution-approvals.test.ts:573:36
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[37/185]⎯
+
+ FAIL  tests/execution-approvals.test.ts > execution approvals > exposes the owner-only mutation route with strict input
+AssertionError: expected 503 to be 200 // Object.is equality
+
+- Expected
++ Received
+
+- 200
++ 503
+
+ ❯ tests/execution-approvals.test.ts:616:29
+    614|       { params: Promise.resolve({ approvalId: APPROVAL_ID, executionId…
+    615|     );
+    616|     expect(response.status).toBe(200);
+       |                             ^
+    617|     expect(await response.json()).toMatchObject({
+    618|       approval: { status: "approved" },
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[38/185]⎯
+
+ FAIL  tests/execution-controls.test.ts > execution lifecycle controls > pauses queued with its exact resume target
+ FAIL  tests/execution-controls.test.ts > execution lifecycle controls > pauses running with its exact resume target
+ FAIL  tests/execution-controls.test.ts > execution lifecycle controls > pauses waiting_approval with its exact resume target
+AssertionError: promise rejected "SchemaMigrationError: Database version 6 … { code: '…' }" instead of resolving
+ ❯ tests/execution-controls.test.ts:172:25
+    170|     }, dependencies);
+    171|
+    172|     await expect(result).resolves.toMatchObject({
+       |                         ^
+    173|       body: { execution: { status: "paused", resumeTarget: target } },
+    174|       status: 200,
+
+Caused by: SchemaMigrationError: Database version 6 schema is invalid.
+ ❯ migrateDatabase src/server/migrations.ts:1375:13
+ ❯ openDatabase src/server/db.ts:14:5
+ ❯ controlExecution src/server/execution/execution-control-service.ts:403:20
+ ❯ tests/execution-controls.test.ts:166:20
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯
+Serialized Error: { code: 'SCHEMA_DATA_INVALID' }
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[39/185]⎯
+
+ FAIL  tests/execution-controls.test.ts > execution lifecycle controls > discards an in-flight action, requests command termination, and fences late results
+SchemaMigrationError: Database version 6 schema is invalid.
+ ❯ migrateDatabase src/server/migrations.ts:1375:13
+    1373|     const validation = validateV6(database);
+    1374|     if (validation) {
+    1375|       throw new SchemaMigrationError(
+       |             ^
+    1376|         validation,
+    1377|         "Database version 6 schema is invalid.",
+ ❯ openDatabase src/server/db.ts:14:5
+ ❯ controlExecution src/server/execution/execution-control-service.ts:403:20
+ ❯ tests/execution-controls.test.ts:198:26
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[40/185]⎯
+
+ FAIL  tests/execution-controls.test.ts > execution lifecycle controls > continues only to the recorded target with target-specific preconditions
+AssertionError: promise rejected "SchemaMigrationError: Database version 6 … { code: '…' }" instead of resolving
+ ❯ tests/execution-controls.test.ts:219:22
+    217|       expectedVersion: runningVersion,
+    218|       operationId: operationId(10),
+    219|     }, dependencies)).resolves.toMatchObject({
+       |                      ^
+    220|       body: { execution: { status: "running", resumeTarget: null } },
+    221|     });
+
+Caused by: SchemaMigrationError: Database version 6 schema is invalid.
+ ❯ migrateDatabase src/server/migrations.ts:1375:13
+ ❯ openDatabase src/server/db.ts:14:5
+ ❯ controlExecution src/server/execution/execution-control-service.ts:403:20
+ ❯ tests/execution-controls.test.ts:215:18
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯
+Serialized Error: { code: 'SCHEMA_DATA_INVALID' }
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[41/185]⎯
+
+ FAIL  tests/execution-controls.test.ts > execution lifecycle controls > retries stale execution as a new attempt and sandbox without resetting history or deadline
+AssertionError: expected [] to have a length of 1 but got +0
+
+- Expected
++ Received
+
+- 1
++ 0
+
+ ❯ tests/execution-controls.test.ts:240:50
+    238|     }, dependencies);
+    239|     void pending.catch(() => undefined);
+    240|     await vi.waitFor(() => expect(sandboxInputs).toHaveLength(1));
+       |                                                  ^
+    241|
+    242|     expect(row("executions", "id=?", EXECUTION_ID)).toMatchObject({
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[42/185]⎯
+
+ FAIL  tests/execution-controls.test.ts > execution lifecycle controls > rejects retry when current eligibility, workspace, context, or budget preconditions fail
+AssertionError: expected SchemaMigrationError: Database version 6 … { code: '…' } to match object { code: 'TASK_NOT_ELIGIBLE' }
+(1 matching property omitted from actual)
+
+- Expected
++ Received
+
+- {
+-   "code": "TASK_NOT_ELIGIBLE",
++ SchemaMigrationError {
++   "code": "SCHEMA_DATA_INVALID",
+  }
+
+ ❯ tests/execution-controls.test.ts:268:22
+    266|       expectedVersion: version,
+    267|       operationId: operationId(21),
+    268|     }, dependencies)).rejects.toMatchObject({ code: "TASK_NOT_ELIGIBLE…
+       |                      ^
+    269|     expect(row("executions", "id=?", EXECUTION_ID).current_attempt_no)…
+    270|   });
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[43/185]⎯
+
+ FAIL  tests/execution-controls.test.ts > execution lifecycle controls > stops a single execution, expires approvals, and never mutates the other execution
+SchemaMigrationError: Database version 6 schema is invalid.
+ ❯ migrateDatabase src/server/migrations.ts:1375:13
+    1373|     const validation = validateV6(database);
+    1374|     if (validation) {
+    1375|       throw new SchemaMigrationError(
+       |             ^
+    1376|         validation,
+    1377|         "Database version 6 schema is invalid.",
+ ❯ openDatabase src/server/db.ts:14:5
+ ❯ controlExecution src/server/execution/execution-control-service.ts:403:20
+ ❯ tests/execution-controls.test.ts:290:11
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[44/185]⎯
+
+ FAIL  tests/execution-controls.test.ts > execution lifecycle controls > keeps stopped terminal
+ FAIL  tests/execution-controls.test.ts > execution lifecycle controls > keeps merged terminal
+AssertionError: expected SchemaMigrationError: Database version 6 … { code: '…' } to match object { code: 'EXECUTION_STATE_CONFLICT' }
+(1 matching property omitted from actual)
+
+- Expected
++ Received
+
+- {
+-   "code": "EXECUTION_STATE_CONFLICT",
++ SchemaMigrationError {
++   "code": "SCHEMA_DATA_INVALID",
+  }
+
+ ❯ tests/execution-controls.test.ts:310:22
+    308|       expectedVersion: version,
+    309|       operationId: operationId(31),
+    310|     }, dependencies)).rejects.toMatchObject({ code: "EXECUTION_STATE_C…
+       |                      ^
+    311|   });
+    312|
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[45/185]⎯
+
+ FAIL  tests/execution-controls.test.ts > execution lifecycle controls > blocks every ordinary control while manual recovery is required
+AssertionError: expected SchemaMigrationError: Database version 6 … { code: '…' } to match object { code: 'MANUAL_RECOVERY_REQUIRED' }
+(1 matching property omitted from actual)
+
+- Expected
++ Received
+
+- {
+-   "code": "MANUAL_RECOVERY_REQUIRED",
++ SchemaMigrationError {
++   "code": "SCHEMA_DATA_INVALID",
+  }
+
+ ❯ tests/execution-controls.test.ts:324:24
+    322|         expectedVersion: version,
+    323|         operationId: operationId(40 + index),
+    324|       }, dependencies)).rejects.toMatchObject({ code: "MANUAL_RECOVERY…
+       |                        ^
+    325|     }
+    326|   });
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[46/185]⎯
+
+ FAIL  tests/execution-controls.test.ts > execution lifecycle controls > durably replays the exact receipt and conflicts on reused operation content
+SchemaMigrationError: Database version 6 schema is invalid.
+ ❯ migrateDatabase src/server/migrations.ts:1375:13
+    1373|     const validation = validateV6(database);
+    1374|     if (validation) {
+    1375|       throw new SchemaMigrationError(
+       |             ^
+    1376|         validation,
+    1377|         "Database version 6 schema is invalid.",
+ ❯ openDatabase src/server/db.ts:14:5
+ ❯ controlExecution src/server/execution/execution-control-service.ts:403:20
+ ❯ tests/execution-controls.test.ts:334:25
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[47/185]⎯
+
+ FAIL  tests/execution-controls.test.ts > execution lifecycle controls > persists stale-version conflicts without overwriting newer owner actions
+AssertionError: expected SchemaMigrationError: Database version 6 … { code: '…' } to match object { code: 'EXECUTION_STATE_CONFLICT' }
+(1 matching property omitted from actual)
+
+- Expected
++ Received
+
+- {
+-   "code": "EXECUTION_STATE_CONFLICT",
++ SchemaMigrationError {
++   "code": "SCHEMA_DATA_INVALID",
+  }
+
+ ❯ tests/execution-controls.test.ts:352:22
+    350|       expectedVersion: 99,
+    351|       operationId: operationId(70),
+    352|     }, dependencies)).rejects.toMatchObject({ code: "EXECUTION_STATE_C…
+       |                      ^
+    353|     expect(row("execution_operations", "id=?", operationId(70))).toMat…
+    354|       status: "completed",
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[48/185]⎯
+
+ FAIL  tests/execution-eligibility.test.ts > execution start eligibility > strictly rejects task arrays without creating work
+SchemaMigrationError: Database version 6 schema is invalid.
+ ❯ migrateDatabase src/server/migrations.ts:1375:13
+    1373|     const validation = validateV6(database);
+    1374|     if (validation) {
+    1375|       throw new SchemaMigrationError(
+       |             ^
+    1376|         validation,
+    1377|         "Database version 6 schema is invalid.",
+ ❯ openDatabase src/server/db.ts:14:5
+ ❯ executionCount tests/execution-eligibility.test.ts:179:20
+ ❯ tests/execution-eligibility.test.ts:203:12
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[49/185]⎯
+
+ FAIL  tests/execution-eligibility.test.ts > execution start eligibility > persists and exactly replays the missing rejection
+SchemaMigrationError: Database version 6 schema is invalid.
+ ❯ migrateDatabase src/server/migrations.ts:1375:13
+    1373|     const validation = validateV6(database);
+    1374|     if (validation) {
+    1375|       throw new SchemaMigrationError(
+       |             ^
+    1376|         validation,
+    1377|         "Database version 6 schema is invalid.",
+ ❯ openDatabase src/server/db.ts:14:5
+ ❯ startExecution src/server/execution/execution-service.ts:562:20
+ ❯ start tests/execution-eligibility.test.ts:167:10
+ ❯ tests/execution-eligibility.test.ts:212:25
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[50/185]⎯
+
+ FAIL  tests/execution-eligibility.test.ts > execution start eligibility > persists and exactly replays the todo rejection
+ FAIL  tests/execution-eligibility.test.ts > execution start eligibility > persists and exactly replays the unassigned rejection
+SchemaMigrationError: Database version 6 schema is invalid.
+ ❯ migrateDatabase src/server/migrations.ts:1375:13
+    1373|     const validation = validateV6(database);
+    1374|     if (validation) {
+    1375|       throw new SchemaMigrationError(
+       |             ^
+    1376|         validation,
+    1377|         "Database version 6 schema is invalid.",
+ ❯ openDatabase src/server/db.ts:14:5
+ ❯ addTask tests/execution-eligibility.test.ts:119:20
+ ❯ tests/execution-eligibility.test.ts:211:27
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[51/185]⎯
+
+ FAIL  tests/execution-eligibility.test.ts > execution start eligibility > requires current membership, done dependencies, latest planned run, and project readiness
+SchemaMigrationError: Database version 6 schema is invalid.
+ ❯ migrateDatabase src/server/migrations.ts:1375:13
+    1373|     const validation = validateV6(database);
+    1374|     if (validation) {
+    1375|       throw new SchemaMigrationError(
+       |             ^
+    1376|         validation,
+    1377|         "Database version 6 schema is invalid.",
+ ❯ openDatabase src/server/db.ts:14:5
+ ❯ addTask tests/execution-eligibility.test.ts:119:20
+ ❯ tests/execution-eligibility.test.ts:223:5
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[52/185]⎯
+
+ FAIL  tests/execution-eligibility.test.ts > execution start eligibility > atomically enforces project two, task one, Agent one, and DAG-unrelated selections
+SchemaMigrationError: Database version 6 schema is invalid.
+ ❯ migrateDatabase src/server/migrations.ts:1375:13
+    1373|     const validation = validateV6(database);
+    1374|     if (validation) {
+    1375|       throw new SchemaMigrationError(
+       |             ^
+    1376|         validation,
+    1377|         "Database version 6 schema is invalid.",
+ ❯ openDatabase src/server/db.ts:14:5
+ ❯ addTask tests/execution-eligibility.test.ts:119:20
+ ❯ tests/execution-eligibility.test.ts:244:5
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[53/185]⎯
+
+ FAIL  tests/execution-eligibility.test.ts > execution start eligibility > rejects a dependency relationship introduced beside an active execution
+SchemaMigrationError: Database version 6 schema is invalid.
+ ❯ migrateDatabase src/server/migrations.ts:1375:13
+    1373|     const validation = validateV6(database);
+    1374|     if (validation) {
+    1375|       throw new SchemaMigrationError(
+       |             ^
+    1376|         validation,
+    1377|         "Database version 6 schema is invalid.",
+ ❯ openDatabase src/server/db.ts:14:5
+ ❯ addTask tests/execution-eligibility.test.ts:119:20
+ ❯ tests/execution-eligibility.test.ts:290:5
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[54/185]⎯
+
+ FAIL  tests/execution-operations.test.ts > execution parent operations and ordered child receipts > keeps the receipt pending across contiguous children and completes only on the final public outcome
+SchemaMigrationError: Database version 6 schema is invalid.
+ ❯ migrateDatabase src/server/migrations.ts:1375:13
+    1373|     const validation = validateV6(database);
+    1374|     if (validation) {
+    1375|       throw new SchemaMigrationError(
+       |             ^
+    1376|         validation,
+    1377|         "Database version 6 schema is invalid.",
+ ❯ openDatabase src/server/db.ts:14:5
+ ❯ tests/execution-operations.test.ts:237:22
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[55/185]⎯
+
+ FAIL  tests/execution-operations.test.ts > execution parent operations and ordered child receipts > replays exact status/body and conflicts on either kind or canonical request hash
+SchemaMigrationError: Database version 6 schema is invalid.
+ ❯ migrateDatabase src/server/migrations.ts:1375:13
+    1373|     const validation = validateV6(database);
+    1374|     if (validation) {
+    1375|       throw new SchemaMigrationError(
+       |             ^
+    1376|         validation,
+    1377|         "Database version 6 schema is invalid.",
+ ❯ openDatabase src/server/db.ts:14:5
+ ❯ tests/execution-operations.test.ts:313:22
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[56/185]⎯
+
+ FAIL  tests/execution-operations.test.ts > execution parent operations and ordered child receipts > allows at most one running child for an operation and its execution
+SchemaMigrationError: Database version 6 schema is invalid.
+ ❯ migrateDatabase src/server/migrations.ts:1375:13
+    1373|     const validation = validateV6(database);
+    1374|     if (validation) {
+    1375|       throw new SchemaMigrationError(
+       |             ^
+    1376|         validation,
+    1377|         "Database version 6 schema is invalid.",
+ ❯ openDatabase src/server/db.ts:14:5
+ ❯ tests/execution-operations.test.ts:360:22
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[57/185]⎯
+
+ FAIL  tests/execution-operations.test.ts > execution parent operations and ordered child receipts > uses CAS so final completion occurs exactly once and duplicate finalizers replay deterministically
+SchemaMigrationError: Database version 6 schema is invalid.
+ ❯ migrateDatabase src/server/migrations.ts:1375:13
+    1373|     const validation = validateV6(database);
+    1374|     if (validation) {
+    1375|       throw new SchemaMigrationError(
+       |             ^
+    1376|         validation,
+    1377|         "Database version 6 schema is invalid.",
+ ❯ openDatabase src/server/db.ts:14:5
+ ❯ tests/execution-operations.test.ts:380:22
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[58/185]⎯
+
+ FAIL  tests/execution-operations.test.ts > execution parent operations and ordered child receipts > rejects gaps, stale action_count, and appending behind a nonterminal child
+SchemaMigrationError: Database version 6 schema is invalid.
+ ❯ migrateDatabase src/server/migrations.ts:1375:13
+    1373|     const validation = validateV6(database);
+    1374|     if (validation) {
+    1375|       throw new SchemaMigrationError(
+       |             ^
+    1376|         validation,
+    1377|         "Database version 6 schema is invalid.",
+ ❯ openDatabase src/server/db.ts:14:5
+ ❯ tests/execution-operations.test.ts:425:22
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[59/185]⎯
+
+ FAIL  tests/execution-read-api.test.ts > bounded execution read APIs > round-trips the complete persisted event union in sequence order across pages
+SchemaMigrationError: Database version 6 schema is invalid.
+ ❯ migrateDatabase src/server/migrations.ts:1375:13
+    1373|     const validation = validateV6(database);
+    1374|     if (validation) {
+    1375|       throw new SchemaMigrationError(
+       |             ^
+    1376|         validation,
+    1377|         "Database version 6 schema is invalid.",
+ ❯ openDatabase src/server/db.ts:14:5
+ ❯ openForExecution src/server/execution/execution-read-service.ts:390:20
+ ❯ Module.listExecutionEvents src/server/execution/execution-read-service.ts:757:30
+ ❯ tests/execution-read-api.test.ts:440:32
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[60/185]⎯
+
+ FAIL  tests/execution-read-api.test.ts > bounded execution read APIs > fails closed when every persisted event payload is tampered in the database
+AssertionError: execution_created: expected SchemaMigrationError: Database version 6 … { code: '…' } to match object { code: 'INTERNAL_ERROR' }
+(1 matching property omitted from actual)
+
+- Expected
++ Received
+
+- {
+-   "code": "INTERNAL_ERROR",
++ SchemaMigrationError {
++   "code": "SCHEMA_DATA_INVALID",
+  }
+
+ ❯ tests/execution-read-api.test.ts:499:15
+    497|         EXECUTION_ID,
+    498|         { limit: "1" },
+    499|       ), type).rejects.toMatchObject({
+       |               ^
+    500|         code: "INTERNAL_ERROR",
+    501|       });
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[61/185]⎯
+
+ FAIL  tests/execution-read-api.test.ts > bounded execution read APIs > fails closed on unknown type without reflecting stored data
+ FAIL  tests/execution-read-api.test.ts > bounded execution read APIs > fails closed on missing payload field without reflecting stored data
+ FAIL  tests/execution-read-api.test.ts > bounded execution read APIs > fails closed on extra payload field without reflecting stored data
+ FAIL  tests/execution-read-api.test.ts > bounded execution read APIs > fails closed on wrong payload type without reflecting stored data
+AssertionError: expected 503 to be 500 // Object.is equality
+
+- Expected
++ Received
+
+- 500
++ 503
+
+ ❯ tests/execution-read-api.test.ts:530:29
+    528|       { params: Promise.resolve({ executionId: EXECUTION_ID }) },
+    529|     );
+    530|     expect(response.status).toBe(500);
+       |                             ^
+    531|     const body = await response.json();
+    532|     expect(body).toEqual({
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[62/185]⎯
+
+ FAIL  tests/execution-read-api.test.ts > bounded execution read APIs > fails closed with the same stable error for a non-object stored event payload
+AssertionError: expected SchemaMigrationError: Database version 6 … { code: '…' } to match object { code: 'INTERNAL_ERROR' }
+(1 matching property omitted from actual)
+
+- Expected
++ Received
+
+- {
+-   "code": "INTERNAL_ERROR",
++ SchemaMigrationError {
++   "code": "SCHEMA_DATA_INVALID",
+  }
+
+ ❯ tests/execution-read-api.test.ts:546:7
+    544|       EXECUTION_ID,
+    545|       { limit: "1" },
+    546|     )).rejects.toMatchObject({
+       |       ^
+    547|       code: "INTERNAL_ERROR",
+    548|     });
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[63/185]⎯
+
+ FAIL  tests/execution-read-api.test.ts > bounded execution read APIs > returns strict list/detail summaries without private or absolute host facts
+SchemaMigrationError: Database version 6 schema is invalid.
+ ❯ migrateDatabase src/server/migrations.ts:1375:13
+    1373|     const validation = validateV6(database);
+    1374|     if (validation) {
+    1375|       throw new SchemaMigrationError(
+       |             ^
+    1376|         validation,
+    1377|         "Database version 6 schema is invalid.",
+ ❯ openDatabase src/server/db.ts:14:5
+ ❯ openForProject src/server/execution/execution-read-service.ts:367:20
+ ❯ Module.listProjectExecutions src/server/execution/execution-read-service.ts:585:26
+ ❯ tests/execution-read-api.test.ts:552:30
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[64/185]⎯
+
+ FAIL  tests/execution-read-api.test.ts > bounded execution read APIs > returns the active approval bound to the current staged hash beyond ten historical approvals
+SchemaMigrationError: Database version 6 schema is invalid.
+ ❯ migrateDatabase src/server/migrations.ts:1375:13
+    1373|     const validation = validateV6(database);
+    1374|     if (validation) {
+    1375|       throw new SchemaMigrationError(
+       |             ^
+    1376|         validation,
+    1377|         "Database version 6 schema is invalid.",
+ ❯ openDatabase src/server/db.ts:14:5
+ ❯ openForExecution src/server/execution/execution-read-service.ts:390:20
+ ❯ Module.listExecutionApprovals src/server/execution/execution-read-service.ts:1072:30
+ ❯ tests/execution-read-api.test.ts:647:35
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[65/185]⎯
+
+ FAIL  tests/execution-read-api.test.ts > bounded execution read APIs > strictly summarizes every required validation when the policy exceeds one page
+SchemaMigrationError: Database version 6 schema is invalid.
+ ❯ migrateDatabase src/server/migrations.ts:1375:13
+    1373|     const validation = validateV6(database);
+    1374|     if (validation) {
+    1375|       throw new SchemaMigrationError(
+       |             ^
+    1376|         validation,
+    1377|         "Database version 6 schema is invalid.",
+ ❯ openDatabase src/server/db.ts:14:5
+ ❯ openForExecution src/server/execution/execution-read-service.ts:390:20
+ ❯ Module.readExecutionDetail src/server/execution/execution-read-service.ts:623:13
+ ❯ tests/execution-read-api.test.ts:738:32
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[66/185]⎯
+
+ FAIL  tests/execution-read-api.test.ts > bounded execution read APIs > uses independent tamper-proof cursors and bounded pages for events and 101+ staged facts
+SchemaMigrationError: Database version 6 schema is invalid.
+ ❯ migrateDatabase src/server/migrations.ts:1375:13
+    1373|     const validation = validateV6(database);
+    1374|     if (validation) {
+    1375|       throw new SchemaMigrationError(
+       |             ^
+    1376|         validation,
+    1377|         "Database version 6 schema is invalid.",
+ ❯ openDatabase src/server/db.ts:14:5
+ ❯ openForExecution src/server/execution/execution-read-service.ts:390:20
+ ❯ Module.listExecutionEvents src/server/execution/execution-read-service.ts:757:30
+ ❯ tests/execution-read-api.test.ts:750:32
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[67/185]⎯
+
+ FAIL  tests/execution-read-api.test.ts > bounded execution read APIs > keeps the maximum 100000 observation and blocker set behind bounded pages
+SchemaMigrationError: Database version 6 schema is invalid.
+ ❯ migrateDatabase src/server/migrations.ts:1375:13
+    1373|     const validation = validateV6(database);
+    1374|     if (validation) {
+    1375|       throw new SchemaMigrationError(
+       |             ^
+    1376|         validation,
+    1377|         "Database version 6 schema is invalid.",
+ ❯ openDatabase src/server/db.ts:14:5
+ ❯ openForExecution src/server/execution/execution-read-service.ts:390:20
+ ❯ Module.listStagedObservations src/server/execution/execution-read-service.ts:918:30
+ ❯ tests/execution-read-api.test.ts:813:30
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[68/185]⎯
+
+ FAIL  tests/execution-read-api.test.ts > bounded execution read APIs > reads a legal multibyte 1 MiB artifact through contiguous <=64KiB chunks
+SchemaMigrationError: Database version 6 schema is invalid.
+ ❯ migrateDatabase src/server/migrations.ts:1375:13
+    1373|     const validation = validateV6(database);
+    1374|     if (validation) {
+    1375|       throw new SchemaMigrationError(
+       |             ^
+    1376|         validation,
+    1377|         "Database version 6 schema is invalid.",
+ ❯ openDatabase src/server/db.ts:14:5
+ ❯ openForExecution src/server/execution/execution-read-service.ts:390:20
+ ❯ Module.listExecutionArtifacts src/server/execution/execution-read-service.ts:807:30
+ ❯ tests/execution-read-api.test.ts:847:33
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[69/185]⎯
+
+ FAIL  tests/execution-read-api.test.ts > bounded execution read APIs > rejects chunk gaps/hash corruption and keeps diff responses <=64KiB
+SchemaMigrationError: Database version 6 schema is invalid.
+ ❯ migrateDatabase src/server/migrations.ts:1375:13
+    1373|     const validation = validateV6(database);
+    1374|     if (validation) {
+    1375|       throw new SchemaMigrationError(
+       |             ^
+    1376|         validation,
+    1377|         "Database version 6 schema is invalid.",
+ ❯ openDatabase src/server/db.ts:14:5
+ ❯ openForExecution src/server/execution/execution-read-service.ts:390:20
+ ❯ Module.readObservationDiff src/server/execution/execution-read-service.ts:1032:30
+ ❯ tests/execution-read-api.test.ts:893:30
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[70/185]⎯
+
+ FAIL  tests/execution-read-api.test.ts > bounded execution read APIs > rejects oversized limits and remains stable after reopening the database
+SchemaMigrationError: Database version 6 schema is invalid.
+ ❯ migrateDatabase src/server/migrations.ts:1375:13
+    1373|     const validation = validateV6(database);
+    1374|     if (validation) {
+    1375|       throw new SchemaMigrationError(
+       |             ^
+    1376|         validation,
+    1377|         "Database version 6 schema is invalid.",
+ ❯ openDatabase src/server/db.ts:14:5
+ ❯ tests/execution-read-api.test.ts:909:16
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[71/185]⎯
+
+ FAIL  tests/execution-read-api.test.ts > bounded execution read APIs > rejects oversized limits and remains stable after reopening the database
+Error: database is not open
+ ❯ tests/execution-read-api.test.ts:385:12
+    383|
+    384| afterEach(() => {
+    385|   database.close();
+       |            ^
+    386|   delete process.env.COCKPIT_DB_PATH;
+    387|   rmSync(directory, { force: true, recursive: true });
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[72/185]⎯
+
+ FAIL  tests/execution-slice.test.tsx > execution T-2 vertical slice > persists queued execution, preparing attempt, pending receipt, and running sandbox action before start returns
+AssertionError: Start returned before sandbox execution: {"error":{"code":"STORAGE_UNAVAILABLE","message":"Storage is unavailable."}}
+ ❯ startPendingExecution tests/execution-slice.test.tsx:227:12
+    225|   ]);
+    226|   if (first instanceof Response) {
+    227|     expect.fail(`Start returned before sandbox execution: ${await firs…
+       |            ^
+    228|   }
+    229|   expect(deferred.executor).toHaveBeenCalledTimes(1);
+ ❯ tests/execution-slice.test.tsx:256:33
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[73/185]⎯
+
+ FAIL  tests/execution-slice.test.tsx > execution T-2 vertical slice > renders route-backed loading, empty, error recovery, queued preparation, and refresh rehydration
+AssertionError: Start returned before sandbox execution: {"error":{"code":"STORAGE_UNAVAILABLE","message":"Storage is unavailable."}}
+ ❯ startPendingExecution tests/execution-slice.test.tsx:227:12
+    225|   ]);
+    226|   if (first instanceof Response) {
+    227|     expect.fail(`Start returned before sandbox execution: ${await firs…
+       |            ^
+    228|   }
+    229|   expect(deferred.executor).toHaveBeenCalledTimes(1);
+ ❯ tests/execution-slice.test.tsx:352:5
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[74/185]⎯
+
+ FAIL  tests/execution-stale-context.test.ts > execution frozen-input staleness > rejects promptInput missing field before model progression
+ FAIL  tests/execution-stale-context.test.ts > execution frozen-input staleness > rejects promptInput extra field before model progression
+ FAIL  tests/execution-stale-context.test.ts > execution frozen-input staleness > rejects promptInput wrong field type before model progression
+ FAIL  tests/execution-stale-context.test.ts > execution frozen-input staleness > rejects promptInput wrong version before model progression
+ FAIL  tests/execution-stale-context.test.ts > execution frozen-input staleness > rejects promptInput tampered task before model progression
+AssertionError: expected SchemaMigrationError: Database version 6 … { code: '…' } to match object { code: 'FROZEN_INPUT_INVALID', …(1) }
+(1 matching property omitted from actual)
+
+- Expected
++ Received
+
+- {
+-   "code": "FROZEN_INPUT_INVALID",
+-   "httpStatus": 500,
++ SchemaMigrationError {
++   "code": "SCHEMA_DATA_INVALID",
+  }
+
+ ❯ tests/execution-stale-context.test.ts:272:7
+    270|       { expectedVersion: 1, operationId: operationId(90) },
+    271|       { fileAdapter: {} },
+    272|     )).rejects.toMatchObject({ code: "FROZEN_INPUT_INVALID", httpStatu…
+       |       ^
+    273|
+    274|     expect(fetchMock).not.toHaveBeenCalled();
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[75/185]⎯
+
+ FAIL  tests/execution-stale-context.test.ts > execution frozen-input staleness > atomically stales before a model action when task input changes
+SchemaMigrationError: Database version 6 schema is invalid.
+ ❯ migrateDatabase src/server/migrations.ts:1375:13
+    1373|     const validation = validateV6(database);
+    1374|     if (validation) {
+    1375|       throw new SchemaMigrationError(
+       |             ^
+    1376|         validation,
+    1377|         "Database version 6 schema is invalid.",
+ ❯ openDatabase src/server/db.ts:14:5
+ ❯ Module.advanceExecution src/server/execution/action-orchestrator.ts:1459:20
+ ❯ tests/execution-stale-context.test.ts:303:34
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[76/185]⎯
+
+ FAIL  tests/execution-stale-context.test.ts > execution frozen-input staleness > stales when shared memory changes
+Error: table memory_entries has no column named source_ref
+ ❯ tests/execution-stale-context.test.ts:335:38
+    333|       "UPDATE missions SET goal='Changed goal',version=version+1 WHERE…
+    334|     ).run()],
+    335|     ["shared memory", () => database.exec(`
+       |                                      ^
+    336|       INSERT INTO memory_entries (
+    337|         id,project_id,type,content,source_type,source_ref,created_by,s…
+ ❯ tests/execution-stale-context.test.ts:374:5
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[77/185]⎯
+
+ FAIL  tests/execution-stale-context.test.ts > execution frozen-input staleness > ignores pure credential rotation and acquires the latest verified key
+SchemaMigrationError: Database version 6 schema is invalid.
+ ❯ migrateDatabase src/server/migrations.ts:1375:13
+    1373|     const validation = validateV6(database);
+    1374|     if (validation) {
+    1375|       throw new SchemaMigrationError(
+       |             ^
+    1376|         validation,
+    1377|         "Database version 6 schema is invalid.",
+ ❯ openDatabase src/server/db.ts:14:5
+ ❯ Module.advanceExecution src/server/execution/action-orchestrator.ts:1459:20
+ ❯ tests/execution-stale-context.test.ts:386:34
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[78/185]⎯
+
+ FAIL  tests/execution-stale-context.test.ts > execution frozen-input staleness > pauses without creating an action when the current credential is unavailable
+SchemaMigrationError: Database version 6 schema is invalid.
+ ❯ migrateDatabase src/server/migrations.ts:1375:13
+    1373|     const validation = validateV6(database);
+    1374|     if (validation) {
+    1375|       throw new SchemaMigrationError(
+       |             ^
+    1376|         validation,
+    1377|         "Database version 6 schema is invalid.",
+ ❯ openDatabase src/server/db.ts:14:5
+ ❯ Module.advanceExecution src/server/execution/action-orchestrator.ts:1459:20
+ ❯ tests/execution-stale-context.test.ts:436:34
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[79/185]⎯
+
+ FAIL  tests/execution-stale-context.test.ts > execution frozen-input staleness > keeps an acquired key in flight and discards a late result after noncredential change
+AssertionError: expected undefined to be type of 'function'
+
+Expected: "function"
+Received: "undefined"
+
+ ❯ tests/execution-stale-context.test.ts:470:44
+    468|       { fileAdapter: {} },
+    469|     );
+    470|     await vi.waitFor(() => expect(release).toBeTypeOf("function"));
+       |                                            ^
+    471|     rotateCredential("second-provider-key");
+    472|     database.prepare("UPDATE agents SET system_prompt='changed' WHERE …
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[80/185]⎯
+
+ FAIL  tests/execution-stale-context.test.ts > execution frozen-input staleness > checks frozen input before a staged action and exposes the same merge boundary
+SchemaMigrationError: Database version 6 schema is invalid.
+ ❯ migrateDatabase src/server/migrations.ts:1375:13
+    1373|     const validation = validateV6(database);
+    1374|     if (validation) {
+    1375|       throw new SchemaMigrationError(
+       |             ^
+    1376|         validation,
+    1377|         "Database version 6 schema is invalid.",
+ ❯ openDatabase src/server/db.ts:14:5
+ ❯ Module.advanceExecution src/server/execution/action-orchestrator.ts:1459:20
+ ❯ tests/execution-stale-context.test.ts:560:33
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[81/185]⎯
+
+ FAIL  tests/execution-usage-budget.test.ts > shared execution usage and business budgets > aggregates S-4 primary plus S-5 primary/repair and pauses after crossing without a tool
+SchemaMigrationError: Database version 6 schema is invalid.
+ ❯ migrateDatabase src/server/migrations.ts:1375:13
+    1373|     const validation = validateV6(database);
+    1374|     if (validation) {
+    1375|       throw new SchemaMigrationError(
+       |             ^
+    1376|         validation,
+    1377|         "Database version 6 schema is invalid.",
+ ❯ openDatabase src/server/db.ts:14:5
+ ❯ Module.advanceExecution src/server/execution/action-orchestrator.ts:1459:20
+ ❯ run tests/execution-usage-budget.test.ts:149:18
+ ❯ tests/execution-usage-budget.test.ts:190:26
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[82/185]⎯
+
+ FAIL  tests/execution-usage-budget.test.ts > shared execution usage and business budgets > does no HTTP or action when trusted same-Agent usage is already at max
+SchemaMigrationError: Database version 6 schema is invalid.
+ ❯ migrateDatabase src/server/migrations.ts:1375:13
+    1373|     const validation = validateV6(database);
+    1374|     if (validation) {
+    1375|       throw new SchemaMigrationError(
+       |             ^
+    1376|         validation,
+    1377|         "Database version 6 schema is invalid.",
+ ❯ openDatabase src/server/db.ts:14:5
+ ❯ Module.advanceExecution src/server/execution/action-orchestrator.ts:1459:20
+ ❯ run tests/execution-usage-budget.test.ts:149:18
+ ❯ tests/execution-usage-budget.test.ts:217:26
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[83/185]⎯
+
+ FAIL  tests/execution-usage-budget.test.ts > shared execution usage and business budgets > counts valid provider-failure usage and keeps it across retry
+SchemaMigrationError: Database version 6 schema is invalid.
+ ❯ migrateDatabase src/server/migrations.ts:1375:13
+    1373|     const validation = validateV6(database);
+    1374|     if (validation) {
+    1375|       throw new SchemaMigrationError(
+       |             ^
+    1376|         validation,
+    1377|         "Database version 6 schema is invalid.",
+ ❯ openDatabase src/server/db.ts:14:5
+ ❯ Module.advanceExecution src/server/execution/action-orchestrator.ts:1459:20
+ ❯ run tests/execution-usage-budget.test.ts:149:18
+ ❯ tests/execution-usage-budget.test.ts:237:26
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[84/185]⎯
+
+ FAIL  tests/execution-usage-budget.test.ts > shared execution usage and business budgets > pauses with no requested action for missing, negative, noninteger, and inconsistent usage
+SchemaMigrationError: Database version 6 schema is invalid.
+ ❯ migrateDatabase src/server/migrations.ts:1375:13
+    1373|     const validation = validateV6(database);
+    1374|     if (validation) {
+    1375|       throw new SchemaMigrationError(
+       |             ^
+    1376|         validation,
+    1377|         "Database version 6 schema is invalid.",
+ ❯ openDatabase src/server/db.ts:14:5
+ ❯ Module.advanceExecution src/server/execution/action-orchestrator.ts:1459:20
+ ❯ run tests/execution-usage-budget.test.ts:149:18
+ ❯ tests/execution-usage-budget.test.ts:271:28
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[85/185]⎯
+
+ FAIL  tests/execution-usage-budget.test.ts > shared execution usage and business budgets > enforces exact round, tool, and wall-clock prechecks while keeping Agents independent
+SchemaMigrationError: Database version 6 schema is invalid.
+ ❯ migrateDatabase src/server/migrations.ts:1375:13
+    1373|     const validation = validateV6(database);
+    1374|     if (validation) {
+    1375|       throw new SchemaMigrationError(
+       |             ^
+    1376|         validation,
+    1377|         "Database version 6 schema is invalid.",
+ ❯ openDatabase src/server/db.ts:14:5
+ ❯ Module.advanceExecution src/server/execution/action-orchestrator.ts:1459:20
+ ❯ run tests/execution-usage-budget.test.ts:149:18
+ ❯ tests/execution-usage-budget.test.ts:302:11
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[86/185]⎯
+
+ FAIL  tests/execution-write-stage-integration.test.ts > verified sandbox manifest lifecycle > persists strict baseline and current manifest identities across reopen
+SchemaMigrationError: Database version 6 schema is invalid.
+ ❯ migrateDatabase src/server/migrations.ts:1375:13
+    1373|     const validation = validateV6(database);
+    1374|     if (validation) {
+    1375|       throw new SchemaMigrationError(
+       |             ^
+    1376|         validation,
+    1377|         "Database version 6 schema is invalid.",
+ ❯ Module.openDatabase src/server/db.ts:14:5
+ ❯ tests/execution-write-stage-integration.test.ts:278:22
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[87/185]⎯
+
+ FAIL  tests/execution-write-stage-integration.test.ts > verified sandbox manifest lifecycle > marks same bytes with a new canonical identity stale after reopen
+SchemaMigrationError: Database version 6 schema is invalid.
+ ❯ migrateDatabase src/server/migrations.ts:1375:13
+    1373|     const validation = validateV6(database);
+    1374|     if (validation) {
+    1375|       throw new SchemaMigrationError(
+       |             ^
+    1376|         validation,
+    1377|         "Database version 6 schema is invalid.",
+ ❯ Module.openDatabase src/server/db.ts:14:5
+ ❯ tests/execution-write-stage-integration.test.ts:326:22
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[88/185]⎯
+
+ FAIL  tests/execution-write-stage-integration.test.ts > verified sandbox manifest lifecycle > reconciles lease loss, transaction injection, and a late finalizer
+AssertionError: expected 500 to be 409 // Object.is equality
+
+- Expected
++ Received
+
+- 409
++ 500
+
+ ❯ tests/execution-write-stage-integration.test.ts:626:31
+    624|           },
+    625|         );
+    626|         expect(result.status).toBe(scenario === "transaction" ? 500 : …
+       |                               ^
+    627|         expectNoStageOrphans(database, operation);
+    628|         expect(database.prepare(`
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[89/185]⎯
+
+ FAIL  tests/execution-write-stage-integration.test.ts > verified sandbox manifest lifecycle > refreshes a real write before/after and stages the refreshed tree exactly once
+AssertionError: expected 500 to be 200 // Object.is equality
+
+- Expected
++ Received
+
+- 200
++ 500
+
+ ❯ tests/execution-write-stage-integration.test.ts:796:29
+    794|       );
+    795|
+    796|       expect(staged.status).toBe(200);
+       |                             ^
+    797|       expect(counted.refreshCount).toBe(1);
+    798|       expect(database.prepare(`
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[90/185]⎯
+
+ FAIL  tests/execution-write-stage-integration.test.ts > verified sandbox manifest lifecycle > drops a refreshed stage when the cached manifest CAS loses
+AssertionError: expected { body: { error: { …(2) } }, …(1) } to match object { …(2) }
+(1 matching property omitted from actual)
+
+- Expected
++ Received
+
+  {
+    "body": {
+      "error": {
+-       "code": "STALE_EXECUTION",
++       "code": "INTERNAL_ERROR",
+      },
+    },
+-   "status": 409,
++   "status": 500,
+  }
+
+ ❯ tests/execution-write-stage-integration.test.ts:1015:22
+    1013|         },
+    1014|       );
+    1015|       expect(result).toMatchObject({
+       |                      ^
+    1016|         body: { error: { code: "STALE_EXECUTION" } },
+    1017|         status: 409,
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[91/185]⎯
+
+ FAIL  tests/members.service.test.ts > project membership service > prevents removing a member assigned to a project work item
+AssertionError: expected error to match asymmetric matcher
+
+- Expected
++ Received
+
+- ObjectContaining {
+-   "agentIds": [
+-     "agent-beta",
+-   ],
+-   "code": "MEMBER_HAS_ASSIGNMENTS",
++ SchemaMigrationError {
++   "message": "Database version 6 schema is invalid.",
++   "code": "SCHEMA_DATA_INVALID",
++   "name": "SchemaMigrationError",
+  }
+
+ ❯ tests/members.service.test.ts:242:7
+    240|         expectedProjectVersion: 2,
+    241|       }),
+    242|     ).toThrowError(
+       |       ^
+    243|       expect.objectContaining({
+    244|         agentIds: ["agent-beta"],
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[92/185]⎯
+
+ FAIL  tests/merge-external-writer.test.ts > external-writer merge recovery > resolves exact old/new manifests and replays each operation exactly
+Error: no such table: work_item_execution_results
+ ❯ tests/merge-external-writer.test.ts:216:31
+    214|         ? { executionStatus: "conflicted", journalStatus: "resolved_ol…
+    215|         : { executionStatus: "merged", journalStatus: "resolved_new", …
+    216|       expect(fixture.database.prepare(
+       |                               ^
+    217|         "SELECT count(*) AS count FROM work_item_execution_results",
+    218|       ).get()).toEqual({ count: action === "recovered_new" ? 1 : 0 });
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[93/185]⎯
+
+ FAIL  tests/merge-external-writer.test.ts > external-writer merge recovery > resolves exact old/new manifests and replays each operation exactly
+Error: EPERM, Permission denied: \\?\C:\Users\ADMINI~1\AppData\Local\Temp\2\cool-ai-writer-recovered_old-ILWBFd '\\?\C:\Users\ADMINI~1\AppData\Local\Temp\2\cool-ai-writer-recovered_old-ILWBFd'
+ ❯ tests/merge-external-writer.test.ts:94:39
+     92|
+     93| afterEach(() => {
+     94|   for (const root of roots.splice(0)) rmSync(root, { force: true, recu…
+       |                                       ^
+     95| });
+     96|
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[94/185]⎯
+
+ FAIL  tests/merge-external-writer.test.ts > external-writer merge recovery > detects every postcheck-to-receipt window without overwriting external bytes
+Error: no such table: work_item_execution_results
+ ❯ tests/merge-external-writer.test.ts:304:33
+    302|         })).rejects.toMatchObject({ code: "MANUAL_RECOVERY_REQUIRED" }…
+    303|         assertExternalState(target, mutation);
+    304|         expect(fixture.database.prepare(
+       |                                 ^
+    305|           "SELECT count(*) AS count FROM work_item_execution_results",
+    306|         ).get()).toEqual({ count: 0 });
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[95/185]⎯
+
+ FAIL  tests/merge-external-writer.test.ts > external-writer merge recovery > detects every postcheck-to-receipt window without overwriting external bytes
+Error: EPERM, Permission denied: \\?\C:\Users\ADMINI~1\AppData\Local\Temp\2\cool-ai-writer-before_precommit_check-replace-D6FxLd '\\?\C:\Users\ADMINI~1\AppData\Local\Temp\2\cool-ai-writer-before_precommit_check-replace-D6FxLd'
+ ❯ tests/merge-external-writer.test.ts:94:39
+     92|
+     93| afterEach(() => {
+     94|   for (const root of roots.splice(0)) rmSync(root, { force: true, recu…
+       |                                       ^
+     95| });
+     96|
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[96/185]⎯
+
+ FAIL  tests/merge-external-writer.test.ts > external-writer merge recovery > detects restart roll-forward races for every external path shape
+AssertionError: expected [Function] to throw error including 'crash after private commit' but got 'Mission review context is not initial…'
+
+Expected: "crash after private commit"
+Received: "Mission review context is not initialized."
+
+ ❯ tests/merge-external-writer.test.ts:324:10
+    322|           },
+    323|         },
+    324|       })).rejects.toThrow("crash after private commit");
+       |          ^
+    325|       const target = join(fixture.workspaceRoot, "src/a.txt");
+    326|       await mutateCanonical(fixture.root, target, mutation);
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[97/185]⎯
+
+ FAIL  tests/merge-external-writer.test.ts > external-writer merge recovery > detects restart roll-forward races for every external path shape
+Error: EPERM, Permission denied: \\?\C:\Users\ADMINI~1\AppData\Local\Temp\2\cool-ai-writer-restart-replace-aUFjj3 '\\?\C:\Users\ADMINI~1\AppData\Local\Temp\2\cool-ai-writer-restart-replace-aUFjj3'
+ ❯ tests/merge-external-writer.test.ts:94:39
+     92|
+     93| afterEach(() => {
+     94|   for (const root of roots.splice(0)) rmSync(root, { force: true, recu…
+       |                                       ^
+     95| });
+     96|
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[98/185]⎯
+
+ FAIL  tests/merge-journal-prepare.test.ts > merge journal prepare and conditional apply > turns a post-journal native uncertainty into a zero-result manual barrier
+Error: no such table: work_item_execution_results
+ ❯ tests/merge-journal-prepare.test.ts:138:31
+    136|         status: "manual_recovery",
+    137|       });
+    138|       expect(fixture.database.prepare(
+       |                               ^
+    139|         "SELECT count(*) AS count FROM work_item_execution_results",
+    140|       ).get()).toEqual({ count: 0 });
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[99/185]⎯
+
+ FAIL  tests/merge-journal-prepare.test.ts > merge journal prepare and conditional apply > durably prepares full manifests and applies modified/added paths in stable order
+AssertionError: expected 'SCHEMA_DRIFT' to be null
+
+- Expected:
+null
+
++ Received:
+"SCHEMA_DRIFT"
+
+ ❯ tests/merge-journal-prepare.test.ts:246:44
+    244|         "SELECT status,consumed_at IS NOT NULL AS consumed FROM execut…
+    245|       ).get()).toEqual({ consumed: 1, status: "consumed" });
+    246|       expect(validateV5(fixture.database)).toBeNull();
+       |                                            ^
+    247|       fixture.database.prepare(`
+    248|         UPDATE execution_merge_files
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[100/185]⎯
+
+ FAIL  tests/process-runner.test.ts > direct process runner > persists redacted chunks and exact receipt only inside the winning terminal CAS
+SchemaMigrationError: Database version 6 schema is invalid.
+ ❯ migrateDatabase src/server/migrations.ts:1375:13
+    1373|     const validation = validateV6(database);
+    1374|     if (validation) {
+    1375|       throw new SchemaMigrationError(
+       |             ^
+    1376|         validation,
+    1377|         "Database version 6 schema is invalid.",
+ ❯ openDatabase src/server/db.ts:14:5
+ ❯ tests/process-runner.test.ts:523:22
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[101/185]⎯
+
+ FAIL  tests/process-runner.test.ts > direct process runner > terminalizes a synchronous spawn exception without orphaning the action or receipt
+SchemaMigrationError: Database version 6 schema is invalid.
+ ❯ migrateDatabase src/server/migrations.ts:1375:13
+    1373|     const validation = validateV6(database);
+    1374|     if (validation) {
+    1375|       throw new SchemaMigrationError(
+       |             ^
+    1376|         validation,
+    1377|         "Database version 6 schema is invalid.",
+ ❯ openDatabase src/server/db.ts:14:5
+ ❯ tests/process-runner.test.ts:591:22
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[102/185]⎯
+
+ FAIL  tests/process-runner.test.ts > direct process runner > rejects approval input tamper before spawn and terminalizes authorization
+ FAIL  tests/process-runner.test.ts > direct process runner > rejects tool input tamper before spawn and terminalizes authorization
+ FAIL  tests/process-runner.test.ts > direct process runner > rejects action request tamper before spawn and terminalizes authorization
+ FAIL  tests/process-runner.test.ts > direct process runner > rejects tool action link tamper before spawn and terminalizes authorization
+SchemaMigrationError: Database version 6 schema is invalid.
+ ❯ migrateDatabase src/server/migrations.ts:1375:13
+    1373|     const validation = validateV6(database);
+    1374|     if (validation) {
+    1375|       throw new SchemaMigrationError(
+       |             ^
+    1376|         validation,
+    1377|         "Database version 6 schema is invalid.",
+ ❯ openDatabase src/server/db.ts:14:5
+ ❯ seedConsumedOneShot tests/process-runner.test.ts:273:20
+ ❯ tests/process-runner.test.ts:647:5
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[103/185]⎯
+
+ FAIL  tests/process-runner.test.ts > direct process runner > drops late process facts after stop wins and preserves its exact receipt
+ FAIL  tests/process-runner.test.ts > direct process runner > drops late process facts after reconcile wins and preserves its exact receipt
+SchemaMigrationError: Database version 6 schema is invalid.
+ ❯ migrateDatabase src/server/migrations.ts:1375:13
+    1373|     const validation = validateV6(database);
+    1374|     if (validation) {
+    1375|       throw new SchemaMigrationError(
+       |             ^
+    1376|         validation,
+    1377|         "Database version 6 schema is invalid.",
+ ❯ openDatabase src/server/db.ts:14:5
+ ❯ tests/process-runner.test.ts:700:24
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[104/185]⎯
+
+ FAIL  tests/process-runner.test.ts > direct process runner > fails the attempt closed and creates no validation or stage when tree termination is unconfirmed
+SchemaMigrationError: Database version 6 schema is invalid.
+ ❯ migrateDatabase src/server/migrations.ts:1375:13
+    1373|     const validation = validateV6(database);
+    1374|     if (validation) {
+    1375|       throw new SchemaMigrationError(
+       |             ^
+    1376|         validation,
+    1377|         "Database version 6 schema is invalid.",
+ ❯ openDatabase src/server/db.ts:14:5
+ ❯ tests/process-runner.test.ts:773:22
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[105/185]⎯
+
+ FAIL  tests/project-chat.api.test.ts > project chat API terminal semantics > stores a project message with no active run without creating one
+AssertionError: expected 503 to be 201 // Object.is equality
+
+- Expected
++ Received
+
+- 201
++ 503
+
+ ❯ tests/project-chat.api.test.ts:121:29
+    119|     });
+    120|
+    121|     expect(response.status).toBe(201);
+       |                             ^
+    122|     await expect(response.json()).resolves.toMatchObject({
+    123|       message: { content: "A note before collaboration", runId: null, …
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[106/185]⎯
+
+ FAIL  tests/project-chat.api.test.ts > project chat API terminal semantics > appends a project message to the active run and deduplicates it
+AssertionError: expected 503 to be 201 // Object.is equality
+
+- Expected
++ Received
+
+- 201
++ 503
+
+ ❯ start tests/project-chat.api.test.ts:97:27
+     95| ): Promise<Record<string, any>> {
+     96|   const response = await post("runs", { message: "Start", operationId …
+     97|   expect(response.status).toBe(201);
+       |                           ^
+     98|   return response.json();
+     99| }
+ ❯ tests/project-chat.api.test.ts:138:21
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[107/185]⎯
+
+ FAIL  tests/project-chat.api.test.ts > project chat API terminal semantics > rejects a reused project-message operation id with different content
+AssertionError: expected 503 to be 409 // Object.is equality
+
+- Expected
++ Received
+
+- 409
++ 503
+
+ ❯ tests/project-chat.api.test.ts:165:29
+    163|     const conflict = await post("messages", { content: "Second", opera…
+    164|
+    165|     expect(conflict.status).toBe(409);
+       |                             ^
+    166|     await expect(conflict.json()).resolves.toEqual({
+    167|       error: {
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[108/185]⎯
+
+ FAIL  tests/project-chat.api.test.ts > project chat API terminal semantics > does not revive a planned run when posting a project message
+ FAIL  tests/project-chat.api.test.ts > project chat API terminal semantics > does not revive a stopped run when posting a project message
+AssertionError: expected 503 to be 201 // Object.is equality
+
+- Expected
++ Received
+
+- 201
++ 503
+
+ ❯ start tests/project-chat.api.test.ts:97:27
+     95| ): Promise<Record<string, any>> {
+     96|   const response = await post("runs", { message: "Start", operationId …
+     97|   expect(response.status).toBe(201);
+       |                           ^
+     98|   return response.json();
+     99| }
+ ❯ tests/project-chat.api.test.ts:178:23
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[109/185]⎯
+
+ FAIL  tests/project-chat.api.test.ts > project chat API terminal semantics > starts an explicit new run after a terminal run
+AssertionError: expected 503 to be 201 // Object.is equality
+
+- Expected
++ Received
+
+- 201
++ 503
+
+ ❯ start tests/project-chat.api.test.ts:97:27
+     95| ): Promise<Record<string, any>> {
+     96|   const response = await post("runs", { message: "Start", operationId …
+     97|   expect(response.status).toBe(201);
+       |                           ^
+     98|   return response.json();
+     99| }
+ ❯ tests/project-chat.api.test.ts:214:19
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[110/185]⎯
+
+ FAIL  tests/sandbox-snapshot.test.ts > durable sandbox action lifecycle > reconciles a restarted expired build to paused only after owned cleanup
+SchemaMigrationError: Database version 6 schema is invalid.
+ ❯ migrateDatabase src/server/migrations.ts:1375:13
+    1373|     const validation = validateV6(database);
+    1374|     if (validation) {
+    1375|       throw new SchemaMigrationError(
+       |             ^
+    1376|         validation,
+    1377|         "Database version 6 schema is invalid.",
+ ❯ Module.openDatabase src/server/db.ts:14:5
+ ❯ tests/sandbox-snapshot.test.ts:325:16
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[111/185]⎯
+
+ FAIL  tests/turn-acquire.test.ts > advance operation acquisition > atomically stores an immutable prompt snapshot, hashes, epoch, sequence, lease, event, and pending receipt
+SchemaMigrationError: Database version 6 schema is invalid.
+ ❯ migrateDatabase src/server/migrations.ts:1375:13
+    1373|     const validation = validateV6(database);
+    1374|     if (validation) {
+    1375|       throw new SchemaMigrationError(
+       |             ^
+    1376|         validation,
+    1377|         "Database version 6 schema is invalid.",
+ ❯ openDatabase src/server/db.ts:14:5
+ ❯ reconcileExpiredAttempt src/server/collaboration/turn-orchestrator.ts:600:20
+ ❯ acquireAdvance src/server/collaboration/turn-orchestrator.ts:1212:3
+ ❯ acquire tests/turn-acquire.test.ts:90:10
+ ❯ tests/turn-acquire.test.ts:206:20
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[112/185]⎯
+
+ FAIL  tests/turn-acquire.test.ts > advance operation acquisition > returns operation in progress for a repeated pending advance without duplicating work
+SchemaMigrationError: Database version 6 schema is invalid.
+ ❯ migrateDatabase src/server/migrations.ts:1375:13
+    1373|     const validation = validateV6(database);
+    1374|     if (validation) {
+    1375|       throw new SchemaMigrationError(
+       |             ^
+    1376|         validation,
+    1377|         "Database version 6 schema is invalid.",
+ ❯ openDatabase src/server/db.ts:14:5
+ ❯ reconcileExpiredAttempt src/server/collaboration/turn-orchestrator.ts:600:20
+ ❯ acquireAdvance src/server/collaboration/turn-orchestrator.ts:1212:3
+ ❯ acquire tests/turn-acquire.test.ts:90:10
+ ❯ tests/turn-acquire.test.ts:302:5
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[113/185]⎯
+
+ FAIL  tests/turn-acquire.test.ts > advance operation acquisition > guards a paused run before creating an attempt
+ FAIL  tests/turn-acquire.test.ts > advance operation acquisition > guards a waiting_owner run before creating an attempt
+ FAIL  tests/turn-acquire.test.ts > advance operation acquisition > guards a stopped run before creating an attempt
+SchemaMigrationError: Database version 6 schema is invalid.
+ ❯ migrateDatabase src/server/migrations.ts:1375:13
+    1373|     const validation = validateV6(database);
+    1374|     if (validation) {
+    1375|       throw new SchemaMigrationError(
+       |             ^
+    1376|         validation,
+    1377|         "Database version 6 schema is invalid.",
+ ❯ openDatabase src/server/db.ts:14:5
+ ❯ tests/turn-acquire.test.ts:324:22
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[114/185]⎯
+
+ FAIL  tests/turn-acquire.test.ts > advance operation acquisition > guards an open decision and another calling attempt
+SchemaMigrationError: Database version 6 schema is invalid.
+ ❯ migrateDatabase src/server/migrations.ts:1375:13
+    1373|     const validation = validateV6(database);
+    1374|     if (validation) {
+    1375|       throw new SchemaMigrationError(
+       |             ^
+    1376|         validation,
+    1377|         "Database version 6 schema is invalid.",
+ ❯ openDatabase src/server/db.ts:14:5
+ ❯ tests/turn-acquire.test.ts:339:22
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[115/185]⎯
+
+ FAIL  tests/turn-acquire.test.ts > advance operation acquisition > serializes concurrent advances so exactly one calling attempt is acquired
+AssertionError: expected [] to have a length of 1 but got +0
+
+- Expected
++ Received
+
+- 1
++ 0
+
+ ❯ tests/turn-acquire.test.ts:423:67
+    421|     ]);
+    422|
+    423|     expect(results.filter((item) => item.status === "fulfilled")).toHa…
+       |                                                                   ^
+    424|     const rejected = results.find((item) => item.status === "rejected"…
+    425|     expect(rejected?.status).toBe("rejected");
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[116/185]⎯
+
+ FAIL  tests/turn-acquire.test.ts > advance operation acquisition > pauses at the rounds pre-boundary, completes the receipt, and starts no call
+ FAIL  tests/turn-acquire.test.ts > advance operation acquisition > pauses at the tokens pre-boundary, completes the receipt, and starts no call
+ FAIL  tests/turn-acquire.test.ts > advance operation acquisition > pauses at the handoffs pre-boundary, completes the receipt, and starts no call
+SchemaMigrationError: Database version 6 schema is invalid.
+ ❯ migrateDatabase src/server/migrations.ts:1375:13
+    1373|     const validation = validateV6(database);
+    1374|     if (validation) {
+    1375|       throw new SchemaMigrationError(
+       |             ^
+    1376|         validation,
+    1377|         "Database version 6 schema is invalid.",
+ ❯ openDatabase src/server/db.ts:14:5
+ ❯ tests/turn-acquire.test.ts:444:24
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[117/185]⎯
+
+ FAIL  tests/turn-finalize.test.ts > attempt finalize CAS > commits only with calling status, token, live lease, running epoch, and recomputed context hash
+SchemaMigrationError: Database version 6 schema is invalid.
+ ❯ migrateDatabase src/server/migrations.ts:1375:13
+    1373|     const validation = validateV6(database);
+    1374|     if (validation) {
+    1375|       throw new SchemaMigrationError(
+       |             ^
+    1376|         validation,
+    1377|         "Database version 6 schema is invalid.",
+ ❯ openDatabase src/server/db.ts:14:5
+ ❯ reconcileExpiredAttempt src/server/collaboration/turn-orchestrator.ts:600:20
+ ❯ Module.acquireAdvance src/server/collaboration/turn-orchestrator.ts:1212:3
+ ❯ acquire tests/turn-finalize.test.ts:312:33
+ ❯ tests/turn-finalize.test.ts:448:5
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[118/185]⎯
+
+ FAIL  tests/turn-finalize.test.ts > attempt finalize CAS > pause discards business results while retaining allowed call audit
+ FAIL  tests/turn-finalize.test.ts > attempt finalize CAS > stop discards business results while retaining allowed call audit
+ FAIL  tests/turn-finalize.test.ts > attempt finalize CAS > epoch discards business results while retaining allowed call audit
+ FAIL  tests/turn-finalize.test.ts > attempt finalize CAS > expired discards business results while retaining allowed call audit
+SchemaMigrationError: Database version 6 schema is invalid.
+ ❯ migrateDatabase src/server/migrations.ts:1375:13
+    1373|     const validation = validateV6(database);
+    1374|     if (validation) {
+    1375|       throw new SchemaMigrationError(
+       |             ^
+    1376|         validation,
+    1377|         "Database version 6 schema is invalid.",
+ ❯ openDatabase src/server/db.ts:14:5
+ ❯ reconcileExpiredAttempt src/server/collaboration/turn-orchestrator.ts:600:20
+ ❯ Module.acquireAdvance src/server/collaboration/turn-orchestrator.ts:1212:3
+ ❯ acquire tests/turn-finalize.test.ts:312:33
+ ❯ tests/turn-finalize.test.ts:482:7
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[119/185]⎯
+
+ FAIL  tests/turn-finalize.test.ts > attempt finalize CAS > discards on recomputed context hash mismatch and pauses the running run
+SchemaMigrationError: Database version 6 schema is invalid.
+ ❯ migrateDatabase src/server/migrations.ts:1375:13
+    1373|     const validation = validateV6(database);
+    1374|     if (validation) {
+    1375|       throw new SchemaMigrationError(
+       |             ^
+    1376|         validation,
+    1377|         "Database version 6 schema is invalid.",
+ ❯ openDatabase src/server/db.ts:14:5
+ ❯ reconcileExpiredAttempt src/server/collaboration/turn-orchestrator.ts:600:20
+ ❯ Module.acquireAdvance src/server/collaboration/turn-orchestrator.ts:1212:3
+ ❯ acquire tests/turn-finalize.test.ts:312:33
+ ❯ tests/turn-finalize.test.ts:514:5
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[120/185]⎯
+
+ FAIL  tests/turn-finalize.test.ts > attempt finalize CAS > rejects a mismatched lease token with affected rows zero and no durable writes
+SchemaMigrationError: Database version 6 schema is invalid.
+ ❯ migrateDatabase src/server/migrations.ts:1375:13
+    1373|     const validation = validateV6(database);
+    1374|     if (validation) {
+    1375|       throw new SchemaMigrationError(
+       |             ^
+    1376|         validation,
+    1377|         "Database version 6 schema is invalid.",
+ ❯ openDatabase src/server/db.ts:14:5
+ ❯ reconcileExpiredAttempt src/server/collaboration/turn-orchestrator.ts:600:20
+ ❯ Module.acquireAdvance src/server/collaboration/turn-orchestrator.ts:1212:3
+ ❯ acquire tests/turn-finalize.test.ts:312:33
+ ❯ tests/turn-finalize.test.ts:542:5
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[121/185]⎯
+
+ FAIL  tests/turn-finalize.test.ts > attempt finalize CAS > persists exact public provider failure, completes pending receipt, and records every call/valid usage
+ FAIL  tests/turn-finalize.test.ts > attempt finalize CAS > persists exact public usage failure, completes pending receipt, and records every call/valid usage
+ FAIL  tests/turn-finalize.test.ts > attempt finalize CAS > persists exact public schema failure, completes pending receipt, and records every call/valid usage
+SchemaMigrationError: Database version 6 schema is invalid.
+ ❯ migrateDatabase src/server/migrations.ts:1375:13
+    1373|     const validation = validateV6(database);
+    1374|     if (validation) {
+    1375|       throw new SchemaMigrationError(
+       |             ^
+    1376|         validation,
+    1377|         "Database version 6 schema is invalid.",
+ ❯ openDatabase src/server/db.ts:14:5
+ ❯ reconcileExpiredAttempt src/server/collaboration/turn-orchestrator.ts:600:20
+ ❯ Module.acquireAdvance src/server/collaboration/turn-orchestrator.ts:1212:3
+ ❯ acquire tests/turn-finalize.test.ts:312:33
+ ❯ tests/turn-finalize.test.ts:588:7
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[122/185]⎯
+
+ FAIL  tests/turn-finalize.test.ts > attempt finalize CAS > rolls back a business failure, then completes the pending receipt in a short failure transaction
+SchemaMigrationError: Database version 6 schema is invalid.
+ ❯ migrateDatabase src/server/migrations.ts:1375:13
+    1373|     const validation = validateV6(database);
+    1374|     if (validation) {
+    1375|       throw new SchemaMigrationError(
+       |             ^
+    1376|         validation,
+    1377|         "Database version 6 schema is invalid.",
+ ❯ openDatabase src/server/db.ts:14:5
+ ❯ reconcileExpiredAttempt src/server/collaboration/turn-orchestrator.ts:600:20
+ ❯ Module.acquireAdvance src/server/collaboration/turn-orchestrator.ts:1212:3
+ ❯ acquire tests/turn-finalize.test.ts:312:33
+ ❯ tests/turn-finalize.test.ts:610:5
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[123/185]⎯
+
+ FAIL  tests/turn-finalize.test.ts > attempt finalize CAS > durably sanitizes unexpected business exception as failed/internal_failure and makes a late finalizer a no-op
+ FAIL  tests/turn-finalize.test.ts > attempt finalize CAS > durably sanitizes SQLite persistence exception as failed/internal_failure and makes a late finalizer a no-op
+SchemaMigrationError: Database version 6 schema is invalid.
+ ❯ migrateDatabase src/server/migrations.ts:1375:13
+    1373|     const validation = validateV6(database);
+    1374|     if (validation) {
+    1375|       throw new SchemaMigrationError(
+       |             ^
+    1376|         validation,
+    1377|         "Database version 6 schema is invalid.",
+ ❯ openDatabase src/server/db.ts:14:5
+ ❯ reconcileExpiredAttempt src/server/collaboration/turn-orchestrator.ts:600:20
+ ❯ Module.acquireAdvance src/server/collaboration/turn-orchestrator.ts:1212:3
+ ❯ acquire tests/turn-finalize.test.ts:312:33
+ ❯ tests/turn-finalize.test.ts:676:7
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[124/185]⎯
+
+ FAIL  tests/turn-finalize.test.ts > attempt finalize CAS > persists provider credential and verification generations on auth failure
+SchemaMigrationError: Database version 6 schema is invalid.
+ ❯ migrateDatabase src/server/migrations.ts:1375:13
+    1373|     const validation = validateV6(database);
+    1374|     if (validation) {
+    1375|       throw new SchemaMigrationError(
+       |             ^
+    1376|         validation,
+    1377|         "Database version 6 schema is invalid.",
+ ❯ openDatabase src/server/db.ts:14:5
+ ❯ reconcileExpiredAttempt src/server/collaboration/turn-orchestrator.ts:600:20
+ ❯ Module.acquireAdvance src/server/collaboration/turn-orchestrator.ts:1212:3
+ ❯ acquire tests/turn-finalize.test.ts:312:33
+ ❯ tests/turn-finalize.test.ts:707:5
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[125/185]⎯
+
+ FAIL  tests/turn-finalize.test.ts > attempt finalize CAS > a late finalizer after a committed terminal attempt reads the durable receipt and changes nothing
+ FAIL  tests/turn-finalize.test.ts > attempt finalize CAS > a late finalizer after a failed terminal attempt reads the durable receipt and changes nothing
+ FAIL  tests/turn-finalize.test.ts > attempt finalize CAS > a late finalizer after a discarded terminal attempt reads the durable receipt and changes nothing
+SchemaMigrationError: Database version 6 schema is invalid.
+ ❯ migrateDatabase src/server/migrations.ts:1375:13
+    1373|     const validation = validateV6(database);
+    1374|     if (validation) {
+    1375|       throw new SchemaMigrationError(
+       |             ^
+    1376|         validation,
+    1377|         "Database version 6 schema is invalid.",
+ ❯ openDatabase src/server/db.ts:14:5
+ ❯ reconcileExpiredAttempt src/server/collaboration/turn-orchestrator.ts:600:20
+ ❯ Module.acquireAdvance src/server/collaboration/turn-orchestrator.ts:1212:3
+ ❯ acquire tests/turn-finalize.test.ts:312:33
+ ❯ tests/turn-finalize.test.ts:756:7
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[126/185]⎯
+
+ FAIL  tests/turn-finalize.test.ts > attempt finalize CAS > keeps the advance receipt request hash and identity unchanged
+SchemaMigrationError: Database version 6 schema is invalid.
+ ❯ migrateDatabase src/server/migrations.ts:1375:13
+    1373|     const validation = validateV6(database);
+    1374|     if (validation) {
+    1375|       throw new SchemaMigrationError(
+       |             ^
+    1376|         validation,
+    1377|         "Database version 6 schema is invalid.",
+ ❯ openDatabase src/server/db.ts:14:5
+ ❯ reconcileExpiredAttempt src/server/collaboration/turn-orchestrator.ts:600:20
+ ❯ Module.acquireAdvance src/server/collaboration/turn-orchestrator.ts:1212:3
+ ❯ acquire tests/turn-finalize.test.ts:312:33
+ ❯ tests/turn-finalize.test.ts:773:5
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[127/185]⎯
+
+ FAIL  tests/validation-policy.test.ts > append-only validation policy > retains history and frozen references across restart until project deletion
+SchemaMigrationError: Database version 6 schema is invalid.
+ ❯ migrateDatabase src/server/migrations.ts:1375:13
+    1373|     const validation = validateV6(database);
+    1374|     if (validation) {
+    1375|       throw new SchemaMigrationError(
+       |             ^
+    1376|         validation,
+    1377|         "Database version 6 schema is invalid.",
+ ❯ openDatabase src/server/db.ts:14:5
+ ❯ Module.listValidationPolicyRevisions src/server/execution/validation-policy-service.ts:256:20
+ ❯ tests/validation-policy.test.ts:270:34
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[128/185]⎯
+
+ FAIL  tests/validation-policy.test.ts > append-only validation policy > retains history and frozen references across restart until project deletion
+Error: EPERM, Permission denied: \\?\C:\Users\ADMINI~1\AppData\Local\Temp\2\cool-ai-validation-policy-cUCLS7 '\\?\C:\Users\ADMINI~1\AppData\Local\Temp\2\cool-ai-validation-policy-cUCLS7'
+ ❯ tests/validation-policy.test.ts:103:5
+    101| afterEach(() => {
+    102|   for (const directory of temporaryDirectories.splice(0)) {
+    103|     rmSync(directory, { force: true, recursive: true });
+       |     ^
+    104|   }
+    105| });
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[129/185]⎯
+
+ FAIL  tests/validation-policy.test.ts > append-only validation policy > rejects validation facts that do not belong to the attempt's frozen revision
+SchemaMigrationError: Database version 6 schema is invalid.
+ ❯ migrateDatabase src/server/migrations.ts:1375:13
+    1373|     const validation = validateV6(database);
+    1374|     if (validation) {
+    1375|       throw new SchemaMigrationError(
+       |             ^
+    1376|         validation,
+    1377|         "Database version 6 schema is invalid.",
+ ❯ openDatabase src/server/db.ts:14:5
+ ❯ Module.saveValidationPolicy src/server/execution/validation-policy-service.ts:458:20
+ ❯ tests/validation-policy.test.ts:313:26
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[130/185]⎯
+
+⎯⎯⎯⎯⎯⎯ Unhandled Errors ⎯⎯⎯⎯⎯⎯
+
+Vitest caught 1 unhandled error during the test run.
+This might cause false positive tests. Resolve unhandled errors to make sure your tests are not affected.
+
+⎯⎯⎯⎯ Unhandled Rejection ⎯⎯⎯⎯⎯
+SchemaMigrationError: Database version 6 schema is invalid.
+ ❯ migrateDatabase src/server/migrations.ts:1375:13
+    1373|     const validation = validateV6(database);
+    1374|     if (validation) {
+    1375|       throw new SchemaMigrationError(
+       |             ^
+    1376|         validation,
+    1377|         "Database version 6 schema is invalid.",
+ ❯ openDatabase src/server/db.ts:14:5
+ ❯ Module.advanceExecution src/server/execution/action-orchestrator.ts:1459:20
+ ❯ tests/execution-stale-context.test.ts:464:29
+ ❯ node_modules/@vitest/runner/dist/chunk-artifact.js:302:11
+ ❯ node_modules/@vitest/runner/dist/chunk-artifact.js:1903:26
+ ❯ node_modules/@vitest/runner/dist/chunk-artifact.js:2326:20
+ ❯ runWithCancel node_modules/@vitest/runner/dist/chunk-artifact.js:2323:10
+ ❯ node_modules/@vitest/runner/dist/chunk-artifact.js:2305:20
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯
+Serialized Error: { code: 'SCHEMA_DATA_INVALID' }
+This error originated in "tests/execution-stale-context.test.ts" test file. It doesn't mean the error was thrown inside the file itself, but while it was running.
+The latest test that might've caused the error is "keeps an acquired key in flight and discards a late result after noncredential change". It might mean one of the following:
+- The error was thrown, while Vitest was running this test.
+- If the error occurred after the test had been completed, this was the last documented test before it was thrown.
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯
+
+
+ Test Files  28 failed | 134 passed (162)
+      Tests  180 failed | 924 passed (1104)
+     Errors  1 error
+   Start at  17:06:02
+   Duration  143.58s (transform 8.35s, setup 83.31s, import 42.22s, tests 439.02s, environment 375.15s)
+
+# exit: 1

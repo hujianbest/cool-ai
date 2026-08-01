@@ -79,6 +79,7 @@ export type ReviewOperationInput = {
 };
 
 export type ReviewOrchestratorDependencies = {
+  acquireContext?: (database: DatabaseSync, input: ReviewOperationInput) => void;
   callProvider?: (
     request: OpenAiChatRequest,
     context: OpenAiChatCallContext,
@@ -237,6 +238,7 @@ function acquire(
   requestHash: string,
   now: Date,
   leaseToken: string,
+  acquireContext?: ReviewOrchestratorDependencies["acquireContext"],
 ): void {
   if (
     !Number.isSafeInteger(input.trustedTokens)
@@ -254,6 +256,7 @@ function acquire(
     );
   }
   transaction(database, () => {
+    acquireContext?.(database, input);
     if (input.retryOfAttemptId) {
       const prior = database.prepare(`
         SELECT status,parsed_output_hash AS outputHash,work_item_id AS workItemId
@@ -628,7 +631,14 @@ export async function runReviewOperation(
   const randomUUID = dependencies.randomUUID ?? nodeRandomUUID;
   const callProvider = dependencies.callProvider ?? callOpenAiChat;
   const leaseToken = randomUUID();
-  acquire(database, input, requestHash, clock(), leaseToken);
+  acquire(
+    database,
+    input,
+    requestHash,
+    clock(),
+    leaseToken,
+    dependencies.acquireContext,
+  );
   const callDependencies = {
     callProvider,
     clock,

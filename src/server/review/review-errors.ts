@@ -45,6 +45,7 @@ export const REVIEW_ERROR_REGISTRY = {
   RESULT_SUPERSEDED: { eventType: "review_attempt_discarded", message: "结果版本已被取代", status: 409 },
   REVIEW_ALREADY_IN_PROGRESS: { eventType: null, message: "已有复核正在进行", status: 409 },
   REVIEW_CONTENT_INCOMPLETE: { eventType: "review_finalize_failed", message: "复核材料正文不完整，不能通过", status: 422 },
+  REVIEW_CONTEXT_STALE: { eventType: null, message: "复核上下文已变化，请基于最新内容重试", status: 409 },
   REVIEW_FINALIZE_FAILED: { eventType: "review_finalize_failed", message: "复核结果已保存，但本地提交失败；重试不会再次调用模型", status: 500 },
   REVIEW_INVARIANT_FAILED: { eventType: "review_finalize_failed", message: "复核数据不一致", status: 500 },
   REVIEW_MATERIAL_INVALID: { eventType: "review_attempt_failed", message: "公开复核材料无效", status: 422 },

@@ -1,6 +1,6 @@
 import { join } from "node:path";
 
-import { startReview } from "@/src/server/review/review-slice-service";
+import { startPublicReview } from "@/src/server/review/review-application-service";
 import {
   ReviewApiError,
   reviewErrorResponse,
@@ -47,7 +47,7 @@ export async function POST(request: Request, context: RouteContext): Promise<Res
     );
   }
   try {
-    return Response.json(await startReview(databasePath(), workItemId, input));
+    return Response.json(await startPublicReview(databasePath(), workItemId, input));
   } catch (error) {
     return reviewErrorResponse(error, "POST /api/work-items/:workItemId/reviews");
   }
