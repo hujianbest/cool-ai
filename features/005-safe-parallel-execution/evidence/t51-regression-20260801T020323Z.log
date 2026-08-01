@@ -1,0 +1,16 @@
+# hf-gate-run
+# label: t51-regression
+# command: python -m pytest --import-mode=importlib .cursor/skills/hf-workflow/scripts/test_hf_gate.py .opencode/skills/hf-workflow/scripts/test_hf_gate.py
+# started: 2026-08-01T02:03:23+00:00
+============================= test session starts =============================
+platform win32 -- Python 3.13.12, pytest-9.0.3, pluggy-1.6.0
+rootdir: D:\cool-ai
+collected 80 items
+
+.cursor\skills\hf-workflow\scripts\test_hf_gate.py ..................... [ 26%]
+...................                                                      [ 50%]
+.opencode\skills\hf-workflow\scripts\test_hf_gate.py ................... [ 73%]
+.....................                                                    [100%]
+
+============================= 80 passed in 3.07s ==============================
+# exit: 0

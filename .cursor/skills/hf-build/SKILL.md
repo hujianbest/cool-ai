@@ -39,6 +39,14 @@ TDD 铁律只约束建造模式——测试的第一性依据是"对将被保留
 
 先写了实现?删掉,从测试重新开始;不保留"作参考"。手工创建或编辑 evidence/ 日志 = 造假。例外仅限纯配置、纯文档类任务,且要在 progress.md 说明。
 
+### 计划内 `[verification-only]` 任务
+
+只运行既有验证、明确不新增或修改 product code / test 行为的计划任务，不应伪造行为缺口来制造 RED。此类任务必须在任务 ID 后使用唯一机器语法：`T-<N> [verification-only]`；ID 后恰一个 ASCII 空格，marker 全小写，marker 后只能 EOL，或一个 ASCII 空格加首字符非空白的描述。双空格、tab、大小写/拼写/下划线变体、suffix 与后置 marker 都是普通任务，仍走 RED/GREEN。
+
+精确 marker 任务跳过 RED/GREEN，但仍必须先勾选，并通过 `hf_gate.py run --label t<N>-<label> -- <既有验证命令>` 留至少一份同任务边界、exit 0 的严格运行日志。信封须有首行 magic、与文件名完整 label 一致的唯一 label、唯一非空 command、唯一带 `Z` 或明确 offset 的可解析 started、唯一整数且位于末个非空行的 exit。截图、其他任务号、suite/smoke/demo、无严格信封或全非 0 都不算。
+
+strict run envelope 只是结构校验，不是密码学签名，不能证明作者身份；人工创建或编辑即使结构完整仍属于 evidence 造假。该例外不豁免任务完成、评审、suite 新鲜度、smoke、demo 或 demo acceptance。
+
 ## 单任务循环(任务 T-N)
 
 ### 1. 测试设计

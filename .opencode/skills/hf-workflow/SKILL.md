@@ -49,7 +49,7 @@ shape(hf-shape 塑形) → S-1 行走骨架(hf-skeleton) → 切片循环 ⟲ �
 | (S-1) | `hf-skeleton` | 可运行的应用空壳(走交付链,内容收紧) | 同交付链 |
 | frame | `hf-frame` | frame.md + 环境基线证据 | `check --to plan`(档位1/探索: `--to build`) |
 | plan | `hf-plan` | plan.md 或 spec.md + design.md | 评审通过+确认落盘, `check --to build` |
-| build | `hf-build` | 代码 + 测试 + 逐任务 red/green 证据 | 任务全勾, `check --to verify`(探索: `--to close`) |
+| build | `hf-build` | 代码 + 测试 + 普通任务逐任务 red/green 证据；计划内 verification-only 任务留严格运行证据 | 任务全勾, `check --to verify`(探索: `--to close`) |
 | verify | `hf-verify` | 冒烟证据 + 独立代码评审 + demo 验收 | `check --to ship` |
 | ship | `hf-ship` | 验收报告 + 反馈回写产品层 + 收尾 | 需求逐条闭合 |
 
@@ -99,7 +99,9 @@ python3 $gate check --product            # 产品层是否就绪
 ```
 
 - **进入任何阶段前必须运行 check,并把 RESULT 行写进 progress.md。** FAIL 时不得进入,输出即待办清单。
-- 证据标签约定:`baseline`(环境基线)、`t<N>-red` / `t<N>-green`(逐任务红绿)、`suite`(全量测试)、`smoke`(运行时冒烟)、`demo`(用户可体验的演示:录屏/截图/预览地址探活)。
+- 证据标签约定:`baseline`(环境基线)、`t<N>-red` / `t<N>-green`(普通任务逐任务红绿，完整 label 必须精确相等，`redo` / `red-extra` / `greenish` / `green-extra` 不算)、`suite`(全量测试)、`smoke`(运行时冒烟)、`demo`(用户可体验的演示:录屏/截图/预览地址探活)。
+- 仅对计划中不改 product code / test 行为、只运行既有验证的任务，可在任务 ID 后使用精确 marker：`- [x] T-50 [verification-only] 描述`。机器语法为 ID 后恰一个 ASCII 空格和全小写 `[verification-only]`，marker 后只能 EOL，或一个 ASCII 空格加首字符非空白的描述；双空格、tab、大小写/拼写/下划线变体、suffix 或后置 marker 都按普通任务处理。
+- verification-only 任务仍必须勾选，并至少有一份属于同一任务边界的 `t<N>-<label>` 日志通过 strict run envelope 且 exit 0。严格信封要求首行恰为 `# hf-gate-run`，唯一且与文件名完整 label 相等的 label、唯一非空 command、唯一可解析且含 `Z`/明确 offset 的 started、唯一整数 exit，且 exit 是最后一个非空行。该结构检查不是密码学签名，无法证明作者身份；人工创建或编辑结构完整的 evidence 仍是造假。
 - **手工创建或编辑 `evidence/` 下的日志 = 造假**。截图/录屏等非日志证据可直接放入 evidence/(命名 `smoke-*` / `demo-*`)。
 - gate 只做机械裁决(文件存在性、结论行、退出码、时间戳),不理解语义;语义质量由 `hf-review` 与用户 demo 验收把关。
 

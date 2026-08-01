@@ -22,6 +22,7 @@ This workspace ships HarnessFlow: a harness that drives an agent from a raw idea
 - Exploration prototypes are disposable: tier 1 only, can never ship, close via `conclusion.md` + `check --to close`; never promote prototype code directly.
 - Author/reviewer separation: reviews run in a subagent or fresh session; a same-session (degraded) review may not verdict "通过" and may never self-approve.
 - One task at a time in the build stage; no implementation code before a failing test (red log with nonzero exit) — build mode only.
+- A planned task marked with exact `T-<N> [verification-only]` syntax may skip red/green only when it changes no product code or test behavior; it still needs a checked task and at least one same-task `hf_gate.py run` strict-envelope log with exit 0. Near-match markers are ordinary tasks, and a strict envelope is structural validation rather than proof of authorship.
 - Recover state with `hf_gate.py status`, not from chat memory.
 
 Pure Q&A or code-reading requests that produce no code changes do not need HarnessFlow.

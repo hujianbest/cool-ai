@@ -1,0 +1,54 @@
+# hf-gate-run
+# label: t51-green
+# command: python .cursor/skills/hf-workflow/scripts/test_hf_gate.py
+# started: 2026-08-01T02:03:16+00:00
+test_degraded_review_with_auto_approval_blocks (__main__.CheckBuildTest.test_degraded_review_with_auto_approval_blocks) ... ok
+test_degraded_review_with_real_user_confirmation_passes (__main__.CheckBuildTest.test_degraded_review_with_real_user_confirmation_passes) ... ok
+test_missing_confirmation_blocks (__main__.CheckBuildTest.test_missing_confirmation_blocks) ... ok
+test_tier1_passes_with_frame_and_baseline (__main__.CheckBuildTest.test_tier1_passes_with_frame_and_baseline) ... ok
+test_tier2_fails_without_plan_review (__main__.CheckBuildTest.test_tier2_fails_without_plan_review) ... ok
+test_tier2_passes_with_approved_plan_review (__main__.CheckBuildTest.test_tier2_passes_with_approved_plan_review) ... ok
+test_tier3_requires_both_reviews (__main__.CheckBuildTest.test_tier3_requires_both_reviews) ... ok
+test_verdict_needs_revision_blocks (__main__.CheckBuildTest.test_verdict_needs_revision_blocks) ... ok
+test_fails_without_spec_review (__main__.CheckDesignTest.test_fails_without_spec_review) ... ok
+test_passes_with_approved_spec_review (__main__.CheckDesignTest.test_passes_with_approved_spec_review) ... ok
+test_fails_for_tier1 (__main__.CheckPlanTest.test_fails_for_tier1) ... ok
+test_fails_without_baseline_evidence (__main__.CheckPlanTest.test_fails_without_baseline_evidence) ... ok
+test_fails_without_frame (__main__.CheckPlanTest.test_fails_without_frame) ... ok
+test_passes_with_frame_and_baseline (__main__.CheckPlanTest.test_passes_with_frame_and_baseline) ... ok
+test_complete_ship_passes (__main__.CheckShipTest.test_complete_ship_passes) ... ok
+test_failed_suite_blocks (__main__.CheckShipTest.test_failed_suite_blocks) ... ok
+test_missing_code_review_blocks (__main__.CheckShipTest.test_missing_code_review_blocks) ... ok
+test_missing_smoke_blocks (__main__.CheckShipTest.test_missing_smoke_blocks) ... ok
+test_missing_suite_blocks (__main__.CheckShipTest.test_missing_suite_blocks) ... ok
+test_smoke_screenshot_counts_as_evidence (__main__.CheckShipTest.test_smoke_screenshot_counts_as_evidence) ... ok
+test_suite_older_than_green_blocks (__main__.CheckShipTest.test_suite_older_than_green_blocks) ... ok
+test_complete_red_green_passes (__main__.CheckVerifyTest.test_complete_red_green_passes) ... ok
+test_green_log_with_nonzero_exit_blocks (__main__.CheckVerifyTest.test_green_log_with_nonzero_exit_blocks) ... ok
+test_missing_red_log_blocks (__main__.CheckVerifyTest.test_missing_red_log_blocks) ... ok
+test_red_log_with_exit_zero_blocks (__main__.CheckVerifyTest.test_red_log_with_exit_zero_blocks) ... ok
+test_regular_tasks_reject_near_miss_red_green_labels (__main__.CheckVerifyTest.test_regular_tasks_reject_near_miss_red_green_labels) ... ok
+test_unchecked_task_blocks (__main__.CheckVerifyTest.test_unchecked_task_blocks) ... ok
+test_verification_only_accepts_strict_run_envelope_without_red_green (__main__.CheckVerifyTest.test_verification_only_accepts_strict_run_envelope_without_red_green) ... ok
+test_verification_only_marker_accepts_eol_or_single_space_description (__main__.CheckVerifyTest.test_verification_only_marker_accepts_eol_or_single_space_description) ... ok
+test_verification_only_marker_requires_exact_ascii_token_boundaries (__main__.CheckVerifyTest.test_verification_only_marker_requires_exact_ascii_token_boundaries) ... ok
+test_verification_only_rejects_non_log_screenshot (__main__.CheckVerifyTest.test_verification_only_rejects_non_log_screenshot) ... ok
+test_verification_only_rejects_wrong_task_and_malformed_labels (__main__.CheckVerifyTest.test_verification_only_rejects_wrong_task_and_malformed_labels) ... ok
+test_verification_only_requires_at_least_one_exit_zero (__main__.CheckVerifyTest.test_verification_only_requires_at_least_one_exit_zero) ... ok
+test_verification_only_still_requires_task_done (__main__.CheckVerifyTest.test_verification_only_still_requires_task_done) ... ok
+test_verification_only_strict_envelope_rejects_each_malformed_field (__main__.CheckVerifyTest.test_verification_only_strict_envelope_rejects_each_malformed_field) ... ok
+test_verification_only_strict_envelope_rejects_missing_or_duplicate_headers (__main__.CheckVerifyTest.test_verification_only_strict_envelope_rejects_missing_or_duplicate_headers) ... ok
+test_run_propagates_nonzero_exit (__main__.RunCommandTest.test_run_propagates_nonzero_exit) ... ok
+test_run_rejects_bad_label (__main__.RunCommandTest.test_run_rejects_bad_label) ... ok
+test_run_writes_log_with_header_and_exit_zero (__main__.RunCommandTest.test_run_writes_log_with_header_and_exit_zero) ... ok
+test_unknown_target_is_usage_error (__main__.UsageTest.test_unknown_target_is_usage_error) ... usage: hf_gate.py check [-h] [--feature FEATURE]
+                        [--to {plan,design,build,verify,ship,close}]
+                        [--product] [--root ROOT]
+hf_gate.py check: error: argument --to: invalid choice: 'nonsense' (choose from plan, design, build, verify, ship, close)
+ok
+
+----------------------------------------------------------------------
+Ran 40 tests in 1.356s
+
+OK
+# exit: 0

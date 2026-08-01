@@ -183,3 +183,29 @@
 ## Findings
 
 无。T-49 已把 build-graph 模块解析失败与 runtime adapter/capability failure 分成唯一语义：`sandbox-preflight.ts` 静态相对导入Windows native factory，resolver/`koffi`缺失直接令Node/Vitest import或Next build失败；runtime先判platform/arch，supported才调用factory，`WindowsNativeError`/typed `SANDBOX_UNVERIFIABLE`原样传播，unknown construction仅在factory边界包装并保留cause。全链无动态specifier、require/catch module fallback、path-level或普通fs降级；`serverExternalPackages:["koffi"]`及server-only/client-edge边界有build判据。三组聚焦测试加production build可在一次TDD内覆盖默认happy path、typed/unknown/unsupported分支与fallback=0；T-50顺延和FR/NFR覆盖索引一致。
+
+# 技术设计 评审 (第 29 轮)
+
+- 日期: 2026-08-01
+- 评审方式: subagent
+- 结论: 需修改
+
+## Findings
+
+1. [严重] `[verification-only]` 的“机器日志必须由 `hf_gate.py run` 产生”尚无可实现的结构判据，按当前设计会把手写exit-only文件当真。design.md:1390-1391 只要求文件名label命中 `^t<N>-` 且可解析 `# exit: 0`；现有 `evidence_logs/log_exit` 也只看文件名和任意匹配的exit行。因此手工创建 `evidence/t50-proof-<timestamp>.log` 并只写 `# exit: 0` 就会通过，与T-51判据“手写文件失败”直接冲突。请明确可机械校验的 run envelope：至少要求首行magic、header中的完整label与文件名解析label精确相等、command存在、started为合法UTC/offset时间、且最终唯一/终端exit行可解析；verification-only正例应实际调用 `run_gate(["run", ...])` 产生日志，负例逐项伪造/缺失/mismatch必须失败。需同时承认本地文本无法提供密码学防伪，门禁保证的是严格结构来源边界，蓄意完整伪造仍由“编辑evidence即造假”的流程红线约束，避免声称机械上能证明作者身份。
+
+2. [一般] marker 的右侧token边界及错误marker回落后的普通证据边界未精确定义。design.md:1386-1388 规定ID后一个ASCII空格和精确首token，但未说明 `[verification-only]suffix`、marker后tab/无描述/多空格等是否命中；若实现仅 `rest.startswith(" [verification-only]")`，粘连后缀会被错误豁免。请把完整语法写成等价正则/解析规则，例如ID后恰一个ASCII空格、marker后必须EOL或ASCII空格再接描述，并为粘连、双空格、tab补负例。错误marker回落为普通任务后还必须验证真实label边界的 `t<N>-red-*`/`t<N>-green-*`；现有prefix helper会让 `t<N>-redo-*` 或 `t<N>-greenish-*` 被当作普通RED/GREEN。若“普通规则保持不变”有意保留该历史行为，应在T-51明确不把这些近似label用于证明错误marker未获豁免；否则应一并收紧并加回归。其余方面，T-50现有`t50-*` exit0日志、T-51真实RED、普通TDD不削弱、双镜像范围、一次TDD粒度及NFR-4覆盖索引均无阻塞。
+
+# 技术设计 评审 (第 30 轮)
+
+- 日期: 2026-08-01
+- 评审方式: subagent
+- 结论: 通过
+- 用户确认: auto-approved 2026-08-01
+
+## Findings
+
+无。第 29 轮两项 findings 均已闭合：
+
+1. verification-only日志已定义strict run envelope：magic、唯一且与文件名一致的label、非空command、带时区ISO started、唯一整数exit且为末非空行均须成立；正例必须真实调用`run`生成，结构缺失/重复/mismatch逐项失败，并明确该校验不提供密码学防伪，完整人工仿造仍受“编辑evidence=造假”红线约束。
+2. marker 已给出ID后rest的等价正则，限定恰一ASCII空格、精确小写token及右侧EOL/单空格非空描述；suffix、双空格、tab等全部回落普通任务。普通RED/GREEN也改为完整label精确相等，`redo/red-extra/greenish/green-extra`不可冒充，verification label按任务号完整边界校验。T-51判据覆盖两套gate/测试/工作流与build文档镜像，普通TDD、任务完成、suite/smoke/demo等门禁均未放宽。

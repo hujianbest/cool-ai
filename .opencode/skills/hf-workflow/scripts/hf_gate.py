@@ -44,8 +44,10 @@
   --to build   档位 1：frame + baseline；
                档位 2：plan.md 含任务清单 + plan-review 通过且已确认；
                档位 3：spec/design 齐备 + 两轮评审均通过且已确认
-  --to verify  build 前提 + 任务清单全部勾选 + 每个任务有 red(exit!=0)
-               与 green(最新一份 exit==0) 证据日志
+  --to verify  build 前提 + 任务清单全部勾选 + 普通任务有精确 red(exit!=0)
+               与 green(最新一份 exit==0) 证据日志；精确标记为
+               [verification-only] 的任务改需至少一份任务边界 strict run
+               envelope 且 exit==0
   --to ship    verify 前提 + code-review 通过且已确认 + suite 日志
                (exit==0 且不早于最新 green) + smoke 冒烟证据；
                用户可感知为"是"时另需 demo 证据(evidence/demo-*)
@@ -82,7 +84,8 @@ LOG_NAME_RE = re.compile(r"^(?P<label>[a-z0-9-]+)-(?P<ts>\d{8}T\d{6}Z)(?:-\d+)?\
 TIER_RE = re.compile(r"^-[ \t]*风险档位:[ \t]*([123])\b", re.MULTILINE)
 MODE_RE = re.compile(r"^-[ \t]*模式:[ \t]*(探索|建造)\b", re.MULTILINE)
 PERCEIVABLE_RE = re.compile(r"^-[ \t]*用户可感知:[ \t]*(是|否)\b", re.MULTILINE)
-TASK_RE = re.compile(r"^- \[([ xX])\][ \t]*(T-\d+)\b", re.MULTILINE)
+TASK_RE = re.compile(r"^- \[([ xX])\][ \t]*(T-\d+)\b(.*)$", re.MULTILINE)
+VERIFICATION_ONLY_RE = re.compile(r"^ \[verification-only\](?:$| [^ \t\r\n].*)$")
 SLICE_RE = re.compile(r"^- \[([ xX])\][ \t]*(S-\d+)[ \t]*(.*)$", re.MULTILINE)
 CONFIRM_RE = re.compile(r"^-[ \t]*用户确认:[ \t]*(\S.*)$", re.MULTILINE)
 EXIT_RE = re.compile(r"^# exit: (\d+)\s*$", re.MULTILINE)
@@ -198,6 +201,57 @@ def evidence_logs(feature: Path, label_prefix: str) -> list[tuple[str, Path, int
     return sorted(out, key=lambda t: t[0])
 
 
+def evidence_logs_for_label(feature: Path, label: str) -> list[tuple[str, Path, int | None]]:
+    """返回完整 label 精确相等的日志，拒绝 redo/greenish 等前缀近似。"""
+    return [
+        item for item in evidence_logs(feature, label)
+        if (match := LOG_NAME_RE.match(item[1].name)) and match.group("label") == label
+    ]
+
+
+def strict_run_envelope(path: Path, expected_label: str) -> int | None:
+    """校验 verification-only 证据的 hf_gate.py run 结构信封。"""
+    try:
+        lines = path.read_text(encoding="utf-8").splitlines()
+    except (OSError, UnicodeError):
+        return None
+    if not lines or lines[0] != "# hf-gate-run":
+        return None
+
+    def values(prefix: str) -> list[str]:
+        return [line[len(prefix):] for line in lines if line.startswith(prefix)]
+
+    labels = values("# label: ")
+    commands = values("# command: ")
+    started_values = values("# started: ")
+    exits = values("# exit: ")
+    if not (len(labels) == len(commands) == len(started_values) == len(exits) == 1):
+        return None
+    if not labels[0] or labels[0] != expected_label:
+        return None
+    if not commands[0].strip():
+        return None
+
+    started = started_values[0]
+    if not re.search(r"(?:Z|[+-]\d{2}:\d{2})$", started):
+        return None
+    try:
+        parsed_started = datetime.fromisoformat(
+            started[:-1] + "+00:00" if started.endswith("Z") else started
+        )
+    except ValueError:
+        return None
+    if parsed_started.tzinfo is None or parsed_started.utcoffset() is None:
+        return None
+
+    if not re.fullmatch(r"-?\d+", exits[0]):
+        return None
+    nonempty = [line for line in lines if line.strip()]
+    if not nonempty or nonempty[-1] != f"# exit: {exits[0]}":
+        return None
+    return int(exits[0])
+
+
 def read_frame_field(feature: Path, pattern: re.Pattern) -> str | None:
     frame = feature / "frame.md"
     if not frame.is_file():
@@ -230,12 +284,14 @@ def read_review(feature: Path, name: str) -> dict | None:
     return {"verdict": verdict, "method": method, "confirm": confirm}
 
 
-def read_tasks(feature: Path, doc: str) -> list[tuple[str, bool]] | None:
+def read_tasks(feature: Path, doc: str) -> list[tuple[str, bool, bool]] | None:
     path = feature / doc
     if not path.is_file():
         return None
-    return [(tid, mark.lower() == "x")
-            for mark, tid in TASK_RE.findall(path.read_text(encoding="utf-8"))]
+    return [
+        (tid, mark.lower() == "x", bool(VERIFICATION_ONLY_RE.fullmatch(rest)))
+        for mark, tid, rest in TASK_RE.findall(path.read_text(encoding="utf-8"))
+    ]
 
 
 def read_slices(root: Path) -> list[tuple[str, bool, str]] | None:
@@ -332,28 +388,65 @@ class Checker:
         else:
             self.ok(f"{doc} 任务清单: {len(tasks)} 项")
 
-    def task_ids(self, tier: int) -> list[tuple[str, bool]]:
+    def task_ids(self, tier: int) -> list[tuple[str, bool, bool]]:
         if tier == 1:
             # tier-1 无计划文档，从证据日志推断任务 ID
-            ids = sorted({m.group(1) for _, p, _ in evidence_logs(self.feature, "t")
-                          for m in [re.match(r"^t(\d+)-(?:red|green)-", p.name)] if m})
+            ids = sorted({
+                task_match.group(1)
+                for _, path, _ in evidence_logs(self.feature, "t")
+                if (name_match := LOG_NAME_RE.match(path.name))
+                and (task_match := re.fullmatch(
+                    r"t(\d+)-(?:red|green)", name_match.group("label")
+                ))
+            })
             if not ids:
                 self.fail("tier-1 至少需要一对 t<N>-red / t<N>-green 证据日志")
-            return [(f"T-{i}", True) for i in ids]
+            return [(f"T-{i}", True, False) for i in ids]
         return read_tasks(self.feature, self.task_doc_for(tier)) or []
 
-    def check_tasks_done(self, tasks: list[tuple[str, bool]]) -> None:
-        undone = [tid for tid, done in tasks if not done]
+    def check_tasks_done(self, tasks: list[tuple[str, bool, bool]]) -> None:
+        undone = [tid for tid, done, _ in tasks if not done]
         if undone:
             self.fail(f"任务未全部完成，未勾选: {', '.join(undone)}")
         elif tasks:
             self.ok(f"任务清单全部勾选 ({len(tasks)} 项)")
 
-    def check_red_green(self, tasks: list[tuple[str, bool]]) -> None:
-        for tid, _ in tasks:
+    def check_verification_only(self, tid: str) -> None:
+        n = tid.split("-")[1]
+        label_re = re.compile(rf"^t{re.escape(n)}-[a-z0-9]+(?:-[a-z0-9]+)*$")
+        evidence = self.feature / "evidence"
+        candidates: list[tuple[Path, str]] = []
+        if evidence.is_dir():
+            for path in evidence.iterdir():
+                match = LOG_NAME_RE.match(path.name)
+                if match and label_re.fullmatch(match.group("label")):
+                    candidates.append((path, match.group("label")))
+        strict = [
+            (path, code)
+            for path, label in candidates
+            if (code := strict_run_envelope(path, label)) is not None
+        ]
+        passing = [path for path, code in strict if code == 0]
+        if passing:
+            self.ok(f"{tid} verification-only 机器证据: {passing[-1].name} (exit 0)")
+        elif strict:
+            self.fail(f"{tid} verification-only 机器证据没有 exit 0 的严格运行日志")
+        elif candidates:
+            self.fail(f"{tid} verification-only 候选日志不满足 strict run envelope")
+        else:
+            self.fail(
+                f"{tid} 缺 verification-only 机器证据: "
+                f"至少一份 evidence/t{n}-<label>-*.log 且 strict run envelope exit 0"
+            )
+
+    def check_red_green(self, tasks: list[tuple[str, bool, bool]]) -> None:
+        for tid, _, verification_only in tasks:
             n = tid.split("-")[1]
-            reds = evidence_logs(self.feature, f"t{n}-red")
-            greens = evidence_logs(self.feature, f"t{n}-green")
+            if verification_only:
+                self.check_verification_only(tid)
+                continue
+            reds = evidence_logs_for_label(self.feature, f"t{n}-red")
+            greens = evidence_logs_for_label(self.feature, f"t{n}-green")
             if not reds:
                 self.fail(f"{tid} 缺 red 证据: evidence/t{n}-red-*.log（失败先行的测试运行）")
             elif not any(code not in (0, None) for _, _, code in reds):
@@ -388,7 +481,11 @@ class Checker:
 
     def check_suite(self) -> None:
         greens = evidence_logs(self.feature, "t")
-        green_ts = [ts for ts, p, _ in greens if re.match(r"^t\d+-green-", p.name)]
+        green_ts = [
+            ts for ts, path, _ in greens
+            if (match := LOG_NAME_RE.match(path.name))
+            and re.fullmatch(r"t\d+-green", match.group("label"))
+        ]
         suites = evidence_logs(self.feature, "suite")
         if not suites:
             self.fail("缺全量测试证据: evidence/suite-*.log")

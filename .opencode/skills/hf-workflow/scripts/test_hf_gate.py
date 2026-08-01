@@ -37,11 +37,35 @@ def make_log(feature: Path, label: str, ts: str, exit_code: int, body: str = "ou
     return path
 
 
+def make_strict_log(feature: Path, label: str, ts: str, exit_code: int,
+                    *, header_label: str | None = None,
+                    command: str = "dummy",
+                    started: str = "2026-07-03T10:00:00+00:00",
+                    body: str = "out",
+                    magic: str = "# hf-gate-run",
+                    suffix: str = "") -> Path:
+    evidence = feature / "evidence"
+    evidence.mkdir(exist_ok=True)
+    path = evidence / f"{label}-{ts}.log"
+    path.write_text(
+        f"{magic}\n"
+        f"# label: {header_label if header_label is not None else label}\n"
+        f"# command: {command}\n"
+        f"# started: {started}\n"
+        f"{body}\n"
+        f"# exit: {exit_code}\n"
+        f"{suffix}",
+        encoding="utf-8",
+    )
+    return path
+
+
 def make_frame(feature: Path, tier: int) -> None:
     feature.mkdir(parents=True, exist_ok=True)
     (feature / "frame.md").write_text(
         "# 某特性 Frame\n\n- 意图: 测试用\n"
-        f"- 风险档位: {tier}\n- 档位理由: 测试\n",
+        f"- 模式: 建造\n- 风险档位: {tier}\n- 档位理由: 测试\n"
+        "- 用户可感知: 否\n- 理由: 测试门禁\n",
         encoding="utf-8",
     )
 
@@ -271,6 +295,20 @@ class CheckVerifyTest(unittest.TestCase):
     def check(self):
         return run_gate(["check", "--feature", str(self.feature), "--to", "verify"])
 
+    def write_task(self, rest: str, *, done: bool = True):
+        mark = "x" if done else " "
+        (self.feature / "plan.md").write_text(
+            "# 计划\n\n## 任务清单\n\n"
+            f"- [{mark}] T-50{rest}\n",
+            encoding="utf-8",
+        )
+
+    def clear_t50_logs(self):
+        evidence = self.feature / "evidence"
+        if evidence.is_dir():
+            for path in evidence.glob("t50-*.log"):
+                path.unlink()
+
     def test_unchecked_task_blocks(self):
         make_plan(self.feature, [("T-1", True), ("T-2", False)])
         make_log(self.feature, "t1-red", TS1, 1)
@@ -308,6 +346,170 @@ class CheckVerifyTest(unittest.TestCase):
         make_log(self.feature, "t2-green", TS3, 0)
         code, out = self.check()
         self.assertEqual(code, 0, out)
+
+    def test_verification_only_accepts_strict_run_envelope_without_red_green(self):
+        (self.feature / "frame.md").write_text(
+            "# 某特性 Frame\n\n- 意图: 测试用\n"
+            "- 模式: 建造\n- 风险档位: 2\n- 档位理由: 测试\n"
+            "- 用户可感知: 否\n- 理由: 仅验证门禁\n",
+            encoding="utf-8",
+        )
+        (self.feature / "plan.md").write_text(
+            "# 计划\n\n## 任务清单\n\n"
+            "- [x] T-50 [verification-only] 运行既有验证\n",
+            encoding="utf-8",
+        )
+        code, out = run_gate([
+            "run", "--feature", str(self.feature), "--label", "t50-proof",
+            "--", sys.executable, "-c", "print('verified')",
+        ])
+        self.assertEqual(code, 0, out)
+
+        code, out = self.check()
+        self.assertEqual(code, 0, out)
+        self.assertIn("verification-only 机器证据", out)
+
+    def test_verification_only_marker_requires_exact_ascii_token_boundaries(self):
+        code, out = run_gate([
+            "run", "--feature", str(self.feature), "--label", "t50-proof",
+            "--", sys.executable, "-c", "print('verified')",
+        ])
+        self.assertEqual(code, 0, out)
+        invalid_rests = [
+            "  [verification-only] 描述",
+            "\t[verification-only] 描述",
+            " [Verification-only] 描述",
+            " [VERIFICATION-ONLY] 描述",
+            " [verification_only] 描述",
+            " [verifiction-only] 描述",
+            " [verification-only]suffix",
+            " [verification-only]\t描述",
+            " [verification-only]  描述",
+            " [verification-only] ",
+            " 描述 [verification-only]",
+        ]
+        for rest in invalid_rests:
+            with self.subTest(rest=rest):
+                self.write_task(rest)
+                code, out = self.check()
+                self.assertEqual(code, 1, out)
+                self.assertIn("red", out)
+                self.assertIn("green", out)
+
+    def test_verification_only_marker_accepts_eol_or_single_space_description(self):
+        code, out = run_gate([
+            "run", "--feature", str(self.feature), "--label", "t50-proof",
+            "--", sys.executable, "-c", "print('verified')",
+        ])
+        self.assertEqual(code, 0, out)
+        for rest in (" [verification-only]", " [verification-only] 描述"):
+            with self.subTest(rest=rest):
+                self.write_task(rest)
+                code, out = self.check()
+                self.assertEqual(code, 0, out)
+                self.assertIn("verification-only 机器证据", out)
+
+    def test_verification_only_still_requires_task_done(self):
+        self.write_task(" [verification-only] 描述", done=False)
+        code, out = run_gate([
+            "run", "--feature", str(self.feature), "--label", "t50-proof",
+            "--", sys.executable, "-c", "print('verified')",
+        ])
+        self.assertEqual(code, 0, out)
+        code, out = self.check()
+        self.assertEqual(code, 1, out)
+        self.assertIn("T-50", out)
+
+    def test_verification_only_rejects_wrong_task_and_malformed_labels(self):
+        self.write_task(" [verification-only] 描述")
+        for label in (
+            "t500-proof", "t50", "t50--proof", "task50-proof",
+            "suite", "smoke", "demo",
+        ):
+            make_strict_log(self.feature, label, TS2, 0)
+        code, out = self.check()
+        self.assertEqual(code, 1, out)
+        self.assertIn("verification-only", out)
+
+    def test_verification_only_requires_at_least_one_exit_zero(self):
+        self.write_task(" [verification-only] 描述")
+        make_strict_log(self.feature, "t50-proof", TS2, 2)
+        make_strict_log(self.feature, "t50-check", TS3, 1)
+        code, out = self.check()
+        self.assertEqual(code, 1, out)
+        self.assertIn("exit 0", out)
+
+    def test_verification_only_rejects_non_log_screenshot(self):
+        self.write_task(" [verification-only] 描述")
+        evidence = self.feature / "evidence"
+        (evidence / "t50-proof.png").write_bytes(b"\x89PNG")
+        code, out = self.check()
+        self.assertEqual(code, 1, out)
+        self.assertIn("verification-only", out)
+
+    def test_verification_only_strict_envelope_rejects_each_malformed_field(self):
+        self.write_task(" [verification-only] 描述")
+        variants = {
+            "bad-magic": {"magic": "# not-hf-gate-run"},
+            "label-mismatch": {"header_label": "t50-other"},
+            "empty-command": {"command": "   "},
+            "naive-started": {"started": "2026-07-03T10:00:00"},
+            "bad-started": {"started": "not-a-date"},
+            "nonterminal-exit": {"suffix": "after exit\n"},
+        }
+        for name, kwargs in variants.items():
+            with self.subTest(name=name):
+                self.clear_t50_logs()
+                make_strict_log(self.feature, f"t50-{name}", TS2, 0, **kwargs)
+                code, out = self.check()
+                self.assertEqual(code, 1, out)
+                self.assertIn("strict run envelope", out)
+
+    def test_verification_only_strict_envelope_rejects_missing_or_duplicate_headers(self):
+        self.write_task(" [verification-only] 描述")
+        valid_lines = [
+            "# hf-gate-run",
+            "# label: t50-proof",
+            "# command: dummy",
+            "# started: 2026-07-03T10:00:00Z",
+            "out",
+            "# exit: 0",
+        ]
+        cases = {
+            "missing-label": [line for line in valid_lines if not line.startswith("# label:")],
+            "missing-command": [line for line in valid_lines if not line.startswith("# command:")],
+            "missing-started": [line for line in valid_lines if not line.startswith("# started:")],
+            "missing-exit": [line for line in valid_lines if not line.startswith("# exit:")],
+            "duplicate-label": valid_lines[:2] + [valid_lines[1]] + valid_lines[2:],
+            "duplicate-command": valid_lines[:3] + [valid_lines[2]] + valid_lines[3:],
+            "duplicate-started": valid_lines[:4] + [valid_lines[3]] + valid_lines[4:],
+            "duplicate-exit": valid_lines + ["# exit: 0"],
+            "noninteger-exit": valid_lines[:-1] + ["# exit: nope"],
+        }
+        for name, lines in cases.items():
+            with self.subTest(name=name):
+                self.clear_t50_logs()
+                path = self.feature / "evidence" / f"t50-proof-{TS2}.log"
+                path.write_text("\n".join(lines) + "\n", encoding="utf-8")
+                code, out = self.check()
+                self.assertEqual(code, 1, out)
+                self.assertIn("strict run envelope", out)
+
+    def test_regular_tasks_reject_near_miss_red_green_labels(self):
+        make_plan(self.feature, [("T-1", True)])
+        for label, exit_code in (
+            ("t1-redo", 1),
+            ("t1-red-extra", 1),
+            ("t1-greenish", 0),
+            ("t1-green-extra", 0),
+            ("t10-red", 1),
+            ("t10-green", 0),
+        ):
+            make_log(self.feature, label, TS2, exit_code)
+        code, out = self.check()
+        self.assertEqual(code, 1, out)
+        self.assertIn("t1-red-*.log", out)
+        self.assertIn("t1-green-*.log", out)
 
 
 class CheckShipTest(unittest.TestCase):
