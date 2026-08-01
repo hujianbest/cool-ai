@@ -12,6 +12,7 @@ import {
 import {
   executionApprovalDtoSchema,
   executionDtoSchema,
+  executionEventDtoSchema,
   recoveryFileDtoSchema,
   recoveryMergeFileStatusSchema,
   type RecoveryFileDto,
@@ -143,42 +144,6 @@ const MAX_CHUNK_BYTES = 65_536;
 const MAX_CHUNK_ENVELOPE_BYTES = 72 * 1024;
 const MAX_BODY_BYTES = 1_048_576;
 const CURSOR_TTL_MS = 24 * 60 * 60 * 1000;
-
-const eventPayloadSchemas: Record<string, z.ZodType> = {
-  action_finished: z.object({
-    actionId: z.string(), actionIndex: z.number().int(), code: z.string().nullable(),
-    kind: z.string(), operationId: z.string(), status: z.string(),
-  }).strict(),
-  action_reconciled: z.object({
-    actionId: z.string(), actionIndex: z.number().int(), kind: z.string(),
-    operationId: z.string(), resumeTarget: z.string().nullable(),
-  }).strict(),
-  action_started: z.object({
-    actionId: z.string(), actionIndex: z.number().int(), attemptNo: z.number().int(),
-    kind: z.string(), operationId: z.string(), overallDeadlineAt: z.string(),
-  }).strict(),
-  status_changed: z.object({
-    from: z.string(), reasonCode: z.string().nullable(), to: z.string(),
-  }).strict(),
-};
-
-const eventSchema = z.object({
-  actorId: z.string().nullable(),
-  actorType: z.enum(["owner", "agent", "system"]),
-  attemptNo: z.number().int().positive(),
-  createdAt: z.string(),
-  id: z.string().min(1),
-  payload: z.record(z.string(), z.unknown()),
-  sequence: z.number().int().positive(),
-  type: z.string().min(1),
-}).strict().superRefine((event, context) => {
-  const schema = eventPayloadSchemas[event.type];
-  if (!schema) return;
-  const parsed = schema.safeParse(event.payload);
-  if (!parsed.success) {
-    context.addIssue({ code: "custom", message: "Stored execution event is invalid." });
-  }
-});
 
 const artifactSchema = z.object({
   contentBytes: z.number().int().min(0).max(MAX_BODY_BYTES),
@@ -781,7 +746,7 @@ export async function listExecutionEvents(
   databasePath: string,
   executionId: string,
   query: ReadQuery,
-): Promise<CursorPage<z.infer<typeof eventSchema>>> {
+): Promise<CursorPage<z.infer<typeof executionEventDtoSchema>>> {
   const requested = limit(query.limit, 100);
   const key = decodeCursor(databasePath, query.after, "events", executionId);
   const sequence = key?.[0];
@@ -805,10 +770,11 @@ export async function listExecutionEvents(
       id ?? null,
       requested + 1,
     ) as Array<Record<string, unknown>>;
-    const items = rows.map(({ payloadJson, ...row }) => ({
-      ...row,
-      payload: JSON.parse(payloadJson as string),
-    })) as Array<z.infer<typeof eventSchema>>;
+    const items = rows.map(({ payloadJson, ...row }) =>
+      executionEventDtoSchema.parse({
+        ...row,
+        payload: JSON.parse(payloadJson as string),
+      }));
     return boundedPage(
       databasePath,
       "events",
@@ -816,7 +782,7 @@ export async function listExecutionEvents(
       items,
       requested,
       (row) => [row.sequence, row.id],
-      eventSchema,
+      executionEventDtoSchema,
     );
   } catch (error) {
     if (error instanceof ExecutionError) throw error;

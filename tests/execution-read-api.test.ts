@@ -10,6 +10,10 @@ import {
   createBoundedUtf8Text,
   persistArtifactOutput,
 } from "@/src/server/execution/stage-service";
+import {
+  executionEventDtoSchema,
+  executionEventTypeSchema,
+} from "@/src/shared/execution-contracts";
 
 type ReadModule = typeof import("@/src/server/execution/execution-read-service");
 type GetRoute = {
@@ -32,6 +36,84 @@ const STAGED_ID = "read-staged";
 const HASH = "a".repeat(64);
 const POLICY_HASH =
   "4f53cda18c2baa0c0354bb5f9a3ecbe5ed12ab4d8e11ba873c2f11161202b945";
+
+const persistedEventFixtures = [
+  ["execution_created", { agentId: "read-agent", attemptNo: 1, workItemId: "read-work" }],
+  ["action_queued", {
+    actionId: "read-action",
+    actionIndex: 0,
+    attemptNo: 1,
+    kind: "sandbox_build",
+    operationId: "26000000-0000-4000-8000-000000000001",
+    overallDeadlineAt: "2026-07-30T08:15:00.000Z",
+  }],
+  ["attempt_started", { attemptNo: 2 }],
+  ["action_started", {
+    actionId: "read-action",
+    actionIndex: 0,
+    attemptNo: 1,
+    kind: "sandbox_build",
+    operationId: "26000000-0000-4000-8000-000000000001",
+    overallDeadlineAt: "2026-07-30T08:15:00.000Z",
+  }],
+  ["action_finished", {
+    actionId: "read-action",
+    actionIndex: 0,
+    code: "MERGED",
+    kind: "merge_apply",
+    operationId: "26000000-0000-4000-8000-000000000001",
+    status: "succeeded",
+  }],
+  ["action_reconciled", {
+    actionId: "read-action",
+    actionIndex: 0,
+    kind: "command",
+    operationId: "26000000-0000-4000-8000-000000000001",
+    resumeTarget: null,
+  }],
+  ["status_changed", { from: "running", reasonCode: null, to: "staged" }],
+  ["usage_recorded", {
+    agentId: "read-agent",
+    completionTokens: 3,
+    modelCallId: "model-call",
+    promptTokens: 2,
+    reported: true,
+    totalTokens: 5,
+  }],
+  ["boundary_paused", { agentId: "read-agent", boundary: "tokens", limit: 10, value: 11 }],
+  ["tool_requested", {
+    requestSummary: { authorization: "one_shot", requestHash: HASH },
+    toolCallId: "tool-call",
+    type: "command",
+  }],
+  ["tool_succeeded", {
+    afterHash: null,
+    beforeHash: null,
+    resultSummary: { entryCount: 1, path: ".", totalObserved: 1, truncated: false },
+    toolCallId: "tool-call",
+    type: "list",
+  }],
+  ["tool_failed", { code: "SANDBOX_UNVERIFIABLE", toolCallId: "tool-call", type: "read" }],
+  ["approval_requested", {
+    approvalId: "approval",
+    kind: "command",
+    requestHash: HASH,
+    riskReasons: ["unlisted"],
+  }],
+  ["approval_decided", {
+    action: "approve",
+    approvalId: "approval",
+    authorizationSource: "one_shot",
+    kind: "command",
+    status: "approved",
+  }],
+  ["stale_detected", { categories: ["external_workspace"], pathCount: 1 }],
+  ["conflict_detected", { otherExecutionIds: ["other-execution"], pathCount: 1 }],
+  ["control_applied", { action: "pause" }],
+  ["merged", { journalId: "journal", resultId: "result", stagedHash: HASH }],
+] as const;
+
+const expectedPersistedEventTypes = persistedEventFixtures.map(([type]) => type).sort();
 
 let directory: string;
 let databasePath: string;
@@ -220,6 +302,128 @@ describe("bounded execution read APIs", () => {
     expect(JSON.stringify(body)).not.toMatch(
       /Bearer|secret|D:\\|provider\.invalid|private-chain|systemPrompt/i,
     );
+  });
+
+  it("round-trips the complete persisted event union in sequence order across pages", async () => {
+    expect(expectedPersistedEventTypes.filter(
+      (type) => !executionEventTypeSchema.options.includes(type as never),
+    )).toEqual([]);
+    database.prepare("DELETE FROM execution_events WHERE execution_id=?").run(EXECUTION_ID);
+    const insert = database.prepare(`
+      INSERT INTO execution_events (
+        id,project_id,execution_id,sequence,attempt_no,type,actor_type,actor_id,
+        payload_json,created_at
+      ) VALUES (?, ?, ?, ?, 1, ?, 'system', NULL, ?, ?)
+    `);
+    persistedEventFixtures.forEach(([type, payload], index) => {
+      insert.run(
+        `round-trip-${String(index).padStart(2, "0")}`,
+        PROJECT_ID,
+        EXECUTION_ID,
+        index + 1,
+        type,
+        JSON.stringify(payload),
+        NOW,
+      );
+    });
+
+    const items: Array<{ payload: unknown; sequence: number; type: string }> = [];
+    let after: string | undefined;
+    do {
+      const page = await reads.listExecutionEvents(
+        databasePath,
+        EXECUTION_ID,
+        { after, limit: "5" },
+      );
+      items.push(...page.items);
+      after = page.nextCursor ?? undefined;
+    } while (after);
+
+    expect(items.map(({ sequence }) => sequence)).toEqual(
+      persistedEventFixtures.map((_, index) => index + 1),
+    );
+    expect(items.map(({ type, payload }) => [type, payload])).toEqual(persistedEventFixtures);
+  });
+
+  it("keeps every enum member discriminated and rejects extras for every persisted payload", () => {
+    const discriminatedTypes = executionEventDtoSchema.options
+      .map((schema) => schema.shape.type.value)
+      .sort();
+    expect(discriminatedTypes).toEqual([...executionEventTypeSchema.options].sort());
+    for (const [type, payload] of persistedEventFixtures) {
+      const event = {
+        actorId: null,
+        actorType: "system",
+        attemptNo: 1,
+        createdAt: NOW,
+        id: `strict-${type}`,
+        payload,
+        sequence: 1,
+        type,
+      };
+      expect(executionEventDtoSchema.safeParse(event).success, type).toBe(true);
+      expect(executionEventDtoSchema.safeParse({
+        ...event,
+        payload: { ...payload, extraSecret: "stored-secret-marker" },
+      }).success, `${type} payload extra`).toBe(false);
+    }
+    expect(executionEventDtoSchema.safeParse({
+      actorId: null,
+      actorType: "system",
+      attemptNo: 1,
+      createdAt: NOW,
+      extraSecret: "stored-secret-marker",
+      id: "strict-envelope",
+      payload: persistedEventFixtures[0][1],
+      sequence: 1,
+      type: persistedEventFixtures[0][0],
+    }).success).toBe(false);
+  });
+
+  it.each([
+    ["unknown type", "future_event", { safe: true }],
+    ["missing payload field", "status_changed", { from: "running", to: "staged" }],
+    ["extra payload field", "status_changed", {
+      extraSecret: "stored-secret-marker",
+      from: "running",
+      reasonCode: null,
+      to: "staged",
+    }],
+    ["wrong payload type", "status_changed", {
+      from: "running",
+      reasonCode: null,
+      to: 7,
+    }],
+  ])("fails closed on %s without reflecting stored data", async (_label, type, payload) => {
+    database.prepare(`
+      UPDATE execution_events SET type=?,payload_json=? WHERE id='event-1'
+    `).run(type, JSON.stringify(payload));
+    const load = routeModules["../app/api/executions/[executionId]/events/route.ts"];
+    expect(load).toBeTypeOf("function");
+    const route = await load!();
+    const response = await route.GET(
+      new Request(`http://localhost/api/executions/${EXECUTION_ID}/events?limit=1`),
+      { params: Promise.resolve({ executionId: EXECUTION_ID }) },
+    );
+    expect(response.status).toBe(500);
+    const body = await response.json();
+    expect(body).toEqual({
+      error: { code: "INTERNAL_ERROR", message: "The execution service is unavailable." },
+    });
+    expect(JSON.stringify(body)).not.toMatch(/future_event|stored-secret-marker|running|staged/);
+  });
+
+  it("fails closed with the same stable error for a non-object stored event payload", async () => {
+    database.prepare(`
+      UPDATE execution_events SET payload_json=? WHERE id='event-1'
+    `).run(JSON.stringify("stored-secret-marker"));
+    await expect(reads.listExecutionEvents(
+      databasePath,
+      EXECUTION_ID,
+      { limit: "1" },
+    )).rejects.toMatchObject({
+      code: "INTERNAL_ERROR",
+    });
   });
 
   it("returns strict list/detail summaries without private or absolute host facts", async () => {

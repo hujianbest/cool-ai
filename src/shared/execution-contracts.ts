@@ -30,6 +30,7 @@ export const executionEventTypeSchema = z.enum([
   "execution_created",
   "sandbox_preflight",
   "sandbox_ready",
+  "action_queued",
   "action_started",
   "action_finished",
   "action_reconciled",
@@ -40,6 +41,7 @@ export const executionEventTypeSchema = z.enum([
   "model_call_succeeded",
   "model_call_failed",
   "usage_recorded",
+  "boundary_paused",
   "tool_requested",
   "tool_succeeded",
   "tool_rejected",
@@ -58,6 +60,272 @@ export const executionEventTypeSchema = z.enum([
   "manual_recovery_required",
   "manual_recovery_resolved",
   "operation_replayed",
+]);
+
+const executionEventHashSchema = z.string().regex(/^[0-9a-f]{64}$/u);
+const eventToolTypeSchema = z.enum(["list", "read", "write", "command"]);
+const eventOutputSummarySchema = z.object({
+  bytes: z.number().int().nonnegative(),
+  sha256: executionEventHashSchema,
+  truncated: z.boolean(),
+}).strict();
+const eventActionPayloadSchema = z.object({
+  actionId: z.string().min(1),
+  actionIndex: z.number().int().nonnegative(),
+  attemptNo: z.number().int().positive(),
+  kind: executionActionKindSchema,
+  operationId: z.string().min(1),
+  overallDeadlineAt: z.string(),
+}).strict();
+const toolSucceededPayloadSchema = z.discriminatedUnion("type", [
+  z.object({
+    afterHash: z.null(),
+    beforeHash: z.null(),
+    resultSummary: z.object({
+      entryCount: z.number().int().nonnegative(),
+      path: z.string(),
+      totalObserved: z.number().int().nonnegative(),
+      truncated: z.boolean(),
+    }).strict(),
+    toolCallId: z.string().min(1),
+    type: z.literal("list"),
+  }).strict(),
+  z.object({
+    afterHash: z.null(),
+    beforeHash: z.null(),
+    resultSummary: z.object({
+      bytes: z.number().int().nonnegative(),
+      guardCategory: z.literal("credential_redacted").nullable(),
+      path: z.string(),
+      redacted: z.boolean(),
+      sha256: executionEventHashSchema,
+    }).strict(),
+    toolCallId: z.string().min(1),
+    type: z.literal("read"),
+  }).strict(),
+  z.object({
+    afterHash: executionEventHashSchema,
+    beforeHash: executionEventHashSchema.nullable(),
+    resultSummary: z.object({
+      action: z.enum(["created", "replaced"]),
+      afterHash: executionEventHashSchema,
+      beforeHash: executionEventHashSchema.nullable(),
+      bytes: z.number().int().nonnegative(),
+      path: z.string(),
+    }).strict(),
+    toolCallId: z.string().min(1),
+    type: z.literal("write"),
+  }).strict(),
+  z.object({
+    authorizationSource: z.enum(["one_shot", "standing_policy"]),
+    durationMs: z.number().int().nonnegative(),
+    exitCode: z.number().int().nullable(),
+    status: z.enum(["completed", "lease_lost", "termination_unconfirmed", "timed_out"]),
+    stderr: eventOutputSummarySchema,
+    stdout: eventOutputSummarySchema,
+    toolCallId: z.string().min(1),
+    type: z.literal("command"),
+  }).strict(),
+]);
+const toolFailedPayloadSchema = z.union([
+  z.object({
+    code: z.string().min(1),
+    toolCallId: z.string().min(1),
+    type: eventToolTypeSchema,
+  }).strict(),
+  toolSucceededPayloadSchema.options[3],
+  z.object({
+    guardCode: z.string().min(1),
+    recovery: z.string().nullable(),
+    toolCallId: z.string().min(1),
+    type: eventToolTypeSchema,
+  }).strict(),
+]);
+const commonEventFields = {
+  actorId: z.string().nullable(),
+  actorType: z.enum(["owner", "agent", "system"]),
+  attemptNo: z.number().int().positive(),
+  createdAt: z.string(),
+  id: z.string().min(1),
+  sequence: z.number().int().positive(),
+};
+function executionEventVariant<
+  Type extends z.infer<typeof executionEventTypeSchema>,
+  Payload extends z.ZodType,
+>(type: Type, payload: Payload) {
+  return z.object({
+    ...commonEventFields,
+    payload,
+    type: z.literal(type),
+  }).strict();
+}
+
+export const executionEventDtoSchema = z.discriminatedUnion("type", [
+  executionEventVariant("execution_created", z.object({
+    agentId: z.string().min(1), attemptNo: z.number().int().positive(), workItemId: z.string().min(1),
+  }).strict()),
+  executionEventVariant("sandbox_preflight", z.object({
+    copiedBytes: z.number().int().nonnegative(),
+    excludedCount: z.number().int().nonnegative(),
+    itemCount: z.number().int().nonnegative(),
+  }).strict()),
+  executionEventVariant("sandbox_ready", z.object({
+    manifestHash: executionEventHashSchema,
+  }).strict()),
+  executionEventVariant("action_queued", eventActionPayloadSchema),
+  executionEventVariant("action_started", eventActionPayloadSchema),
+  executionEventVariant("action_finished", z.object({
+    actionId: z.string().min(1),
+    actionIndex: z.number().int().nonnegative(),
+    code: z.string().nullable(),
+    kind: executionActionKindSchema,
+    operationId: z.string().min(1),
+    status: z.enum(["succeeded", "failed", "interrupted", "discarded"]),
+  }).strict()),
+  executionEventVariant("action_reconciled", z.object({
+    actionId: z.string().min(1),
+    actionIndex: z.number().int().nonnegative(),
+    kind: executionActionKindSchema,
+    operationId: z.string().min(1),
+    resumeTarget: z.string().nullable(),
+  }).strict()),
+  executionEventVariant("status_changed", z.object({
+    from: executionStatusSchema,
+    reasonCode: z.string().nullable(),
+    to: executionStatusSchema,
+  }).strict()),
+  executionEventVariant("attempt_started", z.object({
+    attemptNo: z.number().int().positive(),
+  }).strict()),
+  executionEventVariant("attempt_interrupted", z.object({
+    attemptNo: z.number().int().positive(), kind: executionActionKindSchema,
+  }).strict()),
+  executionEventVariant("model_call_started", z.object({
+    attemptNo: z.number().int().positive(),
+    kind: z.enum(["primary", "repair"]),
+    modelCallId: z.string().min(1),
+    round: z.number().int().positive(),
+  }).strict()),
+  executionEventVariant("model_call_succeeded", z.object({
+    attemptNo: z.number().int().positive(),
+    kind: z.enum(["primary", "repair"]),
+    modelCallId: z.string().min(1),
+    round: z.number().int().positive(),
+  }).strict()),
+  executionEventVariant("model_call_failed", z.object({
+    attemptNo: z.number().int().positive(),
+    category: z.string().min(1),
+    kind: z.enum(["primary", "repair"]),
+    modelCallId: z.string().min(1),
+    round: z.number().int().positive(),
+  }).strict()),
+  executionEventVariant("usage_recorded", z.object({
+    agentId: z.string().min(1),
+    completionTokens: z.number().int().nonnegative(),
+    modelCallId: z.string().min(1),
+    promptTokens: z.number().int().nonnegative(),
+    reported: z.boolean(),
+    totalTokens: z.number().int().nonnegative(),
+  }).strict()),
+  executionEventVariant("boundary_paused", z.object({
+    agentId: z.string().min(1),
+    boundary: z.enum(["business_rounds", "tool_calls", "tokens", "wall_clock"]),
+    limit: z.number().int().nonnegative(),
+    value: z.number().int().nonnegative(),
+  }).strict()),
+  executionEventVariant("tool_requested", z.object({
+    requestSummary: z.object({
+      authorization: z.enum(["one_shot", "standing_policy"]),
+      requestHash: executionEventHashSchema,
+    }).strict(),
+    toolCallId: z.string().min(1),
+    type: eventToolTypeSchema,
+  }).strict()),
+  executionEventVariant("tool_succeeded", toolSucceededPayloadSchema),
+  executionEventVariant("tool_rejected", z.object({
+    guardCode: z.string().min(1),
+    recovery: z.string().nullable(),
+    toolCallId: z.string().min(1),
+    type: eventToolTypeSchema,
+  }).strict()),
+  executionEventVariant("tool_failed", toolFailedPayloadSchema),
+  executionEventVariant("approval_requested", z.object({
+    approvalId: z.string().min(1),
+    kind: z.enum(["command", "staged_merge"]),
+    requestHash: executionEventHashSchema,
+    riskReasons: z.array(z.string()),
+  }).strict()),
+  executionEventVariant("approval_decided", z.union([
+    z.object({ approvalId: z.string().min(1), decision: z.string().min(1) }).strict(),
+    z.object({
+      action: z.enum(["approve", "reject", "revoke", "replace"]),
+      approvalId: z.string().min(1),
+      authorizationSource: z.literal("one_shot"),
+      kind: z.enum(["command", "staged_merge"]),
+      status: z.enum(["pending", "approved", "consumed", "rejected", "revoked", "replaced", "expired"]),
+    }).strict(),
+  ])),
+  executionEventVariant("approval_consumed", z.object({
+    approvalId: z.string().min(1),
+  }).strict()),
+  executionEventVariant("validation_recorded", z.object({
+    exitCode: z.number().int(),
+    policyEntryId: z.string().min(1),
+    required: z.boolean(),
+    sandboxManifestHash: executionEventHashSchema,
+    succeeded: z.boolean(),
+    truncated: z.boolean(),
+    validationId: z.string().min(1),
+  }).strict()),
+  executionEventVariant("staged_created", z.object({
+    blockReasons: z.array(z.string()),
+    blockerCount: z.number().int().nonnegative(),
+    classification: z.enum(["auto_eligible", "approval_required", "blocked"]),
+    mergeFileCount: z.number().int().nonnegative(),
+    mergeFinalBytes: z.number().int().nonnegative(),
+    observedFinalBytes: z.number().int().nonnegative(),
+    observedPathCount: z.number().int().nonnegative(),
+    stagedHash: executionEventHashSchema,
+    stagedId: z.string().min(1),
+  }).strict()),
+  executionEventVariant("stale_detected", z.object({
+    categories: z.array(z.string()), pathCount: z.number().int().nonnegative(),
+  }).strict()),
+  executionEventVariant("conflict_detected", z.object({
+    otherExecutionIds: z.array(z.string().min(1)), pathCount: z.number().int().nonnegative(),
+  }).strict()),
+  executionEventVariant("control_applied", z.object({
+    action: z.enum(["pause", "continue", "retry", "stop"]),
+  }).strict()),
+  executionEventVariant("merge_prepared", z.object({
+    journalId: z.string().min(1),
+    mergeFileCount: z.number().int().nonnegative(),
+    stagedHash: executionEventHashSchema,
+  }).strict()),
+  executionEventVariant("merge_recovered", z.object({
+    direction: z.enum(["rollback", "roll_forward"]), journalId: z.string().min(1),
+  }).strict()),
+  executionEventVariant("merged", z.object({
+    journalId: z.string().min(1),
+    resultId: z.string().min(1),
+    stagedHash: executionEventHashSchema,
+  }).strict()),
+  executionEventVariant("manual_recovery_required", z.object({
+    journalId: z.string().min(1),
+    mismatchPhase: z.string().nullable(),
+    observedManifestHash: executionEventHashSchema.nullable(),
+    oldManifestHash: executionEventHashSchema,
+    pathCount: z.number().int().nonnegative(),
+    postManifestHash: executionEventHashSchema,
+  }).strict()),
+  executionEventVariant("manual_recovery_resolved", z.object({
+    journalId: z.string().min(1),
+    resolution: z.enum(["recovered_old", "recovered_new", "abandon"]),
+    uncleanedOwnedPathCount: z.number().int().nonnegative(),
+  }).strict()),
+  executionEventVariant("operation_replayed", z.object({
+    kind: z.string().min(1), operationId: z.string().min(1),
+  }).strict()),
 ]);
 
 export const executionDtoSchema = z.object({

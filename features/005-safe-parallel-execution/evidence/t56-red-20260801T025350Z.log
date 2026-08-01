@@ -1,0 +1,92 @@
+# hf-gate-run
+# label: t56-red
+# command: npm.cmd test -- tests/execution-read-api.test.ts
+# started: 2026-08-01T02:53:50+00:00
+
+> collaboration-cockpit@0.1.0 test
+> vitest run tests/execution-read-api.test.ts
+
+
+ RUN  v4.1.10 D:/cool-ai
+
+(node:4164) ExperimentalWarning: SQLite is an experimental feature and might change at any time
+(Use `node --trace-warnings ...` to show where the warning was created)
+ ❯ tests/execution-read-api.test.ts (15 tests | 3 failed) 35682ms
+     × round-trips the complete persisted event union in sequence order across pages 2001ms
+     × fails closed on unknown type without reflecting stored data 2066ms
+     × fails closed with the same stable error for a non-object stored event payload 2229ms
+
+⎯⎯⎯⎯⎯⎯⎯ Failed Tests 3 ⎯⎯⎯⎯⎯⎯⎯
+
+ FAIL  tests/execution-read-api.test.ts > bounded execution read APIs > round-trips the complete persisted event union in sequence order across pages
+AssertionError: expected [ 'action_queued', 'boundary_paused' ] to deeply equal []
+
+- Expected
++ Received
+
+- []
++ [
++   "action_queued",
++   "boundary_paused",
++ ]
+
+ ❯ tests/execution-read-api.test.ts:307:8
+    305|     expect(expectedPersistedEventTypes.filter(
+    306|       (type) => !executionEventTypeSchema.options.includes(type as nev…
+    307|     )).toEqual([]);
+       |        ^
+    308|     database.prepare("DELETE FROM execution_events WHERE execution_id=…
+    309|     const insert = database.prepare(`
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[1/3]⎯
+
+ FAIL  tests/execution-read-api.test.ts > bounded execution read APIs > fails closed on unknown type without reflecting stored data
+AssertionError: expected 200 to be 500 // Object.is equality
+
+- Expected
++ Received
+
+- 500
++ 200
+
+ ❯ tests/execution-read-api.test.ts:370:29
+    368|       { params: Promise.resolve({ executionId: EXECUTION_ID }) },
+    369|     );
+    370|     expect(response.status).toBe(500);
+       |                             ^
+    371|     const body = await response.json();
+    372|     expect(body).toEqual({
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[2/3]⎯
+
+ FAIL  tests/execution-read-api.test.ts > bounded execution read APIs > fails closed with the same stable error for a non-object stored event payload
+AssertionError: expected ExecutionError: An unexpected error occur… { …(2) } to match object { code: 'INTERNAL_ERROR', …(2) }
+(2 matching properties omitted from actual)
+
+- Expected
++ Received
+
+- {
++ ExecutionError {
+    "code": "INTERNAL_ERROR",
+-   "message": "An unexpected error occurred.",
+-   "status": 500,
+  }
+
+ ❯ tests/execution-read-api.test.ts:386:7
+    384|       EXECUTION_ID,
+    385|       { limit: "1" },
+    386|     )).rejects.toMatchObject({
+       |       ^
+    387|       code: "INTERNAL_ERROR",
+    388|       message: "An unexpected error occurred.",
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[3/3]⎯
+
+
+ Test Files  1 failed (1)
+      Tests  3 failed | 12 passed (15)
+   Start at  10:53:51
+   Duration  38.57s (transform 315ms, setup 415ms, import 418ms, tests 35.68s, environment 1.77s)
+
+# exit: 1
