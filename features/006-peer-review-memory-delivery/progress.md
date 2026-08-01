@@ -4,5 +4,5 @@
 - 当前阶段: build
 - 执行模式: auto
 - 已加载扩展: ext-ui-design
-- 下一步: 执行 T-14：实现统一 required/optional evidence、mission context fingerprint 与 manifest
+- 下一步: 执行 T-15：实现 delivery 两阶段生成、失效、重试与历史
 - 门禁输出: RESULT: PASS — 可进入 build
