@@ -1,0 +1,163 @@
+# hf-gate-run
+# label: t10-red
+# command: npm.cmd test -- tests/review-escalation.test.ts tests/review-escalation-ui.test.tsx
+# started: 2026-08-01T05:48:23+00:00
+
+> collaboration-cockpit@0.1.0 test
+> vitest run tests/review-escalation.test.ts tests/review-escalation-ui.test.tsx
+
+
+ RUN  v4.1.10 D:/cool-ai
+
+(node:12604) ExperimentalWarning: SQLite is an experimental feature and might change at any time
+(Use `node --trace-warnings ...` to show where the warning was created)
+ ❯ tests/review-escalation-ui.test.tsx (4 tests | 4 failed) 14ms
+     × renders loading and disabled states with semantic reasons and tokens 9ms
+     × preserves answer/action draft on error and exposes an alert 1ms
+     × shows pending success, disables duplicate submit and focuses the new state 1ms
+     × labels all three non-pass actions accessibly 1ms
+ ❯ tests/review-escalation.test.ts (5 tests | 5 failed) 1338ms
+     × finalizes one immutable open issue and never passes the original attempt 278ms
+     × continues idempotently on the same result and requires a fresh attempt 273ms
+     × applies owner action rework without forging pass 261ms
+     × applies owner action terminate_mission without forging pass 265ms
+     × allows only the owner and keeps one winner across different operations 258ms
+
+⎯⎯⎯⎯⎯⎯⎯ Failed Tests 9 ⎯⎯⎯⎯⎯⎯⎯
+
+ FAIL  tests/review-escalation-ui.test.tsx > owner escalation answer UI > renders loading and disabled states with semantic reasons and tokens
+AssertionError: T-10 escalation UI must exist: expected undefined to be type of 'function'
+
+Expected: "function"
+Received: "undefined"
+
+ ❯ component tests/review-escalation-ui.test.tsx:28:60
+     26|     }
+     27|   ).EscalationIssue;
+     28|   expect(EscalationIssue, "T-10 escalation UI must exist").toBeTypeOf(…
+       |                                                            ^
+     29|   return EscalationIssue!;
+     30| }
+ ❯ tests/review-escalation-ui.test.tsx:41:29
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[1/9]⎯
+
+ FAIL  tests/review-escalation-ui.test.tsx > owner escalation answer UI > preserves answer/action draft on error and exposes an alert
+AssertionError: T-10 escalation UI must exist: expected undefined to be type of 'function'
+
+Expected: "function"
+Received: "undefined"
+
+ ❯ component tests/review-escalation-ui.test.tsx:28:60
+     26|     }
+     27|   ).EscalationIssue;
+     28|   expect(EscalationIssue, "T-10 escalation UI must exist").toBeTypeOf(…
+       |                                                            ^
+     29|   return EscalationIssue!;
+     30| }
+ ❯ tests/review-escalation-ui.test.tsx:63:29
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[2/9]⎯
+
+ FAIL  tests/review-escalation-ui.test.tsx > owner escalation answer UI > shows pending success, disables duplicate submit and focuses the new state
+AssertionError: T-10 escalation UI must exist: expected undefined to be type of 'function'
+
+Expected: "function"
+Received: "undefined"
+
+ ❯ component tests/review-escalation-ui.test.tsx:28:60
+     26|     }
+     27|   ).EscalationIssue;
+     28|   expect(EscalationIssue, "T-10 escalation UI must exist").toBeTypeOf(…
+       |                                                            ^
+     29|   return EscalationIssue!;
+     30| }
+ ❯ tests/review-escalation-ui.test.tsx:78:29
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[3/9]⎯
+
+ FAIL  tests/review-escalation-ui.test.tsx > owner escalation answer UI > labels all three non-pass actions accessibly
+AssertionError: T-10 escalation UI must exist: expected undefined to be type of 'function'
+
+Expected: "function"
+Received: "undefined"
+
+ ❯ component tests/review-escalation-ui.test.tsx:28:60
+     26|     }
+     27|   ).EscalationIssue;
+     28|   expect(EscalationIssue, "T-10 escalation UI must exist").toBeTypeOf(…
+       |                                                            ^
+     29|   return EscalationIssue!;
+     30| }
+ ❯ tests/review-escalation-ui.test.tsx:100:29
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[4/9]⎯
+
+ FAIL  tests/review-escalation.test.ts > review escalation issue and owner answer > finalizes one immutable open issue and never passes the original attempt
+ReviewFinalizeError: Escalation finalization is reserved for T-10.
+ ❯ parseCheckpoint src/server/review/review-finalizer.ts:188:11
+    186|   }
+    187|   if (output.decision.choice === "escalate") {
+    188|     throw new ReviewFinalizeError(
+       |           ^
+    189|       "REVIEW_ESCALATION_NOT_IMPLEMENTED",
+    190|       409,
+ ❯ finalizeCheckpointedReview src/server/review/review-finalizer.ts:257:18
+ ❯ finalizeEscalation tests/review-escalation.test.ts:130:10
+ ❯ tests/review-escalation.test.ts:161:22
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[5/9]⎯
+
+ FAIL  tests/review-escalation.test.ts > review escalation issue and owner answer > continues idempotently on the same result and requires a fresh attempt
+ReviewFinalizeError: Escalation finalization is reserved for T-10.
+ ❯ parseCheckpoint src/server/review/review-finalizer.ts:188:11
+    186|   }
+    187|   if (output.decision.choice === "escalate") {
+    188|     throw new ReviewFinalizeError(
+       |           ^
+    189|       "REVIEW_ESCALATION_NOT_IMPLEMENTED",
+    190|       409,
+ ❯ finalizeCheckpointedReview src/server/review/review-finalizer.ts:257:18
+ ❯ finalizeEscalation tests/review-escalation.test.ts:130:10
+ ❯ tests/review-escalation.test.ts:190:19
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[6/9]⎯
+
+ FAIL  tests/review-escalation.test.ts > review escalation issue and owner answer > applies owner action rework without forging pass
+ FAIL  tests/review-escalation.test.ts > review escalation issue and owner answer > applies owner action terminate_mission without forging pass
+ReviewFinalizeError: Escalation finalization is reserved for T-10.
+ ❯ parseCheckpoint src/server/review/review-finalizer.ts:188:11
+    186|   }
+    187|   if (output.decision.choice === "escalate") {
+    188|     throw new ReviewFinalizeError(
+       |           ^
+    189|       "REVIEW_ESCALATION_NOT_IMPLEMENTED",
+    190|       409,
+ ❯ finalizeCheckpointedReview src/server/review/review-finalizer.ts:257:18
+ ❯ finalizeEscalation tests/review-escalation.test.ts:130:10
+ ❯ tests/review-escalation.test.ts:243:19
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[7/9]⎯
+
+ FAIL  tests/review-escalation.test.ts > review escalation issue and owner answer > allows only the owner and keeps one winner across different operations
+ReviewFinalizeError: Escalation finalization is reserved for T-10.
+ ❯ parseCheckpoint src/server/review/review-finalizer.ts:188:11
+    186|   }
+    187|   if (output.decision.choice === "escalate") {
+    188|     throw new ReviewFinalizeError(
+       |           ^
+    189|       "REVIEW_ESCALATION_NOT_IMPLEMENTED",
+    190|       409,
+ ❯ finalizeCheckpointedReview src/server/review/review-finalizer.ts:257:18
+ ❯ finalizeEscalation tests/review-escalation.test.ts:130:10
+ ❯ tests/review-escalation.test.ts:273:19
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[8/9]⎯
+
+
+ Test Files  2 failed (2)
+      Tests  9 failed (9)
+   Start at  13:48:24
+   Duration  4.28s (transform 250ms, setup 887ms, import 581ms, tests 1.35s, environment 3.68s)
+
+# exit: 1

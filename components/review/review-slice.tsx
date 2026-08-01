@@ -4,6 +4,23 @@ import { useCallback, useEffect, useRef, useState } from "react";
 
 import type { ReviewWorkspaceDto } from "@/src/shared/review-contracts";
 
+type EscalationAction = "continue_review" | "rework" | "terminate_mission";
+
+type EscalationIssueProps = {
+  disabledReason?: string | null;
+  issue: null | {
+    answer: null | { action: string; answer: string };
+    id: string;
+    options: string[];
+    question: string;
+  };
+  loading?: boolean;
+  onAnswer: (input: {
+    action: EscalationAction;
+    answer: string;
+  }) => Promise<{ action: string; state: string }>;
+};
+
 type ReviewSliceProps = {
   load?: () => Promise<ReviewWorkspaceDto>;
   start?: (input: {
@@ -161,6 +178,129 @@ export function ReviewSlice({ load, start, workItemId }: ReviewSliceProps) {
           {attempt.decision ? <p>{attempt.decision.publicSummary}</p> : null}
         </section>
       ) : null}
+    </section>
+  );
+}
+
+const escalationSuccessTitle: Record<EscalationAction, string> = {
+  continue_review: "已等待新复核",
+  rework: "已进入返工",
+  terminate_mission: "使命已终止",
+};
+
+export function EscalationIssue({
+  disabledReason = null,
+  issue,
+  loading = false,
+  onAnswer,
+}: EscalationIssueProps) {
+  const [answer, setAnswer] = useState("");
+  const [action, setAction] = useState<EscalationAction | "">("");
+  const [submitting, setSubmitting] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+  const [completedAction, setCompletedAction] = useState<EscalationAction | null>(
+    issue?.answer?.action as EscalationAction | null ?? null,
+  );
+  const completedHeading = useRef<HTMLHeadingElement>(null);
+
+  if (loading) return <p aria-busy="true">正在加载升级问题…</p>;
+  if (!issue) return <p>尚无待 Owner 回答的升级问题。</p>;
+
+  const formReason = disabledReason
+    ?? (answer.trim().length === 0
+      ? "请填写 Owner 回答"
+      : action === ""
+      ? "请选择继续复核、返工或终止使命"
+      : null);
+
+  async function submitAnswer() {
+    if (!action || formReason) return;
+    setSubmitting(true);
+    setError(null);
+    try {
+      const result = await onAnswer({ action, answer: answer.trim() });
+      const nextAction = result.action as EscalationAction;
+      setCompletedAction(nextAction);
+      requestAnimationFrame(() => completedHeading.current?.focus());
+    } catch {
+      setError("提交失败；已保留 Owner 回答与处理动作，请重试。");
+    } finally {
+      setSubmitting(false);
+    }
+  }
+
+  if (completedAction) {
+    return (
+      <section aria-labelledby={`escalation-${issue.id}-complete`} className="stack">
+        <h4
+          id={`escalation-${issue.id}-complete`}
+          ref={completedHeading}
+          tabIndex={-1}
+        >
+          {escalationSuccessTitle[completedAction]}
+        </h4>
+        <p aria-live="polite">Owner 回答已保存。</p>
+        <p>原复核 attempt 与裁决保持只读；后续动作会创建新的链路事实。</p>
+      </section>
+    );
+  }
+
+  return (
+    <section aria-labelledby={`escalation-${issue.id}-title`} className="stack">
+      <h4 id={`escalation-${issue.id}-title`}>等待 Owner 回答</h4>
+      <p>{issue.question}</p>
+      <ul>
+        {issue.options.map((option) => <li key={option}>{option}</li>)}
+      </ul>
+      <label htmlFor={`escalation-${issue.id}-answer`}>Owner 回答</label>
+      <textarea
+        aria-describedby={`escalation-${issue.id}-reason`}
+        disabled={Boolean(disabledReason) || submitting}
+        id={`escalation-${issue.id}-answer`}
+        onChange={(event) => setAnswer(event.target.value)}
+        value={answer}
+      />
+      <fieldset disabled={Boolean(disabledReason) || submitting}>
+        <legend>Owner 处理动作</legend>
+        <label>
+          <input
+            checked={action === "continue_review"}
+            name={`escalation-${issue.id}-action`}
+            onChange={() => setAction("continue_review")}
+            type="radio"
+          />
+          继续复核
+        </label>
+        <label>
+          <input
+            checked={action === "rework"}
+            name={`escalation-${issue.id}-action`}
+            onChange={() => setAction("rework")}
+            type="radio"
+          />
+          返工
+        </label>
+        <label>
+          <input
+            checked={action === "terminate_mission"}
+            name={`escalation-${issue.id}-action`}
+            onChange={() => setAction("terminate_mission")}
+            type="radio"
+          />
+          终止使命
+        </label>
+      </fieldset>
+      <p id={`escalation-${issue.id}-reason`}>{formReason}</p>
+      <button
+        aria-describedby={`escalation-${issue.id}-reason`}
+        disabled={formReason !== null || submitting}
+        onClick={() => void submitAnswer()}
+        style={{ minHeight: "var(--control-min)" }}
+        type="button"
+      >
+        {submitting ? "正在提交 Owner 回答…" : "提交 Owner 回答"}
+      </button>
+      {error ? <p className="error-text" role="alert">{error}</p> : null}
     </section>
   );
 }

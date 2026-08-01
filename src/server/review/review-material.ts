@@ -231,7 +231,25 @@ export function freezeReviewMaterial(
 ): { hash: string; json: string; material: ReviewMaterial } {
   const result = database.prepare(`
     SELECT r.id,r.version,r.execution_id AS executionId,r.staged_result_id AS stagedResultId,
-           r.merge_journal_id AS mergeJournalId,r.created_at AS createdAt
+           r.merge_journal_id AS mergeJournalId,r.created_at AS createdAt,
+           (
+             SELECT answer.id FROM review_escalations e
+             JOIN review_escalation_answers answer ON answer.escalation_id=e.id
+             WHERE e.work_item_id=r.work_item_id AND e.result_id=r.id
+             ORDER BY answer.created_at DESC,answer.id DESC LIMIT 1
+           ) AS ownerAnswerId,
+           (
+             SELECT answer.answer FROM review_escalations e
+             JOIN review_escalation_answers answer ON answer.escalation_id=e.id
+             WHERE e.work_item_id=r.work_item_id AND e.result_id=r.id
+             ORDER BY answer.created_at DESC,answer.id DESC LIMIT 1
+           ) AS ownerAnswer,
+           (
+             SELECT answer.action FROM review_escalations e
+             JOIN review_escalation_answers answer ON answer.escalation_id=e.id
+             WHERE e.work_item_id=r.work_item_id AND e.result_id=r.id
+             ORDER BY answer.created_at DESC,answer.id DESC LIMIT 1
+           ) AS ownerAnswerAction
     FROM work_item_result_versions r WHERE r.id=?
   `).get(head.resultId) as any;
   const project = database.prepare("SELECT id,name FROM projects WHERE id=?")
@@ -447,7 +465,13 @@ export function freezeReviewMaterial(
     dependencies,
     executor,
     mission,
-    ownerAnswer: null,
+    ownerAnswer: result.ownerAnswerId
+      ? {
+          action: result.ownerAnswerAction,
+          answer: result.ownerAnswer,
+          answerId: result.ownerAnswerId,
+        }
+      : null,
     project,
     result: {
       createdAt: result.createdAt,

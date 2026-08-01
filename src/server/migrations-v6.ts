@@ -224,7 +224,7 @@ CREATE INDEX review_events_page ON review_events(mission_id,sequence,id);
 `;
 
 function immutableSql(): string {
-  return IMMUTABLE.map(([table, prefix, error]) => `
+  const immutableRows = IMMUTABLE.map(([table, prefix, error]) => `
 CREATE TRIGGER ${prefix}_no_update BEFORE UPDATE ON ${table}
 BEGIN SELECT RAISE(ABORT,'${error}'); END;
 CREATE TRIGGER ${prefix}_no_delete BEFORE DELETE ON ${table}
@@ -243,6 +243,16 @@ WHEN ${["memory_entries", "work_item_result_versions", "mission_deliveries", "re
     ? "EXISTS(SELECT 1 FROM review_escalations WHERE id=OLD.escalation_id)"
     : "1"}
 BEGIN SELECT RAISE(ABORT,'${error}'); END;`).join("\n");
+  return `${immutableRows}
+CREATE TRIGGER review_attempt_terminal_no_update
+BEFORE UPDATE ON review_attempts
+WHEN OLD.status IN ('rejected','escalated','passed','failed','interrupted','discarded')
+BEGIN SELECT RAISE(ABORT,'IMMUTABLE_REVIEW_ATTEMPT'); END;
+CREATE TRIGGER review_attempt_terminal_no_delete
+BEFORE DELETE ON review_attempts
+WHEN OLD.status IN ('rejected','escalated','passed','failed','interrupted','discarded')
+ AND EXISTS(SELECT 1 FROM projects WHERE id=OLD.project_id)
+BEGIN SELECT RAISE(ABORT,'IMMUTABLE_REVIEW_ATTEMPT'); END;`;
 }
 
 const CREATE_V6_SCHEMA = `${CREATE_TABLES}\n${immutableSql()}`;

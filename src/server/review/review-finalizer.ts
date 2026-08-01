@@ -89,7 +89,7 @@ function terminalReplay(
       "Review checkpoint hash changed.",
     );
   }
-  if (!["rejected", "passed"].includes(row.status)) return null;
+  if (!["rejected", "escalated", "passed"].includes(row.status)) return null;
   const operation = database.prepare(`
     SELECT status,response_json AS responseJson
     FROM review_operations WHERE project_id=? AND id=?
@@ -184,13 +184,6 @@ function parseCheckpoint(row: AttemptRow, checkpointHash: string): ValidatedRevi
       "Durable review checkpoint has an invalid decision.",
     );
   }
-  if (output.decision.choice === "escalate") {
-    throw new ReviewFinalizeError(
-      "REVIEW_ESCALATION_NOT_IMPLEMENTED",
-      409,
-      "Escalation finalization is reserved for T-10.",
-    );
-  }
   return output;
 }
 
@@ -274,7 +267,11 @@ export function finalizeCheckpointedReview(
     const headVersion = assertCurrentIdentity(database, row);
     const now = clock().toISOString();
     const decisionId = randomUUID();
-    const terminalStatus = output.decision.choice === "reject" ? "rejected" : "passed";
+    const terminalStatus = output.decision.choice === "reject"
+      ? "rejected"
+      : output.decision.choice === "escalate"
+      ? "escalated"
+      : "passed";
 
     before("decision");
     database.prepare(`
@@ -294,6 +291,26 @@ export function finalizeCheckpointedReview(
       JSON.stringify(output.limitations),
       now,
     );
+
+    let escalationId: string | undefined;
+    if (output.decision.choice === "escalate") {
+      escalationId = randomUUID();
+      database.prepare(`
+        INSERT INTO review_escalations(
+          id,decision_id,work_item_id,result_id,question,options_json,
+          evidence_refs_json,created_at
+        ) VALUES (?, ?, ?, ?, ?, ?, ?, ?)
+      `).run(
+        escalationId,
+        decisionId,
+        row.workItemId,
+        row.resultId,
+        output.decision.question,
+        JSON.stringify(output.decision.options),
+        JSON.stringify(output.evidenceRefs),
+        now,
+      );
+    }
 
     before("memory-candidates");
     if (output.decision.choice === "pass") {
@@ -326,8 +343,12 @@ export function finalizeCheckpointedReview(
         AND current_result_id=? AND current_attempt_id=?
         AND state='reviewing' AND version=?
     `).run(
-      output.decision.choice === "reject" ? "rework" : "passed",
-      output.decision.choice === "reject" ? null : row.attemptId,
+      output.decision.choice === "reject"
+        ? "rework"
+        : output.decision.choice === "escalate"
+        ? "waiting_owner"
+        : "passed",
+      output.decision.choice === "pass" ? row.attemptId : null,
       now,
       row.workItemId,
       row.projectId,
@@ -365,7 +386,7 @@ export function finalizeCheckpointedReview(
         throw new ReviewFinalizeError(
           "REVIEW_STATE_CONFLICT",
           409,
-          "Rejected work item is not in progress.",
+          "Non-pass reviewed work item is not in progress.",
         );
       }
     }
@@ -380,9 +401,14 @@ export function finalizeCheckpointedReview(
     appendEvent(
       database,
       row,
-      output.decision.choice === "reject" ? "rework_requested" : "work_item_passed",
+      output.decision.choice === "reject"
+        ? "rework_requested"
+        : output.decision.choice === "escalate"
+        ? "review_escalated"
+        : "work_item_passed",
       {
         decisionId,
+        ...(escalationId ? { escalationId } : {}),
         resultId: row.resultId,
         workItemId: row.workItemId,
       },
@@ -408,6 +434,7 @@ export function finalizeCheckpointedReview(
       attemptId: row.attemptId,
       checkpointHash: input.checkpointHash,
       decisionId,
+      ...(escalationId ? { escalationId } : {}),
       retry: { kind: "none", providerCallRequired: false },
       state: terminalStatus,
     });

@@ -248,7 +248,7 @@ describe("checkpointed reject/pass decisions", () => {
     ).get()).toEqual({ count: 1 });
   });
 
-  it("leaves escalation checkpoint finalizing for T-10", async () => {
+  it("finalizes escalation into one waiting-owner issue", async () => {
     const finalize = await finalizer();
     const hash = checkpoint({
       decision: { choice: "escalate", options: ["A", "B"], question: "Choose" },
@@ -259,15 +259,24 @@ describe("checkpointed reject/pass decisions", () => {
       publicSummary: "Owner input needed",
     });
 
-    expect(() => finalize(
+    const result = finalize(
       database,
       { attemptId: "attempt", checkpointHash: hash },
-    )).toThrowError(expect.objectContaining({ code: "REVIEW_ESCALATION_NOT_IMPLEMENTED" }));
-    expect(database.prepare(
-      "SELECT status FROM review_attempts WHERE id='attempt'",
-    ).get()).toEqual({ status: "finalizing" });
-    expect(database.prepare(
-      "SELECT COUNT(*) AS count FROM review_decisions",
-    ).get()).toEqual({ count: 0 });
+    );
+    expect(result).toMatchObject({ state: "escalated", escalationId: expect.any(String) });
+    expect(database.prepare(`
+      SELECT a.status,d.choice,h.state,h.current_attempt_id AS currentAttempt,
+             (SELECT COUNT(*) FROM review_escalations) AS issues
+      FROM review_attempts a
+      JOIN review_decisions d ON d.attempt_id=a.id
+      JOIN work_item_review_heads h ON h.work_item_id=a.work_item_id
+      WHERE a.id='attempt'
+    `).get()).toEqual({
+      choice: "escalate",
+      currentAttempt: null,
+      issues: 1,
+      state: "waiting_owner",
+      status: "escalated",
+    });
   });
 });
