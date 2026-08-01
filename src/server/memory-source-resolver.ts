@@ -2,7 +2,6 @@ import type { DatabaseSync } from "node:sqlite";
 import { z } from "zod";
 
 import {
-  memorySourceTypeSchema,
   type MemorySource,
 } from "@/src/shared/memory-contracts";
 
@@ -12,6 +11,11 @@ const candidateSourceTypes = [
   "review",
   "validation",
   "artifact",
+] as const;
+const frozenSourceTypes = [
+  ...candidateSourceTypes,
+  "memory",
+  "execution",
 ] as const;
 
 const resolverInputSchema = z.object({
@@ -24,7 +28,7 @@ const resolverInputSchema = z.object({
 
 const frozenRefSchema = z.object({
   id: z.string().min(1),
-  type: memorySourceTypeSchema,
+  type: z.enum(frozenSourceTypes),
   version: z.string().min(1),
 }).strict();
 

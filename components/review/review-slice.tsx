@@ -112,13 +112,18 @@ export function ReviewSlice({ load, start, workItemId }: ReviewSliceProps) {
         resultId: workspace.result.id,
         reviewerAgentId: selectedReviewerId,
       };
-      const next = start
-        ? await start(input)
-        : await readJson(await fetch(`/api/work-items/${workItemId}/reviews`, {
+      let next: ReviewWorkspaceDto;
+      if (start) {
+        next = await start(input);
+      } else {
+        const response = await fetch(`/api/work-items/${workItemId}/reviews`, {
           body: JSON.stringify(input),
           headers: { "content-type": "application/json" },
           method: "POST",
-        }));
+        });
+        if (!response.ok) throw new Error("发起复核失败");
+        next = await readJson(await fetch(`/api/work-items/${workItemId}/review`));
+      }
       setWorkspace(next);
       const reviewer = next.currentAttempt?.reviewer.name ?? "所选 Agent";
       setSuccess(`已由 ${reviewer} 完成独立复核。`);

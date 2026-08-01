@@ -1,0 +1,85 @@
+# hf-gate-run
+# label: t29-ui-red
+# command: npm.cmd test -- tests/review-product-wiring.test.tsx
+# started: 2026-08-01T10:31:43+00:00
+
+> collaboration-cockpit@0.1.0 test
+> vitest run tests/review-product-wiring.test.tsx
+
+
+ RUN  v4.1.10 D:/cool-ai
+
+stderr | tests/review-product-wiring.test.tsx > review product wiring > uses the real review and answer route adapters, preserving owner draft and live focus
+An error occurred in the <ReviewSlice> component.
+
+Consider adding an error boundary to your tree to customize error handling behavior.
+Visit https://react.dev/link/error-boundaries to learn more about error boundaries.
+
+
+ ❯ tests/review-product-wiring.test.tsx (4 tests | 1 failed) 1493ms
+     × uses the real review and answer route adapters, preserving owner draft and live focus 1452ms
+
+⎯⎯⎯⎯⎯⎯⎯ Failed Tests 1 ⎯⎯⎯⎯⎯⎯⎯
+
+ FAIL  tests/review-product-wiring.test.tsx > review product wiring > uses the real review and answer route adapters, preserving owner draft and live focus
+TestingLibraryElementError: Unable to find role="status"
+
+Ignored nodes: comments, script, style
+[36m<body>[39m
+  [36m<div />[39m
+[36m</body>[39m
+
+Ignored nodes: comments, script, style
+[36m<body>[39m
+  [36m<div />[39m
+[36m</body>[39m
+ ❯ waitForWrapper node_modules/@testing-library/dom/dist/wait-for.js:163:27
+ ❯ node_modules/@testing-library/dom/dist/query-helpers.js:86:33
+ ❯ tests/review-product-wiring.test.tsx:238:25
+    236|     await user.click(await screen.findByRole("radio", { name: /Reviewe…
+    237|     await user.click(screen.getByRole("button", { name: "确认并发起真实复核" })…
+    238|     expect(await screen.findByRole("status")).toHaveTextContent("完成独立复…
+       |                         ^
+    239|
+    240|     rerender(
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[1/1]⎯
+
+⎯⎯⎯⎯⎯⎯ Unhandled Errors ⎯⎯⎯⎯⎯⎯
+
+Vitest caught 1 unhandled error during the test run.
+This might cause false positive tests. Resolve unhandled errors to make sure your tests are not affected.
+
+⎯⎯⎯⎯⎯ Uncaught Exception ⎯⎯⎯⎯⎯
+TypeError: Cannot read properties of undefined (reading 'title')
+ ❯ ReviewSlice components/review/review-slice.tsx:156:69
+    154|         <div>
+    155|           <p className="eyebrow">独立复核</p>
+    156|           <h3 id={`review-${workItemId}-title`}>{workspace.workItem.ti…
+       |                                                                     ^
+    157|         </div>
+    158|         <span className="status-label">{workspace.effectiveStatus}</sp…
+ ❯ Object.react_stack_bottom_frame node_modules/react-dom/cjs/react-dom-client.development.js:25904:20
+ ❯ renderWithHooks node_modules/react-dom/cjs/react-dom-client.development.js:7662:22
+ ❯ updateFunctionComponent node_modules/react-dom/cjs/react-dom-client.development.js:10166:19
+ ❯ beginWork node_modules/react-dom/cjs/react-dom-client.development.js:11778:18
+ ❯ runWithFiberInDEV node_modules/react-dom/cjs/react-dom-client.development.js:874:13
+ ❯ performUnitOfWork node_modules/react-dom/cjs/react-dom-client.development.js:17641:22
+ ❯ workLoopSync node_modules/react-dom/cjs/react-dom-client.development.js:17469:41
+ ❯ renderRootSync node_modules/react-dom/cjs/react-dom-client.development.js:17450:11
+ ❯ performWorkOnRoot node_modules/react-dom/cjs/react-dom-client.development.js:16583:35
+
+This error originated in "tests/review-product-wiring.test.tsx" test file. It doesn't mean the error was thrown inside the file itself, but while it was running.
+The latest test that might've caused the error is "uses the real review and answer route adapters, preserving owner draft and live focus". It might mean one of the following:
+- The error was thrown, while Vitest was running this test.
+- If the error occurred after the test had been completed, this was the last documented test before it was thrown.
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯
+
+
+ Test Files  1 failed (1)
+      Tests  1 failed | 3 passed (4)
+     Errors  1 error
+   Start at  18:31:44
+   Duration  4.18s (transform 211ms, setup 418ms, import 199ms, tests 1.49s, environment 1.78s)
+
+# exit: 1

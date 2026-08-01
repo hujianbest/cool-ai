@@ -1,0 +1,65 @@
+# hf-gate-run
+# label: t29-memory-red
+# command: npm.cmd test -- tests/memory-source-navigation.test.ts
+# started: 2026-08-01T10:40:31+00:00
+
+> collaboration-cockpit@0.1.0 test
+> vitest run tests/memory-source-navigation.test.ts
+
+
+ RUN  v4.1.10 D:/cool-ai
+
+(node:2772) ExperimentalWarning: SQLite is an experimental feature and might change at any time
+(Use `node --trace-warnings ...` to show where the warning was created)
+ ❯ tests/memory-source-navigation.test.ts (7 tests | 6 failed) 2851ms
+     × projects Agent proposer, pass confirmer, and platform persistence responsibility 430ms
+     × resolves exact task id/version to a versioned product href 408ms
+     × resolves exact result id/version to a versioned product href 399ms
+     × resolves exact review id/version to a versioned product href 407ms
+     × resolves exact validation id/version to a versioned product href 403ms
+     × resolves exact artifact id/version to a versioned product href 404ms
+
+⎯⎯⎯⎯⎯⎯⎯ Failed Tests 6 ⎯⎯⎯⎯⎯⎯⎯
+
+ FAIL  tests/memory-source-navigation.test.ts > memory source resolver > projects Agent proposer, pass confirmer, and platform persistence responsibility
+MemoryError: Memory source is invalid.
+ ❯ invalidSource src/server/memory-service.ts:90:9
+     88|
+     89| function invalidSource(): never {
+     90|   throw new MemoryError(
+       |         ^
+     91|     "INVALID_SOURCE",
+     92|     400,
+ ❯ toMemory src/server/memory-service.ts:233:57
+ ❯ src/server/memory-service.ts:473:28
+ ❯ listMemoriesInDatabase src/server/memory-service.ts:473:15
+ ❯ tests/memory-source-navigation.test.ts:142:12
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[1/6]⎯
+
+ FAIL  tests/memory-source-navigation.test.ts > memory source resolver > resolves exact task id/version to a versioned product href
+ FAIL  tests/memory-source-navigation.test.ts > memory source resolver > resolves exact result id/version to a versioned product href
+ FAIL  tests/memory-source-navigation.test.ts > memory source resolver > resolves exact review id/version to a versioned product href
+ FAIL  tests/memory-source-navigation.test.ts > memory source resolver > resolves exact validation id/version to a versioned product href
+ FAIL  tests/memory-source-navigation.test.ts > memory source resolver > resolves exact artifact id/version to a versioned product href
+MemorySourceResolutionError: Memory source is invalid.
+ ❯ invalidSource src/server/memory-source-resolver.ts:48:9
+     46|
+     47| function invalidSource(): never {
+     48|   throw new MemorySourceResolutionError();
+       |         ^
+     49| }
+     50|
+ ❯ attemptMaterial src/server/memory-source-resolver.ts:68:12
+ ❯ resolveMemorySource src/server/memory-source-resolver.ts:79:20
+ ❯ tests/memory-source-navigation.test.ts:173:20
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[2/6]⎯
+
+
+ Test Files  1 failed (1)
+      Tests  6 failed | 1 passed (7)
+   Start at  18:40:32
+   Duration  6.16s (transform 264ms, setup 429ms, import 457ms, tests 2.85s, environment 2.13s)
+
+# exit: 1

@@ -1,0 +1,11 @@
+# hf-gate-run
+# label: t29-smoke
+# command: npm.cmd run smoke:review
+# started: 2026-08-01T10:45:20+00:00
+
+> collaboration-cockpit@0.1.0 smoke:review
+> node tests/review-browser-smoke.mjs
+
+REVIEW SMOKE PASS: first result 65eabe96-4617-4375-b0f7-f38e44cef94c passed by a non-executor, persisted memory, and generated delivery aa0f6354-7e23-4b52-946b-5726e6833e12
+SCREENSHOT: D:\cool-ai\features\006-peer-review-memory-delivery\evidence\smoke-review-desktop.png
+# exit: 0
