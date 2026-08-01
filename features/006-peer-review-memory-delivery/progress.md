@@ -4,5 +4,5 @@
 - 当前阶段: build
 - 执行模式: auto
 - 已加载扩展: ext-ui-design
-- 下一步: 执行 T-18：完成 restart/invariant/fault 矩阵集成
-- 门禁输出: RESULT: FAIL (15 项未通过) — 不得进入 verify
+- 下一步: 执行 T-19：交付桌面公开材料、逐 call 与 finalize 工作区
+- 门禁输出: RESULT: FAIL (13 项未通过) — 不得进入 verify

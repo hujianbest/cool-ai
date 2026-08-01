@@ -1,4 +1,4 @@
-import { createHash, createHmac, timingSafeEqual } from "node:crypto";
+import { createHash, createHmac, randomUUID, timingSafeEqual } from "node:crypto";
 import type { DatabaseSync } from "node:sqlite";
 
 import { openDatabase } from "@/src/server/db";
@@ -7,6 +7,7 @@ import {
   reviewAttemptDetailDtoSchema,
   reviewAttemptDtoSchema,
   reviewEventDtoSchema,
+  reviewOutputSchema,
   reviewWorkspaceDtoSchema,
   type StrictReviewAttemptDto,
   type StrictReviewWorkspaceDto,
@@ -585,4 +586,187 @@ export function listReviewEvents(
   } finally {
     database.close();
   }
+}
+
+export class ReviewPersistenceInvariantError extends Error {
+  readonly code = "REVIEW_INVARIANT_FAILED";
+  readonly status = 500;
+}
+
+function persistenceInvariant(value: unknown, message: string): asserts value {
+  if (!value) throw new ReviewPersistenceInvariantError(message);
+}
+
+export function assertReviewPersistenceInvariants(database: DatabaseSync): void {
+  const attempts = database.prepare(`
+    SELECT a.id,a.status,a.result_id AS resultId,a.parsed_output_json AS output,
+           a.parsed_output_hash AS outputHash,a.output_checkpointed_at AS checkpointedAt,
+           h.state AS headState,h.current_attempt_id AS headAttemptId,
+           h.current_result_id AS headResultId,w.status AS board,
+           count(d.id) AS decisions,min(d.choice) AS choice
+    FROM review_attempts a
+    LEFT JOIN work_item_review_heads h ON h.work_item_id=a.work_item_id
+    LEFT JOIN work_items w ON w.id=a.work_item_id
+    LEFT JOIN review_decisions d ON d.attempt_id=a.id
+    GROUP BY a.id ORDER BY a.id
+  `).all() as Array<Record<string, unknown>>;
+  for (const row of attempts) {
+    const parts = [row.output, row.outputHash, row.checkpointedAt];
+    const checkpointed = parts.every((value) => value !== null);
+    persistenceInvariant(
+      checkpointed || parts.every((value) => value === null),
+      `Attempt ${row.id} has a partial checkpoint.`,
+    );
+    if (checkpointed) {
+      persistenceInvariant(
+        createHash("sha256").update(String(row.output), "utf8").digest("hex") === row.outputHash,
+        `Attempt ${row.id} has an invalid checkpoint hash.`,
+      );
+      let parsed: unknown;
+      try {
+        parsed = JSON.parse(String(row.output));
+      } catch {
+        throw new ReviewPersistenceInvariantError(`Attempt ${row.id} has invalid checkpoint JSON.`);
+      }
+      persistenceInvariant(
+        reviewOutputSchema.safeParse(parsed).success,
+        `Attempt ${row.id} has invalid checkpoint content.`,
+      );
+    }
+    persistenceInvariant(
+      !["finalizing", "rejected", "escalated", "passed"].includes(String(row.status))
+        || checkpointed,
+      `Attempt ${row.id} has no checkpoint.`,
+    );
+    if (["calling", "finalizing"].includes(String(row.status))) {
+      persistenceInvariant(
+        row.headState === "reviewing"
+          && row.headAttemptId === row.id
+          && row.headResultId === row.resultId,
+        `Attempt ${row.id} is detached from its active head.`,
+      );
+    }
+    const choice = row.status === "rejected"
+      ? "reject"
+      : row.status === "escalated"
+      ? "escalate"
+      : row.status === "passed"
+      ? "pass"
+      : null;
+    persistenceInvariant(
+      choice === null
+        ? Number(row.decisions) === 0
+        : Number(row.decisions) === 1 && row.choice === choice,
+      `Attempt ${row.id} has partial decision rows.`,
+    );
+    if (row.status === "passed") {
+      persistenceInvariant(
+        row.headState === "passed" && row.headAttemptId === row.id && row.board === "done",
+        `Attempt ${row.id} has a drifted pass projection.`,
+      );
+    }
+    persistenceInvariant(
+      row.board !== "done" || (row.status === "passed" && row.headState === "passed"),
+      `Attempt ${row.id} has an unreviewed done projection.`,
+    );
+  }
+  persistenceInvariant(!database.prepare(`
+    SELECT h.mission_id FROM mission_delivery_heads h
+    LEFT JOIN mission_deliveries d
+      ON d.mission_id=h.mission_id AND d.id=h.current_delivery_id
+    WHERE (h.state='completed' AND d.id IS NULL)
+       OR (h.state<>'completed' AND h.current_delivery_id IS NOT NULL)
+    LIMIT 1
+  `).get(), "Delivery head has drifted.");
+  persistenceInvariant(!database.prepare(`
+    SELECT h.mission_id FROM mission_delivery_heads h
+    WHERE h.next_event_sequence<>(SELECT count(*)+1 FROM review_events e
+                                  WHERE e.mission_id=h.mission_id)
+    LIMIT 1
+  `).get(), "Review event history has drifted.");
+}
+
+export function reconcileReviewPersistence(
+  database: DatabaseSync,
+  dependencies: { clock?: () => Date; randomUUID?: () => string } = {},
+): { interruptedAttemptIds: string[] } {
+  assertReviewPersistenceInvariants(database);
+  const now = (dependencies.clock ?? (() => new Date()))().toISOString();
+  const ids = database.prepare(`
+    SELECT id FROM review_attempts
+    WHERE status='calling' AND lease_expires_at<=? ORDER BY id
+  `).all(now) as Array<{ id: string }>;
+  const interruptedAttemptIds: string[] = [];
+  for (const { id } of ids) {
+    database.exec("BEGIN IMMEDIATE");
+    try {
+      const row = database.prepare(`
+        SELECT project_id AS projectId,mission_id AS missionId,
+               work_item_id AS workItemId,operation_id AS operationId
+        FROM review_attempts WHERE id=? AND status='calling' AND lease_expires_at<=?
+      `).get(id, now) as Record<string, string> | undefined;
+      if (!row) {
+        database.exec("COMMIT");
+        continue;
+      }
+      database.prepare(`
+        UPDATE review_attempts SET status='interrupted',error_category='interrupted',finished_at=?
+        WHERE id=? AND status='calling'
+      `).run(now, id);
+      database.prepare(`
+        UPDATE review_model_calls SET status='interrupted',error_category='interrupted',finished_at=?
+        WHERE attempt_id=? AND status='calling'
+      `).run(now, id);
+      persistenceInvariant(database.prepare(`
+        UPDATE work_item_review_heads
+        SET state='pending_review',current_attempt_id=NULL,version=version+1,updated_at=?
+        WHERE work_item_id=? AND current_attempt_id=? AND state='reviewing'
+      `).run(now, row.workItemId, id).changes === 1, "Interrupted attempt lost its head.");
+      const response = JSON.stringify({
+        attemptId: id,
+        errorCategory: "interrupted",
+        retry: { attemptId: id, kind: "new-provider-attempt", providerCallRequired: true },
+        state: "failed",
+      });
+      persistenceInvariant(database.prepare(`
+        UPDATE review_operations SET status='completed',http_status=409,response_json=?,updated_at=?
+        WHERE project_id=? AND id=? AND status='pending'
+      `).run(response, now, row.projectId, row.operationId).changes === 1,
+      "Interrupted attempt lost its receipt.");
+      const eventHead = database.prepare(`
+        SELECT next_event_sequence AS sequence FROM mission_delivery_heads
+        WHERE project_id=? AND mission_id=?
+      `).get(row.projectId, row.missionId) as { sequence: number } | undefined;
+      persistenceInvariant(eventHead, "Interrupted attempt lost its event head.");
+      database.prepare(`
+        INSERT INTO review_events(
+          id,project_id,mission_id,sequence,type,actor_type,actor_id,payload_json,created_at
+        ) VALUES (?, ?, ?, ?, 'review_attempt_interrupted','system',NULL,?,?)
+      `).run(
+        (dependencies.randomUUID ?? randomUUID)(),
+        row.projectId,
+        row.missionId,
+        eventHead.sequence,
+        JSON.stringify({ attemptId: id, category: "interrupted" }),
+        now,
+      );
+      persistenceInvariant(database.prepare(`
+        UPDATE mission_delivery_heads
+        SET next_event_sequence=next_event_sequence+1,updated_at=?
+        WHERE project_id=? AND mission_id=? AND next_event_sequence=?
+      `).run(now, row.projectId, row.missionId, eventHead.sequence).changes === 1,
+      "Interrupted attempt lost its event sequence.");
+      database.exec("COMMIT");
+      interruptedAttemptIds.push(id);
+    } catch (error) {
+      try {
+        database.exec("ROLLBACK");
+      } catch {
+        // Preserve the fail-closed recovery error.
+      }
+      throw error;
+    }
+  }
+  assertReviewPersistenceInvariants(database);
+  return { interruptedAttemptIds };
 }

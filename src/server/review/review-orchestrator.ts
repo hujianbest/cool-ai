@@ -29,6 +29,12 @@ export const REVIEW_PROVIDER_CALL_TIMEOUT_MILLISECONDS = 90_000;
 export const REVIEW_HEARTBEAT_INTERVAL_MILLISECONDS = 30_000;
 export const REVIEW_LEASE_MILLISECONDS = 120_000;
 
+export type ReviewFaultPoint =
+  | "after_provider_response"
+  | "before_output_checkpoint"
+  | "after_output_checkpoint"
+  | "before_business_finalize";
+
 export class ReviewOrchestratorError extends Error {
   constructor(
     public readonly code: string,
@@ -88,6 +94,7 @@ export type ReviewOrchestratorDependencies = {
     },
   ) => ReviewOperationResponse | void;
   beforeFinalizeStep?: (step: ReviewFinalizeStep) => void;
+  fault?: (point: ReviewFaultPoint) => void;
   randomUUID?: () => string;
   scheduleHeartbeat?: (callback: () => void, milliseconds: number) => () => void;
 };
@@ -535,6 +542,7 @@ function invokeLocalFinalize(
       "Durable review output cannot be read for local finalize.",
     );
   }
+  dependencies.fault?.("before_business_finalize");
   try {
     const finalized = dependencies.localFinalize?.(database, {
       attemptId: response.attemptId,
@@ -637,6 +645,7 @@ export async function runReviewOperation(
     "primary",
     1,
   );
+  dependencies.fault?.("after_provider_response");
   const primaryUsage = validUsage(primary);
   if (primary.status !== "succeeded" || primary.content === null || !primaryUsage) {
     const status = primary.status === "succeeded" || primary.status === "usage_invalid"
@@ -667,6 +676,7 @@ export async function runReviewOperation(
       "repair",
       2,
     );
+    dependencies.fault?.("after_provider_response");
     const repairUsage = validUsage(repair);
     if (repair.status !== "succeeded" || repair.content === null || !repairUsage) {
       const status = repair.status === "succeeded" || repair.status === "usage_invalid"
@@ -694,6 +704,7 @@ export async function runReviewOperation(
         clock(),
       );
     }
+    dependencies.fault?.("before_output_checkpoint");
     const response = checkpoint(
       database,
       input,
@@ -703,6 +714,7 @@ export async function runReviewOperation(
       checked.output,
       clock(),
     );
+    dependencies.fault?.("after_output_checkpoint");
     return invokeLocalFinalize(database, response, dependencies);
   }
 
@@ -715,6 +727,7 @@ export async function runReviewOperation(
       clock(),
     );
   }
+  dependencies.fault?.("before_output_checkpoint");
   const response = checkpoint(
     database,
     input,
@@ -724,5 +737,6 @@ export async function runReviewOperation(
     checked.output,
     clock(),
   );
+  dependencies.fault?.("after_output_checkpoint");
   return invokeLocalFinalize(database, response, dependencies);
 }
