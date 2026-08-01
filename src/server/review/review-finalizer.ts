@@ -1,6 +1,7 @@
 import { createHash, randomUUID as nodeRandomUUID } from "node:crypto";
 import type { DatabaseSync } from "node:sqlite";
 
+import { commitReviewMemoryCandidateTx } from "@/src/server/review/memory-committer";
 import type { ValidatedReviewOutput } from "@/src/server/review/review-schema";
 import {
   reviewOperationResponseSchema,
@@ -315,23 +316,42 @@ export function finalizeCheckpointedReview(
     before("memory-candidates");
     if (output.decision.choice === "pass") {
       output.memoryCandidates.forEach((candidate, position) => {
+        const candidateId = randomUUID();
+        const content = candidate.content.trim();
         database.prepare(`
           INSERT INTO review_memory_candidates(
             id,attempt_id,position,type,content,source_type,source_id,
             source_version,supersedes_memory_id,created_at
           ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
         `).run(
-          randomUUID(),
+          candidateId,
           row.attemptId,
           position,
           candidate.type,
-          candidate.content.trim(),
+          content,
           candidate.source.type,
           candidate.source.id,
           candidate.source.version,
           candidate.supersedesMemoryId,
           now,
         );
+        commitReviewMemoryCandidateTx(database, {
+          attemptId: row.attemptId,
+          candidate: {
+            content,
+            id: candidateId,
+            sourceId: candidate.source.id,
+            sourceType: candidate.source.type,
+            sourceVersion: candidate.source.version,
+            supersedesMemoryId: candidate.supersedesMemoryId,
+            type: candidate.type,
+          },
+          decisionId,
+          memoryId: randomUUID(),
+          now,
+          projectId: row.projectId,
+          reviewerAgentId: row.reviewerAgentId,
+        });
       });
     }
 
