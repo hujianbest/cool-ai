@@ -105,11 +105,11 @@ describe("merge DB commit and restart recovery", () => {
       expect(fixture.database.prepare(`
         SELECT e.status,e.merged_at AS mergedAt,w.status AS workItemStatus,
                r.execution_id AS resultExecutionId,r.staged_result_id AS stagedResultId,
-               r.merge_journal_id AS journalId,r.status AS resultStatus,
+               r.merge_journal_id AS journalId,'awaiting_review' AS resultStatus,
                j.status AS journalStatus
         FROM executions e
         JOIN work_items w ON w.id=e.work_item_id
-        JOIN work_item_execution_results r ON r.execution_id=e.id
+        JOIN work_item_result_versions r ON r.execution_id=e.id
         JOIN execution_merge_journals j ON j.id=r.merge_journal_id
         WHERE e.id=?
       `).get(EXECUTION_ID)).toMatchObject({
@@ -142,7 +142,7 @@ describe("merge DB commit and restart recovery", () => {
       });
       expect(replay).toEqual(committed);
       expect(fixture.database.prepare(
-        "SELECT count(*) AS count FROM work_item_execution_results",
+        "SELECT count(*) AS count FROM work_item_result_versions",
       ).get()).toEqual({ count: 1 });
       expect(fixture.database.prepare(
         "SELECT count(*) AS count FROM execution_events",
@@ -179,7 +179,7 @@ describe("merge DB commit and restart recovery", () => {
       "SELECT status,merged_at AS mergedAt FROM executions WHERE id=?",
     ).get(EXECUTION_ID)).toEqual({ mergedAt: null, status: "staged" });
     expect(fixture.database.prepare(
-      "SELECT count(*) AS count FROM work_item_execution_results",
+      "SELECT count(*) AS count FROM work_item_result_versions",
     ).get()).toEqual({ count: 0 });
     expect(operationState(fixture.database)).toMatchObject({
       actionStatus: "interrupted",
@@ -222,7 +222,7 @@ describe("merge DB commit and restart recovery", () => {
       SELECT e.status,e.merged_at AS mergedAt,r.id AS resultId,
              r.staged_result_id AS stagedResultId,j.status AS journalStatus
       FROM executions e
-      JOIN work_item_execution_results r ON r.execution_id=e.id
+      JOIN work_item_result_versions r ON r.execution_id=e.id
       JOIN execution_merge_journals j ON j.id=r.merge_journal_id
       WHERE e.id=?
     `).get(EXECUTION_ID) as Record<string, unknown>;
@@ -389,6 +389,16 @@ function seedDatabase(
     VALUES ('${PROJECT_ID}','agent','${NOW}');
     INSERT INTO missions (id,project_id,title,goal,version,created_at,updated_at)
     VALUES ('mission','${PROJECT_ID}','Mission','Goal',1,'${NOW}','${NOW}');
+    INSERT INTO mission_delivery_heads(
+      mission_id,project_id,context_version,state,current_delivery_id,current_operation_id,
+      generation_lease_token,generation_lease_expires_at,last_error_code,
+      next_event_sequence,version,updated_at
+    ) VALUES ('mission','${PROJECT_ID}',1,'ongoing',NULL,NULL,NULL,NULL,NULL,2,1,'${NOW}');
+    INSERT INTO review_events(
+      id,project_id,mission_id,sequence,type,actor_type,actor_id,payload_json,created_at
+    ) VALUES ('merge-review-init','${PROJECT_ID}','mission',1,
+      'mission_review_initialized','system',NULL,
+      '{"contextVersion":1,"headVersion":1,"missionId":"mission"}','${NOW}');
     INSERT INTO work_items (
       id,mission_id,title,description,status,assignee_agent_id,version,created_at,updated_at
     ) VALUES ('work','mission','Work','','in_progress','agent',1,'${NOW}','${NOW}');

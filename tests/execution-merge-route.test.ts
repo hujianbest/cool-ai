@@ -75,6 +75,17 @@ function seedEligibleTask(): void {
       VALUES ('${PROJECT_ID}','merge-route-agent','${NOW}');
       INSERT INTO missions (id,project_id,title,goal,version,created_at,updated_at)
       VALUES ('merge-route-mission','${PROJECT_ID}','Mission','Ship',1,'${NOW}','${NOW}');
+      INSERT INTO mission_delivery_heads(
+        mission_id,project_id,context_version,state,current_delivery_id,current_operation_id,
+        generation_lease_token,generation_lease_expires_at,last_error_code,
+        next_event_sequence,version,updated_at
+      ) VALUES ('merge-route-mission','${PROJECT_ID}',1,'ongoing',
+        NULL,NULL,NULL,NULL,NULL,2,1,'${NOW}');
+      INSERT INTO review_events(
+        id,project_id,mission_id,sequence,type,actor_type,actor_id,payload_json,created_at
+      ) VALUES ('merge-route-review-init','${PROJECT_ID}','merge-route-mission',1,
+        'mission_review_initialized','system',NULL,
+        '{"contextVersion":1,"headVersion":1,"missionId":"merge-route-mission"}','${NOW}');
       INSERT INTO work_items (
         id,mission_id,title,description,status,assignee_agent_id,version,created_at,updated_at
       ) VALUES (

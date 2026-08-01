@@ -109,6 +109,16 @@ function seed(
       ('project','executor','${NOW}'),('project','reviewer','${NOW}');
     INSERT INTO missions (id,project_id,title,goal,version,created_at,updated_at)
     VALUES ('mission','project','Fresh v6 mission','Ship safely',1,'${NOW}','${NOW}');
+    INSERT INTO mission_delivery_heads(
+      mission_id,project_id,context_version,state,current_delivery_id,current_operation_id,
+      generation_lease_token,generation_lease_expires_at,last_error_code,
+      next_event_sequence,version,updated_at
+    ) VALUES ('mission','project',1,'ongoing',NULL,NULL,NULL,NULL,NULL,2,1,'${NOW}');
+    INSERT INTO review_events(
+      id,project_id,mission_id,sequence,type,actor_type,actor_id,payload_json,created_at
+    ) VALUES ('mission-review-initialized','project','mission',1,
+      'mission_review_initialized','system',NULL,
+      '{"contextVersion":1,"headVersion":1,"missionId":"mission"}','${NOW}');
     INSERT INTO work_items (
       id,mission_id,title,description,status,assignee_agent_id,version,created_at,updated_at
     ) VALUES ('work','mission','Fresh work item','Change a file','in_progress','executor',1,'${NOW}','${NOW}');

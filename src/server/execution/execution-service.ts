@@ -416,6 +416,12 @@ function qualifyTask(
   if (basic.status !== "in_progress") {
     return rejection(input.workItemId, "NOT_IN_PROGRESS");
   }
+  const reviewHead = database.prepare(`
+    SELECT state FROM work_item_review_heads WHERE work_item_id=?
+  `).get(input.workItemId) as { state: string } | undefined;
+  if (reviewHead && reviewHead.state !== "rework") {
+    return rejection(input.workItemId, "REVIEW_STATE_CONFLICT");
+  }
   if (!basic.agentId) return rejection(input.workItemId, "UNASSIGNED");
   if (!database.prepare(
     "SELECT 1 FROM project_memberships WHERE project_id=? AND agent_id=?",

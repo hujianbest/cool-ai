@@ -244,39 +244,105 @@ function attemptDto(database: DatabaseSync, attemptId: string | null): ReviewAtt
   };
 }
 
-export function initializeFirstResultReviewTx(
+type ResultVersionInput = {
+  executionId: string;
+  executorAgentId: string;
+  mergeJournalId: string;
+  missionId: string;
+  projectId: string;
+  resultId: string;
+  stagedResultId: string;
+  workItemId: string;
+};
+
+function appendResultEventTx(
   database: DatabaseSync,
   input: {
     missionId: string;
+    payload: Record<string, unknown>;
     projectId: string;
-    resultId: string;
-    workItemId: string;
+    type: "result_version_created" | "rework_requested";
   },
 ): void {
   const now = new Date().toISOString();
-  const existingMissionHead = database.prepare(
-    "SELECT 1 FROM mission_delivery_heads WHERE mission_id=?",
-  ).get(input.missionId);
-  if (!existingMissionHead) {
-    database.prepare(`
-      INSERT INTO mission_delivery_heads(
-        mission_id,project_id,context_version,state,current_delivery_id,current_operation_id,
-        generation_lease_token,generation_lease_expires_at,last_error_code,
-        next_event_sequence,version,updated_at
-      ) VALUES (?, ?, 1, 'ongoing', NULL, NULL, NULL, NULL, NULL, 2, 1, ?)
-    `).run(input.missionId, input.projectId, now);
-    database.prepare(`
-      INSERT INTO review_events(
-        id,project_id,mission_id,sequence,type,actor_type,actor_id,payload_json,created_at
-      ) VALUES (?, ?, ?, 1, 'mission_review_initialized', 'system', NULL, ?, ?)
-    `).run(
-      randomUUID(),
-      input.projectId,
-      input.missionId,
-      JSON.stringify({ contextVersion: 1, headVersion: 1, missionId: input.missionId }),
-      now,
+  const deliveryHead = database.prepare(`
+    SELECT next_event_sequence AS sequence
+    FROM mission_delivery_heads
+    WHERE mission_id=? AND project_id=?
+  `).get(input.missionId, input.projectId) as { sequence: number } | undefined;
+  if (!deliveryHead) {
+    throw new ReviewSliceError(
+      "REVIEW_STATE_CONFLICT",
+      409,
+      "Mission review context is not initialized.",
     );
   }
+  database.prepare(`
+    INSERT INTO review_events(
+      id,project_id,mission_id,sequence,type,actor_type,actor_id,payload_json,created_at
+    ) VALUES (?, ?, ?, ?, ?, 'system', NULL, ?, ?)
+  `).run(
+    randomUUID(),
+    input.projectId,
+    input.missionId,
+    deliveryHead.sequence,
+    input.type,
+    JSON.stringify(input.payload),
+    now,
+  );
+  const advanced = database.prepare(`
+    UPDATE mission_delivery_heads
+    SET next_event_sequence=next_event_sequence+1,updated_at=?
+    WHERE mission_id=? AND project_id=? AND next_event_sequence=?
+  `).run(now, input.missionId, input.projectId, deliveryHead.sequence);
+  if (advanced.changes !== 1) {
+    throw new ReviewSliceError("REVIEW_STATE_CONFLICT", 409, "Review event sequence changed.");
+  }
+}
+
+function insertResultVersionTx(
+  database: DatabaseSync,
+  input: ResultVersionInput,
+  version: number,
+  supersedesResultId: string | null,
+): void {
+  database.prepare(`
+    INSERT INTO work_item_result_versions (
+      id,project_id,mission_id,work_item_id,version,execution_id,staged_result_id,
+      merge_journal_id,supersedes_result_id,executor_agent_id,created_at
+    ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?,
+      strftime('%Y-%m-%dT%H:%M:%fZ','now'))
+  `).run(
+    input.resultId,
+    input.projectId,
+    input.missionId,
+    input.workItemId,
+    version,
+    input.executionId,
+    input.stagedResultId,
+    input.mergeJournalId,
+    supersedesResultId,
+    input.executorAgentId,
+  );
+}
+
+export function initializeFirstResultHeadTx(
+  database: DatabaseSync,
+  input: ResultVersionInput,
+): { resultId: string; version: number } {
+  const existing = database.prepare(`
+    SELECT
+      (SELECT COUNT(*) FROM work_item_result_versions WHERE work_item_id=?) AS results,
+      (SELECT COUNT(*) FROM work_item_review_heads WHERE work_item_id=?) AS heads
+  `).get(input.workItemId, input.workItemId) as { heads: number; results: number };
+  if (existing.heads !== 0 || existing.results !== 0) {
+    throw new ReviewSliceError(
+      "REVIEW_STATE_CONFLICT",
+      409,
+      "The first result head already exists.",
+    );
+  }
+  insertResultVersionTx(database, input, 1, null);
   database.prepare(`
     INSERT INTO work_item_review_heads (
       work_item_id,project_id,mission_id,current_result_id,current_attempt_id,
@@ -284,25 +350,142 @@ export function initializeFirstResultReviewTx(
     ) VALUES (?, ?, ?, ?, NULL, 'pending_review', 1,
       strftime('%Y-%m-%dT%H:%M:%fZ','now'))
   `).run(input.workItemId, input.projectId, input.missionId, input.resultId);
-  const deliveryHead = database.prepare(
-    "SELECT next_event_sequence AS sequence FROM mission_delivery_heads WHERE mission_id=?",
-  ).get(input.missionId) as { sequence: number };
-  database.prepare(`
-    INSERT INTO review_events(
-      id,project_id,mission_id,sequence,type,actor_type,actor_id,payload_json,created_at
-    ) VALUES (?, ?, ?, ?, 'result_version_created', 'system', NULL, ?, ?)
+  appendResultEventTx(database, {
+    missionId: input.missionId,
+    payload: { resultId: input.resultId, resultVersion: 1, workItemId: input.workItemId },
+    projectId: input.projectId,
+    type: "result_version_created",
+  });
+  return { resultId: input.resultId, version: 1 };
+}
+
+export function advanceResultHeadTx(
+  database: DatabaseSync,
+  input: ResultVersionInput & {
+    expectedHeadVersion: number;
+    expectedResultId: string;
+  },
+): { resultId: string; version: number } {
+  const current = database.prepare(`
+    SELECT h.project_id AS projectId,h.mission_id AS missionId,
+           h.current_result_id AS resultId,h.current_attempt_id AS attemptId,
+           h.state,h.version AS headVersion,r.version AS resultVersion
+    FROM work_item_review_heads h
+    JOIN work_item_result_versions r
+      ON r.work_item_id=h.work_item_id AND r.id=h.current_result_id
+    WHERE h.work_item_id=?
+  `).get(input.workItemId) as {
+    attemptId: string | null;
+    headVersion: number;
+    missionId: string;
+    projectId: string;
+    resultId: string;
+    resultVersion: number;
+    state: string;
+  } | undefined;
+  if (
+    !current
+    || current.projectId !== input.projectId
+    || current.missionId !== input.missionId
+    || current.resultId !== input.expectedResultId
+    || current.headVersion !== input.expectedHeadVersion
+    || current.state !== "rework"
+    || current.attemptId !== null
+  ) {
+    throw new ReviewSliceError("REVIEW_STATE_CONFLICT", 409, "Result head changed before merge.");
+  }
+  const nextVersion = current.resultVersion + 1;
+  insertResultVersionTx(database, input, nextVersion, current.resultId);
+  const updated = database.prepare(`
+    UPDATE work_item_review_heads
+    SET current_result_id=?,current_attempt_id=NULL,state='pending_review',
+        version=version+1,updated_at=strftime('%Y-%m-%dT%H:%M:%fZ','now')
+    WHERE work_item_id=? AND project_id=? AND mission_id=?
+      AND current_result_id=? AND current_attempt_id IS NULL
+      AND state='rework' AND version=?
   `).run(
-    randomUUID(),
+    input.resultId,
+    input.workItemId,
     input.projectId,
     input.missionId,
-    deliveryHead.sequence,
-    JSON.stringify({ resultId: input.resultId, resultVersion: 1, workItemId: input.workItemId }),
-    now,
+    current.resultId,
+    current.headVersion,
   );
-  database.prepare(`
-    UPDATE mission_delivery_heads SET next_event_sequence=next_event_sequence+1
-    WHERE mission_id=? AND next_event_sequence=?
-  `).run(input.missionId, deliveryHead.sequence);
+  if (updated.changes !== 1) {
+    throw new ReviewSliceError("REVIEW_STATE_CONFLICT", 409, "Result head merge CAS was lost.");
+  }
+  appendResultEventTx(database, {
+    missionId: input.missionId,
+    payload: {
+      resultId: input.resultId,
+      resultVersion: nextVersion,
+      supersedesResultId: current.resultId,
+      workItemId: input.workItemId,
+    },
+    projectId: input.projectId,
+    type: "result_version_created",
+  });
+  return { resultId: input.resultId, version: nextVersion };
+}
+
+export function requestResultReworkTx(
+  database: DatabaseSync,
+  input: {
+    expectedAttemptId: string | null;
+    expectedHeadVersion: number;
+    expectedResultId: string;
+    workItemId: string;
+  },
+): void {
+  const current = database.prepare(`
+    SELECT project_id AS projectId,mission_id AS missionId,
+           current_result_id AS resultId,current_attempt_id AS attemptId,state,version
+    FROM work_item_review_heads WHERE work_item_id=?
+  `).get(input.workItemId) as {
+    attemptId: string | null;
+    missionId: string;
+    projectId: string;
+    resultId: string;
+    state: string;
+    version: number;
+  } | undefined;
+  const validSource = current && (
+    (current.state === "reviewing"
+      && input.expectedAttemptId !== null
+      && current.attemptId === input.expectedAttemptId)
+    || (current.state === "waiting_owner"
+      && input.expectedAttemptId === null
+      && current.attemptId === null)
+  );
+  if (
+    !validSource
+    || current.resultId !== input.expectedResultId
+    || current.version !== input.expectedHeadVersion
+  ) {
+    throw new ReviewSliceError("REVIEW_STATE_CONFLICT", 409, "Stale rework request.");
+  }
+  const updated = database.prepare(`
+    UPDATE work_item_review_heads
+    SET state='rework',current_attempt_id=NULL,version=version+1,
+        updated_at=strftime('%Y-%m-%dT%H:%M:%fZ','now')
+    WHERE work_item_id=? AND current_result_id=? AND version=? AND state=?
+      AND current_attempt_id IS ?
+  `).run(
+    input.workItemId,
+    input.expectedResultId,
+    input.expectedHeadVersion,
+    current.state,
+    input.expectedAttemptId,
+  );
+  if (updated.changes !== 1) {
+    throw new ReviewSliceError("REVIEW_STATE_CONFLICT", 409, "Rework head CAS was lost.");
+  }
+  appendResultEventTx(database, {
+    missionId: current.missionId,
+    payload: { resultId: current.resultId, workItemId: input.workItemId },
+    projectId: current.projectId,
+    type: "rework_requested",
+  });
 }
 
 export function readReviewWorkspace(

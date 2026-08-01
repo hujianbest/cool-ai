@@ -1,0 +1,112 @@
+# hf-gate-run
+# label: t4-red
+# command: npm.cmd test -- tests/result-version-rework.test.ts tests/execution-rework-integration.test.ts
+# started: 2026-08-01T04:46:03+00:00
+
+> collaboration-cockpit@0.1.0 test
+> vitest run tests/result-version-rework.test.ts tests/execution-rework-integration.test.ts
+
+
+ RUN  v4.1.10 D:/cool-ai
+
+(node:300) ExperimentalWarning: SQLite is an experimental feature and might change at any time
+(Use `node --trace-warnings ...` to show where the warning was created)
+(node:4088) ExperimentalWarning: SQLite is an experimental feature and might change at any time
+(Use `node --trace-warnings ...` to show where the warning was created)
+ ❯ tests/execution-rework-integration.test.ts (2 tests | 2 failed) 13ms
+     × keeps merged executions terminal while moving only the result head 10ms
+     × does not let a late old-attempt rework overwrite a newer result 1ms
+ ❯ tests/result-version-rework.test.ts (3 tests | 3 failed) 957ms
+     × atomically initializes result v1, review head and the next mission event 326ms
+     × advances only a current rework head to consecutive immutable versions 316ms
+     × allows one concurrent next-version winner and leaves no branch 313ms
+
+⎯⎯⎯⎯⎯⎯⎯ Failed Tests 5 ⎯⎯⎯⎯⎯⎯⎯
+
+ FAIL  tests/execution-rework-integration.test.ts > execution rework result integration > keeps merged executions terminal while moving only the result head
+AssertionError: expected undefined to be type of 'function'
+
+Expected: "function"
+Received: "undefined"
+
+ ❯ tests/execution-rework-integration.test.ts:134:48
+    132|
+    133|   it("keeps merged executions terminal while moving only the result he…
+    134|     expect(rework.initializeFirstResultHeadTx).toBeTypeOf("function");
+       |                                                ^
+    135|     expect(rework.requestResultReworkTx).toBeTypeOf("function");
+    136|     expect(rework.advanceResultHeadTx).toBeTypeOf("function");
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[1/5]⎯
+
+ FAIL  tests/execution-rework-integration.test.ts > execution rework result integration > does not let a late old-attempt rework overwrite a newer result
+AssertionError: expected undefined to be type of 'function'
+
+Expected: "function"
+Received: "undefined"
+
+ ❯ tests/execution-rework-integration.test.ts:180:48
+    178|
+    179|   it("does not let a late old-attempt rework overwrite a newer result"…
+    180|     expect(rework.initializeFirstResultHeadTx).toBeTypeOf("function");
+       |                                                ^
+    181|     expect(rework.requestResultReworkTx).toBeTypeOf("function");
+    182|     expect(rework.advanceResultHeadTx).toBeTypeOf("function");
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[2/5]⎯
+
+ FAIL  tests/result-version-rework.test.ts > immutable result version chain > atomically initializes result v1, review head and the next mission event
+AssertionError: expected undefined to be type of 'function'
+
+Expected: "function"
+Received: "undefined"
+
+ ❯ tests/result-version-rework.test.ts:133:56
+    131| describe("immutable result version chain", () => {
+    132|   it("atomically initializes result v1, review head and the next missi…
+    133|     expect(resultVersions.initializeFirstResultHeadTx).toBeTypeOf("fun…
+       |                                                        ^
+    134|     database.exec("BEGIN IMMEDIATE");
+    135|     const created = resultVersions.initializeFirstResultHeadTx!(databa…
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[3/5]⎯
+
+ FAIL  tests/result-version-rework.test.ts > immutable result version chain > advances only a current rework head to consecutive immutable versions
+AssertionError: expected undefined to be type of 'function'
+
+Expected: "function"
+Received: "undefined"
+
+ ❯ tests/result-version-rework.test.ts:167:56
+    165|
+    166|   it("advances only a current rework head to consecutive immutable ver…
+    167|     expect(resultVersions.initializeFirstResultHeadTx).toBeTypeOf("fun…
+       |                                                        ^
+    168|     expect(resultVersions.requestResultReworkTx).toBeTypeOf("function"…
+    169|     expect(resultVersions.advanceResultHeadTx).toBeTypeOf("function");
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[4/5]⎯
+
+ FAIL  tests/result-version-rework.test.ts > immutable result version chain > allows one concurrent next-version winner and leaves no branch
+AssertionError: expected undefined to be type of 'function'
+
+Expected: "function"
+Received: "undefined"
+
+ ❯ tests/result-version-rework.test.ts:202:56
+    200|
+    201|   it("allows one concurrent next-version winner and leaves no branch",…
+    202|     expect(resultVersions.initializeFirstResultHeadTx).toBeTypeOf("fun…
+       |                                                        ^
+    203|     expect(resultVersions.requestResultReworkTx).toBeTypeOf("function"…
+    204|     expect(resultVersions.advanceResultHeadTx).toBeTypeOf("function");
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[5/5]⎯
+
+
+ Test Files  2 failed (2)
+      Tests  5 failed (5)
+   Start at  12:46:04
+   Duration  3.85s (transform 337ms, setup 879ms, import 682ms, tests 971ms, environment 3.64s)
+
+# exit: 1

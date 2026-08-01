@@ -540,6 +540,7 @@ export const taskRejectionSchema = z.object({
     "TASK_ACTIVE",
     "AGENT_ACTIVE",
     "PROJECT_LIMIT",
+    "REVIEW_STATE_CONFLICT",
   ]),
   messageKey: z.string().min(1),
 }).strict();

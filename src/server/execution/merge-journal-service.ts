@@ -28,7 +28,10 @@ import {
   recoveryMergeFileStatusSchema,
   type RecoveryMergeFileStatus,
 } from "@/src/shared/execution-contracts";
-import { initializeFirstResultReviewTx } from "@/src/server/review/review-slice-service";
+import {
+  advanceResultHeadTx,
+  initializeFirstResultHeadTx,
+} from "@/src/server/review/review-slice-service";
 
 export type MergeFaultPoint =
   | "before_prepare"
@@ -1347,28 +1350,40 @@ function commitDatabaseFacts(
       throw new ExecutionError("EXECUTION_STATE_CONFLICT", 409, "Execution is not staged.");
     }
     const resultId = randomUUID();
-    database.prepare(`
-      INSERT INTO work_item_result_versions (
-        id,project_id,mission_id,work_item_id,version,execution_id,staged_result_id,
-        merge_journal_id,supersedes_result_id,executor_agent_id,created_at
-      ) VALUES (?, ?, ?, ?, 1, ?, ?, ?, NULL, ?,
-        strftime('%Y-%m-%dT%H:%M:%fZ','now'))
-    `).run(
-      resultId,
-      journal.projectId,
-      execution.missionId,
-      execution.workItemId,
-      journal.executionId,
-      journal.stagedResultId,
-      journal.id,
-      execution.agentId,
-    );
-    initializeFirstResultReviewTx(database, {
+    const resultInput = {
+      executionId: journal.executionId,
+      executorAgentId: execution.agentId,
+      mergeJournalId: journal.id,
       missionId: execution.missionId,
       projectId: journal.projectId,
       resultId,
+      stagedResultId: journal.stagedResultId,
       workItemId: execution.workItemId,
-    });
+    };
+    const currentHead = database.prepare(`
+      SELECT current_result_id AS resultId,state,version
+      FROM work_item_review_heads WHERE work_item_id=?
+    `).get(execution.workItemId) as {
+      resultId: string;
+      state: string;
+      version: number;
+    } | undefined;
+    if (!currentHead) {
+      initializeFirstResultHeadTx(database, resultInput);
+    } else {
+      if (currentHead.state !== "rework") {
+        throw new ExecutionError(
+          "REVIEW_STATE_CONFLICT",
+          409,
+          "The review head is not ready for a replacement result.",
+        );
+      }
+      advanceResultHeadTx(database, {
+        ...resultInput,
+        expectedHeadVersion: currentHead.version,
+        expectedResultId: currentHead.resultId,
+      });
+    }
     const updated = database.prepare(`
       UPDATE executions
       SET status='merged',merged_at=strftime('%Y-%m-%dT%H:%M:%fZ','now'),
@@ -2206,30 +2221,54 @@ export async function resolveManualRecovery(input: {
       );
     }
     const execution = input.database.prepare(`
-      SELECT mission_id AS missionId,work_item_id AS workItemId
+      SELECT mission_id AS missionId,work_item_id AS workItemId,agent_id AS agentId
       FROM executions WHERE project_id=? AND id=?
     `).get(input.projectId, input.executionId) as {
+      agentId: string;
       missionId: string;
       workItemId: string;
     };
     if (input.action === "recovered_new") {
-      input.database.prepare(`
-        INSERT INTO work_item_result_versions (
-          id,project_id,mission_id,work_item_id,version,execution_id,staged_result_id,
-          merge_journal_id,supersedes_result_id,executor_agent_id,created_at
-        ) VALUES (?, ?, ?, ?, 1, ?, ?, ?, NULL,
-          (SELECT agent_id FROM executions WHERE id=?),
-          strftime('%Y-%m-%dT%H:%M:%fZ','now'))
-      `).run(
-        randomUUID(),
-        input.projectId,
-        execution.missionId,
-        execution.workItemId,
-        input.executionId,
-        journal.stagedResultId,
-        journal.id,
-        input.executionId,
-      );
+      const existingResult = input.database.prepare(`
+        SELECT id FROM work_item_result_versions
+        WHERE project_id=? AND execution_id=? AND merge_journal_id=?
+      `).get(input.projectId, input.executionId, journal.id) as { id: string } | undefined;
+      if (!existingResult) {
+        const resultInput = {
+          executionId: input.executionId,
+          executorAgentId: execution.agentId,
+          mergeJournalId: journal.id,
+          missionId: execution.missionId,
+          projectId: input.projectId,
+          resultId: randomUUID(),
+          stagedResultId: journal.stagedResultId,
+          workItemId: execution.workItemId,
+        };
+        const currentHead = input.database.prepare(`
+          SELECT current_result_id AS resultId,state,version
+          FROM work_item_review_heads WHERE work_item_id=?
+        `).get(execution.workItemId) as {
+          resultId: string;
+          state: string;
+          version: number;
+        } | undefined;
+        if (!currentHead) {
+          initializeFirstResultHeadTx(input.database, resultInput);
+        } else {
+          if (currentHead.state !== "rework") {
+            throw new ExecutionError(
+              "REVIEW_STATE_CONFLICT",
+              409,
+              "The review head is not ready for recovered result.",
+            );
+          }
+          advanceResultHeadTx(input.database, {
+            ...resultInput,
+            expectedHeadVersion: currentHead.version,
+            expectedResultId: currentHead.resultId,
+          });
+        }
+      }
     }
     const executionStatus = input.action === "recovered_new"
       ? "merged"
