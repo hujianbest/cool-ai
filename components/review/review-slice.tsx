@@ -14,6 +14,11 @@ export {
   type ReviewPublicContent,
 } from "@/components/review/review-material-panel";
 export {
+  ReviewOutcomesPanel,
+  type ReviewOutcomeAction,
+  type ReviewOutcomesPanelProps,
+} from "@/components/review/review-outcomes-panel";
+export {
   ReviewWorkspace,
   type ReviewWorkspaceProps,
 } from "@/components/review/review-workspace";

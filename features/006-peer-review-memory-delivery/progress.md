@@ -4,5 +4,5 @@
 - 当前阶段: build
 - 执行模式: auto
 - 已加载扩展: ext-ui-design
-- 下一步: 执行 T-20：交付返工、升级与逐 attempt 历史 UI
-- 门禁输出: RESULT: FAIL (11 项未通过) — 不得进入 verify
+- 下一步: 执行 T-21：交付五类 memory actor/source/version/history UI
+- 门禁输出: RESULT: PASS — 可进入 build
