@@ -102,6 +102,11 @@ function detail(
       mergeFinalBytes: 512,
       observedFinalBytes: 4_096,
       observedPathCount: 101,
+      requiredValidations: {
+        ready: true,
+        requiredCount: 1,
+        validCount: 1,
+      },
       stagedHash: STAGED_HASH,
     },
   };
@@ -465,4 +470,130 @@ describe("T-29 execution review UI", () => {
       expect(within(card).queryByRole("button", { name: "批准命令" })).not.toBeInTheDocument();
     },
   );
+
+  it("treats zero required validations as vacuously ready for server-eligible auto merge", async () => {
+    const user = userEvent.setup();
+    const fetchMock = installFetch("staged", "auto_eligible", (url, init) => {
+      if (url.pathname === "/api/executions/execution-a") {
+        const response = detail("staged", "auto_eligible");
+        return Response.json({
+          ...response,
+          counts: { ...response.counts, approvals: 0, events: 0, validations: 0 },
+          staged: {
+            ...response.staged!,
+            requiredValidations: { ready: true, requiredCount: 0, validCount: 0 },
+          },
+        });
+      }
+      if (url.pathname.endsWith("/events")
+        || url.pathname.endsWith("/observations")
+        || url.pathname.endsWith("/blockers")) {
+        return Response.json({ items: [], nextCursor: null });
+      }
+      if (url.pathname.endsWith("/merge") && init?.method === "POST") {
+        return Response.json({ execution: execution("merged" as never) });
+      }
+      return undefined;
+    });
+
+    render(createElement(ExecutionPanel, { projectId: PROJECT_ID }));
+    const card = await screen.findByRole("region", { name: "Task A" });
+    await user.click(await within(card).findByRole("tab", { name: "变更" }));
+    expect(await within(card).findByText(/没有必需验证政策/)).toBeInTheDocument();
+    await user.click(within(card).getByRole("button", { name: "自动合入当前变更" }));
+    expect(fetchMock).toHaveBeenCalledWith(
+      "/api/executions/execution-a/merge",
+      expect.objectContaining({ method: "POST" }),
+    );
+  });
+
+  it("does not let a failed optional validation block server-eligible auto merge", async () => {
+    const user = userEvent.setup();
+    installFetch("staged", "auto_eligible", (url) => {
+      if (url.pathname === "/api/executions/execution-a") {
+        const response = detail("staged", "auto_eligible");
+        return Response.json({
+          ...response,
+          counts: { ...response.counts, approvals: 0, events: 0 },
+          staged: {
+            ...response.staged!,
+            requiredValidations: { ready: true, requiredCount: 0, validCount: 0 },
+          },
+        });
+      }
+      if (url.pathname.endsWith("/validations")) {
+        return Response.json({
+          items: [{
+            afterLastWrite: true,
+            exitCode: 1,
+            finishedAt: "2026-07-30T08:04:00.000Z",
+            id: "optional-failed",
+            policyEntryId: "optional-test",
+            required: false,
+            stderr: { bytes: 0, sha256: HASH, truncated: false },
+            stdout: { bytes: 0, sha256: HASH, truncated: false },
+            succeeded: false,
+          }],
+          nextCursor: null,
+        });
+      }
+      if (url.pathname.endsWith("/events")
+        || url.pathname.endsWith("/observations")
+        || url.pathname.endsWith("/blockers")) {
+        return Response.json({ items: [], nextCursor: null });
+      }
+      return undefined;
+    });
+
+    render(createElement(ExecutionPanel, { projectId: PROJECT_ID }));
+    const card = await screen.findByRole("region", { name: "Task A" });
+    await user.click(await within(card).findByRole("tab", { name: "变更" }));
+    expect(await within(card).findByText(/没有必需验证政策/)).toBeInTheDocument();
+    expect(within(card).getByRole("button", { name: "自动合入当前变更" })).toBeEnabled();
+  });
+
+  it("does not decide readiness from a successful first page when required policy exceeds 20", async () => {
+    const user = userEvent.setup();
+    installFetch("staged", "auto_eligible", (url) => {
+      if (url.pathname === "/api/executions/execution-a") {
+        const response = detail("staged", "auto_eligible");
+        return Response.json({
+          ...response,
+          counts: { ...response.counts, approvals: 0, events: 0, validations: 21 },
+          staged: {
+            ...response.staged!,
+            requiredValidations: { ready: false, requiredCount: 21, validCount: 20 },
+          },
+        });
+      }
+      if (url.pathname.endsWith("/validations")) {
+        return Response.json({
+          items: Array.from({ length: 20 }, (_, index) => ({
+            afterLastWrite: true,
+            exitCode: 0,
+            finishedAt: `2026-07-30T08:04:${String(index).padStart(2, "0")}.000Z`,
+            id: `required-${index}`,
+            policyEntryId: `required-test-${index}`,
+            required: true,
+            stderr: { bytes: 0, sha256: HASH, truncated: false },
+            stdout: { bytes: 0, sha256: HASH, truncated: false },
+            succeeded: true,
+          })),
+          nextCursor: "required-page-2",
+        });
+      }
+      if (url.pathname.endsWith("/events")
+        || url.pathname.endsWith("/observations")
+        || url.pathname.endsWith("/blockers")) {
+        return Response.json({ items: [], nextCursor: null });
+      }
+      return undefined;
+    });
+
+    render(createElement(ExecutionPanel, { projectId: PROJECT_ID }));
+    const card = await screen.findByRole("region", { name: "Task A" });
+    await user.click(await within(card).findByRole("tab", { name: "变更" }));
+    expect(await within(card).findByText(/20\/21 项新鲜且通过/)).toBeInTheDocument();
+    expect(within(card).queryByRole("button", { name: /自动合入/ })).not.toBeInTheDocument();
+  });
 });

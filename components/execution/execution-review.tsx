@@ -54,6 +54,11 @@ type StagedSummary = {
   mergeFinalBytes: number;
   observedFinalBytes: number;
   observedPathCount: number;
+  requiredValidations: {
+    ready: boolean;
+    requiredCount: number;
+    validCount: number;
+  };
   stagedHash: string;
 };
 
@@ -576,9 +581,6 @@ export function ExecutionReview({
   const approvalItems = approvals.items.map((item) => approvalOverrides[item.id] ?? item);
   const commandApprovals = approvalItems.filter(({ kind }) => kind === "command");
   const stagedApproval = approvalItems.find(({ kind }) => kind === "staged_merge");
-  const requiredValidations = validations.items.filter(({ required }) => true);
-  const requiredFresh = requiredValidations.length > 0
-    && requiredValidations.every((item) => item.succeeded && item.afterLastWrite);
   const readError = Boolean(
     detailError || events.error || approvals.error || validations.error
     || artifacts.error || observations.error || blockers.error,
@@ -771,11 +773,11 @@ export function ExecutionReview({
                 <p>staged hash：{shortHash(detail.staged.stagedHash)}</p>
                 <p>
                   必需验证：
-                  {validations.loading
-                    ? "正在核对"
-                    : requiredValidations.length === 0
-                      ? "没有必需验证政策"
-                      : requiredFresh ? "全部新鲜且通过" : "缺失、失败或已过期"}
+                  {detail.staged.requiredValidations.requiredCount === 0
+                    ? "没有必需验证政策"
+                    : detail.staged.requiredValidations.ready
+                      ? "全部新鲜且通过"
+                      : `${detail.staged.requiredValidations.validCount}/${detail.staged.requiredValidations.requiredCount} 项新鲜且通过，尚未就绪`}
                 </p>
                 <p>政策 hash：{shortHash(detail.frozen.policyHash)} · 修订 #{detail.frozen.policyVersion}</p>
                 <p>
@@ -790,8 +792,7 @@ export function ExecutionReview({
               <div className="execution-review-actions">
                 {detail.staged.classification === "auto_eligible"
                 && execution.status === "staged"
-                && requiredFresh
-                && !readError ? (
+                && detail.staged.requiredValidations.ready ? (
                   <button
                     onClick={() => onMerge(detail.staged!.stagedHash)}
                     type="button"
@@ -818,7 +819,7 @@ export function ExecutionReview({
                         execution.status !== "staged"
                         || readError
                         || validations.loading
-                        || (requiredValidations.length > 0 && !requiredFresh)
+                        || !detail.staged!.requiredValidations.ready
                       }
                       type="button"
                     >

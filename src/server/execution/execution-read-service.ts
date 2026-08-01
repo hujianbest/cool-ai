@@ -233,6 +233,11 @@ const stagedSummarySchema = z.object({
   mergeFinalBytes: z.number().int().nonnegative(),
   observedFinalBytes: z.number().int().nonnegative(),
   observedPathCount: z.number().int().nonnegative(),
+  requiredValidations: z.object({
+    ready: z.boolean(),
+    requiredCount: z.number().int().min(0).max(50),
+    validCount: z.number().int().min(0).max(50),
+  }).strict(),
   stagedHash: HASH,
 }).strict();
 
@@ -498,22 +503,67 @@ function hashJson(value: unknown): string {
 
 function stagedSummary(database: DatabaseSync, executionId: string) {
   const row = database.prepare(`
-    SELECT id,staged_hash AS stagedHash,classification,block_reasons_json AS blockReasonsJson,
+    SELECT s.id,s.staged_hash AS stagedHash,s.classification,
+           s.block_reasons_json AS blockReasonsJson,
            observed_path_count AS observedPathCount,observed_final_bytes AS observedFinalBytes,
            merge_file_count AS mergeFileCount,merge_final_bytes AS mergeFinalBytes,
-           blocker_count AS blockerCount
-    FROM execution_staged_results WHERE execution_id=? ORDER BY created_at DESC,id DESC LIMIT 1
+           blocker_count AS blockerCount,s.project_id AS projectId,s.attempt_id AS attemptId,
+           s.sandbox_manifest_hash AS sandboxManifestHash,
+           a.frozen_policy_revision_id AS policyRevisionId
+    FROM execution_staged_results s
+    JOIN execution_attempts a
+      ON a.project_id=s.project_id AND a.execution_id=s.execution_id AND a.id=s.attempt_id
+    WHERE s.execution_id=? ORDER BY s.created_at DESC,s.id DESC LIMIT 1
   `).get(executionId) as Record<string, unknown> | undefined;
   if (!row) return null;
-  const { blockReasonsJson, ...summaryRow } = row;
+  const {
+    attemptId,
+    blockReasonsJson,
+    policyRevisionId,
+    projectId,
+    sandboxManifestHash,
+    ...summaryRow
+  } = row;
+  const stagedAttemptId = String(attemptId);
+  const stagedPolicyRevisionId = String(policyRevisionId);
+  const stagedProjectId = String(projectId);
+  const stagedSandboxManifestHash = String(sandboxManifestHash);
   const counts = database.prepare(`
     SELECT kind,COUNT(*) AS count FROM execution_staged_blockers
     WHERE staged_result_id=? GROUP BY kind ORDER BY kind
   `).all(row.id as string) as Array<{ count: number; kind: string }>;
+  const requiredCount = Number((database.prepare(`
+    SELECT COUNT(*) AS count
+    FROM project_validation_policy_entries
+    WHERE project_id=? AND revision_id=? AND required=1
+  `).get(stagedProjectId, stagedPolicyRevisionId) as { count: number }).count);
+  const validCount = Number((database.prepare(`
+    SELECT COUNT(DISTINCT entry.id) AS count
+    FROM project_validation_policy_entries entry
+    JOIN execution_validation_results result
+      ON result.project_id=entry.project_id
+     AND result.policy_revision_id=entry.revision_id
+     AND result.policy_entry_id=entry.id
+    WHERE entry.project_id=? AND entry.revision_id=? AND entry.required=1
+      AND result.execution_id=? AND result.attempt_id=?
+      AND result.sandbox_manifest_hash=?
+      AND result.required=1 AND result.succeeded=1 AND result.exit_code=0
+  `).get(
+    stagedProjectId,
+    stagedPolicyRevisionId,
+    executionId,
+    stagedAttemptId,
+    stagedSandboxManifestHash,
+  ) as { count: number }).count);
   return stagedSummarySchema.parse({
     ...summaryRow,
     blockReasons: JSON.parse(blockReasonsJson as string),
     blockerCounts: Object.fromEntries(counts.map((item) => [item.kind, item.count])),
+    requiredValidations: {
+      ready: validCount === requiredCount,
+      requiredCount,
+      validCount,
+    },
   });
 }
 

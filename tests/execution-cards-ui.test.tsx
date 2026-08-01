@@ -322,6 +322,11 @@ describe("T-45 merge wiring", () => {
             mergeFinalBytes: 6,
             observedFinalBytes: 6,
             observedPathCount: 1,
+            requiredValidations: {
+              ready: true,
+              requiredCount: 1,
+              validCount: 1,
+            },
             stagedHash: "b".repeat(64),
           },
         });

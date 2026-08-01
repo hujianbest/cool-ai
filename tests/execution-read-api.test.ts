@@ -229,13 +229,101 @@ describe("bounded execution read APIs", () => {
     expect(detail).toMatchObject({
       execution: { id: EXECUTION_ID, status: "staged" },
       counts: { events: 3, stagedObservations: 101, stagedBlockers: 101 },
-      staged: { id: STAGED_ID, observedPathCount: 101, blockerCount: 101 },
+      staged: {
+        blockerCount: 101,
+        id: STAGED_ID,
+        observedPathCount: 101,
+        requiredValidations: { ready: true, requiredCount: 0, validCount: 0 },
+      },
     });
     expect(Object.keys(detail).sort()).toEqual(
       ["counts", "execution", "frozen", "recovery", "staged"].sort(),
     );
     expect(JSON.stringify({ list, detail })).not.toMatch(
       /D:\\|sandbox-secret|canonical-secret|cipher-secret|provider\.invalid|private-chain|systemPrompt/i,
+    );
+  });
+
+  it("strictly summarizes every required validation when the policy exceeds one page", async () => {
+    database.exec(`
+      DROP TRIGGER validation_policy_revision_no_update;
+      UPDATE project_validation_policy_revisions
+      SET entry_count=21
+      WHERE id='read-policy';
+      CREATE TRIGGER validation_policy_revision_no_update BEFORE UPDATE ON project_validation_policy_revisions BEGIN SELECT RAISE(ABORT,'IMMUTABLE_POLICY_REVISION'); END;
+    `);
+    const insertEntry = database.prepare(`
+      INSERT INTO project_validation_policy_entries (
+        id,project_id,revision_id,position,executable,executable_identity,args_json,
+        workdir,required,tuple_hash
+      ) VALUES (?, ?, ?, ?, ?, ?, '[]', '.', 1, ?)
+    `);
+    const insertToolCall = database.prepare(`
+      INSERT INTO execution_tool_calls (
+        id,project_id,execution_id,attempt_id,action_id,business_round,type,
+        request_hash,status,error_code,public_request_json,public_result_json,
+        before_sandbox_hash,after_sandbox_hash,started_at,finished_at
+      ) VALUES (?, ?, ?, ?, NULL, ?, 'command', ?, 'succeeded', NULL, '{}', '{}',
+        ?, ?, ?, ?)
+    `);
+    const insertValidation = database.prepare(`
+      INSERT INTO execution_validation_results (
+        id,project_id,execution_id,attempt_id,policy_revision_id,policy_entry_id,
+        tool_call_id,sandbox_manifest_hash,required,exit_code,succeeded,
+        stdout_bytes,stderr_bytes,stdout_sha256,stderr_sha256,
+        stdout_truncated,stderr_truncated,finished_at
+      ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, 1, 0, 1, 0, 0, ?, ?, 0, 0, ?)
+    `);
+    for (let index = 0; index < 21; index += 1) {
+      const suffix = String(index).padStart(2, "0");
+      const entryId = `required-entry-${suffix}`;
+      const toolCallId = `required-tool-${suffix}`;
+      const finishedAt = `2026-07-30T08:01:${suffix}.000Z`;
+      insertEntry.run(
+        entryId,
+        PROJECT_ID,
+        "read-policy",
+        index,
+        `test-${suffix}`,
+        HASH,
+        HASH,
+      );
+      if (index === 20) continue;
+      insertToolCall.run(
+        toolCallId,
+        PROJECT_ID,
+        EXECUTION_ID,
+        ATTEMPT_ID,
+        index + 10,
+        HASH,
+        HASH,
+        HASH,
+        finishedAt,
+        finishedAt,
+      );
+      insertValidation.run(
+        `required-validation-${suffix}`,
+        PROJECT_ID,
+        EXECUTION_ID,
+        ATTEMPT_ID,
+        "read-policy",
+        entryId,
+        toolCallId,
+        HASH,
+        HASH,
+        HASH,
+        finishedAt,
+      );
+    }
+
+    const detail = await reads.readExecutionDetail(databasePath, EXECUTION_ID);
+    expect(detail.staged?.requiredValidations).toEqual({
+      ready: false,
+      requiredCount: 21,
+      validCount: 20,
+    });
+    expect(Object.keys(detail.staged?.requiredValidations ?? {}).sort()).toEqual(
+      ["ready", "requiredCount", "validCount"].sort(),
     );
   });
 
