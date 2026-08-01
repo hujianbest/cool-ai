@@ -1,0 +1,11 @@
+# hf-gate-run
+# label: smoke
+# command: npm.cmd run smoke:review -- --full
+# started: 2026-08-01T16:50:28+00:00
+
+> collaboration-cockpit@0.1.0 smoke:review
+> node tests/review-browser-smoke.mjs --full
+
+REVIEW FULL CHAIN PASS: result fc8e2999-8c01-45e7-971d-f8d98214a51a rejected, result 07c697f9-ce75-4f9d-be4d-b88b57921733 escalated then passed after owner answer, persisted memory, restarted, and recovered delivery d689171b-1cd0-4d69-b4c7-70293c12e2fa
+SCREENSHOTS: D:\cool-ai\features\006-peer-review-memory-delivery\evidence\smoke-review-desktop.png; D:\cool-ai\features\006-peer-review-memory-delivery\evidence\smoke-review-narrow.png
+# exit: 0

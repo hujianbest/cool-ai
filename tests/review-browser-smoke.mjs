@@ -30,6 +30,7 @@ const apiKey = `review-key-${randomBytes(18).toString("base64url")}`;
 const masterKey = randomBytes(32).toString("base64url");
 const evidenceDirectory = resolve("features", "006-peer-review-memory-delivery", "evidence");
 const desktopScreenshot = join(evidenceDirectory, "smoke-review-desktop.png");
+const narrowScreenshot = join(evidenceDirectory, "smoke-review-narrow.png");
 mkdirSync(join(workspaceDirectory, "src"), { recursive: true });
 mkdirSync(executionRoot, { recursive: true });
 mkdirSync(evidenceDirectory, { recursive: true });
@@ -96,13 +97,14 @@ function collaborationTurn() {
 }
 
 function executionTurn() {
-  if (executionStep === 0) {
+  const executionNumber = Math.floor(executionStep / 2) + 1;
+  if (executionStep % 2 === 0) {
     executionStep += 1;
     return {
       action: {
-        content: `${reviewBodyMarker}\n`,
+        content: `${reviewBodyMarker}-v${executionNumber}\n`,
         expectedHash: null,
-        path: "src/reviewed.txt",
+        path: `src/reviewed-${executionNumber}.txt`,
         type: "write",
       },
       summary: "Create the public body that the independent reviewer must read.",
@@ -124,6 +126,36 @@ function reviewOutput(material) {
     "the independent review Agent must receive the real public diff body",
   );
   providerSawReviewBody = true;
+  if (reviewCallCount === 1) {
+    return {
+      decision: {
+        choice: "reject",
+        reworkRequirements: ["Add a second public result for independent review."],
+      },
+      evidenceRefs: [source],
+      findings: [],
+      limitations: [],
+      memoryCandidates: [],
+      publicSummary: "The first result needs a public rework result.",
+    };
+  }
+  if (reviewCallCount === 2) {
+    return {
+      decision: {
+        choice: "escalate",
+        options: [
+          "Continue review with the owner clarification.",
+          "Return the revised result for another rework cycle.",
+        ],
+        question: "Should this revised public result proceed to final review?",
+      },
+      evidenceRefs: [source],
+      findings: [],
+      limitations: [],
+      memoryCandidates: [],
+      publicSummary: "The revised result needs one explicit owner clarification.",
+    };
+  }
   return {
     decision: { choice: "pass" },
     evidenceRefs: [source],
@@ -240,6 +272,22 @@ async function waitForApp() {
     await new Promise((done) => setTimeout(done, 500));
   }
   throw new Error(`Review app did not become ready.\n${serverOutput}`);
+}
+
+async function restartAppServer() {
+  stopAppServer();
+  const deadline = Date.now() + 30_000;
+  while (Date.now() < deadline) {
+    try {
+      await fetch(baseUrl);
+    } catch {
+      break;
+    }
+    await new Promise((done) => setTimeout(done, 100));
+  }
+  appServer = undefined;
+  startAppServer();
+  await waitForApp();
 }
 
 async function createSkill(page) {
@@ -473,12 +521,70 @@ async function approveAndMerge(page, executionId, staged) {
 }
 
 async function openRunTab(page) {
-  const heading = page.getByRole("heading", { name: "运行详情" });
+  const openEditor = page.getByRole("button", {
+    exact: true,
+    name: "打开编辑",
+  });
+  if (await openEditor.isVisible().catch(() => false)) {
+    await openEditor.focus();
+    await page.keyboard.press("Enter");
+    await page.getByRole("dialog", { name: "任务编辑" }).waitFor();
+  }
+  const heading = page.getByRole("heading", { exact: true, name: "运行详情" }).first();
   if (await heading.isVisible().catch(() => false)) return;
-  const tab = page.getByRole("tab", { name: "运行详情" });
-  await tab.focus();
+  const tab = page.getByRole("tab", { exact: true, name: "运行详情" }).first();
+  try {
+    await tab.focus();
+    await page.keyboard.press("Enter");
+    await heading.waitFor();
+  } catch (error) {
+    throw new Error(
+      `${error.message}\nURL=${page.url()}`
+      + `\nPage=${(await page.locator("body").innerText()).slice(-8_000)}`,
+    );
+  }
+}
+
+async function openReviewThroughKeyboard(page) {
+  await page.goto(baseUrl, { waitUntil: "networkidle" });
+  await openRunTab(page);
+  const openReview = page.getByRole("button", { name: "打开复核闭环" }).last();
+  await openReview.focus();
   await page.keyboard.press("Enter");
-  await heading.waitFor();
+}
+
+async function startReviewThroughKeyboard(page, workItemId, expectedChoice) {
+  await openReviewThroughKeyboard(page);
+  const reviewerChoice = page.getByRole("radio", { name: /Review Verifier/ });
+  await reviewerChoice.focus();
+  await page.keyboard.press("Space");
+  const startReview = page.getByRole("button", { name: "确认并发起真实复核" });
+  await startReview.focus();
+  await page.keyboard.press("Enter");
+  const expectedStatus = {
+    escalate: "waiting_owner",
+    pass: "passed",
+    reject: "rework",
+  }[expectedChoice];
+  const deadline = Date.now() + 60_000;
+  while (Date.now() < deadline) {
+    const workspace = await readWorkspace(page, workItemId);
+    if (workspace.effectiveStatus === expectedStatus) break;
+    await new Promise((done) => setTimeout(done, 200));
+  }
+  await openReviewThroughKeyboard(page);
+  const answerTab = page.getByRole("tab", { exact: true, name: "回答" });
+  await answerTab.focus();
+  await page.keyboard.press("Enter");
+  await page.getByRole("listitem")
+    .filter({ hasText: `唯一裁决：${expectedChoice}` })
+    .last()
+    .waitFor();
+}
+
+async function readWorkspace(page, workItemId) {
+  return page.evaluate(async (id) =>
+    (await (await fetch(`/api/work-items/${id}/review`)).json()), workItemId);
 }
 
 let browser;
@@ -533,25 +639,10 @@ try {
     "the public merge must create the first result version",
   );
 
-  await page.reload({ waitUntil: "networkidle" });
-  await openRunTab(page);
-  const executionCard = page.getByRole("region", { name: "Implement reviewed change" });
-  await executionCard.getByText("已合入").waitFor();
-  const openReview = executionCard.getByRole("button", { name: "打开复核闭环" });
-  await openReview.focus();
-  await page.keyboard.press("Enter");
-  const reviewerChoice = page.getByRole("radio", { name: /Review Verifier/ });
-  await reviewerChoice.focus();
-  await page.keyboard.press("Space");
-  const startReview = page.getByRole("button", { name: "确认并发起真实复核" });
-  await startReview.focus();
-  await page.keyboard.press("Enter");
   try {
-    await page.getByRole("heading", { name: "唯一裁决：pass" }).waitFor();
+    await startReviewThroughKeyboard(page, started.workItem.id, "reject");
   } catch (error) {
-    const workspace = await page.evaluate(async (workItemId) =>
-      (await (await fetch(`/api/work-items/${workItemId}/review`)).json()),
-    started.workItem.id);
+    const workspace = await readWorkspace(page, started.workItem.id);
     throw new Error(
       `${error.message}\nReview calls=${reviewCallCount}; bodySeen=${providerSawReviewBody}`
       + `\nWorkspace=${JSON.stringify(workspace)}`
@@ -561,11 +652,49 @@ try {
   }
   assert.equal(reviewCallCount, 1);
   assert.equal(providerSawReviewBody, true);
+  assert.equal((await readWorkspace(page, started.workItem.id)).effectiveStatus, "rework");
 
-  await page.reload({ waitUntil: "networkidle" });
-  await openRunTab(page);
-  await executionCard.getByRole("button", { name: "打开复核闭环" }).focus();
+  const reworkExecution = await startExecution(page, context.project.id, runId);
+  assert.equal(reworkExecution.workItem.id, started.workItem.id);
+  const reworkStaged = await advanceToStaged(page, reworkExecution.executionId);
+  const revisedResult = await approveAndMerge(
+    page,
+    reworkExecution.executionId,
+    reworkStaged,
+  );
+  assert.notEqual(revisedResult.id, result.id);
+  assert.equal((await readWorkspace(page, started.workItem.id)).result.version, 2);
+
+  await startReviewThroughKeyboard(page, started.workItem.id, "escalate");
+  assert.equal(reviewCallCount, 2);
+  const escalated = await readWorkspace(page, started.workItem.id);
+  assert.equal(escalated.effectiveStatus, "waiting_owner");
+  assert.ok(escalated.currentEscalation?.escalationId);
+
+  await openReviewThroughKeyboard(page);
+  const answerTab = page.getByRole("tab", { exact: true, name: "回答" });
+  await answerTab.focus();
   await page.keyboard.press("Enter");
+  const ownerAnswer = page.getByRole("textbox", { name: "Owner 回答" });
+  await ownerAnswer.focus();
+  await page.keyboard.type("Proceed with the revised public result.");
+  const continueReview = page.getByRole("radio", { name: "继续复核" });
+  await continueReview.focus();
+  await page.keyboard.press("Space");
+  const submitAnswer = page.getByRole("button", { name: "提交 Owner 回答" });
+  await submitAnswer.focus();
+  await page.keyboard.press("Enter");
+  await page.getByRole("heading", { name: "Owner 动作已保存" }).waitFor();
+  const answered = await readWorkspace(page, started.workItem.id);
+  assert.equal(answered.effectiveStatus, "pending_review");
+  assert.equal(answered.answeredEscalations.length, 1);
+
+  await startReviewThroughKeyboard(page, started.workItem.id, "pass");
+  assert.equal(reviewCallCount, 3);
+  const passed = await readWorkspace(page, started.workItem.id);
+  assert.equal(passed.effectiveStatus, "passed");
+
+  await openReviewThroughKeyboard(page);
   const memoryTab = page.getByRole("tab", { exact: true, name: "记忆" });
   await memoryTab.focus();
   await page.keyboard.press("Enter");
@@ -588,19 +717,69 @@ try {
   await generateDelivery.focus();
   await page.keyboard.press("Enter");
   await page.getByRole("heading", { name: "最终交付 v1" }).waitFor();
-  await page.screenshot({ fullPage: true, path: desktopScreenshot });
 
   const delivery = await page.evaluate(async (missionId) =>
     (await (await fetch(`/api/missions/${missionId}/delivery`)).json()),
   context.mission.id);
   assert.equal(delivery.state, "completed");
   assert.ok(delivery.currentDeliveryId);
-  assert.ok(providerCallCount >= 3);
-  console.log(
-    `REVIEW SMOKE PASS: first result ${result.id} passed by a non-executor, `
-    + `persisted memory, and generated delivery ${delivery.currentDeliveryId}`,
+  await page.screenshot({ fullPage: true, path: desktopScreenshot });
+
+  await restartAppServer();
+  await page.reload({ waitUntil: "networkidle" });
+  const recovered = await readWorkspace(page, started.workItem.id);
+  assert.equal(recovered.effectiveStatus, "passed");
+  assert.equal(recovered.result.version, 2);
+  assert.equal(recovered.answeredEscalations.length, 1);
+  const recoveredHistory = await page.evaluate(async (workItemId) =>
+    (await (await fetch(`/api/work-items/${workItemId}/reviews?limit=20`)).json()),
+  started.workItem.id);
+  assert.deepEqual(
+    recoveredHistory.items.map((attempt) => attempt.decision?.choice),
+    ["reject", "escalate", "pass"],
   );
-  console.log(`SCREENSHOT: ${desktopScreenshot}`);
+  const recoveredDelivery = await page.evaluate(async (missionId) =>
+    (await (await fetch(`/api/missions/${missionId}/delivery`)).json()),
+  context.mission.id);
+  assert.equal(recoveredDelivery.currentDeliveryId, delivery.currentDeliveryId);
+
+  await page.setViewportSize({ height: 844, width: 390 });
+  await page.goto(baseUrl, { waitUntil: "networkidle" });
+  await openRunTab(page);
+  const executionSwitcher = page.getByRole("list", { name: "执行摘要切换" });
+  const openExecution = executionSwitcher
+    .getByRole("button", { name: /Implement reviewed change/ })
+    .last();
+  await openExecution.focus();
+  await page.keyboard.press("Enter");
+  const executionDialog = page.getByRole("dialog", {
+    name: "Implement reviewed change 详情",
+  });
+  await executionDialog.waitFor();
+  const openReviewClosure = executionDialog.getByRole("button", {
+    name: "打开复核闭环",
+  });
+  await openReviewClosure.focus();
+  await page.keyboard.press("Enter");
+  const openNarrowReview = page.getByRole("button", {
+    exact: true,
+    name: "打开复核",
+  });
+  await openNarrowReview.focus();
+  await page.keyboard.press("Enter");
+  await page.getByRole("dialog", {
+    name: /Implement reviewed change 复核闭环/,
+  }).waitFor();
+  await page.screenshot({ fullPage: true, path: narrowScreenshot });
+  await page.keyboard.press("Escape");
+
+  assert.ok(providerCallCount >= 9);
+  console.log(
+    `REVIEW FULL CHAIN PASS: result ${result.id} rejected, result `
+    + `${revisedResult.id} escalated then passed after owner answer, persisted `
+    + `memory, restarted, and recovered delivery ${delivery.currentDeliveryId}`,
+  );
+  console.log(`SCREENSHOTS: ${desktopScreenshot}; ${narrowScreenshot}`);
 } catch (error) {
   console.error(error);
   console.error(serverOutput);

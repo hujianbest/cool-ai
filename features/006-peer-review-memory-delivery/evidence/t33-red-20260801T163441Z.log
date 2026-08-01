@@ -1,0 +1,75 @@
+# hf-gate-run
+# label: t33-red
+# command: npm.cmd test -- tests/review-browser-full-chain.test.ts
+# started: 2026-08-01T16:34:41+00:00
+
+> collaboration-cockpit@0.1.0 test
+> vitest run tests/review-browser-full-chain.test.ts
+
+
+ RUN  v4.1.10 D:/cool-ai
+
+ ❯ tests/review-browser-full-chain.test.ts (1 test | 1 failed) 23133ms
+     × completes the real full chain and writes both viewport screenshots 23131ms
+
+⎯⎯⎯⎯⎯⎯⎯ Failed Tests 1 ⎯⎯⎯⎯⎯⎯⎯
+
+ FAIL  tests/review-browser-full-chain.test.ts > review browser full-chain smoke > completes the real full chain and writes both viewport screenshots
+AssertionError: expected one REVIEW FULL CHAIN PASS sentinel
+
+> collaboration-cockpit@0.1.0 smoke:review
+> node tests/review-browser-smoke.mjs --full
+
+REVIEW SMOKE PASS: first result 2f4d366e-cc74-43d2-b819-a458c5f77479 passed by a non-executor, persisted memory, and generated delivery 216214ed-86d5-4870-9cea-8431fb6713a4
+SCREENSHOT: D:\cool-ai\features\006-peer-review-memory-delivery\evidence\smoke-review-desktop.png
+: expected [] to have a length of 1 but got +0
+
+- Expected
++ Received
+
+- 1
++ 0
+
+ ❯ tests/review-browser-full-chain.test.ts:62:7
+     60|       sentinels,
+     61|       `expected one REVIEW FULL CHAIN PASS sentinel\n${result.output}`,
+     62|     ).toHaveLength(1);
+       |       ^
+     63|     expect.soft(
+     64|       existsSync(desktopScreenshot),
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[1/2]⎯
+
+ FAIL  tests/review-browser-full-chain.test.ts > review browser full-chain smoke > completes the real full chain and writes both viewport screenshots
+AssertionError: narrow screenshot was not written
+
+> collaboration-cockpit@0.1.0 smoke:review
+> node tests/review-browser-smoke.mjs --full
+
+REVIEW SMOKE PASS: first result 2f4d366e-cc74-43d2-b819-a458c5f77479 passed by a non-executor, persisted memory, and generated delivery 216214ed-86d5-4870-9cea-8431fb6713a4
+SCREENSHOT: D:\cool-ai\features\006-peer-review-memory-delivery\evidence\smoke-review-desktop.png
+: expected false to be true // Object.is equality
+
+- Expected
++ Received
+
+- true
++ false
+
+ ❯ tests/review-browser-full-chain.test.ts:70:7
+     68|       existsSync(narrowScreenshot),
+     69|       `narrow screenshot was not written\n${result.output}`,
+     70|     ).toBe(true);
+       |       ^
+     71|   }, 300_000);
+     72| });
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[2/2]⎯
+
+
+ Test Files  1 failed (1)
+      Tests  1 failed (1)
+   Start at  00:34:42
+   Duration  25.64s (transform 41ms, setup 415ms, import 20ms, tests 23.13s, environment 1.78s)
+
+# exit: 1
