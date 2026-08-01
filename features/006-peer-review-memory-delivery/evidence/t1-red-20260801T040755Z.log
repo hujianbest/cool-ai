@@ -1,0 +1,44 @@
+# hf-gate-run
+# label: t1-red
+# command: npm.cmd test -- --run tests/review-slice.test.tsx
+# started: 2026-08-01T04:07:55+00:00
+
+> collaboration-cockpit@0.1.0 test
+> vitest run --run tests/review-slice.test.tsx
+
+
+ RUN  v4.1.10 D:/cool-ai
+
+(node:1788) ExperimentalWarning: SQLite is an experimental feature and might change at any time
+(Use `node --trace-warnings ...` to show where the warning was created)
+ ❯ tests/review-slice.test.tsx (1 test | 1 failed) 150ms
+     × starts a fresh database at schema v6 148ms
+
+⎯⎯⎯⎯⎯⎯⎯ Failed Tests 1 ⎯⎯⎯⎯⎯⎯⎯
+
+ FAIL  tests/review-slice.test.tsx > peer review slice > starts a fresh database at schema v6
+AssertionError: expected 5 to be 6 // Object.is equality
+
+- Expected
++ Received
+
+- 6
++ 5
+
+ ❯ tests/review-slice.test.tsx:26:32
+     24|         user_version: number;
+     25|       };
+     26|       expect(row.user_version).toBe(6);
+       |                                ^
+     27|     } finally {
+     28|       database.close();
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[1/1]⎯
+
+
+ Test Files  1 failed (1)
+      Tests  1 failed (1)
+   Start at  12:07:56
+   Duration  2.93s (transform 117ms, setup 421ms, import 268ms, tests 150ms, environment 1.80s)
+
+# exit: 1

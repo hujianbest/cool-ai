@@ -4,5 +4,5 @@
 - 当前阶段: build
 - 执行模式: auto
 - 已加载扩展: ext-ui-design
-- 下一步: 按任务清单从 T-1 开始逐项 TDD 实现并单独提交
+- 下一步: 执行 T-2：收紧 SQLite v6 完整迁移、全新 mission 初始化与不可变不变量
 - 门禁输出: RESULT: PASS — 可进入 build

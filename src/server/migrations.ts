@@ -1,6 +1,11 @@
 import type { DatabaseSync } from "node:sqlite";
 
 import { createV5, hasAnyV5Object, validateV5 } from "@/src/server/migrations-v5";
+import {
+  createV6T1,
+  hasAnyV6T1Object,
+  validateV6T1,
+} from "@/src/server/migrations-v6";
 
 type SchemaErrorCode =
   | "SCHEMA_DATA_INVALID"
@@ -1255,7 +1260,7 @@ function version(database: DatabaseSync): number {
 
 export function migrateDatabase(database: DatabaseSync): void {
   let currentVersion = version(database);
-  if (currentVersion > 5) {
+  if (currentVersion > 6) {
     throw new SchemaMigrationError("SCHEMA_TOO_NEW", "Database schema is newer than supported.");
   }
 
@@ -1317,7 +1322,10 @@ export function migrateDatabase(database: DatabaseSync): void {
     currentVersion = 4;
   }
 
-  if (currentVersion >= 4 && (!validCompleteV3(database) || !validCollaborationV4(database))) {
+  if (
+    (currentVersion === 4 || currentVersion === 5)
+    && (!validCompleteV3(database) || !validCollaborationV4(database))
+  ) {
     throw new SchemaMigrationError("SCHEMA_DRIFT", "Database collaboration schema is invalid.");
   }
 
@@ -1340,6 +1348,26 @@ export function migrateDatabase(database: DatabaseSync): void {
     const validation = validateV5(database);
     if (validation) {
       throw new SchemaMigrationError(validation, "Database version 5 schema is invalid.");
+    }
+    if (hasAnyV6T1Object(database)) {
+      throw new SchemaMigrationError("SCHEMA_DRIFT", "Database version 6 schema is partial.");
+    }
+    inTransaction(database, () => {
+      createV6T1(database);
+      if (!validateV6T1(database)) {
+        throw new SchemaMigrationError("SCHEMA_DRIFT", "Database version 6 schema is invalid.");
+      }
+      database.exec("PRAGMA user_version = 6");
+    });
+    currentVersion = 6;
+  }
+
+  if (currentVersion === 6) {
+    if (!validateV6T1(database)) {
+      throw new SchemaMigrationError(
+        "SCHEMA_DRIFT",
+        "Database version 6 schema is invalid.",
+      );
     }
   }
 }

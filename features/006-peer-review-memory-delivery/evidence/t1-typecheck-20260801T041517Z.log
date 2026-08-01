@@ -1,0 +1,98 @@
+# hf-gate-run
+# label: t1-typecheck
+# command: npm.cmd run build
+# started: 2026-08-01T04:15:17+00:00
+
+> collaboration-cockpit@0.1.0 build
+> next build --webpack
+
+▲ Next.js 16.2.12 (webpack)
+
+  Creating an optimized production build ...
+✓ Compiled successfully in 4.9s
+  Running TypeScript ...
+  Finished TypeScript in 11.7s ...
+  Collecting page data using 7 workers ...
+(node:9556) ExperimentalWarning: SQLite is an experimental feature and might change at any time
+(Use `node --trace-warnings ...` to show where the warning was created)
+(node:14392) ExperimentalWarning: SQLite is an experimental feature and might change at any time
+(Use `node --trace-warnings ...` to show where the warning was created)
+(node:5252) ExperimentalWarning: SQLite is an experimental feature and might change at any time
+(Use `node --trace-warnings ...` to show where the warning was created)
+(node:13248) ExperimentalWarning: SQLite is an experimental feature and might change at any time
+(Use `node --trace-warnings ...` to show where the warning was created)
+(node:12624) ExperimentalWarning: SQLite is an experimental feature and might change at any time
+(Use `node --trace-warnings ...` to show where the warning was created)
+(node:5788) ExperimentalWarning: SQLite is an experimental feature and might change at any time
+(Use `node --trace-warnings ...` to show where the warning was created)
+(node:14364) ExperimentalWarning: SQLite is an experimental feature and might change at any time
+(Use `node --trace-warnings ...` to show where the warning was created)
+  Generating static pages using 7 workers (0/10) ...
+  Generating static pages using 7 workers (2/10) 
+  Generating static pages using 7 workers (4/10) 
+  Generating static pages using 7 workers (7/10) 
+✓ Generating static pages using 7 workers (10/10) in 380ms
+  Finalizing page optimization ...
+  Collecting build traces ...
+
+Route (app)
+┌ ○ /
+├ ○ /_not-found
+├ ƒ /api/agent-templates
+├ ƒ /api/agents
+├ ƒ /api/agents/[agentId]
+├ ƒ /api/executions/[executionId]
+├ ƒ /api/executions/[executionId]/advance
+├ ƒ /api/executions/[executionId]/approvals
+├ ƒ /api/executions/[executionId]/approvals/[approvalId]
+├ ƒ /api/executions/[executionId]/artifacts
+├ ƒ /api/executions/[executionId]/artifacts/[artifactId]/chunks
+├ ƒ /api/executions/[executionId]/control
+├ ƒ /api/executions/[executionId]/events
+├ ƒ /api/executions/[executionId]/merge
+├ ƒ /api/executions/[executionId]/recovery/files
+├ ƒ /api/executions/[executionId]/recovery/resolve
+├ ƒ /api/executions/[executionId]/staged/[stagedId]/blockers
+├ ƒ /api/executions/[executionId]/staged/[stagedId]/observations
+├ ƒ /api/executions/[executionId]/staged/[stagedId]/observations/[observationId]/diff
+├ ƒ /api/executions/[executionId]/validations
+├ ƒ /api/executions/[executionId]/validations/[validationId]/[stream]/chunks
+├ ƒ /api/missions/[missionId]
+├ ƒ /api/missions/[missionId]/work-items
+├ ƒ /api/projects
+├ ƒ /api/projects/[projectId]/collaboration
+├ ƒ /api/projects/[projectId]/context
+├ ƒ /api/projects/[projectId]/executions
+├ ƒ /api/projects/[projectId]/members
+├ ƒ /api/projects/[projectId]/memories
+├ ƒ /api/projects/[projectId]/messages
+├ ƒ /api/projects/[projectId]/mission
+├ ƒ /api/projects/[projectId]/runs
+├ ƒ /api/projects/[projectId]/tasks
+├ ƒ /api/projects/[projectId]/validation-policy
+├ ƒ /api/projects/[projectId]/validation-policy/audits
+├ ƒ /api/projects/[projectId]/validation-policy/revisions
+├ ƒ /api/projects/[projectId]/workspace
+├ ƒ /api/providers
+├ ƒ /api/providers/[providerId]
+├ ƒ /api/providers/verify
+├ ƒ /api/runs/[runId]/advance
+├ ƒ /api/runs/[runId]/control
+├ ƒ /api/runs/[runId]/decisions/[decisionId]/answer
+├ ƒ /api/runs/[runId]/recover
+├ ƒ /api/runs/[runId]/timeline
+├ ƒ /api/skills
+├ ƒ /api/skills/[skillId]
+├ ƒ /api/tasks/[taskId]/execute
+├ ƒ /api/tasks/[taskId]/start
+├ ƒ /api/work-items/[workItemId]
+├ ƒ /api/work-items/[workItemId]/review
+├ ƒ /api/work-items/[workItemId]/reviews
+├ ƒ /api/work-items/[workItemId]/transition
+└ ○ /team
+
+
+○  (Static)   prerendered as static content
+ƒ  (Dynamic)  server-rendered on demand
+
+# exit: 0

@@ -13,6 +13,7 @@ import { createPortal } from "react-dom";
 import { ExecutionReview } from "@/components/execution/execution-review";
 import { ManualRecoverySurface } from "@/components/execution/manual-recovery-surface";
 import { useModalSurface, useNarrowMode } from "@/components/mobile-dialog";
+import { ReviewSlice } from "@/components/review/review-slice";
 import { ValidationPolicyPanel } from "@/components/execution/validation-policy-panel";
 import {
   ApiDisplayError,
@@ -253,6 +254,9 @@ function ExecutionCard({
           onExecutionChanged={onExecutionChanged}
           onMerge={onMerge}
         />
+      ) : null}
+      {!execution.manualRecoveryRequired && execution.status === "merged" ? (
+        <ReviewSlice workItemId={execution.workItem.id} />
       ) : null}
       {!execution.manualRecoveryRequired && asyncState.advanceError ? (
         <div className="stack">

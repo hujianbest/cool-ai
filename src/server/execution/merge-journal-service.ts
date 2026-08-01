@@ -28,6 +28,7 @@ import {
   recoveryMergeFileStatusSchema,
   type RecoveryMergeFileStatus,
 } from "@/src/shared/execution-contracts";
+import { initializeFirstResultReviewTx } from "@/src/server/review/review-slice-service";
 
 export type MergeFaultPoint =
   | "before_prepare"
@@ -1360,6 +1361,12 @@ function commitDatabaseFacts(
       journal.stagedResultId,
       journal.id,
     );
+    initializeFirstResultReviewTx(database, {
+      missionId: execution.missionId,
+      projectId: journal.projectId,
+      resultId,
+      workItemId: execution.workItemId,
+    });
     const updated = database.prepare(`
       UPDATE executions
       SET status='merged',merged_at=strftime('%Y-%m-%dT%H:%M:%fZ','now'),
