@@ -15,6 +15,12 @@ export {
   type ReviewAttemptPanelProps,
 } from "@/components/review/review-attempt-panel";
 export {
+  ReviewAccessSurface,
+  type ReviewAccessSurfaceKey,
+  type ReviewAccessSurfaceProps,
+  type ReviewAccessSurfaceState,
+} from "@/components/review/review-access-surface";
+export {
   ReviewMaterialPanel,
   type ReviewMaterialView,
   type ReviewPublicContent,

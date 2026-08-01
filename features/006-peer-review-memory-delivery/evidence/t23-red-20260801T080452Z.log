@@ -1,0 +1,67 @@
+# hf-gate-run
+# label: t23-red
+# command: npm test -- tests/review-accessibility.test.tsx
+# started: 2026-08-01T08:04:52+00:00
+
+> collaboration-cockpit@0.1.0 test
+> vitest run tests/review-accessibility.test.tsx
+
+
+ RUN  v4.1.10 D:/cool-ai
+
+ ❯ tests/review-accessibility.test.tsx (5 tests | 5 failed) 42ms
+     × completes review, answer, memory and delivery with keyboard on desktop 30ms
+     × uses one narrow modal with inert background, trap, Escape and focus restore 3ms
+     × keeps one modal while replacing narrow review, answer, memory and delivery content 3ms
+     × exposes loading, empty, error, disabled and success as text and live semantics 2ms
+     × uses 44px token targets, AA palette pairs and token-only surface styles 2ms
+
+⎯⎯⎯⎯⎯⎯⎯ Failed Tests 5 ⎯⎯⎯⎯⎯⎯⎯
+
+ FAIL  tests/review-accessibility.test.tsx > review accessibility and responsive single surface > completes review, answer, memory and delivery with keyboard on desktop
+ FAIL  tests/review-accessibility.test.tsx > review accessibility and responsive single surface > uses one narrow modal with inert background, trap, Escape and focus restore
+ FAIL  tests/review-accessibility.test.tsx > review accessibility and responsive single surface > keeps one modal while replacing narrow review, answer, memory and delivery content
+ FAIL  tests/review-accessibility.test.tsx > review accessibility and responsive single surface > exposes loading, empty, error, disabled and success as text and live semantics
+AssertionError: T-23 accessible review surface must exist: expected undefined to be type of 'function'
+
+Expected: "function"
+Received: "undefined"
+
+ ❯ ReviewAccessSurface tests/review-accessibility.test.tsx:28:66
+     26| function ReviewAccessSurface(props: ReviewAccessSurfaceProps) {
+     27|   const Component = optionalComponents.ReviewAccessSurface;
+     28|   expect(Component, "T-23 accessible review surface must exist").toBeT…
+       |                                                                  ^
+     29|   return <Component {...props} />;
+     30| }
+ ❯ Object.react_stack_bottom_frame node_modules/react-dom/cjs/react-dom-client.development.js:25904:20
+ ❯ renderWithHooks node_modules/react-dom/cjs/react-dom-client.development.js:7662:22
+ ❯ updateFunctionComponent node_modules/react-dom/cjs/react-dom-client.development.js:10166:19
+ ❯ beginWork node_modules/react-dom/cjs/react-dom-client.development.js:11778:18
+ ❯ runWithFiberInDEV node_modules/react-dom/cjs/react-dom-client.development.js:874:13
+ ❯ performUnitOfWork node_modules/react-dom/cjs/react-dom-client.development.js:17641:22
+ ❯ workLoopSync node_modules/react-dom/cjs/react-dom-client.development.js:17469:41
+ ❯ renderRootSync node_modules/react-dom/cjs/react-dom-client.development.js:17450:11
+ ❯ performWorkOnRoot node_modules/react-dom/cjs/react-dom-client.development.js:16583:35
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[1/5]⎯
+
+ FAIL  tests/review-accessibility.test.tsx > review accessibility and responsive single surface > uses 44px token targets, AA palette pairs and token-only surface styles
+Error: ENOENT: no such file or directory, open 'D:\cool-ai\components\review\review-access-surface.tsx'
+ ❯ tests/review-accessibility.test.tsx:185:23
+    183|     const tokens = readFileSync(resolve("app/tokens.css"), "utf8");
+    184|     const cockpit = readFileSync(resolve("app/cockpit.css"), "utf8");
+    185|     const component = readFileSync(
+       |                       ^
+    186|       resolve("components/review/review-access-surface.tsx"),
+    187|       "utf8",
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[2/5]⎯
+
+
+ Test Files  1 failed (1)
+      Tests  5 failed (5)
+   Start at  16:04:53
+   Duration  3.13s (transform 156ms, setup 427ms, import 309ms, tests 42ms, environment 1.78s)
+
+# exit: 1

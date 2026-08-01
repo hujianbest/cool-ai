@@ -4,5 +4,5 @@
 - 当前阶段: build
 - 执行模式: auto
 - 已加载扩展: ext-ui-design
-- 下一步: 执行 T-23：交付窄屏单 surface 与完整 a11y/token 纪律
+- 下一步: 执行 T-24：新增真实 provider/browser smoke:review harness 并收口全链
 - 门禁输出: RESULT: PASS — 可进入 build
