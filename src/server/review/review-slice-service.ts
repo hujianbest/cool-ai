@@ -5,6 +5,10 @@ import { createCredentialVault } from "@/src/server/credential-vault";
 import { openDatabase } from "@/src/server/db";
 import { callOpenAiChat } from "@/src/server/collaboration/openai-chat-client";
 import {
+  invalidateCompletionTx,
+  projectPassedWorkItemTx,
+} from "@/src/server/review/completion-gate";
+import {
   reviewOutputSchema,
   startReviewInputSchema,
   type ReviewAttemptDto,
@@ -456,6 +460,8 @@ export function requestResultReworkTx(
     || (current.state === "waiting_owner"
       && input.expectedAttemptId === null
       && current.attemptId === null)
+    || (current.state === "passed"
+      && input.expectedAttemptId === null)
   );
   if (
     !validSource
@@ -463,6 +469,13 @@ export function requestResultReworkTx(
     || current.version !== input.expectedHeadVersion
   ) {
     throw new ReviewSliceError("REVIEW_STATE_CONFLICT", 409, "Stale rework request.");
+  }
+  if (current.state === "passed") {
+    invalidateCompletionTx(database, {
+      reason: "DOWNSTREAM_REWORK_REQUESTED",
+      workItemId: input.workItemId,
+    });
+    return;
   }
   const updated = database.prepare(`
     UPDATE work_item_review_heads
@@ -764,15 +777,22 @@ export async function startReview(
       database.prepare(
         "UPDATE review_attempts SET status='passed',finished_at=? WHERE id=? AND status='calling'",
       ).run(new Date().toISOString(), attemptId);
-      database.prepare(`
+      const projectedHead = database.prepare(`
         UPDATE work_item_review_heads
         SET state='passed',version=version+1,updated_at=?
         WHERE work_item_id=? AND current_attempt_id=? AND state='reviewing'
       `).run(new Date().toISOString(), workItemId, attemptId);
-      database.prepare(`
-        UPDATE work_items SET status='done',version=version+1,updated_at=?
-        WHERE id=? AND status='in_progress'
-      `).run(new Date().toISOString(), workItemId);
+      if (projectedHead.changes !== 1) {
+        throw new ReviewSliceError(
+          "REVIEW_STATE_CONFLICT",
+          409,
+          "Review pass lost its completion-head CAS.",
+        );
+      }
+      projectPassedWorkItemTx(database, {
+        expectedHeadVersion: acquired.headVersion + 2,
+        workItemId,
+      });
     });
   } finally {
     database.close();

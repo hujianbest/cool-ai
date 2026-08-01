@@ -2,6 +2,7 @@ import { randomUUID } from "node:crypto";
 
 import { MissionError } from "@/src/server/mission-service";
 import { SchemaMigrationError } from "@/src/server/migrations";
+import { CompletionGateError } from "@/src/server/review/completion-gate";
 
 export async function readMissionJson(
   request: Request,
@@ -20,13 +21,18 @@ export async function readMissionJson(
 }
 
 export function missionApiError(error: unknown, route: string): Response {
-  if (error instanceof MissionError) {
+  if (error instanceof MissionError || error instanceof CompletionGateError) {
     return Response.json(
       {
         error: {
           code: error.code,
           message: error.message,
-          ...(error.fields ? { fields: error.fields } : {}),
+          ...(error instanceof CompletionGateError && error.blockers
+            ? { blockers: error.blockers }
+            : {}),
+          ...(error instanceof MissionError && error.fields
+            ? { fields: error.fields }
+            : {}),
           ...(error.currentVersion !== undefined
             ? { currentVersion: error.currentVersion }
             : {}),

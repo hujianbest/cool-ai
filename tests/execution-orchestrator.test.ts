@@ -13,6 +13,7 @@ import {
   controlExecution,
   type ExecutionControlDependencies,
 } from "@/src/server/execution/execution-control-service";
+import { initializeMissionDeliveryTx } from "@/src/server/migrations-v6";
 
 type Identity = {
   finalPath: string;
@@ -153,6 +154,10 @@ function seed(): void {
     INSERT INTO project_validation_policies (project_id,active_revision_id,version,updated_at)
     VALUES ('${PROJECT_ID}','policy',1,strftime('%Y-%m-%dT%H:%M:%fZ','now'));
   `);
+  const mission = database.prepare(`
+    SELECT id,project_id AS projectId,updated_at AS updatedAt FROM missions WHERE id='mission'
+  `).get() as { id: string; projectId: string; updatedAt: string };
+  initializeMissionDeliveryTx(database, mission);
   insertExecution(EXECUTION_ID, "agent-a", "work-a", "attempt-a");
   insertExecution(SECOND_EXECUTION_ID, "agent-b", "work-b", "attempt-b");
 }

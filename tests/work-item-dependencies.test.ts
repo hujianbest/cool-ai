@@ -9,7 +9,6 @@ import {
   createMission,
   createWorkItem,
   getMissionState,
-  transitionWorkItem,
   updateWorkItem,
 } from "@/src/server/mission-service";
 
@@ -186,7 +185,7 @@ describe("work-item dependency full replacement", () => {
     expect(replace(third, [first.id]).dependencyIds).toEqual([first.id]);
   });
 
-  it("requires done dependencies for active items and preserves T-5 transition readiness", () => {
+  it("does not treat a forged legacy done status as a passed dependency", () => {
     const { mission } = createProjectMission("Readiness");
     const prerequisite = item(mission.id, "Prerequisite");
     const active = item(mission.id, "Active");
@@ -200,43 +199,9 @@ describe("work-item dependency full replacement", () => {
     expect(persisted(active.id)).toEqual(before);
 
     setStatus(prerequisite.id, "done");
-    const accepted = replace(active, [prerequisite.id]);
-    expect(accepted).toMatchObject({
-      dependencyIds: [prerequisite.id],
-      status: "in_progress",
-      version: 2,
-    });
-
-    const donePrerequisite = item(mission.id, "Done-state prerequisite");
-    const completed = item(mission.id, "Completed item");
-    setStatus(completed.id, "done");
     expectCode(
-      () => replace(completed, [donePrerequisite.id]),
-      "DEPENDENCY_NOT_READY",
+      () => replace(active, [prerequisite.id]),
+      "SCHEMA_DATA_INVALID",
     );
-    expect(persisted(completed.id).row).toMatchObject({ status: "done", version: 1 });
-    setStatus(donePrerequisite.id, "done");
-    expect(replace(completed, [donePrerequisite.id])).toMatchObject({
-      dependencyIds: [donePrerequisite.id],
-      status: "done",
-      version: 2,
-    });
-
-    const todoDependent = item(mission.id, "Todo dependent", [active.id]);
-    expectCode(
-      () =>
-        transitionWorkItem(databasePath, todoDependent.id, {
-          toStatus: "in_progress",
-          expectedVersion: 1,
-        }),
-      "DEPENDENCY_NOT_READY",
-    );
-    setStatus(active.id, "done");
-    expect(
-      transitionWorkItem(databasePath, todoDependent.id, {
-        toStatus: "in_progress",
-        expectedVersion: 1,
-      }),
-    ).toMatchObject({ status: "in_progress", version: 2 });
   });
 });

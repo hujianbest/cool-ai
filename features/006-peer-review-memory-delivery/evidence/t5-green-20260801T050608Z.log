@@ -1,0 +1,22 @@
+# hf-gate-run
+# label: t5-green
+# command: npm test -- tests/completion-gate.test.ts tests/mission-legacy-entrypoints.test.ts
+# started: 2026-08-01T05:06:08+00:00
+
+> collaboration-cockpit@0.1.0 test
+> vitest run tests/completion-gate.test.ts tests/mission-legacy-entrypoints.test.ts
+
+
+ RUN  v4.1.10 D:/cool-ai
+
+(node:5232) ExperimentalWarning: SQLite is an experimental feature and might change at any time
+(Use `node --trace-warnings ...` to show where the warning was created)
+(node:4840) ExperimentalWarning: SQLite is an experimental feature and might change at any time
+(Use `node --trace-warnings ...` to show where the warning was created)
+
+ Test Files  2 passed (2)
+      Tests  9 passed (9)
+   Start at  13:06:09
+   Duration  10.16s (transform 516ms, setup 3.19s, import 1.28s, tests 6.19s, environment 8.48s)
+
+# exit: 0

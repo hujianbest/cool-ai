@@ -14,6 +14,7 @@ import {
 import { startExecution } from "@/src/server/execution/execution-service";
 import { cleanupOwnedSandbox } from "@/src/server/execution/sandbox-snapshot";
 import { createWindowsNativeReadAdapter } from "@/src/server/execution/windows-native-read-adapter";
+import { initializeMissionDeliveryTx } from "@/src/server/migrations-v6";
 
 const PROJECT_ID = "sandbox-orchestrator-project";
 const RUN_ID = "sandbox-orchestrator-run";
@@ -141,6 +142,11 @@ function seedEligibleTask(): void {
       INSERT INTO project_validation_policies (project_id,active_revision_id,version,updated_at)
       VALUES ('${PROJECT_ID}','sandbox-policy',1,'${NOW}');
     `);
+    initializeMissionDeliveryTx(database, {
+      id: "sandbox-mission",
+      projectId: PROJECT_ID,
+      updatedAt: NOW,
+    });
     database.prepare(
       "UPDATE projects SET workspace_path=?,workspace_key=? WHERE id=?",
     ).run(workspace, workspace.toLocaleLowerCase("en-US"), PROJECT_ID);

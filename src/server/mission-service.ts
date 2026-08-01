@@ -1,8 +1,14 @@
 import { randomUUID } from "node:crypto";
 import type { DatabaseSync } from "node:sqlite";
 
+import { canonicalRequestHash } from "@/src/server/collaboration/operation-receipts";
 import { openDatabase } from "@/src/server/db";
 import { initializeMissionDeliveryTx } from "@/src/server/migrations-v6";
+import {
+  CompletionGateError,
+  invalidateCompletionTx,
+  writeWorkItemStatusTx,
+} from "@/src/server/review/completion-gate";
 import type {
   Mission,
   MissionState,
@@ -28,6 +34,7 @@ type UpdateWorkItemInput = CreateWorkItemInput & { expectedVersion: number };
 type TransitionWorkItemInput = {
   toStatus: WorkItemStatus;
   expectedVersion: number;
+  operationId?: string;
 };
 export type WorkItemBatchProposal = {
   clientKey: string;
@@ -331,8 +338,10 @@ function ensureDependenciesDone(
   const unfinished = database
     .prepare(
       `SELECT 1
-       FROM work_items
-       WHERE id IN (${placeholders}) AND status <> 'done'
+       FROM work_items prerequisite
+       LEFT JOIN work_item_review_heads head ON head.work_item_id=prerequisite.id
+       WHERE prerequisite.id IN (${placeholders})
+         AND (prerequisite.status <> 'done' OR head.state IS NOT 'passed')
        LIMIT 1`,
     )
     .get(...dependencyIds);
@@ -598,8 +607,13 @@ export function claimWorkItemTx(
            FROM work_item_dependencies AS dependencies
            JOIN work_items AS prerequisite
              ON prerequisite.id = dependencies.depends_on_id
+           LEFT JOIN work_item_review_heads AS review_head
+             ON review_head.work_item_id = prerequisite.id
            WHERE dependencies.work_item_id = work_items.id
-             AND prerequisite.status <> 'done'
+             AND (
+               prerequisite.status <> 'done'
+               OR review_head.state IS NOT 'passed'
+             )
          )`,
     )
     .run(agentId, timestamp, workItemId, version);
@@ -777,11 +791,147 @@ export function updateWorkItem(
           workItemId,
         );
       replaceDependencyRows(database, workItemId, parsed.dependencyIds);
+      if (current.status === "done") {
+        invalidateCompletionTx(database, {
+          reason: "WORK_ITEM_MATERIAL_CHANGED",
+          workItemId,
+        });
+      }
       return workItemById(database, workItemId)!;
     });
   } finally {
     database.close();
   }
+}
+
+export function transitionWorkItemTx(
+  database: DatabaseSync,
+  input: {
+    actor: MissionWriteActor;
+    expectedVersion: number;
+    toStatus: WorkItemStatus;
+    workItemId: string;
+  },
+): WorkItem {
+  const current = workItemById(database, input.workItemId);
+  if (!current) {
+    throw new MissionError("WORK_ITEM_NOT_FOUND", 404, "Work item was not found.");
+  }
+  if (current.version !== input.expectedVersion) {
+    throw new MissionError(
+      "RESOURCE_CONFLICT",
+      409,
+      "Work item version is stale.",
+      undefined,
+      current.version,
+    );
+  }
+  if (input.toStatus === "done") {
+    writeWorkItemStatusTx(database, {
+      expectedVersion: input.expectedVersion,
+      toStatus: "done",
+      workItemId: input.workItemId,
+    });
+    return workItemById(database, input.workItemId)!;
+  }
+  if (!allowedTransitions[current.status].includes(input.toStatus)) {
+    throw new MissionError(
+      "INVALID_TRANSITION",
+      409,
+      "Work item transition is not allowed.",
+    );
+  }
+  if (current.status === "done" && input.toStatus === "in_progress") {
+    invalidateCompletionTx(database, {
+      reason: input.actor.type === "agent" ? "AGENT_REOPENED" : "OWNER_REOPENED",
+      workItemId: input.workItemId,
+    });
+    return workItemById(database, input.workItemId)!;
+  }
+  if (input.toStatus === "in_progress") {
+    ensureDependenciesDone(database, current.dependencyIds);
+  }
+  const updated = database.prepare(`
+    UPDATE work_items
+    SET status=?,version=version+1,updated_at=?
+    WHERE id=? AND version=? AND status=?
+  `).run(
+    input.toStatus,
+    new Date().toISOString(),
+    input.workItemId,
+    input.expectedVersion,
+    current.status,
+  );
+  if (updated.changes !== 1) {
+    throw new MissionError(
+      "RESOURCE_CONFLICT",
+      409,
+      "Work item version is stale.",
+      undefined,
+      workItemById(database, input.workItemId)?.version,
+    );
+  }
+  return workItemById(database, input.workItemId)!;
+}
+
+type TransitionReceipt =
+  | { ok: true; workItem: WorkItem }
+  | {
+      error: {
+        blockers?: Array<{ code: string; workItemId: string | null }>;
+        code: string;
+        currentVersion?: number;
+        message: string;
+        status: number;
+      };
+      ok: false;
+    };
+
+function receiptError(receipt: Extract<TransitionReceipt, { ok: false }>): never {
+  const error = receipt.error;
+  if (error.blockers) {
+    throw new CompletionGateError(
+      error.code,
+      error.status,
+      error.message,
+      error.blockers,
+      error.currentVersion,
+    );
+  }
+  throw new MissionError(
+    error.code,
+    error.status,
+    error.message,
+    undefined,
+    error.currentVersion,
+  );
+}
+
+function insertTransitionReceipt(
+  database: DatabaseSync,
+  input: {
+    operationId: string;
+    projectId: string;
+    requestHash: string;
+    receipt: TransitionReceipt;
+  },
+): void {
+  const timestamp = new Date().toISOString();
+  const status = input.receipt.ok ? 200 : input.receipt.error.status;
+  database.prepare(`
+    INSERT INTO collaboration_operations(
+      id,project_id,run_id,kind,request_hash,status,http_status,response_json,
+      created_at,updated_at
+    ) VALUES (?, ?, NULL, 'legacy_work_item_transition', ?, 'completed', ?, ?, ?, ?)
+  `).run(
+    input.operationId,
+    input.projectId,
+    input.requestHash,
+    status,
+    JSON.stringify(input.receipt),
+    timestamp,
+    timestamp,
+  );
 }
 
 export function transitionWorkItem(
@@ -793,77 +943,94 @@ export function transitionWorkItem(
     invalid([{ field: "status", code: "invalid_format" }]);
   }
   const version = expectedVersion(input.expectedVersion);
+  if (
+    input.operationId !== undefined
+    && (typeof input.operationId !== "string"
+      || !/^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/iu
+        .test(input.operationId))
+  ) {
+    invalid([{ field: "operationId", code: "invalid_format" }]);
+  }
   const database = openDatabase(databasePath);
   try {
-    return transaction(database, () => {
-      const current = workItemById(database, workItemId);
-      if (!current) {
-        throw new MissionError(
-          "WORK_ITEM_NOT_FOUND",
-          404,
-          "Work item was not found.",
-        );
-      }
-      if (current.version !== version) {
-        throw new MissionError(
-          "RESOURCE_CONFLICT",
-          409,
-          "Work item version is stale.",
-          undefined,
-          current.version,
-        );
-      }
-      if (!allowedTransitions[current.status].includes(input.toStatus)) {
-        throw new MissionError(
-          "INVALID_TRANSITION",
-          409,
-          "Work item transition is not allowed.",
-        );
-      }
-
-      if (input.toStatus === "in_progress" || input.toStatus === "done") {
-        const unfinished = database
-          .prepare(
-            `SELECT 1
-             FROM work_item_dependencies AS dependencies
-             JOIN work_items AS prerequisite
-               ON prerequisite.id = dependencies.depends_on_id
-             WHERE dependencies.work_item_id = ?
-               AND prerequisite.status <> 'done'
-             LIMIT 1`,
-          )
-          .get(workItemId);
-        if (unfinished) {
-          throw dependencyNotReadyError();
+    const current = workItemById(database, workItemId);
+    if (!current) {
+      throw new MissionError("WORK_ITEM_NOT_FOUND", 404, "Work item was not found.");
+    }
+    const mission = missionById(database, current.missionId)!;
+    const requestHash = canonicalRequestHash({ ...input, workItemId });
+    if (input.operationId) {
+      const prior = database.prepare(`
+        SELECT kind,request_hash AS requestHash,status,response_json AS responseJson
+        FROM collaboration_operations WHERE project_id=? AND id=?
+      `).get(mission.projectId, input.operationId) as {
+        kind: string;
+        requestHash: string;
+        responseJson: string;
+        status: string;
+      } | undefined;
+      if (prior) {
+        if (
+          prior.kind !== "legacy_work_item_transition"
+          || prior.requestHash !== requestHash
+        ) {
+          throw new MissionError(
+            "OPERATION_CONFLICT",
+            409,
+            "Operation id was already used for different input.",
+          );
         }
+        const receipt = JSON.parse(prior.responseJson) as TransitionReceipt;
+        if (!receipt.ok) receiptError(receipt);
+        return receipt.workItem;
       }
-
-      if (current.status === "done" && input.toStatus === "in_progress") {
-        const activeDownstream = database
-          .prepare(
-            `SELECT 1
-             FROM work_item_dependencies AS dependencies
-             JOIN work_items AS downstream
-               ON downstream.id = dependencies.work_item_id
-             WHERE dependencies.depends_on_id = ?
-               AND downstream.status IN ('in_progress', 'done')
-             LIMIT 1`,
-          )
-          .get(workItemId);
-        if (activeDownstream) {
-          throw dependencyNotReadyError();
+    }
+    try {
+      return transaction(database, () => {
+        const transitioned = transitionWorkItemTx(database, {
+          actor: { type: "owner" },
+          expectedVersion: version,
+          toStatus: input.toStatus,
+          workItemId,
+        });
+        if (input.operationId) {
+          insertTransitionReceipt(database, {
+            operationId: input.operationId,
+            projectId: mission.projectId,
+            receipt: { ok: true, workItem: transitioned },
+            requestHash,
+          });
         }
+        return transitioned;
+      });
+    } catch (error) {
+      if (
+        input.operationId
+        && (error instanceof MissionError || error instanceof CompletionGateError)
+      ) {
+        const receipt: TransitionReceipt = {
+          error: {
+            ...(error instanceof CompletionGateError && error.blockers
+              ? { blockers: error.blockers }
+              : {}),
+            code: error.code,
+            ...(error.currentVersion !== undefined
+              ? { currentVersion: error.currentVersion }
+              : {}),
+            message: error.message,
+            status: error.httpStatus,
+          },
+          ok: false,
+        };
+        transaction(database, () => insertTransitionReceipt(database, {
+          operationId: input.operationId!,
+          projectId: mission.projectId,
+          receipt,
+          requestHash,
+        }));
       }
-
-      database
-        .prepare(
-          `UPDATE work_items
-           SET status = ?, version = version + 1, updated_at = ?
-           WHERE id = ?`,
-        )
-        .run(input.toStatus, new Date().toISOString(), workItemId);
-      return workItemById(database, workItemId)!;
-    });
+      throw error;
+    }
   } finally {
     database.close();
   }

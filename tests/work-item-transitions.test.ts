@@ -153,10 +153,8 @@ describe("work-item transition service", () => {
       ["todo", "in_progress"],
       ["todo", "blocked"],
       ["in_progress", "blocked"],
-      ["in_progress", "done"],
       ["blocked", "todo"],
       ["blocked", "in_progress"],
-      ["done", "in_progress"],
     ];
 
     for (const [from, to] of allowed) {
@@ -178,16 +176,15 @@ describe("work-item transition service", () => {
       "todo:in_progress",
       "todo:blocked",
       "in_progress:blocked",
-      "in_progress:done",
       "blocked:todo",
       "blocked:in_progress",
-      "done:in_progress",
     ]);
-    const statuses: WorkItemStatus[] = ["todo", "in_progress", "blocked", "done"];
+    const statuses: WorkItemStatus[] = ["todo", "in_progress", "blocked"];
 
     for (const from of statuses) {
       for (const to of statuses) {
         if (allowed.has(`${from}:${to}`)) continue;
+        if (to === "done") continue;
         const item = createItem(domain, mission.id, `${from} rejects ${to}`);
         setState(item.id, from);
         expect(() =>
@@ -201,7 +198,7 @@ describe("work-item transition service", () => {
     }
   });
 
-  it("requires direct dependencies done when entering in_progress or done", async () => {
+  it("requires a passed dependency when entering in_progress", async () => {
     const domain = await service();
     const mission = setupMission(domain);
     const prerequisite = createItem(domain, mission.id, "Prerequisite");
@@ -211,7 +208,6 @@ describe("work-item transition service", () => {
     for (const [from, to] of [
       ["todo", "in_progress"],
       ["blocked", "in_progress"],
-      ["in_progress", "done"],
     ] as Array<[WorkItemStatus, WorkItemStatus]>) {
       setState(prerequisite.id, "in_progress");
       setState(dependent.id, from);
@@ -223,43 +219,13 @@ describe("work-item transition service", () => {
       ).toThrowError(expect.objectContaining({ code: "DEPENDENCY_NOT_READY" }));
       expect(readState(dependent.id)).toEqual({ status: from, version: 1 });
 
-      setState(prerequisite.id, "done");
-      expect(
-        domain.transitionWorkItem(databasePath, dependent.id, {
-          toStatus: to,
-          expectedVersion: 1,
-        }),
-      ).toMatchObject({ status: to, version: 2 });
     }
   });
 
-  it("blocks reopening done prerequisites with active downstream and enforces expectedVersion", async () => {
+  it("enforces expectedVersion without mutating the current state", async () => {
     const domain = await service();
     const mission = setupMission(domain);
-    const prerequisite = createItem(domain, mission.id, "Done prerequisite");
-    const downstream = createItem(domain, mission.id, "Downstream");
-    addDependency(downstream.id, prerequisite.id);
-    setState(prerequisite.id, "done");
-
-    for (const downstreamStatus of ["in_progress", "done"] as WorkItemStatus[]) {
-      setState(downstream.id, downstreamStatus);
-      expect(() =>
-        domain.transitionWorkItem(databasePath, prerequisite.id, {
-          toStatus: "in_progress",
-          expectedVersion: 1,
-        }),
-      ).toThrowError(expect.objectContaining({ code: "DEPENDENCY_NOT_READY" }));
-      expect(readState(prerequisite.id)).toEqual({ status: "done", version: 1 });
-    }
-
-    setState(downstream.id, "blocked");
-    expect(
-      domain.transitionWorkItem(databasePath, prerequisite.id, {
-        toStatus: "in_progress",
-        expectedVersion: 1,
-      }),
-    ).toMatchObject({ status: "in_progress", version: 2 });
-
+    const prerequisite = createItem(domain, mission.id, "Versioned prerequisite");
     setState(prerequisite.id, "todo", 4);
     expect(() =>
       domain.transitionWorkItem(databasePath, prerequisite.id, {

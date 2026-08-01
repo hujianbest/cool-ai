@@ -154,7 +154,7 @@ describe("transaction-aware mission primitives", () => {
     database.close();
   });
 
-  it("creates a complete same-batch DAG, increments mission once, and claims conditionally", async () => {
+  it("creates a complete DAG and rejects claims behind forged legacy done", async () => {
     vi.useFakeTimers();
     vi.setSystemTime(new Date("2026-07-30T01:02:03.000Z"));
     const domain = await primitives();
@@ -211,24 +211,15 @@ describe("transaction-aware mission primitives", () => {
       database
         .prepare("UPDATE work_items SET status = 'done' WHERE id = ?")
         .run(keys.research);
-      const claimed = withTransaction(database, () =>
-        domain.claimWorkItemTx(database, projectId, keys.write, "agent-a", 1),
-      );
-      expect(claimed).toMatchObject({
-        id: keys.write,
-        status: "in_progress",
-        assigneeAgentId: "agent-a",
-        version: 2,
-      });
       expect(() =>
         withTransaction(database, () =>
-          domain.claimWorkItemTx(database, projectId, keys.write, "agent-a", 2),
+          domain.claimWorkItemTx(database, projectId, keys.write, "agent-a", 1),
         ),
       ).toThrowError(expect.objectContaining({ code: "ACTION_CONFLICT" }));
       expect(row(database, keys.write)).toEqual({
-        assigneeAgentId: "agent-a",
-        status: "in_progress",
-        version: 2,
+        assigneeAgentId: null,
+        status: "todo",
+        version: 1,
       });
     } finally {
       database.close();
