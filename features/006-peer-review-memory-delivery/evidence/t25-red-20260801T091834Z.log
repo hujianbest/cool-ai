@@ -1,0 +1,77 @@
+# hf-gate-run
+# label: t25-red
+# command: npm test -- tests/review-event-compatibility.test.ts
+# started: 2026-08-01T09:18:34+00:00
+
+> collaboration-cockpit@0.1.0 test
+> vitest run tests/review-event-compatibility.test.ts
+
+
+ RUN  v4.1.10 D:/cool-ai
+
+(node:12308) ExperimentalWarning: SQLite is an experimental feature and might change at any time
+(Use `node --trace-warnings ...` to show where the warning was created)
+ ❯ tests/review-event-compatibility.test.ts (8 tests | 8 failed) 2634ms
+     × projects every designed legacy variant and survives restart as strict public DTOs 448ms
+     × fails closed on unknown type 318ms
+     × fails closed on unknown field 312ms
+     × fails closed on unknown reason 308ms
+     × fails closed on unknown error code 316ms
+     × fails closed on missing predecessor 304ms
+     × fails closed on duplicate predecessor 316ms
+     × fails closed on association drift 309ms
+
+⎯⎯⎯⎯⎯⎯⎯ Failed Tests 8 ⎯⎯⎯⎯⎯⎯⎯
+
+ FAIL  tests/review-event-compatibility.test.ts > review event historical compatibility > projects every designed legacy variant and survives restart as strict public DTOs
+SchemaMigrationError: Database version 6 schema is invalid.
+ ❯ migrateDatabase src/server/migrations.ts:1375:13
+    1373|     const validation = validateV6(database);
+    1374|     if (validation) {
+    1375|       throw new SchemaMigrationError(
+       |             ^
+    1376|         validation,
+    1377|         "Database version 6 schema is invalid.",
+ ❯ openDatabase src/server/db.ts:14:5
+ ❯ listReviewEvents src/server/review/review-read-service.ts:549:20
+ ❯ tests/review-event-compatibility.test.ts:233:19
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[1/8]⎯
+
+ FAIL  tests/review-event-compatibility.test.ts > review event historical compatibility > fails closed on unknown type
+ FAIL  tests/review-event-compatibility.test.ts > review event historical compatibility > fails closed on unknown field
+ FAIL  tests/review-event-compatibility.test.ts > review event historical compatibility > fails closed on unknown reason
+ FAIL  tests/review-event-compatibility.test.ts > review event historical compatibility > fails closed on unknown error code
+ FAIL  tests/review-event-compatibility.test.ts > review event historical compatibility > fails closed on missing predecessor
+ FAIL  tests/review-event-compatibility.test.ts > review event historical compatibility > fails closed on duplicate predecessor
+ FAIL  tests/review-event-compatibility.test.ts > review event historical compatibility > fails closed on association drift
+AssertionError: expected error to match asymmetric matcher
+
+- Expected
++ Received
+
+- ObjectContaining {
+-   "code": "SCHEMA_DATA_INVALID",
++ SchemaMigrationError {
++   "message": "Database version 6 schema is invalid.",
++   "code": "SCHEMA_DRIFT",
++   "name": "SchemaMigrationError",
+  }
+
+ ❯ tests/review-event-compatibility.test.ts:352:8
+    350|     seed(open(path), events as StoredEvent[]);
+    351|     expect(() => listReviewEvents(path, "mission", { limit: "100" }))
+    352|       .toThrowError(expect.objectContaining({ code: "SCHEMA_DATA_INVAL…
+       |        ^
+    353|   });
+    354| });
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[2/8]⎯
+
+
+ Test Files  1 failed (1)
+      Tests  8 failed (8)
+   Start at  17:18:35
+   Duration  5.50s (transform 187ms, setup 420ms, import 377ms, tests 2.63s, environment 1.77s)
+
+# exit: 1

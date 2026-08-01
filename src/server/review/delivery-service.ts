@@ -546,6 +546,39 @@ function appendDeliveryEventTx(
   }
 }
 
+function deliveryStartedFingerprint(
+  database: DatabaseSync,
+  missionId: string,
+  operationId: string,
+): string {
+  const rows = database.prepare(`
+    SELECT payload_json AS payloadJson FROM review_events
+    WHERE mission_id=? AND type='delivery_generation_started'
+      AND json_extract(payload_json,'$.operationId')=?
+    ORDER BY sequence,id
+  `).all(missionId, operationId) as Array<{ payloadJson: string }>;
+  if (rows.length !== 1) {
+    throw new DeliveryGenerationError(
+      "DELIVERY_INVARIANT_FAILED",
+      500,
+      "Delivery operation has no unique immutable start event.",
+    );
+  }
+  const payload = JSON.parse(rows[0]!.payloadJson) as Record<string, unknown>;
+  if (
+    Object.keys(payload).sort().join(",") !== "inputFingerprint,operationId"
+    || payload.operationId !== operationId
+    || !HASH.safeParse(payload.inputFingerprint).success
+  ) {
+    throw new DeliveryGenerationError(
+      "DELIVERY_INVARIANT_FAILED",
+      500,
+      "Delivery start event is invalid.",
+    );
+  }
+  return String(payload.inputFingerprint);
+}
+
 function completeDeliveryOperationTx(
   database: DatabaseSync,
   input: {
@@ -758,6 +791,7 @@ function recordDeliveryFailure(
   database: DatabaseSync,
   input: {
     errorCode: string;
+    inputFingerprint: string;
     leaseToken: string;
     missionId: string;
     operationId: string;
@@ -791,7 +825,11 @@ function recordDeliveryFailure(
     }, now);
     appendDeliveryEventTx(database, {
       missionId: input.missionId,
-      payload: { errorCode: input.errorCode, operationId: input.operationId },
+      payload: {
+        category: "generation_failed",
+        inputFingerprint: input.inputFingerprint,
+        operationId: input.operationId,
+      },
       projectId: input.projectId,
       type: "delivery_generation_failed",
     }, dependencies);
@@ -910,12 +948,11 @@ export function finalizeDeliveryGeneration(
         missionId: input.missionId,
         payload: {
           deliveryId,
+          deliveryVersion: versionNumber,
           inputFingerprint: input.bundle.inputFingerprint,
-          reused: Boolean(existing),
-          version: versionNumber,
         },
         projectId: input.projectId,
-        type: "delivery_generation_completed",
+        type: "delivery_completed",
       }, dependencies);
       dependencies.beforeCommitStep?.("before_commit");
       return {
@@ -929,6 +966,7 @@ export function finalizeDeliveryGeneration(
     if (!(error instanceof DeliveryGenerationError && error.code === "DELIVERY_STATE_CONFLICT")) {
       recordDeliveryFailure(database, {
         errorCode: "DELIVERY_GENERATION_FAILED",
+        inputFingerprint: input.bundle.inputFingerprint,
         leaseToken: input.leaseToken,
         missionId: input.missionId,
         operationId: input.operationId,
@@ -946,7 +984,11 @@ export function finalizeDeliveryGeneration(
 
 export function invalidateMissionContextTx(
   database: DatabaseSync,
-  input: { missionId: string; projectId: string; reason: string },
+  input: {
+    missionId: string;
+    projectId: string;
+    reason: "MISSION_CONTEXT_CHANGED";
+  },
 ): { discardedAttemptIds: string[]; invalidatedDeliveryId: string | null } {
   const head = deliveryHead(database, input.projectId, input.missionId);
   if (!head) {
@@ -1024,7 +1066,7 @@ export function invalidateMissionContextTx(
   for (const attempt of attempts) {
     appendDeliveryEventTx(database, {
       missionId: input.missionId,
-      payload: { attemptId: attempt.id, reason: input.reason, workItemId: attempt.workItemId },
+      payload: { attemptId: attempt.id, category: "context_changed" },
       projectId: input.projectId,
       type: "review_attempt_discarded",
     });
@@ -1034,11 +1076,11 @@ export function invalidateMissionContextTx(
       missionId: input.missionId,
       payload: {
         deliveryId: head.currentDeliveryId,
-        operationId: head.currentOperationId,
-        reason: input.reason,
+        reasonCode: "MISSION_CONTEXT_CHANGED",
+        workItemIds: [],
       },
       projectId: input.projectId,
-      type: "mission_delivery_invalidated",
+      type: "delivery_invalidated",
     });
   }
   return {
@@ -1091,11 +1133,16 @@ export function reconcileDeliveryGeneration(
     appendDeliveryEventTx(database, {
       missionId: input.missionId,
       payload: {
-        errorCode: "DELIVERY_GENERATION_INTERRUPTED",
+        category: "interrupted",
+        inputFingerprint: deliveryStartedFingerprint(
+          database,
+          input.missionId,
+          head.currentOperationId,
+        ),
         operationId: head.currentOperationId,
       },
       projectId: input.projectId,
-      type: "delivery_generation_interrupted",
+      type: "delivery_generation_failed",
     }, dependencies);
     return { reconciled: true };
   });

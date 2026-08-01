@@ -263,13 +263,10 @@ export function answerEscalation(
       action: input.action,
       answerId,
       escalationId,
-      resultId: row.resultId,
-      workItemId: row.workItemId,
     }, randomUUID(), now);
     if (input.action === "terminate_mission") {
-      appendEvent(database, row, "mission_owner_terminated", {
-        escalationId,
-        missionId: row.missionId,
+      appendEvent(database, row, "mission_terminated", {
+        reason: "owner_terminated",
       }, randomUUID(), now);
     }
     const response = responseFor(escalationId, {

@@ -5,6 +5,11 @@ export type CompletionBlocker = {
   code: string;
   workItemId: string | null;
 };
+export type CompletionInvalidationReason =
+  | "DOWNSTREAM_REWORK_REQUESTED"
+  | "OWNER_REOPENED"
+  | "AGENT_REOPENED"
+  | "WORK_ITEM_MATERIAL_CHANGED";
 
 export class CompletionGateError extends Error {
   constructor(
@@ -199,7 +204,7 @@ export function projectPassedWorkItemTx(
       workItemId: input.workItemId,
     },
     projectId: current.projectId,
-    type: "work_item_review_passed",
+    type: "legacy_work_item_review_passed",
   });
 }
 
@@ -295,7 +300,7 @@ export function writeMissionCompletionTx(
 
 export function invalidateCompletionTx(
   database: DatabaseSync,
-  input: { reason: string; workItemId: string },
+  input: { reason: CompletionInvalidationReason; workItemId: string },
 ): { invalidatedWorkItemIds: string[] } {
   const root = workItem(database, input.workItemId);
   if (!root) {
@@ -339,9 +344,9 @@ export function invalidateCompletionTx(
     invalidatedWorkItemIds.push(id);
     appendEventTx(database, {
       missionId: root.missionId,
-      payload: { reason: input.reason, workItemId: id },
+      payload: { reasonCode: input.reason, workItemId: id },
       projectId: root.projectId,
-      type: "work_item_completion_invalidated",
+      type: "legacy_work_item_completion_invalidated",
     });
   }
 
@@ -389,11 +394,11 @@ export function invalidateCompletionTx(
       missionId: root.missionId,
       payload: {
         deliveryId: delivery.deliveryId,
-        reason: input.reason,
-        workItemId: input.workItemId,
+        reasonCode: input.reason,
+        workItemIds: [input.workItemId],
       },
       projectId: root.projectId,
-      type: "mission_delivery_invalidated",
+      type: "delivery_invalidated",
     });
   }
   return { invalidatedWorkItemIds };

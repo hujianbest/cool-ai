@@ -537,11 +537,12 @@ export function finalizeCheckpointedReview(
       output.decision.choice === "reject"
         ? "rework_requested"
         : output.decision.choice === "escalate"
-        ? "review_escalated"
+        ? "escalation_opened"
         : "work_item_passed",
       {
         decisionId,
         ...(escalationId ? { escalationId } : {}),
+        ...(output.decision.choice === "pass" ? { reasonCode: "review_passed" } : {}),
         resultId: row.resultId,
         workItemId: row.workItemId,
       },

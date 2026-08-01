@@ -367,7 +367,13 @@ export function initializeFirstResultHeadTx(
   `).run(input.workItemId, input.projectId, input.missionId, input.resultId);
   appendResultEventTx(database, {
     missionId: input.missionId,
-    payload: { resultId: input.resultId, resultVersion: 1, workItemId: input.workItemId },
+    payload: {
+      executionId: input.executionId,
+      resultId: input.resultId,
+      resultVersion: 1,
+      supersedesResultId: null,
+      workItemId: input.workItemId,
+    },
     projectId: input.projectId,
     type: "result_version_created",
   });
@@ -432,6 +438,7 @@ export function advanceResultHeadTx(
   appendResultEventTx(database, {
     missionId: input.missionId,
     payload: {
+      executionId: input.executionId,
       resultId: input.resultId,
       resultVersion: nextVersion,
       supersedesResultId: current.resultId,

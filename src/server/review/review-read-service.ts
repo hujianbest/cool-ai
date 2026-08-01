@@ -354,6 +354,250 @@ function durableEventActor(
   return { actorId: actor.actorId, actorType: "agent" };
 }
 
+function schemaDataInvalid(): never {
+  throw new ReviewApiError("SCHEMA_DATA_INVALID");
+}
+
+function exactPayload(
+  payload: Record<string, unknown>,
+  keys: readonly string[],
+): void {
+  const actual = Object.keys(payload).sort();
+  const expected = [...keys].sort();
+  if (
+    actual.length !== expected.length
+    || actual.some((key, index) => key !== expected[index])
+  ) {
+    schemaDataInvalid();
+  }
+}
+
+function recordPayload(value: unknown): Record<string, unknown> {
+  if (!value || typeof value !== "object" || Array.isArray(value)) schemaDataInvalid();
+  return value as Record<string, unknown>;
+}
+
+const COMPLETION_REASONS = new Set([
+  "DOWNSTREAM_REWORK_REQUESTED",
+  "OWNER_REOPENED",
+  "AGENT_REOPENED",
+  "WORK_ITEM_MATERIAL_CHANGED",
+]);
+
+function completionReason(value: unknown): string {
+  if (typeof value !== "string" || !COMPLETION_REASONS.has(value)) schemaDataInvalid();
+  return value;
+}
+
+function eventIdentifier(value: unknown): string {
+  if (typeof value !== "string" || value.length === 0) schemaDataInvalid();
+  return value;
+}
+
+function uniqueStartedFingerprint(
+  database: DatabaseSync,
+  missionId: string,
+  sequence: number,
+  operationId: unknown,
+): string {
+  if (typeof operationId !== "string" || operationId.length === 0) schemaDataInvalid();
+  const rows = database.prepare(`
+    SELECT payload_json AS payloadJson
+    FROM review_events
+    WHERE mission_id=? AND sequence<? AND type='delivery_generation_started'
+      AND json_extract(payload_json,'$.operationId')=?
+    ORDER BY sequence,id
+  `).all(missionId, sequence, operationId) as Array<{ payloadJson: string }>;
+  if (rows.length !== 1) schemaDataInvalid();
+  let payload: Record<string, unknown>;
+  try {
+    payload = recordPayload(JSON.parse(rows[0]!.payloadJson));
+  } catch {
+    schemaDataInvalid();
+  }
+  exactPayload(payload!, ["operationId", "inputFingerprint"]);
+  if (typeof payload!.inputFingerprint !== "string") schemaDataInvalid();
+  return payload!.inputFingerprint;
+}
+
+function adaptStoredEvent(
+  database: DatabaseSync,
+  missionId: string,
+  row: Record<string, unknown>,
+  unsafePayload: unknown,
+) {
+  const payload = recordPayload(unsafePayload);
+  const type = String(row.type);
+  let canonicalType = type;
+  let canonicalPayload: Record<string, unknown> = payload;
+
+  switch (type) {
+    case "work_item_review_passed":
+      exactPayload(payload, ["headVersion", "workItemId"]);
+      canonicalType = "legacy_work_item_review_passed";
+      break;
+    case "work_item_passed":
+      if (!("reasonCode" in payload)) {
+        exactPayload(payload, ["decisionId", "resultId", "workItemId"]);
+        canonicalPayload = { ...payload, reasonCode: "review_passed" };
+      }
+      break;
+    case "work_item_completion_invalidated":
+      exactPayload(payload, ["reason", "workItemId"]);
+      canonicalType = "legacy_work_item_completion_invalidated";
+      canonicalPayload = {
+        reasonCode: completionReason(payload.reason),
+        workItemId: payload.workItemId,
+      };
+      break;
+    case "review_escalated":
+      exactPayload(payload, ["escalationId", "decisionId", "resultId", "workItemId"]);
+      canonicalType = "escalation_opened";
+      break;
+    case "escalation_answered":
+      if ("resultId" in payload || "workItemId" in payload) {
+        exactPayload(payload, [
+          "escalationId", "answerId", "action", "resultId", "workItemId",
+        ]);
+        const durable = database.prepare(`
+          SELECT e.work_item_id AS workItemId,e.result_id AS resultId,
+                 answer.id AS answerId,answer.action
+          FROM review_escalations e
+          JOIN review_escalation_answers answer ON answer.escalation_id=e.id
+          WHERE e.id=?
+        `).get(eventIdentifier(payload.escalationId)) as Record<string, unknown> | undefined;
+        if (
+          !durable
+          || durable.workItemId !== payload.workItemId
+          || durable.resultId !== payload.resultId
+          || durable.answerId !== payload.answerId
+          || durable.action !== payload.action
+        ) schemaDataInvalid();
+        canonicalPayload = {
+          action: payload.action,
+          answerId: payload.answerId,
+          escalationId: payload.escalationId,
+        };
+      }
+      break;
+    case "mission_owner_terminated": {
+      exactPayload(payload, ["escalationId", "missionId"]);
+      if (payload.missionId !== missionId) schemaDataInvalid();
+      const durable = database.prepare(`
+        SELECT 1
+        FROM review_escalations escalation
+        JOIN review_escalation_answers answer ON answer.escalation_id=escalation.id
+        JOIN review_decisions decision ON decision.id=escalation.decision_id
+        JOIN review_attempts attempt ON attempt.id=decision.attempt_id
+        WHERE escalation.id=? AND attempt.mission_id=?
+          AND answer.action='terminate_mission'
+      `).get(eventIdentifier(payload.escalationId), missionId);
+      if (!durable) schemaDataInvalid();
+      canonicalType = "mission_terminated";
+      canonicalPayload = { reason: "owner_terminated" };
+      break;
+    }
+    case "review_attempt_discarded":
+      if ("reason" in payload || "workItemId" in payload) {
+        exactPayload(payload, ["attemptId", "reason", "workItemId"]);
+        if (payload.reason !== "MISSION_CONTEXT_CHANGED") schemaDataInvalid();
+        const durable = database.prepare(`
+          SELECT work_item_id AS workItemId,mission_id AS missionId
+          FROM review_attempts WHERE id=?
+        `).get(eventIdentifier(payload.attemptId)) as Record<string, unknown> | undefined;
+        if (
+          !durable
+          || durable.workItemId !== payload.workItemId
+          || durable.missionId !== missionId
+        ) schemaDataInvalid();
+        canonicalPayload = { attemptId: payload.attemptId, category: "context_changed" };
+      }
+      break;
+    case "delivery_generation_failed":
+    case "delivery_generation_interrupted":
+      if ("errorCode" in payload) {
+        exactPayload(payload, ["errorCode", "operationId"]);
+        const interrupted = type === "delivery_generation_interrupted";
+        if (
+          payload.errorCode
+          !== (interrupted
+            ? "DELIVERY_GENERATION_INTERRUPTED"
+            : "DELIVERY_GENERATION_FAILED")
+        ) schemaDataInvalid();
+        canonicalType = "delivery_generation_failed";
+        canonicalPayload = {
+          category: interrupted ? "interrupted" : "generation_failed",
+          inputFingerprint: uniqueStartedFingerprint(
+            database,
+            missionId,
+            Number(row.sequence),
+            payload.operationId,
+          ),
+          operationId: payload.operationId,
+        };
+      }
+      break;
+    case "delivery_generation_completed": {
+      exactPayload(payload, ["deliveryId", "inputFingerprint", "reused", "version"]);
+      if (
+        typeof payload.reused !== "boolean"
+        || !Number.isInteger(payload.version)
+        || Number(payload.version) < 1
+      ) schemaDataInvalid();
+      const durable = database.prepare(`
+        SELECT 1 FROM mission_deliveries
+        WHERE id=? AND mission_id=? AND version=? AND input_fingerprint=?
+      `).get(
+        eventIdentifier(payload.deliveryId),
+        missionId,
+        Number(payload.version),
+        eventIdentifier(payload.inputFingerprint),
+      );
+      if (!durable) schemaDataInvalid();
+      canonicalType = "delivery_completed";
+      canonicalPayload = {
+        deliveryId: payload.deliveryId,
+        deliveryVersion: payload.version,
+        inputFingerprint: payload.inputFingerprint,
+      };
+      break;
+    }
+    case "mission_delivery_invalidated":
+      if ("workItemId" in payload) {
+        exactPayload(payload, ["deliveryId", "reason", "workItemId"]);
+        canonicalPayload = {
+          deliveryId: payload.deliveryId,
+          reasonCode: completionReason(payload.reason),
+          workItemIds: [payload.workItemId],
+        };
+      } else {
+        exactPayload(payload, ["deliveryId", "operationId", "reason"]);
+        if (payload.reason !== "MISSION_CONTEXT_CHANGED") schemaDataInvalid();
+        const durable = database.prepare(`
+          SELECT 1 FROM review_operations
+          WHERE id=? AND kind='generate_delivery' AND parent_id=?
+        `).get(eventIdentifier(payload.operationId), missionId);
+        if (!durable) schemaDataInvalid();
+        canonicalPayload = {
+          deliveryId: payload.deliveryId,
+          reasonCode: payload.reason,
+          workItemIds: [],
+        };
+      }
+      canonicalType = "delivery_invalidated";
+      break;
+  }
+
+  const parsed = reviewEventDtoSchema.safeParse({
+    ...row,
+    ...durableEventActor(database, row, canonicalPayload),
+    payload: canonicalPayload,
+    type: canonicalType,
+  });
+  if (!parsed.success) schemaDataInvalid();
+  return parsed.data;
+}
+
 function candidates(database: DatabaseSync, projectId: string, executorAgentId: string) {
   return (database.prepare(`
     SELECT a.id,a.name,a.role,a.avatar_text AS avatarText,
@@ -534,7 +778,8 @@ export function readReviewAttemptDetail(databasePath: string, attemptId: string)
   }
 }
 
-export function listReviewEvents(
+export function listReviewEventsFromDatabase(
+  database: DatabaseSync,
   databasePath: string,
   missionId: string,
   query: ReadQuery,
@@ -546,43 +791,52 @@ export function listReviewEvents(
   if (key && (key.length !== 2 || !Number.isInteger(sequence) || typeof id !== "string")) {
     throw new ReviewApiError("INVALID_INPUT");
   }
+  const exists = database.prepare("SELECT 1 FROM missions WHERE id=?").get(missionId);
+  if (!exists) throw new ReviewApiError("PROJECT_NOT_FOUND");
+  const rows = database.prepare(`
+    SELECT id,sequence,type,actor_type AS actorType,actor_id AS actorId,
+      payload_json AS payloadJson,created_at AS createdAt
+    FROM review_events WHERE mission_id=?
+      AND (? IS NULL OR sequence>? OR (sequence=? AND id>?))
+    ORDER BY sequence,id LIMIT ?
+  `).all(
+    missionId,
+    sequence ?? null,
+    sequence ?? null,
+    sequence ?? null,
+    id ?? null,
+    requested + 1,
+  ) as Array<Record<string, unknown>>;
+  const values = rows.map(({ payloadJson, ...row }) => {
+    let payload: unknown;
+    try {
+      payload = JSON.parse(String(payloadJson));
+    } catch {
+      schemaDataInvalid();
+    }
+    return adaptStoredEvent(database, missionId, row, payload);
+  });
+  return boundedPage(
+    databasePath,
+    "review-events",
+    missionId,
+    values,
+    requested,
+    ({ id: eventId, sequence: eventSequence }) => [eventSequence, eventId],
+  );
+}
+
+export function listReviewEvents(
+  databasePath: string,
+  missionId: string,
+  query: ReadQuery,
+) {
   const database = openDatabase(databasePath);
   try {
-    const exists = database.prepare("SELECT 1 FROM missions WHERE id=?").get(missionId);
-    if (!exists) throw new ReviewApiError("PROJECT_NOT_FOUND");
-    const rows = database.prepare(`
-      SELECT id,sequence,type,actor_type AS actorType,actor_id AS actorId,
-        payload_json AS payloadJson,created_at AS createdAt
-      FROM review_events WHERE mission_id=?
-        AND (? IS NULL OR sequence>? OR (sequence=? AND id>?))
-      ORDER BY sequence,id LIMIT ?
-    `).all(
-      missionId,
-      sequence ?? null,
-      sequence ?? null,
-      sequence ?? null,
-      id ?? null,
-      requested + 1,
-    ) as Array<Record<string, unknown>>;
-    const values = rows.map(({ payloadJson, ...row }) => {
-      const payload = JSON.parse(String(payloadJson)) as Record<string, unknown>;
-      return reviewEventDtoSchema.parse({
-        ...row,
-        ...durableEventActor(database, row, payload),
-        payload,
-      });
-    });
-    return boundedPage(
-      databasePath,
-      "review-events",
-      missionId,
-      values,
-      requested,
-      ({ id: eventId, sequence: eventSequence }) => [eventSequence, eventId],
-    );
+    return listReviewEventsFromDatabase(database, databasePath, missionId, query);
   } catch (error) {
     if (error instanceof ReviewApiError) throw error;
-    throw new ReviewApiError("REVIEW_INVARIANT_FAILED");
+    throw new ReviewApiError("SCHEMA_DATA_INVALID");
   } finally {
     database.close();
   }
