@@ -1,0 +1,22 @@
+# hf-gate-run
+# label: t9-green
+# command: npm.cmd test -- tests/review-decisions.test.ts tests/review-finalize-replay.test.ts
+# started: 2026-08-01T05:43:33+00:00
+
+> collaboration-cockpit@0.1.0 test
+> vitest run tests/review-decisions.test.ts tests/review-finalize-replay.test.ts
+
+
+ RUN  v4.1.10 D:/cool-ai
+
+(node:2020) ExperimentalWarning: SQLite is an experimental feature and might change at any time
+(Use `node --trace-warnings ...` to show where the warning was created)
+(node:5728) ExperimentalWarning: SQLite is an experimental feature and might change at any time
+(Use `node --trace-warnings ...` to show where the warning was created)
+
+ Test Files  2 passed (2)
+      Tests  11 passed (11)
+   Start at  13:43:34
+   Duration  8.30s (transform 714ms, setup 1.62s, import 959ms, tests 4.74s, environment 6.61s)
+
+# exit: 0

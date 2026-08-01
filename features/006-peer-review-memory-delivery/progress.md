@@ -4,5 +4,5 @@
 - 当前阶段: build
 - 执行模式: auto
 - 已加载扩展: ext-ui-design
-- 下一步: 执行 T-9：实现 checkpoint→reject/pass 本地原子提交与可恢复重放
+- 下一步: 执行 T-10：实现 escalation issue、owner answer 与新 attempt 链
 - 门禁输出: RESULT: PASS — 可进入 build

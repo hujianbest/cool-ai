@@ -1,0 +1,125 @@
+# hf-gate-run
+# label: t9-red
+# command: npm.cmd test -- tests/review-decisions.test.ts tests/review-finalize-replay.test.ts
+# started: 2026-08-01T05:39:35+00:00
+
+> collaboration-cockpit@0.1.0 test
+> vitest run tests/review-decisions.test.ts tests/review-finalize-replay.test.ts
+
+
+ RUN  v4.1.10 D:/cool-ai
+
+(node:12004) ExperimentalWarning: SQLite is an experimental feature and might change at any time
+(Use `node --trace-warnings ...` to show where the warning was created)
+(node:12952) ExperimentalWarning: SQLite is an experimental feature and might change at any time
+(Use `node --trace-warnings ...` to show where the warning was created)
+ ❯ tests/review-decisions.test.ts (3 tests | 3 failed) 865ms
+     × atomically rejects into rework with one immutable decision and completed receipt 308ms
+     × passes with zero candidates and duplicate/late finalizers cannot add a decision 277ms
+     × leaves escalation checkpoint finalizing for T-10 277ms
+ ❯ tests/review-finalize-replay.test.ts (8 tests | 8 failed) 2698ms
+     × keeps all pass facts absent on decision fault, then replays locally without new usage 544ms
+     × keeps all pass facts absent on memory-candidates fault, then replays locally without new usage 322ms
+     × keeps all pass facts absent on head fault, then replays locally without new usage 308ms
+     × keeps all pass facts absent on board fault, then replays locally without new usage 310ms
+     × keeps all pass facts absent on events fault, then replays locally without new usage 318ms
+     × keeps all pass facts absent on attempt fault, then replays locally without new usage 308ms
+     × keeps all pass facts absent on receipt fault, then replays locally without new usage 306ms
+     × reads the durable checkpoint on replay and never trusts a caller-supplied output 279ms
+
+⎯⎯⎯⎯⎯⎯ Failed Tests 11 ⎯⎯⎯⎯⎯⎯⎯
+
+ FAIL  tests/review-decisions.test.ts > checkpointed reject/pass decisions > atomically rejects into rework with one immutable decision and completed receipt
+AssertionError: T-9 finalizer module must exist: expected undefined to be type of 'function'
+
+Expected: "function"
+Received: "undefined"
+
+ ❯ finalizer tests/review-decisions.test.ts:129:51
+    127| async function finalizer() {
+    128|   const load = modules["../src/server/review/review-finalizer.ts"];
+    129|   expect(load, "T-9 finalizer module must exist").toBeTypeOf("function…
+       |                                                   ^
+    130|   const module = await load();
+    131|   expect(module.finalizeCheckpointedReview).toBeTypeOf("function");
+ ❯ tests/review-decisions.test.ts:148:28
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[1/11]⎯
+
+ FAIL  tests/review-decisions.test.ts > checkpointed reject/pass decisions > passes with zero candidates and duplicate/late finalizers cannot add a decision
+AssertionError: T-9 finalizer module must exist: expected undefined to be type of 'function'
+
+Expected: "function"
+Received: "undefined"
+
+ ❯ finalizer tests/review-decisions.test.ts:129:51
+    127| async function finalizer() {
+    128|   const load = modules["../src/server/review/review-finalizer.ts"];
+    129|   expect(load, "T-9 finalizer module must exist").toBeTypeOf("function…
+       |                                                   ^
+    130|   const module = await load();
+    131|   expect(module.finalizeCheckpointedReview).toBeTypeOf("function");
+ ❯ tests/review-decisions.test.ts:197:28
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[2/11]⎯
+
+ FAIL  tests/review-decisions.test.ts > checkpointed reject/pass decisions > leaves escalation checkpoint finalizing for T-10
+AssertionError: T-9 finalizer module must exist: expected undefined to be type of 'function'
+
+Expected: "function"
+Received: "undefined"
+
+ ❯ finalizer tests/review-decisions.test.ts:129:51
+    127| async function finalizer() {
+    128|   const load = modules["../src/server/review/review-finalizer.ts"];
+    129|   expect(load, "T-9 finalizer module must exist").toBeTypeOf("function…
+       |                                                   ^
+    130|   const module = await load();
+    131|   expect(module.finalizeCheckpointedReview).toBeTypeOf("function");
+ ❯ tests/review-decisions.test.ts:252:28
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[3/11]⎯
+
+ FAIL  tests/review-finalize-replay.test.ts > checkpointed business finalize replay > keeps all pass facts absent on decision fault, then replays locally without new usage
+ FAIL  tests/review-finalize-replay.test.ts > checkpointed business finalize replay > keeps all pass facts absent on memory-candidates fault, then replays locally without new usage
+ FAIL  tests/review-finalize-replay.test.ts > checkpointed business finalize replay > keeps all pass facts absent on head fault, then replays locally without new usage
+ FAIL  tests/review-finalize-replay.test.ts > checkpointed business finalize replay > keeps all pass facts absent on board fault, then replays locally without new usage
+ FAIL  tests/review-finalize-replay.test.ts > checkpointed business finalize replay > keeps all pass facts absent on events fault, then replays locally without new usage
+ FAIL  tests/review-finalize-replay.test.ts > checkpointed business finalize replay > keeps all pass facts absent on attempt fault, then replays locally without new usage
+ FAIL  tests/review-finalize-replay.test.ts > checkpointed business finalize replay > keeps all pass facts absent on receipt fault, then replays locally without new usage
+SchemaMigrationError: Database version 6 schema is invalid.
+ ❯ migrateDatabase src/server/migrations.ts:1375:13
+    1373|     const validation = validateV6(database);
+    1374|     if (validation) {
+    1375|       throw new SchemaMigrationError(
+       |             ^
+    1376|         validation,
+    1377|         "Database version 6 schema is invalid.",
+ ❯ openDatabase src/server/db.ts:14:5
+ ❯ tests/review-finalize-replay.test.ts:233:16
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[4/11]⎯
+
+ FAIL  tests/review-finalize-replay.test.ts > checkpointed business finalize replay > reads the durable checkpoint on replay and never trusts a caller-supplied output
+AssertionError: expected 'finalizing' to be 'passed' // Object.is equality
+
+Expected: "passed"
+Received: "finalizing"
+
+ ❯ tests/review-finalize-replay.test.ts:277:26
+    275|     });
+    276|
+    277|     expect(result.state).toBe("passed");
+       |                          ^
+    278|     expect(database.prepare(
+    279|       "SELECT choice FROM review_decisions WHERE attempt_id='attempt'",
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[5/11]⎯
+
+
+ Test Files  2 failed (2)
+      Tests  11 failed (11)
+   Start at  13:39:36
+   Duration  5.60s (transform 406ms, setup 881ms, import 604ms, tests 3.56s, environment 3.70s)
+
+# exit: 1

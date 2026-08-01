@@ -68,6 +68,11 @@ const newProviderAttemptRetrySchema = z.object({
   providerCallRequired: z.literal(true),
 }).strict();
 
+const noRetrySchema = z.object({
+  kind: z.literal("none"),
+  providerCallRequired: z.literal(false),
+}).strict();
+
 export const reviewOperationResponseSchema = z.discriminatedUnion("state", [
   z.object({
     attemptId: z.string().min(1),
@@ -80,6 +85,20 @@ export const reviewOperationResponseSchema = z.discriminatedUnion("state", [
     errorCategory: z.string().min(1),
     retry: newProviderAttemptRetrySchema,
     state: z.literal("failed"),
+  }).strict(),
+  z.object({
+    attemptId: z.string().min(1),
+    checkpointHash: z.string().regex(/^[0-9a-f]{64}$/u),
+    decisionId: z.string().min(1),
+    retry: noRetrySchema,
+    state: z.literal("rejected"),
+  }).strict(),
+  z.object({
+    attemptId: z.string().min(1),
+    checkpointHash: z.string().regex(/^[0-9a-f]{64}$/u),
+    decisionId: z.string().min(1),
+    retry: noRetrySchema,
+    state: z.literal("passed"),
   }).strict(),
 ]);
 

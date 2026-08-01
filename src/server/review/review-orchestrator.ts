@@ -15,6 +15,10 @@ import {
   type ReviewOutputValidationContext,
   type ValidatedReviewOutput,
 } from "@/src/server/review/review-schema";
+import {
+  finalizeCheckpointedReview,
+  type ReviewFinalizeStep,
+} from "@/src/server/review/review-finalizer";
 import type { ModelCallResult, ModelCallUsage } from "@/src/shared/collaboration-contracts";
 import {
   reviewOperationResponseSchema,
@@ -82,7 +86,8 @@ export type ReviewOrchestratorDependencies = {
       checkpointHash: string;
       output: ValidatedReviewOutput;
     },
-  ) => void;
+  ) => ReviewOperationResponse | void;
+  beforeFinalizeStep?: (step: ReviewFinalizeStep) => void;
   randomUUID?: () => string;
   scheduleHeartbeat?: (callback: () => void, milliseconds: number) => () => void;
 };
@@ -517,8 +522,8 @@ function invokeLocalFinalize(
   database: DatabaseSync,
   response: ReviewOperationResponse,
   dependencies: ReviewOrchestratorDependencies,
-): void {
-  if (response.state !== "finalizing" || !dependencies.localFinalize) return;
+): ReviewOperationResponse {
+  if (response.state !== "finalizing") return response;
   const row = database.prepare(`
     SELECT parsed_output_json AS output FROM review_attempts
     WHERE id=? AND status='finalizing' AND parsed_output_hash=?
@@ -531,16 +536,31 @@ function invokeLocalFinalize(
     );
   }
   try {
-    dependencies.localFinalize(database, {
+    const finalized = dependencies.localFinalize?.(database, {
       attemptId: response.attemptId,
       checkpointHash: response.checkpointHash,
       output: JSON.parse(row.output) as ValidatedReviewOutput,
     });
+    if (finalized) return finalized;
+    if (dependencies.localFinalize) return response;
+    return finalizeCheckpointedReview(
+      database,
+      {
+        attemptId: response.attemptId,
+        checkpointHash: response.checkpointHash,
+      },
+      {
+        beforeStep: dependencies.beforeFinalizeStep,
+        clock: dependencies.clock,
+        randomUUID: dependencies.randomUUID,
+      },
+    );
   } catch {
     database.prepare(`
       UPDATE review_attempts SET finalize_error_code='LOCAL_FINALIZE_FAILED'
       WHERE id=? AND status='finalizing' AND parsed_output_hash=?
     `).run(response.attemptId, response.checkpointHash);
+    return response;
   }
 }
 
@@ -593,8 +613,7 @@ export async function runReviewOperation(
   const requestHash = canonicalRequestHash(input.request);
   const replay = operationReplay(database, input, requestHash);
   if (replay) {
-    invokeLocalFinalize(database, replay, dependencies);
-    return replay;
+    return invokeLocalFinalize(database, replay, dependencies);
   }
 
   const clock = dependencies.clock ?? (() => new Date());
@@ -684,8 +703,7 @@ export async function runReviewOperation(
       checked.output,
       clock(),
     );
-    invokeLocalFinalize(database, response, dependencies);
-    return response;
+    return invokeLocalFinalize(database, response, dependencies);
   }
 
   if (!checked.output) {
@@ -706,6 +724,5 @@ export async function runReviewOperation(
     checked.output,
     clock(),
   );
-  invokeLocalFinalize(database, response, dependencies);
-  return response;
+  return invokeLocalFinalize(database, response, dependencies);
 }
