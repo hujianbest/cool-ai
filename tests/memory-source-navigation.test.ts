@@ -89,7 +89,8 @@ beforeEach(() => {
         {"type":"result","id":"result-1","version":"2"},
         {"type":"review","id":"attempt-1","version":"1"},
         {"type":"validation","id":"validation-1","version":"${HASH_A}"},
-        {"type":"artifact","id":"artifact-1","version":"${HASH_B}"}
+        {"type":"artifact","id":"artifact-1","version":"${HASH_B}"},
+        {"type":"execution","id":"execution-event-1","version":"1"}
       ]}',
       '${HASH_A}','${HASH_B}','provider-1',1,1,'${NOW}','model',
       NULL,NULL,NULL,NULL,NULL,'${NOW}',NULL);

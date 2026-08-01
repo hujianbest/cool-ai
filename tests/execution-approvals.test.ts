@@ -6,7 +6,12 @@ import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
 import { canonicalRequestHash } from "@/src/server/collaboration/operation-receipts";
 import { createCredentialVault } from "@/src/server/credential-vault";
-import { openDatabase } from "@/src/server/db";
+import { createV6FixtureDatabaseOpener } from "@/tests/v6-fixture-db";
+
+const openDatabase = createV6FixtureDatabaseOpener({
+  missingDeliveryHeadMissionIds: ["approval-mission"],
+  missingReviewHeadResultIds: [],
+});
 import { controlExecution } from "@/src/server/execution/execution-control-service";
 import { refreshExecutionFrozenFixture } from "./execution-frozen-fixture";
 

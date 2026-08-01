@@ -5,7 +5,17 @@ import { afterEach, beforeEach, describe, expect, it } from "vitest";
 
 import { collaborationErrorResponse } from "@/src/server/collaboration/collaboration-api";
 import { CollaborationError } from "@/src/server/collaboration/collaboration-errors";
-import { openDatabase } from "@/src/server/db";
+import { createV6FixtureDatabaseOpener } from "@/tests/v6-fixture-db";
+
+const openReadyDatabase = createV6FixtureDatabaseOpener({
+  missingDeliveryHeadMissionIds: ["mission-1"],
+  missingReviewHeadResultIds: [],
+});
+const openLateDatabase = createV6FixtureDatabaseOpener({
+  missingDeliveryHeadMissionIds: ["mission-late"],
+  missingReviewHeadResultIds: [],
+});
+let openDatabase = openReadyDatabase;
 import { apiErrorCopy } from "@/src/shared/api-error-copy";
 
 type Route = {
@@ -29,6 +39,7 @@ async function route(): Promise<Route> {
 }
 
 function seedProject(ready = true): void {
+  openDatabase = ready ? openReadyDatabase : openLateDatabase;
   const database = openDatabase(databasePath);
   const timestamp = "2026-07-30T00:00:00.000Z";
   try {

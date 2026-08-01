@@ -18,7 +18,12 @@ import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
 vi.mock("server-only", () => ({}));
 
-import { openDatabase } from "@/src/server/db";
+import { createV6FixtureDatabaseOpener } from "@/tests/v6-fixture-db";
+
+const openDatabase = createV6FixtureDatabaseOpener({
+  missingDeliveryHeadMissionIds: ["mission"],
+  missingReviewHeadResultIds: [],
+});
 import { declareStaged } from "@/src/server/execution/action-orchestrator";
 import { ExecutionError } from "@/src/server/execution/execution-service";
 import { executeWriteToolAction } from "@/src/server/execution/file-tools";

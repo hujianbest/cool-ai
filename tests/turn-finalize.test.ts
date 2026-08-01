@@ -7,7 +7,12 @@ import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { CollaborationError } from "@/src/server/collaboration/collaboration-errors";
 import { canonicalRequestHash } from "@/src/server/collaboration/operation-receipts";
 import type { StructuredTurnResult } from "@/src/server/collaboration/structured-repair";
-import { openDatabase } from "@/src/server/db";
+import { createV6FixtureDatabaseOpener } from "@/tests/v6-fixture-db";
+
+const openDatabase = createV6FixtureDatabaseOpener({
+  missingDeliveryHeadMissionIds: ["mission-finalize"],
+  missingReviewHeadResultIds: [],
+});
 
 type Dependencies = {
   clock: () => Date;

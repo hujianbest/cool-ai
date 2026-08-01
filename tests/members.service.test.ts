@@ -3,7 +3,12 @@ import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
-import { openDatabase } from "@/src/server/db";
+import { createV6FixtureDatabaseOpener } from "@/tests/v6-fixture-db";
+
+const openDatabase = createV6FixtureDatabaseOpener({
+  missingDeliveryHeadMissionIds: ["mission-1"],
+  missingReviewHeadResultIds: [],
+});
 import { createProject } from "@/src/server/projects";
 
 type ProjectMember = {

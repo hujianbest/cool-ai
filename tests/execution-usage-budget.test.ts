@@ -5,7 +5,12 @@ import type { DatabaseSync } from "node:sqlite";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
 import { createCredentialVault } from "@/src/server/credential-vault";
-import { openDatabase } from "@/src/server/db";
+import { createV6FixtureDatabaseOpener } from "@/tests/v6-fixture-db";
+
+const openDatabase = createV6FixtureDatabaseOpener({
+  missingDeliveryHeadMissionIds: ["mission"],
+  missingReviewHeadResultIds: [],
+});
 import { refreshExecutionFrozenFixture } from "./execution-frozen-fixture";
 
 type AdvanceModule = {

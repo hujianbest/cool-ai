@@ -121,6 +121,7 @@ function databaseFixture(overrides: Fixture = {}): DatabaseSync {
         }];
       }
       if (sql.includes("FROM memory_entries")) return [];
+      if (sql.includes("FROM review_escalations escalation")) return [];
       throw new Error(`Unexpected all query: ${sql}`);
     },
     get: () => {

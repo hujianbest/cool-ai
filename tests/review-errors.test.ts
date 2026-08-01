@@ -40,6 +40,7 @@ const expected = {
   RESULT_SUPERSEDED: [409, "结果版本已被取代", "review_attempt_discarded"],
   REVIEW_ALREADY_IN_PROGRESS: [409, "已有复核正在进行", null],
   REVIEW_CONTENT_INCOMPLETE: [422, "复核材料正文不完整，不能通过", "review_finalize_failed"],
+  REVIEW_CONTEXT_STALE: [409, "复核上下文已变化，请基于最新内容重试", null],
   REVIEW_FINALIZE_FAILED: [500, "复核结果已保存，但本地提交失败；重试不会再次调用模型", "review_finalize_failed"],
   REVIEW_INVARIANT_FAILED: [500, "复核数据不一致", "review_finalize_failed"],
   REVIEW_MATERIAL_INVALID: [422, "公开复核材料无效", "review_attempt_failed"],

@@ -6,7 +6,12 @@ import { join } from "node:path";
 import { createElement, type ComponentType } from "react";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
-import { openDatabase } from "@/src/server/db";
+import { createV6FixtureDatabaseOpener } from "@/tests/v6-fixture-db";
+
+const openDatabase = createV6FixtureDatabaseOpener({
+  missingDeliveryHeadMissionIds: ["mission-execution"],
+  missingReviewHeadResultIds: [],
+});
 
 type RouteContext = { params: Promise<{ projectId: string }> };
 type ExecutionRoute = {

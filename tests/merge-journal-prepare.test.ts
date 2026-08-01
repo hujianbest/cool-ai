@@ -12,8 +12,13 @@ import { dirname, join, relative, resolve } from "node:path";
 import type { DatabaseSync } from "node:sqlite";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
-import { openDatabase } from "@/src/server/db";
-import { validateV5 } from "@/src/server/migrations-v5";
+import { createV6FixtureDatabaseOpener } from "@/tests/v6-fixture-db";
+
+const openDatabase = createV6FixtureDatabaseOpener({
+  missingDeliveryHeadMissionIds: ["mission"],
+  missingReviewHeadResultIds: [],
+});
+import { validateV6 } from "@/src/server/migrations-v6";
 import {
   createWindowsVerifiedMergeAdapter,
   type MergeVerifiedAdapter,
@@ -136,7 +141,7 @@ describe("merge journal prepare and conditional apply", () => {
         status: "manual_recovery",
       });
       expect(fixture.database.prepare(
-        "SELECT count(*) AS count FROM work_item_execution_results",
+        "SELECT count(*) AS count FROM work_item_result_versions",
       ).get()).toEqual({ count: 0 });
     } finally {
       fixture.database.close();
@@ -243,13 +248,13 @@ describe("merge journal prepare and conditional apply", () => {
       expect(fixture.database.prepare(
         "SELECT status,consumed_at IS NOT NULL AS consumed FROM execution_approvals",
       ).get()).toEqual({ consumed: 1, status: "consumed" });
-      expect(validateV5(fixture.database)).toBeNull();
+      expect(validateV6(fixture.database)).toBeNull();
       fixture.database.prepare(`
         UPDATE execution_merge_files
         SET durable_new_ref_json=json_set(durable_new_ref_json,'$.ownerId','wrong-owner')
         WHERE journal_id=? AND position=0
       `).run(result.journalId);
-      expect(validateV5(fixture.database)).toBe("SCHEMA_DATA_INVALID");
+      expect(validateV6(fixture.database)).toBe("SCHEMA_DATA_INVALID");
     } finally {
       fixture.database.close();
     }

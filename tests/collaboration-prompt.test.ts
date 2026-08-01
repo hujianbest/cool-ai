@@ -4,7 +4,12 @@ import { join } from "node:path";
 import { afterEach, beforeEach, describe, expect, it } from "vitest";
 
 import { createCredentialVault } from "@/src/server/credential-vault";
-import { openDatabase } from "@/src/server/db";
+import { createV6FixtureDatabaseOpener } from "@/tests/v6-fixture-db";
+
+const openDatabase = createV6FixtureDatabaseOpener({
+  missingDeliveryHeadMissionIds: ["mission-prompt"],
+  missingReviewHeadResultIds: [],
+});
 
 type PromptMessage = {
   role: "system" | "user" | "assistant";
@@ -180,11 +185,14 @@ function seedReadyProject(): void {
         'todo', NULL, 1, '${timestamp}', '${timestamp}'
       );
       INSERT INTO memory_entries (
-        id, project_id, type, content, source_type, source_ref, created_by,
+        id, project_id, chain_id, version, type, content, dedupe_hash,
+        source_type, source_id, source_version, proposer_actor_type,
+        proposer_actor_id, confirming_review_attempt_id, persistence_actor,
         supersedes_id, created_at
       ) VALUES (
-        'memory-prompt', '${PROJECT_ID}', 'fact', 'Public active memory',
-        'owner_input', 'Owner', 'owner', NULL, '${timestamp}'
+        'memory-prompt', '${PROJECT_ID}', 'memory-prompt', 1, 'fact',
+        'Public active memory', '${"a".repeat(64)}', 'owner_input', 'Owner',
+        NULL, 'owner', NULL, NULL, 'platform', NULL, '${timestamp}'
       );
       INSERT INTO collaboration_project_sequences (
         project_id, next_message_sequence

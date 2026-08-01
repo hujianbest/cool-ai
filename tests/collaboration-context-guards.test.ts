@@ -7,7 +7,12 @@ import * as agentService from "@/src/server/agent-service";
 import * as contextSnapshotService from "@/src/server/context-snapshot-service";
 import * as providerService from "@/src/server/provider-service";
 import { createCredentialVault } from "@/src/server/credential-vault";
-import { openDatabase } from "@/src/server/db";
+import { createV6FixtureDatabaseOpener } from "@/tests/v6-fixture-db";
+
+const openDatabase = createV6FixtureDatabaseOpener({
+  missingDeliveryHeadMissionIds: ["mission-1"],
+  missingReviewHeadResultIds: [],
+});
 import { replaceMembers } from "@/src/server/membership-service";
 import {
   updateMission,

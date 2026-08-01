@@ -127,8 +127,9 @@ describe("strict review read API", () => {
         .toBe(false);
       expect(reviewAttemptDetailDtoSchema.safeParse({
         ...value,
+        answeredEscalations: [],
         candidateAssociations: [],
-        escalation: null,
+        currentEscalation: null,
         frozenMaterial: { sourceRefs: [] },
       }).success).toBe(true);
     }

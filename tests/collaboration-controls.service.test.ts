@@ -6,7 +6,12 @@ import { afterEach, beforeEach, describe, expect, it } from "vitest";
 import * as runService from "@/src/server/collaboration/run-service";
 import { CollaborationError } from "@/src/server/collaboration/collaboration-errors";
 import { createCredentialVault } from "@/src/server/credential-vault";
-import { openDatabase } from "@/src/server/db";
+import { createV6FixtureDatabaseOpener } from "@/tests/v6-fixture-db";
+
+const openDatabase = createV6FixtureDatabaseOpener({
+  missingDeliveryHeadMissionIds: ["mission-1"],
+  missingReviewHeadResultIds: [],
+});
 
 type ControlAction = "pause" | "continue" | "retry" | "stop";
 type ControlInput = {

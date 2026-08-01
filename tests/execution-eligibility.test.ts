@@ -9,7 +9,12 @@ import { createElement } from "react";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
 import { ExecutionPanel } from "@/components/execution/execution-panel";
-import { openDatabase } from "@/src/server/db";
+import { createV6FixtureDatabaseOpener } from "@/tests/v6-fixture-db";
+
+const openDatabase = createV6FixtureDatabaseOpener({
+  missingDeliveryHeadMissionIds: ["mission"],
+  missingReviewHeadResultIds: [],
+});
 import { startExecution } from "@/src/server/execution/execution-service";
 
 const PROJECT_ID = "eligibility-project";
@@ -228,7 +233,9 @@ describe("execution start eligibility", () => {
 
     const database = openDatabase(databasePath);
     try {
-      database.prepare("UPDATE work_items SET status='done' WHERE id='dependency'").run();
+      database.prepare(
+        "DELETE FROM work_item_dependencies WHERE work_item_id='blocked'",
+      ).run();
       database.prepare(
         "DELETE FROM project_memberships WHERE project_id=? AND agent_id='agent-a'",
       ).run(PROJECT_ID);
@@ -294,9 +301,8 @@ describe("execution start eligibility", () => {
     addTask("related", "agent-b");
     const database = openDatabase(databasePath);
     try {
-      database.prepare("UPDATE work_items SET status='done' WHERE id='active'").run();
       database.prepare(
-        "INSERT INTO work_item_dependencies (work_item_id,depends_on_id) VALUES ('related','active')",
+        "INSERT INTO work_item_dependencies (work_item_id,depends_on_id) VALUES ('active','related')",
       ).run();
     } finally {
       database.close();

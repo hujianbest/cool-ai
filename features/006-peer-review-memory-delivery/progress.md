@@ -4,5 +4,5 @@
 - 当前阶段: build
 - 执行模式: auto
 - 已加载扩展: ext-ui-design
-- 下一步: 执行 T-30：统一 v6 测试 fixture 与生产 schema validator
+- 下一步: 执行 T-31：修复终态裁决历史被 empty surface 隐藏
 - 门禁输出: RESULT: PASS — 可进入 build

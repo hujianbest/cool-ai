@@ -204,7 +204,7 @@ describe("delivery invalidation and restart recovery", () => {
     invalidateMissionContextTx(database, {
       missionId: "mission",
       projectId: "project",
-      reason: "TASK_REOPENED",
+      reason: "MISSION_CONTEXT_CHANGED",
     });
 
     expect(database.prepare(

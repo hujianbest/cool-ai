@@ -5,7 +5,12 @@ import { afterEach, beforeEach, describe, expect, it } from "vitest";
 
 import { CollaborationError } from "@/src/server/collaboration/collaboration-errors";
 import { canonicalRequestHash } from "@/src/server/collaboration/operation-receipts";
-import { openDatabase } from "@/src/server/db";
+import { createV6FixtureDatabaseOpener } from "@/tests/v6-fixture-db";
+
+const openDatabase = createV6FixtureDatabaseOpener({
+  missingDeliveryHeadMissionIds: ["mission-acquire"],
+  missingReviewHeadResultIds: [],
+});
 
 type AcquireDependencies = {
   clock: () => Date;

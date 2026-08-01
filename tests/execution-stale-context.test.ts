@@ -5,7 +5,12 @@ import type { DatabaseSync } from "node:sqlite";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
 import { createCredentialVault } from "@/src/server/credential-vault";
-import { openDatabase } from "@/src/server/db";
+import { createV6FixtureDatabaseOpener } from "@/tests/v6-fixture-db";
+
+const openDatabase = createV6FixtureDatabaseOpener({
+  missingDeliveryHeadMissionIds: ["mission"],
+  missingReviewHeadResultIds: [],
+});
 import {
   captureExecutionFrozenInput,
   staleExecutionIfFrozenInputChanged,
@@ -334,9 +339,12 @@ describe("execution frozen-input staleness", () => {
     ).run()],
     ["shared memory", () => database.exec(`
       INSERT INTO memory_entries (
-        id,project_id,type,content,source_type,source_ref,created_by,supersedes_id,created_at
-      ) VALUES ('memory','${PROJECT_ID}','decision','Use strict mode','owner_input',
-        'owner','owner',NULL,strftime('%Y-%m-%dT%H:%M:%fZ','now'));
+        id,project_id,chain_id,version,type,content,dedupe_hash,source_type,
+        source_id,source_version,proposer_actor_type,proposer_actor_id,
+        confirming_review_attempt_id,persistence_actor,supersedes_id,created_at
+      ) VALUES ('memory','${PROJECT_ID}','memory',1,'decision','Use strict mode',
+        '${"b".repeat(64)}','owner_input','owner',NULL,'owner',NULL,NULL,
+        'platform',NULL,strftime('%Y-%m-%dT%H:%M:%fZ','now'));
     `)],
     ["project members", () => database.exec(`
       INSERT INTO agents (

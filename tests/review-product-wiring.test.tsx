@@ -190,7 +190,11 @@ describe("review product wiring", () => {
         });
         expect(body.operationId).toMatch(/^[0-9a-f-]{36}$/u);
         current = workspace("waiting_owner");
-        return Response.json(current);
+        return Response.json({
+          attemptId: "attempt-1",
+          decisionId: "decision-1",
+          state: "completed",
+        });
       }
       if (
         url === "/api/escalations/escalation-1/answer"

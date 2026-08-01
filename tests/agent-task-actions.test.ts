@@ -5,7 +5,12 @@ import type { DatabaseSync } from "node:sqlite";
 import { afterEach, beforeEach, describe, expect, it } from "vitest";
 
 import type { StructuredTurnResult } from "@/src/server/collaboration/structured-repair";
-import { openDatabase } from "@/src/server/db";
+import { createV6FixtureDatabaseOpener } from "@/tests/v6-fixture-db";
+
+const openDatabase = createV6FixtureDatabaseOpener({
+  missingDeliveryHeadMissionIds: [],
+  missingReviewHeadResultIds: [],
+});
 import { createMission, createWorkItem } from "@/src/server/mission-service";
 
 type ProposedTask = {
@@ -421,7 +426,10 @@ describe("Agent task action committer", () => {
     });
     const database = openDatabase(databasePath);
     database
-      .prepare("UPDATE work_items SET status = 'done', version = version + 1 WHERE id = ?")
+      .prepare("DELETE FROM work_item_dependencies WHERE work_item_id = ?")
+      .run(existing.id);
+    database
+      .prepare("UPDATE work_items SET version = version + 1 WHERE id = ?")
       .run(prerequisite.id);
     database.close();
 

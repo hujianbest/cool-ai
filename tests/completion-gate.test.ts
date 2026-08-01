@@ -213,7 +213,7 @@ describe("single completion gate", () => {
     markPassed(leaf.id, 4);
 
     const result = tx(() => completion.invalidateCompletionTx(database, {
-      reason: "DEPENDENCY_REOPENED",
+      reason: "DOWNSTREAM_REWORK_REQUESTED",
       workItemId: root.id,
     }));
 
@@ -223,7 +223,7 @@ describe("single completion gate", () => {
     expect(state(leaf.id)).toMatchObject({ state: "rework", status: "in_progress" });
     expect(database.prepare(`
       SELECT COUNT(*) AS count FROM review_events
-      WHERE type='work_item_completion_invalidated'
+      WHERE type='legacy_work_item_completion_invalidated'
     `).get()).toEqual({ count: 3 });
   });
 
@@ -260,7 +260,7 @@ describe("single completion gate", () => {
     ).all(missionId)).toEqual([{ id: "delivery-1", version: 1 }]);
     expect(database.prepare(`
       SELECT COUNT(*) AS count FROM review_events
-      WHERE type='mission_delivery_invalidated'
+      WHERE type='delivery_invalidated'
     `).get()).toEqual({ count: 1 });
   });
 });

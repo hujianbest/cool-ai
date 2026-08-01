@@ -4,7 +4,12 @@ import { join } from "node:path";
 import type { DatabaseSync } from "node:sqlite";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
-import { openDatabase } from "@/src/server/db";
+import { createV6FixtureDatabaseOpener } from "@/tests/v6-fixture-db";
+
+const openDatabase = createV6FixtureDatabaseOpener({
+  missingDeliveryHeadMissionIds: ["mission", "other-mission"],
+  missingReviewHeadResultIds: [],
+});
 import {
   controlExecution,
   type ExecutionControlDependencies,
@@ -260,7 +265,7 @@ describe("execution lifecycle controls", () => {
 
   it("rejects retry when current eligibility, workspace, context, or budget preconditions fail", async () => {
     const version = setExecution("failed", null, "PROCESS_TERMINATION_UNCONFIRMED");
-    database.prepare("UPDATE work_items SET status='done' WHERE id='work'").run();
+    database.prepare("UPDATE work_items SET assignee_agent_id=NULL WHERE id='work'").run();
     await expect(controlExecution(databasePath, EXECUTION_ID, {
       action: "retry",
       expectedVersion: version,

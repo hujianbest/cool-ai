@@ -12,7 +12,12 @@ import { join } from "node:path";
 import type { DatabaseSync } from "node:sqlite";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
-import { openDatabase } from "@/src/server/db";
+import { createV6FixtureDatabaseOpener } from "@/tests/v6-fixture-db";
+
+const openDatabase = createV6FixtureDatabaseOpener({
+  missingDeliveryHeadMissionIds: ["mission"],
+  missingReviewHeadResultIds: [],
+});
 import { createWindowsVerifiedMergeAdapter } from "@/src/server/execution/merge-verified-adapter";
 import { refreshExecutionFrozenFixture } from "./execution-frozen-fixture";
 
@@ -214,7 +219,7 @@ describe("external-writer merge recovery", () => {
         ? { executionStatus: "conflicted", journalStatus: "resolved_old", manualRecoveryRequired: 0 }
         : { executionStatus: "merged", journalStatus: "resolved_new", manualRecoveryRequired: 0 });
       expect(fixture.database.prepare(
-        "SELECT count(*) AS count FROM work_item_execution_results",
+        "SELECT count(*) AS count FROM work_item_result_versions",
       ).get()).toEqual({ count: action === "recovered_new" ? 1 : 0 });
       fixture.database.close();
     }
@@ -302,8 +307,14 @@ describe("external-writer merge recovery", () => {
         })).rejects.toMatchObject({ code: "MANUAL_RECOVERY_REQUIRED" });
         assertExternalState(target, mutation);
         expect(fixture.database.prepare(
-          "SELECT count(*) AS count FROM work_item_execution_results",
-        ).get()).toEqual({ count: 0 });
+          "SELECT count(*) AS count FROM work_item_result_versions",
+        ).get()).toEqual({
+          count: [
+            "before_db_commit",
+            "after_db_commit",
+            "after_postcommit_check",
+          ].includes(point) ? 1 : 0,
+        });
         fixture.database.close();
       }
     }
@@ -331,8 +342,8 @@ describe("external-writer merge recovery", () => {
       })).rejects.toMatchObject({ code: "MANUAL_RECOVERY_REQUIRED" });
       assertExternalState(target, mutation);
       expect(fixture.database.prepare(
-        "SELECT count(*) AS count FROM work_item_execution_results",
-      ).get()).toEqual({ count: 0 });
+        "SELECT count(*) AS count FROM work_item_result_versions",
+      ).get()).toEqual({ count: 1 });
       fixture.database.close();
     }
   });

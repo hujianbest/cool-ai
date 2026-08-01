@@ -4,7 +4,12 @@ import { join } from "node:path";
 import { afterEach, beforeEach, describe, expect, it } from "vitest";
 
 import { acquireAdvance } from "@/src/server/collaboration/turn-orchestrator";
-import { openDatabase } from "@/src/server/db";
+import { createV6FixtureDatabaseOpener } from "@/tests/v6-fixture-db";
+
+const openDatabase = createV6FixtureDatabaseOpener({
+  missingDeliveryHeadMissionIds: ["mission-recovery-api"],
+  missingReviewHeadResultIds: [],
+});
 
 type GetRoute = {
   GET(
@@ -285,7 +290,6 @@ import { join } from "node:path";
 import { afterEach, beforeEach, describe, expect, it } from "vitest";
 
 import { canonicalRequestHash } from "@/src/server/collaboration/operation-receipts";
-import { openDatabase } from "@/src/server/db";
 
 type ReadRoute = {
   GET(
