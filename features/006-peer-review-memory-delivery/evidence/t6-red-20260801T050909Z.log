@@ -1,0 +1,84 @@
+# hf-gate-run
+# label: t6-red
+# command: npm test -- tests/review-material.test.ts
+# started: 2026-08-01T05:09:09+00:00
+
+> collaboration-cockpit@0.1.0 test
+> vitest run tests/review-material.test.ts
+
+
+ RUN  v4.1.10 D:/cool-ai
+
+ ❯ tests/review-material.test.ts (4 tests | 4 failed) 20ms
+     × embeds exact versioned diff, validation, artifact and typed event chunks deterministically 6ms
+     × fails closed for header-only required content while optional missing content remains limited 1ms
+     × uses the shared 2 MiB prompt budget and never truncates required content 11ms
+     × marks any related task, mission or source version change stale 1ms
+
+⎯⎯⎯⎯⎯⎯⎯ Failed Tests 4 ⎯⎯⎯⎯⎯⎯⎯
+
+ FAIL  tests/review-material.test.ts > frozen review material > embeds exact versioned diff, validation, artifact and typed event chunks deterministically
+Error: REVIEW_MATERIAL_NOT_IMPLEMENTED
+ ❯ freezeReviewMaterial src/server/review/review-material.ts:17:9
+     15|   _options: { requiredArtifactIds?: ReadonlySet<string> } = {},
+     16| ): never {
+     17|   throw new Error("REVIEW_MATERIAL_NOT_IMPLEMENTED");
+       |         ^
+     18| }
+     19|
+ ❯ tests/review-material.test.ts:181:19
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[1/4]⎯
+
+ FAIL  tests/review-material.test.ts > frozen review material > fails closed for header-only required content while optional missing content remains limited
+Error: REVIEW_MATERIAL_NOT_IMPLEMENTED
+ ❯ freezeReviewMaterial src/server/review/review-material.ts:17:9
+     15|   _options: { requiredArtifactIds?: ReadonlySet<string> } = {},
+     16| ): never {
+     17|   throw new Error("REVIEW_MATERIAL_NOT_IMPLEMENTED");
+       |         ^
+     18| }
+     19|
+ ❯ tests/review-material.test.ts:210:29
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[2/4]⎯
+
+ FAIL  tests/review-material.test.ts > frozen review material > uses the shared 2 MiB prompt budget and never truncates required content
+AssertionError: expected [Function] to throw error matching /REVIEW_MATERIAL_LIMIT_EXCEEDED/u but got 'REVIEW_MATERIAL_NOT_IMPLEMENTED'
+
+- Expected:
+/REVIEW_MATERIAL_LIMIT_EXCEEDED/u
+
++ Received:
+"REVIEW_MATERIAL_NOT_IMPLEMENTED"
+
+ ❯ tests/review-material.test.ts:237:8
+    235|       "attempt",
+    236|       { requiredArtifactIds: new Set(["artifact"]) },
+    237|     )).toThrowError(/REVIEW_MATERIAL_LIMIT_EXCEEDED/u);
+       |        ^
+    238|
+    239|     const optional = freezeReviewMaterial(databaseFixture({ artifactBo…
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[3/4]⎯
+
+ FAIL  tests/review-material.test.ts > frozen review material > marks any related task, mission or source version change stale
+Error: REVIEW_MATERIAL_NOT_IMPLEMENTED
+ ❯ freezeReviewMaterial src/server/review/review-material.ts:17:9
+     15|   _options: { requiredArtifactIds?: ReadonlySet<string> } = {},
+     16| ): never {
+     17|   throw new Error("REVIEW_MATERIAL_NOT_IMPLEMENTED");
+       |         ^
+     18| }
+     19|
+ ❯ tests/review-material.test.ts:248:20
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[4/4]⎯
+
+
+ Test Files  1 failed (1)
+      Tests  4 failed (4)
+   Start at  13:09:10
+   Duration  2.58s (transform 56ms, setup 428ms, import 35ms, tests 20ms, environment 1.79s)
+
+# exit: 1

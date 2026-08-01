@@ -261,11 +261,13 @@ describe("peer review slice", () => {
     expect(fixture.requests).toHaveLength(1);
     const messages = fixture.requests[0]!.messages as Array<{ content: string }>;
     const frozenMaterial = JSON.parse(messages[1]!.content) as {
-      changes: Array<{ text: string }>;
-      validations: Array<{ stdout: string }>;
+      changes: { observations: Array<{ publicDiff: { chunks: Array<{ text: string }> } }> };
+      validations: Array<{ stdout: { chunks: Array<{ text: string }> } }>;
     };
-    expect(frozenMaterial.changes[0]?.text).toBe("-old-a\n+new-a");
-    expect(frozenMaterial.validations[0]?.stdout).toBe("required validation passed");
+    expect(frozenMaterial.changes.observations[0]?.publicDiff.chunks[0]?.text)
+      .toBe("-old-a\n+new-a");
+    expect(frozenMaterial.validations[0]?.stdout.chunks[0]?.text)
+      .toBe("required validation passed");
     expect(reviewed.currentAttempt).toMatchObject({
       calls: [{
         status: "succeeded",

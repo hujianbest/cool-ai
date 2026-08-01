@@ -9,6 +9,11 @@ import {
   projectPassedWorkItemTx,
 } from "@/src/server/review/completion-gate";
 import {
+  assertReviewMaterialPassable,
+  freezeReviewMaterial,
+  reviewMaterialIsCurrent,
+} from "@/src/server/review/review-material";
+import {
   reviewOutputSchema,
   startReviewInputSchema,
   type ReviewAttemptDto,
@@ -527,63 +532,6 @@ export function readReviewWorkspace(
   }
 }
 
-function freezeMaterial(database: DatabaseSync, row: HeadRow, attemptId: string) {
-  const result = database.prepare(`
-    SELECT r.id,r.execution_id AS executionId,r.staged_result_id AS stagedResultId,
-           s.staged_hash AS stagedHash
-    FROM work_item_result_versions r
-    JOIN execution_staged_results s ON s.id=r.staged_result_id
-    WHERE r.id=?
-  `).get(row.resultId) as {
-    executionId: string;
-    id: string;
-    stagedHash: string;
-    stagedResultId: string;
-  };
-  const changes = database.prepare(`
-    SELECT id,path,diff_text AS text FROM execution_staged_observations
-    WHERE staged_result_id=? AND diff_text IS NOT NULL AND diff_bytes>0
-    ORDER BY position,id
-  `).all(result.stagedResultId) as Array<{ id: string; path: string; text: string }>;
-  const validations = database.prepare(`
-    SELECT id,exit_code AS exitCode,succeeded,sandbox_manifest_hash AS version
-    FROM execution_validation_results
-    WHERE execution_id=? AND required=1 ORDER BY finished_at,id
-  `).all(result.executionId) as Array<{
-    exitCode: number;
-    id: string;
-    succeeded: number;
-    version: string;
-  }>;
-  const withOutput = validations.map((validation) => {
-    const chunks = database.prepare(`
-      SELECT stream,text FROM execution_validation_output_chunks
-      WHERE validation_id=? ORDER BY stream,chunk_index
-    `).all(validation.id) as Array<{ stream: "stderr" | "stdout"; text: string }>;
-    return {
-      ...validation,
-      stderr: chunks.filter(({ stream }) => stream === "stderr").map(({ text }) => text).join(""),
-      stdout: chunks.filter(({ stream }) => stream === "stdout").map(({ text }) => text).join(""),
-    };
-  });
-  if (changes.length === 0 || withOutput.length === 0 || withOutput.some(({ succeeded }) => succeeded !== 1)) {
-    throw new ReviewSliceError("REVIEW_MATERIAL_INVALID", 422, "公开复核材料无效");
-  }
-  const material = {
-    changes,
-    result: { id: row.resultId, stagedHash: result.stagedHash, version: 1 },
-    review: { attemptId, version: "1" },
-    sourceRefs: [
-      { id: row.workItemId, type: "task", version: "1" },
-      { id: row.resultId, type: "result", version: "1" },
-      ...withOutput.map(({ id, version }) => ({ id, type: "validation", version })),
-    ],
-    validations: withOutput,
-  };
-  const json = JSON.stringify(material);
-  return { hash: createHash("sha256").update(json).digest("hex"), json };
-}
-
 function providerFor(database: DatabaseSync, reviewerId: string): ProviderRow {
   const row = database.prepare(`
     SELECT p.id,p.name,p.base_url AS baseUrl,a.model,p.api_key_cipher AS apiKeyCipher,
@@ -607,7 +555,7 @@ export async function startReview(
   if (!parsed.success) throw new ReviewSliceError("INVALID_INPUT", 400, "输入不符合约束");
   const database = openDatabase(databasePath);
   let attemptId = "";
-  let material = { hash: "", json: "" };
+  let material!: ReturnType<typeof freezeReviewMaterial>;
   let provider!: ProviderRow;
   try {
     const acquired = transaction(database, () => {
@@ -628,7 +576,7 @@ export async function startReview(
         throw new ReviewSliceError("REVIEWER_INELIGIBLE", 403, "所选 Agent 不具备独立复核资格");
       }
       attemptId = randomUUID();
-      material = freezeMaterial(database, row, attemptId);
+      material = freezeReviewMaterial(database, row, attemptId);
       provider = providerFor(database, parsed.data.reviewerAgentId);
       const startedAt = new Date().toISOString();
       const leaseExpiresAt = new Date(Date.now() + 120_000).toISOString();
@@ -739,6 +687,43 @@ export async function startReview(
     const reviewed = reviewOutputSchema.safeParse(output);
     if (!reviewed.success) {
       throw new ReviewSliceError("STRUCTURED_OUTPUT_INVALID", 400, "复核输出格式无效");
+    }
+    if (!reviewMaterialIsCurrent(database, acquired, material.hash, attemptId)) {
+      transaction(database, () => {
+        database.prepare(`
+          UPDATE review_attempts SET status='discarded',error_category='stale',
+                 finished_at=? WHERE id=? AND status='calling'
+        `).run(new Date().toISOString(), attemptId);
+        database.prepare(`
+          UPDATE work_item_review_heads
+          SET state='pending_review',current_attempt_id=NULL,version=version+1,updated_at=?
+          WHERE work_item_id=? AND current_attempt_id=? AND state='reviewing'
+        `).run(new Date().toISOString(), workItemId, attemptId);
+      });
+      throw new ReviewSliceError("RESULT_SUPERSEDED", 409, "复核材料版本已变化");
+    }
+    if (reviewed.data.decision.choice === "pass") {
+      try {
+        assertReviewMaterialPassable(material.material, reviewed.data.limitations);
+      } catch {
+        transaction(database, () => {
+          database.prepare(`
+            UPDATE review_attempts
+            SET status='failed',error_category='material',finished_at=?
+            WHERE id=? AND status='calling'
+          `).run(new Date().toISOString(), attemptId);
+          database.prepare(`
+            UPDATE work_item_review_heads
+            SET state='pending_review',current_attempt_id=NULL,version=version+1,updated_at=?
+            WHERE work_item_id=? AND current_attempt_id=? AND state='reviewing'
+          `).run(new Date().toISOString(), workItemId, attemptId);
+        });
+        throw new ReviewSliceError(
+          "REVIEW_CONTENT_INCOMPLETE",
+          422,
+          "复核材料正文不完整，不能通过",
+        );
+      }
     }
     const usage = call.usage;
     transaction(database, () => {
