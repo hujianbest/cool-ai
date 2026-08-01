@@ -18,6 +18,7 @@ export type AnswerEscalationResponse = {
   next: "new_review_attempt" | "new_execution_result" | "mission_terminated";
   resultId: string;
   state: "pending_review" | "rework" | "owner_terminated";
+  workItemId: string;
 };
 
 export type AnswerEscalationDependencies = {
@@ -50,12 +51,13 @@ type EscalationRow = {
   workItemId: string;
 };
 
-function requestHash(input: AnswerEscalationInput): string {
+function requestHash(escalationId: string, input: AnswerEscalationInput): string {
   return createHash("sha256").update(JSON.stringify({
+    kind: "answer_escalation",
+    escalationId,
     action: input.action,
     answer: input.answer.trim(),
     expectedHeadVersion: input.expectedHeadVersion,
-    operationId: input.operationId,
   })).digest("hex");
 }
 
@@ -81,7 +83,7 @@ function escalation(database: DatabaseSync, escalationId: string): EscalationRow
 
 function responseFor(
   escalationId: string,
-  row: Pick<EscalationRow, "answer" | "answerAction" | "answerId" | "resultId">,
+  row: Pick<EscalationRow, "answer" | "answerAction" | "answerId" | "resultId" | "workItemId">,
 ): AnswerEscalationResponse {
   if (!row.answer || !row.answerAction || !row.answerId) {
     throw new ReviewEscalationError(
@@ -99,6 +101,7 @@ function responseFor(
       next: "new_review_attempt",
       resultId: row.resultId,
       state: "pending_review",
+      workItemId: row.workItemId,
     };
   }
   if (row.answerAction === "rework") {
@@ -110,6 +113,7 @@ function responseFor(
       next: "new_execution_result",
       resultId: row.resultId,
       state: "rework",
+      workItemId: row.workItemId,
     };
   }
   return {
@@ -120,6 +124,7 @@ function responseFor(
     next: "mission_terminated",
     resultId: row.resultId,
     state: "owner_terminated",
+    workItemId: row.workItemId,
   };
 }
 
@@ -186,11 +191,6 @@ export function answerEscalation(
   database.exec("BEGIN IMMEDIATE");
   try {
     const row = escalation(database, escalationId);
-    if (row.answerId) {
-      const existing = responseFor(escalationId, row);
-      database.exec("COMMIT");
-      return existing;
-    }
     const operation = database.prepare(`
       SELECT request_hash AS requestHash,status,response_json AS responseJson
       FROM review_operations WHERE project_id=? AND id=?
@@ -199,7 +199,7 @@ export function answerEscalation(
       responseJson: string | null;
       status: string;
     } | undefined;
-    const hash = requestHash({ ...input, answer });
+    const hash = requestHash(escalationId, { ...input, answer });
     if (operation) {
       if (operation.requestHash !== hash) {
         throw new ReviewEscalationError("OPERATION_CONFLICT", 409, "Operation body changed.");
@@ -210,6 +210,11 @@ export function answerEscalation(
         return replay;
       }
       throw new ReviewEscalationError("OPERATION_IN_PROGRESS", 409, "Operation is in progress.");
+    }
+    if (row.answerId) {
+      const existing = responseFor(escalationId, row);
+      database.exec("COMMIT");
+      return existing;
     }
     if (
       row.state !== "waiting_owner"
@@ -274,6 +279,7 @@ export function answerEscalation(
       answerAction: input.action,
       answerId,
       resultId: row.resultId,
+      workItemId: row.workItemId,
     });
     database.prepare(`
       UPDATE review_operations

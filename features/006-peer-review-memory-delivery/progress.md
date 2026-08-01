@@ -4,5 +4,5 @@
 - 当前阶段: build
 - 执行模式: auto
 - 已加载扩展: ext-ui-design
-- 下一步: 执行 T-26：收口 escalation answer API、workspace 与多轮 new-attempt 公开链
+- 下一步: 执行 T-27：public-input delivery application service 与 read/mutation/history APIs
 - 门禁输出: RESULT: PASS — 可进入 build

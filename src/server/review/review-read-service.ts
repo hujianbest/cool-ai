@@ -620,6 +620,48 @@ function candidates(database: DatabaseSync, projectId: string, executorAgentId: 
   }));
 }
 
+function escalationRows(database: DatabaseSync, resultId: string) {
+  return database.prepare(`
+    SELECT escalation.id AS escalationId,escalation.result_id AS resultId,
+           decision.attempt_id AS attemptId,escalation.question,
+           escalation.options_json AS optionsJson,escalation.created_at AS createdAt,
+           answer.id AS answerId,answer.action,answer.answer,
+           answer.created_at AS answerCreatedAt
+    FROM review_escalations escalation
+    JOIN review_decisions decision ON decision.id=escalation.decision_id
+    LEFT JOIN review_escalation_answers answer
+      ON answer.escalation_id=escalation.id
+    WHERE escalation.result_id=?
+    ORDER BY escalation.created_at,escalation.id
+  `).all(resultId) as Array<Record<string, unknown>>;
+}
+
+function openEscalation(row: Record<string, unknown>) {
+  return {
+    attemptId: row.attemptId,
+    createdAt: row.createdAt,
+    escalationId: row.escalationId,
+    options: JSON.parse(String(row.optionsJson)),
+    question: row.question,
+    resultId: row.resultId,
+  };
+}
+
+function answeredEscalation(row: Record<string, unknown>) {
+  return {
+    answer: {
+      action: row.action,
+      answer: row.answer,
+      answerId: row.answerId,
+      answerVersion: 1 as const,
+      createdAt: row.answerCreatedAt,
+    },
+    attemptId: row.attemptId,
+    escalationId: row.escalationId,
+    resultId: row.resultId,
+  };
+}
+
 export function readReviewWorkspace(
   databasePath: string,
   workItemId: string,
@@ -630,10 +672,12 @@ export function readReviewWorkspace(
       SELECT h.project_id AS projectId,h.state,h.version AS headVersion,
         h.current_attempt_id AS currentAttemptId,w.id AS workItemId,w.title,
         w.version AS workItemVersion,w.status AS boardStatus,
+        mission_head.state AS missionState,
         r.id AS resultId,r.version AS resultVersion,
         r.executor_agent_id AS executorAgentId,r.created_at AS resultCreatedAt
       FROM work_item_review_heads h
       JOIN work_items w ON w.id=h.work_item_id
+      JOIN mission_delivery_heads mission_head ON mission_head.mission_id=h.mission_id
       LEFT JOIN work_item_result_versions r ON r.id=h.current_result_id
       WHERE h.work_item_id=?
     `).get(workItemId) as Record<string, unknown> | undefined;
@@ -644,7 +688,25 @@ export function readReviewWorkspace(
     const history = database.prepare(
       "SELECT COUNT(*) AS count FROM review_attempts WHERE work_item_id=?",
     ).get(workItemId) as { count: number };
+    const escalations = row.resultId
+      ? escalationRows(database, String(row.resultId))
+      : [];
+    const open = escalations.filter(({ answerId }) => answerId === null);
+    if (
+      (row.state === "waiting_owner"
+        && row.missionState !== "owner_terminated"
+        && open.length !== 1)
+      || (row.state !== "waiting_owner" && open.length !== 0)
+    ) {
+      throw new ReviewApiError("REVIEW_INVARIANT_FAILED");
+    }
     const value = {
+      answeredEscalations: escalations
+        .filter(({ answerId }) => answerId !== null)
+        .sort((left, right) =>
+          String(left.answerCreatedAt).localeCompare(String(right.answerCreatedAt))
+          || String(left.answerId).localeCompare(String(right.answerId)))
+        .map(answeredEscalation),
       blockers: eligible.length === 0 && row.resultId
         ? [{ code: "NO_INDEPENDENT_REVIEWER", refId: null }]
         : [],
@@ -652,8 +714,8 @@ export function readReviewWorkspace(
       currentAttempt: row.currentAttemptId
         ? attemptDto(database, String(row.currentAttemptId))
         : null,
+      currentEscalation: open[0] ? openEscalation(open[0]) : null,
       effectiveStatus: row.state,
-      escalation: null,
       headVersion: row.headVersion,
       historyCount: history.count,
       result: row.resultId
@@ -740,9 +802,13 @@ export function readReviewAttemptDetail(databasePath: string, attemptId: string)
       FROM review_attempts WHERE id=?
     `).get(attemptId) as { frozenMaterialJson: string };
     const escalation = database.prepare(`
-      SELECT e.id,e.question,e.options_json AS optionsJson,e.created_at AS createdAt
+      SELECT e.id AS escalationId,e.result_id AS resultId,
+             d.attempt_id AS attemptId,e.question,e.options_json AS optionsJson,
+             e.created_at AS createdAt,answer.id AS answerId,answer.action,
+             answer.answer,answer.created_at AS answerCreatedAt
       FROM review_escalations e
       JOIN review_decisions d ON d.id=e.decision_id
+      LEFT JOIN review_escalation_answers answer ON answer.escalation_id=e.id
       WHERE d.attempt_id=?
     `).get(attemptId) as Record<string, unknown> | undefined;
     const associations = database.prepare(`
@@ -755,14 +821,12 @@ export function readReviewAttemptDetail(databasePath: string, attemptId: string)
     `).all(attemptId);
     const value = {
       ...attempt,
+      answeredEscalations: escalation?.answerId
+        ? [answeredEscalation(escalation)]
+        : [],
       candidateAssociations: associations,
-      escalation: escalation
-        ? {
-            createdAt: escalation.createdAt,
-            id: escalation.id,
-            options: JSON.parse(String(escalation.optionsJson)),
-            question: escalation.question,
-          }
+      currentEscalation: escalation && !escalation.answerId
+        ? openEscalation(escalation)
         : null,
       frozenMaterial: JSON.parse(row.frozenMaterialJson),
     };

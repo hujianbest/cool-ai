@@ -1,0 +1,32 @@
+# hf-gate-run
+# label: t26-regression
+# command: npm.cmd test -- tests/review-escalation-route.test.ts tests/review-escalation-integration.test.ts tests/review-escalation.test.ts tests/execution-rework-integration.test.ts tests/review-material.test.ts tests/review-read-api.test.ts tests/review-events.test.ts tests/review-recovery.test.ts tests/review-restart-integration.test.ts
+# started: 2026-08-01T09:49:09+00:00
+
+> collaboration-cockpit@0.1.0 test
+> vitest run tests/review-escalation-route.test.ts tests/review-escalation-integration.test.ts tests/review-escalation.test.ts tests/execution-rework-integration.test.ts tests/review-material.test.ts tests/review-read-api.test.ts tests/review-events.test.ts tests/review-recovery.test.ts tests/review-restart-integration.test.ts
+
+
+ RUN  v4.1.10 D:/cool-ai
+
+(node:15660) ExperimentalWarning: SQLite is an experimental feature and might change at any time
+(Use `node --trace-warnings ...` to show where the warning was created)
+(node:8860) ExperimentalWarning: SQLite is an experimental feature and might change at any time
+(Use `node --trace-warnings ...` to show where the warning was created)
+(node:7576) ExperimentalWarning: SQLite is an experimental feature and might change at any time
+(Use `node --trace-warnings ...` to show where the warning was created)
+(node:17372) ExperimentalWarning: SQLite is an experimental feature and might change at any time
+(Use `node --trace-warnings ...` to show where the warning was created)
+(node:5016) ExperimentalWarning: SQLite is an experimental feature and might change at any time
+(Use `node --trace-warnings ...` to show where the warning was created)
+(node:7636) ExperimentalWarning: SQLite is an experimental feature and might change at any time
+(Use `node --trace-warnings ...` to show where the warning was created)
+(node:16820) ExperimentalWarning: SQLite is an experimental feature and might change at any time
+(Use `node --trace-warnings ...` to show where the warning was created)
+
+ Test Files  9 passed (9)
+      Tests  39 passed (39)
+   Start at  17:49:11
+   Duration  9.57s (transform 2.13s, setup 6.93s, import 4.08s, tests 9.25s, environment 31.38s)
+
+# exit: 0
