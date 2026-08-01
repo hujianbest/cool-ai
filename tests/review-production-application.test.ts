@@ -4,9 +4,16 @@ import { join } from "node:path";
 import { DatabaseSync } from "node:sqlite";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
-import { POST } from "@/app/api/work-items/[workItemId]/reviews/route";
+import { GET as getProjects } from "@/app/api/projects/route";
+import { GET as getProjectContext } from "@/app/api/projects/[projectId]/context/route";
+import { GET as getProjectTasks } from "@/app/api/projects/[projectId]/tasks/route";
+import {
+  GET as getReviews,
+  POST,
+} from "@/app/api/work-items/[workItemId]/reviews/route";
 import { createCredentialVault } from "@/src/server/credential-vault";
 import { openDatabase } from "@/src/server/db";
+import { validateV6 } from "@/src/server/migrations-v6";
 import type { ModelCallResult } from "@/src/shared/collaboration-contracts";
 
 type ApplicationModule = typeof import("../src/server/review/review-application-service");
@@ -64,6 +71,17 @@ function output(choice: "reject" | "escalate" | "pass"): ModelCallResult {
     httpStatus: 200,
     status: "succeeded",
     usage: { completionTokens: 2, promptTokens: 3, totalTokens: 5 },
+    usageReported: true,
+  };
+}
+
+function invalidOutput(): ModelCallResult {
+  return {
+    content: "{",
+    error: null,
+    httpStatus: 200,
+    status: "succeeded",
+    usage: { completionTokens: 1, promptTokens: 1, totalTokens: 2 },
     usageReported: true,
   };
 }
@@ -283,5 +301,95 @@ describe("public production review application", () => {
     expect(await changedPath.json()).toMatchObject({ error: { code: "OPERATION_CONFLICT" } });
     expect(callOpenAiChat).toHaveBeenCalledTimes(1);
     expect(counts()).toEqual(afterReplay);
+  });
+
+  it("atomically restores the review head after primary and repair are both invalid", async () => {
+    callOpenAiChat.mockResolvedValue(invalidOutput());
+
+    const first = await post("work", body());
+    expect(first.status).toBe(200);
+    const payload = await first.json();
+    expect(payload).toMatchObject({
+      errorCategory: "structured_output_invalid",
+      state: "failed",
+    });
+    expect(callOpenAiChat).toHaveBeenCalledTimes(2);
+
+    const database = openDatabase(databasePath);
+    try {
+      expect(database.prepare(`
+        SELECT status,error_category AS errorCategory,finished_at IS NOT NULL AS finished,
+               lease_token AS leaseToken,project_id AS projectId,mission_id AS missionId,
+               work_item_id AS workItemId,result_id AS resultId,operation_id AS operationId
+        FROM review_attempts
+      `).get()).toMatchObject({
+        errorCategory: "structured_output_invalid",
+        finished: 1,
+        leaseToken: expect.any(String),
+        missionId: "mission",
+        operationId,
+        projectId: "project",
+        resultId: "result",
+        status: "failed",
+        workItemId: "work",
+      });
+      expect(database.prepare(`
+        SELECT kind,parent_id AS parentId,status,http_status AS httpStatus,
+               request_hash AS requestHash
+        FROM review_operations WHERE project_id='project' AND id=?
+      `).get(operationId)).toMatchObject({
+        httpStatus: 502,
+        kind: "start_review",
+        parentId: "work",
+        requestHash: expect.stringMatching(/^[0-9a-f]{64}$/u),
+        status: "completed",
+      });
+      expect(database.prepare(`
+        SELECT project_id AS projectId,mission_id AS missionId,
+               current_result_id AS currentResultId,current_attempt_id AS currentAttemptId,
+               state,version
+        FROM work_item_review_heads WHERE work_item_id='work'
+      `).get()).toEqual({
+        currentAttemptId: null,
+        currentResultId: "result",
+        missionId: "mission",
+        projectId: "project",
+        state: "pending_review",
+        version: 3,
+      });
+      expect(database.prepare("SELECT count(*) AS n FROM review_decisions").get()).toEqual({ n: 0 });
+      expect(validateV6(database)).not.toBe("SCHEMA_DATA_INVALID");
+    } finally {
+      database.close();
+    }
+
+    const replay = await post("work", body());
+    expect(await replay.json()).toEqual(payload);
+    expect(callOpenAiChat).toHaveBeenCalledTimes(2);
+    expect(counts()).toEqual({ attempts: 1, decisions: 0, memories: 0, receipts: 1 });
+
+    const reopened = openDatabase(databasePath);
+    expect(reopened.prepare(`
+      SELECT state,current_attempt_id AS currentAttemptId
+      FROM work_item_review_heads WHERE work_item_id='work'
+    `).get()).toEqual({ currentAttemptId: null, state: "pending_review" });
+    reopened.close();
+
+    const responses = await Promise.all([
+      getProjects(),
+      getProjectTasks(
+        new Request("http://localhost/api/projects/project/tasks"),
+        { params: Promise.resolve({ projectId: "project" }) },
+      ),
+      getProjectContext(
+        new Request("http://localhost/api/projects/project/context?agentId=reviewer"),
+        { params: Promise.resolve({ projectId: "project" }) },
+      ),
+      getReviews(
+        new Request("http://localhost/api/work-items/work/reviews"),
+        { params: Promise.resolve({ workItemId: "work" }) },
+      ),
+    ]);
+    expect(responses.map((response) => response.status)).not.toContain(500);
   });
 });

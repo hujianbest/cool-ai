@@ -1,0 +1,53 @@
+# hf-gate-run
+# label: t32-red
+# command: npm test -- tests/review-production-application.test.ts
+# started: 2026-08-01T16:27:53+00:00
+
+> collaboration-cockpit@0.1.0 test
+> vitest run tests/review-production-application.test.ts
+
+
+ RUN  v4.1.10 D:/cool-ai
+
+(node:6208) ExperimentalWarning: SQLite is an experimental feature and might change at any time
+(Use `node --trace-warnings ...` to show where the warning was created)
+ ❯ tests/review-production-application.test.ts (7 tests | 1 failed) 2127ms
+     × atomically restores the review head after primary and repair are both invalid 316ms
+
+⎯⎯⎯⎯⎯⎯⎯ Failed Tests 1 ⎯⎯⎯⎯⎯⎯⎯
+
+ FAIL  tests/review-production-application.test.ts > public production review application > atomically restores the review head after primary and repair are both invalid
+AssertionError: expected { projectId: 'project', …(5) } to deeply equal { currentAttemptId: null, …(5) }
+
+- Expected
++ Received
+
+  {
+-   "currentAttemptId": null,
++   "currentAttemptId": "a1543d9b-0389-4de2-b0c9-380b97076d17",
+    "currentResultId": "result",
+    "missionId": "mission",
+    "projectId": "project",
+-   "state": "pending_review",
+-   "version": 3,
++   "state": "reviewing",
++   "version": 2,
+  }
+
+ ❯ tests/review-production-application.test.ts:350:17
+    348|                state,version
+    349|         FROM work_item_review_heads WHERE work_item_id='work'
+    350|       `).get()).toEqual({
+       |                 ^
+    351|         currentAttemptId: null,
+    352|         currentResultId: "result",
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[1/1]⎯
+
+
+ Test Files  1 failed (1)
+      Tests  1 failed | 6 passed (7)
+   Start at  00:27:54
+   Duration  5.39s (transform 514ms, setup 418ms, import 796ms, tests 2.13s, environment 1.77s)
+
+# exit: 1

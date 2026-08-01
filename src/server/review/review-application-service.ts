@@ -459,6 +459,7 @@ export async function startPublicReview(
             "复核上下文已变化，请基于最新内容重试",
           );
         }
+        return current.headVersion + 1;
       },
     });
   } finally {

@@ -79,7 +79,7 @@ export type ReviewOperationInput = {
 };
 
 export type ReviewOrchestratorDependencies = {
-  acquireContext?: (database: DatabaseSync, input: ReviewOperationInput) => void;
+  acquireContext?: (database: DatabaseSync, input: ReviewOperationInput) => number | void;
   callProvider?: (
     request: OpenAiChatRequest,
     context: OpenAiChatCallContext,
@@ -108,6 +108,19 @@ type AttemptRow = {
   outputHash: string | null;
   status: string;
 };
+
+type ReviewAcquisition = {
+  acquiredHeadVersion: number | null;
+  leaseToken: string;
+  requestHash: string;
+};
+
+class FailureCasLostError extends Error {
+  constructor() {
+    super("Review failure finalization lost its CAS.");
+    this.name = "FailureCasLostError";
+  }
+}
 
 function transaction<T>(database: DatabaseSync, work: () => T): T {
   database.exec("BEGIN IMMEDIATE");
@@ -239,7 +252,7 @@ function acquire(
   now: Date,
   leaseToken: string,
   acquireContext?: ReviewOrchestratorDependencies["acquireContext"],
-): void {
+): ReviewAcquisition {
   if (
     !Number.isSafeInteger(input.trustedTokens)
     || !Number.isSafeInteger(input.maxTokens)
@@ -255,8 +268,8 @@ function acquire(
       "Reviewer token boundary has been reached.",
     );
   }
-  transaction(database, () => {
-    acquireContext?.(database, input);
+  const acquiredHeadVersion = transaction(database, () => {
+    const headVersion = acquireContext?.(database, input);
     if (input.retryOfAttemptId) {
       const prior = database.prepare(`
         SELECT status,parsed_output_hash AS outputHash,work_item_id AS workItemId
@@ -322,7 +335,9 @@ function acquire(
       input.model,
       timestamp,
     );
+    return headVersion ?? null;
   });
+  return { acquiredHeadVersion, leaseToken, requestHash };
 }
 
 function heartbeat(
@@ -408,28 +423,89 @@ function terminalCall(
 function completeFailure(
   database: DatabaseSync,
   input: ReviewOperationInput,
+  acquisition: ReviewAcquisition,
   category: string,
   now: Date,
 ): ReviewOperationResponse {
   const response = failedResponse(input.attemptId, category);
-  transaction(database, () => {
-    database.prepare(`
-      UPDATE review_attempts
-      SET status='failed',error_category=?,finished_at=?
-      WHERE id=? AND status='calling'
-    `).run(category, now.toISOString(), input.attemptId);
-    database.prepare(`
-      UPDATE review_operations
-      SET status='completed',http_status=502,response_json=?,updated_at=?
-      WHERE project_id=? AND id=? AND status='pending'
-    `).run(
-      JSON.stringify(response),
-      now.toISOString(),
-      input.projectId,
-      input.operationId,
+  const timestamp = now.toISOString();
+  try {
+    transaction(database, () => {
+      const attempt = database.prepare(`
+        UPDATE review_attempts
+        SET status='failed',error_category=?,finished_at=?
+        WHERE id=? AND project_id=? AND mission_id=? AND work_item_id=?
+          AND result_id=? AND operation_id=? AND status='calling' AND lease_token=?
+      `).run(
+        category,
+        timestamp,
+        input.attemptId,
+        input.projectId,
+        input.missionId,
+        input.workItemId,
+        input.resultId,
+        input.operationId,
+        acquisition.leaseToken,
+      );
+      const operation = database.prepare(`
+        UPDATE review_operations
+        SET status='completed',http_status=502,response_json=?,updated_at=?
+        WHERE project_id=? AND id=? AND kind='start_review' AND parent_id=?
+          AND request_hash=? AND status='pending'
+          AND EXISTS(
+            SELECT 1 FROM review_attempts correlated_attempt
+            WHERE correlated_attempt.project_id=review_operations.project_id
+              AND correlated_attempt.operation_id=review_operations.id
+              AND correlated_attempt.id=?
+              AND correlated_attempt.mission_id=?
+              AND correlated_attempt.work_item_id=?
+              AND correlated_attempt.result_id=?
+          )
+      `).run(
+        JSON.stringify(response),
+        timestamp,
+        input.projectId,
+        input.operationId,
+        input.parentId,
+        acquisition.requestHash,
+        input.attemptId,
+        input.missionId,
+        input.workItemId,
+        input.resultId,
+      );
+      const head = acquisition.acquiredHeadVersion === null
+        ? { changes: 1 }
+        : database.prepare(`
+          UPDATE work_item_review_heads
+          SET state='pending_review',current_attempt_id=NULL,
+              version=version+1,updated_at=?
+          WHERE project_id=? AND mission_id=? AND work_item_id=?
+            AND current_result_id=? AND current_attempt_id=?
+            AND state='reviewing' AND version=?
+        `).run(
+          timestamp,
+          input.projectId,
+          input.missionId,
+          input.workItemId,
+          input.resultId,
+          input.attemptId,
+          acquisition.acquiredHeadVersion,
+        );
+      if (attempt.changes !== 1 || operation.changes !== 1 || head.changes !== 1) {
+        throw new FailureCasLostError();
+      }
+    });
+    return response;
+  } catch (error) {
+    if (!(error instanceof FailureCasLostError)) throw error;
+    const winner = operationReplay(database, input, acquisition.requestHash);
+    if (winner) return winner;
+    throw new ReviewOrchestratorError(
+      "REVIEW_STATE_CONFLICT",
+      409,
+      "Review failure finalization lost to a newer durable state.",
     );
-  });
-  return response;
+  }
 }
 
 function repairRequest(request: OpenAiChatRequest, invalidContent: string): OpenAiChatRequest {
@@ -631,7 +707,7 @@ export async function runReviewOperation(
   const randomUUID = dependencies.randomUUID ?? nodeRandomUUID;
   const callProvider = dependencies.callProvider ?? callOpenAiChat;
   const leaseToken = randomUUID();
-  acquire(
+  const acquisition = acquire(
     database,
     input,
     requestHash,
@@ -663,7 +739,7 @@ export async function runReviewOperation(
       : "provider_failed";
     const category = primary.error?.category ?? status;
     terminalCall(database, input, 1, status, primary, category, clock());
-    return completeFailure(database, input, category, clock());
+    return completeFailure(database, input, acquisition, category, clock());
   }
 
   let checked = checkedOutput(primary.content, input.validationContext);
@@ -694,7 +770,7 @@ export async function runReviewOperation(
         : "provider_failed";
       const category = repair.error?.category ?? status;
       terminalCall(database, input, 2, status, repair, category, clock());
-      return completeFailure(database, input, category, clock());
+      return completeFailure(database, input, acquisition, category, clock());
     }
     checked = checkedOutput(repair.content, input.validationContext);
     if (!checked.output) {
@@ -710,6 +786,7 @@ export async function runReviewOperation(
       return completeFailure(
         database,
         input,
+        acquisition,
         checked.category ?? "structured_output_invalid",
         clock(),
       );
@@ -733,6 +810,7 @@ export async function runReviewOperation(
     return completeFailure(
       database,
       input,
+      acquisition,
       checked.category ?? "structured_output_invalid",
       clock(),
     );
