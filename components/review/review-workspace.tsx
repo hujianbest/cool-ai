@@ -9,13 +9,21 @@ import {
   ReviewMaterialPanel,
   type ReviewMaterialView,
 } from "@/components/review/review-material-panel";
+import {
+  ReviewMemoryAssociations,
+  type ReviewMemoryAssociation,
+} from "@/components/review/review-memory-associations";
 import type {
   ReviewAttemptDto,
   ReviewWorkspaceDto,
 } from "@/src/shared/review-contracts";
 
 export type ReviewWorkspaceProps = {
-  detail?: { attempt: ReviewAttemptDto; material: ReviewMaterialView };
+  detail?: {
+    attempt: ReviewAttemptDto;
+    candidateAssociations?: ReviewMemoryAssociation[];
+    material: ReviewMaterialView;
+  };
   history?: ReviewAttemptDto[];
   load: () => Promise<ReviewWorkspaceDto>;
   onLocalFinalize: (
@@ -24,6 +32,7 @@ export type ReviewWorkspaceProps = {
   ) => Promise<ReviewWorkspaceDto>;
   onNewProviderAttempt?: (attemptId: string) => Promise<ReviewWorkspaceDto>;
   operationDisabledReason?: string | null;
+  projectId?: string;
   workItemId: string;
 };
 
@@ -34,6 +43,7 @@ export function ReviewWorkspace({
   onLocalFinalize,
   onNewProviderAttempt,
   operationDisabledReason = null,
+  projectId,
   workItemId,
 }: ReviewWorkspaceProps) {
   const [workspace, setWorkspace] = useState<ReviewWorkspaceDto | null>(null);
@@ -166,6 +176,12 @@ export function ReviewWorkspace({
         <section aria-labelledby={`review-${detail.attempt.id}-material`} className="stack">
           <h4 id={`review-${detail.attempt.id}-material`}>Attempt 详情材料</h4>
           <ReviewMaterialPanel material={detail.material} />
+          {detail.attempt.decision?.choice === "pass" ? (
+            <ReviewMemoryAssociations
+              associations={detail.candidateAssociations ?? []}
+              projectId={projectId}
+            />
+          ) : null}
         </section>
       ) : null}
 

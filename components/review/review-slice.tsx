@@ -14,6 +14,11 @@ export {
   type ReviewPublicContent,
 } from "@/components/review/review-material-panel";
 export {
+  ReviewMemoryAssociations,
+  type ReviewMemoryAssociation,
+  type ReviewMemoryAssociationsProps,
+} from "@/components/review/review-memory-associations";
+export {
   ReviewOutcomesPanel,
   type ReviewOutcomeAction,
   type ReviewOutcomesPanelProps,

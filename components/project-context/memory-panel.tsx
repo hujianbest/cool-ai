@@ -8,15 +8,21 @@ import {
 } from "react";
 
 import type { ApiError } from "@/src/shared/contracts";
-import type { MemoryEntry } from "@/src/shared/project-context-contracts";
+import type {
+  MemoryEntryV6,
+  MemorySourceType,
+  MemoryType,
+} from "@/src/shared/memory-contracts";
+import type { MemoryEntry as LegacyMemoryEntry } from "@/src/shared/project-context-contracts";
 
 type MemoryDraft = {
-  type: MemoryEntry["type"];
+  type: MemoryType;
   content: string;
-  sourceType: MemoryEntry["sourceType"];
+  sourceType: "artifact_path" | "owner_input" | "work_item";
   sourceRef: string;
   supersedesId: string;
 };
+type MemoryEntry = MemoryEntryV6 | LegacyMemoryEntry;
 type MemoryPayload = Partial<ApiError> & {
   error?: ApiError["error"] & {
     fields?: Array<{ field: string; code: string }>;
@@ -31,19 +37,64 @@ const EMPTY_DRAFT: MemoryDraft = {
   supersedesId: "",
 };
 const MEMORY_TYPES: Array<{
-  value: MemoryEntry["type"];
+  value: MemoryType;
   label: string;
 }> = [
   { value: "goal", label: "目标" },
   { value: "decision", label: "决策" },
   { value: "fact", label: "事实" },
   { value: "artifact", label: "产物" },
+  { value: "experience", label: "经验" },
 ];
-const SOURCE_LABELS: Record<MemoryEntry["sourceType"], string> = {
+const OWNER_SOURCE_LABELS: Record<MemoryDraft["sourceType"], string> = {
   owner_input: "Owner 输入",
   work_item: "任务",
   artifact_path: "产物路径",
 };
+const SOURCE_LABELS: Record<MemorySourceType, string> = {
+  ...OWNER_SOURCE_LABELS,
+  artifact: "artifact",
+  result: "result",
+  review: "review",
+  task: "task",
+  validation: "validation",
+};
+
+function isV6(memory: MemoryEntry): memory is MemoryEntryV6 {
+  return "actor" in memory && "source" in memory && "version" in memory;
+}
+
+function memoryType(memory: MemoryEntry): MemoryType {
+  return memory.type;
+}
+
+function chainId(memory: MemoryEntry): string {
+  return isV6(memory) ? memory.chainId : memory.id;
+}
+
+function version(memory: MemoryEntry): number {
+  return isV6(memory) ? memory.version : 1;
+}
+
+function source(memory: MemoryEntry): MemoryEntryV6["source"] {
+  return isV6(memory)
+    ? memory.source
+    : {
+        href: null,
+        id: memory.sourceRef,
+        type: memory.sourceType,
+        version: null,
+      };
+}
+
+function actorCopy(memory: MemoryEntry): string {
+  if (!isV6(memory) || memory.actor.proposerType === "owner") {
+    return "Owner 提议 · 平台持久化";
+  }
+  return `Agent ${memory.actor.proposerAgent.name} 提议 · 通过裁决 ${
+    memory.actor.confirmer.decisionId
+  } 确认 · 平台持久化`;
+}
 
 function memoryError(payload: MemoryPayload): string {
   switch (payload.error?.code) {
@@ -178,7 +229,19 @@ export function MemoryPanel({ projectId }: { projectId: string }) {
   }
 
   const supersedeOptions = memories.filter(
-    (memory) => memory.active && memory.type === draft.type,
+    (memory) => memory.active && memoryType(memory) === draft.type,
+  );
+  const displayedMemories = [...memories].sort((left, right) =>
+    includeHistory
+      ? chainId(left).localeCompare(chainId(right))
+        || version(left) - version(right)
+        || left.id.localeCompare(right.id)
+      : left.createdAt.localeCompare(right.createdAt) || left.id.localeCompare(right.id)
+  );
+  const successorById = new Map(
+    memories
+      .filter((memory) => memory.supersedesId !== null)
+      .map((memory) => [memory.supersedesId!, memory]),
   );
 
   return (
@@ -231,12 +294,12 @@ export function MemoryPanel({ projectId }: { projectId: string }) {
               setDraft((current) => ({
                 ...current,
                 sourceType: event.target
-                  .value as MemoryEntry["sourceType"],
+                  .value as MemoryDraft["sourceType"],
               }))
             }
             value={draft.sourceType}
           >
-            {Object.entries(SOURCE_LABELS).map(([value, label]) => (
+            {Object.entries(OWNER_SOURCE_LABELS).map(([value, label]) => (
               <option key={value} value={value}>
                 {label}
               </option>
@@ -281,7 +344,7 @@ export function MemoryPanel({ projectId }: { projectId: string }) {
             ))}
           </select>
         </div>
-        <button disabled={isSaving} type="submit">
+        <button disabled={isLoading || isSaving} type="submit">
           {isSaving ? "正在保存记忆…" : "保存记忆"}
         </button>
       </form>
@@ -329,8 +392,19 @@ export function MemoryPanel({ projectId }: { projectId: string }) {
           aria-label={includeHistory ? "共享记忆历史" : "Active 共享记忆"}
           className="stack memory-list"
         >
-          {memories.map((memory) => (
-            <li className="task-summary stack" key={memory.id}>
+          {displayedMemories.map((memory) => {
+            const memorySource = source(memory);
+            const successor = successorById.get(memory.id);
+            const predecessor = memory.supersedesId
+              ? memories.find((candidate) => candidate.id === memory.supersedesId)
+              : undefined;
+            return (
+            <li
+              aria-label={`memory ${memory.id}`}
+              className="task-summary stack"
+              id={`memory-${memory.id}`}
+              key={memory.id}
+            >
               <h3
                 ref={(element) => {
                   if (element) headingRefs.current.set(memory.id, element);
@@ -340,17 +414,47 @@ export function MemoryPanel({ projectId }: { projectId: string }) {
               >
                 {memory.content}
               </h3>
-              <p>
-                {MEMORY_TYPES.find((type) => type.value === memory.type)?.label} ·{" "}
-                {SOURCE_LABELS[memory.sourceType]} · {memory.sourceRef}
-              </p>
-              <p>创建者：owner</p>
-              <p>{memory.active ? "Active" : "已失效"}</p>
-              {memory.sourceType === "artifact_path" ? (
+              <p>{MEMORY_TYPES.find((type) => type.value === memoryType(memory))?.label}</p>
+              <p>{actorCopy(memory)}</p>
+              {memorySource.href && memorySource.version ? (
+                <a
+                  aria-label={`${memorySource.type} · ${memorySource.id} · version ${memorySource.version}`}
+                  href={memorySource.href}
+                >
+                  {SOURCE_LABELS[memorySource.type]} · <code>{memorySource.id}</code>
+                  {" · version "}<code>{memorySource.version}</code>
+                </a>
+              ) : (
+                <p>
+                  {SOURCE_LABELS[memorySource.type]} · <code>{memorySource.id}</code>
+                  {" · "}<span>原有来源（无版本）</span>
+                </p>
+              )}
+              <p>chain <code>{chainId(memory)}</code> · v{version(memory)}</p>
+              {memory.active ? (
+                <p>Active · 当前版本</p>
+              ) : (
+                <>
+                  <p>已失效</p>
+                  <p>{successor ? `已被 v${version(successor)} 取代` : "已取代"}</p>
+                </>
+              )}
+              {predecessor ? (
+                <a href={`#memory-${predecessor.id}`}>
+                  取代 memory {predecessor.id} · v{version(predecessor)}
+                </a>
+              ) : null}
+              {successor ? (
+                <a href={`#memory-${successor.id}`}>
+                  后继 memory {successor.id} · v{version(successor)}
+                </a>
+              ) : null}
+              {memorySource.type === "artifact_path" ? (
                 <p className="muted">仅引用，尚未读取</p>
               ) : null}
             </li>
-          ))}
+            );
+          })}
         </ul>
       ) : null}
     </section>

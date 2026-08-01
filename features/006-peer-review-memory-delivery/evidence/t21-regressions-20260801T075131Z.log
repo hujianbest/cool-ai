@@ -1,0 +1,28 @@
+# hf-gate-run
+# label: t21-regressions
+# command: npm.cmd test -- tests/review-memory-ui.test.tsx tests/memory-panel.test.tsx tests/memory-v6-contracts.test.ts tests/memory-source-navigation.test.ts tests/review-memory-dedup.test.ts tests/review-memory-supersedes.test.ts tests/review-workspace-ui.test.tsx tests/review-outcomes-ui.test.tsx tests/review-escalation-ui.test.tsx tests/workspace-slice.test.tsx tests/agent-review-capability-ui.test.tsx
+# started: 2026-08-01T07:51:31+00:00
+
+> collaboration-cockpit@0.1.0 test
+> vitest run tests/review-memory-ui.test.tsx tests/memory-panel.test.tsx tests/memory-v6-contracts.test.ts tests/memory-source-navigation.test.ts tests/review-memory-dedup.test.ts tests/review-memory-supersedes.test.ts tests/review-workspace-ui.test.tsx tests/review-outcomes-ui.test.tsx tests/review-escalation-ui.test.tsx tests/workspace-slice.test.tsx tests/agent-review-capability-ui.test.tsx
+
+
+ RUN  v4.1.10 D:/cool-ai
+
+(node:2184) ExperimentalWarning: SQLite is an experimental feature and might change at any time
+(Use `node --trace-warnings ...` to show where the warning was created)
+(node:11820) ExperimentalWarning: SQLite is an experimental feature and might change at any time
+(Use `node --trace-warnings ...` to show where the warning was created)
+(node:15904) ExperimentalWarning: SQLite is an experimental feature and might change at any time
+(Use `node --trace-warnings ...` to show where the warning was created)
+(node:3240) ExperimentalWarning: SQLite is an experimental feature and might change at any time
+(Use `node --trace-warnings ...` to show where the warning was created)
+(node:15332) ExperimentalWarning: SQLite is an experimental feature and might change at any time
+(Use `node --trace-warnings ...` to show where the warning was created)
+
+ Test Files  11 passed (11)
+      Tests  52 passed (52)
+   Start at  15:51:32
+   Duration  10.38s (transform 2.24s, setup 7.07s, import 5.06s, tests 15.17s, environment 29.87s)
+
+# exit: 0
