@@ -1,0 +1,28 @@
+# hf-gate-run
+# label: t7-regression
+# command: npm test -- tests/review-material.test.ts tests/review-qualification.test.ts tests/review-slice.test.tsx tests/structured-repair.test.ts tests/execution-structured-repair.test.ts tests/openai-chat-client.test.ts tests/execution-security-integration.test.ts
+# started: 2026-08-01T05:24:09+00:00
+
+> collaboration-cockpit@0.1.0 test
+> vitest run tests/review-material.test.ts tests/review-qualification.test.ts tests/review-slice.test.tsx tests/structured-repair.test.ts tests/execution-structured-repair.test.ts tests/openai-chat-client.test.ts tests/execution-security-integration.test.ts
+
+
+ RUN  v4.1.10 D:/cool-ai
+
+(node:7888) ExperimentalWarning: SQLite is an experimental feature and might change at any time
+(Use `node --trace-warnings ...` to show where the warning was created)
+(node:16960) ExperimentalWarning: SQLite is an experimental feature and might change at any time
+(Use `node --trace-warnings ...` to show where the warning was created)
+(node:9080) ExperimentalWarning: SQLite is an experimental feature and might change at any time
+(Use `node --trace-warnings ...` to show where the warning was created)
+(node:14524) ExperimentalWarning: SQLite is an experimental feature and might change at any time
+(Use `node --trace-warnings ...` to show where the warning was created)
+(node:16404) ExperimentalWarning: SQLite is an experimental feature and might change at any time
+(Use `node --trace-warnings ...` to show where the warning was created)
+
+ Test Files  7 passed (7)
+      Tests  54 passed (54)
+   Start at  13:24:10
+   Duration  7.40s (transform 2.44s, setup 6.84s, import 4.38s, tests 10.65s, environment 20.62s)
+
+# exit: 0

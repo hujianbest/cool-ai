@@ -1,27 +1,59 @@
 import { z } from "zod";
 
-const evidenceRefSchema = z.object({
+const segmenter = new Intl.Segmenter("zh-CN", { granularity: "grapheme" });
+
+function publicText(maximum: number) {
+  return z.string()
+    .transform((value) => value.trim())
+    .refine((value) => {
+      const length = Array.from(segmenter.segment(value)).length;
+      return length >= 1 && length <= maximum;
+    });
+}
+
+export const reviewEvidenceRefSchema = z.object({
   id: z.string().min(1),
   type: z.enum(["task", "result", "review", "validation", "artifact"]),
   version: z.string().min(1),
 }).strict();
 
+const reviewMemoryCandidateSchema = z.object({
+  type: z.enum(["decision", "fact", "artifact", "experience"]),
+  content: publicText(20_000),
+  source: reviewEvidenceRefSchema,
+  supersedesMemoryId: z.string().min(1).nullable(),
+}).strict();
+
+const escalationOptionsSchema = z.array(publicText(500))
+  .min(2)
+  .max(8)
+  .refine((options) => new Set(options).size === options.length);
+
 export const reviewOutputSchema = z.object({
   decision: z.discriminatedUnion("choice", [
-    z.object({ choice: z.literal("reject"), reworkRequirements: z.array(z.string().trim().min(1)).min(1) }).strict(),
-    z.object({ choice: z.literal("escalate"), question: z.string().trim().min(1), options: z.array(z.string().trim().min(1)).min(2) }).strict(),
+    z.object({
+      choice: z.literal("reject"),
+      reworkRequirements: z.array(publicText(5_000)).min(1),
+    }).strict(),
+    z.object({
+      choice: z.literal("escalate"),
+      question: publicText(1_000),
+      options: escalationOptionsSchema,
+    }).strict(),
     z.object({ choice: z.literal("pass") }).strict(),
   ]),
-  evidenceRefs: z.array(evidenceRefSchema),
+  evidenceRefs: z.array(reviewEvidenceRefSchema),
   findings: z.array(z.object({
-    detail: z.string().trim().min(1),
-    evidenceRefs: z.array(evidenceRefSchema),
-    title: z.string().trim().min(1),
+    detail: publicText(5_000),
+    evidenceRefs: z.array(reviewEvidenceRefSchema),
+    title: publicText(5_000),
   }).strict()),
-  limitations: z.array(z.string().trim().min(1)),
-  memoryCandidates: z.array(z.never()),
-  publicSummary: z.string().trim().min(1),
+  limitations: z.array(publicText(5_000)),
+  memoryCandidates: z.array(reviewMemoryCandidateSchema),
+  publicSummary: publicText(20_000),
 }).strict();
+
+export type ReviewOutput = z.infer<typeof reviewOutputSchema>;
 
 export const startReviewInputSchema = z.object({
   expectedHeadVersion: z.number().int().min(1),
