@@ -346,19 +346,36 @@ export function invalidateCompletionTx(
   }
 
   const delivery = database.prepare(`
-    SELECT state,current_delivery_id AS deliveryId,version
+    SELECT state,current_delivery_id AS deliveryId,
+           current_operation_id AS operationId,version
     FROM mission_delivery_heads WHERE mission_id=? AND project_id=?
   `).get(root.missionId, root.projectId) as {
     deliveryId: string | null;
+    operationId: string | null;
     state: string;
     version: number;
   };
   if (delivery.state === "completed" || delivery.state === "generating") {
+    if (delivery.state === "generating" && delivery.operationId) {
+      database.prepare(`
+        UPDATE review_operations
+        SET status='completed',http_status=409,response_json=?,updated_at=?
+        WHERE project_id=? AND id=? AND kind='generate_delivery' AND status='pending'
+      `).run(
+        JSON.stringify({
+          error: { code: "DELIVERY_CONTEXT_CHANGED" },
+          ok: false,
+        }),
+        now,
+        root.projectId,
+        delivery.operationId,
+      );
+    }
     const changed = database.prepare(`
       UPDATE mission_delivery_heads
       SET state='ongoing',current_delivery_id=NULL,current_operation_id=NULL,
           generation_lease_token=NULL,generation_lease_expires_at=NULL,
-          version=version+1,updated_at=?
+          last_error_code=NULL,version=version+1,updated_at=?
       WHERE mission_id=? AND project_id=? AND version=?
     `).run(now, root.missionId, root.projectId, delivery.version);
     if (changed.changes !== 1) {

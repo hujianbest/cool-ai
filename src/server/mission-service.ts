@@ -9,6 +9,7 @@ import {
   invalidateCompletionTx,
   writeWorkItemStatusTx,
 } from "@/src/server/review/completion-gate";
+import { invalidateMissionContextTx } from "@/src/server/review/delivery-service";
 import type {
   Mission,
   MissionState,
@@ -702,9 +703,14 @@ export function updateMission(
         .prepare(
           `UPDATE missions
            SET title = ?, goal = ?, version = version + 1, updated_at = ?
-           WHERE id = ?`,
+           WHERE id = ? AND version = ?`,
         )
-        .run(parsed.title, parsed.goal, new Date().toISOString(), missionId);
+        .run(parsed.title, parsed.goal, new Date().toISOString(), missionId, version);
+      invalidateMissionContextTx(database, {
+        missionId,
+        projectId: current.projectId,
+        reason: "MISSION_CONTEXT_CHANGED",
+      });
       return missionById(database, missionId)!;
     });
   } finally {

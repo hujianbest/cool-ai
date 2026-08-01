@@ -1,6 +1,10 @@
-import { createHash } from "node:crypto";
+import { createHash, randomUUID } from "node:crypto";
+import type { DatabaseSync } from "node:sqlite";
 
 import { z } from "zod";
+
+import { canonicalRequestHash } from "@/src/server/collaboration/operation-receipts";
+import { completionBlockersTx } from "@/src/server/review/completion-gate";
 
 const MAX_DELIVERY_BYTES = 256 * 1024;
 const HASH = z.string().regex(/^[0-9a-f]{64}$/u);
@@ -429,4 +433,692 @@ export function buildDeliveryBundle(
     );
   }
   return { blockers, inputFingerprint, manifest, summary };
+}
+
+const DELIVERY_LEASE_MS = 120_000;
+
+type DeliveryClock = {
+  clock?: () => Date;
+  randomUUID?: () => string;
+};
+
+type DeliveryFaultPoint = "before_insert" | "after_insert" | "before_head_cas";
+
+export class DeliveryGenerationError extends Error {
+  constructor(
+    public readonly code: string,
+    public readonly httpStatus: number,
+    message: string,
+    public readonly blockers?: unknown[],
+    public readonly currentVersion?: number,
+  ) {
+    super(message);
+    this.name = "DeliveryGenerationError";
+  }
+}
+
+type DeliveryHeadRow = {
+  contextVersion: number;
+  currentDeliveryId: string | null;
+  currentOperationId: string | null;
+  expiresAt: string | null;
+  leaseToken: string | null;
+  state: "ongoing" | "generating" | "completed" | "owner_terminated";
+  version: number;
+};
+
+function deliveryHead(
+  database: DatabaseSync,
+  projectId: string,
+  missionId: string,
+): DeliveryHeadRow | undefined {
+  return database.prepare(`
+    SELECT context_version AS contextVersion,current_delivery_id AS currentDeliveryId,
+           current_operation_id AS currentOperationId,
+           generation_lease_expires_at AS expiresAt,
+           generation_lease_token AS leaseToken,state,version
+    FROM mission_delivery_heads WHERE project_id=? AND mission_id=?
+  `).get(projectId, missionId) as DeliveryHeadRow | undefined;
+}
+
+function withTransaction<T>(database: DatabaseSync, operation: () => T): T {
+  database.exec("BEGIN IMMEDIATE");
+  try {
+    const result = operation();
+    database.exec("COMMIT");
+    return result;
+  } catch (error) {
+    try {
+      database.exec("ROLLBACK");
+    } catch {
+      // Preserve the domain or injected fault.
+    }
+    throw error;
+  }
+}
+
+function appendDeliveryEventTx(
+  database: DatabaseSync,
+  input: {
+    missionId: string;
+    payload: Record<string, unknown>;
+    projectId: string;
+    type: string;
+  },
+  dependencies: DeliveryClock = {},
+): void {
+  const head = database.prepare(`
+    SELECT next_event_sequence AS sequence FROM mission_delivery_heads
+    WHERE project_id=? AND mission_id=?
+  `).get(input.projectId, input.missionId) as { sequence: number } | undefined;
+  if (!head) {
+    throw new DeliveryGenerationError(
+      "DELIVERY_STATE_CONFLICT",
+      409,
+      "Mission delivery state is not initialized.",
+    );
+  }
+  const now = (dependencies.clock ?? (() => new Date()))().toISOString();
+  database.prepare(`
+    INSERT INTO review_events(
+      id,project_id,mission_id,sequence,type,actor_type,actor_id,payload_json,created_at
+    ) VALUES (?, ?, ?, ?, ?, 'system', NULL, ?, ?)
+  `).run(
+    (dependencies.randomUUID ?? randomUUID)(),
+    input.projectId,
+    input.missionId,
+    head.sequence,
+    input.type,
+    JSON.stringify(input.payload),
+    now,
+  );
+  const advanced = database.prepare(`
+    UPDATE mission_delivery_heads
+    SET next_event_sequence=next_event_sequence+1,updated_at=?
+    WHERE project_id=? AND mission_id=? AND next_event_sequence=?
+  `).run(now, input.projectId, input.missionId, head.sequence);
+  if (advanced.changes !== 1) {
+    throw new DeliveryGenerationError(
+      "DELIVERY_STATE_CONFLICT",
+      409,
+      "Mission delivery event sequence changed.",
+    );
+  }
+}
+
+function completeDeliveryOperationTx(
+  database: DatabaseSync,
+  input: {
+    body: Record<string, unknown>;
+    operationId: string;
+    projectId: string;
+    status: number;
+  },
+  now: string,
+): void {
+  database.prepare(`
+    UPDATE review_operations
+    SET status='completed',http_status=?,response_json=?,updated_at=?
+    WHERE project_id=? AND id=? AND status='pending'
+  `).run(
+    input.status,
+    JSON.stringify(input.body),
+    now,
+    input.projectId,
+    input.operationId,
+  );
+}
+
+export function acquireDeliveryGeneration(
+  database: DatabaseSync,
+  input: {
+    buildInput: DeliveryBuildInput;
+    expectedHeadVersion: number;
+    missionId: string;
+    operationId: string;
+    projectId: string;
+  },
+  dependencies: DeliveryClock = {},
+): {
+  bundle: DeliveryBundle;
+  headVersion: number;
+  leaseToken: string;
+  missionId: string;
+  operationId: string;
+  projectId: string;
+  reused: boolean;
+} {
+  const clock = dependencies.clock ?? (() => new Date());
+  const bundle = buildDeliveryBundle(input.buildInput, clock().toISOString());
+  if (bundle.blockers.length > 0) {
+    throw new DeliveryGenerationError(
+      "MISSION_COMPLETION_BLOCKED",
+      409,
+      "Required delivery evidence is not ready.",
+      bundle.blockers,
+    );
+  }
+  if (
+    input.buildInput.mission.id !== input.missionId
+    || !Number.isInteger(input.expectedHeadVersion)
+    || input.expectedHeadVersion < 1
+  ) {
+    throw new DeliveryGenerationError("DELIVERY_INPUT_INVALID", 400, "Delivery input is invalid.");
+  }
+  const hasWorkItems = Boolean(database.prepare(`
+    SELECT 1 FROM sqlite_master WHERE type='table' AND name='work_items'
+  `).get());
+  if (hasWorkItems) {
+    const completionBlockers = completionBlockersTx(database, input.missionId);
+    if (completionBlockers.length > 0) {
+      throw new DeliveryGenerationError(
+        "MISSION_COMPLETION_BLOCKED",
+        409,
+        "Mission has unresolved completion blockers.",
+        completionBlockers,
+      );
+    }
+    const mission = database.prepare(`
+      SELECT version FROM missions WHERE id=? AND project_id=?
+    `).get(input.missionId, input.projectId) as { version: number } | undefined;
+    if (!mission || mission.version !== input.buildInput.mission.version) {
+      throw new DeliveryGenerationError(
+        "DELIVERY_STATE_CONFLICT",
+        409,
+        "Mission version changed.",
+      );
+    }
+  }
+  const requestHash = canonicalRequestHash({
+    expectedHeadVersion: input.expectedHeadVersion,
+    inputFingerprint: bundle.inputFingerprint,
+    missionId: input.missionId,
+  });
+
+  return withTransaction(database, () => {
+    const prior = database.prepare(`
+      SELECT kind,request_hash AS requestHash,status,response_json AS responseJson
+      FROM review_operations WHERE project_id=? AND id=?
+    `).get(input.projectId, input.operationId) as {
+      kind: string;
+      requestHash: string;
+      responseJson: string | null;
+      status: string;
+    } | undefined;
+    if (prior) {
+      if (prior.kind !== "generate_delivery" || prior.requestHash !== requestHash) {
+        throw new DeliveryGenerationError(
+          "OPERATION_CONFLICT",
+          409,
+          "Operation id was already used for different delivery input.",
+        );
+      }
+      const current = deliveryHead(database, input.projectId, input.missionId);
+      if (
+        prior.status === "pending"
+        && current?.state === "generating"
+        && current.currentOperationId === input.operationId
+        && current.leaseToken
+      ) {
+        return {
+          bundle,
+          headVersion: current.version,
+          leaseToken: current.leaseToken,
+          missionId: input.missionId,
+          operationId: input.operationId,
+          projectId: input.projectId,
+          reused: true,
+        };
+      }
+      throw new DeliveryGenerationError(
+        "DELIVERY_STATE_CONFLICT",
+        409,
+        "Delivery operation has already completed.",
+      );
+    }
+
+    const head = deliveryHead(database, input.projectId, input.missionId);
+    if (
+      !head
+      || head.state !== "ongoing"
+      || head.version !== input.expectedHeadVersion
+      || head.contextVersion !== input.buildInput.mission.contextVersion
+    ) {
+      throw new DeliveryGenerationError(
+        "DELIVERY_STATE_CONFLICT",
+        409,
+        "Mission delivery state changed.",
+        undefined,
+        head?.version,
+      );
+    }
+    const now = clock();
+    const timestamp = now.toISOString();
+    const leaseToken = (dependencies.randomUUID ?? randomUUID)();
+    const expiresAt = new Date(now.getTime() + DELIVERY_LEASE_MS).toISOString();
+    database.prepare(`
+      INSERT INTO review_operations(
+        id,project_id,kind,parent_id,request_hash,status,http_status,response_json,
+        created_at,updated_at
+      ) VALUES (?, ?, 'generate_delivery', ?, ?, 'pending', NULL, NULL, ?, ?)
+    `).run(
+      input.operationId,
+      input.projectId,
+      input.missionId,
+      requestHash,
+      timestamp,
+      timestamp,
+    );
+    const acquired = database.prepare(`
+      UPDATE mission_delivery_heads
+      SET state='generating',current_operation_id=?,generation_lease_token=?,
+          generation_lease_expires_at=?,last_error_code=NULL,
+          version=version+1,updated_at=?
+      WHERE project_id=? AND mission_id=? AND state='ongoing' AND version=?
+        AND context_version=?
+    `).run(
+      input.operationId,
+      leaseToken,
+      expiresAt,
+      timestamp,
+      input.projectId,
+      input.missionId,
+      input.expectedHeadVersion,
+      input.buildInput.mission.contextVersion,
+    );
+    if (acquired.changes !== 1) {
+      throw new DeliveryGenerationError(
+        "DELIVERY_STATE_CONFLICT",
+        409,
+        "Mission delivery acquire lost its compare-and-swap.",
+      );
+    }
+    appendDeliveryEventTx(database, {
+      missionId: input.missionId,
+      payload: {
+        inputFingerprint: bundle.inputFingerprint,
+        operationId: input.operationId,
+      },
+      projectId: input.projectId,
+      type: "delivery_generation_started",
+    }, dependencies);
+    return {
+      bundle,
+      headVersion: input.expectedHeadVersion + 1,
+      leaseToken,
+      missionId: input.missionId,
+      operationId: input.operationId,
+      projectId: input.projectId,
+      reused: false,
+    };
+  });
+}
+
+function recordDeliveryFailure(
+  database: DatabaseSync,
+  input: {
+    errorCode: string;
+    leaseToken: string;
+    missionId: string;
+    operationId: string;
+    projectId: string;
+  },
+  dependencies: DeliveryClock,
+): void {
+  withTransaction(database, () => {
+    const now = (dependencies.clock ?? (() => new Date()))().toISOString();
+    const failed = database.prepare(`
+      UPDATE mission_delivery_heads
+      SET state='ongoing',current_operation_id=NULL,generation_lease_token=NULL,
+          generation_lease_expires_at=NULL,last_error_code=?,
+          version=version+1,updated_at=?
+      WHERE project_id=? AND mission_id=? AND state='generating'
+        AND current_operation_id=? AND generation_lease_token=?
+    `).run(
+      input.errorCode,
+      now,
+      input.projectId,
+      input.missionId,
+      input.operationId,
+      input.leaseToken,
+    );
+    if (failed.changes !== 1) return;
+    completeDeliveryOperationTx(database, {
+      body: { error: { code: input.errorCode }, ok: false },
+      operationId: input.operationId,
+      projectId: input.projectId,
+      status: 500,
+    }, now);
+    appendDeliveryEventTx(database, {
+      missionId: input.missionId,
+      payload: { errorCode: input.errorCode, operationId: input.operationId },
+      projectId: input.projectId,
+      type: "delivery_generation_failed",
+    }, dependencies);
+  });
+}
+
+export function finalizeDeliveryGeneration(
+  database: DatabaseSync,
+  input: {
+    bundle: DeliveryBundle;
+    leaseToken: string;
+    missionId: string;
+    operationId: string;
+    projectId: string;
+  },
+  dependencies: DeliveryClock & {
+    beforeCommitStep?: (
+      point: "after_delivery_insert" | "after_head_update" | "before_commit",
+    ) => void;
+    fault?: (point: DeliveryFaultPoint) => void;
+  } = {},
+):
+  | { deliveryId: string; reused: boolean; state: "completed"; version: number }
+  | {
+      errorCode: "DELIVERY_GENERATION_FAILED";
+      retry: { kind: "explicit-owner-retry" };
+      state: "failed";
+    } {
+  const clock = dependencies.clock ?? (() => new Date());
+  try {
+    return withTransaction(database, () => {
+      const head = deliveryHead(database, input.projectId, input.missionId);
+      const now = clock();
+      if (
+        !head
+        || head.state !== "generating"
+        || head.currentOperationId !== input.operationId
+        || head.leaseToken !== input.leaseToken
+        || !head.expiresAt
+        || Date.parse(head.expiresAt) <= now.getTime()
+      ) {
+        throw new DeliveryGenerationError(
+          "DELIVERY_STATE_CONFLICT",
+          409,
+          "Delivery generation lease is no longer current.",
+          undefined,
+          head?.version,
+        );
+      }
+      dependencies.fault?.("before_insert");
+      const existing = database.prepare(`
+        SELECT id,version FROM mission_deliveries
+        WHERE mission_id=? AND input_fingerprint=?
+      `).get(input.missionId, input.bundle.inputFingerprint) as
+        | { id: string; version: number }
+        | undefined;
+      const latest = database.prepare(`
+        SELECT id,version FROM mission_deliveries
+        WHERE mission_id=? ORDER BY version DESC,id DESC LIMIT 1
+      `).get(input.missionId) as { id: string; version: number } | undefined;
+      const deliveryId = existing?.id ?? (dependencies.randomUUID ?? randomUUID)();
+      const versionNumber = existing?.version ?? (latest?.version ?? 0) + 1;
+      if (!existing) {
+        database.prepare(`
+          INSERT INTO mission_deliveries(
+            id,project_id,mission_id,version,input_fingerprint,summary_json,
+            evidence_manifest_json,supersedes_delivery_id,created_at
+          ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)
+        `).run(
+          deliveryId,
+          input.projectId,
+          input.missionId,
+          versionNumber,
+          input.bundle.inputFingerprint,
+          JSON.stringify(input.bundle.summary),
+          JSON.stringify(input.bundle.manifest),
+          latest?.id ?? null,
+          now.toISOString(),
+        );
+      }
+      dependencies.fault?.("after_insert");
+      dependencies.beforeCommitStep?.("after_delivery_insert");
+      dependencies.fault?.("before_head_cas");
+      const completed = database.prepare(`
+        UPDATE mission_delivery_heads
+        SET state='completed',current_delivery_id=?,current_operation_id=NULL,
+            generation_lease_token=NULL,generation_lease_expires_at=NULL,
+            last_error_code=NULL,version=version+1,updated_at=?
+        WHERE project_id=? AND mission_id=? AND state='generating' AND version=?
+          AND current_operation_id=? AND generation_lease_token=?
+      `).run(
+        deliveryId,
+        now.toISOString(),
+        input.projectId,
+        input.missionId,
+        head.version,
+        input.operationId,
+        input.leaseToken,
+      );
+      if (completed.changes !== 1) {
+        throw new DeliveryGenerationError(
+          "DELIVERY_STATE_CONFLICT",
+          409,
+          "Delivery finalize lost its compare-and-swap.",
+        );
+      }
+      dependencies.beforeCommitStep?.("after_head_update");
+      const response = { deliveryId, ok: true, reused: Boolean(existing), version: versionNumber };
+      completeDeliveryOperationTx(database, {
+        body: response,
+        operationId: input.operationId,
+        projectId: input.projectId,
+        status: 200,
+      }, now.toISOString());
+      appendDeliveryEventTx(database, {
+        missionId: input.missionId,
+        payload: {
+          deliveryId,
+          inputFingerprint: input.bundle.inputFingerprint,
+          reused: Boolean(existing),
+          version: versionNumber,
+        },
+        projectId: input.projectId,
+        type: "delivery_generation_completed",
+      }, dependencies);
+      dependencies.beforeCommitStep?.("before_commit");
+      return {
+        deliveryId,
+        reused: Boolean(existing),
+        state: "completed",
+        version: versionNumber,
+      };
+    });
+  } catch (error) {
+    if (!(error instanceof DeliveryGenerationError && error.code === "DELIVERY_STATE_CONFLICT")) {
+      recordDeliveryFailure(database, {
+        errorCode: "DELIVERY_GENERATION_FAILED",
+        leaseToken: input.leaseToken,
+        missionId: input.missionId,
+        operationId: input.operationId,
+        projectId: input.projectId,
+      }, dependencies);
+      return {
+        errorCode: "DELIVERY_GENERATION_FAILED",
+        retry: { kind: "explicit-owner-retry" },
+        state: "failed",
+      };
+    }
+    throw error;
+  }
+}
+
+export function invalidateMissionContextTx(
+  database: DatabaseSync,
+  input: { missionId: string; projectId: string; reason: string },
+): { discardedAttemptIds: string[]; invalidatedDeliveryId: string | null } {
+  const head = deliveryHead(database, input.projectId, input.missionId);
+  if (!head) {
+    throw new DeliveryGenerationError(
+      "DELIVERY_STATE_CONFLICT",
+      409,
+      "Mission delivery state is not initialized.",
+    );
+  }
+  const now = new Date().toISOString();
+  const attempts = database.prepare(`
+    SELECT id,work_item_id AS workItemId,operation_id AS operationId FROM review_attempts
+    WHERE project_id=? AND mission_id=? AND status IN ('calling','finalizing')
+    ORDER BY id
+  `).all(input.projectId, input.missionId) as Array<{
+    id: string;
+    operationId: string;
+    workItemId: string;
+  }>;
+  for (const attempt of attempts) {
+    const discarded = database.prepare(`
+      UPDATE review_attempts
+      SET status='discarded',error_category='stale',finished_at=?
+      WHERE id=? AND status IN ('calling','finalizing')
+    `).run(now, attempt.id);
+    if (discarded.changes !== 1) {
+      throw new DeliveryGenerationError(
+        "REVIEW_STATE_CONFLICT",
+        409,
+        "Review attempt invalidation lost its compare-and-swap.",
+      );
+    }
+    database.prepare(`
+      UPDATE review_model_calls
+      SET status='discarded',error_category='stale',
+          finished_at=coalesce(finished_at,?)
+      WHERE attempt_id=? AND status='calling'
+    `).run(now, attempt.id);
+    database.prepare(`
+      UPDATE work_item_review_heads
+      SET state='pending_review',current_attempt_id=NULL,version=version+1,updated_at=?
+      WHERE work_item_id=? AND current_attempt_id=?
+    `).run(now, attempt.workItemId, attempt.id);
+    completeDeliveryOperationTx(database, {
+      body: { error: { code: input.reason }, ok: false },
+      operationId: attempt.operationId,
+      projectId: input.projectId,
+      status: 409,
+    }, now);
+  }
+
+  if (head.state === "generating" && head.currentOperationId) {
+    completeDeliveryOperationTx(database, {
+      body: { error: { code: "DELIVERY_CONTEXT_CHANGED" }, ok: false },
+      operationId: head.currentOperationId,
+      projectId: input.projectId,
+      status: 409,
+    }, now);
+  }
+  const changed = database.prepare(`
+    UPDATE mission_delivery_heads
+    SET context_version=context_version+1,state='ongoing',current_delivery_id=NULL,
+        current_operation_id=NULL,generation_lease_token=NULL,
+        generation_lease_expires_at=NULL,last_error_code=NULL,
+        version=version+1,updated_at=?
+    WHERE project_id=? AND mission_id=? AND version=?
+  `).run(now, input.projectId, input.missionId, head.version);
+  if (changed.changes !== 1) {
+    throw new DeliveryGenerationError(
+      "DELIVERY_STATE_CONFLICT",
+      409,
+      "Mission context invalidation lost its compare-and-swap.",
+    );
+  }
+  for (const attempt of attempts) {
+    appendDeliveryEventTx(database, {
+      missionId: input.missionId,
+      payload: { attemptId: attempt.id, reason: input.reason, workItemId: attempt.workItemId },
+      projectId: input.projectId,
+      type: "review_attempt_discarded",
+    });
+  }
+  if (head.state === "completed" || head.state === "generating") {
+    appendDeliveryEventTx(database, {
+      missionId: input.missionId,
+      payload: {
+        deliveryId: head.currentDeliveryId,
+        operationId: head.currentOperationId,
+        reason: input.reason,
+      },
+      projectId: input.projectId,
+      type: "mission_delivery_invalidated",
+    });
+  }
+  return {
+    discardedAttemptIds: attempts.map(({ id }) => id),
+    invalidatedDeliveryId: head.currentDeliveryId,
+  };
+}
+
+export function reconcileDeliveryGeneration(
+  database: DatabaseSync,
+  input: { missionId: string; projectId: string },
+  dependencies: DeliveryClock = {},
+): { reconciled: boolean } {
+  const clock = dependencies.clock ?? (() => new Date());
+  const current = deliveryHead(database, input.projectId, input.missionId);
+  if (
+    !current
+    || current.state !== "generating"
+    || !current.expiresAt
+    || Date.parse(current.expiresAt) > clock().getTime()
+  ) {
+    return { reconciled: false };
+  }
+  return withTransaction(database, () => {
+    const head = deliveryHead(database, input.projectId, input.missionId);
+    if (
+      !head
+      || head.state !== "generating"
+      || !head.expiresAt
+      || Date.parse(head.expiresAt) > clock().getTime()
+      || !head.currentOperationId
+    ) {
+      return { reconciled: false };
+    }
+    const now = clock().toISOString();
+    const changed = database.prepare(`
+      UPDATE mission_delivery_heads
+      SET state='ongoing',current_operation_id=NULL,generation_lease_token=NULL,
+          generation_lease_expires_at=NULL,last_error_code='DELIVERY_GENERATION_INTERRUPTED',
+          version=version+1,updated_at=?
+      WHERE project_id=? AND mission_id=? AND state='generating' AND version=?
+    `).run(now, input.projectId, input.missionId, head.version);
+    if (changed.changes !== 1) return { reconciled: false };
+    completeDeliveryOperationTx(database, {
+      body: { error: { code: "DELIVERY_GENERATION_INTERRUPTED" }, ok: false },
+      operationId: head.currentOperationId,
+      projectId: input.projectId,
+      status: 500,
+    }, now);
+    appendDeliveryEventTx(database, {
+      missionId: input.missionId,
+      payload: {
+        errorCode: "DELIVERY_GENERATION_INTERRUPTED",
+        operationId: head.currentOperationId,
+      },
+      projectId: input.projectId,
+      type: "delivery_generation_interrupted",
+    }, dependencies);
+    return { reconciled: true };
+  });
+}
+
+export function reconcileDeliveryGenerations(
+  database: DatabaseSync,
+  dependencies: DeliveryClock & { build?: () => unknown } = {},
+): { reconciledOperationIds: string[] } {
+  const rows = database.prepare(`
+    SELECT project_id AS projectId,mission_id AS missionId,
+           current_operation_id AS operationId
+    FROM mission_delivery_heads
+    WHERE state='generating'
+    ORDER BY mission_id
+  `).all() as Array<{ missionId: string; operationId: string; projectId: string }>;
+  const reconciledOperationIds: string[] = [];
+  for (const row of rows) {
+    const result = reconcileDeliveryGeneration(database, {
+      missionId: row.missionId,
+      projectId: row.projectId,
+    }, dependencies);
+    if (result.reconciled) reconciledOperationIds.push(row.operationId);
+  }
+  return { reconciledOperationIds };
 }
