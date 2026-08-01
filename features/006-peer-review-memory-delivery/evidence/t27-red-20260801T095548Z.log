@@ -1,0 +1,115 @@
+# hf-gate-run
+# label: t27-red
+# command: npm test -- tests/delivery-route.test.ts tests/delivery-api-recovery.test.ts
+# started: 2026-08-01T09:55:48+00:00
+
+> collaboration-cockpit@0.1.0 test
+> vitest run tests/delivery-route.test.ts tests/delivery-api-recovery.test.ts
+
+
+ RUN  v4.1.10 D:/cool-ai
+
+(node:9100) ExperimentalWarning: SQLite is an experimental feature and might change at any time
+(Use `node --trace-warnings ...` to show where the warning was created)
+ ❯ tests/delivery-route.test.ts (3 tests | 3 failed) 13ms
+     × returns strict current progress and cursor history 9ms
+     × accepts only operationId and expectedHeadVersion 1ms
+     × rejects malformed history queries before storage 1ms
+ ❯ tests/delivery-api-recovery.test.ts (2 tests | 2 failed) 231ms
+     × restores explicit retry progress and immutable invalidated history after restart 105ms
+     × uses a scoped cursor that survives reopening and rejects cross-mission reuse 124ms
+
+⎯⎯⎯⎯⎯⎯⎯ Failed Tests 5 ⎯⎯⎯⎯⎯⎯⎯
+
+ FAIL  tests/delivery-api-recovery.test.ts > delivery API recovery reads > restores explicit retry progress and immutable invalidated history after restart
+AssertionError: delivery read service must exist: expected undefined to be type of 'function'
+
+Expected: "function"
+Received: "undefined"
+
+ ❯ reads tests/delivery-api-recovery.test.ts:17:52
+     15| async function reads(): Promise<ReadModule> {
+     16|   const load = readModules["../src/server/review/delivery-read-service…
+     17|   expect(load, "delivery read service must exist").toBeTypeOf("functio…
+       |                                                    ^
+     18|   return load!();
+     19| }
+ ❯ tests/delivery-api-recovery.test.ts:83:27
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[1/5]⎯
+
+ FAIL  tests/delivery-api-recovery.test.ts > delivery API recovery reads > uses a scoped cursor that survives reopening and rejects cross-mission reuse
+AssertionError: delivery read service must exist: expected undefined to be type of 'function'
+
+Expected: "function"
+Received: "undefined"
+
+ ❯ reads tests/delivery-api-recovery.test.ts:17:52
+     15| async function reads(): Promise<ReadModule> {
+     16|   const load = readModules["../src/server/review/delivery-read-service…
+     17|   expect(load, "delivery read service must exist").toBeTypeOf("functio…
+       |                                                    ^
+     18|   return load!();
+     19| }
+ ❯ tests/delivery-api-recovery.test.ts:124:27
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[2/5]⎯
+
+ FAIL  tests/delivery-route.test.ts > mission delivery routes > returns strict current progress and cursor history
+AssertionError: strict delivery current route must exist: expected undefined to be type of 'function'
+
+Expected: "function"
+Received: "undefined"
+
+ ❯ currentRoute tests/delivery-route.test.ts:33:60
+     31| async function currentRoute(): Promise<CurrentRoute> {
+     32|   const load = currentModules["../app/api/missions/[missionId]/deliver…
+     33|   expect(load, "strict delivery current route must exist").toBeTypeOf(…
+       |                                                            ^
+     34|   return load!();
+     35| }
+ ❯ tests/delivery-route.test.ts:62:34
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[3/5]⎯
+
+ FAIL  tests/delivery-route.test.ts > mission delivery routes > accepts only operationId and expectedHeadVersion
+AssertionError: strict delivery current route must exist: expected undefined to be type of 'function'
+
+Expected: "function"
+Received: "undefined"
+
+ ❯ currentRoute tests/delivery-route.test.ts:33:60
+     31| async function currentRoute(): Promise<CurrentRoute> {
+     32|   const load = currentModules["../app/api/missions/[missionId]/deliver…
+     33|   expect(load, "strict delivery current route must exist").toBeTypeOf(…
+       |                                                            ^
+     34|   return load!();
+     35| }
+ ❯ tests/delivery-route.test.ts:94:25
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[4/5]⎯
+
+ FAIL  tests/delivery-route.test.ts > mission delivery routes > rejects malformed history queries before storage
+AssertionError: strict delivery history route must exist: expected undefined to be type of 'function'
+
+Expected: "function"
+Received: "undefined"
+
+ ❯ historyRoute tests/delivery-route.test.ts:39:60
+     37| async function historyRoute(): Promise<HistoryRoute> {
+     38|   const load = historyModules["../app/api/missions/[missionId]/deliver…
+     39|   expect(load, "strict delivery history route must exist").toBeTypeOf(…
+       |                                                            ^
+     40|   return load!();
+     41| }
+ ❯ tests/delivery-route.test.ts:126:35
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[5/5]⎯
+
+
+ Test Files  2 failed (2)
+      Tests  5 failed (5)
+   Start at  17:55:49
+   Duration  2.86s (transform 126ms, setup 880ms, import 90ms, tests 244ms, environment 3.66s)
+
+# exit: 1

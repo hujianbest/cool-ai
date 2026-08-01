@@ -610,8 +610,11 @@ export function acquireDeliveryGeneration(
     missionId: string;
     operationId: string;
     projectId: string;
+    requestHash?: string;
   },
-  dependencies: DeliveryClock = {},
+  dependencies: DeliveryClock & {
+    verifySnapshot?: (database: DatabaseSync, inputFingerprint: string) => void;
+  } = {},
 ): {
   bundle: DeliveryBundle;
   headVersion: number;
@@ -662,13 +665,14 @@ export function acquireDeliveryGeneration(
       );
     }
   }
-  const requestHash = canonicalRequestHash({
+  const requestHash = input.requestHash ?? canonicalRequestHash({
     expectedHeadVersion: input.expectedHeadVersion,
     inputFingerprint: bundle.inputFingerprint,
     missionId: input.missionId,
   });
 
   return withTransaction(database, () => {
+    dependencies.verifySnapshot?.(database, bundle.inputFingerprint);
     const prior = database.prepare(`
       SELECT kind,request_hash AS requestHash,status,response_json AS responseJson
       FROM review_operations WHERE project_id=? AND id=?
@@ -836,6 +840,24 @@ function recordDeliveryFailure(
   });
 }
 
+type DeliveryFinalizeSuccess = {
+  deliveryId: string;
+  reused: boolean;
+  state: "completed";
+  version: number;
+};
+type DeliveryFinalizeFailure = {
+  errorCode: "DELIVERY_GENERATION_FAILED";
+  retry: { kind: "explicit-owner-retry" };
+  state: "failed";
+};
+type DeliveryFinalizeDependencies = DeliveryClock & {
+  beforeCommitStep?: (
+    point: "after_delivery_insert" | "after_head_update" | "before_commit",
+  ) => void;
+  fault?: (point: DeliveryFaultPoint) => void;
+};
+
 export function finalizeDeliveryGeneration(
   database: DatabaseSync,
   input: {
@@ -845,19 +867,30 @@ export function finalizeDeliveryGeneration(
     operationId: string;
     projectId: string;
   },
-  dependencies: DeliveryClock & {
-    beforeCommitStep?: (
-      point: "after_delivery_insert" | "after_head_update" | "before_commit",
-    ) => void;
-    fault?: (point: DeliveryFaultPoint) => void;
-  } = {},
-):
-  | { deliveryId: string; reused: boolean; state: "completed"; version: number }
-  | {
-      errorCode: "DELIVERY_GENERATION_FAILED";
-      retry: { kind: "explicit-owner-retry" };
-      state: "failed";
-    } {
+  dependencies?: DeliveryClock & { beforeCommitStep?: never; fault?: never },
+): DeliveryFinalizeSuccess;
+export function finalizeDeliveryGeneration(
+  database: DatabaseSync,
+  input: {
+    bundle: DeliveryBundle;
+    leaseToken: string;
+    missionId: string;
+    operationId: string;
+    projectId: string;
+  },
+  dependencies: DeliveryFinalizeDependencies,
+): DeliveryFinalizeSuccess | DeliveryFinalizeFailure;
+export function finalizeDeliveryGeneration(
+  database: DatabaseSync,
+  input: {
+    bundle: DeliveryBundle;
+    leaseToken: string;
+    missionId: string;
+    operationId: string;
+    projectId: string;
+  },
+  dependencies: DeliveryFinalizeDependencies = {},
+): DeliveryFinalizeSuccess | DeliveryFinalizeFailure {
   const clock = dependencies.clock ?? (() => new Date());
   try {
     return withTransaction(database, () => {
