@@ -4,6 +4,20 @@ import { useCallback, useEffect, useRef, useState } from "react";
 
 import type { ReviewWorkspaceDto } from "@/src/shared/review-contracts";
 
+export {
+  ReviewAttemptPanel,
+  type ReviewAttemptPanelProps,
+} from "@/components/review/review-attempt-panel";
+export {
+  ReviewMaterialPanel,
+  type ReviewMaterialView,
+  type ReviewPublicContent,
+} from "@/components/review/review-material-panel";
+export {
+  ReviewWorkspace,
+  type ReviewWorkspaceProps,
+} from "@/components/review/review-workspace";
+
 type EscalationAction = "continue_review" | "rework" | "terminate_mission";
 
 type EscalationIssueProps = {

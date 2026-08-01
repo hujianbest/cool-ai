@@ -1,0 +1,110 @@
+# hf-gate-run
+# label: t19-red
+# command: npm test -- tests/review-workspace-ui.test.tsx
+# started: 2026-08-01T07:22:54+00:00
+
+> collaboration-cockpit@0.1.0 test
+> vitest run tests/review-workspace-ui.test.tsx
+
+
+ RUN  v4.1.10 D:/cool-ai
+
+ ❯ tests/review-workspace-ui.test.tsx (8 tests | 8 failed) 51ms
+     × shows real diff, validation, artifact and event bodies with source/version/status 30ms
+     × shows primary/repair calling/terminal failures and nullable reported usage 4ms
+     × workspace uses finalize mode as the only retry authority 3ms
+     × history uses finalize mode as the only retry authority 3ms
+     × detail uses finalize mode as the only retry authority 3ms
+     × keeps finalizing checkpoint on refresh and can continue local finalize 2ms
+     × disables pass for hash/header-only or incomplete required content 2ms
+     × covers loading, empty, error, disabled, success, focus and live states 2ms
+
+⎯⎯⎯⎯⎯⎯⎯ Failed Tests 8 ⎯⎯⎯⎯⎯⎯⎯
+
+ FAIL  tests/review-workspace-ui.test.tsx > desktop review workspace > shows real diff, validation, artifact and event bodies with source/version/status
+ FAIL  tests/review-workspace-ui.test.tsx > desktop review workspace > disables pass for hash/header-only or incomplete required content
+AssertionError: T-19 material panel must exist: expected undefined to be type of 'function'
+
+Expected: "function"
+Received: "undefined"
+
+ ❯ ReviewMaterialPanel tests/review-workspace-ui.test.tsx:56:55
+     54| function ReviewMaterialPanel(props: ReviewMaterialPanelProps) {
+     55|   const Component = optionalComponents.ReviewMaterialPanel;
+     56|   expect(Component, "T-19 material panel must exist").toBeTypeOf("func…
+       |                                                       ^
+     57|   return <Component {...props} />;
+     58| }
+ ❯ Object.react_stack_bottom_frame node_modules/react-dom/cjs/react-dom-client.development.js:25904:20
+ ❯ renderWithHooks node_modules/react-dom/cjs/react-dom-client.development.js:7662:22
+ ❯ updateFunctionComponent node_modules/react-dom/cjs/react-dom-client.development.js:10166:19
+ ❯ beginWork node_modules/react-dom/cjs/react-dom-client.development.js:11778:18
+ ❯ runWithFiberInDEV node_modules/react-dom/cjs/react-dom-client.development.js:874:13
+ ❯ performUnitOfWork node_modules/react-dom/cjs/react-dom-client.development.js:17641:22
+ ❯ workLoopSync node_modules/react-dom/cjs/react-dom-client.development.js:17469:41
+ ❯ renderRootSync node_modules/react-dom/cjs/react-dom-client.development.js:17450:11
+ ❯ performWorkOnRoot node_modules/react-dom/cjs/react-dom-client.development.js:16583:35
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[1/8]⎯
+
+ FAIL  tests/review-workspace-ui.test.tsx > desktop review workspace > shows primary/repair calling/terminal failures and nullable reported usage
+ FAIL  tests/review-workspace-ui.test.tsx > desktop review workspace > workspace uses finalize mode as the only retry authority
+ FAIL  tests/review-workspace-ui.test.tsx > desktop review workspace > history uses finalize mode as the only retry authority
+ FAIL  tests/review-workspace-ui.test.tsx > desktop review workspace > detail uses finalize mode as the only retry authority
+AssertionError: T-19 attempt panel must exist: expected undefined to be type of 'function'
+
+Expected: "function"
+Received: "undefined"
+
+ ❯ ReviewAttemptPanel tests/review-workspace-ui.test.tsx:50:54
+     48| function ReviewAttemptPanel(props: ReviewAttemptPanelProps) {
+     49|   const Component = optionalComponents.ReviewAttemptPanel;
+     50|   expect(Component, "T-19 attempt panel must exist").toBeTypeOf("funct…
+       |                                                      ^
+     51|   return <Component {...props} />;
+     52| }
+ ❯ Object.react_stack_bottom_frame node_modules/react-dom/cjs/react-dom-client.development.js:25904:20
+ ❯ renderWithHooks node_modules/react-dom/cjs/react-dom-client.development.js:7662:22
+ ❯ updateFunctionComponent node_modules/react-dom/cjs/react-dom-client.development.js:10166:19
+ ❯ beginWork node_modules/react-dom/cjs/react-dom-client.development.js:11778:18
+ ❯ runWithFiberInDEV node_modules/react-dom/cjs/react-dom-client.development.js:874:13
+ ❯ performUnitOfWork node_modules/react-dom/cjs/react-dom-client.development.js:17641:22
+ ❯ workLoopSync node_modules/react-dom/cjs/react-dom-client.development.js:17469:41
+ ❯ renderRootSync node_modules/react-dom/cjs/react-dom-client.development.js:17450:11
+ ❯ performWorkOnRoot node_modules/react-dom/cjs/react-dom-client.development.js:16583:35
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[2/8]⎯
+
+ FAIL  tests/review-workspace-ui.test.tsx > desktop review workspace > keeps finalizing checkpoint on refresh and can continue local finalize
+ FAIL  tests/review-workspace-ui.test.tsx > desktop review workspace > covers loading, empty, error, disabled, success, focus and live states
+AssertionError: T-19 workspace must exist: expected undefined to be type of 'function'
+
+Expected: "function"
+Received: "undefined"
+
+ ❯ ReviewWorkspace tests/review-workspace-ui.test.tsx:62:50
+     60| function ReviewWorkspace(props: ReviewWorkspaceProps) {
+     61|   const Component = optionalComponents.ReviewWorkspace;
+     62|   expect(Component, "T-19 workspace must exist").toBeTypeOf("function"…
+       |                                                  ^
+     63|   return <Component {...props} />;
+     64| }
+ ❯ Object.react_stack_bottom_frame node_modules/react-dom/cjs/react-dom-client.development.js:25904:20
+ ❯ renderWithHooks node_modules/react-dom/cjs/react-dom-client.development.js:7662:22
+ ❯ updateFunctionComponent node_modules/react-dom/cjs/react-dom-client.development.js:10166:19
+ ❯ beginWork node_modules/react-dom/cjs/react-dom-client.development.js:11778:18
+ ❯ runWithFiberInDEV node_modules/react-dom/cjs/react-dom-client.development.js:874:13
+ ❯ performUnitOfWork node_modules/react-dom/cjs/react-dom-client.development.js:17641:22
+ ❯ workLoopSync node_modules/react-dom/cjs/react-dom-client.development.js:17469:41
+ ❯ renderRootSync node_modules/react-dom/cjs/react-dom-client.development.js:17450:11
+ ❯ performWorkOnRoot node_modules/react-dom/cjs/react-dom-client.development.js:16583:35
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[3/8]⎯
+
+
+ Test Files  1 failed (1)
+      Tests  8 failed (8)
+   Start at  15:22:56
+   Duration  3.29s (transform 76ms, setup 421ms, import 212ms, tests 51ms, environment 1.78s)
+
+# exit: 1
