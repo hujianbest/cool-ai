@@ -260,7 +260,7 @@ describe("peer review slice", () => {
 
     expect(fixture.requests).toHaveLength(1);
     const messages = fixture.requests[0]!.messages as Array<{ content: string }>;
-    const frozenMaterial = JSON.parse(messages[1]!.content) as {
+    const frozenMaterial = JSON.parse(messages[2]!.content) as {
       changes: { observations: Array<{ publicDiff: { chunks: Array<{ text: string }> } }> };
       validations: Array<{ stdout: { chunks: Array<{ text: string }> } }>;
     };

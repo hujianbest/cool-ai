@@ -188,6 +188,106 @@ function parseCheckpoint(row: AttemptRow, checkpointHash: string): ValidatedRevi
   return output;
 }
 
+export function assertDurableReviewAgentAuthority(
+  database: DatabaseSync,
+  input: {
+    attemptId: string;
+    checkpointHash: string;
+    claimedActorId: string;
+    claimedActorType: string;
+  },
+): { actorId: string; actorType: "agent"; resultId: string } {
+  const row = database.prepare(`
+    SELECT reviewer_agent_id AS reviewerAgentId,result_id AS resultId,status,
+           parsed_output_hash AS checkpointHash
+    FROM review_attempts WHERE id=?
+  `).get(input.attemptId) as {
+    checkpointHash: string | null;
+    resultId: string;
+    reviewerAgentId: string;
+    status: string;
+  } | undefined;
+  if (
+    !row
+    || row.status !== "finalizing"
+    || row.checkpointHash !== input.checkpointHash
+    || input.claimedActorType !== "agent"
+    || input.claimedActorId !== row.reviewerAgentId
+  ) {
+    throw new ReviewFinalizeError(
+      "REVIEW_ACTOR_FORGERY",
+      403,
+      "Review actor is not the selected durable review Agent.",
+    );
+  }
+  return { actorId: row.reviewerAgentId, actorType: "agent", resultId: row.resultId };
+}
+
+export function deriveDurableReviewPublicActors(
+  database: DatabaseSync,
+  attemptId: string,
+): {
+  decision: { actorId: string; actorType: "agent" } | null;
+  events: Array<{ actorId: string; actorType: "agent"; id: string }>;
+  memories: Array<{ actorId: string; actorType: "agent"; id: string }>;
+} {
+  const attemptRow = database.prepare(`
+    SELECT reviewer_agent_id AS reviewerAgentId FROM review_attempts WHERE id=?
+  `).get(attemptId) as { reviewerAgentId: string } | undefined;
+  if (!attemptRow) {
+    throw new ReviewFinalizeError("REVIEW_ATTEMPT_NOT_FOUND", 404, "Review attempt was not found.");
+  }
+  const decisionRows = database.prepare(`
+    SELECT id,reviewer_agent_id AS actorId FROM review_decisions WHERE attempt_id=?
+  `).all(attemptId) as Array<{ actorId: string; id: string }>;
+  if (
+    decisionRows.length > 1
+    || decisionRows.some(({ actorId }) => actorId !== attemptRow.reviewerAgentId)
+  ) {
+    throw new ReviewFinalizeError(
+      "REVIEW_ACTOR_FORGERY",
+      500,
+      "Durable review decision actor is inconsistent.",
+    );
+  }
+  const memoryRows = database.prepare(`
+    SELECT id,proposer_actor_type AS actorType,proposer_actor_id AS actorId
+    FROM memory_entries WHERE confirming_review_attempt_id=? ORDER BY id
+  `).all(attemptId) as Array<{ actorId: string | null; actorType: string; id: string }>;
+  const eventRows = database.prepare(`
+    SELECT id,actor_type AS actorType,actor_id AS actorId
+    FROM review_events
+    WHERE json_extract(payload_json,'$.attemptId')=?
+    ORDER BY sequence,id
+  `).all(attemptId) as Array<{ actorId: string | null; actorType: string; id: string }>;
+  if (
+    [...memoryRows, ...eventRows].some((row) =>
+      row.actorType !== "agent" || row.actorId !== attemptRow.reviewerAgentId
+    )
+  ) {
+    throw new ReviewFinalizeError(
+      "REVIEW_ACTOR_FORGERY",
+      500,
+      "Durable review public actor is inconsistent.",
+    );
+  }
+  return {
+    decision: decisionRows[0]
+      ? { actorId: attemptRow.reviewerAgentId, actorType: "agent" }
+      : null,
+    events: eventRows.map(({ id }) => ({
+      actorId: attemptRow.reviewerAgentId,
+      actorType: "agent",
+      id,
+    })),
+    memories: memoryRows.map(({ id }) => ({
+      actorId: attemptRow.reviewerAgentId,
+      actorType: "agent",
+      id,
+    })),
+  };
+}
+
 function assertCurrentIdentity(database: DatabaseSync, row: AttemptRow): number {
   const current = database.prepare(`
     SELECT h.version,h.state,h.current_result_id AS resultId,
@@ -265,6 +365,12 @@ export function finalizeCheckpointedReview(
     const won = terminalReplay(database, row, input.checkpointHash);
     if (won) return won;
     parseCheckpoint(row, input.checkpointHash);
+    assertDurableReviewAgentAuthority(database, {
+      attemptId: row.attemptId,
+      checkpointHash: input.checkpointHash,
+      claimedActorId: row.reviewerAgentId,
+      claimedActorType: "agent",
+    });
     const headVersion = assertCurrentIdentity(database, row);
     const now = clock().toISOString();
     const decisionId = randomUUID();

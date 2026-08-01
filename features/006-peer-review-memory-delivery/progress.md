@@ -4,5 +4,5 @@
 - 当前阶段: build
 - 执行模式: auto
 - 已加载扩展: ext-ui-design
-- 下一步: 执行 T-17：收口产品域 redaction、secret/CoT 与 actor 防伪
-- 门禁输出: RESULT: PASS — 可进入 build
+- 下一步: 执行 T-18：完成 restart/invariant/fault 矩阵集成
+- 门禁输出: RESULT: FAIL (15 项未通过) — 不得进入 verify

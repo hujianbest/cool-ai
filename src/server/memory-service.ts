@@ -27,6 +27,7 @@ type MemoryRow = {
   active: number;
   chainId: string;
   confirmerChoice: string | null;
+  confirmerReviewerAgentId: string | null;
   confirmingReviewAttemptId: string | null;
   content: string;
   createdAt: string;
@@ -217,6 +218,7 @@ function toMemory(database: DatabaseSync, row: MemoryRow): MemoryResult {
       || !row.confirmingReviewAttemptId
       || !row.decisionId
       || row.confirmerChoice !== "pass"
+      || row.confirmerReviewerAgentId !== row.proposerActorId
       || !row.sourceVersion
     ) invalidSource();
     try {
@@ -299,6 +301,7 @@ function memoryById(database: DatabaseSync, memoryId: string): MemoryResult | un
          entry.confirming_review_attempt_id AS confirmingReviewAttemptId,
          decision.id AS decisionId,
          decision.choice AS confirmerChoice,
+         decision.reviewer_agent_id AS confirmerReviewerAgentId,
          entry.persistence_actor AS persistenceActor,
          entry.supersedes_id AS supersedesId,
          entry.created_at AS createdAt,
@@ -449,6 +452,7 @@ export function listMemoriesInDatabase(
            entry.confirming_review_attempt_id AS confirmingReviewAttemptId,
            decision.id AS decisionId,
            decision.choice AS confirmerChoice,
+           decision.reviewer_agent_id AS confirmerReviewerAgentId,
            entry.persistence_actor AS persistenceActor,
            entry.supersedes_id AS supersedesId,
            entry.created_at AS createdAt,

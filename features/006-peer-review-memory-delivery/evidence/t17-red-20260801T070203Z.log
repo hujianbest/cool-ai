@@ -1,0 +1,145 @@
+# hf-gate-run
+# label: t17-red
+# command: npm test -- tests/review-redaction.test.ts tests/review-forgery.test.ts
+# started: 2026-08-01T07:02:03+00:00
+
+> collaboration-cockpit@0.1.0 test
+> vitest run tests/review-redaction.test.ts tests/review-forgery.test.ts
+
+
+ RUN  v4.1.10 D:/cool-ai
+
+(node:16888) ExperimentalWarning: SQLite is an experimental feature and might change at any time
+(Use `node --trace-warnings ...` to show where the warning was created)
+(node:16084) ExperimentalWarning: SQLite is an experimental feature and might change at any time
+(Use `node --trace-warnings ...` to show where the warning was created)
+ ❯ tests/review-redaction.test.ts (13 tests | 13 failed) 500ms
+     × builds provider egress from only the selected reviewer private config and allowlisted public material 453ms
+     × classifies forbidden public text before persistence: api_key=KEY_SENTINEL 1ms
+     × classifies forbidden public text before persistence: Authorization: Bearer AUTH_SENTINEL 1ms
+     × classifies forbidden public text before persistence: master_key=MASTER_SENTINEL 1ms
+     × classifies forbidden public text before persistence: cipher=CIPHER_SENTINEL 1ms
+     × classifies forbidden public text before persistence: validation_token=TOKEN_SENTINEL 1ms
+     × classifies forbidden public text before persistence: raw provider body: RAW_BODY_SENTINEL 1ms
+     × classifies forbidden public text before persistence: HOME=C:\Users\secret-user 1ms
+     × classifies forbidden public text before persistence: D:\private\host\database.sqlite 1ms
+     × classifies forbidden public text before persistence: /home/private-user/project 1ms
+     × classifies forbidden public text before persistence: other agent system prompt: OTHER_PROMPT_SENTINEL 0ms
+     × classifies forbidden public text before persistence: chain-of-thought: COT_SENTINEL 0ms
+     × fails closed on redaction failure and writes no decision 38ms
+ ❯ tests/review-forgery.test.ts (6 tests | 5 failed) 555ms
+     × rejects owner from creating an Agent decision 264ms
+     × rejects platform from creating an Agent decision 1ms
+     × rejects client from creating an Agent decision 1ms
+     × rejects other-agent from creating an Agent decision 1ms
+     × derives decision, memory proposer, and public event actors from durable review facts 1ms
+
+⎯⎯⎯⎯⎯⎯ Failed Tests 18 ⎯⎯⎯⎯⎯⎯⎯
+
+ FAIL  tests/review-forgery.test.ts > durable review actor anti-forgery > rejects owner from creating an Agent decision
+ FAIL  tests/review-forgery.test.ts > durable review actor anti-forgery > rejects platform from creating an Agent decision
+ FAIL  tests/review-forgery.test.ts > durable review actor anti-forgery > rejects client from creating an Agent decision
+ FAIL  tests/review-forgery.test.ts > durable review actor anti-forgery > rejects other-agent from creating an Agent decision
+AssertionError: T-17 durable authority guard must exist: expected undefined to be type of 'function'
+
+Expected: "function"
+Received: "undefined"
+
+ ❯ tests/review-forgery.test.ts:59:68
+     57|         .assertDurableReviewAgentAuthority;
+     58|
+     59|       expect(authorize, "T-17 durable authority guard must exist").toB…
+       |                                                                    ^
+     60|       expect(() => (authorize as (database: DatabaseSync, input: unkno…
+     61|         attemptId: "attempt-1",
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[1/18]⎯
+
+ FAIL  tests/review-forgery.test.ts > durable review actor anti-forgery > derives decision, memory proposer, and public event actors from durable review facts
+AssertionError: T-17 durable actor projection must exist: expected undefined to be type of 'function'
+
+Expected: "function"
+Received: "undefined"
+
+ ❯ tests/review-forgery.test.ts:97:64
+     95|       .deriveDurableReviewPublicActors;
+     96|
+     97|     expect(derive, "T-17 durable actor projection must exist").toBeTyp…
+       |                                                                ^
+     98|     expect((derive as (database: DatabaseSync, attemptId: string) => u…
+     99|       db,
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[2/18]⎯
+
+ FAIL  tests/review-redaction.test.ts > review product-domain redaction > builds provider egress from only the selected reviewer private config and allowlisted public material
+AssertionError: T-17 provider egress builder must exist: expected undefined to be type of 'function'
+
+Expected: "function"
+Received: "undefined"
+
+ ❯ tests/review-redaction.test.ts:97:62
+     95|     const build = (module as unknown as Record<string, unknown>).build…
+     96|
+     97|     expect(build, "T-17 provider egress builder must exist").toBeTypeO…
+       |                                                              ^
+     98|     const request = (build as (input: unknown) => unknown)({
+     99|       material: {
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[3/18]⎯
+
+ FAIL  tests/review-redaction.test.ts > review product-domain redaction > classifies forbidden public text before persistence: api_key=KEY_SENTINEL
+ FAIL  tests/review-redaction.test.ts > review product-domain redaction > classifies forbidden public text before persistence: Authorization: Bearer AUTH_SENTINEL
+ FAIL  tests/review-redaction.test.ts > review product-domain redaction > classifies forbidden public text before persistence: master_key=MASTER_SENTINEL
+ FAIL  tests/review-redaction.test.ts > review product-domain redaction > classifies forbidden public text before persistence: cipher=CIPHER_SENTINEL
+ FAIL  tests/review-redaction.test.ts > review product-domain redaction > classifies forbidden public text before persistence: validation_token=TOKEN_SENTINEL
+ FAIL  tests/review-redaction.test.ts > review product-domain redaction > classifies forbidden public text before persistence: raw provider body: RAW_BODY_SENTINEL
+ FAIL  tests/review-redaction.test.ts > review product-domain redaction > classifies forbidden public text before persistence: HOME=C:\Users\secret-user
+ FAIL  tests/review-redaction.test.ts > review product-domain redaction > classifies forbidden public text before persistence: D:\private\host\database.sqlite
+ FAIL  tests/review-redaction.test.ts > review product-domain redaction > classifies forbidden public text before persistence: /home/private-user/project
+ FAIL  tests/review-redaction.test.ts > review product-domain redaction > classifies forbidden public text before persistence: other agent system prompt: OTHER_PROMPT_SENTINEL
+ FAIL  tests/review-redaction.test.ts > review product-domain redaction > classifies forbidden public text before persistence: chain-of-thought: COT_SENTINEL
+AssertionError: T-17 product-domain scanner must exist: expected undefined to be type of 'function'
+
+Expected: "function"
+Received: "undefined"
+
+ ❯ tests/review-redaction.test.ts:142:63
+    140|     const inspect = (module as unknown as Record<string, unknown>).rev…
+    141|
+    142|     expect(inspect, "T-17 product-domain scanner must exist").toBeType…
+       |                                                               ^
+    143|     expect((inspect as (value: unknown) => boolean)({ publicSummary: s…
+    144|   });
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[4/18]⎯
+
+ FAIL  tests/review-redaction.test.ts > review product-domain redaction > fails closed on redaction failure and writes no decision
+AssertionError: expected { Object (attemptId, checkpointHash, ...) } to match object { errorCategory: 'redaction', …(1) }
+(7 matching properties omitted from actual)
+
+- Expected
++ Received
+
+  {
+-   "errorCategory": "redaction",
+-   "state": "failed",
++   "state": "finalizing",
+  }
+
+ ❯ tests/review-redaction.test.ts:174:20
+    172|     });
+    173|
+    174|     expect(result).toMatchObject({ errorCategory: "redaction", state: …
+       |                    ^
+    175|     expect(callProvider).toHaveBeenCalledTimes(1);
+    176|     expect(db.prepare("SELECT COUNT(*) AS count FROM review_decisions"…
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[5/18]⎯
+
+
+ Test Files  2 failed (2)
+      Tests  18 failed | 1 passed (19)
+   Start at  15:02:04
+   Duration  3.44s (transform 612ms, setup 1.33s, import 164ms, tests 1.05s, environment 3.71s)
+
+# exit: 1

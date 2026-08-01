@@ -321,6 +321,38 @@ function attemptDto(database: DatabaseSync, attemptId: string): StrictReviewAtte
   return parsed.data;
 }
 
+function durableEventActor(
+  database: DatabaseSync,
+  row: Record<string, unknown>,
+  payload: Record<string, unknown>,
+): { actorId: string | null; actorType: "owner" | "agent" | "system" } {
+  if (row.actorType !== "agent") {
+    if (row.actorType === "owner" || row.actorType === "system") {
+      return {
+        actorId: typeof row.actorId === "string" ? row.actorId : null,
+        actorType: row.actorType,
+      };
+    }
+    throw new ReviewApiError("REVIEW_INVARIANT_FAILED");
+  }
+  const attemptId = typeof payload.attemptId === "string" ? payload.attemptId : null;
+  const decisionId = typeof payload.decisionId === "string" ? payload.decisionId : null;
+  const durable = attemptId
+    ? database.prepare(`
+        SELECT reviewer_agent_id AS actorId FROM review_attempts WHERE id=?
+      `).get(attemptId)
+    : decisionId
+    ? database.prepare(`
+        SELECT reviewer_agent_id AS actorId FROM review_decisions WHERE id=?
+      `).get(decisionId)
+    : undefined;
+  const actor = durable as { actorId: string } | undefined;
+  if (!actor || actor.actorId !== row.actorId) {
+    throw new ReviewApiError("REVIEW_INVARIANT_FAILED");
+  }
+  return { actorId: actor.actorId, actorType: "agent" };
+}
+
 function candidates(database: DatabaseSync, projectId: string, executorAgentId: string) {
   return (database.prepare(`
     SELECT a.id,a.name,a.role,a.avatar_text AS avatarText,
@@ -531,11 +563,14 @@ export function listReviewEvents(
       id ?? null,
       requested + 1,
     ) as Array<Record<string, unknown>>;
-    const values = rows.map(({ payloadJson, ...row }) =>
-      reviewEventDtoSchema.parse({
+    const values = rows.map(({ payloadJson, ...row }) => {
+      const payload = JSON.parse(String(payloadJson)) as Record<string, unknown>;
+      return reviewEventDtoSchema.parse({
         ...row,
-        payload: JSON.parse(String(payloadJson)),
-      }));
+        ...durableEventActor(database, row, payload),
+        payload,
+      });
+    });
     return boundedPage(
       databasePath,
       "review-events",

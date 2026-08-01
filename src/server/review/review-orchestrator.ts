@@ -450,7 +450,7 @@ function checkedOutput(
     return { category: "structured_output_invalid", output: null, structurallyInvalid: true };
   }
   if (reviewOutputContainsSensitiveText(parsed, context.secretValues)) {
-    return { category: "output_security_invalid", output: null, structurallyInvalid: false };
+    return { category: "redaction", output: null, structurallyInvalid: false };
   }
   const validated = validateReviewOutput(parsed, context);
   return validated.success

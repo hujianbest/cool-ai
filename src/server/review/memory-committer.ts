@@ -129,6 +129,31 @@ export function commitReviewMemoryCandidateTx(
     reviewerAgentId: string;
   },
 ): ReviewMemoryAssociation {
+  const authority = database.prepare(`
+    SELECT a.reviewer_agent_id AS reviewerAgentId,a.status,
+           d.attempt_id AS decisionAttemptId,d.reviewer_agent_id AS decisionReviewerAgentId
+    FROM review_attempts a
+    JOIN review_decisions d ON d.id=?
+    WHERE a.id=?
+  `).get(input.decisionId, input.attemptId) as {
+    decisionAttemptId: string;
+    decisionReviewerAgentId: string;
+    reviewerAgentId: string;
+    status: string;
+  } | undefined;
+  if (
+    !authority
+    || authority.status !== "finalizing"
+    || authority.decisionAttemptId !== input.attemptId
+    || authority.reviewerAgentId !== input.reviewerAgentId
+    || authority.decisionReviewerAgentId !== authority.reviewerAgentId
+  ) {
+    throw new ReviewMemoryCommitError(
+      "MEMORY_ACTOR_FORGERY",
+      403,
+      "Agent memory proposer is not derived from the durable review attempt.",
+    );
+  }
   const hash = dedupeHash(input.candidate);
   const existing = exactActiveMemory(database, input.projectId, input.candidate, hash);
   const target = input.candidate.supersedesMemoryId === null

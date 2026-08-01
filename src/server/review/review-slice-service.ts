@@ -14,6 +14,10 @@ import {
   reviewMaterialIsCurrent,
 } from "@/src/server/review/review-material";
 import {
+  buildReviewProviderRequest,
+  reviewOutputContainsSensitiveText,
+} from "@/src/server/review/review-schema";
+import {
   reviewOutputSchema,
   startReviewInputSchema,
   type ReviewAttemptDto,
@@ -57,6 +61,8 @@ type ProviderRow = {
   model: string;
   name: string;
   providerVersion: number;
+  reviewerRole: string;
+  reviewerSystemPrompt: string;
   verifiedAt: string;
 };
 
@@ -538,12 +544,23 @@ function providerFor(database: DatabaseSync, reviewerId: string): ProviderRow {
            p.api_key_iv AS apiKeyIv,p.api_key_tag AS apiKeyTag,p.key_id AS keyId,
            p.credential_version AS credentialVersion,
            p.credential_generation AS credentialGeneration,p.version AS providerVersion,
-           p.verified_at AS verifiedAt
+           p.verified_at AS verifiedAt,a.role AS reviewerRole,
+           a.system_prompt AS reviewerSystemPrompt
     FROM agents a JOIN providers p ON p.id=a.provider_id
     WHERE a.id=? AND p.verified_at IS NOT NULL
   `).get(reviewerId) as ProviderRow | undefined;
   if (!row) throw new ReviewSliceError("CREDENTIAL_UNAVAILABLE", 503, "复核凭据暂不可用");
   return row;
+}
+
+function reviewerSkills(database: DatabaseSync, reviewerId: string): string[] {
+  return (database.prepare(`
+    SELECT skill.instructions
+    FROM agent_skills assignment JOIN skills skill ON skill.id=assignment.skill_id
+    WHERE assignment.agent_id=?
+    ORDER BY assignment.position,skill.id
+  `).all(reviewerId) as Array<{ instructions: string }>)
+    .map(({ instructions }) => instructions);
 }
 
 export async function startReview(
@@ -633,16 +650,21 @@ export async function startReview(
       credentialVersion: provider.credentialVersion,
       keyId: provider.keyId,
     });
+    const providerPrompt = buildReviewProviderRequest({
+      material: material.material,
+      reviewer: {
+        id: parsed.data.reviewerAgentId,
+        role: provider.reviewerRole,
+        skills: reviewerSkills(database, parsed.data.reviewerAgentId),
+        systemPrompt: provider.reviewerSystemPrompt,
+      },
+    });
     const callStartedAt = new Date().toISOString();
     const call = await callOpenAiChat({
       apiKey,
       baseUrl: provider.baseUrl,
       model: provider.model,
-      messages: [
-        { role: "system", content: "你是独立复核 Agent。只返回 strict JSON 公开结论，不输出隐藏思维链。" },
-        { role: "system", content: material.json },
-        { role: "user", content: "基于冻结 diff 与 required validation 正文，返回且仅返回一个 reject、escalate 或 pass 裁决。" },
-      ],
+      messages: providerPrompt.messages,
     }, {
       attemptId,
       correlationId: randomUUID(),
@@ -678,6 +700,7 @@ export async function startReview(
       });
       throw new ReviewSliceError(call.error?.code ?? "PROVIDER_RESPONSE_INVALID", 502, "Provider 服务暂时异常");
     }
+    const reportedUsage = call.usage;
     let output: unknown;
     try {
       output = JSON.parse(call.content);
@@ -687,6 +710,40 @@ export async function startReview(
     const reviewed = reviewOutputSchema.safeParse(output);
     if (!reviewed.success) {
       throw new ReviewSliceError("STRUCTURED_OUTPUT_INVALID", 400, "复核输出格式无效");
+    }
+    if (reviewOutputContainsSensitiveText(reviewed.data, [apiKey])) {
+      transaction(database, () => {
+        database.prepare(`
+          INSERT INTO review_model_calls (
+            id,attempt_id,kind,call_index,status,prompt_hash,
+            prompt_tokens,completion_tokens,total_tokens,error_category,started_at,finished_at
+          ) VALUES (?, ?,'primary',1,'succeeded',?, ?, ?, ?, 'redaction', ?, ?)
+        `).run(
+          callId,
+          attemptId,
+          material.hash,
+          reportedUsage.promptTokens,
+          reportedUsage.completionTokens,
+          reportedUsage.totalTokens,
+          callStartedAt,
+          new Date().toISOString(),
+        );
+        database.prepare(`
+          UPDATE review_attempts
+          SET status='failed',error_category='redaction',finished_at=?
+          WHERE id=? AND status='calling'
+        `).run(new Date().toISOString(), attemptId);
+        database.prepare(`
+          UPDATE work_item_review_heads
+          SET state='pending_review',current_attempt_id=NULL,version=version+1,updated_at=?
+          WHERE work_item_id=? AND current_attempt_id=? AND state='reviewing'
+        `).run(new Date().toISOString(), workItemId, attemptId);
+      });
+      throw new ReviewSliceError(
+        "REVIEW_OUTPUT_REDACTED",
+        422,
+        "复核公开输出包含不可持久化内容",
+      );
     }
     if (!reviewMaterialIsCurrent(database, acquired, material.hash, attemptId)) {
       transaction(database, () => {
@@ -725,7 +782,6 @@ export async function startReview(
         );
       }
     }
-    const usage = call.usage;
     transaction(database, () => {
       database.prepare(`
         INSERT INTO review_model_calls (
@@ -736,9 +792,9 @@ export async function startReview(
         callId,
         attemptId,
         material.hash,
-        usage.promptTokens,
-        usage.completionTokens,
-        usage.totalTokens,
+        reportedUsage.promptTokens,
+        reportedUsage.completionTokens,
+        reportedUsage.totalTokens,
         callStartedAt,
         new Date().toISOString(),
       );
