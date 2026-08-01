@@ -30,6 +30,7 @@ type HeadRow = {
   missionId: string;
   projectId: string;
   resultId: string;
+  resultVersion: number;
   state: "pending_review" | "reviewing" | "passed";
   workItemId: string;
   workItemTitle: string;
@@ -41,10 +42,13 @@ type ProviderRow = {
   apiKeyTag: string;
   baseUrl: string;
   credentialVersion: 1;
+  credentialGeneration: number;
   id: string;
   keyId: string;
   model: string;
   name: string;
+  providerVersion: number;
+  verifiedAt: string;
 };
 
 function transaction<T>(database: DatabaseSync, work: () => T): T {
@@ -65,10 +69,10 @@ function head(database: DatabaseSync, workItemId: string): HeadRow {
            h.mission_id AS missionId,h.current_result_id AS resultId,
            h.current_attempt_id AS currentAttemptId,h.state,
            h.version AS headVersion,w.title AS workItemTitle,
-           e.agent_id AS executorAgentId
+           r.version AS resultVersion,e.agent_id AS executorAgentId
     FROM work_item_review_heads h
     JOIN work_items w ON w.id=h.work_item_id
-    JOIN work_item_execution_results r ON r.id=h.current_result_id
+    JOIN work_item_result_versions r ON r.id=h.current_result_id
     JOIN executions e ON e.id=r.execution_id
     WHERE h.work_item_id=?
   `).get(workItemId) as HeadRow | undefined;
@@ -198,6 +202,30 @@ export function initializeFirstResultReviewTx(
     workItemId: string;
   },
 ): void {
+  const now = new Date().toISOString();
+  const existingMissionHead = database.prepare(
+    "SELECT 1 FROM mission_delivery_heads WHERE mission_id=?",
+  ).get(input.missionId);
+  if (!existingMissionHead) {
+    database.prepare(`
+      INSERT INTO mission_delivery_heads(
+        mission_id,project_id,context_version,state,current_delivery_id,current_operation_id,
+        generation_lease_token,generation_lease_expires_at,last_error_code,
+        next_event_sequence,version,updated_at
+      ) VALUES (?, ?, 1, 'ongoing', NULL, NULL, NULL, NULL, NULL, 2, 1, ?)
+    `).run(input.missionId, input.projectId, now);
+    database.prepare(`
+      INSERT INTO review_events(
+        id,project_id,mission_id,sequence,type,actor_type,actor_id,payload_json,created_at
+      ) VALUES (?, ?, ?, 1, 'mission_review_initialized', 'system', NULL, ?, ?)
+    `).run(
+      randomUUID(),
+      input.projectId,
+      input.missionId,
+      JSON.stringify({ contextVersion: 1, headVersion: 1, missionId: input.missionId }),
+      now,
+    );
+  }
   database.prepare(`
     INSERT INTO work_item_review_heads (
       work_item_id,project_id,mission_id,current_result_id,current_attempt_id,
@@ -205,6 +233,25 @@ export function initializeFirstResultReviewTx(
     ) VALUES (?, ?, ?, ?, NULL, 'pending_review', 1,
       strftime('%Y-%m-%dT%H:%M:%fZ','now'))
   `).run(input.workItemId, input.projectId, input.missionId, input.resultId);
+  const deliveryHead = database.prepare(
+    "SELECT next_event_sequence AS sequence FROM mission_delivery_heads WHERE mission_id=?",
+  ).get(input.missionId) as { sequence: number };
+  database.prepare(`
+    INSERT INTO review_events(
+      id,project_id,mission_id,sequence,type,actor_type,actor_id,payload_json,created_at
+    ) VALUES (?, ?, ?, ?, 'result_version_created', 'system', NULL, ?, ?)
+  `).run(
+    randomUUID(),
+    input.projectId,
+    input.missionId,
+    deliveryHead.sequence,
+    JSON.stringify({ resultId: input.resultId, resultVersion: 1, workItemId: input.workItemId }),
+    now,
+  );
+  database.prepare(`
+    UPDATE mission_delivery_heads SET next_event_sequence=next_event_sequence+1
+    WHERE mission_id=? AND next_event_sequence=?
+  `).run(input.missionId, deliveryHead.sequence);
 }
 
 export function readReviewWorkspace(
@@ -224,7 +271,7 @@ export function readReviewWorkspace(
       result: {
         executorAgentId: row.executorAgentId,
         id: row.resultId,
-        version: 1,
+        version: row.resultVersion,
       },
       workItem: { id: row.workItemId, title: row.workItemTitle },
     };
@@ -237,7 +284,7 @@ function freezeMaterial(database: DatabaseSync, row: HeadRow, attemptId: string)
   const result = database.prepare(`
     SELECT r.id,r.execution_id AS executionId,r.staged_result_id AS stagedResultId,
            s.staged_hash AS stagedHash
-    FROM work_item_execution_results r
+    FROM work_item_result_versions r
     JOIN execution_staged_results s ON s.id=r.staged_result_id
     WHERE r.id=?
   `).get(row.resultId) as {
@@ -294,7 +341,9 @@ function providerFor(database: DatabaseSync, reviewerId: string): ProviderRow {
   const row = database.prepare(`
     SELECT p.id,p.name,p.base_url AS baseUrl,a.model,p.api_key_cipher AS apiKeyCipher,
            p.api_key_iv AS apiKeyIv,p.api_key_tag AS apiKeyTag,p.key_id AS keyId,
-           p.credential_version AS credentialVersion
+           p.credential_version AS credentialVersion,
+           p.credential_generation AS credentialGeneration,p.version AS providerVersion,
+           p.verified_at AS verifiedAt
     FROM agents a JOIN providers p ON p.id=a.provider_id
     WHERE a.id=? AND p.verified_at IS NOT NULL
   `).get(reviewerId) as ProviderRow | undefined;
@@ -330,13 +379,25 @@ export async function startReview(
       attemptId = randomUUID();
       material = freezeMaterial(database, row, attemptId);
       provider = providerFor(database, parsed.data.reviewerAgentId);
+      const startedAt = new Date().toISOString();
+      const leaseExpiresAt = new Date(Date.now() + 120_000).toISOString();
+      const requestHash = createHash("sha256")
+        .update(JSON.stringify(parsed.data))
+        .digest("hex");
+      database.prepare(`
+        INSERT INTO review_operations(
+          id,project_id,kind,parent_id,request_hash,status,http_status,response_json,created_at,updated_at
+        ) VALUES (?,?,'start_review',?,?,'pending',NULL,NULL,?,?)
+      `).run(parsed.data.operationId, row.projectId, row.workItemId, requestHash, startedAt, startedAt);
       database.prepare(`
         INSERT INTO review_attempts (
           id,project_id,mission_id,work_item_id,result_id,reviewer_agent_id,
-          status,frozen_material_json,frozen_material_hash,provider_id,model,
+          operation_id,status,lease_token,lease_expires_at,
+          frozen_material_json,frozen_material_hash,prompt_hash,
+          provider_id,provider_version,credential_generation,verified_at,model,
           started_at,finished_at
-        ) VALUES (?, ?, ?, ?, ?, ?, 'calling', ?, ?, ?, ?,
-          strftime('%Y-%m-%dT%H:%M:%fZ','now'),NULL)
+        ) VALUES (?, ?, ?, ?, ?, ?, ?, 'calling', ?, ?, ?, ?, ?, ?, ?, ?, ?, ?,
+          ?,NULL)
       `).run(
         attemptId,
         row.projectId,
@@ -344,10 +405,18 @@ export async function startReview(
         row.workItemId,
         row.resultId,
         parsed.data.reviewerAgentId,
+        parsed.data.operationId,
+        randomUUID(),
+        leaseExpiresAt,
         material.json,
         material.hash,
+        material.hash,
         provider.id,
+        provider.providerVersion,
+        provider.credentialGeneration,
+        provider.verifiedAt,
         provider.model,
+        startedAt,
       );
       database.prepare(`
         UPDATE work_item_review_heads
@@ -385,15 +454,17 @@ export async function startReview(
       transaction(database, () => {
         database.prepare(`
           INSERT INTO review_model_calls (
-            id,attempt_id,status,prompt_tokens,completion_tokens,total_tokens,
-            started_at,finished_at
-          ) VALUES (?, ?, 'failed', ?, ?, ?, ?, ?)
+            id,attempt_id,kind,call_index,status,prompt_hash,
+            prompt_tokens,completion_tokens,total_tokens,error_category,started_at,finished_at
+          ) VALUES (?, ?,'primary',1,'provider_failed',?, ?, ?, ?, ?, ?, ?)
         `).run(
           callId,
           attemptId,
+          material.hash,
           call.usage?.promptTokens ?? null,
           call.usage?.completionTokens ?? null,
           call.usage?.totalTokens ?? null,
+          call.error?.code ?? "provider_failed",
           callStartedAt,
           new Date().toISOString(),
         );
@@ -422,12 +493,13 @@ export async function startReview(
     transaction(database, () => {
       database.prepare(`
         INSERT INTO review_model_calls (
-          id,attempt_id,status,prompt_tokens,completion_tokens,total_tokens,
-          started_at,finished_at
-        ) VALUES (?, ?, 'succeeded', ?, ?, ?, ?, ?)
+          id,attempt_id,kind,call_index,status,prompt_hash,
+          prompt_tokens,completion_tokens,total_tokens,error_category,started_at,finished_at
+        ) VALUES (?, ?,'primary',1,'succeeded',?, ?, ?, ?, NULL, ?, ?)
       `).run(
         callId,
         attemptId,
+        material.hash,
         usage.promptTokens,
         usage.completionTokens,
         usage.totalTokens,
@@ -459,6 +531,10 @@ export async function startReview(
         SET state='passed',version=version+1,updated_at=?
         WHERE work_item_id=? AND current_attempt_id=? AND state='reviewing'
       `).run(new Date().toISOString(), workItemId, attemptId);
+      database.prepare(`
+        UPDATE work_items SET status='done',version=version+1,updated_at=?
+        WHERE id=? AND status='in_progress'
+      `).run(new Date().toISOString(), workItemId);
     });
   } finally {
     database.close();

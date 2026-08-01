@@ -2,9 +2,9 @@ import type { DatabaseSync } from "node:sqlite";
 
 import { createV5, hasAnyV5Object, validateV5 } from "@/src/server/migrations-v5";
 import {
-  createV6T1,
-  hasAnyV6T1Object,
-  validateV6T1,
+  createV6,
+  hasAnyV6Object,
+  validateV6,
 } from "@/src/server/migrations-v6";
 
 type SchemaErrorCode =
@@ -249,6 +249,7 @@ const INTEGER_COLUMNS = new Set([
   "agents.can_read",
   "agents.can_write",
   "agents.can_execute",
+  "agents.review_capable",
   "agents.max_tokens",
   "agents.max_handoffs",
   "agents.version",
@@ -685,9 +686,12 @@ function hasExactColumns(
   expected: readonly string[] = REQUIRED_COLUMNS[table],
 ): boolean {
   const columns = tableInfo(database, table).map(({ name }) => name);
+  const accepted = table === "agents" && columns.includes("review_capable")
+    ? [...expected, "review_capable"]
+    : expected;
   if (
-    columns.length === expected.length &&
-    columns.every((column, index) => column === expected[index])
+    columns.length === accepted.length &&
+    columns.every((column, index) => column === accepted[index])
   ) {
     return tableInfo(database, table).every(({ name, notnull, pk, type }) => {
       const key = `${table}.${name}`;
@@ -989,6 +993,8 @@ function validWorkItemDependencies(database: DatabaseSync): boolean {
 }
 
 function validMemoryEntries(database: DatabaseSync): boolean {
+  const columns = tableInfo(database, "memory_entries").map(({ name }) => name);
+  if (columns.includes("chain_id")) return true;
   return (
     tableNames(database).has("memory_entries") &&
     hasExactColumns(database, "memory_entries") &&
@@ -1323,7 +1329,7 @@ export function migrateDatabase(database: DatabaseSync): void {
   }
 
   if (
-    (currentVersion === 4 || currentVersion === 5)
+    (currentVersion === 4 || currentVersion === 5 || currentVersion === 6)
     && (!validCompleteV3(database) || !validCollaborationV4(database))
   ) {
     throw new SchemaMigrationError("SCHEMA_DRIFT", "Database collaboration schema is invalid.");
@@ -1349,13 +1355,14 @@ export function migrateDatabase(database: DatabaseSync): void {
     if (validation) {
       throw new SchemaMigrationError(validation, "Database version 5 schema is invalid.");
     }
-    if (hasAnyV6T1Object(database)) {
+    if (hasAnyV6Object(database)) {
       throw new SchemaMigrationError("SCHEMA_DRIFT", "Database version 6 schema is partial.");
     }
     inTransaction(database, () => {
-      createV6T1(database);
-      if (!validateV6T1(database)) {
-        throw new SchemaMigrationError("SCHEMA_DRIFT", "Database version 6 schema is invalid.");
+      createV6(database);
+      const validation = validateV6(database);
+      if (validation) {
+        throw new SchemaMigrationError(validation, "Database version 6 schema is invalid.");
       }
       database.exec("PRAGMA user_version = 6");
     });
@@ -1363,9 +1370,10 @@ export function migrateDatabase(database: DatabaseSync): void {
   }
 
   if (currentVersion === 6) {
-    if (!validateV6T1(database)) {
+    const validation = validateV6(database);
+    if (validation) {
       throw new SchemaMigrationError(
-        "SCHEMA_DRIFT",
+        validation,
         "Database version 6 schema is invalid.",
       );
     }

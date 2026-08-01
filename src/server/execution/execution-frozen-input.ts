@@ -180,7 +180,7 @@ export function captureExecutionFrozenInput(
     ORDER BY w.id
   `).all(input.workItemId) as FrozenExecutionPromptInput["dependencies"];
   const memory = database.prepare(`
-    SELECT entry.id,entry.type,entry.content,entry.source_ref AS sourceRef
+    SELECT entry.id,entry.type,entry.content,entry.source_id AS sourceRef
     FROM memory_entries entry
     WHERE entry.project_id=?
       AND NOT EXISTS (

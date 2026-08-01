@@ -211,8 +211,8 @@ function activeMemories(database: DatabaseSync, projectId: string): MemoryEntry[
          entry.type,
          entry.content,
          entry.source_type AS sourceType,
-         entry.source_ref AS sourceRef,
-         entry.created_by AS createdBy,
+         entry.source_id AS sourceRef,
+         entry.proposer_actor_type AS createdBy,
          entry.supersedes_id AS supersedesId,
          entry.created_at AS createdAt
        FROM memory_entries entry

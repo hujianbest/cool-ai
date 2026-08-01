@@ -6,6 +6,7 @@ import { afterEach, describe, expect, it } from "vitest";
 
 import { openDatabase } from "@/src/server/db";
 import { V5_INDEXES, V5_TABLES } from "@/src/server/migrations-v5";
+import { V6_TRIGGERS } from "@/src/server/migrations-v6";
 
 const V4_TABLES = [
   "collaboration_attempts",
@@ -157,6 +158,23 @@ function makeCompleteV3(path: string): void {
   openDatabase(path).close();
   const database = new DatabaseSync(path);
   database.exec("PRAGMA foreign_keys=OFF");
+  for (const trigger of V6_TRIGGERS) database.exec(`DROP TRIGGER IF EXISTS "${trigger}"`);
+  for (const table of [
+    "review_memory_associations", "review_memory_candidates", "review_escalation_answers",
+    "review_escalations", "review_decisions", "review_model_calls", "review_attempts",
+    "review_operations", "work_item_review_heads", "work_item_result_versions",
+    "mission_delivery_heads", "mission_deliveries", "review_events", "memory_entries",
+  ]) database.exec(`DROP TABLE IF EXISTS "${table}"`);
+  database.exec(`
+    CREATE TABLE memory_entries (
+      id TEXT PRIMARY KEY, project_id TEXT NOT NULL REFERENCES projects(id) ON DELETE CASCADE,
+      type TEXT NOT NULL CHECK(type IN ('goal','decision','fact','artifact')), content TEXT NOT NULL,
+      source_type TEXT NOT NULL CHECK(source_type IN ('owner_input','work_item','artifact_path')),
+      source_ref TEXT NOT NULL, created_by TEXT NOT NULL CHECK(created_by = 'owner'),
+      supersedes_id TEXT UNIQUE REFERENCES memory_entries(id), created_at TEXT NOT NULL
+    );
+    ALTER TABLE agents DROP COLUMN review_capable;
+  `);
   for (const table of [...V5_TABLES].reverse()) {
     database.exec(`DROP TABLE IF EXISTS "${table}"`);
   }
@@ -211,7 +229,7 @@ describe("SQLite v4 collaboration migration", () => {
     const completePath = databasePath();
     makeCompleteV3(completePath);
     const migrated = openDatabase(completePath);
-    expect(userVersion(migrated)).toBe(5);
+    expect(userVersion(migrated)).toBe(6);
     expect(objectNames(migrated, "table")).toEqual(
       expect.arrayContaining([...V4_TABLES]),
     );
@@ -467,7 +485,7 @@ describe("SQLite v4 collaboration migration", () => {
 
     expectSchemaDrift(path);
     const unchanged = new DatabaseSync(path);
-    expect(userVersion(unchanged)).toBe(5);
+    expect(userVersion(unchanged)).toBe(6);
     unchanged.close();
   });
 
@@ -490,7 +508,7 @@ describe("SQLite v4 collaboration migration", () => {
     first.close();
 
     const second = openDatabase(path);
-    expect(userVersion(second)).toBe(5);
+    expect(userVersion(second)).toBe(6);
     expect(
       second
         .prepare(

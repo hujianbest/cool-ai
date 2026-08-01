@@ -7,6 +7,7 @@ import { afterEach, describe, expect, it } from "vitest";
 
 import { openDatabase } from "@/src/server/db";
 import { CREATE_V5, createV5 } from "@/src/server/migrations-v5";
+import { V6_TRIGGERS } from "@/src/server/migrations-v6";
 import {
   recoveryFileDtoSchema,
   recoveryFilePageSchema,
@@ -73,6 +74,8 @@ const V5_TRIGGERS = [
   "validation_policy_audit_no_update",
   "validation_policy_audit_no_delete",
 ] as const;
+const RETAINED_V5_TABLES = V5_TABLES.filter((name) => name !== "work_item_execution_results");
+const RETAINED_V5_INDEXES = V5_INDEXES.filter((name) => name !== "work_item_execution_results_item");
 
 const DROP_V5_TABLES = [
   "work_item_execution_results",
@@ -127,6 +130,28 @@ function names(
 
 function makeV4(path: string): void {
   const current = openDatabase(path);
+  current.exec("PRAGMA foreign_keys=OFF");
+  for (const trigger of V6_TRIGGERS) current.exec(`DROP TRIGGER IF EXISTS "${trigger}"`);
+  for (const table of [
+    "review_memory_associations", "review_memory_candidates", "review_escalation_answers",
+    "review_escalations", "review_decisions", "review_model_calls", "review_attempts",
+    "review_operations", "work_item_review_heads", "work_item_result_versions",
+    "mission_delivery_heads", "mission_deliveries", "review_events", "memory_entries",
+  ]) current.exec(`DROP TABLE IF EXISTS "${table}"`);
+  current.exec(`
+    CREATE TABLE memory_entries (
+      id TEXT PRIMARY KEY,
+      project_id TEXT NOT NULL REFERENCES projects(id) ON DELETE CASCADE,
+      type TEXT NOT NULL CHECK(type IN ('goal','decision','fact','artifact')),
+      content TEXT NOT NULL,
+      source_type TEXT NOT NULL CHECK(source_type IN ('owner_input','work_item','artifact_path')),
+      source_ref TEXT NOT NULL,
+      created_by TEXT NOT NULL CHECK(created_by = 'owner'),
+      supersedes_id TEXT UNIQUE REFERENCES memory_entries(id),
+      created_at TEXT NOT NULL
+    )
+  `);
+  current.exec("ALTER TABLE agents DROP COLUMN review_capable");
   current.close();
   const database = new DatabaseSync(path);
   database.exec("PRAGMA foreign_keys=OFF");
@@ -260,10 +285,10 @@ describe("SQLite v5 strict atomic migration", () => {
     database.close();
 
     const migrated = openDatabase(path);
-    expect(userVersion(migrated)).toBe(5);
-    expect(names(migrated, "table")).toEqual(expect.arrayContaining([...V5_TABLES]));
+    expect(userVersion(migrated)).toBe(6);
+    expect(names(migrated, "table")).toEqual(expect.arrayContaining(RETAINED_V5_TABLES));
     expect(V5_TABLES).toHaveLength(23);
-    expect(names(migrated, "index")).toEqual(expect.arrayContaining([...V5_INDEXES]));
+    expect(names(migrated, "index")).toEqual(expect.arrayContaining(RETAINED_V5_INDEXES));
     expect(V5_INDEXES).toHaveLength(22);
     expect(names(migrated, "trigger")).toEqual(expect.arrayContaining([...V5_TRIGGERS]));
     expect(V5_TRIGGERS).toHaveLength(6);
@@ -359,8 +384,8 @@ describe("SQLite v5 strict atomic migration", () => {
 
   it("rejects drift of every v5 table, index, and trigger instead of repairing it", () => {
     for (const [type, objects] of [
-      ["table", V5_TABLES],
-      ["index", V5_INDEXES],
+      ["table", RETAINED_V5_TABLES],
+      ["index", RETAINED_V5_INDEXES],
       ["trigger", V5_TRIGGERS],
     ] as const) {
       for (const object of objects) {
@@ -371,7 +396,7 @@ describe("SQLite v5 strict atomic migration", () => {
         database.close();
         expectOpenError(path, "SCHEMA_DRIFT");
         const unchanged = new DatabaseSync(path);
-        expect(userVersion(unchanged)).toBe(5);
+        expect(userVersion(unchanged)).toBe(6);
         unchanged.close();
       }
     }
@@ -477,7 +502,7 @@ describe("SQLite v5 strict atomic migration", () => {
       .all(...V5_TABLES, ...V5_INDEXES, ...V5_TRIGGERS);
     first.close();
     const reopened = openDatabase(path);
-    expect(userVersion(reopened)).toBe(5);
+    expect(userVersion(reopened)).toBe(6);
     expect(
       reopened
         .prepare(
@@ -491,7 +516,7 @@ describe("SQLite v5 strict atomic migration", () => {
 
     const tooNewPath = databasePath();
     const tooNew = new DatabaseSync(tooNewPath);
-    tooNew.exec("PRAGMA user_version=6");
+    tooNew.exec("PRAGMA user_version=7");
     tooNew.close();
     expectOpenError(tooNewPath, "SCHEMA_TOO_NEW");
   });

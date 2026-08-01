@@ -439,8 +439,12 @@ export function createV5(database: DatabaseSync): void {
   }
 }
 
-function schemaIsExact(database: DatabaseSync): boolean {
+function schemaIsExact(database: DatabaseSync, retained = false): boolean {
   const expectedNames = new Set<string>([...V5_TABLES, ...V5_INDEXES, ...V5_TRIGGERS]);
+  if (retained) {
+    expectedNames.delete("work_item_execution_results");
+    expectedNames.delete("work_item_execution_results_item");
+  }
   const rows = objectRows(database).filter(({ name }) => expectedNames.has(name));
   if (rows.length !== expectedNames.size) return false;
   return rows.every(({ name, sql }) => sql !== null && normalizeSql(sql) === expectedSql.get(name));
@@ -668,8 +672,11 @@ function mergeDescriptorFactsAreValid(database: DatabaseSync): boolean {
   return true;
 }
 
-export function validateV5(database: DatabaseSync): "SCHEMA_DRIFT" | "SCHEMA_DATA_INVALID" | null {
-  if (!schemaIsExact(database)) return "SCHEMA_DRIFT";
+function validateV5Facts(
+  database: DatabaseSync,
+  retained = false,
+): "SCHEMA_DRIFT" | "SCHEMA_DATA_INVALID" | null {
+  if (!schemaIsExact(database, retained)) return "SCHEMA_DRIFT";
   if ((database.prepare("PRAGMA foreign_key_check").all() as unknown[]).length > 0) {
     return "SCHEMA_DRIFT";
   }
@@ -773,4 +780,14 @@ export function validateV5(database: DatabaseSync): "SCHEMA_DRIFT" | "SCHEMA_DAT
     `) > 0
   ) return "SCHEMA_DATA_INVALID";
   return null;
+}
+
+export function validateV5(database: DatabaseSync): "SCHEMA_DRIFT" | "SCHEMA_DATA_INVALID" | null {
+  return validateV5Facts(database);
+}
+
+export function validateV5Retained(
+  database: DatabaseSync,
+): "SCHEMA_DRIFT" | "SCHEMA_DATA_INVALID" | null {
+  return validateV5Facts(database, true);
 }

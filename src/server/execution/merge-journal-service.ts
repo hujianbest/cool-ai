@@ -1200,7 +1200,7 @@ async function enterManualRecovery(
     : null;
   transaction(database, () => {
     database.prepare(
-      "DELETE FROM work_item_execution_results WHERE merge_journal_id=?",
+      "DELETE FROM work_item_review_heads WHERE current_result_id IN (SELECT id FROM work_item_result_versions WHERE merge_journal_id=?)",
     ).run(journal.id);
     database.prepare(`
       UPDATE executions
@@ -1330,11 +1330,12 @@ function commitDatabaseFacts(
   if (!alreadyInTransaction) database.exec("BEGIN IMMEDIATE");
   try {
     const execution = database.prepare(`
-      SELECT mission_id AS missionId,work_item_id AS workItemId,
+      SELECT mission_id AS missionId,work_item_id AS workItemId,agent_id AS agentId,
              current_attempt_no AS attemptNo,next_event_sequence AS nextSequence,
              status,version
       FROM executions WHERE project_id=? AND id=?
     `).get(journal.projectId, journal.executionId) as {
+      agentId: string;
       attemptNo: number;
       missionId: string;
       nextSequence: number;
@@ -1347,10 +1348,10 @@ function commitDatabaseFacts(
     }
     const resultId = randomUUID();
     database.prepare(`
-      INSERT INTO work_item_execution_results (
-        id,project_id,mission_id,work_item_id,execution_id,staged_result_id,
-        merge_journal_id,status,created_at
-      ) VALUES (?, ?, ?, ?, ?, ?, ?, 'awaiting_review',
+      INSERT INTO work_item_result_versions (
+        id,project_id,mission_id,work_item_id,version,execution_id,staged_result_id,
+        merge_journal_id,supersedes_result_id,executor_agent_id,created_at
+      ) VALUES (?, ?, ?, ?, 1, ?, ?, ?, NULL, ?,
         strftime('%Y-%m-%dT%H:%M:%fZ','now'))
     `).run(
       resultId,
@@ -1360,6 +1361,7 @@ function commitDatabaseFacts(
       journal.executionId,
       journal.stagedResultId,
       journal.id,
+      execution.agentId,
     );
     initializeFirstResultReviewTx(database, {
       missionId: execution.missionId,
@@ -1428,10 +1430,10 @@ function publicCommitBody(database: DatabaseSync, journal: JournalRow): CommitRe
   const row = database.prepare(`
     SELECT e.id AS executionId,e.status,e.version,e.merged_at AS mergedAt,
            r.id AS resultId,r.staged_result_id AS stagedResultId,
-           r.merge_journal_id AS mergeJournalId,r.status AS resultStatus,
+           r.merge_journal_id AS mergeJournalId,'awaiting_review' AS resultStatus,
            r.created_at AS resultCreatedAt
     FROM executions e
-    JOIN work_item_execution_results r ON r.execution_id=e.id
+    JOIN work_item_result_versions r ON r.execution_id=e.id
     WHERE e.project_id=? AND e.id=? AND r.merge_journal_id=?
   `).get(journal.projectId, journal.executionId, journal.id) as {
     executionId: string;
@@ -2212,10 +2214,11 @@ export async function resolveManualRecovery(input: {
     };
     if (input.action === "recovered_new") {
       input.database.prepare(`
-        INSERT INTO work_item_execution_results (
-          id,project_id,mission_id,work_item_id,execution_id,staged_result_id,
-          merge_journal_id,status,created_at
-        ) VALUES (?, ?, ?, ?, ?, ?, ?, 'awaiting_review',
+        INSERT INTO work_item_result_versions (
+          id,project_id,mission_id,work_item_id,version,execution_id,staged_result_id,
+          merge_journal_id,supersedes_result_id,executor_agent_id,created_at
+        ) VALUES (?, ?, ?, ?, 1, ?, ?, ?, NULL,
+          (SELECT agent_id FROM executions WHERE id=?),
           strftime('%Y-%m-%dT%H:%M:%fZ','now'))
       `).run(
         randomUUID(),
@@ -2225,6 +2228,7 @@ export async function resolveManualRecovery(input: {
         input.executionId,
         journal.stagedResultId,
         journal.id,
+        input.executionId,
       );
     }
     const executionStatus = input.action === "recovered_new"

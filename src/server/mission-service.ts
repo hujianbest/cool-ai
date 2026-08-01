@@ -2,6 +2,7 @@ import { randomUUID } from "node:crypto";
 import type { DatabaseSync } from "node:sqlite";
 
 import { openDatabase } from "@/src/server/db";
+import { initializeMissionDeliveryTx } from "@/src/server/migrations-v6";
 import type {
   Mission,
   MissionState,
@@ -651,7 +652,9 @@ export function createMission(
            ) VALUES (?, ?, ?, ?, 1, ?, ?)`,
         )
         .run(id, projectId, parsed.title, parsed.goal, timestamp, timestamp);
-      return missionById(database, id)!;
+      const mission = missionById(database, id)!;
+      initializeMissionDeliveryTx(database, mission);
+      return mission;
     });
   } finally {
     database.close();

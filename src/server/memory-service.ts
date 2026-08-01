@@ -1,4 +1,4 @@
-import { randomUUID } from "node:crypto";
+import { createHash, randomUUID } from "node:crypto";
 import type { DatabaseSync } from "node:sqlite";
 
 import { openDatabase } from "@/src/server/db";
@@ -166,8 +166,8 @@ function memoryById(database: DatabaseSync, memoryId: string): MemoryEntry | und
          entry.type,
          entry.content,
          entry.source_type AS sourceType,
-         entry.source_ref AS sourceRef,
-         entry.created_by AS createdBy,
+         entry.source_id AS sourceRef,
+         entry.proposer_actor_type AS createdBy,
          entry.supersedes_id AS supersedesId,
          entry.created_at AS createdAt,
          CASE WHEN EXISTS (
@@ -238,18 +238,31 @@ export function createMemory(
       }
 
       const id = randomUUID();
+      const target = parsed.supersedesId
+        ? database.prepare(
+          "SELECT chain_id AS chainId,version FROM memory_entries WHERE id=?",
+        ).get(parsed.supersedesId) as { chainId: string; version: number }
+        : null;
+      const dedupeHash = createHash("sha256").update(JSON.stringify([
+        parsed.type, parsed.content, parsed.sourceType, sourceRef, null,
+      ])).digest("hex");
       database
         .prepare(
           `INSERT INTO memory_entries (
-             id, project_id, type, content, source_type, source_ref,
-             created_by, supersedes_id, created_at
-           ) VALUES (?, ?, ?, ?, ?, ?, 'owner', ?, ?)`,
+             id,project_id,chain_id,version,type,content,dedupe_hash,source_type,
+             source_id,source_version,proposer_actor_type,proposer_actor_id,
+             confirming_review_attempt_id,persistence_actor,supersedes_id,created_at
+           ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, NULL, 'owner', NULL, NULL,
+             'platform', ?, ?)`,
         )
         .run(
           id,
           projectId,
+          target?.chainId ?? id,
+          (target?.version ?? 0) + 1,
           parsed.type,
           parsed.content,
+          dedupeHash,
           parsed.sourceType,
           sourceRef,
           parsed.supersedesId ?? null,
@@ -278,8 +291,8 @@ export function listMemories(
            entry.type,
            entry.content,
            entry.source_type AS sourceType,
-           entry.source_ref AS sourceRef,
-           entry.created_by AS createdBy,
+           entry.source_id AS sourceRef,
+           entry.proposer_actor_type AS createdBy,
            entry.supersedes_id AS supersedesId,
            entry.created_at AS createdAt,
            CASE WHEN EXISTS (

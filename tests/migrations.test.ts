@@ -134,7 +134,7 @@ describe("database migrations", () => {
   it("migrates an empty v0 database through v1-v3 to the complete v4 schema", () => {
     const database = openDatabase(databasePath());
 
-    expect(userVersion(database)).toBe(5);
+    expect(userVersion(database)).toBe(6);
     expect(tableNames(database)).toEqual(expect.arrayContaining([
       "agent_skills",
       "agents",
@@ -179,7 +179,7 @@ describe("database migrations", () => {
 
     const database = openDatabase(path);
 
-    expect(userVersion(database)).toBe(5);
+    expect(userVersion(database)).toBe(6);
     expect(database.prepare("SELECT name FROM projects").all()).toEqual([{ name: "Existing" }]);
     expect(database.prepare("SELECT goal FROM task_runs").all()).toEqual([{ goal: "Keep me" }]);
     expect(database.prepare("SELECT message FROM task_events").all()).toEqual([
@@ -202,7 +202,7 @@ describe("database migrations", () => {
     createFixture(v1Path, `${S1_SCHEMA} PRAGMA user_version = 1;`);
 
     const upgraded = openDatabase(v1Path);
-    expect(userVersion(upgraded)).toBe(5);
+    expect(userVersion(upgraded)).toBe(6);
     expect(tableNames(upgraded)).toContain("agent_skills");
     upgraded.close();
   });
@@ -220,7 +220,7 @@ describe("database migrations", () => {
     first.close();
 
     const second = openDatabase(path);
-    expect(userVersion(second)).toBe(5);
+    expect(userVersion(second)).toBe(6);
     expect(second.prepare("SELECT name FROM skills").all()).toEqual([{ name: "Persisted" }]);
     second.close();
   });
@@ -280,7 +280,7 @@ describe("database migrations", () => {
 
   it("rejects schemas newer than the application", () => {
     const path = databasePath();
-    createFixture(path, `${S1_SCHEMA} ${S2_SCHEMA} PRAGMA user_version = 6;`);
+    createFixture(path, `${S1_SCHEMA} ${S2_SCHEMA} PRAGMA user_version = 7;`);
 
     expectSchemaError(path, "SCHEMA_TOO_NEW");
   });
