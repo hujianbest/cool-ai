@@ -1,0 +1,133 @@
+# hf-gate-run
+# label: t11-red
+# command: npm.cmd test -- tests/memory-v6-contracts.test.ts tests/memory-source-navigation.test.ts
+# started: 2026-08-01T06:02:30+00:00
+
+> collaboration-cockpit@0.1.0 test
+> vitest run tests/memory-v6-contracts.test.ts tests/memory-source-navigation.test.ts
+
+
+ RUN  v4.1.10 D:/cool-ai
+
+(node:3216) ExperimentalWarning: SQLite is an experimental feature and might change at any time
+(Use `node --trace-warnings ...` to show where the warning was created)
+(node:11108) ExperimentalWarning: SQLite is an experimental feature and might change at any time
+(Use `node --trace-warnings ...` to show where the warning was created)
+ ❯ tests/memory-v6-contracts.test.ts (7 tests | 7 failed) 24ms
+     × accepts all five types and preserves owner actor and legacy source semantics 11ms
+     × models Agent proposal, review confirmation, and platform persistence separately 2ms
+     × fails closed without echoing unknown memory type 3ms
+     × fails closed without echoing unknown source type 2ms
+     × fails closed without echoing extra top-level field 2ms
+     × fails closed without echoing extra actor field 2ms
+     × fails closed without echoing extra source field 2ms
+ ❯ tests/memory-source-navigation.test.ts (6 tests | 6 failed) 2393ms
+     × resolves exact task id/version to a versioned product href 406ms
+     × resolves exact result id/version to a versioned product href 406ms
+     × resolves exact review id/version to a versioned product href 393ms
+     × resolves exact validation id/version to a versioned product href 411ms
+     × resolves exact artifact id/version to a versioned product href 383ms
+     × fails closed for cross-project, drifted, unknown, and extra-field sources 392ms
+
+⎯⎯⎯⎯⎯⎯ Failed Tests 13 ⎯⎯⎯⎯⎯⎯⎯
+
+ FAIL  tests/memory-source-navigation.test.ts > memory source resolver > resolves exact task id/version to a versioned product href
+ FAIL  tests/memory-source-navigation.test.ts > memory source resolver > resolves exact result id/version to a versioned product href
+ FAIL  tests/memory-source-navigation.test.ts > memory source resolver > resolves exact review id/version to a versioned product href
+ FAIL  tests/memory-source-navigation.test.ts > memory source resolver > resolves exact validation id/version to a versioned product href
+ FAIL  tests/memory-source-navigation.test.ts > memory source resolver > resolves exact artifact id/version to a versioned product href
+AssertionError: the memory source resolver module must exist: expected undefined to be type of 'function'
+
+Expected: "function"
+Received: "undefined"
+
+ ❯ resolver tests/memory-source-navigation.test.ts:47:64
+     45| async function resolver(): Promise<SourceResolverModule["resolveMemory…
+     46|   const load = resolverModules["../src/server/memory-source-resolver.t…
+     47|   expect(load, "the memory source resolver module must exist").toBeTyp…
+       |                                                                ^
+     48|   return (await load()).resolveMemorySource;
+     49| }
+ ❯ tests/memory-source-navigation.test.ts:125:39
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[1/13]⎯
+
+ FAIL  tests/memory-source-navigation.test.ts > memory source resolver > fails closed for cross-project, drifted, unknown, and extra-field sources
+AssertionError: the memory source resolver module must exist: expected undefined to be type of 'function'
+
+Expected: "function"
+Received: "undefined"
+
+ ❯ resolver tests/memory-source-navigation.test.ts:47:64
+     45| async function resolver(): Promise<SourceResolverModule["resolveMemory…
+     46|   const load = resolverModules["../src/server/memory-source-resolver.t…
+     47|   expect(load, "the memory source resolver module must exist").toBeTyp…
+       |                                                                ^
+     48|   return (await load()).resolveMemorySource;
+     49| }
+ ❯ tests/memory-source-navigation.test.ts:147:39
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[2/13]⎯
+
+ FAIL  tests/memory-v6-contracts.test.ts > memory v6 strict contracts > accepts all five types and preserves owner actor and legacy source semantics
+AssertionError: the memory v6 strict contract module must exist: expected undefined to be type of 'function'
+
+Expected: "function"
+Received: "undefined"
+
+ ❯ contracts tests/memory-v6-contracts.test.ts:33:67
+     31| async function contracts(): Promise<MemoryContractsModule> {
+     32|   const load = contractModules["../src/shared/memory-contracts.ts"];
+     33|   expect(load, "the memory v6 strict contract module must exist").toBe…
+       |                                                                   ^
+     34|   return load();
+     35| }
+ ❯ tests/memory-v6-contracts.test.ts:39:43
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[3/13]⎯
+
+ FAIL  tests/memory-v6-contracts.test.ts > memory v6 strict contracts > models Agent proposal, review confirmation, and platform persistence separately
+AssertionError: the memory v6 strict contract module must exist: expected undefined to be type of 'function'
+
+Expected: "function"
+Received: "undefined"
+
+ ❯ contracts tests/memory-v6-contracts.test.ts:33:67
+     31| async function contracts(): Promise<MemoryContractsModule> {
+     32|   const load = contractModules["../src/shared/memory-contracts.ts"];
+     33|   expect(load, "the memory v6 strict contract module must exist").toBe…
+       |                                                                   ^
+     34|   return load();
+     35| }
+ ❯ tests/memory-v6-contracts.test.ts:77:43
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[4/13]⎯
+
+ FAIL  tests/memory-v6-contracts.test.ts > memory v6 strict contracts > fails closed without echoing unknown memory type
+ FAIL  tests/memory-v6-contracts.test.ts > memory v6 strict contracts > fails closed without echoing unknown source type
+ FAIL  tests/memory-v6-contracts.test.ts > memory v6 strict contracts > fails closed without echoing extra top-level field
+ FAIL  tests/memory-v6-contracts.test.ts > memory v6 strict contracts > fails closed without echoing extra actor field
+ FAIL  tests/memory-v6-contracts.test.ts > memory v6 strict contracts > fails closed without echoing extra source field
+AssertionError: the memory v6 strict contract module must exist: expected undefined to be type of 'function'
+
+Expected: "function"
+Received: "undefined"
+
+ ❯ contracts tests/memory-v6-contracts.test.ts:33:67
+     31| async function contracts(): Promise<MemoryContractsModule> {
+     32|   const load = contractModules["../src/shared/memory-contracts.ts"];
+     33|   expect(load, "the memory v6 strict contract module must exist").toBe…
+       |                                                                   ^
+     34|   return load();
+     35| }
+ ❯ tests/memory-v6-contracts.test.ts:127:43
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[5/13]⎯
+
+
+ Test Files  2 failed (2)
+      Tests  13 failed (13)
+   Start at  14:02:31
+   Duration  5.52s (transform 289ms, setup 994ms, import 667ms, tests 2.42s, environment 3.95s)
+
+# exit: 1

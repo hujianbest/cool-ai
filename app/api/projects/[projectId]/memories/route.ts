@@ -4,17 +4,14 @@ import { memoryApiError, readMemoryJson } from "@/src/server/memory-api";
 import {
   createMemory,
   listMemories,
+  type CreateMemoryInput,
 } from "@/src/server/memory-service";
-import type { MemoryEntry } from "@/src/shared/project-context-contracts";
+import {
+  memoryCreateResponseSchema,
+  memoryListResponseSchema,
+} from "@/src/shared/memory-contracts";
 
 type RouteContext = { params: Promise<{ projectId: string }> };
-type CreateMemoryInput = {
-  type: MemoryEntry["type"];
-  content: string;
-  sourceType: MemoryEntry["sourceType"];
-  sourceRef: string;
-  supersedesId?: string;
-};
 
 function databasePath(): string {
   return process.env.COCKPIT_DB_PATH ?? join(process.cwd(), ".data", "cockpit.sqlite");
@@ -28,9 +25,9 @@ export async function GET(
   try {
     const includeInactive =
       new URL(request.url).searchParams.get("includeInactive") === "1";
-    return Response.json({
+    return Response.json(memoryListResponseSchema.parse({
       memories: listMemories(databasePath(), projectId, includeInactive),
-    });
+    }));
   } catch (error) {
     return memoryApiError(error, "GET /api/projects/:projectId/memories");
   }
@@ -45,13 +42,13 @@ export async function POST(
   if (!body.ok) return body.response;
   try {
     return Response.json(
-      {
+      memoryCreateResponseSchema.parse({
         memory: createMemory(
           databasePath(),
           projectId,
           body.value as CreateMemoryInput,
         ),
-      },
+      }),
       { status: 201 },
     );
   } catch (error) {

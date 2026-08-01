@@ -1,0 +1,24 @@
+# hf-gate-run
+# label: t11-context-regression
+# command: npm.cmd test -- tests/context-migrations.test.ts tests/context.api.test.ts tests/context-smoke-contract.test.ts tests/context-snapshot.test.ts
+# started: 2026-08-01T06:07:53+00:00
+
+> collaboration-cockpit@0.1.0 test
+> vitest run tests/context-migrations.test.ts tests/context.api.test.ts tests/context-smoke-contract.test.ts tests/context-snapshot.test.ts
+
+
+ RUN  v4.1.10 D:/cool-ai
+
+(node:12480) ExperimentalWarning: SQLite is an experimental feature and might change at any time
+(Use `node --trace-warnings ...` to show where the warning was created)
+(node:11160) ExperimentalWarning: SQLite is an experimental feature and might change at any time
+(Use `node --trace-warnings ...` to show where the warning was created)
+(node:2560) ExperimentalWarning: SQLite is an experimental feature and might change at any time
+(Use `node --trace-warnings ...` to show where the warning was created)
+
+ Test Files  4 passed (4)
+      Tests  10 passed (10)
+   Start at  14:07:54
+   Duration  15.73s (transform 3.12s, setup 7.37s, import 5.84s, tests 10.61s, environment 25.94s)
+
+# exit: 0

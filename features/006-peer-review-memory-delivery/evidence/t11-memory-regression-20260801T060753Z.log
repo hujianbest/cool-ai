@@ -1,0 +1,26 @@
+# hf-gate-run
+# label: t11-memory-regression
+# command: npm.cmd test -- tests/memory.service.test.ts tests/memory.api.test.ts tests/memory-v6-contracts.test.ts tests/memory-source-navigation.test.ts
+# started: 2026-08-01T06:07:53+00:00
+
+> collaboration-cockpit@0.1.0 test
+> vitest run tests/memory.service.test.ts tests/memory.api.test.ts tests/memory-v6-contracts.test.ts tests/memory-source-navigation.test.ts
+
+
+ RUN  v4.1.10 D:/cool-ai
+
+(node:13648) ExperimentalWarning: SQLite is an experimental feature and might change at any time
+(Use `node --trace-warnings ...` to show where the warning was created)
+(node:15188) ExperimentalWarning: SQLite is an experimental feature and might change at any time
+(Use `node --trace-warnings ...` to show where the warning was created)
+(node:8704) ExperimentalWarning: SQLite is an experimental feature and might change at any time
+(Use `node --trace-warnings ...` to show where the warning was created)
+(node:12724) ExperimentalWarning: SQLite is an experimental feature and might change at any time
+(Use `node --trace-warnings ...` to show where the warning was created)
+
+ Test Files  4 passed (4)
+      Tests  20 passed (20)
+   Start at  14:07:54
+   Duration  15.53s (transform 1.04s, setup 7.24s, import 4.19s, tests 13.41s, environment 25.89s)
+
+# exit: 0

@@ -2,25 +2,56 @@ import { createHash, randomUUID } from "node:crypto";
 import type { DatabaseSync } from "node:sqlite";
 
 import { openDatabase } from "@/src/server/db";
-import type { MemoryEntry } from "@/src/shared/project-context-contracts";
+import {
+  MemorySourceResolutionError,
+  resolveMemorySource,
+} from "@/src/server/memory-source-resolver";
+import {
+  memoryEntryV6Schema,
+  type MemoryEntryV6,
+  type MemoryType,
+} from "@/src/shared/memory-contracts";
 
-type MemoryType = MemoryEntry["type"];
-type SourceType = MemoryEntry["sourceType"];
+type SourceType = "owner_input" | "work_item" | "artifact_path";
 type FieldError = { field: string; code: string };
-type CreateMemoryInput = {
+export type CreateMemoryInput = {
   type: MemoryType;
   content: string;
   sourceType: SourceType;
   sourceRef: string;
   supersedesId?: string;
 };
-type MemoryRow = Omit<MemoryEntry, "active"> & { active: number };
+type MemoryResult = MemoryEntryV6;
+type MemoryRow = {
+  accentToken: string | null;
+  active: number;
+  chainId: string;
+  confirmerChoice: string | null;
+  confirmingReviewAttemptId: string | null;
+  content: string;
+  createdAt: string;
+  decisionId: string | null;
+  id: string;
+  persistenceActor: string;
+  projectId: string;
+  proposerActorId: string | null;
+  proposerActorType: string;
+  proposerAgentName: string | null;
+  proposerAvatarText: string | null;
+  sourceId: string;
+  sourceType: MemoryEntryV6["source"]["type"];
+  sourceVersion: string | null;
+  supersedesId: string | null;
+  type: MemoryType;
+  version: number;
+};
 
 const memoryTypes: readonly MemoryType[] = [
   "goal",
   "decision",
   "fact",
   "artifact",
+  "experience",
 ];
 const sourceTypes: readonly SourceType[] = [
   "owner_input",
@@ -91,6 +122,15 @@ export function normalizeArtifactPath(sourceRef: string): string {
 
 function parseInput(input: CreateMemoryInput): CreateMemoryInput {
   const fields: FieldError[] = [];
+  if (
+    !input
+    || typeof input !== "object"
+    || Object.keys(input).some((key) =>
+      !["type", "content", "sourceType", "sourceRef", "supersedesId"].includes(key)
+    )
+  ) {
+    fields.push({ field: "input", code: "invalid_format" });
+  }
   if (!input || !memoryTypes.includes(input.type)) {
     fields.push({ field: "type", code: "invalid_format" });
   }
@@ -153,31 +193,126 @@ function validateSource(
   return sourceRef;
 }
 
-function toMemory(row: MemoryRow): MemoryEntry {
-  return { ...row, active: row.active === 1 };
+function toMemory(database: DatabaseSync, row: MemoryRow): MemoryResult {
+  let source: MemoryEntryV6["source"];
+  if (row.proposerActorType === "owner") {
+    if (
+      row.proposerActorId !== null
+      || row.confirmingReviewAttemptId !== null
+      || row.sourceVersion !== null
+      || !sourceTypes.includes(row.sourceType as SourceType)
+    ) invalidSource();
+    source = {
+      href: null,
+      id: row.sourceId,
+      type: row.sourceType,
+      version: null,
+    };
+  } else if (row.proposerActorType === "agent") {
+    if (
+      !row.proposerActorId
+      || !row.proposerAgentName
+      || !row.proposerAvatarText
+      || !row.accentToken
+      || !row.confirmingReviewAttemptId
+      || !row.decisionId
+      || row.confirmerChoice !== "pass"
+      || !row.sourceVersion
+    ) invalidSource();
+    try {
+      source = resolveMemorySource(database, {
+        confirmingReviewAttemptId: row.confirmingReviewAttemptId,
+        id: row.sourceId,
+        projectId: row.projectId,
+        type: row.sourceType as "task" | "result" | "review" | "validation" | "artifact",
+        version: row.sourceVersion,
+      });
+    } catch (error) {
+      if (error instanceof MemorySourceResolutionError) invalidSource();
+      throw error;
+    }
+  } else {
+    invalidSource();
+  }
+
+  const memory = memoryEntryV6Schema.parse({
+    active: row.active === 1,
+    actor: row.proposerActorType === "owner"
+      ? {
+          confirmer: null,
+          persistedBy: row.persistenceActor,
+          proposerAgent: null,
+          proposerType: "owner",
+        }
+      : {
+          confirmer: {
+            decisionId: row.decisionId,
+            reviewAttemptId: row.confirmingReviewAttemptId,
+          },
+          persistedBy: row.persistenceActor,
+          proposerAgent: {
+            accentToken: row.accentToken,
+            avatarText: row.proposerAvatarText,
+            id: row.proposerActorId,
+            name: row.proposerAgentName,
+          },
+          proposerType: "agent",
+        },
+    chainId: row.chainId,
+    content: row.content,
+    createdAt: row.createdAt,
+    id: row.id,
+    projectId: row.projectId,
+    source,
+    supersedesId: row.supersedesId,
+    type: row.type,
+    version: row.version,
+  });
+  if (row.proposerActorType === "owner") {
+    Object.defineProperties(memory, {
+      createdBy: { enumerable: false, value: "owner" },
+      sourceRef: { enumerable: false, value: row.sourceId },
+      sourceType: { enumerable: false, value: row.sourceType },
+    });
+  }
+  return memory as MemoryResult;
 }
 
-function memoryById(database: DatabaseSync, memoryId: string): MemoryEntry | undefined {
+function memoryById(database: DatabaseSync, memoryId: string): MemoryResult | undefined {
   const row = database
     .prepare(
       `SELECT
          entry.id,
          entry.project_id AS projectId,
+         entry.chain_id AS chainId,
+         entry.version,
          entry.type,
          entry.content,
          entry.source_type AS sourceType,
-         entry.source_id AS sourceRef,
-         entry.proposer_actor_type AS createdBy,
+         entry.source_id AS sourceId,
+         entry.source_version AS sourceVersion,
+         entry.proposer_actor_type AS proposerActorType,
+         entry.proposer_actor_id AS proposerActorId,
+         proposer.name AS proposerAgentName,
+         proposer.avatar_text AS proposerAvatarText,
+         proposer.accent_token AS accentToken,
+         entry.confirming_review_attempt_id AS confirmingReviewAttemptId,
+         decision.id AS decisionId,
+         decision.choice AS confirmerChoice,
+         entry.persistence_actor AS persistenceActor,
          entry.supersedes_id AS supersedesId,
          entry.created_at AS createdAt,
          CASE WHEN EXISTS (
            SELECT 1 FROM memory_entries child WHERE child.supersedes_id = entry.id
          ) THEN 0 ELSE 1 END AS active
        FROM memory_entries entry
+       LEFT JOIN agents proposer ON proposer.id=entry.proposer_actor_id
+       LEFT JOIN review_decisions decision
+         ON decision.attempt_id=entry.confirming_review_attempt_id
        WHERE entry.id = ?`,
     )
     .get(memoryId) as MemoryRow | undefined;
-  return row ? toMemory(row) : undefined;
+  return row ? toMemory(database, row) : undefined;
 }
 
 function transaction<T>(database: DatabaseSync, operation: () => T): T {
@@ -200,7 +335,7 @@ export function createMemory(
   databasePath: string,
   projectId: string,
   input: CreateMemoryInput,
-): MemoryEntry {
+): MemoryResult {
   const parsed = parseInput(input);
   const database = openDatabase(databasePath);
   try {
@@ -279,35 +414,57 @@ export function listMemories(
   databasePath: string,
   projectId: string,
   includeInactive = false,
-): MemoryEntry[] {
+): MemoryResult[] {
   const database = openDatabase(databasePath);
   try {
-    ensureProject(database, projectId);
-    const rows = database
-      .prepare(
-        `SELECT
+    return listMemoriesInDatabase(database, projectId, includeInactive);
+  } finally {
+    database.close();
+  }
+}
+
+export function listMemoriesInDatabase(
+  database: DatabaseSync,
+  projectId: string,
+  includeInactive = false,
+): MemoryResult[] {
+  ensureProject(database, projectId);
+  const rows = database
+    .prepare(
+      `SELECT
            entry.id,
            entry.project_id AS projectId,
+           entry.chain_id AS chainId,
+           entry.version,
            entry.type,
            entry.content,
            entry.source_type AS sourceType,
-           entry.source_id AS sourceRef,
-           entry.proposer_actor_type AS createdBy,
+           entry.source_id AS sourceId,
+           entry.source_version AS sourceVersion,
+           entry.proposer_actor_type AS proposerActorType,
+           entry.proposer_actor_id AS proposerActorId,
+           proposer.name AS proposerAgentName,
+           proposer.avatar_text AS proposerAvatarText,
+           proposer.accent_token AS accentToken,
+           entry.confirming_review_attempt_id AS confirmingReviewAttemptId,
+           decision.id AS decisionId,
+           decision.choice AS confirmerChoice,
+           entry.persistence_actor AS persistenceActor,
            entry.supersedes_id AS supersedesId,
            entry.created_at AS createdAt,
            CASE WHEN EXISTS (
              SELECT 1 FROM memory_entries child WHERE child.supersedes_id = entry.id
            ) THEN 0 ELSE 1 END AS active
          FROM memory_entries entry
+         LEFT JOIN agents proposer ON proposer.id=entry.proposer_actor_id
+         LEFT JOIN review_decisions decision
+           ON decision.attempt_id=entry.confirming_review_attempt_id
          WHERE entry.project_id = ?
            AND (? = 1 OR NOT EXISTS (
              SELECT 1 FROM memory_entries child WHERE child.supersedes_id = entry.id
            ))
          ORDER BY entry.created_at ASC, entry.id ASC`,
-      )
-      .all(projectId, Number(includeInactive)) as MemoryRow[];
-    return rows.map(toMemory);
-  } finally {
-    database.close();
-  }
+    )
+    .all(projectId, Number(includeInactive)) as MemoryRow[];
+  return rows.map((row) => toMemory(database, row));
 }

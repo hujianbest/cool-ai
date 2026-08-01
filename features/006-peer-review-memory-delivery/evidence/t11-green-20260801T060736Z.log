@@ -1,0 +1,22 @@
+# hf-gate-run
+# label: t11-green
+# command: npm.cmd test -- tests/memory-v6-contracts.test.ts tests/memory-source-navigation.test.ts
+# started: 2026-08-01T06:07:36+00:00
+
+> collaboration-cockpit@0.1.0 test
+> vitest run tests/memory-v6-contracts.test.ts tests/memory-source-navigation.test.ts
+
+
+ RUN  v4.1.10 D:/cool-ai
+
+(node:16140) ExperimentalWarning: SQLite is an experimental feature and might change at any time
+(Use `node --trace-warnings ...` to show where the warning was created)
+(node:13356) ExperimentalWarning: SQLite is an experimental feature and might change at any time
+(Use `node --trace-warnings ...` to show where the warning was created)
+
+ Test Files  2 passed (2)
+      Tests  14 passed (14)
+   Start at  14:07:37
+   Duration  5.94s (transform 408ms, setup 879ms, import 818ms, tests 3.53s, environment 3.65s)
+
+# exit: 0

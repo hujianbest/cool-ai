@@ -1,0 +1,22 @@
+# hf-gate-run
+# label: t11-api-regression
+# command: npm.cmd test -- tests/memory.api.test.ts tests/context.api.test.ts
+# started: 2026-08-01T06:07:53+00:00
+
+> collaboration-cockpit@0.1.0 test
+> vitest run tests/memory.api.test.ts tests/context.api.test.ts
+
+
+ RUN  v4.1.10 D:/cool-ai
+
+(node:5460) ExperimentalWarning: SQLite is an experimental feature and might change at any time
+(Use `node --trace-warnings ...` to show where the warning was created)
+(node:13344) ExperimentalWarning: SQLite is an experimental feature and might change at any time
+(Use `node --trace-warnings ...` to show where the warning was created)
+
+ Test Files  2 passed (2)
+      Tests  4 passed (4)
+   Start at  14:07:54
+   Duration  12.90s (transform 1.19s, setup 3.83s, import 2.61s, tests 3.65s, environment 12.92s)
+
+# exit: 0
