@@ -192,3 +192,55 @@
 - 已闭合：helper 在同一事务内依次验证 brand、`user_version=6`、完整 schema、实际缺口与 allowlist 全等，补种后调用生产 `validateV6`；任一步失败整体回滚并保持行数不变。T-30 明确覆盖仅缺 head 但无合法 handle 的故意坏库直连生产入口和误经 helper 均失败，且当前通用自动修复 WIP 恰能为该新隔离契约提供独立 RED。
 - 可实现性成立：handle 身份、输入边界、缺口谓词、事务顺序、失败原子性、生产 validator 复核及测试命令均已具体到实现无需再发明关键安全语义，并与 T-30 的新 RED/GREEN 边界一致。
 - T-31/T-32 无回归：T-31 的 terminal history ready/empty 判定与独立 RED/GREEN 保持不变；T-32 仍要求恢复 T-29 最薄 harness 后真实 spawn 完整 provider/Next/SQLite/browser 链取得新 RED，旧 T-30 证据只作诊断，任务覆盖索引与自检仍一致。
+
+# Design评审（第12轮）
+
+- 日期: 2026-08-02
+- 评审方式: subagent
+- 结论: 需修改
+
+## Findings
+
+- [一般] `design.md` §4.4 第 722～731 行、§9.2 第 1369～1376 行、§12.1 第 1478 行与 T-32（第 1618 行）: 诊断事实与当前实现吻合——primary 与 repair 均为 invalid 时，`completeFailure` 会在同一事务把 attempt 置 `failed`、receipt 置 completed，却不更新仍指向该 failed attempt 的 `reviewing` head，随后 v6 invariant/read/open fail-closed；修订也已要求失败事务恢复 `pending_review/currentAttempt=null/version+1`，并覆盖零裁决、重启、公开 reads、late finalizer 与 replay。但“匹配的 reviewing head”尚未固定为可实现且可审计的 CAS identity，§9.2 的通用 review-head key 也没有 `currentAttemptId`；未明确 attempt/operation/head 三个 UPDATE 各自必须命中几行、任一 CAS=0 时整笔如何回滚并读取 winner。实现者仍可能只按 work item/state 或只按 current attempt 更新，在较新 attempt/head 已获胜时误回退 current 状态。→ 明确 `completeFailure` 的单事务 CAS tuple，至少绑定 `workItemId + projectId/missionId + currentResultId + currentAttemptId=本 attempt + state=reviewing + acquire 后 headVersion`，并要求 attempt `calling→failed`、operation `pending→completed`、head `reviewing→pending_review/currentAttempt=null/version+1` 均恰好更新一行；任一不满足整笔 rollback，late/replay只返回已持久 winner/receipt且不得移动较新 head。T-32 直接断言 CAS=0、较新 attempt、same-operation replay、关闭重开及 projects/tasks/context/review reads。
+- [一般] `design.md` §12.1 第 1480 行、T-33（第 1619 行）与 Design Checklist 自检（第 1650 行）: 旧 T-32 证据的诊断归属没有穷尽。目录中共有 8 份旧 `t32-*` 日志：两份 red、四份失败的 green、一次 build 通过以及最后一份失败的 green；正文只点名 `t32-red-20260801T154553Z` 与 `t32-green-20260801T155832Z`。其余精确 `t32-red/green` label 仍可能被机械门禁命中，`t32-build` 也可能被误当 T-32 收口证据；这与“旧 t30/t32 诊断证据均不计”和“每任务独立真实 RED/GREEN”的自检声明不够一致。→ 穷尽列出或用明确封闭集合声明以下 8 份均只属拆分前 full-chain WIP 诊断、不得计入新 T-32/T-33：`t32-red-20260801T154532Z`、`t32-red-20260801T154553Z`、`t32-green-20260801T154811Z`、`t32-build-20260801T155011Z`、`t32-green-20260801T155052Z`、`t32-green-20260801T155239Z`、`t32-green-20260801T155532Z`、`t32-green-20260801T155832Z`；新 T-32 只能以 production application 专属测试取得更晚的真实 `t32-red/green`，新 T-33 只能在恢复 T-29 最薄 harness 后以真实 spawn、合法 `escalate`（2..8 options）取得 `t33-red/green`。
+
+## 本轮其余核对
+
+- T-33 的合法输出边界已闭合：reject/escalate/pass 都要求 strict 合法 provider 输出，escalate 明确复用 2..8 options，禁止再用 invalid output 驱动产品失败路径。
+- T-33 的重新 RED 边界正确：先恢复已提交 T-29 最薄 harness，再由测试真实 spawn `npm run smoke:review -- --full`；缺完整 reject→新 result→escalate→answer/new attempt→pass→memory→delivery→独立进程重启→desktop/narrow 任一运行行为即红，不接受源码字符串匹配。
+- T-32/T-33 inline FR/NFR 集合与第 1623～1640 行覆盖索引一致；ext-ui-design 的 desktop/narrow、三态、键盘、焦点、token 与真实渲染要求仍由 T-33 及既有 UI 任务覆盖。
+
+# Design评审（第13轮）
+
+- 日期: 2026-08-02
+- 评审方式: subagent
+- 结论: 需修改
+
+## Findings
+
+- [一般] 第12轮第1项未完全闭合（`design.md` §3.2 第200～245行、§4.4 第722～731行、§9.2 第1369～1379行与 T-32 第1618行）: failed-review 收口已经明确为单事务三次 CAS、每次恰好命中1行、任一失败整体 rollback 并读取 winner，head tuple 也完整绑定 project/mission/work item/current result/current attempt/reviewing/acquire 后 version，能够保护较新 attempt/head；但 operation CAS 写成 `(id,projectId,kind=start_review,status=pending,attemptId)`，而 `review_operations` 表没有 `attempt_id` 列，只有 attempt 反向持有 `(project_id,operation_id)` 外键。正文既未定义 correlated `EXISTS`/join 条件，也没有使用 §9.2 已声明的 operation key `(projectId,operationId,kind,requestHash)`；实现者仍需自行选择不存在字段、反向关联或 request hash 三种语义。T-32 也只直接断言 head tuple 与三次 UPDATE 行数，没有锁定 attempt/operation 的完整可执行 predicate。→ 把三次 CAS 分别写成与实际 schema 一致的精确 SQL predicate：attempt 至少绑定其 id/project/mission/work item/result/operation/status（以及该失败路径需要的 lease/版本事实），operation 绑定 `(projectId,id,kind,parentId,requestHash,status)` 并以明确的反向 attempt 关联证明属于本 attempt，head 保持现有完整 tuple；同步 T-32 逐一断言三组完整 predicate、各1行、任一0行回滚/返回 durable winner、较新 head 不移动。
+
+## 第12轮 Findings 闭合确认
+
+- 第1项部分闭合：三次 CAS 的事务原子性、affected rows=1、rollback/winner、完整 head identity、较新 head 保护及 replay/late/restart/read 任务断言均已补齐；operation CAS 与实际 schema/§9.2 key 不一致，attempt/operation 完整 predicate 的任务断言仍缺。
+- 第2项已闭合：正文以封闭集合逐一列出目录中全部8份旧 `t32-*` 日志，统一声明仅作拆分前 full-chain WIP 诊断且不得计入新 T-32/T-33；新 T-32 必须以 production application 专属测试取得晚于全部8份日志的 `t32-red/green`，新 T-33 必须恢复 T-29 最薄 harness 后真实 spawn 取得 `t33-red/green`。
+- T-33 边界无回归：reject/escalate/pass 仍要求 strict 合法 provider 输出，escalate 为2..8 options；完整真实链、独立进程重启、desktop/narrow 键盘与截图、唯一 PASS sentinel、无 route interception/业务 DB 直写及 GREEN 后 suite/build/full smoke 均保留。
+
+# Design评审（第14轮）
+
+- 日期: 2026-08-02
+- 评审方式: subagent
+- 结论: 通过
+- 用户确认: auto-approved 2026-08-02
+
+## Findings
+
+无
+
+## 第13轮 Finding 闭合确认
+
+- 已闭合：`acquire` 明确返回并传递 `{leaseToken,requestHash,acquiredHeadVersion}`，失败收口不再依赖调用方重算或漂移后的 head version。
+- 已闭合：attempt predicate 只使用实际 `review_attempts` 列，完整绑定 `id/project_id/mission_id/work_item_id/result_id/operation_id/status='calling'/lease_token`；operation predicate 只使用实际 `review_operations` 列，绑定 `project_id/id/kind='start_review'/parent_id/request_hash/status='pending'`，并以 correlated attempt `EXISTS` 通过反向外键证明该 operation 属于本 attempt。
+- 已闭合：head predicate 完整绑定 `projectId/missionId/workItemId/currentResultId/currentAttemptId/state=reviewing/version=acquiredHeadVersion`；三次 CAS 各须恰好命中一行，任一失败整笔回滚、读取 durable winner，且不得移动较新 attempt/head。
+- 已闭合：T-32 直接断言 acquire 三项返回值、attempt/operation/head 三组完整 predicate、correlated `EXISTS`、affected rows、rollback/winner、late/replay/restart/read 边界，不以间接终态替代 CAS 身份验证。
+- 旧日志与 T-33 无回归：封闭 8 份旧 `t32-*` 日志仍全部仅作拆分前诊断，不计入新 T-32/T-33；当前目录无 `t33-*` 证据，T-33 仍须恢复 T-29 最薄 harness 后真实 spawn，以 strict 合法 reject/escalate/pass（escalate 2..8 options）覆盖完整链、独立进程重启、desktop/narrow 键盘与截图，并在 GREEN 后运行 suite/build/full smoke。

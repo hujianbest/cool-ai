@@ -723,7 +723,7 @@ Business finalize `BEGIN IMMEDIATE`:
 
 1. CAS attempt id/status=`finalizing`/checkpoint hash；重算 head identity/version、current result、reviewer资格和 material/context hash。
 2. lease失效、mission终止、head变化、result被取代、资格丢失或 material/context hash变化 → 记录 typed discard原因，保留只读 checkpoint，head回到适当 current state，不提交 decision/memory/delivery。
-3. provider/schema/usage/redaction失败发生在 checkpoint前：attempt=`failed`、head=`pending_review`、完成 receipt为稳定 error；不自动 retry。
+3. provider/schema/usage/redaction失败发生在 checkpoint前：`acquire`返回并传递 `{leaseToken,requestHash,acquiredHeadVersion}`。单一 `BEGIN IMMEDIATE` 内依次要求：(a) attempt UPDATE predicate=`id,project_id,mission_id,work_item_id,result_id,operation_id,status='calling',lease_token`；(b) operation predicate=`project_id,id,kind='start_review',parent_id,request_hash,status='pending'`，并以 correlated `EXISTS(SELECT 1 FROM review_attempts a WHERE a.project_id=review_operations.project_id AND a.operation_id=review_operations.id AND a.id=:attemptId AND a.mission_id=:missionId AND a.work_item_id=:workItemId AND a.result_id=:resultId)`证明反向归属；(c) head predicate=`projectId,missionId,workItemId,currentResultId,currentAttemptId=attemptId,state=reviewing,version=acquiredHeadVersion`。分别更新为 attempt failed、operation completed稳定receipt、head `pending_review/currentAttempt=null/version+1`；三者各恰好命中1行才提交。任一命中0或>1整笔rollback，读取durable winner receipt/当前head并返回冲突，不改较新 attempt/head。不自动 retry。
 4. 从 checkpoint重新 strict parse，完成 evidence/content/candidate/source/supersedes/completion全量业务校验，再按 choice进入 §5事务；不接受调用栈传入的未持久 output。
 5. 可确定的业务校验失败（如正文不完整、source/supersedes非法）在独立收口事务中保留 checkpoint、attempt=`failed`、head=`pending_review`并完成稳定 error receipt；same operation replay返回原错误，不重新调用 provider。材料修复后必须新 attempt。
 6. 成功后 attempt终态、decision、head、board/memory/escalation/events和 receipt在同一事务完成。
@@ -1475,8 +1475,9 @@ canonical producers只能写右列；适配器仅为升级前既有行服务，�
 - T-29 smoke infrastructure contract: `tests/review-browser-smoke.test.ts`先断言 `package.json`存在 `smoke:review`、harness启动本地 OpenAI-compatible真实 HTTP provider与真实 Next进程，并以Playwright经产品UI完成最薄 pass→memory→delivery；缺脚本/harness即 RED。GREEN实现 `tests/review-browser-smoke.mjs`及 script，不含 route interception/业务SQLite写入。
 - T-30 v6 fixture contract: `tests/v6-fixture-db.test.ts`先针对当前WIP helper取得独立 RED：显式fixture缺head可补种，但同一批含额外schema/data损坏或无合法fixture handle的库即使误经helper仍必须fail-closed、生产模块不得import helper。GREEN签名固定为 `createV6FixtureHandle(path,{missingDeliveryHeadMissionIds,missingReviewHeadResultIds})` → module-private `WeakSet` branded handle，再由 `openV6FixtureDatabase(handle)` 使用；普通path/plain object不能调用修复。allowlist是精确tuple集合：前者每个id必须对应一个存在mission且唯一缺其delivery head，后者每个id必须是某work item当前latest result且唯一缺其review head；少报、多报、重复、已有部分head、非latest、project/work-item/result错配均拒绝。helper在同一事务先验证brand、`user_version=6`、完整schema和实际缺口集合与allowlist全等，再补种并调用生产`validateV6`；任一步失败rollback且行数不变。不包裹/替代生产validator。故意坏库、migration/invariant测试继续直连生产DB。
 - T-31 terminal history UI contract: `tests/review-product-wiring.test.tsx`先构造 `effectiveStatus=rework,currentAttempt=null,currentEscalation=null,history=[rejected]`，证明“回答”误判empty并隐藏唯一裁决；GREEN仅在产品surface把已加载history视为ready，保留真正无history/无issue的empty语义。
-- T-32 full-chain smoke contract: 开始任务前把原T-30 WIP harness恢复到已提交T-29最薄版本；`tests/review-browser-full-chain.test.ts`必须真实 spawn `npm run smoke:review -- --full`，以隔离端口/DB执行 provider+Next+browser，并要求进程输出 `REVIEW FULL CHAIN PASS`及两张截图。最薄harness忽略/不支持`--full`或缺任一 reject→新result→escalate→answer/new attempt→pass→memory→delivery→restart→desktop/narrow运行行为时形成独立 RED，禁止读取源码匹配字符串。GREEN再实现/恢复完整harness。
-- `evidence/t24-red-20260801T081018Z.log` 基于已废弃 route，只是诊断。原T-30 WIP 的 `t30-red-*`、`t30-green-*`、`t30-build-*`、`suite-20260801T104956Z|110413Z|111338Z` 与 `smoke-20260801T111707Z|111903Z` 全部只作计划偏差诊断，不计入T-30/T-31/T-32机械或人工验收。三个任务必须分别产生时间更晚且测试文件/行为唯一对应的新 `t30-red/green`、`t31-red/green`、`t32-red/green`；人工评审不得因旧同label命中推进。
+- T-32 failed-review terminal projection contract: `tests/review-production-application.test.ts`先覆盖 primary+repair 均invalid，证明 attempt/receipt终态后 head仍错误停在reviewing并导致 `validateV6/openDatabase` fail-closed；GREEN要求同一失败事务CAS恢复 head=`pending_review,currentAttempt=null`并递增版本，late/replay不回退新状态。
+- T-33 full-chain smoke contract: 开始任务前把WIP harness恢复到已提交T-29最薄版本；`tests/review-browser-full-chain.test.ts`必须真实 spawn `npm run smoke:review -- --full`，以隔离端口/DB执行 provider+Next+browser，并要求进程输出 `REVIEW FULL CHAIN PASS`及两张截图。最薄harness忽略/不支持`--full`或缺任一 reject→新result→escalate→answer/new attempt→pass→memory→delivery→restart→desktop/narrow运行行为时形成独立 RED，禁止读取源码匹配字符串。GREEN再实现/恢复完整harness；escalate fixture必须满足2..8 options，不能用无效provider输出触发产品失败路径。
+- `evidence/t24-red-20260801T081018Z.log` 基于已废弃 route，只是诊断。原T-30 WIP 的旧 `t30-red/green/build`、三份旧suite、两份旧smoke，以及拆分前 full-chain WIP 的封闭8份 `t32-red-20260801T154532Z`、`t32-red-20260801T154553Z`、`t32-green-20260801T154811Z`、`t32-build-20260801T155011Z`、`t32-green-20260801T155052Z`、`t32-green-20260801T155239Z`、`t32-green-20260801T155532Z`、`t32-green-20260801T155832Z` 全部只作计划偏差诊断，不得计入新T-32/T-33机械或人工验收。T-32须以production application专属测试产生时间更晚的新RED/GREEN；T-33须恢复T29 harness后实际spawn取得新 `t33-red/green`。人工评审不得因旧同label命中推进。
 
 ### 12.2 必测边界
 
@@ -1614,28 +1615,29 @@ canonical producers只能写右列；适配器仅为升级前既有行服务，�
 - [x] T-29 新增真实 provider/browser `smoke:review` 基础设施与最薄 pass链 (覆盖: FR-1, FR-2, FR-3, FR-7, FR-8, FR-10, FR-13, FR-14, NFR-1, NFR-3, NFR-4) — 判据: 修正 `tests/review-browser-smoke.test.ts` route contract后先红后绿；RED只证明script/harness缺失，GREEN新增`tests/review-browser-smoke.mjs`和package script，启动真实provider/Next/SQLite，禁止route interception/直接业务SQLite写入，从全新v6 mission/首次merge经非执行者Agent真实读取正文完成pass→memory→delivery并以Playwright走desktop键盘路径
 - [x] T-30 统一 v6 测试 fixture 与生产 schema validator (覆盖: NFR-2) — 判据: `npm test -- tests/v6-fixture-db.test.ts` 对当前WIP helper取得新RED后再绿；使用module-private WeakSet branded handle与精确missing mission/result id allowlist，普通path/plain object不能修复；实际缺口必须与allowlist全等且每个review result为当前latest，少/多/重复/partial/nonlatest/跨project错配均rollback；“唯一损坏恰为允许形状但无合法handle”的坏库直连生产和误经helper都失败且行数不变，额外schema/data损坏同样fail-closed；补种后生产`validateV6`通过，生产模块import helper=0、不改生产DB/validator，migration/invariant测试绕过helper；随后全量 `npm test` 通过
 - [x] T-31 修复终态裁决历史被 empty surface 隐藏 (覆盖: FR-4, FR-5, FR-12, FR-14, NFR-4) — 判据: `npm test -- tests/review-product-wiring.test.tsx` 先红后绿；`rework+currentAttempt=null+currentEscalation=null+rejected history`切到回答页必须ready并展示逐attempt历史、唯一reject裁决与返工要求；有open issue/成功动作仍ready，只有加载完成且无issue/无history才empty；loading/error/focus/live与窄屏不回归
-- [ ] T-32 扩展真实 browser smoke 全链并收口 (覆盖: FR-1, FR-2, FR-3, FR-4, FR-5, FR-6, FR-7, FR-8, FR-9, FR-10, FR-11, FR-12, FR-13, FR-14, NFR-1, NFR-2, NFR-3, NFR-4) — 判据: 先恢复已提交T-29最薄harness，再新增 `tests/review-browser-full-chain.test.ts`真实spawn `npm run smoke:review -- --full`取得新RED（不是源码字符串测试）；GREEN在无interception/业务DB写入下依次覆盖退回→新result、升级→owner answer/new attempt、通过→memory→delivery，独立应用进程重启历史完整并完成desktop/narrow键盘截图，输出唯一PASS sentinel；原t30 red/green/build/suite/smoke均只作诊断；GREEN后运行`npm test`、`npm run build`、`npm run smoke:review -- --full`
+- [ ] T-32 修复双次无效复核输出后的 head 终态投影 (覆盖: FR-3, FR-11, FR-12, NFR-1, NFR-2) — 判据: `npm test -- tests/review-production-application.test.ts` 产生晚于封闭8份诊断日志的新RED/GREEN；primary+repair均invalid时逐一断言attempt完整predicate含lease、operation完整 `(project,id,kind,parentId,requestHash,status)+correlated attempt EXISTS`、head完整 `(project,mission,workItem,currentResult,currentAttempt,state,acquiredVersion)`，各CAS恰好1行后才得到failed/completed/pending_review且零裁决；任一CAS=0整笔rollback并返回durable winner，较新attempt/head不被回退；same operation replay/late finalizer不新增副作用；`validateV6`与关闭重开通过，projects/tasks/context/review reads不再5xx
+- [ ] T-33 扩展真实 browser smoke 全链并收口 (覆盖: FR-1, FR-2, FR-3, FR-4, FR-5, FR-6, FR-7, FR-8, FR-9, FR-10, FR-11, FR-12, FR-13, FR-14, NFR-1, NFR-2, NFR-3, NFR-4) — 判据: 先恢复已提交T-29最薄harness，再由 `tests/review-browser-full-chain.test.ts`真实spawn `npm run smoke:review -- --full`取得新t33 RED；GREEN harness的reject/escalate/pass均为strict合法provider输出（escalate 2..8 options），在无interception/业务DB写入下覆盖退回→新result、升级→owner answer/new attempt、通过→memory→delivery，独立应用进程重启历史完整并完成desktop/narrow键盘截图，输出唯一PASS sentinel；旧t30/t32诊断证据均不计；GREEN后运行`npm test`、`npm run build`、`npm run smoke:review -- --full`
 
 任务覆盖索引:
 
-- FR-1 → T-1, T-3, T-17, T-19, T-24, T-28, T-29, T-32
-- FR-2 → T-1, T-6, T-7, T-8, T-17, T-18, T-19, T-24, T-29, T-32
-- FR-3 → T-1, T-6, T-7, T-8, T-9, T-10, T-16, T-17, T-18, T-19, T-24, T-25, T-26, T-29, T-32
-- FR-4 → T-2, T-4, T-7, T-9, T-16, T-18, T-20, T-24, T-28, T-31, T-32
-- FR-5 → T-2, T-4, T-7, T-10, T-16, T-18, T-20, T-25, T-26, T-28, T-31, T-32
-- FR-6 → T-2, T-4, T-5, T-6, T-9, T-12, T-13, T-18, T-20, T-24, T-26, T-32
-- FR-7 → T-2, T-5, T-10, T-14, T-15, T-18, T-22, T-25, T-27, T-28, T-29, T-32
-- FR-8 → T-2, T-6, T-7, T-11, T-12, T-13, T-16, T-17, T-18, T-21, T-24, T-27, T-28, T-29, T-32
-- FR-9 → T-2, T-12, T-13, T-16, T-18, T-21, T-28, T-32
-- FR-10 → T-2, T-5, T-6, T-14, T-15, T-16, T-17, T-18, T-22, T-25, T-27, T-28, T-29, T-32
-- FR-11 → T-2, T-3, T-4, T-5, T-6, T-8, T-9, T-10, T-12, T-13, T-14, T-15, T-18, T-24, T-26, T-27, T-32
-- FR-12 → T-2, T-4, T-5, T-8, T-10, T-11, T-13, T-15, T-16, T-18, T-20, T-21, T-22, T-24, T-25, T-26, T-27, T-28, T-31, T-32
-- FR-13 → T-2, T-3, T-5, T-6, T-7, T-8, T-9, T-10, T-11, T-13, T-14, T-15, T-16, T-17, T-18, T-24, T-25, T-26, T-27, T-29, T-32
-- FR-14 → T-1, T-19, T-20, T-21, T-22, T-23, T-26, T-28, T-29, T-31, T-32
-- NFR-1 → T-1, T-2, T-8, T-9, T-12, T-15, T-18, T-24, T-27, T-29, T-32
-- NFR-2 → T-2, T-8, T-15, T-18, T-24, T-25, T-26, T-27, T-30, T-32
-- NFR-3 → T-1, T-2, T-6, T-7, T-17, T-18, T-24, T-25, T-27, T-29, T-32
-- NFR-4 → T-1, T-19, T-20, T-21, T-22, T-23, T-28, T-29, T-31, T-32
+- FR-1 → T-1, T-3, T-17, T-19, T-24, T-28, T-29, T-33
+- FR-2 → T-1, T-6, T-7, T-8, T-17, T-18, T-19, T-24, T-29, T-33
+- FR-3 → T-1, T-6, T-7, T-8, T-9, T-10, T-16, T-17, T-18, T-19, T-24, T-25, T-26, T-29, T-32, T-33
+- FR-4 → T-2, T-4, T-7, T-9, T-16, T-18, T-20, T-24, T-28, T-31, T-33
+- FR-5 → T-2, T-4, T-7, T-10, T-16, T-18, T-20, T-25, T-26, T-28, T-31, T-33
+- FR-6 → T-2, T-4, T-5, T-6, T-9, T-12, T-13, T-18, T-20, T-24, T-26, T-33
+- FR-7 → T-2, T-5, T-10, T-14, T-15, T-18, T-22, T-25, T-27, T-28, T-29, T-33
+- FR-8 → T-2, T-6, T-7, T-11, T-12, T-13, T-16, T-17, T-18, T-21, T-24, T-27, T-28, T-29, T-33
+- FR-9 → T-2, T-12, T-13, T-16, T-18, T-21, T-28, T-33
+- FR-10 → T-2, T-5, T-6, T-14, T-15, T-16, T-17, T-18, T-22, T-25, T-27, T-28, T-29, T-33
+- FR-11 → T-2, T-3, T-4, T-5, T-6, T-8, T-9, T-10, T-12, T-13, T-14, T-15, T-18, T-24, T-26, T-27, T-32, T-33
+- FR-12 → T-2, T-4, T-5, T-8, T-10, T-11, T-13, T-15, T-16, T-18, T-20, T-21, T-22, T-24, T-25, T-26, T-27, T-28, T-31, T-32, T-33
+- FR-13 → T-2, T-3, T-5, T-6, T-7, T-8, T-9, T-10, T-11, T-13, T-14, T-15, T-16, T-17, T-18, T-24, T-25, T-26, T-27, T-29, T-33
+- FR-14 → T-1, T-19, T-20, T-21, T-22, T-23, T-26, T-28, T-29, T-31, T-33
+- NFR-1 → T-1, T-2, T-8, T-9, T-12, T-15, T-18, T-24, T-27, T-29, T-32, T-33
+- NFR-2 → T-2, T-8, T-15, T-18, T-24, T-25, T-26, T-27, T-30, T-32, T-33
+- NFR-3 → T-1, T-2, T-6, T-7, T-17, T-18, T-24, T-25, T-27, T-29, T-33
+- NFR-4 → T-1, T-19, T-20, T-21, T-22, T-23, T-28, T-29, T-31, T-33
 
 ## 15. Design Checklist 自检
 
@@ -1645,4 +1647,4 @@ canonical producers只能写右列；适配器仅为升级前既有行服务，�
 - [x] 接口、数据契约、错误、事件、事务、CAS、状态机和故障恢复具体到 build阶段无需再发明。
 - [x] 所有资源数字沿用现有事实：90秒 provider call、120秒 lease、30秒 heartbeat、一次 repair、1 MiB provider response、2 MiB frozen context、20,000 grapheme公开文本/记忆、128/256/512 KiB API envelope、20/100分页、24小时cursor、44px与WCAG AA；未新增性能/容量阈值。
 - [x] ext-ui-design章节位于测试策略后、任务清单前，覆盖 desktop/narrow、loading/empty/error/disabled/success/focus、token和a11y。
-- [x] T-1先打通 owner→真实review→decision→UI最薄切片；普通 T-1 至 T-32均有一次明确先红后绿边界，T-24 至 T-28收口生产调用点、事件兼容与真实产品树，T-29实现最薄真实 smoke，T-30收口v6 fixture与全量套件，T-31修复终态历史surface，T-32独立扩展完整裁决/重启/双viewport链；inline覆盖与逐项索引一致。
+- [x] T-1先打通 owner→真实review→decision→UI最薄切片；普通 T-1 至 T-33均有一次明确先红后绿边界，T-24 至 T-28收口生产调用点、事件兼容与真实产品树，T-29实现最薄真实 smoke，T-30收口v6 fixture与全量套件，T-31修复终态历史surface，T-32修复失败终态head投影，T-33独立扩展完整裁决/重启/双viewport链；inline覆盖与逐项索引一致。
