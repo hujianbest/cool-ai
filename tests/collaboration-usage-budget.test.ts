@@ -11,6 +11,7 @@ import {
   finalizeAdvance,
 } from "@/src/server/collaboration/turn-orchestrator";
 import { openDatabase } from "@/src/server/db";
+import { initializeMissionDeliveryTx } from "@/src/server/migrations-v6";
 
 const NOW = "2026-07-30T06:00:00.000Z";
 const PROJECT_ID = "project-usage";
@@ -97,6 +98,11 @@ function seedReadyRun(): void {
         'Owner', 'Prepare the plan', NULL, NULL, 1, NULL, '${NOW}'
       );
     `);
+    initializeMissionDeliveryTx(database, {
+      id: "mission-usage",
+      projectId: PROJECT_ID,
+      updatedAt: NOW,
+    });
   } finally {
     database.close();
   }

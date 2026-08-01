@@ -5,6 +5,7 @@ import { afterEach, beforeEach, describe, expect, it } from "vitest";
 
 import type { StructuredTurnResult } from "@/src/server/collaboration/structured-repair";
 import { openDatabase } from "@/src/server/db";
+import { initializeMissionDeliveryTx } from "@/src/server/migrations-v6";
 
 type RecoveryModule = {
   acquireAdvance: (
@@ -125,6 +126,11 @@ function seed(): void {
         'Owner', 'Recover this collaboration', NULL, NULL, 1, NULL, '${ACQUIRED_AT}'
       );
     `);
+    initializeMissionDeliveryTx(database, {
+      id: "mission-recovery",
+      projectId: PROJECT_ID,
+      updatedAt: ACQUIRED_AT,
+    });
   } finally {
     database.close();
   }

@@ -1,0 +1,30 @@
+# hf-gate-run
+# label: t8-regression
+# command: npm.cmd test -- tests/openai-chat-client.test.ts tests/review-output-schema.test.ts tests/review-structured-repair.test.ts tests/review-orchestrator.test.ts tests/review-recovery.test.ts tests/collaboration-usage-budget.test.ts tests/collaboration-recovery.test.ts
+# started: 2026-08-01T05:35:16+00:00
+
+> collaboration-cockpit@0.1.0 test
+> vitest run tests/openai-chat-client.test.ts tests/review-output-schema.test.ts tests/review-structured-repair.test.ts tests/review-orchestrator.test.ts tests/review-recovery.test.ts tests/collaboration-usage-budget.test.ts tests/collaboration-recovery.test.ts
+
+
+ RUN  v4.1.10 D:/cool-ai
+
+(node:10776) ExperimentalWarning: SQLite is an experimental feature and might change at any time
+(Use `node --trace-warnings ...` to show where the warning was created)
+(node:10912) ExperimentalWarning: SQLite is an experimental feature and might change at any time
+(Use `node --trace-warnings ...` to show where the warning was created)
+(node:14472) ExperimentalWarning: SQLite is an experimental feature and might change at any time
+(Use `node --trace-warnings ...` to show where the warning was created)
+(node:7764) ExperimentalWarning: SQLite is an experimental feature and might change at any time
+(Use `node --trace-warnings ...` to show where the warning was created)
+(node:15880) ExperimentalWarning: SQLite is an experimental feature and might change at any time
+(Use `node --trace-warnings ...` to show where the warning was created)
+(node:13132) ExperimentalWarning: SQLite is an experimental feature and might change at any time
+(Use `node --trace-warnings ...` to show where the warning was created)
+
+ Test Files  7 passed (7)
+      Tests  64 passed (64)
+   Start at  13:35:17
+   Duration  7.66s (transform 2.28s, setup 4.10s, import 2.15s, tests 12.22s, environment 16.20s)
+
+# exit: 0

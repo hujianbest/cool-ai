@@ -55,6 +55,36 @@ export const reviewOutputSchema = z.object({
 
 export type ReviewOutput = z.infer<typeof reviewOutputSchema>;
 
+const localFinalizeRetrySchema = z.object({
+  attemptId: z.string().min(1),
+  checkpointHash: z.string().regex(/^[0-9a-f]{64}$/u),
+  kind: z.literal("local-finalize-only"),
+  providerCallRequired: z.literal(false),
+}).strict();
+
+const newProviderAttemptRetrySchema = z.object({
+  attemptId: z.string().min(1),
+  kind: z.literal("new-provider-attempt"),
+  providerCallRequired: z.literal(true),
+}).strict();
+
+export const reviewOperationResponseSchema = z.discriminatedUnion("state", [
+  z.object({
+    attemptId: z.string().min(1),
+    checkpointHash: z.string().regex(/^[0-9a-f]{64}$/u),
+    retry: localFinalizeRetrySchema,
+    state: z.literal("finalizing"),
+  }).strict(),
+  z.object({
+    attemptId: z.string().min(1),
+    errorCategory: z.string().min(1),
+    retry: newProviderAttemptRetrySchema,
+    state: z.literal("failed"),
+  }).strict(),
+]);
+
+export type ReviewOperationResponse = z.infer<typeof reviewOperationResponseSchema>;
+
 export const startReviewInputSchema = z.object({
   expectedHeadVersion: z.number().int().min(1),
   operationId: z.string().uuid(),

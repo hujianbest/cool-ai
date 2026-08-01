@@ -1,0 +1,159 @@
+# hf-gate-run
+# label: t8-red
+# command: npm.cmd test -- tests/review-orchestrator.test.ts tests/review-recovery.test.ts
+# started: 2026-08-01T05:28:57+00:00
+
+> collaboration-cockpit@0.1.0 test
+> vitest run tests/review-orchestrator.test.ts tests/review-recovery.test.ts
+
+
+ RUN  v4.1.10 D:/cool-ai
+
+(node:14560) ExperimentalWarning: SQLite is an experimental feature and might change at any time
+(Use `node --trace-warnings ...` to show where the warning was created)
+(node:14864) ExperimentalWarning: SQLite is an experimental feature and might change at any time
+(Use `node --trace-warnings ...` to show where the warning was created)
+ ❯ tests/review-orchestrator.test.ts (3 tests | 3 failed) 15ms
+     × uses 90s calls, 30s heartbeats, and 120s leases with idempotent operation replay 11ms
+     × persists primary/repair calling and terminal rows with nullable reported usage 2ms
+     × fails closed at token and provider boundaries and requires a new provider attempt 1ms
+ ❯ tests/review-recovery.test.ts (3 tests | 3 failed) 66ms
+     × stores only canonical public output after strict parse/redaction 36ms
+     × restarts after a post-checkpoint SQLite finalize fault and replays only local finalize 26ms
+     × requires an explicit new operation and attempt before another provider call 2ms
+
+⎯⎯⎯⎯⎯⎯⎯ Failed Tests 6 ⎯⎯⎯⎯⎯⎯⎯
+
+ FAIL  tests/review-orchestrator.test.ts > review operation orchestration > uses 90s calls, 30s heartbeats, and 120s leases with idempotent operation replay
+AssertionError: T-8 review orchestrator must exist: expected undefined to be type of 'function'
+
+Expected: "function"
+Received: "undefined"
+
+ ❯ load tests/review-orchestrator.test.ts:114:56
+    112| async function load(): Promise<OrchestratorModule> {
+    113|   const loader = modules["../src/server/review/review-orchestrator.ts"…
+    114|   expect(loader, "T-8 review orchestrator must exist").toBeTypeOf("fun…
+       |                                                        ^
+    115|   return loader();
+    116| }
+ ❯ tests/review-orchestrator.test.ts:132:42
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[1/8]⎯
+
+ FAIL  tests/review-orchestrator.test.ts > review operation orchestration > persists primary/repair calling and terminal rows with nullable reported usage
+AssertionError: T-8 review orchestrator must exist: expected undefined to be type of 'function'
+
+Expected: "function"
+Received: "undefined"
+
+ ❯ load tests/review-orchestrator.test.ts:114:56
+    112| async function load(): Promise<OrchestratorModule> {
+    113|   const loader = modules["../src/server/review/review-orchestrator.ts"…
+    114|   expect(loader, "T-8 review orchestrator must exist").toBeTypeOf("fun…
+       |                                                        ^
+    115|   return loader();
+    116| }
+ ❯ tests/review-orchestrator.test.ts:176:42
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[2/8]⎯
+
+ FAIL  tests/review-orchestrator.test.ts > review operation orchestration > fails closed at token and provider boundaries and requires a new provider attempt
+AssertionError: T-8 review orchestrator must exist: expected undefined to be type of 'function'
+
+Expected: "function"
+Received: "undefined"
+
+ ❯ load tests/review-orchestrator.test.ts:114:56
+    112| async function load(): Promise<OrchestratorModule> {
+    113|   const loader = modules["../src/server/review/review-orchestrator.ts"…
+    114|   expect(loader, "T-8 review orchestrator must exist").toBeTypeOf("fun…
+       |                                                        ^
+    115|   return loader();
+    116| }
+ ❯ tests/review-orchestrator.test.ts:212:42
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[3/8]⎯
+
+ FAIL  tests/review-recovery.test.ts > durable review output recovery > stores only canonical public output after strict parse/redaction
+AssertionError: T-8 recovery orchestrator must exist: expected undefined to be type of 'function'
+
+Expected: "function"
+Received: "undefined"
+
+ ❯ load tests/review-recovery.test.ts:116:58
+    114| async function load(): Promise<OrchestratorModule> {
+    115|   const loader = modules["../src/server/review/review-orchestrator.ts"…
+    116|   expect(loader, "T-8 recovery orchestrator must exist").toBeTypeOf("f…
+       |                                                          ^
+    117|   return loader();
+    118| }
+ ❯ tests/review-recovery.test.ts:135:42
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[4/8]⎯
+
+ FAIL  tests/review-recovery.test.ts > durable review output recovery > stores only canonical public output after strict parse/redaction
+Error: EPERM, Permission denied: \\?\C:\Users\ADMINI~1\AppData\Local\Temp\2\review-recovery-jmywFY '\\?\C:\Users\ADMINI~1\AppData\Local\Temp\2\review-recovery-jmywFY'
+ ❯ tests/review-recovery.test.ts:122:5
+    120| afterEach(() => {
+    121|   for (const directory of directories.splice(0)) {
+    122|     rmSync(directory, { force: true, recursive: true });
+       |     ^
+    123|   }
+    124| });
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[5/8]⎯
+
+ FAIL  tests/review-recovery.test.ts > durable review output recovery > restarts after a post-checkpoint SQLite finalize fault and replays only local finalize
+AssertionError: T-8 recovery orchestrator must exist: expected undefined to be type of 'function'
+
+Expected: "function"
+Received: "undefined"
+
+ ❯ load tests/review-recovery.test.ts:116:58
+    114| async function load(): Promise<OrchestratorModule> {
+    115|   const loader = modules["../src/server/review/review-orchestrator.ts"…
+    116|   expect(loader, "T-8 recovery orchestrator must exist").toBeTypeOf("f…
+       |                                                          ^
+    117|   return loader();
+    118| }
+ ❯ tests/review-recovery.test.ts:177:42
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[6/8]⎯
+
+ FAIL  tests/review-recovery.test.ts > durable review output recovery > restarts after a post-checkpoint SQLite finalize fault and replays only local finalize
+Error: EPERM, Permission denied: \\?\C:\Users\ADMINI~1\AppData\Local\Temp\2\review-restart-PDjXDD '\\?\C:\Users\ADMINI~1\AppData\Local\Temp\2\review-restart-PDjXDD'
+ ❯ tests/review-recovery.test.ts:122:5
+    120| afterEach(() => {
+    121|   for (const directory of directories.splice(0)) {
+    122|     rmSync(directory, { force: true, recursive: true });
+       |     ^
+    123|   }
+    124| });
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[7/8]⎯
+
+ FAIL  tests/review-recovery.test.ts > durable review output recovery > requires an explicit new operation and attempt before another provider call
+AssertionError: T-8 recovery orchestrator must exist: expected undefined to be type of 'function'
+
+Expected: "function"
+Received: "undefined"
+
+ ❯ load tests/review-recovery.test.ts:116:58
+    114| async function load(): Promise<OrchestratorModule> {
+    115|   const loader = modules["../src/server/review/review-orchestrator.ts"…
+    116|   expect(loader, "T-8 recovery orchestrator must exist").toBeTypeOf("f…
+       |                                                          ^
+    117|   return loader();
+    118| }
+ ❯ tests/review-recovery.test.ts:224:42
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[8/8]⎯
+
+
+ Test Files  2 failed (2)
+      Tests  6 failed (6)
+   Start at  13:28:58
+   Duration  2.72s (transform 131ms, setup 883ms, import 93ms, tests 81ms, environment 3.69s)
+
+# exit: 1
