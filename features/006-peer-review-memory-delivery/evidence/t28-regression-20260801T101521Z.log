@@ -1,0 +1,18 @@
+# hf-gate-run
+# label: t28-regression
+# command: npm.cmd test -- tests/project-panel.test.tsx tests/mission-board.test.tsx tests/execution-cards-ui.test.tsx tests/execution-review-ui.test.tsx tests/review-product-wiring.test.tsx tests/review-workspace-ui.test.tsx tests/review-outcomes-ui.test.tsx tests/review-escalation-ui.test.tsx tests/review-memory-ui.test.tsx tests/delivery-ui.test.tsx tests/review-accessibility.test.tsx tests/execution-accessibility.test.tsx
+# started: 2026-08-01T10:15:21+00:00
+
+> collaboration-cockpit@0.1.0 test
+> vitest run tests/project-panel.test.tsx tests/mission-board.test.tsx tests/execution-cards-ui.test.tsx tests/execution-review-ui.test.tsx tests/review-product-wiring.test.tsx tests/review-workspace-ui.test.tsx tests/review-outcomes-ui.test.tsx tests/review-escalation-ui.test.tsx tests/review-memory-ui.test.tsx tests/delivery-ui.test.tsx tests/review-accessibility.test.tsx tests/execution-accessibility.test.tsx
+
+
+ RUN  v4.1.10 D:/cool-ai
+
+
+ Test Files  12 passed (12)
+      Tests  67 passed (67)
+   Start at  18:15:24
+   Duration  17.93s (transform 1.74s, setup 13.48s, import 10.17s, tests 12.29s, environment 63.04s)
+
+# exit: 0

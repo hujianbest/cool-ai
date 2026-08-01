@@ -13,7 +13,7 @@ import { createPortal } from "react-dom";
 import { ExecutionReview } from "@/components/execution/execution-review";
 import { ManualRecoverySurface } from "@/components/execution/manual-recovery-surface";
 import { useModalSurface, useNarrowMode } from "@/components/mobile-dialog";
-import { ReviewSlice } from "@/components/review/review-slice";
+import { ReviewProductSurface } from "@/components/review/review-product-surface";
 import { ValidationPolicyPanel } from "@/components/execution/validation-policy-panel";
 import {
   ApiDisplayError,
@@ -143,6 +143,7 @@ function ExecutionCard({
   asyncState,
   execution,
   headingRef,
+  missionId,
   onAdvanceRetry,
   onControl,
   onExecutionChanged,
@@ -152,6 +153,7 @@ function ExecutionCard({
   asyncState: CardAsyncState;
   execution: ExecutionDto;
   headingRef?: Ref<HTMLHeadingElement>;
+  missionId: string | null;
   onAdvanceRetry: () => void;
   onControl: (action: ControlAction) => void;
   onExecutionChanged: (execution: ExecutionDto) => void;
@@ -163,6 +165,7 @@ function ExecutionCard({
     paths: string[];
     visible: number;
   } | null>(null);
+  const [reviewOpen, setReviewOpen] = useState(false);
   return (
     <section
       aria-labelledby={`execution-${execution.id}-title`}
@@ -255,8 +258,28 @@ function ExecutionCard({
           onMerge={onMerge}
         />
       ) : null}
-      {!execution.manualRecoveryRequired && execution.status === "merged" ? (
-        <ReviewSlice workItemId={execution.workItem.id} />
+      {!execution.manualRecoveryRequired
+      && execution.status === "merged"
+      && missionId ? (
+        <div className="stack">
+          <button
+            aria-expanded={reviewOpen}
+            aria-controls={`execution-${execution.id}-review-product`}
+            onClick={() => setReviewOpen((open) => !open)}
+            type="button"
+          >
+            {reviewOpen ? "关闭复核闭环" : "打开复核闭环"}
+          </button>
+          {reviewOpen ? (
+            <div id={`execution-${execution.id}-review-product`}>
+              <ReviewProductSurface
+                missionId={missionId}
+                projectId={execution.projectId}
+                workItemId={execution.workItem.id}
+              />
+            </div>
+          ) : null}
+        </div>
       ) : null}
       {!execution.manualRecoveryRequired && asyncState.advanceError ? (
         <div className="stack">
@@ -910,6 +933,8 @@ export function ExecutionPanel({
                       asyncState={cardStates[execution.id] ?? {}}
                       execution={execution}
                       key={execution.id}
+                      missionId={workItems.find(({ id }) =>
+                        id === execution.workItem.id)?.missionId ?? null}
                       onAdvanceRetry={() => {
                         void advanceExecution(
                           execution,
@@ -935,6 +960,8 @@ export function ExecutionPanel({
               execution={execution}
               headingRef={index === 0 ? firstHeadingRef : undefined}
               key={execution.id}
+              missionId={workItems.find(({ id }) =>
+                id === execution.workItem.id)?.missionId ?? null}
               onAdvanceRetry={() => {
                 void advanceExecution(
                   execution,

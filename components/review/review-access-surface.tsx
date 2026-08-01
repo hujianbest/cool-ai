@@ -206,12 +206,14 @@ export function ReviewAccessSurface({
             {(states[key] ?? readyState).message}
           </span>
         ))}
-        <div aria-atomic="true" aria-live="polite" className="sr-only" role="status">
-          {surfaces
-            .filter(({ key }) => states[key]?.kind === "success")
-            .map(({ key }) => states[key]?.message)
-            .join("；")}
-        </div>
+        {surfaces.some(({ key }) => states[key]?.kind === "success") ? (
+          <div aria-atomic="true" aria-live="polite" className="sr-only" role="status">
+            {surfaces
+              .filter(({ key }) => states[key]?.kind === "success")
+              .map(({ key }) => states[key]?.message)
+              .join("；")}
+          </div>
+        ) : null}
       </div>
       {narrow && modalOpen ? (
         <div

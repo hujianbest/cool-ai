@@ -26,7 +26,7 @@ export type ReviewWorkspaceProps = {
   };
   history?: ReviewAttemptDto[];
   load: () => Promise<ReviewWorkspaceDto>;
-  onLocalFinalize: (
+  onLocalFinalize?: (
     attemptId: string,
     checkpointHash: string,
   ) => Promise<ReviewWorkspaceDto>;
@@ -69,6 +69,9 @@ export function ReviewWorkspace({
   }, [loadWorkspace]);
 
   async function localFinalize(attemptId: string, checkpointHash: string) {
+    if (!onLocalFinalize) {
+      throw new Error("当前入口没有可用的本地提交动作。");
+    }
     setError(null);
     setSuccess(null);
     try {
@@ -124,7 +127,15 @@ export function ReviewWorkspace({
   const currentAttempt = workspace.currentAttempt;
   const disabledReason = operationDisabledReason
     ?? (loading ? "正在刷新复核工作区" : null)
-    ?? (error ? "请先恢复复核工作区读取" : null);
+    ?? (error ? "请先恢复复核工作区读取" : null)
+    ?? (currentAttempt?.finalize?.mode === "local-finalize-only"
+      && !onLocalFinalize
+      ? "当前产品入口没有可用的本地提交动作"
+      : null)
+    ?? (currentAttempt?.finalize?.mode === "new-provider-attempt"
+      && !onNewProviderAttempt
+      ? "请通过真实复核入口重新发起"
+      : null);
 
   return (
     <section aria-labelledby={`review-workspace-${workItemId}`} className="stack">
@@ -165,7 +176,7 @@ export function ReviewWorkspace({
       {currentAttempt ? (
         <ReviewAttemptPanel
           attempt={currentAttempt}
-          onLocalFinalize={localFinalize}
+          onLocalFinalize={onLocalFinalize ? localFinalize : undefined}
           onNewProviderAttempt={onNewProviderAttempt ? newProviderAttempt : undefined}
           operationDisabledReason={disabledReason}
           surface="workspace"

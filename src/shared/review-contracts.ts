@@ -414,9 +414,30 @@ export type ReviewAttemptDto = {
   };
 };
 export const reviewAttemptHistoryItemDtoSchema = reviewAttemptDtoSchema;
+export const reviewOpenEscalationDtoSchema = z.object({
+  attemptId: identifierSchema,
+  createdAt: timestampSchema,
+  escalationId: identifierSchema,
+  options: z.array(publicText(500)).min(2).max(8),
+  question: publicText(1_000),
+  resultId: identifierSchema,
+}).strict();
+export const reviewAnsweredEscalationDtoSchema = z.object({
+  answer: z.object({
+    action: z.enum(["continue_review", "rework", "terminate_mission"]),
+    answer: publicText(5_000),
+    answerId: identifierSchema,
+    answerVersion: z.literal(1),
+    createdAt: timestampSchema,
+  }).strict(),
+  attemptId: identifierSchema,
+  escalationId: identifierSchema,
+  resultId: identifierSchema,
+}).strict();
 export const reviewAttemptDetailDtoSchema = z.object({
+  answeredEscalations: z.array(reviewAnsweredEscalationDtoSchema),
   candidateAssociations: z.array(z.unknown()),
-  escalation: z.unknown().nullable(),
+  currentEscalation: reviewOpenEscalationDtoSchema.nullable(),
   frozenMaterial: z.unknown(),
 }).passthrough().superRefine((value, context) => {
   const attemptKeys = [
@@ -438,9 +459,10 @@ export const reviewAttemptDetailDtoSchema = z.object({
   }
   const allowed = new Set([
     ...Object.keys(attemptBaseShape),
+    "answeredEscalations",
     "candidateAssociations",
+    "currentEscalation",
     "decision",
-    "escalation",
     "finalize",
     "finishedAt",
     "frozenMaterial",
@@ -452,9 +474,11 @@ export const reviewAttemptDetailDtoSchema = z.object({
 });
 
 export const reviewWorkspaceDtoSchema = z.object({
+  answeredEscalations: z.array(reviewAnsweredEscalationDtoSchema),
   blockers: z.array(z.object({ code: identifierSchema, refId: identifierSchema.nullable() }).strict()),
   candidates: z.array(reviewCandidateDtoSchema),
   currentAttempt: reviewAttemptDtoSchema.nullable(),
+  currentEscalation: reviewOpenEscalationDtoSchema.nullable(),
   effectiveStatus: z.enum([
     "executing",
     "pending_review",
@@ -463,17 +487,6 @@ export const reviewWorkspaceDtoSchema = z.object({
     "waiting_owner",
     "passed",
   ]),
-  escalation: z.object({
-    answer: z.object({
-      action: identifierSchema,
-      answer: z.string(),
-      createdAt: timestampSchema,
-      id: identifierSchema,
-    }).strict().nullable(),
-    id: identifierSchema,
-    options: z.array(z.string()),
-    question: z.string(),
-  }).strict().nullable(),
   headVersion: z.number().int().positive(),
   historyCount: nonnegativeIntegerSchema,
   result: z.object({
@@ -492,12 +505,13 @@ export const reviewWorkspaceDtoSchema = z.object({
 
 export type StrictReviewWorkspaceDto = z.infer<typeof reviewWorkspaceDtoSchema>;
 export type ReviewWorkspaceDto = {
+  answeredEscalations?: z.infer<typeof reviewAnsweredEscalationDtoSchema>[];
   blockers: Array<{ code: string; refId?: string | null }>;
   candidates: ReviewCandidateDto[];
   currentAttempt: ReviewAttemptDto | null;
+  currentEscalation?: z.infer<typeof reviewOpenEscalationDtoSchema> | null;
   effectiveStatus: "executing" | "pending_review" | "reviewing" | "rework"
     | "waiting_owner" | "passed";
-  escalation?: StrictReviewWorkspaceDto["escalation"];
   headVersion: number;
   historyCount?: number;
   result: {
@@ -531,6 +545,8 @@ export const reviewEventTypeSchema = z.enum([
   "memory_superseded",
   "work_item_passed",
   "work_item_invalidated",
+  "legacy_work_item_review_passed",
+  "legacy_work_item_completion_invalidated",
   "completion_write_rejected",
   "delivery_generation_started",
   "delivery_generation_failed",
@@ -563,14 +579,29 @@ const memoryEvent = z.object({
   memoryId: identifierSchema,
   memoryVersion: z.number().int().positive(),
 }).strict();
-const workEvent = z.object({
+const completionReasonCodeSchema = z.enum([
+  "DOWNSTREAM_REWORK_REQUESTED",
+  "OWNER_REOPENED",
+  "AGENT_REOPENED",
+  "WORK_ITEM_MATERIAL_CHANGED",
+]);
+const workPassEvent = z.object({
   decisionId: identifierSchema,
-  reasonCode: z.string().nullable(),
+  reasonCode: z.literal("review_passed"),
+  resultId: identifierSchema,
+  workItemId: identifierSchema,
+}).strict();
+const workInvalidatedEvent = z.object({
+  decisionId: identifierSchema,
+  reasonCode: z.union([
+    completionReasonCodeSchema,
+    z.literal("DEPENDENCY_REOPENED"),
+  ]),
   resultId: identifierSchema,
   workItemId: identifierSchema,
 }).strict();
 const deliveryGenerationEvent = z.object({
-  category: z.string().nullable(),
+  category: z.enum(["generation_failed", "interrupted"]).optional(),
   inputFingerprint: hashSchema,
   operationId: identifierSchema,
 }).strict();
@@ -659,23 +690,37 @@ export const reviewEventDtoSchema = z.discriminatedUnion("type", [
   eventVariant("memory_reused", memoryEvent),
   eventVariant("memory_created", memoryEvent),
   eventVariant("memory_superseded", memoryEvent),
-  eventVariant("work_item_passed", workEvent),
-  eventVariant("work_item_invalidated", workEvent),
+  eventVariant("work_item_passed", workPassEvent),
+  eventVariant("work_item_invalidated", workInvalidatedEvent),
+  eventVariant("legacy_work_item_review_passed", z.object({
+    headVersion: z.number().int().positive(),
+    workItemId: identifierSchema,
+  }).strict()),
+  eventVariant("legacy_work_item_completion_invalidated", z.object({
+    reasonCode: completionReasonCodeSchema,
+    workItemId: identifierSchema,
+  }).strict()),
   eventVariant("completion_write_rejected", z.object({
     blockerCodes: z.array(identifierSchema),
     entryPoint: identifierSchema,
     workItemId: identifierSchema,
   }).strict()),
-  eventVariant("delivery_generation_started", deliveryGenerationEvent),
-  eventVariant("delivery_generation_failed", deliveryGenerationEvent),
+  eventVariant("delivery_generation_started", deliveryGenerationEvent.refine(
+    (payload) => payload.category === undefined,
+    "Started delivery events cannot have a category.",
+  )),
+  eventVariant("delivery_generation_failed", deliveryGenerationEvent.refine(
+    (payload) => payload.category !== undefined,
+    "Failed delivery events require a category.",
+  )),
   eventVariant("delivery_completed", z.object({
     deliveryId: identifierSchema,
     deliveryVersion: z.number().int().positive(),
     inputFingerprint: hashSchema,
   }).strict()),
   eventVariant("delivery_invalidated", z.object({
-    deliveryId: identifierSchema,
-    reasonCode: identifierSchema,
+    deliveryId: identifierSchema.nullable(),
+    reasonCode: z.union([completionReasonCodeSchema, z.literal("MISSION_CONTEXT_CHANGED")]),
     workItemIds: z.array(identifierSchema),
   }).strict()),
   eventVariant("mission_review_initialized", z.object({
@@ -689,9 +734,137 @@ export const reviewEventDtoSchema = z.discriminatedUnion("type", [
     missionVersion: z.number().int().positive(),
     reasonCode: identifierSchema,
   }).strict()),
-  eventVariant("mission_terminated", z.object({ reason: z.string().min(1) }).strict()),
+  eventVariant("mission_terminated", z.object({
+    reason: z.literal("owner_terminated"),
+  }).strict()),
   eventVariant("operation_replayed", z.object({
     kind: z.enum(["start_review", "answer_escalation", "generate_delivery", "terminate_mission"]),
     operationId: identifierSchema,
   }).strict()),
 ]);
+
+export const generateDeliveryInputSchema = z.object({
+  expectedHeadVersion: z.number().int().positive(),
+  operationId: z.string().uuid(),
+}).strict();
+
+const deliveryEvidenceStatusSchema = z.enum([
+  "passed",
+  "available",
+  "failed",
+  "truncated",
+  "stale",
+  "missing",
+  "unreadable",
+]);
+const deliveryEvidenceKindSchema = z.enum([
+  "result",
+  "review",
+  "diff",
+  "validation",
+  "artifact",
+  "execution_event",
+  "memory",
+]);
+const deliveryEvidenceSchema = z.object({
+  href: z.string().startsWith("/"),
+  id: identifierSchema,
+  kind: deliveryEvidenceKindSchema,
+  required: z.boolean(),
+  sha256: hashSchema.nullable(),
+  status: deliveryEvidenceStatusSchema,
+  version: identifierSchema,
+}).strict();
+const deliveryBundleDtoSchema = z.object({
+  blockers: z.array(z.object({
+    code: z.literal("MISSION_COMPLETION_BLOCKED"),
+    id: identifierSchema,
+    kind: deliveryEvidenceKindSchema,
+    status: deliveryEvidenceStatusSchema.exclude(["passed", "available"]),
+    version: identifierSchema,
+  }).strict()),
+  inputFingerprint: hashSchema,
+  manifest: z.object({
+    entries: z.array(deliveryEvidenceSchema),
+    inputFingerprint: hashSchema,
+    schemaVersion: z.literal(1),
+  }).strict(),
+  summary: z.object({
+    mission: z.object({
+      completedAt: timestampSchema,
+      conclusion: z.literal("completed"),
+      goal: z.string(),
+      id: identifierSchema,
+      title: z.string(),
+    }).strict(),
+    tasks: z.array(z.object({
+      artifacts: z.array(z.object({
+        href: z.string().startsWith("/"),
+        id: identifierSchema,
+        version: identifierSchema,
+      }).strict()),
+      changes: z.object({
+        mergeFileCount: nonnegativeIntegerSchema,
+        mergeFinalBytes: nonnegativeIntegerSchema,
+        stagedHash: hashSchema,
+      }).strict(),
+      decision: z.object({
+        choice: z.literal("pass"),
+        id: identifierSchema,
+        publicSummary: z.string(),
+      }).strict(),
+      executor: z.object({ agentId: identifierSchema, name: z.string() }).strict(),
+      limitations: z.array(z.string()),
+      memories: z.array(z.object({
+        href: z.string().startsWith("/"),
+        id: identifierSchema,
+        version: identifierSchema,
+      }).strict()),
+      result: z.object({
+        href: z.string().startsWith("/"),
+        id: identifierSchema,
+        version: z.number().int().positive(),
+      }).strict(),
+      reviewer: z.object({ agentId: identifierSchema, name: z.string() }).strict(),
+      validations: z.object({
+        passedCount: nonnegativeIntegerSchema,
+        refs: z.array(z.object({
+          href: z.string().startsWith("/"),
+          id: identifierSchema,
+          version: identifierSchema,
+        }).strict()),
+        requiredCount: nonnegativeIntegerSchema,
+      }).strict(),
+      workItem: z.object({ id: identifierSchema, title: z.string() }).strict(),
+    }).strict()),
+  }).strict(),
+}).strict();
+
+export const deliveryVersionDtoSchema = z.object({
+  bundle: deliveryBundleDtoSchema,
+  createdAt: timestampSchema,
+  id: identifierSchema,
+  invalidatedReason: identifierSchema.nullable(),
+  invalidatedWorkItemIds: z.array(identifierSchema),
+  state: z.enum(["completed", "invalidated"]),
+  version: z.number().int().positive(),
+}).strict();
+
+export const missionCompletionDtoSchema = z.object({
+  blockers: z.array(z.object({
+    code: identifierSchema,
+    refId: identifierSchema.nullable(),
+    workItemId: identifierSchema.nullable(),
+  }).strict()),
+  currentDelivery: deliveryVersionDtoSchema.nullable(),
+  currentDeliveryId: identifierSchema.nullable(),
+  lastErrorCode: identifierSchema.nullable(),
+  missionId: identifierSchema,
+  retry: z.object({ kind: z.literal("explicit-owner-retry") }).strict().nullable(),
+  state: z.enum(["ongoing", "generating", "completed", "owner_terminated"]),
+  version: z.number().int().positive(),
+}).strict();
+
+export type GenerateDeliveryInput = z.infer<typeof generateDeliveryInputSchema>;
+export type DeliveryVersionDto = z.infer<typeof deliveryVersionDtoSchema>;
+export type MissionCompletionDto = z.infer<typeof missionCompletionDtoSchema>;

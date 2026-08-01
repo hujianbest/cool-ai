@@ -192,7 +192,7 @@ export function ReviewSlice({ load, start, workItemId }: ReviewSliceProps) {
         {submitting ? "正在调用复核 Agent…" : "确认并发起真实复核"}
       </button>
       {error ? <p className="error-text" role="alert">{error}</p> : null}
-      {success ? <p aria-live="polite">{success}</p> : null}
+      {success ? <p aria-live="polite" role="status">{success}</p> : null}
 
       {attempt ? (
         <section aria-labelledby={`review-${attempt.id}-decision`} className="stack">

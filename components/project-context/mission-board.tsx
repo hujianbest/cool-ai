@@ -8,6 +8,7 @@ import {
 } from "react";
 
 import type { ApiError } from "@/src/shared/contracts";
+import { MissionDeliverySurface } from "@/components/review/review-product-surface";
 import type {
   MembershipState,
   Mission,
@@ -757,6 +758,7 @@ export function MissionBoard({ projectId }: { projectId: string }) {
               </section>
             ))}
           </div>
+          <MissionDeliverySurface missionId={mission.id} />
         </>
       )}
       {error && !error.startsWith("无法加载") ? (

@@ -1,0 +1,35 @@
+# hf-gate-run
+# label: t28-red
+# command: npm test -- tests/review-product-wiring.test.tsx
+# started: 2026-08-01T10:14:22+00:00
+
+> collaboration-cockpit@0.1.0 test
+> vitest run tests/review-product-wiring.test.tsx
+
+
+ RUN  v4.1.10 D:/cool-ai
+
+ ❯ tests/review-product-wiring.test.tsx (4 tests | 1 failed) 723ms
+     × keeps versioned memory source hrefs on a reachable product target 4ms
+
+⎯⎯⎯⎯⎯⎯⎯ Failed Tests 1 ⎯⎯⎯⎯⎯⎯⎯
+
+ FAIL  tests/review-product-wiring.test.tsx > review product wiring > keeps versioned memory source hrefs on a reachable product target
+Error: ENOENT: no such file or directory, open 'D:\cool-ai\app\projects\[projectId]\[[...resource]]\page.tsx'
+ ❯ tests/review-product-wiring.test.tsx:153:26
+    151|
+    152|   it("keeps versioned memory source hrefs on a reachable product targe…
+    153|     const sourceTarget = readFileSync(
+       |                          ^
+    154|       resolve("app/projects/[projectId]/[[...resource]]/page.tsx"),
+    155|       "utf8",
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[1/1]⎯
+
+
+ Test Files  1 failed (1)
+      Tests  1 failed | 3 passed (4)
+   Start at  18:14:24
+   Duration  3.39s (transform 233ms, setup 421ms, import 205ms, tests 723ms, environment 1.77s)
+
+# exit: 1

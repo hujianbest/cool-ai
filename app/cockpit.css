@@ -429,6 +429,45 @@ ol {
   padding-block: var(--space-3);
 }
 
+.review-access-surface button,
+.review-access-surface a,
+.review-access-surface input,
+.review-access-surface select,
+.review-access-surface textarea {
+  min-height: var(--control-min);
+  min-width: var(--control-min);
+}
+
+.review-access-tabs,
+.review-access-openers {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--space-2);
+}
+
+.review-access-tabs [aria-selected="true"] {
+  background: var(--accent);
+  color: var(--surface);
+}
+
+.review-access-panel {
+  min-width: 0;
+  border: var(--border-width) solid var(--border);
+  border-radius: var(--radius-sm);
+  padding: var(--space-4);
+  background: var(--surface-muted);
+}
+
+.review-access-state {
+  color: var(--text-muted);
+  font: var(--text-sm) var(--font-sans);
+}
+
+.review-access-dialog {
+  color: var(--text);
+  background: var(--surface);
+}
+
 .execution-review-tabs,
 .execution-review-actions {
   display: flex;

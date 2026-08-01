@@ -30,7 +30,7 @@ export type ReviewOutcomesPanelProps = {
     state: string;
   }>;
   onReload?: () => void;
-  onStartExecution: (input: {
+  onStartExecution?: (input: {
     resultId: string;
     sourceAttemptId: string;
   }) => Promise<{ executionId: string }>;
@@ -79,7 +79,7 @@ function escalationMessage(
   if (result.action === "continue_review") {
     return result.attemptId
       ? `已创建新复核 attempt ${result.attemptId}`
-      : "已请求创建新复核 attempt";
+      : "已创建新复核 attempt";
   }
   if (result.action === "rework") {
     return "已进入返工；新 result 提交后会创建新 attempt";
@@ -157,7 +157,7 @@ export function ReviewOutcomesPanel({
   }
 
   async function startExecution(attempt: ReviewAttemptDto) {
-    if (!attempt.result || disabledReason || pending) return;
+    if (!attempt.result || !onStartExecution || disabledReason || pending) return;
     setPending(attempt.id);
     setOperationError(null);
     setAnnouncement(null);
@@ -305,16 +305,30 @@ export function ReviewOutcomesPanel({
                   </section>
                 ) : null}
                 {attempt.decision?.choice === "reject" && result ? (
-                  <button
-                    disabled={Boolean(disabledReason) || pending !== null}
-                    onClick={() => void startExecution(attempt)}
-                    style={{ minHeight: "var(--control-min)" }}
-                    type="button"
-                  >
-                    {pending === attempt.id
-                      ? "正在创建新 execution…"
-                      : "按退回要求开始新 execution"}
-                  </button>
+                  <>
+                    <button
+                      aria-describedby={!onStartExecution
+                        ? `review-${attempt.id}-execution-reason`
+                        : undefined}
+                      disabled={
+                        !onStartExecution
+                        || Boolean(disabledReason)
+                        || pending !== null
+                      }
+                      onClick={() => void startExecution(attempt)}
+                      style={{ minHeight: "var(--control-min)" }}
+                      type="button"
+                    >
+                      {pending === attempt.id
+                        ? "正在创建新 execution…"
+                        : "按退回要求开始新 execution"}
+                    </button>
+                    {!onStartExecution ? (
+                      <p id={`review-${attempt.id}-execution-reason`}>
+                        请从项目执行区开始返工 execution。
+                      </p>
+                    ) : null}
+                  </>
                 ) : null}
               </li>
             );
