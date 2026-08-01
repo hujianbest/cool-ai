@@ -37,8 +37,46 @@ const HASH = "a".repeat(64);
 const POLICY_HASH =
   "4f53cda18c2baa0c0354bb5f9a3ecbe5ed12ab4d8e11ba873c2f11161202b945";
 
+const expectedPersistedEventTypes = [
+  "action_finished",
+  "action_queued",
+  "action_reconciled",
+  "action_started",
+  "approval_consumed",
+  "approval_decided",
+  "approval_requested",
+  "attempt_interrupted",
+  "attempt_started",
+  "boundary_paused",
+  "conflict_detected",
+  "control_applied",
+  "execution_created",
+  "manual_recovery_required",
+  "manual_recovery_resolved",
+  "merge_prepared",
+  "merge_recovered",
+  "merged",
+  "model_call_failed",
+  "model_call_started",
+  "model_call_succeeded",
+  "operation_replayed",
+  "sandbox_preflight",
+  "sandbox_ready",
+  "staged_created",
+  "stale_detected",
+  "status_changed",
+  "tool_failed",
+  "tool_rejected",
+  "tool_requested",
+  "tool_succeeded",
+  "usage_recorded",
+  "validation_recorded",
+] as const;
+
 const persistedEventFixtures = [
   ["execution_created", { agentId: "read-agent", attemptNo: 1, workItemId: "read-work" }],
+  ["sandbox_preflight", { copiedBytes: 128, excludedCount: 2, itemCount: 4 }],
+  ["sandbox_ready", { manifestHash: HASH }],
   ["action_queued", {
     actionId: "read-action",
     actionIndex: 0,
@@ -72,6 +110,26 @@ const persistedEventFixtures = [
     resumeTarget: null,
   }],
   ["status_changed", { from: "running", reasonCode: null, to: "staged" }],
+  ["attempt_interrupted", { attemptNo: 2, kind: "model" }],
+  ["model_call_started", {
+    attemptNo: 2,
+    kind: "primary",
+    modelCallId: "model-call-started",
+    round: 1,
+  }],
+  ["model_call_succeeded", {
+    attemptNo: 2,
+    kind: "primary",
+    modelCallId: "model-call-succeeded",
+    round: 1,
+  }],
+  ["model_call_failed", {
+    attemptNo: 2,
+    category: "provider_unavailable",
+    kind: "repair",
+    modelCallId: "model-call-failed",
+    round: 2,
+  }],
   ["usage_recorded", {
     agentId: "read-agent",
     completionTokens: 3,
@@ -93,6 +151,12 @@ const persistedEventFixtures = [
     toolCallId: "tool-call",
     type: "list",
   }],
+  ["tool_rejected", {
+    guardCode: "COMMAND_APPROVAL_REQUIRED",
+    recovery: "request_approval",
+    toolCallId: "tool-call-rejected",
+    type: "command",
+  }],
   ["tool_failed", { code: "SANDBOX_UNVERIFIABLE", toolCallId: "tool-call", type: "read" }],
   ["approval_requested", {
     approvalId: "approval",
@@ -107,13 +171,51 @@ const persistedEventFixtures = [
     kind: "command",
     status: "approved",
   }],
+  ["approval_consumed", { approvalId: "approval" }],
+  ["validation_recorded", {
+    exitCode: 0,
+    policyEntryId: "policy-entry",
+    required: true,
+    sandboxManifestHash: HASH,
+    succeeded: true,
+    truncated: false,
+    validationId: "validation",
+  }],
+  ["staged_created", {
+    blockReasons: [],
+    blockerCount: 0,
+    classification: "auto_eligible",
+    mergeFileCount: 2,
+    mergeFinalBytes: 256,
+    observedFinalBytes: 512,
+    observedPathCount: 3,
+    stagedHash: HASH,
+    stagedId: STAGED_ID,
+  }],
   ["stale_detected", { categories: ["external_workspace"], pathCount: 1 }],
   ["conflict_detected", { otherExecutionIds: ["other-execution"], pathCount: 1 }],
   ["control_applied", { action: "pause" }],
+  ["merge_prepared", { journalId: "journal", mergeFileCount: 2, stagedHash: HASH }],
+  ["merge_recovered", { direction: "roll_forward", journalId: "journal" }],
   ["merged", { journalId: "journal", resultId: "result", stagedHash: HASH }],
+  ["manual_recovery_required", {
+    journalId: "journal",
+    mismatchPhase: "apply",
+    observedManifestHash: HASH,
+    oldManifestHash: HASH,
+    pathCount: 2,
+    postManifestHash: HASH,
+  }],
+  ["manual_recovery_resolved", {
+    journalId: "journal",
+    resolution: "recovered_new",
+    uncleanedOwnedPathCount: 0,
+  }],
+  ["operation_replayed", {
+    kind: "stage",
+    operationId: "26000000-0000-4000-8000-000000000001",
+  }],
 ] as const;
-
-const expectedPersistedEventTypes = persistedEventFixtures.map(([type]) => type).sort();
 
 let directory: string;
 let databasePath: string;
@@ -305,9 +407,14 @@ describe("bounded execution read APIs", () => {
   });
 
   it("round-trips the complete persisted event union in sequence order across pages", async () => {
-    expect(expectedPersistedEventTypes.filter(
-      (type) => !executionEventTypeSchema.options.includes(type as never),
-    )).toEqual([]);
+    expect(expectedPersistedEventTypes).toHaveLength(33);
+    expect(persistedEventFixtures).toHaveLength(expectedPersistedEventTypes.length);
+    expect(persistedEventFixtures.map(([type]) => type).sort()).toEqual(
+      [...expectedPersistedEventTypes].sort(),
+    );
+    expect([...executionEventTypeSchema.options].sort()).toEqual(
+      [...expectedPersistedEventTypes].sort(),
+    );
     database.prepare("DELETE FROM execution_events WHERE execution_id=?").run(EXECUTION_ID);
     const insert = database.prepare(`
       INSERT INTO execution_events (
@@ -378,6 +485,21 @@ describe("bounded execution read APIs", () => {
       sequence: 1,
       type: persistedEventFixtures[0][0],
     }).success).toBe(false);
+  });
+
+  it("fails closed when every persisted event payload is tampered in the database", async () => {
+    for (const [type, payload] of persistedEventFixtures) {
+      database.prepare(`
+        UPDATE execution_events SET type=?,payload_json=? WHERE id='event-1'
+      `).run(type, JSON.stringify({ ...payload, extraSecret: "stored-secret-marker" }));
+      await expect(reads.listExecutionEvents(
+        databasePath,
+        EXECUTION_ID,
+        { limit: "1" },
+      ), type).rejects.toMatchObject({
+        code: "INTERNAL_ERROR",
+      });
+    }
   });
 
   it.each([

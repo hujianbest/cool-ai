@@ -4,6 +4,6 @@
 - 当前阶段: build
 - 执行模式: auto
 - 已加载扩展: ext-ui-design（规格包含桌面与窄屏执行、审批和预览 UI）
-- 当前工件: code-review 第 1 轮 findings 1-5 均已按 TDD 修复
-- 下一步: 重跑 suite / smoke，并发起独立代码复审
+- 当前工件: code-review 第 2 轮唯一 finding 已按 T57 RED/GREEN 修复
+- 下一步: 待第 3 轮独立代码复审
 - 门禁输出: RESULT: PASS — 可进入 build
