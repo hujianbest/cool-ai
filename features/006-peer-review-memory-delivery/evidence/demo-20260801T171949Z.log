@@ -1,0 +1,8 @@
+# hf-gate-run
+# label: demo
+# command: npm.cmd exec -- node tests/review-browser-demo.mjs
+# started: 2026-08-01T17:19:49+00:00
+npm warn exec The following package was not found and will be installed: node@26.5.1
+REVIEW FULL CHAIN PASS: result b51bfee3-e7e7-4df5-8da9-8d92ddc960b5 rejected, result 2f8ed7be-bbb1-48c4-88ad-5de1f9b7910b escalated then passed after owner answer, persisted memory, restarted, and recovered delivery 747b80cb-c931-4060-b5bd-cf2c6b1a2b70
+SCREENSHOTS: D:\cool-ai\features\006-peer-review-memory-delivery\evidence\demo-review-desktop.png; D:\cool-ai\features\006-peer-review-memory-delivery\evidence\demo-review-narrow.png
+# exit: 0
