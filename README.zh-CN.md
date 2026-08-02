@@ -31,7 +31,7 @@
 <details>
 <summary>查看团队配置</summary>
 
-![Provider、技能与 Agent 配置](docs/images/cool-ai-team-configuration.png)
+![两名 Agent 的不同职责、技能、权限与独立复核能力](docs/images/cool-ai-team-configuration.png)
 </details>
 
 <details>
@@ -43,13 +43,13 @@
 <details>
 <summary>查看安全执行</summary>
 
-![隔离执行、审批、验证与 staged 变更](docs/images/cool-ai-safe-execution.png)
+![双 Agent 执行中的验证与一次性审批](docs/images/cool-ai-safe-execution.png)
 </details>
 
 <details>
 <summary>查看复核与交付</summary>
 
-![独立复核、有来源记忆与最终交付](docs/images/cool-ai-review-delivery.png)
+![独立复核者、pass 裁决与最终交付摘要](docs/images/cool-ai-review-delivery.png)
 </details>
 
 ## 平台与安全边界

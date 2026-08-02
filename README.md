@@ -31,7 +31,7 @@ Building with multiple Agents often turns the owner into a human router: copying
 <details>
 <summary>See team configuration</summary>
 
-![Provider, skill, and Agent configuration](docs/images/cool-ai-team-configuration.png)
+![Two Agents with distinct roles, skills, permissions, and independent-review capability](docs/images/cool-ai-team-configuration.png)
 </details>
 
 <details>
@@ -43,13 +43,13 @@ Building with multiple Agents often turns the owner into a human router: copying
 <details>
 <summary>See safe execution</summary>
 
-![Isolated execution, approval, validation, and staged changes](docs/images/cool-ai-safe-execution.png)
+![Two-Agent execution with validation and one-shot approval](docs/images/cool-ai-safe-execution.png)
 </details>
 
 <details>
 <summary>See review and delivery</summary>
 
-![Independent review, source-linked memory, and final delivery](docs/images/cool-ai-review-delivery.png)
+![Independent reviewer, pass verdict, and final delivery summary](docs/images/cool-ai-review-delivery.png)
 </details>
 
 ## Platform and security boundaries

@@ -62,6 +62,4 @@ npm run smoke:review
 
 HarnessFlow 开发阶段的测试/build/smoke/demo 必须通过 gate runner 生成机器 evidence；不要手写或编辑 evidence 日志。各切片的规格、任务、评审和证据边界见 [`features/`](../features/)。
 
-S-7“项目文档与产品展示”当前获得了产品回归测试豁免，因此本切片只检查 Markdown 链接、双语一致性、图片和真实渲染，不运行 `npm test`。这是本切片因已知环境基线而作的明确例外，**不是**项目常规规范，也不免除后续产品代码变更的测试、构建、smoke、评审和 demo 要求。
-
 故障处理见[故障排查](./troubleshooting.md)。
