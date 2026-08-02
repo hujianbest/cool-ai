@@ -1,108 +1,148 @@
-# Cool AI collaboration cockpit
+# Cool AI
 
-This walking skeleton proves one real path through the application: create a project, run the deterministic example Agent, persist every task state in SQLite, and recover it after refresh.
+A local-first collaboration cockpit where one product owner assembles configurable Agents into a peer team that can coordinate, execute, review, remember, and deliver.
 
-## Requirements
+**English** · [简体中文](./README.zh-CN.md)
 
-- Node.js 24.x and the bundled npm 11.x
-- Windows, macOS, or Linux
+## Why Cool AI?
 
-## Install
+Building with multiple Agents often turns the owner into a human router: copying context, assigning the next step, reconciling scattered outputs, and checking whether anyone actually verified the result. Cool AI keeps the owner in control without making them relay every message. The team works from one mission board, shared memory, visible handoffs, bounded execution, and an auditable delivery trail.
+
+![Cool AI collaboration cockpit overview](docs/images/cool-ai-cockpit-overview.png)
+
+## What it does
+
+- **Configurable teams:** connect an OpenAI-compatible Provider, create reusable text skills, and define distinct Agents with their own roles, models, permissions, and budgets.
+- **Shared project context:** bind a local workspace, form a peer team, and manage a mission DAG with owners, dependencies, status, and source-linked memory.
+- **Real collaboration:** Agents use structured Provider calls to propose and claim work, talk in the project room, hand off explicitly, ask the owner for decisions, and resume from persisted state.
+- **Safe two-lane execution:** run at most two independent tasks per project in isolated staging areas, with verified paths, exact command approval, resource limits, validation, stale/conflict checks, and controlled merge.
+- **Independent review:** the owner selects an eligible non-executing Agent to review a frozen result and return `reject`, `escalate`, or `pass`; the platform cannot invent a verdict.
+- **Memory and delivery:** preserve source-linked goals, decisions, facts, artifacts, and lessons in immutable version chains, then generate the final delivery after every task passes review.
+
+## From Provider to delivery
+
+1. Add and verify a Provider, then create skills and at least two distinct Agents.
+2. Create a project, bind its local workspace, and add the Agents as equal members.
+3. Define a mission and its task DAG; submit the goal in the project conversation.
+4. Let Agents propose, claim, discuss, and hand off work while the owner can speak, mention an Agent, answer a decision request, pause, or redirect.
+5. Start execution only for dependency-ready tasks. Each execution works in an isolated area and exposes file actions, command approvals, validation, and staged changes before merge.
+6. Select a qualified non-executing Agent to review each current result. Resolve rejection or escalation, preserve accepted memory, and generate the final delivery when all tasks pass.
+
+<details>
+<summary>See team configuration</summary>
+
+![Provider, skill, and Agent configuration](docs/images/cool-ai-team-configuration.png)
+</details>
+
+<details>
+<summary>See real Agent collaboration</summary>
+
+![Multi-Agent collaboration and explicit handoff](docs/images/cool-ai-collaboration-run.png)
+</details>
+
+<details>
+<summary>See safe execution</summary>
+
+![Isolated execution, approval, validation, and staged changes](docs/images/cool-ai-safe-execution.png)
+</details>
+
+<details>
+<summary>See review and delivery</summary>
+
+![Independent review, source-linked memory, and final delivery](docs/images/cool-ai-review-delivery.png)
+</details>
+
+## Platform and security boundaries
+
+Cool AI is a **local-first, single-owner application with no authentication**. Use it only on a trusted machine and do not expose the development server or APIs to an untrusted network. Model requests and the context needed for a task are sent to the Provider configured by the owner, so local-first does not mean fully offline.
+
+- **Web, configuration, and collaboration:** designed for a local desktop browser. Running these surfaces on a platform does not establish verified file-execution support.
+- **Full verified execution:** supported only on Windows 10+ or Windows Server 2016+ x64, with x64 Node.js and local NTFS/ReFS volumes. File execution on other operating systems, architectures, or file systems fails closed with `SANDBOX_UNVERIFIABLE`.
+- **Guardrail, not an OS sandbox:** isolation, verified handles, permissions, approvals, limits, validation, and conflict checks reduce accidental damage. An owner-approved local executable may still access the network, system resources, processes, services, files, or credentials. Use a VM, container, or OS policy for hostile code.
+- **Provider contract:** compatibility is limited to `GET /models` and `POST /chat/completions`; chat content must be a JSON object and usage must be valid, non-negative, and arithmetically consistent.
+- **Lifecycle:** each project allows at most two active executions, and each Agent at most one. There is no background worker; closing the browser or restarting the app does not continue or replay unattended work.
+
+Read [Security](./docs/security.md), [Platforms and limits](./docs/limits-and-platforms.md), and [Provider compatibility](./docs/provider-compatibility.md) before enabling execution.
+
+## Quick start
+
+Requirements: Node.js 24.x and npm 11.x.
 
 ```powershell
 npm install
+# For a clean lockfile-based install, use: npm ci
 ```
 
-## Run locally
+Generate a fresh 32-byte base64url master key. Never commit it.
 
-```powershell
-npm run dev
-```
-
-Open `http://localhost:3000`. Local data is stored in `.data/cockpit.sqlite` by default. To use another location, set `COCKPIT_DB_PATH` before starting:
-
-```powershell
-$env:COCKPIT_DB_PATH='D:\temp\cockpit.sqlite'
-npm run dev
-```
-
-Team model-service credentials also require a process-local 32-byte master key. Generate a fresh base64url value rather than copying a key from documentation or committing one:
+PowerShell:
 
 ```powershell
 $env:COCKPIT_MASTER_KEY = node -e 'const { randomBytes } = require("node:crypto"); process.stdout.write(randomBytes(32).toString("base64url"))'
+```
+
+POSIX shell:
+
+```sh
+export COCKPIT_MASTER_KEY="$(node -e 'const { randomBytes } = require("node:crypto"); process.stdout.write(randomBytes(32).toString("base64url"))')"
+```
+
+Start the application:
+
+```powershell
 npm run dev
 ```
 
-Keep `COCKPIT_MASTER_KEY` in the local process environment or your deployment secret manager. The database stores only encrypted provider credentials; losing or changing this key makes existing credentials unavailable and requires replacing them through Team settings.
+Open <http://localhost:3000>. Losing or changing `COCKPIT_MASTER_KEY` makes previously saved Provider credentials undecryptable; replace those credentials in Team settings.
 
-## Test and build
+## Environment variables
 
-Run the complete automated suite:
+- `COCKPIT_MASTER_KEY` — required to save or use Provider credentials; a canonical base64url encoding of 32 random bytes. Keep it separate from the database and source tree.
+- `COCKPIT_DB_PATH` — optional SQLite path; defaults to `.data/cockpit.sqlite`.
+- `COCKPIT_EXECUTION_ROOT` — optional execution sandbox and recovery root; defaults to `.data/executions`. Do not place it inside a project workspace.
 
-```powershell
+See [Configuration](./docs/configuration.md) for path examples, backup requirements, and recovery implications.
+
+## Architecture at a glance
+
+The React 19 cockpit calls Next.js 16 App Router handlers. Route handlers parse and validate DTOs before calling server-side domain services for projects, collaboration, execution, review, memory, and delivery; security-critical mutations such as execution and review also apply an explicit request-body cap. SQLite (`node:sqlite`) stores persistent facts and immutable versions; the Provider supplies model calls; workspace adapters isolate and verify file/process operations. The browser never accesses SQLite, Provider credentials, or host files directly.
+
+```text
+React cockpit → Next.js route handlers → domain services → SQLite
+                                           ├────────────→ owner Provider
+                                           └────────────→ workspace / execution sandbox
+```
+
+For the three main collaboration, execution, and review chains, see the [architecture overview](./docs/architecture/overview.md).
+
+## Documentation
+
+- [Documentation map](./docs/README.md)
+- [Getting started](./docs/getting-started.md)
+- [Team setup](./docs/guides/team-setup.md)
+- [Project workflow](./docs/guides/project-workflow.md)
+- [Collaboration and handoff](./docs/guides/collaboration.md)
+- [Safe execution](./docs/guides/safe-execution.md)
+- [Review and delivery](./docs/guides/review-and-delivery.md)
+- [Troubleshooting](./docs/troubleshooting.md)
+
+## Testing
+
+The repository exposes only these test, build, and browser smoke commands:
+
+```text
 npm test
-```
-
-Create a production build:
-
-```powershell
 npm run build
-```
-
-## Real browser smoke
-
-Install the Chromium runtime once:
-
-```powershell
-npx playwright install chromium
-```
-
-Then run the end-to-end browser check:
-
-```powershell
 npm run smoke
-```
-
-The smoke command starts the real app on an isolated port with a temporary `COCKPIT_DB_PATH`, creates and reloads persisted data, checks the narrow layout and keyboard drawers, writes screenshots under `features/001-walking-skeleton/evidence/`, and removes its temporary database.
-
-Run the separate S-2 Team configuration smoke with:
-
-```powershell
 npm run smoke:team
-```
-
-This command generates an ephemeral `COCKPIT_MASTER_KEY`, temporary SQLite database, and local OpenAI-compatible provider. It validates provider credential boundaries, creates and edits a skill, creates two distinct Agents, verifies refresh persistence and desktop/narrow accessibility, scans runtime surfaces for secret leakage, writes S-2 screenshots, and removes all temporary runtime state.
-
-Run the complete S-3 project-context browser acceptance with:
-
-```powershell
 npm run smoke:context
-```
-
-This isolated Playwright harness creates a temporary workspace, SQLite database, master key, and local provider. It drives Team prerequisites and the complete workspace→members→mission/DAG→memory→context path, verifies refresh persistence and desktop/narrow keyboard modals, and writes the three S-3 screenshots. Its operation audit requires `content read/enumerate/write/exec = 0`; logs, error responses, and snapshots are also scanned according to the project path and Provider secret boundaries. All temporary runtime state is removed in `finally`.
-
-Run the complete S-4 collaboration orchestration smoke with:
-
-```powershell
 npm run smoke:collaboration
-```
-
-This isolated browser harness starts the real app and a local OpenAI-compatible provider with a temporary workspace, SQLite database, and generated encryption key. It configures encrypted credentials and two distinct Agents, then drives primary and repair model calls through task proposal/claim, handoff, owner mention, decision answer, valid usage, and planned state. Refresh and process-restart recovery, current-Agent private separation, outbound prompt allowlists, product-surface secret/CoT scans, desktop keyboard behavior, and the narrow keyboard surface are verified before the two S-4 demo screenshots are written. Temporary runtime state is always removed.
-
-Run the S-5 safe parallel execution smoke with:
-
-```powershell
 npm run smoke:execution
+npm run smoke:review
 ```
 
-This verification-only harness starts an isolated app, SQLite database, generated master key, real temporary workspace, execution root, and local OpenAI-compatible provider. It drives two independent in-progress tasks through concurrent Agent model/file edits, standing and exact one-shot command authorization, staged review, nonoverlapping merge, replay and budget boundaries, stale/conflict/manual recovery contracts, refresh/restart persistence, and desktop/narrow keyboard UI. It scans provider bodies, database text, product API bodies, DOM, logs, and screenshot-facing surfaces for credentials, ciphertext, raw host paths, environment markers, and hidden reasoning. The harness writes `demo-execution-desktop.png` and `demo-execution-narrow.png` under the S-5 evidence directory and removes all temporary runtime state.
+See [Testing and verification](./docs/testing.md) for what each command covers.
 
-## Troubleshooting
+## Current limits
 
-- **Wrong Node version:** run `node --version`; this repository expects Node.js 24.x because it uses `node:sqlite`.
-- **Port 3000 is occupied:** run `npm run dev -- --port 3001`, then open `http://localhost:3001`.
-- **Data directory is not writable:** set `COCKPIT_DB_PATH` to a writable absolute path. The app does not fall back to in-memory storage.
-- **Chromium is missing:** rerun `npx playwright install chromium` before `npm run smoke`.
-- **Team credentials are unavailable:** confirm the same valid `COCKPIT_MASTER_KEY` is present in every process that reads the database. Never replace it with an example or committed value.
-- **Execution smoke cannot start:** confirm the temporary directory is writable and no security product is blocking isolated Node child processes.
-- **Windows native SWC warning:** the scripts explicitly use Next.js Webpack so the supported WASM fallback can build and run on this host.
+Cool AI does not currently provide multi-user accounts or authentication, public cloud hosting, production deployment tooling, mobile-first operation, native vendor APIs, local Agent CLI guarantees, arbitrary shell access, hostile-code containment, unattended schedules, or automatic cross-restart progress. Narrow screens support basic viewing, conversation, and approval; configuration and parallel execution remain desktop-first.

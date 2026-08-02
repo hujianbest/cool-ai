@@ -6,7 +6,7 @@
 
 - React 19 负责协作驾驶舱 UI。
 - Next.js 16 App Router 组织页面与 `app/api/**` Route Handler。
-- Route Handler 解析有界输入、调用领域服务并返回脱敏的稳定响应。
+- Route Handler 解析并验证 DTO、调用领域服务并返回脱敏的稳定响应；execution、review 等安全关键 mutation 使用显式的 parse 前请求体上限。
 - `src/server/**` 领域服务实现项目、协作、execution、复核、记忆和交付规则。
 - SQLite（`node:sqlite`）保存单机持久事实、版本、lease、operation receipt 和事件。
 - owner 配置的 OpenAI-compatible Provider 提供模型目录与结构化 chat completions。

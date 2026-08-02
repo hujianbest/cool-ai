@@ -6,6 +6,7 @@ Cool AI 的安全目标是让单个 owner 在受信任本机上，以可见权�
 
 - 应用本地优先、单 owner、无登录认证。
 - 不要将开发服务器或 API 暴露到不可信网络；任何能访问应用的人都可能以 owner 能力操作项目。
+- 当前没有覆盖所有 Route Handler 的全局统一 parse 前请求体上限；execution、review 等安全关键 mutation 有显式 body cap，部分较早路由仍在 `request.json()` 后做 DTO/Zod 字段校验。字段校验不能替代 parse 前 body cap，这也是不得暴露到不可信网络的原因之一。
 - 模型请求会发送到 owner 配置的 Provider，包括完成当前任务所需的公开上下文。产品不能被描述为“完全离线”。
 - 工作区、数据库、execution 目录和主密钥均由本机 owner 负责访问控制与备份。
 
