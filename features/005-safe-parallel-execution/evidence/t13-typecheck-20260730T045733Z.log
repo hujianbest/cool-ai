@@ -1,5 +1,0 @@
-# hf-gate-run
-# label: t13-typecheck
-# command: npm.cmd exec tsc -- --noEmit
-# started: 2026-07-30T04:57:33+00:00
-# exit: 0

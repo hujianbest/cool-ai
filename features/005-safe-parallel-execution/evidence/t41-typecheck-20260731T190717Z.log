@@ -1,5 +1,0 @@
-# hf-gate-run
-# label: t41-typecheck
-# command: npm.cmd exec tsc -- --noEmit
-# started: 2026-07-31T19:07:17+00:00
-# exit: 0

@@ -1,5 +1,0 @@
-# hf-gate-run
-# label: typecheck
-# command: npx.cmd tsc --noEmit
-# started: 2026-07-29T23:36:01+00:00
-# exit: 0

@@ -1,5 +1,0 @@
-# hf-gate-run
-# label: review2-typecheck
-# command: npx.cmd tsc --noEmit
-# started: 2026-07-30T00:43:54+00:00
-# exit: 0

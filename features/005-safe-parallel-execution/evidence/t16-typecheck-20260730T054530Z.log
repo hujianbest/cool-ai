@@ -1,7 +1,0 @@
-# hf-gate-run
-# label: t16-typecheck
-# command: npx.cmd tsc --noEmit
-# started: 2026-07-30T05:45:30+00:00
-src/server/execution/node-file-tool-adapter.ts(58,3): error TS2322: Type 'SandboxHandleIdentity' is not assignable to type 'never'.
-src/server/execution/node-file-tool-adapter.ts(202,44): error TS2339: Property 'path' does not exist on type 'FileHandle'.
-# exit: 2

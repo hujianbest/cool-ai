@@ -1,6 +1,0 @@
-# hf-gate-run
-# label: t33-native-smoke
-# command: node --conditions=react-server --experimental-strip-types --input-type=module -e import {mkdtempSync,rmSync} from 'node:fs'; import {tmpdir} from 'node:os'; import {join} from 'node:path'; const path=mkdtempSync(join(tmpdir(),'cool-ai-native-smoke-')); try { const m=await import('./src/server/execution/windows-native-loader.ts'); const loader=m.createWindowsNativeLoader(); const capability=loader.capability(path); const root=loader.openRootDirectory(path); const result={koffi:(await import('koffi')).version,capability,identity:root.identity(),attributes:root.attributes(),finalPath:root.finalPath()}; root.close(); console.log(JSON.stringify(result)); } finally { rmSync(path,{recursive:true,force:true}); }
-# started: 2026-07-31T16:35:53+00:00
-{"koffi":"3.1.2","capability":{"supported":true,"fileSystem":"NTFS"},"identity":{"fileId":"ad440500000017000000000000000000","volumeSerialNumber":"94289c0c289beb8c"},"attributes":{"directory":true,"reparsePoint":false},"finalPath":"C:\\Users\\Administrator\\AppData\\Local\\Temp\\2\\cool-ai-native-smoke-I3g0zQ"}
-# exit: 0

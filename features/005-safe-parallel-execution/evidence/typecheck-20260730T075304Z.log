@@ -1,8 +1,0 @@
-# hf-gate-run
-# label: typecheck
-# command: cmd /c npx tsc --noEmit
-# started: 2026-07-30T07:53:04+00:00
-src/server/execution/stage-service.ts(733,11): error TS2322: Type 'string | null' is not assignable to type 'string'.
-  Type 'null' is not assignable to type 'string'.
-tests/execution-approvals.test.ts(200,72): error TS2345: Argument of type 'unknown' is not assignable to parameter of type 'SQLInputValue'.
-# exit: 2

@@ -1,7 +1,0 @@
-# hf-gate-run
-# label: typecheck
-# command: cmd /c npx tsc --noEmit
-# started: 2026-07-30T05:06:53+00:00
-src/server/execution/execution-structured-repair.ts(161,18): error TS2339: Property 'reason' does not exist on type 'ExecutionActionParseResult'.
-  Property 'reason' does not exist on type '{ success: true; action: { summary: string; action: { type: "list"; path: string; } | { type: "read"; path: string; } | { type: "write"; path: string; content: string; expectedHash: string | null; } | { ...; } | { ...; }; }; }'.
-# exit: 2

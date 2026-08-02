@@ -1,6 +1,0 @@
-# hf-gate-run
-# label: t30-typecheck
-# command: cmd /c npx tsc --noEmit
-# started: 2026-07-30T14:37:11+00:00
-app/api/executions/[executionId]/recovery/resolve/route.ts(55,7): error TS2698: Spread types may only be created from object types.
-# exit: 2

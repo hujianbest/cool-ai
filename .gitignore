@@ -5,6 +5,7 @@ node_modules/
 *.tsbuildinfo
 playwright-report/
 test-results/
+features/**/evidence/
 .env
 .env.local
 .env.*.local

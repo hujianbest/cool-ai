@@ -1,6 +1,0 @@
-# hf-gate-run
-# label: baseline
-# command: npm test
-# started: 2026-07-29T14:20:53+00:00
-hf-gate: 命令无法启动: [WinError 2] 系统找不到指定的文件。
-# exit: 127

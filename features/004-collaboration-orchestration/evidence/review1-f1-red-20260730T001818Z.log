@@ -1,6 +1,0 @@
-# hf-gate-run
-# label: review1-f1-red
-# command: npm test -- tests/agent-task-actions.test.ts tests/mission-transaction-primitives.test.ts tests/handoff-plan-ready.test.ts
-# started: 2026-07-30T00:18:18+00:00
-hf-gate: 命令无法启动: [WinError 2] 系统找不到指定的文件。
-# exit: 127

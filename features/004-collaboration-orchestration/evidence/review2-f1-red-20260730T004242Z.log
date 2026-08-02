@@ -1,6 +1,0 @@
-# hf-gate-run
-# label: review2-f1-red
-# command: npx vitest run tests/collaboration-controls.service.test.ts -t rejects provider auth retry after only non-connection provider fields change
-# started: 2026-07-30T00:42:42+00:00
-hf-gate: 命令无法启动: [WinError 2] 系统找不到指定的文件。
-# exit: 127
