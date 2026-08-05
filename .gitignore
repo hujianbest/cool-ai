@@ -10,3 +10,6 @@ features/**/evidence/
 .env.local
 .env.*.local
 !.env.example
+
+# macOS
+.DS_Store
