@@ -70,6 +70,7 @@ describe("desktop collaboration cockpit", () => {
     render(<ProjectPanel />);
 
     const cockpit = await screen.findByTestId("collaboration-cockpit");
+    const toolbar = within(cockpit).getByRole("toolbar", { name: "驾驶舱面板" });
     const navigation = within(cockpit).getByRole("complementary", {
       name: "项目导航",
     });
@@ -78,9 +79,43 @@ describe("desktop collaboration cockpit", () => {
       name: "当前任务上下文",
     });
 
-    expect(within(navigation).getByRole("button", { name: "Launch plan" })).toHaveAttribute(
+    for (const action of within(toolbar).getAllByRole("button")) {
+      expect(action).toHaveClass("button-secondary");
+    }
+    expect(within(navigation).getByRole("link", { name: "工作" })).toHaveClass("nav-item");
+    expect(within(navigation).getByRole("link", { name: "团队" })).toHaveClass("nav-item");
+    expect(within(navigation).getByRole("heading", { name: "Cool AI" })).toHaveClass(
+      "surface-heading",
+    );
+    expect(within(navigation).getByRole("heading", { name: "项目" })).toHaveClass(
+      "surface-heading",
+    );
+    expect(within(navigation).getByRole("button", { name: "创建项目" })).toHaveClass(
+      "button-primary",
+    );
+    expect(within(navigation).getByRole("button", { name: "关闭项目导航" })).toHaveClass(
+      "button-ghost",
+    );
+    const currentProject = within(navigation).getByRole("button", { name: "Launch plan" });
+    expect(currentProject).toHaveClass("nav-item");
+    expect(currentProject).toHaveAttribute(
       "aria-current",
       "page",
+    );
+    expect(within(flow).getByRole("heading", { name: "Launch plan" })).toHaveClass(
+      "surface-heading",
+    );
+    expect(within(flow).getByRole("button", { name: "运行任务" })).toHaveClass(
+      "button-primary",
+    );
+    expect(within(flow).getByRole("button", { name: "关闭任务编辑" })).toHaveClass(
+      "button-ghost",
+    );
+    expect(within(context).getByRole("heading", { name: "项目上下文" })).toHaveClass(
+      "surface-heading",
+    );
+    expect(within(context).getByRole("button", { name: "关闭当前任务上下文" })).toHaveClass(
+      "button-ghost",
     );
     expect(await within(flow).findByText("任务已完成。")).toBeInTheDocument();
     expect(within(flow).getByText("已完成", { selector: ".status-label" })).toBeInTheDocument();

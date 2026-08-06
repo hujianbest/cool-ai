@@ -182,6 +182,7 @@ export function ProjectPanel() {
           aria-label={
             mobileSurface === "projects" ? "隐藏项目导航" : "打开项目导航"
           }
+          className="button-secondary"
           onClick={() =>
             setMobileSurface((current) =>
               current === "projects" ? null : "projects",
@@ -196,6 +197,7 @@ export function ProjectPanel() {
           aria-controls="task-editor-surface"
           aria-expanded={mobileSurface === "editor"}
           aria-label={mobileSurface === "editor" ? "隐藏编辑" : "打开编辑"}
+          className="button-secondary"
           onClick={() =>
             setMobileSurface((current) =>
               current === "editor" ? null : "editor",
@@ -214,6 +216,7 @@ export function ProjectPanel() {
               ? "隐藏当前任务上下文"
               : "打开当前任务上下文"
           }
+          className="button-secondary"
           onClick={() =>
             setMobileSurface((current) =>
               current === "context" ? null : "context",
@@ -255,7 +258,7 @@ export function ProjectPanel() {
         </span>
         <button
           aria-label="关闭项目导航"
-          className="drawer-close"
+          className="drawer-close button-ghost"
           onClick={closeProjectNavigation}
           ref={projectCloseRef}
           tabIndex={narrow && mobileSurface === "projects" ? 0 : -1}
@@ -269,25 +272,25 @@ export function ProjectPanel() {
           </span>
           <div>
             <p className="eyebrow">协作驾驶舱</p>
-            <h1>Cool AI</h1>
+            <h1 className="surface-heading">Cool AI</h1>
           </div>
         </div>
 
         <nav aria-label="主导航">
           <ul className="project-list">
             <li>
-              <a aria-current="page" href="/">
+              <a aria-current="page" className="nav-item" href="/">
                 工作
               </a>
             </li>
             <li>
-              <a href="/team">团队</a>
+              <a className="nav-item" href="/team">团队</a>
             </li>
           </ul>
         </nav>
 
         <section aria-labelledby="projects-title" className="stack">
-          <h2 id="projects-title">项目</h2>
+          <h2 className="surface-heading" id="projects-title">项目</h2>
           <form className="stack" onSubmit={handleSubmit}>
             <div className="form-field">
               <label htmlFor="project-name">项目名称</label>
@@ -298,7 +301,7 @@ export function ProjectPanel() {
                 value={name}
               />
             </div>
-            <button disabled={isSubmitting} type="submit">
+            <button className="button-primary" disabled={isSubmitting} type="submit">
               {isSubmitting ? "正在创建项目…" : "创建项目"}
             </button>
           </form>
@@ -329,6 +332,7 @@ export function ProjectPanel() {
                   <li key={project.id}>
                     <button
                       aria-current={project.id === currentProjectId ? "page" : undefined}
+                      className="nav-item"
                       onClick={() => {
                         setCurrentProjectId(project.id);
                         if (mobileSurface === "projects")

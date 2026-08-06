@@ -43,6 +43,7 @@ describe("one-command developer loop", () => {
       "page.reload",
       "scrollWidth",
       "smoke-desktop.png",
+      "smoke-workbench-narrow.png",
       "demo-cockpit.png",
     ]) {
       expect(smoke).toContain(contract);

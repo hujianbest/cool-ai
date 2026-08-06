@@ -13,7 +13,25 @@ const temporaryDirectory = mkdtempSync(join(tmpdir(), "cool-ai-smoke-"));
 const databasePath = join(temporaryDirectory, "smoke.sqlite");
 const evidenceDirectory = resolve("features", "001-walking-skeleton", "evidence");
 const smokeScreenshot = join(evidenceDirectory, "smoke-desktop.png");
+const narrowScreenshot = join(evidenceDirectory, "smoke-workbench-narrow.png");
 const demoScreenshot = join(evidenceDirectory, "demo-cockpit.png");
+const currentEvidenceDirectory = resolve("features", "008-ui-design-refresh", "evidence");
+const currentDesktopScreenshot = join(
+  currentEvidenceDirectory,
+  "smoke-workbench-current-desktop.png",
+);
+const currentNarrowScreenshot = join(
+  currentEvidenceDirectory,
+  "smoke-workbench-current-narrow.png",
+);
+const currentDesktopDemoScreenshot = join(
+  currentEvidenceDirectory,
+  "demo-workbench-current-desktop.png",
+);
+const currentNarrowDemoScreenshot = join(
+  currentEvidenceDirectory,
+  "demo-workbench-current-narrow.png",
+);
 const browserExecutable = [
   process.env.PLAYWRIGHT_CHROMIUM_EXECUTABLE,
   "C:\\Program Files\\Google\\Chrome\\Application\\chrome.exe",
@@ -21,6 +39,7 @@ const browserExecutable = [
 ].find((candidate) => candidate && existsSync(candidate));
 
 mkdirSync(evidenceDirectory, { recursive: true });
+mkdirSync(currentEvidenceDirectory, { recursive: true });
 
 const serverCommand =
   process.platform === "win32"
@@ -116,14 +135,16 @@ try {
   }
   const statuses = await page.locator(".status-label").allTextContents();
   assert.deepEqual(statuses, ["排队中", "运行中", "已完成"]);
-  await page.getByText(/示例 Agent 已完成骨架任务/).waitFor();
+  const taskResult = page.getByText(/示例 Agent 已完成骨架任务/);
 
   await page.screenshot({ path: smokeScreenshot, fullPage: true });
+  await page.screenshot({ path: currentDesktopScreenshot, fullPage: true });
 
   await page.reload({ waitUntil: "networkidle" });
   await page.getByRole("button", { name: "Smoke project" }).waitFor();
   await page.getByText("任务已完成。", { exact: true }).waitFor();
-  await page.getByText(/示例 Agent 已完成骨架任务/).waitFor();
+  await page.getByRole("tab", { name: "骨架运行" }).click();
+  await taskResult.scrollIntoViewIfNeeded();
   assert.deepEqual(await page.locator(".status-label").allTextContents(), [
     "排队中",
     "运行中",
@@ -131,10 +152,13 @@ try {
   ]);
 
   await page.screenshot({ path: demoScreenshot, fullPage: true });
+  await page.screenshot({ path: currentDesktopDemoScreenshot, fullPage: true });
 
   await page.setViewportSize({ width: 390, height: 844 });
   await page.reload({ waitUntil: "networkidle" });
-  await page.getByText("任务已完成。", { exact: true }).waitFor();
+  await page
+    .getByText("任务已完成。", { exact: true })
+    .waitFor({ state: "attached" });
 
   const overflow = await page.evaluate(() => ({
     clientWidth: document.documentElement.clientWidth,
@@ -153,23 +177,49 @@ try {
     true,
     `narrow viewport must not overflow horizontally: ${JSON.stringify(overflow)}`,
   );
+  await page.screenshot({ path: narrowScreenshot, fullPage: true });
+  await page.getByRole("button", { name: "打开编辑" }).click();
+  await page.getByRole("dialog", { name: "任务编辑" }).waitFor();
+  await page.screenshot({ path: currentNarrowScreenshot, fullPage: true });
+  await page.screenshot({ path: currentNarrowDemoScreenshot, fullPage: true });
+  await page.getByRole("button", { name: "关闭任务编辑" }).click();
+  await page.reload({ waitUntil: "networkidle" });
+  await page
+    .getByText("任务已完成。", { exact: true })
+    .waitFor({ state: "attached" });
 
   await page.evaluate(() => {
     if (document.activeElement instanceof HTMLElement) document.activeElement.blur();
   });
-  await page.keyboard.press("Tab");
   const projectToggle = page.locator('[aria-controls="project-navigation-drawer"]');
+  for (let index = 0; index < 10; index += 1) {
+    if (await projectToggle.evaluate((element) => document.activeElement === element)) break;
+    await page.keyboard.press("Tab");
+  }
   assert.equal(await projectToggle.getAttribute("aria-label"), "打开项目导航");
   assert.equal(await projectToggle.evaluate((element) => document.activeElement === element), true);
   assert.notEqual(await projectToggle.evaluate((element) => getComputedStyle(element).boxShadow), "none");
+  await page.keyboard.press("Tab");
+  const editorToggle = page.getByRole("button", { name: "打开编辑" });
+  assert.equal(await editorToggle.evaluate((element) => document.activeElement === element), true);
   await page.keyboard.press("Tab");
   const contextToggle = page.locator('[aria-controls="task-context-drawer"]');
   assert.equal(await contextToggle.getAttribute("aria-label"), "打开当前任务上下文");
   assert.equal(await contextToggle.evaluate((element) => document.activeElement === element), true);
   await page.keyboard.press("Tab");
+  const nextFocus = await page.evaluate(() => ({
+    ariaLabel: document.activeElement?.getAttribute("aria-label"),
+    insideClosedSurface:
+      document.activeElement?.closest(
+        '.cockpit-sidebar[hidden], .cockpit-flow[hidden], .cockpit-context[hidden]',
+      ) !== null,
+    tagName: document.activeElement?.tagName,
+    text: document.activeElement?.textContent?.trim().slice(0, 80),
+  }));
   assert.equal(
-    await page.getByLabel("任务目标").evaluate((element) => document.activeElement === element),
-    true,
+    nextFocus.insideClosedSurface,
+    false,
+    `closed narrow surfaces must stay outside tab order: ${JSON.stringify(nextFocus)}`,
   );
 
   await projectToggle.click();
@@ -195,7 +245,12 @@ try {
 
   console.log(`SMOKE PASS: real project/task persistence verified at ${baseUrl}`);
   console.log(`SMOKE SCREENSHOT: ${smokeScreenshot}`);
+  console.log(`NARROW SCREENSHOT: ${narrowScreenshot}`);
   console.log(`DEMO SCREENSHOT: ${demoScreenshot}`);
+  console.log(`CURRENT DESKTOP SCREENSHOT: ${currentDesktopScreenshot}`);
+  console.log(`CURRENT NARROW SCREENSHOT: ${currentNarrowScreenshot}`);
+  console.log(`CURRENT DESKTOP DEMO: ${currentDesktopDemoScreenshot}`);
+  console.log(`CURRENT NARROW DEMO: ${currentNarrowDemoScreenshot}`);
 } finally {
   await browser?.close();
   stopServer();

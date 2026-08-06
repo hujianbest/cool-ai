@@ -243,7 +243,7 @@ export function TaskPanel({
         </span>
         <button
           aria-label="关闭任务编辑"
-          className="drawer-close"
+          className="drawer-close button-ghost"
           data-dialog-close="true"
           onClick={onCloseEditor}
           ref={editorCloseRef}
@@ -259,6 +259,7 @@ export function TaskPanel({
           <div>
             <p className="eyebrow">确定性示例 Agent</p>
             <h2
+              className="surface-heading"
               id="tasks-title"
               ref={currentProjectTitleRef}
               tabIndex={currentProjectName ? -1 : undefined}
@@ -357,7 +358,11 @@ export function TaskPanel({
                     value={goal}
                   />
                 </div>
-                <button disabled={!goal.trim() || isRunning} type="submit">
+                <button
+                  className="button-primary"
+                  disabled={!goal.trim() || isRunning}
+                  type="submit"
+                >
                   {isRunning ? "任务运行中…" : "运行任务"}
                 </button>
               </div>
@@ -423,7 +428,7 @@ export function TaskPanel({
         </span>
         <button
           aria-label="关闭当前任务上下文"
-          className="drawer-close"
+          className="drawer-close button-ghost"
           data-dialog-close="true"
           onClick={onCloseContext}
           ref={contextCloseRef}
@@ -434,7 +439,7 @@ export function TaskPanel({
         </button>
         <div>
           <p className="eyebrow">项目资源</p>
-          <h2>项目上下文</h2>
+          <h2 className="surface-heading">项目上下文</h2>
         </div>
         {projectLoading ? (
           <p aria-busy="true" className="state-message">

@@ -34,6 +34,14 @@ function contrast(left: string, right: string): number {
   return (lighter + 0.05) / (darker + 0.05);
 }
 
+function hexToken(tokens: string, name: string): string {
+  const value = tokens.match(
+    new RegExp(`--${name}:\\s*(#[0-9A-Fa-f]{6})`),
+  )?.[1];
+  expect(value, `${name} token`).toBeDefined();
+  return value!;
+}
+
 describe("Team visual tokens", () => {
   const tokens = readFileSync(join(process.cwd(), "app", "tokens.css"), "utf8");
   const cockpit = readFileSync(join(process.cwd(), "app", "cockpit.css"), "utf8");
@@ -54,6 +62,46 @@ describe("Team visual tokens", () => {
     expect(background, `${accent} background token`).toBeDefined();
     expect(contrast(foreground!, background!)).toBeGreaterThanOrEqual(4.5);
     expect(cockpit).toContain(`[data-accent="${accent}"]`);
+  });
+
+  it("keeps shared text and interactive tokens above contrast thresholds", () => {
+    for (const [foreground, background] of [
+      ["text-primary", "surface-card"],
+      ["text-secondary", "surface-main"],
+      ["text-subtle", "surface-panel"],
+      ["surface-card", "interactive-primary"],
+    ]) {
+      expect(
+        contrast(hexToken(tokens, foreground), hexToken(tokens, background)),
+        `${foreground} on ${background}`,
+      ).toBeGreaterThanOrEqual(4.5);
+    }
+
+    for (const [foreground, background] of [
+      ["border-subtle", "surface-card"],
+      ["border-strong", "interactive-soft"],
+      ["interactive-primary", "interactive-soft"],
+      ["focus-ring-color", "surface-card"],
+    ]) {
+      expect(
+        contrast(hexToken(tokens, foreground), hexToken(tokens, background)),
+        `${foreground} against ${background}`,
+      ).toBeGreaterThanOrEqual(3);
+    }
+  });
+
+  it("keeps status text readable on its semantic surface", () => {
+    for (const [foreground, background] of [
+      ["warning", "status-queued-surface"],
+      ["interactive-primary", "status-running-surface"],
+      ["success", "status-success-surface"],
+      ["danger", "status-danger-surface"],
+    ]) {
+      expect(
+        contrast(hexToken(tokens, foreground), hexToken(tokens, background)),
+        `${foreground} on ${background}`,
+      ).toBeGreaterThanOrEqual(4.5);
+    }
   });
 
   it("uses controlled accent attributes and no inline or raw visual values", () => {

@@ -77,6 +77,7 @@ export function TeamPanel() {
         <button
           aria-expanded={resourceNavigationOpen}
           aria-label={resourceNavigationOpen ? "关闭团队资源" : "打开团队资源"}
+          className="button-secondary"
           onClick={() => {
             if (resourceNavigationOpen) closeResourceNavigation();
             else setResourceNavigationOpen(true);
@@ -102,7 +103,7 @@ export function TeamPanel() {
       >
         <button
           aria-label="关闭团队资源"
-          className="drawer-close"
+          className="drawer-close button-ghost"
           data-dialog-close="true"
           onClick={closeResourceNavigation}
           type="button"
@@ -115,16 +116,16 @@ export function TeamPanel() {
           </span>
           <div>
             <p className="eyebrow">协作驾驶舱</p>
-            <h1>Cool AI</h1>
+            <h1 className="surface-heading">Cool AI</h1>
           </div>
         </div>
         <nav aria-label="主导航">
           <ul className="project-list">
             <li>
-              <a href="/">工作</a>
+              <a className="nav-item" href="/">工作</a>
             </li>
             <li>
-              <a aria-current="page" href="/team">
+              <a aria-current="page" className="nav-item" href="/team">
                 团队
               </a>
             </li>
@@ -139,6 +140,7 @@ export function TeamPanel() {
           <button
             aria-controls="skill-resource-panel"
             aria-selected={resource === "skills"}
+            className="nav-item"
             id="skill-resource-tab"
             onClick={() => selectResource("skills")}
             ref={skillTabRef}
@@ -151,6 +153,7 @@ export function TeamPanel() {
           <button
             aria-controls="provider-resource-panel"
             aria-selected={resource === "providers"}
+            className="nav-item"
             id="provider-resource-tab"
             onClick={() => selectResource("providers")}
             ref={providerTabRef}
@@ -163,6 +166,7 @@ export function TeamPanel() {
           <button
             aria-controls="agent-resource-panel"
             aria-selected={resource === "agents"}
+            className="nav-item"
             id="agent-resource-tab"
             onClick={() => selectResource("agents")}
             ref={agentTabRef}

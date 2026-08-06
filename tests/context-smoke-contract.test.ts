@@ -8,6 +8,7 @@ const packageJson = JSON.parse(
   readFileSync(join(root, "package.json"), "utf8"),
 ) as { scripts?: Record<string, string> };
 const readme = readFileSync(join(root, "README.md"), "utf8");
+const testingGuide = readFileSync(join(root, "docs", "testing.md"), "utf8");
 const harnessPath = join(root, "tests", "context-browser-smoke.mjs");
 
 describe("project-context developer loop contract", () => {
@@ -16,8 +17,8 @@ describe("project-context developer loop contract", () => {
       "node tests/context-browser-smoke.mjs",
     );
     expect(readme).toContain("npm run smoke:context");
-    expect(readme).toContain("temporary workspace");
-    expect(readme).toContain("content read/enumerate/write/exec = 0");
+    expect(testingGuide).toContain("临时工作区");
+    expect(testingGuide).toContain("工作区、成员、使命/DAG、记忆和上下文");
   });
 
   it("provides a compiling harness with required evidence and security contracts", () => {

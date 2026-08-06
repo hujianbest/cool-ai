@@ -8,6 +8,7 @@ const packageJson = JSON.parse(
   readFileSync(join(root, "package.json"), "utf8"),
 ) as { scripts?: Record<string, string> };
 const readme = readFileSync(join(root, "README.md"), "utf8");
+const testingGuide = readFileSync(join(root, "docs", "testing.md"), "utf8");
 const harnessPath = join(root, "tests", "collaboration-browser-smoke.mjs");
 
 describe("collaboration browser verification contract", () => {
@@ -16,8 +17,8 @@ describe("collaboration browser verification contract", () => {
       "node tests/collaboration-browser-smoke.mjs",
     );
     expect(readme).toContain("npm run smoke:collaboration");
-    expect(readme).toContain("two distinct Agents");
-    expect(readme).toContain("local OpenAI-compatible provider");
+    expect(readme).toContain("at least two distinct Agents");
+    expect(testingGuide).toContain("真实本地 HTTP Provider");
   });
 
   it("provides a compiling harness with behavioral, recovery, and evidence contracts", () => {

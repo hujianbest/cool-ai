@@ -94,7 +94,19 @@ describe("Team accessibility contract", () => {
 
     const tablist = screen.getByRole("tablist", { name: "团队资源" });
     const tabs = within(tablist).getAllByRole("tab");
+    expect(screen.getByRole("link", { name: "工作" })).toHaveClass("nav-item");
+    expect(screen.getByRole("link", { name: "团队" })).toHaveClass("nav-item");
+    expect(screen.getByRole("heading", { name: "Cool AI" })).toHaveClass(
+      "surface-heading",
+    );
+    expect(screen.getByRole("button", { name: "打开团队资源" })).toHaveClass(
+      "button-secondary",
+    );
+    expect(screen.getByRole("button", { name: "关闭团队资源" })).toHaveClass(
+      "button-ghost",
+    );
     expect(tabs.map((tab) => tab.textContent)).toEqual(["技能", "模型服务", "Agent"]);
+    for (const tab of tabs) expect(tab).toHaveClass("nav-item");
     expect(tabs[0]).toHaveAttribute("aria-selected", "true");
     tabs[0].focus();
     await user.keyboard("{ArrowRight}");

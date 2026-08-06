@@ -2,11 +2,17 @@
   box-sizing: border-box;
 }
 
+html,
+body {
+  min-height: var(--viewport-height);
+  max-width: var(--full-width);
+  overflow-x: hidden;
+}
+
 body {
   margin: 0;
-  overflow-x: hidden;
-  background: var(--canvas);
-  color: var(--text);
+  background: var(--surface-sunken);
+  color: var(--text-primary);
   font: var(--text-md) var(--font-sans);
 }
 
@@ -28,11 +34,11 @@ input,
 select,
 textarea {
   min-height: var(--control-min);
-  border: none;
+  border: var(--border-width) solid var(--border-subtle);
   border-radius: var(--radius-sm);
   padding: var(--space-2) var(--space-3);
-  background: var(--surface);
-  color: var(--text);
+  background: var(--surface-card);
+  color: var(--text-primary);
   font: inherit;
 }
 
@@ -41,15 +47,46 @@ button {
 }
 
 button:hover {
-  background: var(--surface-muted);
+  background: var(--interactive-soft-hover);
+}
+
+.button-primary {
+  border-color: var(--interactive-primary);
+  background: var(--interactive-primary);
+  color: var(--surface-card);
+}
+
+.button-primary:hover {
+  border-color: var(--interactive-primary-hover);
+  background: var(--interactive-primary-hover);
+}
+
+.button-secondary {
+  background: var(--interactive-soft);
+  color: var(--text-primary);
+  border: var(--border-width) solid var(--border-strong);
+}
+
+.button-secondary:hover {
+  background: var(--interactive-soft-hover);
+}
+
+.button-ghost {
+  border-color: transparent;
+  background: transparent;
+  color: var(--text-secondary);
+}
+
+.button-ghost:hover {
+  background: var(--interactive-soft);
 }
 
 button:disabled,
 input:disabled,
 select:disabled,
 textarea:disabled {
-  background: var(--surface-muted);
-  color: var(--text-muted);
+  background: var(--surface-panel);
+  color: var(--text-subtle);
   cursor: not-allowed;
 }
 
@@ -68,7 +105,7 @@ textarea {
 }
 
 a {
-  color: var(--text);
+  color: var(--text-primary);
 }
 
 code {
@@ -104,8 +141,10 @@ ol {
 
 .collaboration-cockpit {
   display: grid;
+  min-height: var(--viewport-height);
+  max-width: var(--full-width);
   grid-template-columns: var(--sidebar-width) minmax(var(--content-min), 1fr) var(--context-width);
-  background: var(--canvas);
+  background: var(--surface-sunken);
 }
 
 .mobile-toolbar,
@@ -119,8 +158,8 @@ ol {
   flex-direction: column;
   gap: var(--space-6);
   padding: var(--space-6);
-  background: var(--surface);
-  box-shadow: var(--shadow-panel);
+  background: var(--surface-panel);
+  border: var(--border-width) solid var(--border-subtle);
 }
 
 .modal-surface {
@@ -133,8 +172,8 @@ ol {
   overflow-y: auto;
   border-radius: var(--radius-md);
   padding: var(--space-6);
-  background: var(--surface);
-  box-shadow: var(--shadow-panel);
+  background: var(--surface-card);
+  box-shadow: var(--shadow-2);
 }
 
 .cockpit-flow {
@@ -143,6 +182,7 @@ ol {
   flex-direction: column;
   gap: var(--space-6);
   padding: var(--space-8);
+  background: var(--surface-main);
 }
 
 .mission-board,
@@ -164,8 +204,8 @@ ol {
 .mission-status {
   border-radius: var(--radius-md);
   padding: var(--space-4);
-  background: var(--surface);
-  box-shadow: var(--shadow-panel);
+  background: var(--surface-card);
+  border: var(--border-width) solid var(--border-subtle);
 }
 
 .mission-status h4,
@@ -212,8 +252,36 @@ ol {
 .eyebrow,
 .muted,
 .context-label {
-  color: var(--text-muted);
+  color: var(--text-subtle);
   font: var(--text-sm) var(--font-sans);
+}
+
+.surface-heading {
+  color: var(--text-primary);
+}
+
+.nav-item {
+  display: flex;
+  min-height: var(--control-min);
+  align-items: center;
+  padding: var(--space-2) var(--space-3);
+  color: var(--text-secondary);
+  background: transparent;
+}
+
+.nav-item:hover {
+  color: var(--text-primary);
+  background: var(--interactive-soft-hover);
+}
+
+.nav-item[aria-current] {
+  background: var(--interactive-soft);
+  color: var(--interactive-primary);
+}
+
+[role="tab"][aria-selected="true"] {
+  background: var(--interactive-soft);
+  color: var(--interactive-primary);
 }
 
 .stack,
@@ -319,8 +387,8 @@ ol {
 .state-message {
   border-radius: var(--radius-md);
   padding: var(--space-4);
-  background: var(--surface);
-  box-shadow: var(--shadow-panel);
+  background: var(--surface-card);
+  border: var(--border-width) solid var(--border-subtle);
 }
 
 .composer,
@@ -744,25 +812,33 @@ ol {
 }
 
 .status-label {
+  border: var(--border-width) solid currentColor;
   border-radius: var(--radius-sm);
   padding: var(--space-1) var(--space-2);
-  background: var(--surface);
+  background: var(--surface-card);
   font: var(--text-xs) var(--font-sans);
 }
 
-.status-queued {
+.status-label.status-queued {
   color: var(--warning);
+  background: var(--status-queued-surface);
 }
 
-.status-running {
-  color: var(--accent);
+.status-label.status-running {
+  color: var(--interactive-primary);
+  background: var(--status-running-surface);
 }
 
-.status-completed {
+.status-label.status-completed {
   color: var(--success);
+  background: var(--status-success-surface);
 }
 
-.status-failed,
+.status-label.status-failed {
+  color: var(--danger);
+  background: var(--status-danger-surface);
+}
+
 .error-text {
   color: var(--danger);
 }

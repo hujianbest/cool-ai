@@ -246,9 +246,17 @@ describe("review accessibility and responsive single surface", () => {
       return (values[0] + 0.05) / (values[1] + 0.05);
     };
 
-    expect(contrast(colors.text, colors.surface)).toBeGreaterThanOrEqual(4.5);
-    expect(contrast(colors["text-muted"], colors.surface)).toBeGreaterThanOrEqual(4.5);
-    expect(contrast(colors.accent, colors.surface)).toBeGreaterThanOrEqual(4.5);
-    expect(contrast(colors.danger, colors.surface)).toBeGreaterThanOrEqual(4.5);
+    expect(
+      contrast(colors["text-primary"], colors["surface-card"]),
+    ).toBeGreaterThanOrEqual(4.5);
+    expect(
+      contrast(colors["text-subtle"], colors["surface-card"]),
+    ).toBeGreaterThanOrEqual(4.5);
+    expect(
+      contrast(colors["interactive-primary"], colors["surface-card"]),
+    ).toBeGreaterThanOrEqual(4.5);
+    expect(
+      contrast(colors.danger, colors["surface-card"]),
+    ).toBeGreaterThanOrEqual(4.5);
   });
 });

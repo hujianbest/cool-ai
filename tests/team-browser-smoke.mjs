@@ -35,6 +35,27 @@ const evidenceDirectory = resolve(
 const desktopScreenshot = join(evidenceDirectory, "smoke-team-desktop.png");
 const narrowScreenshot = join(evidenceDirectory, "smoke-team-narrow.png");
 const demoScreenshot = join(evidenceDirectory, "demo-agent-team.png");
+const currentEvidenceDirectory = resolve(
+  "features",
+  "008-ui-design-refresh",
+  "evidence",
+);
+const currentDesktopScreenshot = join(
+  currentEvidenceDirectory,
+  "smoke-team-current-desktop.png",
+);
+const currentNarrowScreenshot = join(
+  currentEvidenceDirectory,
+  "smoke-team-current-narrow.png",
+);
+const currentDesktopDemoScreenshot = join(
+  currentEvidenceDirectory,
+  "demo-team-current-desktop.png",
+);
+const currentNarrowDemoScreenshot = join(
+  currentEvidenceDirectory,
+  "demo-team-current-narrow.png",
+);
 const browserExecutable = [
   process.env.PLAYWRIGHT_CHROMIUM_EXECUTABLE,
   "C:\\Program Files\\Google\\Chrome\\Application\\chrome.exe",
@@ -42,6 +63,7 @@ const browserExecutable = [
 ].find((candidate) => candidate && existsSync(candidate));
 
 mkdirSync(evidenceDirectory, { recursive: true });
+mkdirSync(currentEvidenceDirectory, { recursive: true });
 
 let providerAuthorizationCount = 0;
 let redirectAuthorizationCount = 0;
@@ -289,6 +311,8 @@ try {
 
   await page.screenshot({ fullPage: true, path: desktopScreenshot });
   await page.screenshot({ fullPage: true, path: demoScreenshot });
+  await page.screenshot({ fullPage: true, path: currentDesktopScreenshot });
+  await page.screenshot({ fullPage: true, path: currentDesktopDemoScreenshot });
 
   await page.setViewportSize({ height: 844, width: 390 });
   await page.reload({ waitUntil: "networkidle" });
@@ -370,6 +394,8 @@ try {
     true,
   );
   await page.screenshot({ fullPage: true, path: narrowScreenshot });
+  await page.screenshot({ fullPage: true, path: currentNarrowScreenshot });
+  await page.screenshot({ fullPage: true, path: currentNarrowDemoScreenshot });
   await page.keyboard.press("Escape");
   await mobileDialog.waitFor({ state: "detached" });
   assert.equal(
@@ -448,6 +474,10 @@ try {
   console.log(`SMOKE SCREENSHOT: ${desktopScreenshot}`);
   console.log(`NARROW SCREENSHOT: ${narrowScreenshot}`);
   console.log(`DEMO SCREENSHOT: ${demoScreenshot}`);
+  console.log(`CURRENT DESKTOP SCREENSHOT: ${currentDesktopScreenshot}`);
+  console.log(`CURRENT NARROW SCREENSHOT: ${currentNarrowScreenshot}`);
+  console.log(`CURRENT DESKTOP DEMO: ${currentDesktopDemoScreenshot}`);
+  console.log(`CURRENT NARROW DEMO: ${currentNarrowDemoScreenshot}`);
 } finally {
   await browser?.close();
   stopAppServer();

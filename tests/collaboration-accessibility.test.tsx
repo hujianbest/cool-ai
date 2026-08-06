@@ -288,9 +288,15 @@ describe("narrow collaboration cockpit accessibility", () => {
     expect(tokens).toContain("--control-min: 2.75rem");
     expect(cockpit).toContain("min-height: var(--control-min)");
     expect(cockpit).toMatch(/\.collaboration-mobile-tabs[\s\S]*var\(--/);
-    expect(contrast(token("text"), token("surface"))).toBeGreaterThanOrEqual(4.5);
-    expect(contrast(token("text-muted"), token("surface"))).toBeGreaterThanOrEqual(4.5);
-    expect(contrast(token("danger"), token("surface"))).toBeGreaterThanOrEqual(4.5);
+    expect(
+      contrast(token("text-primary"), token("surface-card")),
+    ).toBeGreaterThanOrEqual(4.5);
+    expect(
+      contrast(token("text-subtle"), token("surface-card")),
+    ).toBeGreaterThanOrEqual(4.5);
+    expect(
+      contrast(token("danger"), token("surface-card")),
+    ).toBeGreaterThanOrEqual(4.5);
     expect(cockpit).not.toMatch(/\.collaboration-mobile-tabs[^}]*#[0-9A-Fa-f]{3,8}/);
   });
 });
