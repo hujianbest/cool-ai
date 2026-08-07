@@ -1,10 +1,18 @@
 import { act, render, screen, waitFor } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
-import { afterEach, describe, expect, it, vi } from "vitest";
+import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
 import { ProjectPanel } from "@/components/project-panel";
 import type { TaskEvent, TaskRun } from "@/src/shared/contracts";
 import { cockpitFetch } from "@/tests/cockpit-test-fetch";
+
+const pushMock = vi.fn();
+let pathnameValue: string | null = "/";
+
+vi.mock("next/navigation", () => ({
+  usePathname: () => pathnameValue,
+  useRouter: () => ({ push: pushMock, replace: vi.fn(), back: vi.fn() }),
+}));
 
 const project = {
   id: "project-1",
@@ -47,6 +55,11 @@ function deferred<T>() {
 
 afterEach(() => {
   vi.unstubAllGlobals();
+});
+
+beforeEach(() => {
+  pushMock.mockClear();
+  pathnameValue = "/";
 });
 
 describe("task event flow", () => {

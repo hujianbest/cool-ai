@@ -1,3 +1,5 @@
+import { ProjectPanel } from "@/components/project-panel";
+
 type SourceReferencePageProps = {
   params: Promise<{
     projectId: string;
@@ -8,17 +10,16 @@ type SourceReferencePageProps = {
   }>;
 };
 
-export default async function SourceReferencePage({
-  params,
-  searchParams,
-}: SourceReferencePageProps) {
-  const { projectId, resource = [] } = await params;
-  const query = await searchParams;
-  const version = Array.isArray(query.version)
-    ? query.version[0]
-    : query.version;
-  const resourcePath = resource.join("/");
-
+// 可追溯来源引用页面组件（当 resource 非空时渲染）
+function SourceReferencePage({
+  projectId,
+  resourcePath,
+  version,
+}: {
+  projectId: string;
+  resourcePath: string;
+  version: string | null;
+}) {
   return (
     <main
       aria-labelledby="source-reference-title"
@@ -46,5 +47,31 @@ export default async function SourceReferencePage({
       </p>
       <a href="/">返回协作驾驶舱</a>
     </main>
+  );
+}
+
+export default async function SourceReferencePageRoute({
+  params,
+  searchParams,
+}: SourceReferencePageProps) {
+  const { projectId, resource = [] } = await params;
+  const query = await searchParams;
+  const version = Array.isArray(query.version)
+    ? query.version[0]
+    : query.version;
+  const resourcePath = resource.join("/");
+
+  // 当 resource 为空时，渲染 ProjectPanel（项目路由化）
+  // 当 resource 非空时，渲染来源引用页面（向后兼容）
+  if (resource.length === 0) {
+    return <ProjectPanel />;
+  }
+
+  return (
+    <SourceReferencePage
+      projectId={projectId}
+      resourcePath={resourcePath}
+      version={version ?? null}
+    />
   );
 }

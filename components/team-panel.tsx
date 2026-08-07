@@ -7,6 +7,7 @@ import {
 } from "react";
 
 import { AgentPanel } from "@/components/agent-panel";
+import { ActivityBar } from "@/components/activity-bar";
 import {
   trapModalFocus,
   useModalSurface,
@@ -73,6 +74,7 @@ export function TeamPanel() {
 
   return (
     <div className="collaboration-cockpit">
+      <ActivityBar activePath="/team" />
       <div className="mobile-toolbar">
         <button
           aria-expanded={resourceNavigationOpen}
@@ -119,18 +121,6 @@ export function TeamPanel() {
             <h1 className="surface-heading">Cool AI</h1>
           </div>
         </div>
-        <nav aria-label="主导航">
-          <ul className="project-list">
-            <li>
-              <a className="nav-item" href="/">工作</a>
-            </li>
-            <li>
-              <a aria-current="page" className="nav-item" href="/team">
-                团队
-              </a>
-            </li>
-          </ul>
-        </nav>
         <div
           aria-label="团队资源"
           className="resource-tabs"

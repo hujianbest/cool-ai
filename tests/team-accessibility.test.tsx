@@ -94,8 +94,17 @@ describe("Team accessibility contract", () => {
 
     const tablist = screen.getByRole("tablist", { name: "团队资源" });
     const tabs = within(tablist).getAllByRole("tab");
-    expect(screen.getByRole("link", { name: "工作" })).toHaveClass("nav-item");
-    expect(screen.getByRole("link", { name: "团队" })).toHaveClass("nav-item");
+    const activityBar = screen.getByRole("navigation", { name: "主导航" });
+    expect(within(activityBar).getByRole("link", { name: "团队" })).toHaveAttribute(
+      "aria-current",
+      "page",
+    );
+    expect(within(activityBar).getByRole("link", { name: "工作" })).toHaveClass(
+      "activity-bar-item",
+    );
+    const sidebar = screen.getByRole("complementary", { name: "团队导航" });
+    expect(within(sidebar).queryByRole("link", { name: "工作" })).toBeNull();
+    expect(within(sidebar).queryByRole("link", { name: "团队" })).toBeNull();
     expect(screen.getByRole("heading", { name: "Cool AI" })).toHaveClass(
       "surface-heading",
     );

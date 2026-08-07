@@ -12,7 +12,7 @@ describe("visual token discipline", () => {
     const tokens = existsSync(tokenPath) ? readFileSync(tokenPath, "utf8") : "";
 
     for (const declaration of [
-      '--font-sans: "Segoe UI Variable", "Microsoft YaHei UI", system-ui, sans-serif',
+      '--font-sans: -apple-system, "PingFang SC", "Noto Sans SC", "Segoe UI Variable", "Microsoft YaHei UI", system-ui, sans-serif',
       "--surface-sunken: #F3EFE7",
       "--surface-panel: #F7F3EC",
       "--surface-main: #FBF8F2",
@@ -57,6 +57,18 @@ describe("visual token discipline", () => {
     ]) {
       expect(tokens).toContain(declaration);
     }
+  });
+
+  it("uses a macOS-first font stack led by -apple-system", () => {
+    const tokens = readFileSync(tokenPath, "utf8");
+    const match = tokens.match(/--font-sans:\s*([^;]+);/);
+    const value = match ? match[1].trim() : "";
+
+    expect(value.startsWith("-apple-system")).toBe(true);
+    expect(value).toContain("PingFang SC");
+    expect(value).toContain("Noto Sans SC");
+    expect(value).toContain("Segoe UI Variable");
+    expect(value).toContain("Microsoft YaHei UI");
   });
 
   it("maps shared cockpit hierarchy to named surfaces and elevation", () => {
@@ -118,7 +130,7 @@ describe("visual token discipline", () => {
     const css = existsSync(cockpitPath) ? readFileSync(cockpitPath, "utf8") : "";
 
     expect(css).toMatch(
-      /grid-template-columns:\s*var\(--sidebar-width\)\s+minmax\(var\(--content-min\),\s*1fr\)\s+var\(--context-width\)/,
+      /grid-template-columns:\s*var\(--activity-bar-width\)\s+var\(--sidebar-width\)\s+minmax\(var\(--content-min\),\s*1fr\)\s+var\(--context-width\)/,
     );
     expect(css).toMatch(
       /(?:button|input)[^{]*\{[^}]*min-height:\s*var\(--control-min\)/s,

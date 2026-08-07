@@ -93,6 +93,7 @@ export function TaskPanel({
   >("chat");
   const [nestedModalOpen, setNestedModalOpen] = useState(false);
   const collaborationTabRefs = useRef(new Map<string, HTMLButtonElement>());
+  const taskGoalInputRef = useRef<HTMLInputElement>(null);
 
   useEffect(() => {
     let active = true;
@@ -304,7 +305,9 @@ export function TaskPanel({
         ) : projectError ? (
           <p className="state-message">{projectError}</p>
         ) : !projectId ? (
-          <p className="state-message">请先创建或选择项目，再运行任务。</p>
+          <div className="state-message">
+            <p>请先创建或选择项目，再运行任务。</p>
+          </div>
         ) : (
           <>
             {narrow ? (
@@ -355,6 +358,8 @@ export function TaskPanel({
                     id="task-goal"
                     name="goal"
                     onChange={(event) => setGoal(event.target.value)}
+                    placeholder="描述你想完成的任务"
+                    ref={taskGoalInputRef}
                     value={goal}
                   />
                 </div>
@@ -386,7 +391,16 @@ export function TaskPanel({
                 正在加载任务历史…
               </p>
             ) : tasks.length === 0 && !error ? (
-              <p className="state-message">暂无任务。输入目标即可运行示例 Agent。</p>
+              <div className="state-message">
+                <p>暂无任务。输入目标即可运行示例 Agent。</p>
+                <button
+                  className="button-primary"
+                  onClick={() => taskGoalInputRef.current?.focus()}
+                  type="button"
+                >
+                  开始创建任务
+                </button>
+              </div>
             ) : null}
 
             {events.length > 0 ? (

@@ -1,0 +1,21 @@
+# UI 交互体验优化 Frame
+
+- 日期: 2026-08-07
+- 意图: 为 owner 改善三栏驾驶舱的导航、路由和视觉层级体验——引入 ActivityBar 图标导航轨、项目 URL 路由化、macOS 友好的字体栈、Agent 身份色头像和引导式空状态，让产品从"能用"提升到"好用"。
+- 切片: 无（独立特性交付；后续交互优化如 SSE 推送、Markdown 聊天、命令面板另起特性）
+- 范围外:
+  - SSE/WebSocket 实时推送（另起特性）
+  - Markdown 聊天消息渲染（另起特性）
+  - 命令面板 Cmd+K（另起特性）
+  - 暗色模式（另起特性）
+  - 使命看板拖拽（另起特性）
+  - 不修改后端 API、数据库 schema 或安全执行逻辑
+- 模式: 建造
+- 风险档位: 2
+- 档位理由: 新增 ActivityBar 组件和项目路由是行为变更与结构调整，触碰 navigation/page/team 多个文件；不碰数据迁移、安全面、认证或公共 API 格式，不构成高危。
+- 用户可感知: 是——导航形态、路由行为、字体渲染、空状态卡片和 Agent 头像全部是用户直接可见的界面变化。
+- 环境基线: 待建立
+- 假设:
+  - A-80 [生效]: macOS 为主要使用平台，字体栈以 -apple-system / PingFang SC 优先；Windows 下回退到 Segoe UI Variable / Microsoft YaHei UI。如不对请指出。
+  - A-81 [生效]: 项目路由 /projects/[projectId] 已有路由文件 app/projects/[projectId]/[[...resource]]，本次复用该路由做主导航。如不对请指出。
+  - A-82 [生效]: ActivityBar 图标使用内联 SVG（不引第三方图标库），与 ext-ui-design 的"不引入新依赖"约束一致。如不对请指出。

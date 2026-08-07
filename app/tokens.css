@@ -1,5 +1,5 @@
 :root {
-  --font-sans: "Segoe UI Variable", "Microsoft YaHei UI", system-ui, sans-serif;
+  --font-sans: -apple-system, "PingFang SC", "Noto Sans SC", "Segoe UI Variable", "Microsoft YaHei UI", system-ui, sans-serif;
   --font-mono: "Cascadia Mono", "Consolas", monospace;
   --sr-only-size: 1px;
   --mission-board-columns: repeat(4, minmax(0, 1fr));
@@ -74,6 +74,7 @@
   --focus-ring-color: #3F675F;
   --focus-ring: 0 0 0 0.1875rem var(--focus-ring-color);
 
+  --activity-bar-width: 3rem;
   --sidebar-width: 15.5rem;
   --context-width: 20rem;
   --content-min: 30rem;
@@ -91,7 +92,7 @@
 /* responsive-cockpit */
 @media (max-width: 56.25rem) {
   .collaboration-cockpit {
-    grid-template-columns: minmax(0, 1fr);
+    grid-template-columns: var(--activity-bar-width) minmax(0, 1fr);
   }
 
   .mobile-toolbar {

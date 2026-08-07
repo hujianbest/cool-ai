@@ -8,8 +8,10 @@ import {
   useState,
   type FormEvent,
 } from "react";
+import { usePathname, useRouter } from "next/navigation";
 
 import { useModalSurface, useNarrowMode } from "@/components/mobile-dialog";
+import { ActivityBar } from "@/components/activity-bar";
 import { ProjectSetupPanel } from "@/components/project-context/project-setup-panel";
 import { TaskPanel } from "@/components/task-panel";
 import {
@@ -25,6 +27,8 @@ async function errorMessage(response: Response): Promise<string> {
 }
 
 export function ProjectPanel() {
+  const pathname = usePathname();
+  const router = useRouter();
   const [projects, setProjects] = useState<Project[]>([]);
   const [currentProjectId, setCurrentProjectId] = useState<string | null>(null);
   const [name, setName] = useState("");
@@ -51,6 +55,7 @@ export function ProjectPanel() {
   const contextToggleRef = useRef<HTMLButtonElement>(null);
   const contextCloseRef = useRef<HTMLButtonElement>(null);
   const currentProjectTitleRef = useRef<HTMLHeadingElement>(null);
+  const projectNameInputRef = useRef<HTMLInputElement>(null);
   const closeMobileSurface = useCallback(() => setMobileSurface(null), []);
   const projectModal = useMemo(
     () => ({
@@ -104,7 +109,28 @@ export function ProjectPanel() {
       .then(({ projects: loadedProjects }) => {
         if (!active) return;
         setProjects(loadedProjects);
-        setCurrentProjectId(loadedProjects[0]?.id ?? null);
+
+        // 从 URL 解析 projectId，如果存在且在列表中，则选中它
+        // 如果 URL 中有 projectId 但不在列表中，显示错误
+        // 否则默认选中第一个项目（兜底逻辑）
+        if (pathname) {
+          const match = pathname.match(/^\/projects\/([^/]+)/);
+          const urlProjectId = match?.[1] ?? null;
+          if (urlProjectId) {
+            if (loadedProjects.some((p) => p.id === urlProjectId)) {
+              setCurrentProjectId(urlProjectId);
+            } else {
+              // URL 中的 projectId 不存在，显示错误
+              setProjectLoadError("未找到该项目。");
+              setCurrentProjectId(null);
+            }
+          } else {
+            setCurrentProjectId(loadedProjects[0]?.id ?? null);
+          }
+        } else {
+          // SSR 首帧 pathname 为空，跳过路由同步，使用默认选中首个
+          setCurrentProjectId(loadedProjects[0]?.id ?? null);
+        }
       })
       .catch((cause: unknown) => {
         if (active) {
@@ -118,7 +144,20 @@ export function ProjectPanel() {
     return () => {
       active = false;
     };
-  }, [reloadKey]);
+  }, [reloadKey, pathname]);
+
+  // URL 同步：当 pathname 变化时（浏览器前进/后退），同步 currentProjectId
+  useEffect(() => {
+    if (!pathname || projects.length === 0) return;
+
+    const match = pathname.match(/^\/projects\/([^/]+)/);
+    const urlProjectId = match?.[1] ?? null;
+
+    // 只有当 URL 中的 projectId 在项目列表中存在时才同步
+    if (urlProjectId && projects.some((p) => p.id === urlProjectId)) {
+      setCurrentProjectId(urlProjectId);
+    }
+  }, [pathname, projects]);
 
   useEffect(() => {
     if (focusCreatedProjectId && focusCreatedProjectId === currentProjectId) {
@@ -148,7 +187,8 @@ export function ProjectPanel() {
       }
       const { project } = (await response.json()) as { project: Project };
       setProjects((current) => [...current, project]);
-      setCurrentProjectId(project.id);
+      // 使用 router.push 导航到新项目的 URL
+      router.push(`/projects/${project.id}`);
       setFocusCreatedProjectId(project.id);
       setName("");
     } catch (cause) {
@@ -170,6 +210,7 @@ export function ProjectPanel() {
 
   return (
     <div className="collaboration-cockpit" data-testid="collaboration-cockpit">
+      <ActivityBar activePath="/" />
       <div
         aria-label="驾驶舱面板"
         className="mobile-toolbar"
@@ -276,19 +317,6 @@ export function ProjectPanel() {
           </div>
         </div>
 
-        <nav aria-label="主导航">
-          <ul className="project-list">
-            <li>
-              <a aria-current="page" className="nav-item" href="/">
-                工作
-              </a>
-            </li>
-            <li>
-              <a className="nav-item" href="/team">团队</a>
-            </li>
-          </ul>
-        </nav>
-
         <section aria-labelledby="projects-title" className="stack">
           <h2 className="surface-heading" id="projects-title">项目</h2>
           <form className="stack" onSubmit={handleSubmit}>
@@ -298,6 +326,8 @@ export function ProjectPanel() {
                 id="project-name"
                 name="name"
                 onChange={(event) => setName(event.target.value)}
+                placeholder="输入项目名称"
+                ref={projectNameInputRef}
                 value={name}
               />
             </div>
@@ -324,7 +354,16 @@ export function ProjectPanel() {
               </button>
             </div>
           ) : projects.length === 0 ? (
-            <p className="muted">暂无项目。</p>
+            <div className="state-message">
+              <p>暂无项目。创建项目开始使用协作驾驶舱。</p>
+              <button
+                className="button-primary"
+                onClick={() => projectNameInputRef.current?.focus()}
+                type="button"
+              >
+                创建项目
+              </button>
+            </div>
           ) : (
             <nav aria-label="项目">
               <ul className="project-list">
@@ -334,7 +373,7 @@ export function ProjectPanel() {
                       aria-current={project.id === currentProjectId ? "page" : undefined}
                       className="nav-item"
                       onClick={() => {
-                        setCurrentProjectId(project.id);
+                        router.push(`/projects/${project.id}`);
                         if (mobileSurface === "projects")
                           closeProjectNavigation();
                       }}

@@ -28,13 +28,19 @@ describe("narrow cockpit layout guard", () => {
     );
   });
 
-  it("collapses the grid and guards against horizontal overflow", () => {
+  it("collapses the grid while keeping the ActivityBar as a persistent first column", () => {
     expect(cockpit).toMatch(/body\s*\{[^}]*overflow-x:\s*hidden/s);
     expect(tokens).toMatch(
-      /@media\s*\(max-width:\s*56\.25rem\)[\s\S]*\.collaboration-cockpit\s*\{[^}]*grid-template-columns:\s*minmax\(0,\s*1fr\)/,
+      /@media\s*\(max-width:\s*56\.25rem\)[\s\S]*\.collaboration-cockpit\s*\{[^}]*grid-template-columns:\s*var\(--activity-bar-width\)\s+minmax\(0,\s*1fr\)/,
     );
     expect(tokens).toMatch(
       /@media\s*\(max-width:\s*56\.25rem\)[\s\S]*\.cockpit-flow\s*\{[^}]*min-width:\s*0/,
+    );
+  });
+
+  it("lays out the cockpit as a four-column grid on wide screens", () => {
+    expect(cockpit).toMatch(
+      /\.collaboration-cockpit\s*\{[^}]*grid-template-columns:\s*var\(--activity-bar-width\)\s+var\(--sidebar-width\)\s+minmax\(var\(--content-min\),\s*1fr\)\s+var\(--context-width\)/s,
     );
   });
 

@@ -82,8 +82,6 @@ describe("desktop collaboration cockpit", () => {
     for (const action of within(toolbar).getAllByRole("button")) {
       expect(action).toHaveClass("button-secondary");
     }
-    expect(within(navigation).getByRole("link", { name: "工作" })).toHaveClass("nav-item");
-    expect(within(navigation).getByRole("link", { name: "团队" })).toHaveClass("nav-item");
     expect(within(navigation).getByRole("heading", { name: "Cool AI" })).toHaveClass(
       "surface-heading",
     );
@@ -123,5 +121,31 @@ describe("desktop collaboration cockpit", () => {
     expect(within(context).getByText("Prepare launch notes")).toBeInTheDocument();
     expect(within(context).getByText("Launch notes ready.")).toBeInTheDocument();
     expect(within(context).getByText("状态：已完成")).toBeInTheDocument();
+  });
+
+  it("renders the ActivityBar navigation rail and drops the in-sidebar text nav", async () => {
+    vi.stubGlobal(
+      "fetch",
+      cockpitFetch([
+        Response.json({ projects: [] }),
+        Response.json({ tasks: [], events: [] }),
+      ]),
+    );
+    render(<ProjectPanel />);
+
+    const cockpit = await screen.findByTestId("collaboration-cockpit");
+    const activityBar = within(cockpit).getByRole("navigation", {
+      name: "主导航",
+    });
+    expect(activityBar).toHaveClass("activity-bar");
+    const workLink = within(activityBar).getByRole("link", { name: "工作" });
+    expect(workLink).toHaveAttribute("aria-current", "page");
+    expect(within(activityBar).getByRole("link", { name: "团队" })).toBeInTheDocument();
+
+    const sidebar = within(cockpit).getByRole("complementary", {
+      name: "项目导航",
+    });
+    expect(within(sidebar).queryByRole("link", { name: "工作" })).toBeNull();
+    expect(within(sidebar).queryByRole("link", { name: "团队" })).toBeNull();
   });
 });

@@ -143,7 +143,7 @@ ol {
   display: grid;
   min-height: var(--viewport-height);
   max-width: var(--full-width);
-  grid-template-columns: var(--sidebar-width) minmax(var(--content-min), 1fr) var(--context-width);
+  grid-template-columns: var(--activity-bar-width) var(--sidebar-width) minmax(var(--content-min), 1fr) var(--context-width);
   background: var(--surface-sunken);
 }
 
@@ -247,6 +247,36 @@ ol {
 
 .agent-mark {
   background: var(--agent-warm);
+}
+
+[data-accent="sage"] .agent-mark {
+  background: var(--agent-sage-bg);
+  color: var(--agent-sage-fg);
+}
+
+[data-accent="terracotta"] .agent-mark {
+  background: var(--agent-terracotta-bg);
+  color: var(--agent-terracotta-fg);
+}
+
+[data-accent="gold"] .agent-mark {
+  background: var(--agent-gold-bg);
+  color: var(--agent-gold-fg);
+}
+
+[data-accent="slate"] .agent-mark {
+  background: var(--agent-slate-bg);
+  color: var(--agent-slate-fg);
+}
+
+[data-accent="rose"] .agent-mark {
+  background: var(--agent-rose-bg);
+  color: var(--agent-rose-fg);
+}
+
+[data-accent="olive"] .agent-mark {
+  background: var(--agent-olive-bg);
+  color: var(--agent-olive-fg);
 }
 
 .eyebrow,
@@ -898,4 +928,38 @@ legend {
 [data-accent="olive"] .agent-avatar {
   color: var(--agent-olive-fg);
   background: var(--agent-olive-bg);
+}
+
+.activity-bar {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-1);
+  background: var(--surface-panel);
+  border-right: var(--border-width) solid var(--border-subtle);
+  padding: var(--space-2) 0;
+  width: var(--activity-bar-width);
+}
+
+.activity-bar .activity-bar-item {
+  display: grid;
+  min-height: var(--control-min);
+  min-width: var(--control-min);
+  place-items: center;
+  color: var(--text-secondary);
+  background: transparent;
+}
+
+.activity-bar .activity-bar-item:hover {
+  background: var(--interactive-soft-hover);
+  color: var(--text-primary);
+}
+
+.activity-bar .activity-bar-item[aria-current="page"] {
+  background: var(--interactive-soft);
+  color: var(--interactive-primary);
+}
+
+.activity-bar .activity-bar-item:focus-visible {
+  outline: none;
+  box-shadow: var(--focus-ring);
 }
