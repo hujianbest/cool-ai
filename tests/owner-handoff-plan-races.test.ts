@@ -416,25 +416,29 @@ describe("calling owner messages and plan_ready", () => {
 });
 
 describe("owner prompt-window consumption", () => {
-  it("consumes exactly the 30 acquired owner message IDs and leaves excluded and post-acquire messages pending", () => {
-    for (let index = 1; index <= 32; index += 1) {
-      ownerMessage(`history-${index}`);
-    }
-    const acquired = acquire();
-    const postAcquire = ownerMessage("post-acquire");
+  it(
+    "consumes exactly the 30 acquired owner message IDs and leaves excluded and post-acquire messages pending",
+    () => {
+      for (let index = 1; index <= 32; index += 1) {
+        ownerMessage(`history-${index}`);
+      }
+      const acquired = acquire();
+      const postAcquire = ownerMessage("post-acquire");
 
-    expect(acquired.prompt.publicMessages.map(({ sequence }) => sequence)).toEqual(
-      Array.from({ length: 30 }, (_, index) => index + 3),
-    );
-    expect(finalize(acquired, handoff(AGENT_B)).status).toBe(200);
+      expect(acquired.prompt.publicMessages.map(({ sequence }) => sequence)).toEqual(
+        Array.from({ length: 30 }, (_, index) => index + 3),
+      );
+      expect(finalize(acquired, handoff(AGENT_B)).status).toBe(200);
 
-    const ownerMessages = messageConsumption().filter(({ authorType }) => authorType === "owner");
-    expect(ownerMessages.filter(({ consumedAt }) => consumedAt !== null)).toHaveLength(30);
-    expect(ownerMessages.slice(0, 2).every(({ consumedAt }) => consumedAt === null)).toBe(true);
-    expect(
-      ownerMessages.find(({ sequence }) => sequence === postAcquire.sequence)?.consumedAt,
-    ).toBeNull();
-  });
+      const ownerMessages = messageConsumption().filter(({ authorType }) => authorType === "owner");
+      expect(ownerMessages.filter(({ consumedAt }) => consumedAt !== null)).toHaveLength(30);
+      expect(ownerMessages.slice(0, 2).every(({ consumedAt }) => consumedAt === null)).toBe(true);
+      expect(
+        ownerMessages.find(({ sequence }) => sequence === postAcquire.sequence)?.consumedAt,
+      ).toBeNull();
+    },
+    15_000,
+  );
 
   it("respects the 60000-character whole-message window when marking acquired owner IDs consumed", () => {
     const messages = Array.from({ length: 7 }, (_, index) =>

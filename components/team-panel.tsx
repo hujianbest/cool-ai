@@ -74,6 +74,7 @@ export function TeamPanel() {
 
   return (
     <div className="collaboration-cockpit">
+      <h1 className="sr-only">团队管理</h1>
       <ActivityBar activePath="/team" />
       <div className="mobile-toolbar">
         <button
@@ -118,7 +119,7 @@ export function TeamPanel() {
           </span>
           <div>
             <p className="eyebrow">协作驾驶舱</p>
-            <h1 className="surface-heading">Cool AI</h1>
+            <p className="surface-heading">Cool AI</p>
           </div>
         </div>
         <div

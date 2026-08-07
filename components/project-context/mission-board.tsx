@@ -473,6 +473,7 @@ export function MissionBoard({ projectId }: { projectId: string }) {
               title: event.target.value,
             }))
           }
+          placeholder="例如：发布首个可用版本"
           ref={missionTitleInputRef}
           value={missionDraft.title}
         />
@@ -578,6 +579,7 @@ export function MissionBoard({ projectId }: { projectId: string }) {
                       title: event.target.value,
                     }))
                   }
+                  placeholder="例如：补齐发布检查清单"
                   ref={workItemTitleRef}
                   value={workItemDraft.title}
                 />
@@ -670,6 +672,7 @@ export function MissionBoard({ projectId }: { projectId: string }) {
                                     title: event.target.value,
                                   }))
                                 }
+                                placeholder="输入更新后的简短标题"
                                 ref={editTitleRef}
                                 value={editDraft.title}
                               />

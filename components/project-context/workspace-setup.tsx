@@ -230,6 +230,7 @@ export function WorkspaceSetup({
                 id={`workspace-path-${projectId}`}
                 name="workspacePath"
                 onChange={(event) => setPath(event.target.value)}
+                placeholder="例如：D:\projects\my-app"
                 ref={pathRef}
                 value={path}
               />

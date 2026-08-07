@@ -33,6 +33,7 @@ export function ProjectPanel() {
   const [currentProjectId, setCurrentProjectId] = useState<string | null>(null);
   const [name, setName] = useState("");
   const [projectLoadError, setProjectLoadError] = useState<string | null>(null);
+  const [routeProjectError, setRouteProjectError] = useState<string | null>(null);
   const [formError, setFormError] = useState<string | null>(null);
   const [isLoading, setIsLoading] = useState(true);
   const [isSubmitting, setIsSubmitting] = useState(false);
@@ -118,17 +119,19 @@ export function ProjectPanel() {
           const urlProjectId = match?.[1] ?? null;
           if (urlProjectId) {
             if (loadedProjects.some((p) => p.id === urlProjectId)) {
+              setRouteProjectError(null);
               setCurrentProjectId(urlProjectId);
             } else {
-              // URL 中的 projectId 不存在，显示错误
-              setProjectLoadError("未找到该项目。");
+              setRouteProjectError("未找到该项目。");
               setCurrentProjectId(null);
             }
           } else {
+            setRouteProjectError(null);
             setCurrentProjectId(loadedProjects[0]?.id ?? null);
           }
         } else {
           // SSR 首帧 pathname 为空，跳过路由同步，使用默认选中首个
+          setRouteProjectError(null);
           setCurrentProjectId(loadedProjects[0]?.id ?? null);
         }
       })
@@ -144,7 +147,7 @@ export function ProjectPanel() {
     return () => {
       active = false;
     };
-  }, [reloadKey, pathname]);
+  }, [reloadKey]);
 
   // URL 同步：当 pathname 变化时（浏览器前进/后退），同步 currentProjectId
   useEffect(() => {
@@ -153,9 +156,15 @@ export function ProjectPanel() {
     const match = pathname.match(/^\/projects\/([^/]+)/);
     const urlProjectId = match?.[1] ?? null;
 
-    // 只有当 URL 中的 projectId 在项目列表中存在时才同步
     if (urlProjectId && projects.some((p) => p.id === urlProjectId)) {
+      setRouteProjectError(null);
       setCurrentProjectId(urlProjectId);
+    } else if (urlProjectId) {
+      setRouteProjectError("未找到该项目。");
+      setCurrentProjectId(null);
+    } else {
+      setRouteProjectError(null);
+      setCurrentProjectId(projects[0]?.id ?? null);
     }
   }, [pathname, projects]);
 
@@ -206,69 +215,90 @@ export function ProjectPanel() {
     setMobileSurface(null);
   }
 
+  function guideToProjectSelection() {
+    if (narrow) {
+      setMobileSurface("projects");
+      window.setTimeout(() => projectNameInputRef.current?.focus(), 0);
+      return;
+    }
+    projectNameInputRef.current?.focus();
+  }
+
   const currentProject = projects.find((project) => project.id === currentProjectId) ?? null;
 
   return (
-    <div className="collaboration-cockpit" data-testid="collaboration-cockpit">
+    <main className="collaboration-cockpit" data-testid="collaboration-cockpit">
+      <h1 className="sr-only">协作工作台</h1>
       <ActivityBar activePath="/" />
-      <div
-        aria-label="驾驶舱面板"
-        className="mobile-toolbar"
-        ref={toolbarRef}
-        role="toolbar"
-      >
-        <button
-          aria-controls="project-navigation-drawer"
-          aria-expanded={mobileSurface === "projects"}
-          aria-label={
-            mobileSurface === "projects" ? "隐藏项目导航" : "打开项目导航"
-          }
-          className="button-secondary"
-          onClick={() =>
-            setMobileSurface((current) =>
-              current === "projects" ? null : "projects",
-            )
-          }
-          ref={projectToggleRef}
-          type="button"
+      <header className="mobile-toolbar">
+        <div
+          aria-label="驾驶舱面板"
+          className="mobile-toolbar-controls"
+          ref={toolbarRef}
+          role="toolbar"
         >
-          项目
-        </button>
-        <button
-          aria-controls="task-editor-surface"
-          aria-expanded={mobileSurface === "editor"}
-          aria-label={mobileSurface === "editor" ? "隐藏编辑" : "打开编辑"}
-          className="button-secondary"
-          onClick={() =>
-            setMobileSurface((current) =>
-              current === "editor" ? null : "editor",
-            )
-          }
-          ref={editorToggleRef}
-          type="button"
-        >
-          编辑
-        </button>
-        <button
-          aria-controls="task-context-drawer"
-          aria-expanded={mobileSurface === "context"}
-          aria-label={
-            mobileSurface === "context"
-              ? "隐藏当前任务上下文"
-              : "打开当前任务上下文"
-          }
-          className="button-secondary"
-          onClick={() =>
-            setMobileSurface((current) =>
-              current === "context" ? null : "context",
-            )
-          }
-          ref={contextToggleRef}
-          type="button"
-        >
-          上下文
-        </button>
-      </div>
+          <button
+            aria-controls="project-navigation-drawer"
+            aria-expanded={mobileSurface === "projects"}
+            aria-label={
+              mobileSurface === "projects" ? "隐藏项目导航" : "打开项目导航"
+            }
+            className="button-secondary"
+            onClick={() =>
+              setMobileSurface((current) =>
+                current === "projects" ? null : "projects",
+              )
+            }
+            ref={projectToggleRef}
+            type="button"
+          >
+            项目
+          </button>
+          <button
+            aria-controls="task-editor-surface"
+            aria-expanded={mobileSurface === "editor"}
+            aria-label={mobileSurface === "editor" ? "隐藏编辑" : "打开编辑"}
+            className="button-secondary"
+            onClick={() =>
+              setMobileSurface((current) =>
+                current === "editor" ? null : "editor",
+              )
+            }
+            ref={editorToggleRef}
+            type="button"
+          >
+            编辑
+          </button>
+          <button
+            aria-controls="task-context-drawer"
+            aria-expanded={mobileSurface === "context"}
+            aria-label={
+              mobileSurface === "context"
+                ? "隐藏当前任务上下文"
+                : "打开当前任务上下文"
+            }
+            className="button-secondary"
+            onClick={() =>
+              setMobileSurface((current) =>
+                current === "context" ? null : "context",
+              )
+            }
+            ref={contextToggleRef}
+            type="button"
+          >
+            上下文
+          </button>
+          {routeProjectError && narrow ? (
+            <button
+              className="button-secondary"
+              onClick={() => router.push("/")}
+              type="button"
+            >
+              返回项目列表
+            </button>
+          ) : null}
+        </div>
+      </header>
 
       <aside
         aria-label={narrow ? undefined : "项目导航"}
@@ -313,7 +343,7 @@ export function ProjectPanel() {
           </span>
           <div>
             <p className="eyebrow">协作驾驶舱</p>
-            <h1 className="surface-heading">Cool AI</h1>
+            <p className="surface-heading">Cool AI</p>
           </div>
         </div>
 
@@ -326,7 +356,7 @@ export function ProjectPanel() {
                 id="project-name"
                 name="name"
                 onChange={(event) => setName(event.target.value)}
-                placeholder="输入项目名称"
+                placeholder="例如：官网改版"
                 ref={projectNameInputRef}
                 value={name}
               />
@@ -354,7 +384,7 @@ export function ProjectPanel() {
               </button>
             </div>
           ) : projects.length === 0 ? (
-            <div className="state-message">
+            <div className="empty-guide state-message">
               <p>暂无项目。创建项目开始使用协作驾驶舱。</p>
               <button
                 className="button-primary"
@@ -365,26 +395,42 @@ export function ProjectPanel() {
               </button>
             </div>
           ) : (
-            <nav aria-label="项目">
-              <ul className="project-list">
-                {projects.map((project) => (
-                  <li key={project.id}>
-                    <button
-                      aria-current={project.id === currentProjectId ? "page" : undefined}
-                      className="nav-item"
-                      onClick={() => {
-                        router.push(`/projects/${project.id}`);
-                        if (mobileSurface === "projects")
-                          closeProjectNavigation();
-                      }}
-                      type="button"
-                    >
-                      {project.name}
-                    </button>
-                  </li>
-                ))}
-              </ul>
-            </nav>
+            <>
+              {routeProjectError && !narrow ? (
+                <div className="empty-guide">
+                  <p className="error-text" role="alert">
+                    {routeProjectError}
+                  </p>
+                  <button
+                    className="button-secondary"
+                    onClick={() => router.push("/")}
+                    type="button"
+                  >
+                    返回项目列表
+                  </button>
+                </div>
+              ) : null}
+              <nav aria-label="项目">
+                <ul className="project-list">
+                  {projects.map((project) => (
+                    <li key={project.id}>
+                      <button
+                        aria-current={project.id === currentProjectId ? "page" : undefined}
+                        className="nav-item"
+                        onClick={() => {
+                          router.push(`/projects/${project.id}`);
+                          if (mobileSurface === "projects")
+                            closeProjectNavigation();
+                        }}
+                        type="button"
+                      >
+                        {project.name}
+                      </button>
+                    </li>
+                  ))}
+                </ul>
+              </nav>
+            </>
           )}
         </section>
         {currentProject ? (
@@ -406,10 +452,11 @@ export function ProjectPanel() {
         narrow={narrow}
         onCloseContext={closeTaskContext}
         onCloseEditor={closeMobileSurface}
-        projectError={projectLoadError}
+        onSelectProject={guideToProjectSelection}
+        projectError={projectLoadError ?? routeProjectError}
         projectId={currentProjectId}
         projectLoading={isLoading}
       />
-    </div>
+    </main>
   );
 }

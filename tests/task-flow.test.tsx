@@ -1,4 +1,4 @@
-import { act, render, screen, waitFor } from "@testing-library/react";
+import { act, render, screen, waitFor, within } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
@@ -19,6 +19,26 @@ const project = {
   name: "Launch plan",
   createdAt: "2026-07-29T00:00:00.000Z",
 };
+const secondProject = {
+  id: "project-2",
+  name: "Release plan",
+  createdAt: "2026-07-30T00:00:00.000Z",
+};
+
+function installRoutingFetch() {
+  const fetchMock = vi.fn(async (input: RequestInfo | URL) => {
+    const url = String(input);
+    if (url === "/api/projects") {
+      return Response.json({ projects: [project, secondProject] });
+    }
+    if (url.startsWith("/api/projects/") && url.endsWith("/tasks")) {
+      return Response.json({ tasks: [], events: [] });
+    }
+    throw new Error(`Unexpected fetch: ${url}`);
+  });
+  vi.stubGlobal("fetch", fetchMock);
+  return fetchMock;
+}
 
 function task(status: TaskRun["status"], overrides: Partial<TaskRun> = {}): TaskRun {
   return {
@@ -51,6 +71,18 @@ function deferred<T>() {
     resolve = resolver;
   });
   return { promise, resolve };
+}
+
+function stubViewport(narrow: boolean): void {
+  vi.stubGlobal(
+    "matchMedia",
+    vi.fn(() => ({
+      addEventListener: vi.fn(),
+      matches: narrow,
+      media: "(max-width: 56.25rem)",
+      removeEventListener: vi.fn(),
+    })),
+  );
 }
 
 afterEach(() => {
@@ -105,8 +137,32 @@ describe("task event flow", () => {
     render(<ProjectPanel />);
 
     expect(await screen.findByText("暂无任务。输入目标即可运行示例 Agent。")).toBeInTheDocument();
+    await userEvent.setup().click(screen.getByRole("button", { name: "开始创建任务" }));
+    expect(screen.getByLabelText("任务目标")).toHaveFocus();
     expect(screen.getByLabelText("任务目标")).toBeEnabled();
     expect(screen.getByRole("button", { name: "运行任务" })).toBeDisabled();
+  });
+
+  it("guides an unselected project state back to project selection", async () => {
+    vi.stubGlobal(
+      "fetch",
+      cockpitFetch([Response.json({ projects: [] })]),
+    );
+    const user = userEvent.setup();
+
+    render(<ProjectPanel />);
+
+    const projectRegion = await screen.findByRole("region", { name: "项目" });
+    const createProjectActions = within(projectRegion).getAllByRole("button", {
+      name: "创建项目",
+    });
+    await user.click(createProjectActions.at(-1)!);
+    expect(screen.getByLabelText("项目名称")).toHaveFocus();
+
+    expect(await screen.findByText("请先选择项目。")).toBeInTheDocument();
+    const context = screen.getByRole("complementary", { name: "当前任务上下文" });
+    await user.click(within(context).getByRole("button", { name: "选择项目" }));
+    expect(screen.getByLabelText("项目名称")).toHaveFocus();
   });
 
   it("calls create, start, and execute in order while rendering each persisted state", async () => {
@@ -215,5 +271,94 @@ describe("task event flow", () => {
     expect(await screen.findByText("任务执行失败。")).toBeInTheDocument();
     expect(screen.getByRole("alert")).toHaveTextContent("任务执行失败，请稍后重试。");
     expect(screen.getByLabelText("任务目标")).toHaveValue("Prepare launch notes");
+  });
+});
+
+describe("project URL routing", () => {
+  it("pushes the selected project URL", async () => {
+    installRoutingFetch();
+    const user = userEvent.setup();
+    render(<ProjectPanel />);
+
+    await user.click(await screen.findByRole("button", { name: secondProject.name }));
+
+    expect(pushMock).toHaveBeenCalledWith("/projects/project-2");
+  });
+
+  it("selects a valid project from a direct URL instead of the first project", async () => {
+    pathnameValue = "/projects/project-2";
+    installRoutingFetch();
+    render(<ProjectPanel />);
+
+    expect(await screen.findByRole("button", { name: secondProject.name })).toHaveAttribute(
+      "aria-current",
+      "page",
+    );
+    expect(screen.getByRole("button", { name: project.name })).not.toHaveAttribute(
+      "aria-current",
+    );
+  });
+
+  it("synchronizes the selected project when browser history changes", async () => {
+    pathnameValue = "/projects/project-2";
+    installRoutingFetch();
+    const view = render(<ProjectPanel />);
+    expect(await screen.findByRole("button", { name: secondProject.name })).toHaveAttribute(
+      "aria-current",
+      "page",
+    );
+
+    pathnameValue = "/projects/project-1";
+    view.rerender(<ProjectPanel />);
+
+    await waitFor(() =>
+      expect(screen.getByRole("button", { name: project.name })).toHaveAttribute(
+        "aria-current",
+        "page",
+      ),
+    );
+  });
+
+  it("shows the project error state for an unknown URL project id", async () => {
+    pathnameValue = "/projects/missing-project";
+    installRoutingFetch();
+    render(<ProjectPanel />);
+
+    expect(await screen.findByRole("alert")).toHaveTextContent("未找到该项目。");
+    expect(screen.getByRole("button", { name: project.name })).not.toHaveAttribute(
+      "aria-current",
+    );
+    expect(screen.getByRole("button", { name: secondProject.name })).not.toHaveAttribute(
+      "aria-current",
+    );
+  });
+
+  it("offers a reachable desktop recovery action for an unknown project", async () => {
+    pathnameValue = "/projects/missing-project";
+    stubViewport(false);
+    installRoutingFetch();
+    const user = userEvent.setup();
+    render(<ProjectPanel />);
+
+    const recovery = await screen.findByRole("button", { name: "返回项目列表" });
+    expect(recovery).toBeVisible();
+    await user.click(recovery);
+
+    expect(pushMock).toHaveBeenCalledWith("/");
+  });
+
+  it("keeps unknown-project recovery reachable with narrow drawers closed", async () => {
+    pathnameValue = "/projects/missing-project";
+    stubViewport(true);
+    installRoutingFetch();
+    const user = userEvent.setup();
+    render(<ProjectPanel />);
+
+    const recovery = await screen.findByRole("button", { name: "返回项目列表" });
+    expect(screen.queryByRole("dialog")).not.toBeInTheDocument();
+    expect(recovery).toBeVisible();
+    await user.click(recovery);
+
+    expect(pushMock).toHaveBeenCalledWith("/");
   });
 });

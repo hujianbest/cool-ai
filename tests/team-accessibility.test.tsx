@@ -95,6 +95,10 @@ describe("Team accessibility contract", () => {
     const tablist = screen.getByRole("tablist", { name: "团队资源" });
     const tabs = within(tablist).getAllByRole("tab");
     const activityBar = screen.getByRole("navigation", { name: "主导航" });
+    expect(
+      screen.getByRole("heading", { level: 1, name: "团队管理" }),
+    ).toBeInTheDocument();
+    expect(screen.getAllByRole("heading", { level: 1 })).toHaveLength(1);
     expect(within(activityBar).getByRole("link", { name: "团队" })).toHaveAttribute(
       "aria-current",
       "page",
@@ -105,7 +109,7 @@ describe("Team accessibility contract", () => {
     const sidebar = screen.getByRole("complementary", { name: "团队导航" });
     expect(within(sidebar).queryByRole("link", { name: "工作" })).toBeNull();
     expect(within(sidebar).queryByRole("link", { name: "团队" })).toBeNull();
-    expect(screen.getByRole("heading", { name: "Cool AI" })).toHaveClass(
+    expect(screen.getByText("Cool AI")).toHaveClass(
       "surface-heading",
     );
     expect(screen.getByRole("button", { name: "打开团队资源" })).toHaveClass(

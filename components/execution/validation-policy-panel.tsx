@@ -275,6 +275,7 @@ export function ValidationPolicyPanel({ projectId }: { projectId: string }) {
                     可执行文件
                     <input
                       onChange={(event) => updateEntry(index, { executable: event.target.value })}
+                      placeholder="例如：npm"
                       value={entry.executable}
                     />
                   </label>
@@ -291,6 +292,7 @@ export function ValidationPolicyPanel({ projectId }: { projectId: string }) {
                     工作目录
                     <input
                       onChange={(event) => updateEntry(index, { workdir: event.target.value })}
+                      placeholder="例如：项目根目录"
                       value={entry.workdir}
                     />
                   </label>

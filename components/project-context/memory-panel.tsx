@@ -320,6 +320,7 @@ export function MemoryPanel({ projectId }: { projectId: string }) {
                 sourceRef: event.target.value,
               }))
             }
+            placeholder="例如：docs/architecture.md"
             ref={sourceRef}
             value={draft.sourceRef}
           />

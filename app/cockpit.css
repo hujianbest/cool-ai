@@ -152,6 +152,10 @@ ol {
   display: none;
 }
 
+.mobile-toolbar-controls {
+  display: contents;
+}
+
 .cockpit-sidebar,
 .cockpit-context {
   display: flex;
@@ -249,31 +253,37 @@ ol {
   background: var(--agent-warm);
 }
 
+.agent-mark[data-accent="sage"],
 [data-accent="sage"] .agent-mark {
   background: var(--agent-sage-bg);
   color: var(--agent-sage-fg);
 }
 
+.agent-mark[data-accent="terracotta"],
 [data-accent="terracotta"] .agent-mark {
   background: var(--agent-terracotta-bg);
   color: var(--agent-terracotta-fg);
 }
 
+.agent-mark[data-accent="gold"],
 [data-accent="gold"] .agent-mark {
   background: var(--agent-gold-bg);
   color: var(--agent-gold-fg);
 }
 
+.agent-mark[data-accent="slate"],
 [data-accent="slate"] .agent-mark {
   background: var(--agent-slate-bg);
   color: var(--agent-slate-fg);
 }
 
+.agent-mark[data-accent="rose"],
 [data-accent="rose"] .agent-mark {
   background: var(--agent-rose-bg);
   color: var(--agent-rose-fg);
 }
 
+.agent-mark[data-accent="olive"],
 [data-accent="olive"] .agent-mark {
   background: var(--agent-olive-bg);
   color: var(--agent-olive-fg);
@@ -429,6 +439,13 @@ ol {
   display: flex;
   flex-direction: column;
   gap: var(--space-2);
+}
+
+.empty-guide {
+  display: flex;
+  align-items: flex-start;
+  flex-direction: column;
+  gap: var(--space-3);
 }
 
 .run-details {

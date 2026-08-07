@@ -435,6 +435,7 @@ export function ProviderPanel() {
               id="provider-name"
               maxLength={80}
               onChange={(event) => setName(event.target.value)}
+              placeholder="例如：团队 OpenAI 网关"
               ref={nameRef}
               required
               value={name}
@@ -456,6 +457,7 @@ export function ProviderPanel() {
                 setBaseUrl(event.target.value);
                 invalidateVerification();
               }}
+              placeholder="例如：https://api.example.com/v1"
               required
               ref={baseUrlRef}
               value={baseUrl}
@@ -477,6 +479,7 @@ export function ProviderPanel() {
                 setDefaultModel(event.target.value);
                 invalidateVerification();
               }}
+              placeholder="例如：gpt-5"
               required
               ref={defaultModelRef}
               value={defaultModel}
@@ -501,6 +504,7 @@ export function ProviderPanel() {
                   setApiKey(event.target.value);
                   invalidateVerification();
                 }}
+                placeholder="粘贴服务端生成的访问密钥"
                 ref={apiKeyRef}
                 type={keyVisible ? "text" : "password"}
                 value={apiKey}

@@ -63,6 +63,7 @@ type TaskPanelProps = {
   onCloseContext: () => void;
   contextSurfaceRef: RefObject<HTMLElement | null>;
   contextCloseRef: RefObject<HTMLButtonElement | null>;
+  onSelectProject: () => void;
 };
 
 export function TaskPanel({
@@ -80,6 +81,7 @@ export function TaskPanel({
   onCloseContext,
   contextSurfaceRef,
   contextCloseRef,
+  onSelectProject,
 }: TaskPanelProps) {
   const [tasks, setTasks] = useState<TaskRun[]>([]);
   const [events, setEvents] = useState<TaskEvent[]>([]);
@@ -227,7 +229,7 @@ export function TaskPanel({
 
   return (
     <>
-      <main
+      <section
         aria-label={narrow ? undefined : "任务事件流"}
         aria-labelledby={narrow ? "task-editor-label" : undefined}
         aria-modal={narrow && editorOpen && !nestedModalOpen ? "true" : undefined}
@@ -305,8 +307,11 @@ export function TaskPanel({
         ) : projectError ? (
           <p className="state-message">{projectError}</p>
         ) : !projectId ? (
-          <div className="state-message">
+          <div className="empty-guide state-message">
             <p>请先创建或选择项目，再运行任务。</p>
+            <button className="button-primary" onClick={onSelectProject} type="button">
+              选择项目以运行任务
+            </button>
           </div>
         ) : (
           <>
@@ -358,7 +363,7 @@ export function TaskPanel({
                     id="task-goal"
                     name="goal"
                     onChange={(event) => setGoal(event.target.value)}
-                    placeholder="描述你想完成的任务"
+                    placeholder="例如：整理本周发布说明"
                     ref={taskGoalInputRef}
                     value={goal}
                   />
@@ -391,7 +396,7 @@ export function TaskPanel({
                 正在加载任务历史…
               </p>
             ) : tasks.length === 0 && !error ? (
-              <div className="state-message">
+              <div className="empty-guide state-message">
                 <p>暂无任务。输入目标即可运行示例 Agent。</p>
                 <button
                   className="button-primary"
@@ -423,7 +428,7 @@ export function TaskPanel({
             ) : null}
           </>
         )}
-      </main>
+      </section>
 
       <aside
         aria-label={narrow ? undefined : "当前任务上下文"}
@@ -490,7 +495,12 @@ export function TaskPanel({
             }
           />
         ) : (
-          <p className="state-message">请先选择项目。</p>
+          <div className="empty-guide state-message">
+            <p>请先选择项目。</p>
+            <button className="button-primary" onClick={onSelectProject} type="button">
+              选择项目
+            </button>
+          </div>
         )}
       </aside>
     </>

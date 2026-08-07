@@ -74,7 +74,7 @@ describe("desktop collaboration cockpit", () => {
     const navigation = within(cockpit).getByRole("complementary", {
       name: "项目导航",
     });
-    const flow = within(cockpit).getByRole("main", { name: "任务事件流" });
+    const flow = within(cockpit).getByRole("region", { name: "任务事件流" });
     const context = within(cockpit).getByRole("complementary", {
       name: "当前任务上下文",
     });
@@ -82,7 +82,7 @@ describe("desktop collaboration cockpit", () => {
     for (const action of within(toolbar).getAllByRole("button")) {
       expect(action).toHaveClass("button-secondary");
     }
-    expect(within(navigation).getByRole("heading", { name: "Cool AI" })).toHaveClass(
+    expect(within(navigation).getByText("Cool AI")).toHaveClass(
       "surface-heading",
     );
     expect(within(navigation).getByRole("heading", { name: "项目" })).toHaveClass(

@@ -431,6 +431,7 @@ export function AgentPanel() {
             id="agent-name"
             maxLength={80}
             onChange={(event) => setName(event.target.value)}
+            placeholder="例如：代码审查助手"
             ref={nameRef}
             required
             value={name}
@@ -510,6 +511,7 @@ export function AgentPanel() {
             aria-describedby={fieldErrors.model ? "agent-model-error" : undefined}
             aria-invalid={fieldErrors.model ? true : undefined}
             id="agent-model"
+            placeholder="由所选服务自动填写"
             readOnly
             value={selectedProvider?.defaultModel ?? model}
           />
@@ -676,6 +678,7 @@ export function AgentPanel() {
             aria-invalid={fieldErrors.avatarText ? true : undefined}
             id="agent-avatar"
             onChange={(event) => setAvatarText(event.target.value)}
+            placeholder="例如：审"
             required
             value={avatarText}
           />

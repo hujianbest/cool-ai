@@ -285,6 +285,7 @@ export function SkillPanel() {
               id="skill-name"
               maxLength={80}
               onChange={(event) => setName(event.target.value)}
+              placeholder="例如：发布说明审校"
               ref={nameRef}
               required
               value={name}

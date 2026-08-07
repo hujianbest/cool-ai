@@ -1,9 +1,17 @@
 import assert from "node:assert/strict";
-import { existsSync, mkdtempSync, mkdirSync, rmSync } from "node:fs";
+import {
+  existsSync,
+  mkdtempSync,
+  mkdirSync,
+  readFileSync,
+  rmSync,
+  writeFileSync,
+} from "node:fs";
 import { tmpdir } from "node:os";
 import { join, resolve } from "node:path";
 import { spawn, spawnSync } from "node:child_process";
 
+import AxeBuilder from "@axe-core/playwright";
 import { chromium } from "playwright";
 
 const host = "127.0.0.1";
@@ -11,6 +19,11 @@ const port = 4100 + (process.pid % 500);
 const baseUrl = `http://${host}:${port}`;
 const temporaryDirectory = mkdtempSync(join(tmpdir(), "cool-ai-smoke-"));
 const databasePath = join(temporaryDirectory, "smoke.sqlite");
+const smokeDistDirectory = `.next-smoke-${process.pid}`;
+const generatedConfigSnapshots = ["next-env.d.ts", "tsconfig.json"].map((path) => ({
+  content: readFileSync(resolve(path), "utf8"),
+  path: resolve(path),
+}));
 const evidenceDirectory = resolve("features", "001-walking-skeleton", "evidence");
 const smokeScreenshot = join(evidenceDirectory, "smoke-desktop.png");
 const narrowScreenshot = join(evidenceDirectory, "smoke-workbench-narrow.png");
@@ -62,6 +75,7 @@ const server = spawn(serverCommand.command, serverCommand.args, {
   env: {
     ...process.env,
     COCKPIT_DB_PATH: databasePath,
+    NEXT_DIST_DIR: smokeDistDirectory,
   },
   stdio: ["ignore", "pipe", "pipe"],
   windowsHide: true,
@@ -104,6 +118,19 @@ async function waitForServer() {
   throw new Error(`Development server did not become ready.\n${serverOutput}`);
 }
 
+async function assertAxeCriticalFree(page, routeLabel) {
+  const result = await new AxeBuilder({ page }).analyze();
+  const critical = result.violations.filter((violation) => violation.impact === "critical");
+  assert.deepEqual(
+    critical.map((violation) => ({
+      id: violation.id,
+      nodes: violation.nodes.map((node) => node.target),
+    })),
+    [],
+    `${routeLabel} must have no critical axe violations`,
+  );
+}
+
 let browser;
 try {
   await waitForServer();
@@ -111,20 +138,42 @@ try {
     headless: true,
     ...(browserExecutable ? { executablePath: browserExecutable } : {}),
   });
-  const page = await browser.newPage({ viewport: { width: 1440, height: 1000 } });
+  const context = await browser.newContext({ viewport: { width: 1440, height: 1000 } });
+  const page = await context.newPage();
 
   await page.goto(baseUrl, { waitUntil: "networkidle" });
   assert.equal(await page.locator("html").getAttribute("lang"), "zh-CN");
-  await page.getByText("暂无项目。", { exact: true }).waitFor();
-
-  await page.getByLabel("项目名称").fill("Smoke project");
-  await page.getByRole("button", { name: "创建项目" }).click();
-  await page.getByRole("button", { name: "Smoke project" }).waitFor();
-  const currentProjectTitle = page.getByRole("heading", { level: 2, name: "Smoke project" });
+  const emptyProjectGuide = page.locator(".empty-guide");
+  await emptyProjectGuide
+    .getByText("暂无项目。创建项目开始使用协作驾驶舱。", { exact: true })
+    .waitFor();
+  const workbenchHeading = page.getByRole("heading", { level: 1, name: "协作工作台" });
+  assert.equal(await workbenchHeading.count(), 1);
+  assert.equal(await workbenchHeading.isVisible(), true);
+  await assertAxeCriticalFree(page, "/");
+  await emptyProjectGuide.getByRole("button", { name: "创建项目" }).click();
+  const projectNameInput = page.getByLabel("项目名称");
   assert.equal(
-    await currentProjectTitle.evaluate((element) => document.activeElement === element),
+    await projectNameInput.evaluate((element) => document.activeElement === element),
     true,
   );
+
+  await projectNameInput.fill("Smoke project");
+  await page
+    .locator("form")
+    .filter({ has: page.getByLabel("项目名称") })
+    .getByRole("button", { name: "创建项目" })
+    .click();
+  await page.waitForURL(/\/projects\/[^/]+$/);
+  const currentProject = page.getByRole("button", { name: "Smoke project" });
+  await currentProject.waitFor();
+  assert.equal(
+    await currentProject.getAttribute("aria-current"),
+    "page",
+  );
+  assert.equal(await workbenchHeading.count(), 1);
+  assert.equal(await workbenchHeading.isVisible(), true);
+  await assertAxeCriticalFree(page, "/projects/<id>");
 
   await page.getByLabel("任务目标").fill("Verify the walking skeleton");
   await page.getByRole("button", { name: "运行任务" }).click();
@@ -243,7 +292,16 @@ try {
     true,
   );
 
+  await page.setViewportSize({ width: 1440, height: 1000 });
+  await page.goto(`${baseUrl}/team`, { waitUntil: "networkidle" });
+  await page.getByRole("tablist", { name: "团队资源" }).waitFor();
+  const teamHeading = page.getByRole("heading", { level: 1, name: "团队管理" });
+  assert.equal(await teamHeading.count(), 1);
+  assert.equal(await teamHeading.isVisible(), true);
+  await assertAxeCriticalFree(page, "/team");
+
   console.log(`SMOKE PASS: real project/task persistence verified at ${baseUrl}`);
+  console.log("AXE PASS: /, /projects/<id>, and /team have no critical violations");
   console.log(`SMOKE SCREENSHOT: ${smokeScreenshot}`);
   console.log(`NARROW SCREENSHOT: ${narrowScreenshot}`);
   console.log(`DEMO SCREENSHOT: ${demoScreenshot}`);
@@ -254,5 +312,9 @@ try {
 } finally {
   await browser?.close();
   stopServer();
+  for (const snapshot of generatedConfigSnapshots) {
+    writeFileSync(snapshot.path, snapshot.content);
+  }
+  rmSync(resolve(smokeDistDirectory), { force: true, recursive: true });
   rmSync(temporaryDirectory, { force: true, recursive: true });
 }

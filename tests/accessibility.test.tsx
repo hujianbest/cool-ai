@@ -1,7 +1,9 @@
 import { render, screen } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
+import { renderToStaticMarkup } from "react-dom/server";
 import { afterEach, describe, expect, it, vi } from "vitest";
 
+import RootLayout from "@/app/layout";
 import { ProjectPanel } from "@/components/project-panel";
 import { cockpitFetch } from "@/tests/cockpit-test-fetch";
 
@@ -38,6 +40,28 @@ afterEach(() => {
 });
 
 describe("narrow-screen and keyboard accessibility", () => {
+  it("provides the document and landmark structure required by axe", () => {
+    const layoutMarkup = renderToStaticMarkup(
+      <RootLayout>
+        <div />
+      </RootLayout>,
+    );
+    expect(layoutMarkup).toContain("<title>Cool AI 协作驾驶舱</title>");
+
+    renderCockpitWithProject();
+
+    expect(screen.getAllByRole("main")).toHaveLength(1);
+    expect(
+      screen.getByRole("heading", {
+        level: 1,
+        name: "协作工作台",
+      }),
+    ).toBeInTheDocument();
+    expect(screen.getAllByRole("heading", { level: 1 })).toHaveLength(1);
+    expect(screen.getByRole("toolbar", { name: "驾驶舱面板" }).closest("header"))
+      .not.toBeNull();
+  });
+
   it("labels both drawer controls and exposes their state", async () => {
     renderCockpitWithProject();
 

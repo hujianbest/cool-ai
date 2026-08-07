@@ -1,4 +1,4 @@
-import { render, screen } from "@testing-library/react";
+import { render, screen, waitFor } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { mkdtempSync, rmSync } from "node:fs";
 import { tmpdir } from "node:os";
@@ -360,7 +360,7 @@ describe("execution T-2 vertical slice", () => {
     const heading = await screen.findByRole("heading", {
       name: "Implement the slice",
     });
-    expect(heading).toHaveFocus();
+    await waitFor(() => expect(heading).toHaveFocus());
     expect(screen.getByText("排队中")).toBeInTheDocument();
     expect(screen.getByText("正在准备隔离区")).toBeInTheDocument();
     const retryButton = screen.getByRole("button", { name: "刷新执行" });

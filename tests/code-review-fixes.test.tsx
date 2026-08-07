@@ -25,7 +25,7 @@ describe("code review fixes", () => {
 
     render(<ProjectPanel />);
 
-    const flow = screen.getByRole("main", { name: "任务事件流" });
+    const flow = screen.getByRole("region", { name: "任务事件流" });
     const context = screen.getByRole("complementary", { name: "当前任务上下文" });
     expect(within(flow).getByText("正在加载项目…")).toHaveAttribute("aria-busy", "true");
     expect(within(context).getByText("正在加载项目上下文…")).toHaveAttribute(
@@ -34,7 +34,9 @@ describe("code review fixes", () => {
     );
 
     projects.resolve(Response.json({ projects: [] }));
-    expect(await screen.findByText("暂无项目。")).toBeInTheDocument();
+    expect(
+      await screen.findByText("暂无项目。创建项目开始使用协作驾驶舱。"),
+    ).toBeInTheDocument();
   });
 
   it("retries a failed project load", async () => {
@@ -54,7 +56,9 @@ describe("code review fixes", () => {
     await user.click(retry);
 
     expect(fetchMock).toHaveBeenCalledTimes(2);
-    expect(await screen.findByText("暂无项目。")).toBeInTheDocument();
+    expect(
+      await screen.findByText("暂无项目。创建项目开始使用协作驾驶舱。"),
+    ).toBeInTheDocument();
   });
 
   it("focuses the current project title after creation", async () => {
@@ -78,9 +82,11 @@ describe("code review fixes", () => {
     const user = userEvent.setup();
 
     render(<ProjectPanel />);
-    await screen.findByText("暂无项目。");
+    await screen.findByText("暂无项目。创建项目开始使用协作驾驶舱。");
     await user.type(screen.getByLabelText("项目名称"), "新项目");
-    await user.click(screen.getByRole("button", { name: "创建项目" }));
+    const projectForm = screen.getByLabelText("项目名称").closest("form");
+    expect(projectForm).not.toBeNull();
+    await user.click(within(projectForm!).getByRole("button", { name: "创建项目" }));
 
     const title = await screen.findByRole("heading", { level: 2, name: "新项目" });
     expect(title).toHaveAttribute("tabindex", "-1");
@@ -95,7 +101,11 @@ describe("code review fixes", () => {
     render(<ProjectPanel />);
 
     expect(screen.getByLabelText("项目名称")).toBeInTheDocument();
-    expect(screen.getByRole("button", { name: "创建项目" })).toBeInTheDocument();
-    expect(await screen.findByText("暂无项目。")).toBeInTheDocument();
+    const projectForm = screen.getByLabelText("项目名称").closest("form");
+    expect(projectForm).not.toBeNull();
+    expect(within(projectForm!).getByRole("button", { name: "创建项目" })).toBeInTheDocument();
+    expect(
+      await screen.findByText("暂无项目。创建项目开始使用协作驾驶舱。"),
+    ).toBeInTheDocument();
   });
 });

@@ -183,6 +183,6 @@ describe("owner-controlled cockpit mobile surfaces", () => {
     expect(
       screen.getByRole("complementary", { name: "当前任务上下文" }),
     ).toBeVisible();
-    expect(screen.getByRole("main", { name: "任务事件流" })).toBeVisible();
+    expect(screen.getByRole("region", { name: "任务事件流" })).toBeVisible();
   });
 });

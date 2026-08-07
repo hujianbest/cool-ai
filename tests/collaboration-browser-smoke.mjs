@@ -387,7 +387,12 @@ async function createTeam(page) {
 async function createProjectContext(page) {
   await page.goto(baseUrl, { waitUntil: "networkidle" });
   await page.getByLabel("项目名称").fill("Collaboration Smoke Project");
-  await page.getByRole("button", { name: "创建项目" }).click();
+  await page
+    .locator("form")
+    .filter({ has: page.getByLabel("项目名称") })
+    .getByRole("button", { name: "创建项目" })
+    .click();
+  await page.waitForURL(/\/projects\/[^/]+$/);
   await page
     .getByRole("heading", { name: "Collaboration Smoke Project" })
     .waitFor();

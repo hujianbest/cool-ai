@@ -125,8 +125,9 @@ ActivityBar(48px) 作为 grid 第一列，左侧三栏不变；替代原 sidebar
 - [x] T-1 字体栈优化 (覆盖: FR-1) — 判据: `--font-sans` 以 -apple-system 开头，CSS 解析测试通过
 - [x] T-2 新建 ActivityBar 组件+样式 (覆盖: FR-2) — 判据: activity-bar.test.tsx 验证渲染/aria-current/焦点/tooltip 全绿
 - [x] T-3 四栏布局适配+集成 project-panel & team-panel (覆盖: FR-2) — 判据: 文字 nav 移除；宽屏四栏 grid 渲染通过；窄屏（≤56.25rem）ActivityBar 可见且 mobile-toolbar 正常
-- [ ] T-4 项目 URL 路由化 (覆盖: FR-3) — 子步骤: ① `usePathname` 解析 `/^\/projects\/([^/]+)/`→projectId；② 所有 `setCurrentProjectId` 改为 `router.push`；③ SSR 首帧 pathname 为空时跳过路由同步、URL/列表加载竞态下保留"默认选中首个"兜底 — 判据: URL 变更/后退同步/无效 ID 错误态测试全绿；`/projects/<id>` 与 `/projects/<id>/<resource>` 两条路径在 `npm run build` 下均可达、无路由冲突
-- [ ] T-5 引导式空状态 (覆盖: FR-4) — 判据: 空项目/空任务/未选项目显示引导卡片+CTA，测试断言可点击
-- [ ] T-6 Agent 身份色头像 (覆盖: FR-5) — 判据: `.agent-mark` data-accent 各 token 着色 + 默认回退测试全绿
-- [ ] T-7 所有 input 加 placeholder (覆盖: FR-6) — 判据: 全量 input 有 placeholder，属性断言通过
-- [ ] T-8 全量回归+build 验证 (覆盖: FR-1–FR-6) — 判据: `npm test` 无新增 fail，`npm run build` 成功
+- [x] T-4 项目 URL 路由化 (覆盖: FR-3) — 子步骤: ① `usePathname` 解析 `/^\/projects\/([^/]+)/`→projectId；② 所有 `setCurrentProjectId` 改为 `router.push`；③ SSR 首帧 pathname 为空时跳过路由同步、URL/列表加载竞态下保留"默认选中首个"兜底 — 判据: URL 变更/后退同步/无效 ID 错误态测试全绿；`/projects/<id>` 与 `/projects/<id>/<resource>` 两条路径在 `npm run build` 下均可达、无路由冲突
+- [x] T-5 引导式空状态 (覆盖: FR-4) — 判据: 空项目/空任务/未选项目显示引导卡片+CTA，测试断言可点击
+- [x] T-6 Agent 身份色头像 (覆盖: FR-5) — 判据: `.agent-mark` data-accent 各 token 着色 + 默认回退测试全绿
+- [x] T-7 所有 input 加 placeholder (覆盖: FR-6) — 判据: 全量 input 有 placeholder，属性断言通过
+- [x] T-8 全量回归+build 验证 (覆盖: FR-1–FR-6) — 判据: `npm test` 无新增 fail，`npm run build` 成功
+- [x] T-9 axe 页面结构返修 (覆盖: verify findings，不新增需求) — 判据: 页面有非空 title、单一 main、真实页面名 h1，mobile toolbar 位于 landmark 内

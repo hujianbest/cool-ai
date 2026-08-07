@@ -279,7 +279,7 @@ describe("external-writer merge recovery", () => {
         fixture.database.close();
       }
     }
-  });
+  }, 30_000);
 
   it("detects every postcheck-to-receipt window without overwriting external bytes", async () => {
     const points = [

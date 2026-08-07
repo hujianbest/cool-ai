@@ -1,4 +1,4 @@
-import { render, screen, waitFor } from "@testing-library/react";
+import { render, screen, waitFor, within } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { afterEach, describe, expect, it, vi } from "vitest";
 
@@ -42,9 +42,11 @@ describe("ProjectPanel", () => {
     const user = userEvent.setup();
 
     render(<ProjectPanel />);
-    await screen.findByText("暂无项目。");
+    await screen.findByText("暂无项目。创建项目开始使用协作驾驶舱。");
     await user.type(screen.getByLabelText("项目名称"), "Launch plan");
-    await user.click(screen.getByRole("button", { name: "创建项目" }));
+    const projectForm = screen.getByLabelText("项目名称").closest("form");
+    expect(projectForm).not.toBeNull();
+    await user.click(within(projectForm!).getByRole("button", { name: "创建项目" }));
 
     expect(await screen.findByRole("heading", { level: 2, name: "Launch plan" })).toBeInTheDocument();
     expect(fetchMock).toHaveBeenCalledWith(
@@ -68,12 +70,14 @@ describe("ProjectPanel", () => {
     const user = userEvent.setup();
 
     render(<ProjectPanel />);
-    await screen.findByText("暂无项目。");
-    await user.click(screen.getByRole("button", { name: "创建项目" }));
+    await screen.findByText("暂无项目。创建项目开始使用协作驾驶舱。");
+    const projectForm = screen.getByLabelText("项目名称").closest("form");
+    expect(projectForm).not.toBeNull();
+    await user.click(within(projectForm!).getByRole("button", { name: "创建项目" }));
     expect(screen.getByRole("alert")).toHaveTextContent("请输入项目名称。");
 
     await user.type(screen.getByLabelText("项目名称"), "Launch plan");
-    await user.click(screen.getByRole("button", { name: "创建项目" }));
+    await user.click(within(projectForm!).getByRole("button", { name: "创建项目" }));
 
     await waitFor(() =>
       expect(screen.getByRole("alert")).toHaveTextContent("请求失败，请稍后重试。"),
