@@ -263,7 +263,9 @@ try {
   await page.getByRole("button", { name: "创建 Agent" }).click();
   await page.getByLabel("创建方式").selectOption("planner");
   await page.getByLabel("Agent 名称").fill("Smoke Planner");
-  await page.getByLabel("模型服务").selectOption({ label: "Smoke Provider" });
+  await page
+    .getByRole("combobox", { name: "模型服务", exact: true })
+    .selectOption({ label: "Smoke Provider" });
   await page.getByRole("checkbox", { name: "Smoke Skill" }).check();
   await page.getByLabel("Token 预算").fill("24000");
   await page.getByLabel("接力轮次").fill("7");
@@ -275,7 +277,9 @@ try {
   await page.getByRole("button", { name: "创建 Agent" }).click();
   await page.getByLabel("创建方式").selectOption("builder");
   await page.getByLabel("Agent 名称").fill("Smoke Builder");
-  await page.getByLabel("模型服务").selectOption({ label: "Smoke Provider" });
+  await page
+    .getByRole("combobox", { name: "模型服务", exact: true })
+    .selectOption({ label: "Smoke Provider" });
   await page.getByRole("checkbox", { name: "Smoke Skill" }).check();
   await page.getByRole("checkbox", { name: "写入文件" }).check();
   await page.getByRole("checkbox", { name: "运行命令" }).check();
@@ -300,11 +304,13 @@ try {
   const agentTab = page.getByRole("tab", { name: "Agent" });
   await agentTab.focus();
   await page.keyboard.press("ArrowLeft");
+  await page.getByRole("tab", { name: "模型服务", selected: true }).waitFor();
   assert.equal(
     await page.getByRole("tab", { name: "模型服务" }).getAttribute("aria-selected"),
     "true",
   );
   await page.keyboard.press("ArrowRight");
+  await page.getByRole("tab", { name: "Agent", selected: true }).waitFor();
   assert.equal(await agentTab.getAttribute("aria-selected"), "true");
   await page.getByRole("heading", { name: "Smoke Planner" }).waitFor();
   await page.getByRole("heading", { name: "Smoke Builder" }).waitFor();
@@ -374,7 +380,10 @@ try {
   await selectNarrowResource("Agent");
   await page.getByRole("heading", { name: "Smoke Planner" }).waitFor();
   await page.getByRole("heading", { name: "Smoke Builder" }).waitFor();
-  await page.getByText("Smoke Skill", { exact: true }).first().waitFor();
+  assert.equal(
+    await plannerCard.getByText("Smoke Skill", { exact: true }).textContent(),
+    "Smoke Skill",
+  );
   const agentEditOpener = page.getByRole("button", { name: "编辑 Smoke Planner" });
   await agentEditOpener.click();
   const mobileDialog = page.getByRole("dialog");

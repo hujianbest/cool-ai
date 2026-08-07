@@ -4,7 +4,7 @@ import { join } from "node:path";
 import { DatabaseSync } from "node:sqlite";
 import { render, screen, waitFor } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
-import type { ComponentType } from "react";
+import type { ReactElement } from "react";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
 type RouteModule = {
@@ -13,7 +13,12 @@ type RouteModule = {
 };
 
 type PageModule = {
-  default: ComponentType;
+  default: (props: {
+    searchParams?: Promise<{
+      returnTo?: string | string[];
+      section?: string | string[];
+    }>;
+  }) => Promise<ReactElement>;
 };
 
 const routeModules = import.meta.glob<RouteModule>("../app/api/skills/route.ts");
@@ -52,10 +57,21 @@ describe("/team skill vertical slice", () => {
     });
 
     const user = userEvent.setup();
-    const firstRender = render(<TeamPage />);
+    const firstRender = render(
+      await TeamPage({ searchParams: Promise.resolve({}) }),
+    );
 
     expect(screen.getByRole("link", { name: "工作" })).toHaveAttribute("href", "/");
-    expect(screen.getByRole("link", { name: "团队" })).toHaveAttribute("href", "/team");
+    const teamHref = screen
+      .getByRole("link", { name: "团队" })
+      .getAttribute("href");
+    expect(teamHref).not.toBeNull();
+    const teamUrl = new URL(teamHref!, "https://cool-ai.test");
+    expect(teamUrl.pathname).toBe("/team");
+    expect([...teamUrl.searchParams.entries()]).toEqual([
+      ["section", "skills"],
+      ["returnTo", "/"],
+    ]);
     expect(await screen.findByText("暂无技能。")).toBeInTheDocument();
     await user.type(screen.getByLabelText("技能名称"), "需求拆解");
     await user.type(screen.getByLabelText("技能说明"), "把目标拆成可验证步骤");
@@ -81,7 +97,7 @@ describe("/team skill vertical slice", () => {
     database.close();
 
     firstRender.unmount();
-    render(<TeamPage />);
+    render(await TeamPage({ searchParams: Promise.resolve({}) }));
 
     expect(await screen.findByRole("heading", { name: "需求拆解" })).toBeInTheDocument();
     expect(screen.getByText("把目标拆成可验证步骤")).toBeInTheDocument();

@@ -51,11 +51,9 @@ describe("Provider configuration panel", () => {
       throw new Error(`Unexpected request: ${url}`);
     }));
     const user = userEvent.setup();
-    render(<TeamPanel />);
-    await screen.findByText("暂无技能。");
+    const view = render(<TeamPanel section="providers" />);
 
     const providerTab = screen.getByRole("tab", { name: "模型服务" });
-    await user.click(providerTab);
     expect(providerTab).toHaveAttribute("aria-selected", "true");
     expect(screen.getByText("正在加载服务…")).toHaveAttribute("aria-busy", "true");
 
@@ -77,9 +75,11 @@ describe("Provider configuration panel", () => {
     await user.keyboard("{ArrowLeft}");
     const skillTab = screen.getByRole("tab", { name: "技能" });
     expect(skillTab).toHaveFocus();
+    view.rerender(<TeamPanel section="skills" />);
     expect(skillTab).toHaveAttribute("aria-selected", "true");
     await user.keyboard("{ArrowRight}");
     expect(providerTab).toHaveFocus();
+    view.rerender(<TeamPanel section="providers" />);
     expect(providerTab).toHaveAttribute("aria-selected", "true");
   });
 
@@ -111,9 +111,7 @@ describe("Provider configuration panel", () => {
       throw new Error(`Unexpected request: ${url}`);
     }));
     const user = userEvent.setup();
-    render(<TeamPanel />);
-    await screen.findByText("暂无技能。");
-    await user.click(screen.getByRole("tab", { name: "模型服务" }));
+    render(<TeamPanel section="providers" />);
     await screen.findByText("暂无模型服务。");
 
     await user.type(screen.getByLabelText("服务名称"), "Local");
@@ -200,9 +198,7 @@ describe("Provider configuration panel", () => {
       throw new Error(`Unexpected request: ${url}`);
     }));
     const user = userEvent.setup();
-    render(<TeamPanel />);
-    await screen.findByText("暂无技能。");
-    await user.click(screen.getByRole("tab", { name: "模型服务" }));
+    render(<TeamPanel section="providers" />);
     await user.click(await screen.findByRole("button", { name: "编辑 Primary" }));
 
     expect(screen.getByText("已保存 ••••ABCD")).toBeInTheDocument();
@@ -260,9 +256,7 @@ describe("Provider configuration panel", () => {
       throw new Error(`Unexpected request: ${url}`);
     }));
     const user = userEvent.setup();
-    render(<TeamPanel />);
-    await screen.findByText("暂无技能。");
-    await user.click(screen.getByRole("tab", { name: "模型服务" }));
+    render(<TeamPanel section="providers" />);
     await screen.findByText("暂无模型服务。");
     await user.type(screen.getByLabelText("服务名称"), "Primary");
     await user.type(screen.getByLabelText("Base URL"), "https://example.test/v1");

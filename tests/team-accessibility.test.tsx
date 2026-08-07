@@ -139,8 +139,9 @@ describe("Team accessibility contract", () => {
     stubFetch();
     stubMobile(false);
     const user = userEvent.setup();
-    render(<TeamPanel />);
+    const view = render(<TeamPanel />);
     await user.click(screen.getByRole("tab", { name: "Agent" }));
+    view.rerender(<TeamPanel section="agents" />);
     await screen.findByText("暂无 Agent。");
 
     expect(screen.getByRole("group", { name: "技能" })).toBeInTheDocument();
@@ -159,8 +160,9 @@ describe("Team accessibility contract", () => {
     stubFetch();
     stubMobile(true);
     const user = userEvent.setup();
-    render(<TeamPanel />);
+    const view = render(<TeamPanel />);
     await user.click(screen.getByRole("tab", { name: "Agent" }));
+    view.rerender(<TeamPanel section="agents" />);
     await screen.findByText("暂无 Agent。");
     const opener = screen.getByRole("button", { name: "创建 Agent" });
     await user.click(opener);

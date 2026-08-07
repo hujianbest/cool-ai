@@ -2,8 +2,16 @@
 
 import type { ReactElement } from "react";
 
+import {
+  buildSettingsHref,
+  parseReturnTo,
+  SETTINGS_SECTIONS,
+} from "@/components/settings-navigation";
+import { useSettingsPreferences } from "@/components/settings-preferences-store";
+
 export type ActivityBarProps = {
   activePath: string;
+  returnTo?: "/" | `/projects/${string}`;
 };
 
 type NavItem = {
@@ -56,23 +64,53 @@ const NAV_ITEMS: readonly NavItem[] = [
   { href: "/team", label: "团队", icon: <TeamIcon /> },
 ];
 
-export function ActivityBar({ activePath }: ActivityBarProps) {
+export function ActivityBar({
+  activePath,
+  returnTo,
+}: ActivityBarProps) {
+  const { preference } = useSettingsPreferences();
+  const settingsReturnTo = returnTo ?? activePath;
+  const workIsActive =
+    activePath === "/" || parseReturnTo(activePath) === activePath;
+  const pinnedSections = preference.pinned.flatMap((id) => {
+    const section = SETTINGS_SECTIONS.find((candidate) => candidate.id === id);
+    return section?.available ? [section] : [];
+  });
+
   return (
     <nav aria-label="主导航" className="activity-bar">
       {NAV_ITEMS.map((item) => {
-        const isActive = activePath === item.href;
+        const isActive =
+          item.href === "/" ? workIsActive : activePath === item.href;
+        const href =
+          item.href === "/team"
+            ? buildSettingsHref("skills", settingsReturnTo)
+            : item.href;
         return (
           <a
             key={item.href}
             aria-current={isActive ? "page" : undefined}
             className="activity-bar-item"
-            href={item.href}
+            href={href}
             title={item.label}
           >
             {item.icon}
           </a>
         );
       })}
+      {pinnedSections.map((section) => (
+        <a
+          key={`settings-${section.id}`}
+          aria-label={`打开固定设置：${section.label}`}
+          className="activity-bar-item"
+          href={buildSettingsHref(section.id, settingsReturnTo)}
+          title={`固定设置：${section.label}`}
+        >
+          <span aria-hidden="true">
+            {section.id === "agents" ? "A" : section.label.slice(0, 1)}
+          </span>
+        </a>
+      ))}
     </nav>
   );
 }

@@ -1,6 +1,8 @@
 "use client";
 
+import { useRouter } from "next/navigation";
 import {
+  useEffect,
   useRef,
   useState,
   type KeyboardEvent,
@@ -14,17 +16,41 @@ import {
   useNarrowMode,
 } from "@/components/mobile-dialog";
 import { ProviderPanel } from "@/components/provider-panel";
+import {
+  buildSettingsHref,
+  SETTINGS_SECTIONS,
+  type SettingsSectionId,
+} from "@/components/settings-navigation";
+import {
+  pinSettingsSection,
+  unpinSettingsSection,
+  useSettingsPreferences,
+} from "@/components/settings-preferences-store";
 import { SkillPanel } from "@/components/skill-panel";
 
-type Resource = "skills" | "providers" | "agents";
-
-const resources: Resource[] = ["skills", "providers", "agents"];
+const resources: SettingsSectionId[] = ["skills", "providers", "agents"];
 const RESOURCE_NAV_INERT = [".cockpit-flow", ".cockpit-context"];
 
-export function TeamPanel() {
-  const [resource, setResource] = useState<Resource>("skills");
+function normalizeSearch(value: string): string {
+  return value.trim().replace(/\s+/g, " ").toLocaleLowerCase("en-US");
+}
+
+type TeamPanelProps = {
+  returnTo?: "/" | `/projects/${string}`;
+  section?: SettingsSectionId;
+};
+
+export function TeamPanel({
+  returnTo = "/",
+  section = "skills",
+}: TeamPanelProps) {
   const [resourceNavigationOpen, setResourceNavigationOpen] = useState(false);
+  const [searchQuery, setSearchQuery] = useState("");
+  const router = useRouter();
   const narrow = useNarrowMode();
+  const settingsPreferences = useSettingsPreferences();
+  const searchRef = useRef<HTMLInputElement>(null);
+  const pendingPanelFocusRef = useRef<SettingsSectionId | null>(null);
   const skillTabRef = useRef<HTMLButtonElement>(null);
   const providerTabRef = useRef<HTMLButtonElement>(null);
   const agentTabRef = useRef<HTMLButtonElement>(null);
@@ -37,28 +63,74 @@ export function TeamPanel() {
     RESOURCE_NAV_INERT,
   );
 
+  useEffect(() => {
+    if (pendingPanelFocusRef.current !== section) return;
+    pendingPanelFocusRef.current = null;
+    const heading = document.querySelector<HTMLElement>(
+      `#${section === "skills" ? "skill" : section.slice(0, -1)}-resource-panel h2`,
+    );
+    if (!heading) return;
+    heading.tabIndex = -1;
+    heading.focus();
+  }, [section]);
+
+  const normalizedQuery = normalizeSearch(searchQuery);
+  const searchResults = SETTINGS_SECTIONS.filter((candidate) => {
+    if (!candidate.available) return false;
+    if (!normalizedQuery) return true;
+    return normalizeSearch(
+      [candidate.label, candidate.purpose, ...candidate.keywords].join(" "),
+    ).includes(normalizedQuery);
+  });
+  const pinned = new Set(settingsPreferences.preference.pinned);
+
+  function togglePinnedSettings(next: SettingsSectionId) {
+    if (pinned.has(next)) unpinSettingsSection(next);
+    else pinSettingsSection(next);
+  }
+
   function closeResourceNavigation() {
     setResourceNavigationOpen(false);
     queueMicrotask(() => resourceToggleRef.current?.focus());
   }
 
-  function selectResource(next: Resource) {
-    setResource(next);
+  function selectResource(
+    next: SettingsSectionId,
+    focusTarget: "panel" | "tab" = "tab",
+  ) {
+    if (focusTarget === "panel") pendingPanelFocusRef.current = next;
+    router.push(buildSettingsHref(next, returnTo));
     if (narrow && resourceNavigationOpen) {
       closeResourceNavigation();
-      return;
+    } else if (focusTarget === "tab") {
+      const refs = {
+        agents: agentTabRef,
+        providers: providerTabRef,
+        skills: skillTabRef,
+      };
+      queueMicrotask(() => refs[next].current?.focus());
     }
-    const refs = {
-      agents: agentTabRef,
-      providers: providerTabRef,
-      skills: skillTabRef,
-    };
-    queueMicrotask(() => refs[next].current?.focus());
+    if (focusTarget === "panel" && next === section) {
+      queueMicrotask(() => {
+        const heading = document.querySelector<HTMLElement>(
+          `#${section === "skills" ? "skill" : section.slice(0, -1)}-resource-panel h2`,
+        );
+        if (!heading) return;
+        pendingPanelFocusRef.current = null;
+        heading.tabIndex = -1;
+        heading.focus();
+      });
+    }
   }
 
   function handleResourceKeys(event: KeyboardEvent<HTMLDivElement>) {
-    const currentIndex = resources.indexOf(resource);
-    let next: Resource | undefined;
+    const focusedIndex = [
+      skillTabRef.current,
+      providerTabRef.current,
+      agentTabRef.current,
+    ].indexOf(document.activeElement as HTMLButtonElement);
+    const currentIndex = focusedIndex >= 0 ? focusedIndex : resources.indexOf(section);
+    let next: SettingsSectionId | undefined;
     if (event.key === "Home") next = resources[0];
     if (event.key === "End") next = resources[resources.length - 1];
     if (event.key === "ArrowLeft") {
@@ -75,7 +147,7 @@ export function TeamPanel() {
   return (
     <div className="collaboration-cockpit">
       <h1 className="sr-only">团队管理</h1>
-      <ActivityBar activePath="/team" />
+      <ActivityBar activePath="/team" returnTo={returnTo} />
       <div className="mobile-toolbar">
         <button
           aria-expanded={resourceNavigationOpen}
@@ -122,6 +194,120 @@ export function TeamPanel() {
             <p className="surface-heading">Cool AI</p>
           </div>
         </div>
+        <a
+          className="nav-item"
+          href={returnTo}
+          onClick={
+            narrow && resourceNavigationOpen
+              ? closeResourceNavigation
+              : undefined
+          }
+        >
+          返回原位置
+        </a>
+        <div className="settings-search stack" role="search">
+          <label htmlFor="settings-section-search">搜索设置分区</label>
+          <input
+            id="settings-section-search"
+            onChange={(event) => setSearchQuery(event.target.value)}
+            placeholder="按名称、用途或关键词检索"
+            ref={searchRef}
+            type="search"
+            value={searchQuery}
+          />
+          {searchResults.length > 0 ? (
+            <ul className="settings-search-results stack">
+              {searchResults.map((candidate) => (
+                <li key={candidate.id}>
+                  <button
+                    aria-label={
+                      candidate.id === "agents"
+                        ? "打开 Agent 设置"
+                        : `打开${candidate.label}设置`
+                    }
+                    className="nav-item settings-search-result"
+                    onClick={() => selectResource(candidate.id, "panel")}
+                    type="button"
+                  >
+                    <span>{candidate.label}</span>
+                    <span className="muted">{candidate.purpose}</span>
+                  </button>
+                </li>
+              ))}
+            </ul>
+          ) : (
+            <div className="empty-guide state-message">
+              <p>没有匹配的设置分区。</p>
+              <button
+                className="button-ghost"
+                onClick={() => {
+                  setSearchQuery("");
+                  queueMicrotask(() => searchRef.current?.focus());
+                }}
+                type="button"
+              >
+                清除检索
+              </button>
+            </div>
+          )}
+        </div>
+        <div
+          aria-busy={!settingsPreferences.hydrated}
+          aria-label="固定设置分区"
+          className="settings-pinning stack"
+        >
+          {SETTINGS_SECTIONS.filter(({ available }) => available).map(
+            (candidate) => {
+              const isPinned = pinned.has(candidate.id);
+              return (
+                <button
+                  key={candidate.id}
+                  aria-label={`${isPinned ? "取消固定" : "固定"}${candidate.label}`}
+                  aria-pressed={isPinned}
+                  className="nav-item"
+                  disabled={!settingsPreferences.hydrated}
+                  onClick={() => togglePinnedSettings(candidate.id)}
+                  type="button"
+                >
+                  {isPinned ? "取消固定" : "固定"} {candidate.label}
+                </button>
+              );
+            },
+          )}
+        </div>
+        {settingsPreferences.error ? (
+          <p className="state-message" role="status">
+            {settingsPreferences.error === "write"
+              ? "固定设置保存失败，导航仍可继续使用。"
+              : settingsPreferences.error === "conflict"
+                ? "检测到固定设置冲突，已按确定性规则合并。"
+              : "固定设置读取失败，导航仍可继续使用。"}
+          </p>
+        ) : null}
+        <section
+          aria-labelledby="settings-preference-history-heading"
+          className="settings-preference-history stack"
+        >
+          <h2 id="settings-preference-history-heading">固定历史</h2>
+          {settingsPreferences.preference.events.length > 0 ? (
+            <ol className="stack">
+              {settingsPreferences.preference.events.map((event) => {
+                const eventSection = SETTINGS_SECTIONS.find(
+                  ({ id }) => id === event.section,
+                );
+                return (
+                  <li key={event.eventId}>
+                    Clock {event.clock}{" "}
+                    {event.action === "pin" ? "固定" : "取消固定"}{" "}
+                    {eventSection?.label ?? event.section} {event.changedAt}
+                  </li>
+                );
+              })}
+            </ol>
+          ) : (
+            <p className="muted">固定分区后，变更记录会显示在这里。</p>
+          )}
+        </section>
         <div
           aria-label="团队资源"
           className="resource-tabs"
@@ -130,39 +316,39 @@ export function TeamPanel() {
         >
           <button
             aria-controls="skill-resource-panel"
-            aria-selected={resource === "skills"}
+            aria-selected={section === "skills"}
             className="nav-item"
             id="skill-resource-tab"
             onClick={() => selectResource("skills")}
             ref={skillTabRef}
             role="tab"
-            tabIndex={resource === "skills" ? 0 : -1}
+            tabIndex={section === "skills" ? 0 : -1}
             type="button"
           >
             技能
           </button>
           <button
             aria-controls="provider-resource-panel"
-            aria-selected={resource === "providers"}
+            aria-selected={section === "providers"}
             className="nav-item"
             id="provider-resource-tab"
             onClick={() => selectResource("providers")}
             ref={providerTabRef}
             role="tab"
-            tabIndex={resource === "providers" ? 0 : -1}
+            tabIndex={section === "providers" ? 0 : -1}
             type="button"
           >
             模型服务
           </button>
           <button
             aria-controls="agent-resource-panel"
-            aria-selected={resource === "agents"}
+            aria-selected={section === "agents"}
             className="nav-item"
             id="agent-resource-tab"
             onClick={() => selectResource("agents")}
             ref={agentTabRef}
             role="tab"
-            tabIndex={resource === "agents" ? 0 : -1}
+            tabIndex={section === "agents" ? 0 : -1}
             type="button"
           >
             Agent
@@ -170,9 +356,9 @@ export function TeamPanel() {
         </div>
       </aside>
 
-      {resource === "agents" ? (
+      {section === "agents" ? (
         <AgentPanel />
-      ) : resource === "providers" ? (
+      ) : section === "providers" ? (
         <ProviderPanel />
       ) : (
         <SkillPanel />

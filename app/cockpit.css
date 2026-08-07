@@ -339,6 +339,16 @@ ol {
   display: flex;
 }
 
+.settings-search input,
+.settings-search-result {
+  width: var(--full-width);
+}
+
+.settings-search-result {
+  align-items: flex-start;
+  flex-direction: column;
+}
+
 .project-context-tabs {
   display: flex;
   flex-wrap: wrap;

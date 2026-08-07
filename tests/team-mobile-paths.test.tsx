@@ -60,19 +60,20 @@ describe("narrow Team resource and editor paths", () => {
   });
 
   it.each([
-    ["模型服务", "创建模型服务", "创建模型服务", "关闭模型服务编辑器"],
-    ["技能", "创建新技能", "创建技能", "关闭技能编辑器"],
-    ["Agent", "创建 Agent", "创建 Agent", "关闭 Agent 编辑器"],
-  ])(
+    ["模型服务", "providers", "创建模型服务", "创建模型服务", "关闭模型服务编辑器"],
+    ["技能", "skills", "创建新技能", "创建技能", "关闭技能编辑器"],
+    ["Agent", "agents", "创建 Agent", "创建 Agent", "关闭 Agent 编辑器"],
+  ] as const)(
     "opens the %s editor as a focus-restoring modal",
-    async (resource, createName, dialogName, closeName) => {
+    async (resource, section, createName, dialogName, closeName) => {
       stubMobile();
       stubResources();
       const user = userEvent.setup();
-      render(<TeamPanel />);
+      const view = render(<TeamPanel />);
       const resources = screen.getByRole("button", { name: "打开团队资源" });
       await user.click(resources);
       await user.click(screen.getByRole("tab", { name: resource }));
+      view.rerender(<TeamPanel section={section} />);
       await waitFor(() =>
         expect(screen.queryByRole("dialog", { name: "团队导航" })).not.toBeInTheDocument(),
       );

@@ -22,13 +22,16 @@ describe("ActivityBar", () => {
     expect(screen.getByRole("link", { name: /团队/ })).toBeInTheDocument();
   });
 
-  it("points 工作 at / and 团队 at /team", () => {
+  it("points 工作 at / and safely structures the 团队 settings URL", () => {
     render(<ActivityBar activePath="/" />);
 
     const work = screen.getByRole("link", { name: /工作/ });
     const team = screen.getByRole("link", { name: /团队/ });
     expect(work).toHaveAttribute("href", "/");
-    expect(team).toHaveAttribute("href", "/team");
+    expect(team).toHaveAttribute(
+      "href",
+      "/team?section=skills&returnTo=%2F",
+    );
   });
 
   it("marks the active route with aria-current=page", () => {

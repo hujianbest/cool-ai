@@ -229,7 +229,7 @@ export function ProjectPanel() {
   return (
     <main className="collaboration-cockpit" data-testid="collaboration-cockpit">
       <h1 className="sr-only">协作工作台</h1>
-      <ActivityBar activePath="/" />
+      <ActivityBar activePath={pathname ?? "/"} />
       <header className="mobile-toolbar">
         <div
           aria-label="驾驶舱面板"

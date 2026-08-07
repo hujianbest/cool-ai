@@ -128,8 +128,7 @@ describe("Agent panel", () => {
       return Promise.resolve(Response.json(jsonForGet(url)));
     }));
     const user = userEvent.setup();
-    render(<TeamPanel />);
-    await user.click(screen.getByRole("tab", { name: "Agent" }));
+    render(<TeamPanel section="agents" />);
 
     expect(screen.getByText("正在加载 Agent…")).toHaveAttribute("aria-busy", "true");
     await act(async () => {
@@ -169,8 +168,7 @@ describe("Agent panel", () => {
       throw new Error(`Unexpected request: ${url}`);
     }));
     const user = userEvent.setup();
-    render(<TeamPanel />);
-    await user.click(screen.getByRole("tab", { name: "Agent" }));
+    render(<TeamPanel section="agents" />);
     await screen.findByText("暂无 Agent。");
     await user.click(screen.getByRole("button", { name: "创建 Agent" }));
 
@@ -245,8 +243,7 @@ describe("Agent panel", () => {
       throw new Error(`Unexpected request: ${url}`);
     }));
     const user = userEvent.setup();
-    render(<TeamPanel />);
-    await user.click(screen.getByRole("tab", { name: "Agent" }));
+    render(<TeamPanel section="agents" />);
     await user.click(await screen.findByRole("button", { name: "编辑 规划" }));
     expect(screen.getByLabelText("规划技能")).toBeChecked();
     expect(screen.getByLabelText("读取文件")).toBeChecked();

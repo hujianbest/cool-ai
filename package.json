@@ -12,7 +12,8 @@
     "smoke:context": "node tests/context-browser-smoke.mjs",
     "smoke:collaboration": "node tests/collaboration-browser-smoke.mjs",
     "smoke:execution": "node tests/execution-browser-smoke.mjs",
-    "smoke:review": "node tests/review-browser-smoke.mjs"
+    "smoke:review": "node tests/review-browser-smoke.mjs",
+    "smoke:settings": "node tests/settings-navigation-browser-smoke.mjs"
   },
   "dependencies": {
     "koffi": "^3.1.2",
