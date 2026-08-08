@@ -13,6 +13,11 @@ import {
   useModalSurface,
   useNarrowMode,
 } from "@/components/mobile-dialog";
+import {
+  AgentOnboardingGuide,
+  parseAgentGuideEnvelopes,
+  type AgentGuideFacts,
+} from "@/components/onboarding-guide";
 import type {
   AccentToken,
   AgentProfile,
@@ -86,6 +91,8 @@ function fieldCopy(field: string, code: string): string {
 }
 
 const AGENT_EDITOR_INERT = [".cockpit-sidebar", "#agent-resource-panel"];
+class KnownAgentWriteError extends Error {}
+
 const AGENT_FIELD_IDS: Record<AgentField, string> = {
   accentToken: "agent-accent",
   avatarText: "agent-avatar",
@@ -116,7 +123,19 @@ function permissionText(permissions: ToolPermissions): string {
   return enabled.length > 0 ? enabled.join(" · ") : "无工具权限";
 }
 
-export function AgentPanel() {
+type AgentPanelProps = {
+  guide?: "agent";
+  onGuideContinue?: () => void;
+  onGuideSkip?: () => void;
+  projectId?: string;
+};
+
+export function AgentPanel({
+  guide,
+  onGuideContinue,
+  onGuideSkip,
+  projectId,
+}: AgentPanelProps = {}) {
   const [agents, setAgents] = useState<AgentProfile[]>([]);
   const [templates, setTemplates] = useState<AgentTemplate[]>([]);
   const [providers, setProviders] = useState<Provider[]>([]);
@@ -148,6 +167,8 @@ export function AgentPanel() {
   >({});
   const [status, setStatus] = useState("");
   const [reloadKey, setReloadKey] = useState(0);
+  const [guideFacts, setGuideFacts] = useState<AgentGuideFacts | null>(null);
+  const [guideRequestError, setGuideRequestError] = useState(false);
   const [editorOpen, setEditorOpen] = useState(false);
   const [focusAgentId, setFocusAgentId] = useState<string | null>(null);
   const mobile = useNarrowMode();
@@ -155,43 +176,75 @@ export function AgentPanel() {
   const nameRef = useRef<HTMLInputElement>(null);
   const dialogRef = useRef<HTMLElement>(null);
   const openerRef = useRef<HTMLElement | null>(null);
+  const createButtonRef = useRef<HTMLButtonElement>(null);
   const headingRefs = useRef(new Map<string, HTMLHeadingElement>());
 
   useEffect(() => {
     let active = true;
     setIsLoading(true);
     setLoadError(null);
+    setGuideFacts(null);
+    setGuideRequestError(false);
     void Promise.all([
       fetch("/api/agent-templates"),
       fetch("/api/providers"),
       fetch("/api/skills"),
       fetch("/api/agents"),
+      projectId
+        ? fetch(`/api/projects/${projectId}/members`)
+        : Promise.resolve(null),
     ])
-      .then(async ([templateResponse, providerResponse, skillResponse, agentResponse]) => {
+      .then(async ([
+        templateResponse,
+        providerResponse,
+        skillResponse,
+        agentResponse,
+        memberResponse,
+      ]) => {
         if (
           !templateResponse.ok ||
           !providerResponse.ok ||
           !skillResponse.ok ||
-          !agentResponse.ok
+          !agentResponse.ok ||
+          (memberResponse !== null && !memberResponse.ok)
         ) {
           throw new Error("agent resources unavailable");
         }
         return Promise.all([
-          templateResponse.json() as Promise<{ templates: AgentTemplate[] }>,
-          providerResponse.json() as Promise<{ providers: Provider[] }>,
-          skillResponse.json() as Promise<{ skills: Skill[] }>,
-          agentResponse.json() as Promise<{ agents: AgentProfile[] }>,
+          templateResponse.json() as Promise<unknown>,
+          providerResponse.json() as Promise<unknown>,
+          skillResponse.json() as Promise<unknown>,
+          agentResponse.json() as Promise<unknown>,
+          memberResponse?.json() as Promise<unknown> | undefined,
         ]);
       })
-      .then(([templatePayload, providerPayload, skillPayload, agentPayload]) => {
+      .then(([
+        templateValue,
+        providerValue,
+        skillValue,
+        agentValue,
+        memberValue,
+      ]) => {
         if (!active) return;
-        setTemplates(templatePayload.templates);
-        setProviders(providerPayload.providers);
-        setSkills(skillPayload.skills);
-        setAgents(agentPayload.agents);
+        const templatePayload = templateValue as { templates?: AgentTemplate[] };
+        const providerPayload = providerValue as { providers?: Provider[] };
+        const skillPayload = skillValue as { skills?: Skill[] };
+        const agentPayload = agentValue as { agents?: AgentProfile[] };
+        if (guide === "agent") {
+          setGuideFacts(
+            parseAgentGuideEnvelopes(providerValue, agentValue, memberValue),
+          );
+        }
+        setTemplates(Array.isArray(templatePayload.templates) ? templatePayload.templates : []);
+        setProviders(Array.isArray(providerPayload.providers) ? providerPayload.providers : []);
+        setSkills(Array.isArray(skillPayload.skills) ? skillPayload.skills : []);
+        setAgents(Array.isArray(agentPayload.agents) ? agentPayload.agents : []);
       })
       .catch(() => {
-        if (active) setLoadError("暂时无法加载 Agent，请稍后重试。");
+        if (active) {
+          setGuideRequestError(true);
+          setLoadError("暂时无法加载 Agent，请稍后重试。");
+        }
       })
       .finally(() => {
         if (active) setIsLoading(false);
@@ -199,7 +252,7 @@ export function AgentPanel() {
     return () => {
       active = false;
     };
-  }, [reloadKey]);
+  }, [guide, projectId, reloadKey]);
 
   useEffect(() => {
     if (loadError || (formError && Object.keys(fieldErrors).length === 0)) {
@@ -351,7 +404,7 @@ export function AgentPanel() {
       const payload = (await response.json()) as ApiFailure & {
         agent?: AgentProfile;
       };
-      if (!response.ok || !payload.agent) {
+      if (!response.ok) {
         const nextErrors: Partial<Record<AgentField, string>> = {};
         for (const issue of payload.error?.fields ?? []) {
           if (isAgentField(issue.field)) {
@@ -365,23 +418,73 @@ export function AgentPanel() {
         if (firstField) {
           queueMicrotask(() => document.getElementById(AGENT_FIELD_IDS[firstField])?.focus());
         }
-        throw new Error(payload.error?.code ?? "SAVE_FAILED");
+        throw new KnownAgentWriteError(payload.error?.code ?? "SAVE_FAILED");
       }
+      if (!payload.agent) throw new Error("uncertain response");
       const saved = payload.agent;
-      setAgents((current) =>
-        current.some(({ id }) => id === saved.id)
-          ? current.map((agent) => (agent.id === saved.id ? saved : agent))
-          : [...current, saved],
-      );
-      setFocusAgentId(saved.id);
-      setStatus("Agent 已保存。");
-      setEditing(saved);
-      if (mobile) setEditorOpen(false);
+      applySavedAgent(saved, "Agent 已保存。");
     } catch (cause) {
-      setFormError(errorCopy(cause instanceof Error ? cause.message : undefined));
+      if (cause instanceof KnownAgentWriteError) {
+        setFormError(errorCopy(cause.message));
+      } else {
+        await reconcileUncertainWrite(body);
+      }
     } finally {
       setIsSaving(false);
     }
+  }
+
+  function applySavedAgent(saved: AgentProfile, message: string) {
+    setAgents((current) =>
+      current.some(({ id }) => id === saved.id)
+        ? current.map((agent) => (agent.id === saved.id ? saved : agent))
+        : [...current, saved],
+    );
+    setFocusAgentId(saved.id);
+    setStatus(message);
+    setEditing(saved);
+    setFormError(null);
+    if (mobile) setEditorOpen(false);
+  }
+
+  async function reconcileUncertainWrite(body: Record<string, unknown>) {
+    try {
+      const response = await fetch("/api/agents");
+      if (!response.ok) throw new Error("reconciliation failed");
+      const payload = (await response.json()) as { agents?: unknown };
+      if (!Array.isArray(payload.agents)) throw new Error("reconciliation failed");
+      if (editing) {
+        const confirmed = (payload.agents as AgentProfile[]).find(
+          (agent) =>
+            agent.id === editing.id &&
+            agent.version > editing.version &&
+            agent.name === body.name &&
+            agent.role === body.role &&
+            agent.systemPrompt === body.systemPrompt &&
+            agent.providerId === body.providerId &&
+            agent.model === body.model &&
+            agent.reviewCapable === body.reviewCapable &&
+            agent.maxTokens === body.maxTokens &&
+            agent.maxHandoffs === body.maxHandoffs &&
+            agent.avatarText === body.avatarText &&
+            agent.accentToken === body.accentToken &&
+            JSON.stringify(agent.skillIds) === JSON.stringify(body.skillIds) &&
+            JSON.stringify(agent.permissions) === JSON.stringify(body.permissions),
+        );
+        if (confirmed) {
+          applySavedAgent(
+            confirmed,
+            "已通过事实核对确认 Agent 已保存。",
+          );
+          return;
+        }
+      }
+    } catch {
+      // Keep the original editor and draft when the write cannot be confirmed.
+    }
+    setFormError(
+      "保存结果不确定，已核对 Agent 列表但无法确认。请保留当前表面并人工核对，不会自动重发。",
+    );
   }
 
   const editor = (
@@ -730,10 +833,30 @@ export function AgentPanel() {
             <p className="eyebrow">团队资源</p>
             <h2>Agent</h2>
           </div>
-          <button onClick={startCreate} type="button">
+          <button onClick={startCreate} ref={createButtonRef} type="button">
             创建 Agent
           </button>
         </header>
+        {guide === "agent" ? (
+          <AgentOnboardingGuide
+            facts={guideFacts}
+            loading={isLoading}
+            loadError={guideRequestError}
+            onContinue={onGuideContinue}
+            onFocusAgent={() => {
+              const focusId =
+                guideFacts?.kind === "success"
+                  ? guideFacts.reviewerAgentId
+                  : guideFacts?.kind === "project_pending"
+                    ? guideFacts.focusAgentId
+                    : null;
+              if (focusId) headingRefs.current.get(focusId)?.focus();
+              else createButtonRef.current?.focus();
+            }}
+            onRetry={() => setReloadKey((current) => current + 1)}
+            onSkip={onGuideSkip}
+          />
+        ) : null}
         {isLoading ? (
           <p aria-busy="true" className="muted">
             正在加载 Agent…

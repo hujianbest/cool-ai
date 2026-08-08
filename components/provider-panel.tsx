@@ -7,6 +7,11 @@ import {
   useModalSurface,
   useNarrowMode,
 } from "@/components/mobile-dialog";
+import {
+  parseProviderGuideEnvelope,
+  ProviderOnboardingGuide,
+  type ProviderGuideFacts,
+} from "@/components/onboarding-guide";
 import type { Provider, ProviderDraft } from "@/src/shared/team-contracts";
 
 type ProviderField =
@@ -66,13 +71,29 @@ function isProviderField(field: string): field is ProviderField {
 
 const PROVIDER_EDITOR_INERT = [".cockpit-sidebar", "#provider-resource-panel"];
 
+class KnownProviderWriteError extends Error {}
+
 function responseCopy(payload: ApiFailure): string {
   const code = payload.error?.code;
   return (code && errorCopy[code]) || "请求失败，请稍后重试。";
 }
 
-export function ProviderPanel() {
+type ProviderPanelProps = {
+  guide?: "provider";
+  onGuideContinue?: () => void;
+  onGuideSkip?: () => void;
+};
+
+export function ProviderPanel({
+  guide,
+  onGuideContinue,
+  onGuideSkip,
+}: ProviderPanelProps = {}) {
   const [providers, setProviders] = useState<Provider[]>([]);
+  const [providerFacts, setProviderFacts] = useState<ProviderGuideFacts | null>(
+    null,
+  );
+  const [guideRequestError, setGuideRequestError] = useState(false);
   const [editing, setEditing] = useState<Provider | null>(null);
   const [name, setName] = useState("");
   const [baseUrl, setBaseUrl] = useState("");
@@ -102,6 +123,7 @@ export function ProviderPanel() {
   const insecureRef = useRef<HTMLInputElement>(null);
   const dialogRef = useRef<HTMLElement>(null);
   const openerRef = useRef<HTMLElement | null>(null);
+  const createButtonRef = useRef<HTMLButtonElement>(null);
   const providerHeadingRefs = useRef(new Map<string, HTMLHeadingElement>());
 
   useModalSurface(narrow && editorOpen, dialogRef, PROVIDER_EDITOR_INERT);
@@ -110,16 +132,27 @@ export function ProviderPanel() {
     let active = true;
     setIsLoading(true);
     setLoadError(null);
+    setGuideRequestError(false);
+    setProviderFacts(null);
     void fetch("/api/providers")
       .then(async (response) => {
         if (!response.ok) throw new Error("provider load failed");
-        return response.json() as Promise<{ providers: Provider[] }>;
+        return response.json() as Promise<unknown>;
       })
-      .then(({ providers: loaded }) => {
-        if (active) setProviders(loaded);
+      .then((payload) => {
+        if (!active) return;
+        const facts = parseProviderGuideEnvelope(payload);
+        setProviderFacts(facts);
+        setProviders(facts.providers);
+        if (facts.kind === "invalid") {
+          setLoadError("模型服务响应无效，已停止加载。");
+        }
       })
       .catch(() => {
-        if (active) setLoadError("暂时无法加载模型服务，请稍后重试。");
+        if (active) {
+          setGuideRequestError(true);
+          setLoadError("暂时无法加载模型服务，请稍后重试。");
+        }
       })
       .finally(() => {
         if (active) setIsLoading(false);
@@ -313,33 +346,85 @@ export function ProviderPanel() {
           method: editing ? "PATCH" : "POST",
         },
       );
-      const payload = (await response.json()) as ApiFailure & { provider?: Provider };
-      if (!response.ok || !payload.provider) throw new Error(applyFailure(payload));
-      const provider = payload.provider;
-      setProviders((current) => {
-        const exists = current.some(({ id }) => id === provider.id);
-        return exists
-          ? current.map((item) => (item.id === provider.id ? provider : item))
-          : [...current, provider];
+      const payload = (await response.json()) as ApiFailure & {
+        provider?: unknown;
+      };
+      if (!response.ok) {
+        throw new KnownProviderWriteError(applyFailure(payload));
+      }
+      const facts = parseProviderGuideEnvelope({
+        providers: payload.provider ? [payload.provider] : [],
       });
-      setEditing(provider);
-      setName(provider.name);
-      setBaseUrl(provider.baseUrl);
-      setDefaultModel(provider.defaultModel);
-      setApiKey("");
-      setAllowInsecureHttp(provider.baseUrl.startsWith("http://"));
-      setValidationToken(null);
-      setKeyVisible(false);
-      setStatusMessage("模型服务已保存。");
-      setFocusProviderId(provider.id);
-      if (narrow) setEditorOpen(false);
+      if (facts.kind !== "success") throw new Error("uncertain response");
+      applySavedProvider(facts.providers[0], "模型服务已保存。");
     } catch (cause) {
-      setFormError(
-        cause instanceof Error ? cause.message : "无法保存模型服务，请稍后重试。",
-      );
+      if (cause instanceof KnownProviderWriteError) {
+        setFormError(cause.message);
+      } else {
+        await reconcileUncertainWrite();
+      }
     } finally {
       setIsSaving(false);
     }
+  }
+
+  function applySavedProvider(provider: Provider, message: string) {
+    setProviders((current) => {
+      const exists = current.some(({ id }) => id === provider.id);
+      return exists
+        ? current.map((item) => (item.id === provider.id ? provider : item))
+        : [...current, provider];
+    });
+    setProviderFacts((current) => {
+      const merged = current?.providers.some(({ id }) => id === provider.id)
+        ? current.providers.map((item) => (item.id === provider.id ? provider : item))
+        : [...(current?.providers ?? []), provider];
+      return parseProviderGuideEnvelope({ providers: merged });
+    });
+    setEditing(provider);
+    setName(provider.name);
+    setBaseUrl(provider.baseUrl);
+    setDefaultModel(provider.defaultModel);
+    setApiKey("");
+    setAllowInsecureHttp(provider.baseUrl.startsWith("http://"));
+    setValidationToken(null);
+    setKeyVisible(false);
+    setStatusMessage(message);
+    setFocusProviderId(provider.id);
+    if (narrow) setEditorOpen(false);
+  }
+
+  async function reconcileUncertainWrite() {
+    try {
+      const response = await fetch("/api/providers");
+      if (!response.ok) throw new Error("reconciliation failed");
+      const facts = parseProviderGuideEnvelope(await response.json());
+      if (facts.kind === "invalid") throw new Error("reconciliation failed");
+      setProviderFacts(facts);
+      setProviders(facts.providers);
+      if (editing && apiKey.length === 0) {
+        const confirmed = facts.providers.find(
+          (provider) =>
+            provider.id === editing.id &&
+            provider.name === name.trim() &&
+            provider.baseUrl === baseUrl.trim() &&
+            provider.defaultModel === defaultModel.trim() &&
+            provider.version > editing.version,
+        );
+        if (confirmed) {
+          applySavedProvider(
+            confirmed,
+            "已通过事实核对确认模型服务已保存。",
+          );
+          return;
+        }
+      }
+    } catch {
+      // The write remains uncertain; keep the original editor and draft.
+    }
+    setFormError(
+      "保存结果不确定，已核对列表但无法确认。请保留当前表面并人工核对，不会自动重发。",
+    );
   }
 
   return (
@@ -355,10 +440,31 @@ export function ProviderPanel() {
             <p className="eyebrow">团队资源</p>
             <h2 id="providers-title">模型服务</h2>
           </div>
-          <button onClick={startCreate} type="button">
+          <button onClick={startCreate} ref={createButtonRef} type="button">
             创建模型服务
           </button>
         </header>
+        {guide === "provider" ? (
+          <ProviderOnboardingGuide
+            facts={providerFacts}
+            loading={isLoading}
+            loadError={guideRequestError}
+            onContinue={onGuideContinue}
+            onFocusProvider={() => {
+              const verifiedId =
+                providerFacts?.kind === "success"
+                  ? providerFacts.verifiedProviderId
+                  : null;
+              if (verifiedId) {
+                providerHeadingRefs.current.get(verifiedId)?.focus();
+              } else {
+                createButtonRef.current?.focus();
+              }
+            }}
+            onRetry={() => setReloadKey((current) => current + 1)}
+            onSkip={onGuideSkip}
+          />
+        ) : null}
         {isLoading ? (
           <p aria-busy="true" className="muted">
             正在加载服务…

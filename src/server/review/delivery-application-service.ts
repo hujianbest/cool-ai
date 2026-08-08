@@ -86,6 +86,7 @@ function buildInput(database: DatabaseSync, missionId: string): {
     SELECT item.id AS workItemId,item.title,item.version AS workItemVersion,
            result.id AS resultId,result.version AS resultVersion,
            result.execution_id AS executionId,result.staged_result_id AS stagedResultId,
+           execution.source_collaboration_run_id AS sourceCollaborationRunId,
            result.executor_agent_id AS executorAgentId,
            staged.staged_hash AS stagedHash,staged.merge_file_count AS mergeFileCount,
            staged.merge_final_bytes AS mergeFinalBytes,
@@ -99,6 +100,7 @@ function buildInput(database: DatabaseSync, missionId: string): {
     JOIN work_item_review_heads head ON head.work_item_id=item.id
     JOIN work_item_result_versions result
       ON result.id=head.current_result_id AND result.work_item_id=item.id
+    JOIN executions execution ON execution.id=result.execution_id
     JOIN execution_staged_results staged ON staged.id=result.staged_result_id
     JOIN review_attempts attempt ON attempt.id=head.current_attempt_id
     JOIN review_decisions decision ON decision.attempt_id=attempt.id AND decision.choice='pass'
@@ -238,6 +240,7 @@ function buildInput(database: DatabaseSync, missionId: string): {
         id: String(task.executionId),
         mergeFileCount: Number(task.mergeFileCount),
         mergeFinalBytes: Number(task.mergeFinalBytes),
+        sourceCollaborationRunId: String(task.sourceCollaborationRunId),
         stagedHash: String(task.stagedHash),
       },
       executor: { agentId: String(task.executorAgentId), name: String(task.executorName) },

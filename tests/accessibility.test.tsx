@@ -106,6 +106,8 @@ describe("narrow-screen and keyboard accessibility", () => {
     await user.tab();
     expect(screen.getByRole("link", { name: "团队" })).toHaveFocus();
     await user.tab();
+    expect(screen.getByRole("link", { name: "首次使用引导" })).toHaveFocus();
+    await user.tab();
     expect(
       screen.getByRole("button", {
         name: "当前为明色主题，切换到暗色主题",

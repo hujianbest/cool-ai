@@ -8,11 +8,17 @@ import {
 } from "react";
 
 import type { ApiError } from "@/src/shared/contracts";
-import type {
-  MembershipState,
-  ProjectMember,
-} from "@/src/shared/project-context-contracts";
+import type { ProjectMember } from "@/src/shared/project-context-contracts";
 import type { AgentProfile } from "@/src/shared/team-contracts";
+import {
+  MembersOnboardingGuide,
+  parseAgentGuideEnvelopes,
+  type AgentGuideFacts,
+} from "@/components/onboarding-guide";
+import {
+  parseMembershipGuideEnvelope,
+  type MembershipGuideEnvelope,
+} from "@/src/shared/onboarding-guide-machine";
 
 type MemberError = Partial<ApiError> & {
   error?: ApiError["error"] & { agentIds?: string[] };
@@ -22,7 +28,12 @@ type MembersSetupProps = {
   projectId: string;
   projectVersion?: number;
   onVersionChange?: (version: number) => void;
+  onGuideContinue?: () => void;
+  onGuideSkip?: () => void;
+  showGuide?: boolean;
 };
+
+class KnownMemberWriteError extends Error {}
 
 function memberError(payload: MemberError, agents: AgentProfile[]): string {
   const code = payload.error?.code;
@@ -58,6 +69,9 @@ export function MembersSetup({
   projectId,
   projectVersion,
   onVersionChange,
+  onGuideContinue,
+  onGuideSkip,
+  showGuide = false,
 }: MembersSetupProps) {
   const [agents, setAgents] = useState<AgentProfile[]>([]);
   const [members, setMembers] = useState<ProjectMember[]>([]);
@@ -68,58 +82,101 @@ export function MembersSetup({
   const [error, setError] = useState<string | null>(null);
   const [assignedAgentIds, setAssignedAgentIds] = useState<string[]>([]);
   const [success, setSuccess] = useState("");
+  const [guideFacts, setGuideFacts] = useState<AgentGuideFacts | null>(null);
+  const [guideLoadError, setGuideLoadError] = useState(false);
+  const [providerValue, setProviderValue] = useState<unknown>(null);
+  const [needsReload, setNeedsReload] = useState(false);
   const [reloadKey, setReloadKey] = useState(0);
   const rosterHeadingRef = useRef<HTMLHeadingElement>(null);
+  const memberGroupRef = useRef<HTMLFieldSetElement>(null);
 
   useEffect(() => {
     let active = true;
     setIsLoading(true);
     setError(null);
     setSuccess("");
+    setGuideFacts(null);
+    setGuideLoadError(false);
+    setNeedsReload(false);
     void Promise.allSettled([
       fetch("/api/agents").then(async (response) => {
-        const payload = (await response.json()) as {
-          agents?: AgentProfile[];
-        } & Partial<ApiError>;
+        const payload: unknown = await response.json();
         if (!response.ok) throw new Error("agents");
-        if (!Array.isArray(payload.agents)) throw new Error("agents");
-        return payload.agents;
+        if (
+          !payload ||
+          typeof payload !== "object" ||
+          Array.isArray(payload) ||
+          !Array.isArray((payload as { agents?: unknown }).agents)
+        ) {
+          throw new Error("agents");
+        }
+        return {
+          agents: (payload as { agents: AgentProfile[] }).agents,
+          value: payload,
+        };
       }),
       fetch(`/api/projects/${projectId}/members`).then(async (response) => {
-        const payload = (await response.json()) as MembershipState &
-          Partial<ApiError>;
+        const payload: unknown = await response.json();
         if (!response.ok) throw new Error("members");
-        if (
-          !Array.isArray(payload.members) ||
-          !Number.isInteger(payload.projectVersion)
-        ) {
-          throw new Error("members");
-        }
-        return payload;
+        const parsed = parseMembershipGuideEnvelope(payload);
+        if (parsed.kind !== "success") throw new Error("members-invalid");
+        return { parsed, value: payload };
       }),
-    ]).then(([agentResult, memberResult]) => {
+      showGuide
+        ? fetch("/api/providers").then(async (response) => {
+            const value: unknown = await response.json();
+            if (!response.ok) throw new Error("providers");
+            return value;
+          })
+        : Promise.resolve(null),
+    ]).then(([agentResult, memberResult, providerResult]) => {
       if (!active) return;
       if (agentResult.status === "fulfilled") {
-        setAgents(agentResult.value);
+        setAgents(agentResult.value.agents);
       } else {
         setError("无法加载 Agent 库，请重试。");
       }
       if (memberResult.status === "fulfilled") {
-        setMembers(memberResult.value.members);
+        setMembers(memberResult.value.parsed.members);
         setSelected(
-          memberResult.value.members.map((member) => member.agentId),
+          memberResult.value.parsed.members.map((member) => member.agentId),
         );
-        setLoadedVersion(memberResult.value.projectVersion);
-        onVersionChange?.(memberResult.value.projectVersion);
+        setLoadedVersion(memberResult.value.parsed.projectVersion);
+        onVersionChange?.(memberResult.value.parsed.projectVersion);
       } else {
-        setError((current) => current ?? "无法加载项目成员，请重试。");
+        setError((current) =>
+          current ??
+          (memberResult.reason instanceof Error &&
+          memberResult.reason.message === "members-invalid"
+            ? "成员响应无效，已失败关闭。"
+            : "无法加载项目成员，请重试。"),
+        );
+      }
+      if (showGuide) {
+        if (
+          agentResult.status === "fulfilled" &&
+          memberResult.status === "fulfilled" &&
+          providerResult.status === "fulfilled" &&
+          providerResult.value !== null
+        ) {
+          setProviderValue(providerResult.value);
+          setGuideFacts(
+            parseAgentGuideEnvelopes(
+              providerResult.value,
+              agentResult.value.value,
+              memberResult.value.value,
+            ),
+          );
+        } else {
+          setGuideLoadError(true);
+        }
       }
       setIsLoading(false);
     });
     return () => {
       active = false;
     };
-  }, [onVersionChange, projectId, reloadKey]);
+  }, [onVersionChange, projectId, reloadKey, showGuide]);
 
   function toggle(agentId: string) {
     setError(null);
@@ -136,47 +193,100 @@ export function MembersSetup({
     if (selected.length < 2 || isSaving) return;
     setError(null);
     setSuccess("");
+    setNeedsReload(false);
     setIsSaving(true);
+    const requestedAgentIds = [...selected];
+    const expectedProjectVersion = projectVersion ?? loadedVersion;
+    const applyState = (
+      parsed: Extract<MembershipGuideEnvelope, { kind: "success" }>,
+      notice: string,
+    ) => {
+      setMembers(parsed.members);
+      setSelected(parsed.members.map((member) => member.agentId));
+      setLoadedVersion(parsed.projectVersion);
+      onVersionChange?.(parsed.projectVersion);
+      setAssignedAgentIds([]);
+      setSuccess(notice);
+      if (showGuide && providerValue) {
+        setGuideFacts(
+          parseAgentGuideEnvelopes(
+            providerValue,
+            { agents },
+            {
+              members: parsed.members,
+              projectVersion: parsed.projectVersion,
+            },
+          ),
+        );
+      }
+      queueMicrotask(() => rosterHeadingRef.current?.focus());
+    };
+    const reconcileUnknownWrite = async () => {
+      try {
+        const response = await fetch(`/api/projects/${projectId}/members`);
+        if (!response.ok) throw new Error("read");
+        const parsed = parseMembershipGuideEnvelope(await response.json());
+        const actualIds =
+          parsed.kind === "success"
+            ? parsed.members.map((member) => member.agentId).sort()
+            : [];
+        const requestedIds = [...requestedAgentIds].sort();
+        if (
+          parsed.kind !== "success" ||
+          parsed.projectVersion !== expectedProjectVersion + 1 ||
+          actualIds.length !== requestedIds.length ||
+          actualIds.some((agentId, index) => agentId !== requestedIds[index])
+        ) {
+          throw new Error("unconfirmed");
+        }
+        applyState(parsed, "已通过事实核对确认项目成员已保存。");
+      } catch {
+        setError(
+          "成员写入结果未知，且无法由 GET 唯一确认。请核对当前成员后再决定是否重试；不会自动重发。",
+        );
+        setNeedsReload(true);
+        memberGroupRef.current?.focus();
+      }
+    };
     try {
       const response = await fetch(`/api/projects/${projectId}/members`, {
         body: JSON.stringify({
-          agentIds: selected,
-          expectedProjectVersion: projectVersion ?? loadedVersion,
+          agentIds: requestedAgentIds,
+          expectedProjectVersion,
         }),
         headers: { "content-type": "application/json" },
         method: "PUT",
       });
-      const payload = (await response.json()) as MembershipState & MemberError;
+      const payload: unknown = await response.json();
       if (!response.ok) {
-        const blockedIds = payload.error?.agentIds ?? [];
-        if (payload.error?.code === "MEMBER_HAS_ASSIGNMENTS") {
+        const apiError = payload as MemberError;
+        const blockedIds = apiError.error?.agentIds ?? [];
+        if (apiError.error?.code === "MEMBER_HAS_ASSIGNMENTS") {
           setAssignedAgentIds(blockedIds);
           setSelected((current) => [
             ...current,
             ...blockedIds.filter((agentId) => !current.includes(agentId)),
           ]);
         }
-        throw new Error(memberError(payload, agents));
+        if (apiError.error?.code === "RESOURCE_CONFLICT") {
+          setNeedsReload(true);
+        }
+        throw new KnownMemberWriteError(memberError(apiError, agents));
       }
-      if (
-        !Array.isArray(payload.members) ||
-        !Number.isInteger(payload.projectVersion)
-      ) {
-        throw new Error("无法保存项目成员，请稍后重试。");
+      const parsed = parseMembershipGuideEnvelope(payload);
+      if (parsed.kind !== "success") {
+        await reconcileUnknownWrite();
+        return;
       }
-      setMembers(payload.members);
-      setSelected(payload.members.map((member) => member.agentId));
-      setLoadedVersion(payload.projectVersion);
-      onVersionChange?.(payload.projectVersion);
-      setAssignedAgentIds([]);
-      setSuccess("项目成员已保存。");
-      queueMicrotask(() => rosterHeadingRef.current?.focus());
+      applyState(parsed, "项目成员已保存。");
     } catch (cause) {
-      setError(
-        cause instanceof Error
-          ? cause.message
-          : "无法保存项目成员，请稍后重试。",
-      );
+      if (cause instanceof KnownMemberWriteError) {
+        setError(
+          cause.message,
+        );
+      } else {
+        await reconcileUnknownWrite();
+      }
     } finally {
       setIsSaving(false);
     }
@@ -184,6 +294,20 @@ export function MembersSetup({
 
   return (
     <section aria-labelledby={`members-title-${projectId}`} className="stack">
+      {showGuide ? (
+        <MembersOnboardingGuide
+          facts={guideFacts}
+          loading={isLoading}
+          loadError={guideLoadError}
+          onContinue={onGuideContinue}
+          onFocusMembers={() => {
+            if (guideFacts?.kind === "success") rosterHeadingRef.current?.focus();
+            else memberGroupRef.current?.focus();
+          }}
+          onRetry={() => setReloadKey((current) => current + 1)}
+            onSkip={onGuideSkip}
+        />
+      ) : null}
       <h3 id={`members-title-${projectId}`}>项目成员</h3>
       {isLoading ? (
         <p aria-busy="true" className="muted">
@@ -205,6 +329,8 @@ export function MembersSetup({
                       ? `members-error-${projectId}`
                       : undefined
                 }
+                ref={memberGroupRef}
+                tabIndex={-1}
               >
                 <legend>平等项目成员</legend>
                 <div className="stack">
@@ -252,13 +378,13 @@ export function MembersSetup({
             ) : null}
           </p>
           {error.startsWith("无法加载") ||
-          error.startsWith("项目已更新") ||
+          needsReload ||
           error.includes("已不存在") ? (
             <button
               onClick={() => setReloadKey((current) => current + 1)}
               type="button"
             >
-              重试加载成员
+              {needsReload ? "重新加载成员" : "重试加载成员"}
             </button>
           ) : null}
         </div>

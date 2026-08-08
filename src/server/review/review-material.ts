@@ -231,8 +231,12 @@ export function freezeReviewMaterial(
 ): { hash: string; json: string; material: ReviewMaterial } {
   const result = database.prepare(`
     SELECT r.id,r.version,r.execution_id AS executionId,r.staged_result_id AS stagedResultId,
-           r.merge_journal_id AS mergeJournalId,r.created_at AS createdAt
-    FROM work_item_result_versions r WHERE r.id=?
+           r.merge_journal_id AS mergeJournalId,r.created_at AS createdAt,
+           (SELECT execution.source_collaboration_run_id
+            FROM executions execution WHERE execution.id=r.execution_id)
+             AS sourceCollaborationRunId
+    FROM work_item_result_versions r
+    WHERE r.id=?
   `).get(head.resultId) as any;
   const project = database.prepare("SELECT id,name FROM projects WHERE id=?")
     .get(head.projectId) as any;
@@ -470,6 +474,7 @@ export function freezeReviewMaterial(
       executionId: result.executionId,
       id: result.id,
       mergeJournalId: result.mergeJournalId,
+      sourceCollaborationRunId: result.sourceCollaborationRunId,
       stagedResultId: result.stagedResultId,
       version: result.version,
     },

@@ -11,6 +11,7 @@ import {
 
 import { CollaborationPanel } from "@/components/collaboration/collaboration-panel";
 import { ExecutionPanel } from "@/components/execution/execution-panel";
+import { OnboardingGuide } from "@/components/onboarding-guide";
 import { MissionBoard } from "@/components/project-context/mission-board";
 import { ProjectContextPanel } from "@/components/project-context/project-context-panel";
 import {
@@ -20,6 +21,7 @@ import {
 } from "@/src/shared/api-error-copy";
 import type {
   ApiError,
+  Project,
   TaskEvent,
   TaskRun,
   TaskStateResponse,
@@ -64,6 +66,14 @@ type TaskPanelProps = {
   contextSurfaceRef: RefObject<HTMLElement | null>;
   contextCloseRef: RefObject<HTMLButtonElement | null>;
   onSelectProject: () => void;
+  onboarding?: {
+    onCreateProject: () => void;
+    onSkip?: () => void;
+    onSelectProject: (projectId: string) => void;
+    projects: Project[];
+    step: "project-select" | "goal";
+  } | null;
+  legacyTasksEnabled?: boolean;
 };
 
 export function TaskPanel({
@@ -82,9 +92,12 @@ export function TaskPanel({
   contextSurfaceRef,
   contextCloseRef,
   onSelectProject,
+  onboarding,
+  legacyTasksEnabled = true,
 }: TaskPanelProps) {
   const [tasks, setTasks] = useState<TaskRun[]>([]);
   const [events, setEvents] = useState<TaskEvent[]>([]);
+  const [goalFactsVersion, setGoalFactsVersion] = useState(0);
   const [goal, setGoal] = useState("");
   const [error, setError] = useState<string | null>(null);
   const [isLoading, setIsLoading] = useState(false);
@@ -103,7 +116,7 @@ export function TaskPanel({
     setTasks([]);
     setEvents([]);
 
-    if (!projectId) {
+    if (!projectId || !legacyTasksEnabled) {
       setIsLoading(false);
       return () => {
         active = false;
@@ -136,7 +149,7 @@ export function TaskPanel({
     return () => {
       active = false;
     };
-  }, [projectId, reloadKey]);
+  }, [legacyTasksEnabled, projectId, reloadKey]);
 
   function applyState(response: TaskStateResponse) {
     setTasks((current) => {
@@ -211,6 +224,26 @@ export function TaskPanel({
     if (focus) queueMicrotask(() => collaborationTabRefs.current.get(surface)?.focus());
   }
 
+  function focusOnboardingSurface(
+    surface: "board" | "chat",
+    targetSelectors: string[],
+  ) {
+    if (narrow) selectCollaborationSurface(surface);
+    let attempts = 0;
+    const focusWhenReady = () => {
+      const target = targetSelectors
+        .map((selector) => document.querySelector<HTMLElement>(selector))
+        .find((candidate) => candidate !== null);
+      if (target) {
+        target.focus();
+        return;
+      }
+      attempts += 1;
+      if (attempts < 100) window.setTimeout(focusWhenReady, 50);
+    };
+    focusWhenReady();
+  }
+
   function handleCollaborationTabs(event: KeyboardEvent<HTMLDivElement>) {
     const currentIndex = collaborationSurfaces.findIndex(
       (item) => item.id === collaborationSurface,
@@ -234,9 +267,9 @@ export function TaskPanel({
         aria-labelledby={narrow ? "task-editor-label" : undefined}
         aria-modal={narrow && editorOpen && !nestedModalOpen ? "true" : undefined}
         className="cockpit-flow"
-        data-open={editorOpen}
+        data-open={editorOpen || Boolean(onboarding)}
         data-testid="editor-surface"
-        hidden={narrow && !editorOpen}
+        hidden={narrow && !editorOpen && !onboarding}
         id="task-editor-surface"
         ref={editorSurfaceRef}
         role={narrow && editorOpen && !nestedModalOpen ? "dialog" : undefined}
@@ -271,6 +304,34 @@ export function TaskPanel({
             </h2>
           </div>
         </div>
+
+        {onboarding ? (
+          <OnboardingGuide
+            onCreateProject={onboarding.onCreateProject}
+            onFocusChat={() => {
+              if (projectId) {
+                focusOnboardingSurface(
+                  "chat",
+                  [`#collaboration-message-${projectId}`],
+                );
+              }
+            }}
+            onFocusMission={() => {
+              if (projectId) {
+                focusOnboardingSurface("board", [
+                  `#mission-title-${projectId}`,
+                  "#mission-board .mission-summary h3",
+                ]);
+              }
+            }}
+            onSelectProject={onboarding.onSelectProject}
+            onSkip={onboarding.onSkip}
+            projectId={projectId}
+            projects={onboarding.projects}
+            refreshKey={goalFactsVersion}
+            step={onboarding.step}
+          />
+        ) : null}
 
         {narrow && projectId ? (
           <div
@@ -324,13 +385,22 @@ export function TaskPanel({
                   role="tabpanel"
                 >
                   {collaborationSurface === "board" ? (
-                    <MissionBoard projectId={projectId} />
+                    <MissionBoard
+                      onGoalFactChanged={() =>
+                        setGoalFactsVersion((current) => current + 1)
+                      }
+                      projectId={projectId}
+                    />
                   ) : collaborationSurface === "run" ? (
                     <>
                       <CollaborationPanel
                         modalBackgroundRef={editorSurfaceRef}
+                        onGoalFactChanged={() =>
+                          setGoalFactsVersion((current) => current + 1)
+                        }
                         onNestedModalChange={setNestedModalOpen}
                         projectId={projectId}
+                        startOnly={onboarding?.step === "goal"}
                         surface="run"
                       />
                       <ExecutionPanel embedded projectId={projectId} />
@@ -338,8 +408,12 @@ export function TaskPanel({
                   ) : (
                     <CollaborationPanel
                       modalBackgroundRef={editorSurfaceRef}
+                      onGoalFactChanged={() =>
+                        setGoalFactsVersion((current) => current + 1)
+                      }
                       onNestedModalChange={setNestedModalOpen}
                       projectId={projectId}
+                      startOnly={onboarding?.step === "goal"}
                       surface={collaborationSurface}
                     />
                   )}
@@ -347,12 +421,24 @@ export function TaskPanel({
               </>
             ) : (
               <>
-                <CollaborationPanel projectId={projectId} />
-                <MissionBoard projectId={projectId} />
+                <CollaborationPanel
+                  onGoalFactChanged={() =>
+                    setGoalFactsVersion((current) => current + 1)
+                  }
+                  projectId={projectId}
+                  startOnly={onboarding?.step === "goal"}
+                />
+                <MissionBoard
+                  onGoalFactChanged={() =>
+                    setGoalFactsVersion((current) => current + 1)
+                  }
+                  projectId={projectId}
+                />
                 <ExecutionPanel embedded projectId={projectId} />
               </>
             )}
-            {!narrow || collaborationSurface === "chat" ? (
+            {legacyTasksEnabled &&
+            (!narrow || collaborationSurface === "chat") ? (
             <>
             <form className="composer" onSubmit={handleSubmit}>
               <div className="form-row">

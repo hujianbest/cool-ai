@@ -813,6 +813,10 @@ const deliveryBundleDtoSchema = z.object({
         id: identifierSchema,
         publicSummary: z.string(),
       }).strict(),
+      execution: z.object({
+        id: identifierSchema,
+        sourceCollaborationRunId: identifierSchema,
+      }).strict(),
       executor: z.object({ agentId: identifierSchema, name: z.string() }).strict(),
       limitations: z.array(z.string()),
       memories: z.array(z.object({

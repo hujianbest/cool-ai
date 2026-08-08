@@ -20,6 +20,13 @@ import {
   caughtApiErrorCopy,
 } from "@/src/shared/api-error-copy";
 import type { ApiError, Project } from "@/src/shared/contracts";
+import {
+  guideHref,
+  parseGuideUrl,
+  parseProjectCreateEnvelope,
+  parseProjectGuideEnvelope,
+  uniquelyReconciledProject,
+} from "@/src/shared/onboarding-guide-machine";
 
 async function errorMessage(response: Response): Promise<string> {
   const payload = (await response.json()) as ApiError;
@@ -29,12 +36,19 @@ async function errorMessage(response: Response): Promise<string> {
 export function ProjectPanel() {
   const pathname = usePathname();
   const router = useRouter();
+  const [guideStep, setGuideStep] = useState<
+    "project-select" | "workspace" | "members" | "goal" | null
+  >(null);
+  const [guideActive, setGuideActive] = useState(false);
   const [projects, setProjects] = useState<Project[]>([]);
   const [currentProjectId, setCurrentProjectId] = useState<string | null>(null);
   const [name, setName] = useState("");
   const [projectLoadError, setProjectLoadError] = useState<string | null>(null);
   const [routeProjectError, setRouteProjectError] = useState<string | null>(null);
   const [formError, setFormError] = useState<string | null>(null);
+  const [projectCreateNotice, setProjectCreateNotice] = useState<string | null>(
+    null,
+  );
   const [isLoading, setIsLoading] = useState(true);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [reloadKey, setReloadKey] = useState(0);
@@ -96,6 +110,43 @@ export function ProjectPanel() {
   useModalSurface(contextModal);
 
   useEffect(() => {
+    const syncGuideStep = () => {
+      const result = parseGuideUrl(
+        `${window.location.pathname}${window.location.search}${window.location.hash}`,
+        isLoading ? null : projects.map((project) => project.id),
+      );
+      setGuideStep(
+        result.kind === "guide" &&
+          (result.route.step === "project-select" ||
+            result.route.step === "workspace" ||
+            result.route.step === "members" ||
+            result.route.step === "goal")
+          ? result.route.step
+          : null,
+      );
+      setGuideActive(
+        result.kind === "guide" &&
+          (result.route.step === "project-select" ||
+            result.route.step === "workspace" ||
+            result.route.step === "members" ||
+            result.route.step === "goal"),
+      );
+    };
+    syncGuideStep();
+    window.addEventListener("popstate", syncGuideStep);
+    return () => window.removeEventListener("popstate", syncGuideStep);
+  }, [isLoading, projects]);
+
+  useEffect(() => {
+    if (
+      narrow &&
+      (guideStep === "workspace" || guideStep === "members")
+    ) {
+      setMobileSurface("projects");
+    }
+  }, [guideStep, narrow]);
+
+  useEffect(() => {
     let active = true;
     setIsLoading(true);
     setProjectLoadError(null);
@@ -105,10 +156,15 @@ export function ProjectPanel() {
         if (!response.ok) {
           throw new ApiDisplayError(await errorMessage(response));
         }
-        return response.json() as Promise<{ projects: Project[] }>;
+        return response.json() as Promise<unknown>;
       })
-      .then(({ projects: loadedProjects }) => {
+      .then((payload) => {
         if (!active) return;
+        const parsed = parseProjectGuideEnvelope(payload);
+        if (parsed.kind !== "success") {
+          throw new ApiDisplayError("项目响应无效，已停止自动选择。");
+        }
+        const loadedProjects = parsed.projects;
         setProjects(loadedProjects);
 
         // 从 URL 解析 projectId，如果存在且在列表中，则选中它
@@ -178,6 +234,7 @@ export function ProjectPanel() {
   async function handleSubmit(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
     setFormError(null);
+    setProjectCreateNotice(null);
 
     if (!name.trim()) {
       setFormError("请输入项目名称。");
@@ -185,6 +242,57 @@ export function ProjectPanel() {
     }
 
     setIsSubmitting(true);
+    const previousProjectIds = new Set(projects.map((project) => project.id));
+    const guideCreate = guideStep === "project-select";
+
+    const finishCreatedProject = (
+      createdProject: Project,
+      reconciled: boolean,
+    ) => {
+      setProjects((current) => {
+        const withoutDuplicate = current.filter(
+          (candidate) => candidate.id !== createdProject.id,
+        );
+        return [...withoutDuplicate, createdProject];
+      });
+      setCurrentProjectId(createdProject.id);
+      setName("");
+      if (reconciled) {
+        setProjectCreateNotice("已通过事实核对确认项目已创建。");
+      }
+      if (guideCreate) {
+        setGuideStep(null);
+        setGuideActive(true);
+        router.push(guideHref("workspace", createdProject.id));
+      } else {
+        router.push(`/projects/${encodeURIComponent(createdProject.id)}`);
+        setFocusCreatedProjectId(createdProject.id);
+      }
+    };
+
+    const reconcileUnknownCreate = async () => {
+      try {
+        const response = await fetch("/api/projects");
+        if (!response.ok) throw new Error("read");
+        const payload: unknown = await response.json();
+        const parsed = parseProjectGuideEnvelope(payload);
+        if (parsed.kind !== "success") throw new Error("invalid");
+        setProjects(parsed.projects);
+        const reconciled = uniquelyReconciledProject(previousProjectIds, payload);
+        if (!reconciled) {
+          setFormError(
+            "无法唯一确认项目是否已创建。请核对项目列表后再决定是否重试；不会自动重发。",
+          );
+          return;
+        }
+        finishCreatedProject(reconciled, true);
+      } catch {
+        setFormError(
+          "项目创建结果未知，且事实核对失败。请稍后核对项目列表；不会自动重发。",
+        );
+      }
+    };
+
     try {
       const response = await fetch("/api/projects", {
         body: JSON.stringify({ name }),
@@ -194,14 +302,19 @@ export function ProjectPanel() {
       if (!response.ok) {
         throw new ApiDisplayError(await errorMessage(response));
       }
-      const { project } = (await response.json()) as { project: Project };
-      setProjects((current) => [...current, project]);
-      // 使用 router.push 导航到新项目的 URL
-      router.push(`/projects/${project.id}`);
-      setFocusCreatedProjectId(project.id);
-      setName("");
+      const payload: unknown = await response.json();
+      const createdProject = parseProjectCreateEnvelope(payload);
+      if (!createdProject) {
+        await reconcileUnknownCreate();
+        return;
+      }
+      finishCreatedProject(createdProject, false);
     } catch (cause) {
-      setFormError(caughtApiErrorCopy(cause, "无法创建项目，请稍后重试。"));
+      if (cause instanceof ApiDisplayError) {
+        setFormError(caughtApiErrorCopy(cause, "无法创建项目，请稍后重试。"));
+      } else {
+        await reconcileUnknownCreate();
+      }
     } finally {
       setIsSubmitting(false);
     }
@@ -224,6 +337,31 @@ export function ProjectPanel() {
     projectNameInputRef.current?.focus();
   }
 
+  function projectRecovery() {
+    const rawGuide = parseGuideUrl(
+      `${window.location.pathname}${window.location.search}`,
+    );
+    const returnToGuide =
+      rawGuide.kind === "guide" && rawGuide.route.projectId !== null;
+    router.push(returnToGuide ? guideHref("project-select") : "/");
+  }
+
+  function continueGuideAfterClosingSurface(
+    step: "goal" | "members",
+    projectId: string,
+  ) {
+    setMobileSurface(null);
+    setGuideStep(step);
+    setGuideActive(true);
+    queueMicrotask(() => router.push(guideHref(step, projectId)));
+  }
+
+  const rawGuideRoute =
+    typeof window === "undefined"
+      ? null
+      : parseGuideUrl(`${window.location.pathname}${window.location.search}`);
+  const guideProjectRecovery =
+    rawGuideRoute?.kind === "guide" && rawGuideRoute.route.projectId !== null;
   const currentProject = projects.find((project) => project.id === currentProjectId) ?? null;
 
   return (
@@ -291,10 +429,10 @@ export function ProjectPanel() {
           {routeProjectError && narrow ? (
             <button
               className="button-secondary"
-              onClick={() => router.push("/")}
+              onClick={projectRecovery}
               type="button"
             >
-              返回项目列表
+              {guideProjectRecovery ? "返回项目选择" : "返回项目列表"}
             </button>
           ) : null}
         </div>
@@ -367,6 +505,8 @@ export function ProjectPanel() {
             <div className="form-field">
               <label htmlFor="project-name">项目名称</label>
               <input
+                aria-describedby={formError ? "project-name-error" : undefined}
+                aria-invalid={formError ? "true" : undefined}
                 id="project-name"
                 name="name"
                 onChange={(event) => setName(event.target.value)}
@@ -380,8 +520,13 @@ export function ProjectPanel() {
             </button>
           </form>
           {formError ? (
-            <p className="error-text" role="alert">
+            <p className="error-text" id="project-name-error" role="alert">
               {formError}
+            </p>
+          ) : null}
+          {projectCreateNotice ? (
+            <p className="onboarding-guide-success" role="status">
+              {projectCreateNotice}
             </p>
           ) : null}
           {isLoading ? (
@@ -417,10 +562,10 @@ export function ProjectPanel() {
                   </p>
                   <button
                     className="button-secondary"
-                    onClick={() => router.push("/")}
+                    onClick={projectRecovery}
                     type="button"
                   >
-                    返回项目列表
+                    {guideProjectRecovery ? "返回项目选择" : "返回项目列表"}
                   </button>
                 </div>
               ) : null}
@@ -449,8 +594,22 @@ export function ProjectPanel() {
         </section>
         {currentProject ? (
           <ProjectSetupPanel
+            onGuideContinue={(step) =>
+              continueGuideAfterClosingSurface(
+                step === "workspace" ? "members" : "goal",
+                currentProject.id,
+              )
+            }
+            onGuideSkip={(step) =>
+              continueGuideAfterClosingSurface(
+                step === "workspace" ? "members" : "goal",
+                currentProject.id,
+              )
+            }
             onWorkspaceConfirmationChange={setWorkspaceConfirmationOpen}
             projectId={currentProject.id}
+            showMembersGuide={guideStep === "members"}
+            showWorkspaceGuide={guideStep === "workspace"}
           />
         ) : null}
       </aside>
@@ -464,12 +623,38 @@ export function ProjectPanel() {
         editorOpen={mobileSurface === "editor"}
         editorSurfaceRef={editorSurfaceRef}
         narrow={narrow}
+        onboarding={
+          guideStep === "project-select" || guideStep === "goal"
+            ? {
+                onCreateProject: guideToProjectSelection,
+                onSkip:
+                  guideStep === "goal" && currentProjectId
+                    ? () => {
+                        setMobileSurface(null);
+                        queueMicrotask(() =>
+                          router.push(
+                            `/projects/${encodeURIComponent(currentProjectId)}`,
+                          ),
+                        );
+                      }
+                    : undefined,
+                onSelectProject: (projectId) => {
+                  setGuideStep(null);
+                  setGuideActive(true);
+                  router.push(guideHref("workspace", projectId));
+                },
+                projects,
+                step: guideStep,
+              }
+            : null
+        }
         onCloseContext={closeTaskContext}
         onCloseEditor={closeMobileSurface}
         onSelectProject={guideToProjectSelection}
         projectError={projectLoadError ?? routeProjectError}
         projectId={currentProjectId}
         projectLoading={isLoading}
+        legacyTasksEnabled={!guideActive}
       />
     </main>
   );

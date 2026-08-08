@@ -1,6 +1,6 @@
 # Cool AI 架构地图
 
-- 日期: 2026-08-06
+- 日期: 2026-08-08
 - 来源: 由当前代码、产品定义与已交付切片反推
 - 用户确认: auto-approved 2026-08-06
 
@@ -11,7 +11,7 @@
 ## 模块边界
 
 - Web 外壳与设计系统（`app/layout.tsx`、`app/tokens.css`、`app/cockpit.css`）：三栏协作驾驶舱、响应式布局、共享 light/dark token 与首绘前主题恢复。
-- 用户界面（`components/`）：项目、团队配置、协作、使命看板、安全执行、同伴复核与交付视图。
+- 用户界面（`components/`）：项目、团队配置、渐进式首次引导、协作、使命看板、安全执行、同伴复核与交付视图。
 - HTTP 边界（`app/api/`）：把用户操作映射为严格校验、可重试的项目/Agent/运行/执行/复核 API。
 - 领域与编排（`src/`）：项目上下文、Agent 协作、任务 DAG、执行生命周期、复核与交付规则。
 - 持久化（`src/` 内数据库与迁移模块、`.data/` 运行数据）：SQLite schema、不可变版本链、事务与重放恢复。
@@ -29,6 +29,7 @@
 ## 关键流程
 
 - 配置团队：页面 → providers/skills/agents API → 校验与密钥边界 → SQLite → 团队资源视图。
+- 首次引导：URL 状态机 → 既有 Provider/Agent/Project/Workspace/Members 事实检测与原表面配置 → Mission+CollaborationRun 目标受理；本地偏好只保存非敏感控制事件，未知写入只 GET 对账。
 - 协作交付：owner 目标 → 项目上下文与使命看板 → 多 Agent 接力/并行执行 → 审批与验证 → 独立复核 → 记忆和最终交付。
 - 安全合入：任务快照 → 隔离 sandbox 工具动作 → stale/冲突检查 → staged preview/审批 → merge journal → canonical workspace。
 

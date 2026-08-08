@@ -118,6 +118,7 @@ export const deliveryBuildInputSchema = z.object({
       id: identifier,
       mergeFileCount: z.number().int().min(0),
       mergeFinalBytes: z.number().int().min(0),
+      sourceCollaborationRunId: identifier,
       stagedHash: HASH,
     }).strict(),
     executor: z.object({ agentId: identifier, name: publicText(5_000) }).strict(),
@@ -175,6 +176,7 @@ export type DeliveryBundle = {
       artifacts: Array<{ href: string; id: string; version: string }>;
       changes: { mergeFileCount: number; mergeFinalBytes: number; stagedHash: string };
       decision: { choice: "pass"; id: string; publicSummary: string };
+      execution: { id: string; sourceCollaborationRunId: string };
       executor: { agentId: string; name: string };
       limitations: string[];
       memories: Array<{ href: string; id: string; version: string }>;
@@ -289,6 +291,7 @@ function fingerprintInput(input: z.output<typeof deliveryBuildInputSchema>) {
             || compareUtf8(left.version, right.version)
           ),
         executionId: task.execution.id,
+        sourceCollaborationRunId: task.execution.sourceCollaborationRunId,
         memoryRefs: task.evidence
           .filter((entry) => entry.kind === "memory")
           .map(({ id, version: sourceVersion }) => ({ id, version: sourceVersion }))
@@ -378,6 +381,10 @@ export function buildDeliveryBundle(
           choice: task.decision.choice,
           id: task.decision.id,
           publicSummary: task.decision.publicSummary,
+        },
+        execution: {
+          id: task.execution.id,
+          sourceCollaborationRunId: task.execution.sourceCollaborationRunId,
         },
         executor: task.executor,
         limitations: task.decision.limitations,

@@ -8,6 +8,10 @@ import { WorkspaceSetup } from "@/components/project-context/workspace-setup";
 type ProjectSetupPanelProps = {
   projectId: string;
   onWorkspaceConfirmationChange?: (open: boolean) => void;
+  onGuideContinue?: (step: "members" | "workspace") => void;
+  onGuideSkip?: (step: "members" | "workspace") => void;
+  showMembersGuide?: boolean;
+  showWorkspaceGuide?: boolean;
 };
 
 type CoordinatedVersion = {
@@ -18,6 +22,10 @@ type CoordinatedVersion = {
 export function ProjectSetupPanel({
   projectId,
   onWorkspaceConfirmationChange,
+  onGuideContinue,
+  onGuideSkip,
+  showMembersGuide = false,
+  showWorkspaceGuide = false,
 }: ProjectSetupPanelProps) {
   const [coordinatedVersion, setCoordinatedVersion] =
     useState<CoordinatedVersion>({ projectId });
@@ -52,11 +60,17 @@ export function ProjectSetupPanel({
         projectVersion={projectVersion}
         setupRootRef={setupRootRef}
         onConfirmationChange={onWorkspaceConfirmationChange}
+        onGuideContinue={() => onGuideContinue?.("workspace")}
+        onGuideSkip={() => onGuideSkip?.("workspace")}
+        showGuide={showWorkspaceGuide}
       />
       <MembersSetup
         onVersionChange={handleVersionChange}
         projectId={projectId}
         projectVersion={projectVersion}
+        onGuideContinue={() => onGuideContinue?.("members")}
+        onGuideSkip={() => onGuideSkip?.("members")}
+        showGuide={showMembersGuide}
       />
     </section>
   );

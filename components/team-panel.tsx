@@ -36,11 +36,13 @@ function normalizeSearch(value: string): string {
 }
 
 type TeamPanelProps = {
+  guide?: "agent" | "provider";
   returnTo?: "/" | `/projects/${string}`;
   section?: SettingsSectionId;
 };
 
 export function TeamPanel({
+  guide,
   returnTo = "/",
   section = "skills",
 }: TeamPanelProps) {
@@ -357,9 +359,44 @@ export function TeamPanel({
       </aside>
 
       {section === "agents" ? (
-        <AgentPanel />
+        <AgentPanel
+          guide={guide === "agent" ? guide : undefined}
+          onGuideContinue={
+            guide === "agent"
+              ? () => router.push("/?guide=project-select")
+              : undefined
+          }
+          onGuideSkip={
+            guide === "agent"
+              ? () => router.push("/?guide=project-select")
+              : undefined
+          }
+          projectId={
+            guide === "agent" && returnTo.startsWith("/projects/")
+              ? returnTo.slice("/projects/".length)
+              : undefined
+          }
+        />
       ) : section === "providers" ? (
-        <ProviderPanel />
+        <ProviderPanel
+          guide={guide === "provider" ? guide : undefined}
+          onGuideContinue={
+            guide === "provider"
+              ? () =>
+                  router.push(
+                    "/team?section=agents&guide=agent&returnTo=/",
+                  )
+              : undefined
+          }
+          onGuideSkip={
+            guide === "provider"
+              ? () =>
+                  router.push(
+                    "/team?section=agents&guide=agent&returnTo=/",
+                  )
+              : undefined
+          }
+        />
       ) : (
         <SkillPanel />
       )}

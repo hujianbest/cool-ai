@@ -63,9 +63,33 @@ function TeamIcon() {
   );
 }
 
+function GuideIcon() {
+  return (
+    <svg
+      aria-hidden="true"
+      fill="none"
+      height={20}
+      stroke="currentColor"
+      strokeLinecap="round"
+      strokeLinejoin="round"
+      strokeWidth={1.5}
+      viewBox="0 0 24 24"
+      width={20}
+    >
+      <path d="M5 5.5h14v13H5z" />
+      <path d="M8 9h8M8 12h5M8 15h7" />
+    </svg>
+  );
+}
+
 const NAV_ITEMS: readonly NavItem[] = [
   { href: "/", label: "工作", icon: <ChatIcon /> },
   { href: "/team", label: "团队", icon: <TeamIcon /> },
+  {
+    href: "/team?section=providers&guide=provider&returnTo=/",
+    label: "首次使用引导",
+    icon: <GuideIcon />,
+  },
 ];
 
 export function ActivityBar({

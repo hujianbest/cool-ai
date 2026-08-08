@@ -12,19 +12,43 @@ import {
 import { createPortal } from "react-dom";
 
 import { useModalSurface } from "@/components/mobile-dialog";
+import { WorkspaceOnboardingGuide } from "@/components/onboarding-guide";
 import type { ApiError } from "@/src/shared/contracts";
 import type { WorkspaceState } from "@/src/shared/project-context-contracts";
+import {
+  parseWorkspaceGuideEnvelope,
+  type WorkspaceGuideEnvelope,
+} from "@/src/shared/onboarding-guide-machine";
 
 type WorkspaceSetupProps = {
   projectId: string;
   projectVersion?: number;
   onVersionChange?: (version: number) => void;
   onConfirmationChange?: (open: boolean) => void;
+  onGuideContinue?: () => void;
+  onGuideSkip?: () => void;
   setupRootRef?: RefObject<HTMLElement | null>;
+  showGuide?: boolean;
 };
+
+class KnownWorkspaceError extends Error {}
+class InvalidWorkspaceResponseError extends Error {}
 
 function looksAbsolute(path: string): boolean {
   return /^(?:[A-Za-z]:[\\/]|\\\\|\/)/.test(path.trim());
+}
+
+function comparableWorkspacePath(path: string): string {
+  let normalized = path.trim().replace(/\//g, "\\");
+  if (normalized.startsWith("\\\\?\\UNC\\")) {
+    normalized = `\\\\${normalized.slice(8)}`;
+  } else if (normalized.startsWith("\\\\?\\")) {
+    normalized = normalized.slice(4);
+  }
+  if (!/^[A-Za-z]:\\$/.test(normalized)) {
+    normalized = normalized.replace(/\\+$/, "");
+  }
+  return normalized.toLocaleLowerCase("en-US");
 }
 
 function workspaceError(payload: Partial<ApiError>): string {
@@ -51,7 +75,10 @@ export function WorkspaceSetup({
   projectVersion,
   onVersionChange,
   onConfirmationChange,
+  onGuideContinue,
+  onGuideSkip,
   setupRootRef,
+  showGuide = false,
 }: WorkspaceSetupProps) {
   const [path, setPath] = useState("");
   const [workspace, setWorkspace] = useState<WorkspaceState["workspace"]>(null);
@@ -60,6 +87,11 @@ export function WorkspaceSetup({
   const [isSaving, setIsSaving] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [success, setSuccess] = useState("");
+  const [guideFacts, setGuideFacts] = useState<WorkspaceGuideEnvelope | null>(
+    null,
+  );
+  const [guideLoadError, setGuideLoadError] = useState(false);
+  const [needsReload, setNeedsReload] = useState(false);
   const [reloadKey, setReloadKey] = useState(0);
   const [confirmOpen, setConfirmOpen] = useState(false);
   const [focusSummary, setFocusSummary] = useState(false);
@@ -99,6 +131,9 @@ export function WorkspaceSetup({
     setLoadedVersion(1);
     setError(null);
     setSuccess("");
+    setGuideFacts(null);
+    setGuideLoadError(false);
+    setNeedsReload(false);
   }, [projectId]);
 
   useEffect(() => {
@@ -106,28 +141,39 @@ export function WorkspaceSetup({
     setIsLoading(true);
     setError(null);
     setSuccess("");
+    setGuideLoadError(false);
+    setNeedsReload(false);
     void fetch(`/api/projects/${projectId}/workspace`)
       .then(async (response) => {
-        const payload = (await response.json()) as WorkspaceState &
-          Partial<ApiError>;
-        if (!response.ok) throw new Error(workspaceError(payload));
-        if (
-          !("workspace" in payload) ||
-          !Number.isInteger(payload.projectVersion)
-        ) {
-          throw new Error("invalid workspace response");
+        const payload: unknown = await response.json();
+        if (!response.ok) {
+          throw new KnownWorkspaceError(
+            workspaceError(payload as Partial<ApiError>),
+          );
         }
-        return payload;
+        const parsed = parseWorkspaceGuideEnvelope(payload);
+        if (parsed.kind === "invalid") {
+          if (active) setGuideFacts(parsed);
+          throw new InvalidWorkspaceResponseError();
+        }
+        return parsed;
       })
       .then((payload) => {
         if (!active) return;
+        setGuideFacts(payload);
         setWorkspace(payload.workspace);
         setLoadedVersion(payload.projectVersion);
-        setPath((current) => current || payload.workspace?.path || "");
+        setPath((current) => payload.workspace?.path ?? current);
         onVersionChange?.(payload.projectVersion);
       })
-      .catch(() => {
-        if (active) setError("无法加载工作区，请重试。");
+      .catch((cause) => {
+        if (!active) return;
+        setGuideLoadError(!(cause instanceof InvalidWorkspaceResponseError));
+        setError(
+          cause instanceof InvalidWorkspaceResponseError
+            ? "工作区响应无效，已失败关闭。"
+            : "无法加载工作区，请重试。",
+        );
       })
       .finally(() => {
         if (active) setIsLoading(false);
@@ -146,36 +192,88 @@ export function WorkspaceSetup({
   async function saveWorkspace(confirmRebind: boolean) {
     setError(null);
     setSuccess("");
+    setNeedsReload(false);
     setIsSaving(true);
+    const expectedVersion = projectVersion ?? loadedVersion;
+    const requestedPath = path.trim();
+    const reconcileUnknownWrite = async () => {
+      try {
+        const response = await fetch(`/api/projects/${projectId}/workspace`);
+        if (!response.ok) throw new Error("read");
+        const parsed = parseWorkspaceGuideEnvelope(await response.json());
+        const samePath =
+          parsed.kind === "success" &&
+          comparableWorkspacePath(parsed.workspace.path) ===
+            comparableWorkspacePath(requestedPath);
+        if (
+          parsed.kind !== "success" ||
+          !samePath ||
+          parsed.projectVersion !== expectedVersion + 1
+        ) {
+          throw new Error("unconfirmed");
+        }
+        setGuideFacts(parsed);
+        setGuideLoadError(false);
+        setWorkspace(parsed.workspace);
+        setLoadedVersion(parsed.projectVersion);
+        setPath(parsed.workspace.path);
+        onVersionChange?.(parsed.projectVersion);
+        updateConfirmation(false);
+        setSuccess("已通过事实核对确认工作区已保存。");
+        setFocusSummary(true);
+      } catch {
+        updateConfirmation(false);
+        setError(
+          "工作区写入结果未知，且无法由 GET 唯一确认。请核对当前绑定后再决定是否重试；不会自动重发。",
+        );
+        setNeedsReload(true);
+        pathRef.current?.focus();
+      }
+    };
     try {
       const response = await fetch(`/api/projects/${projectId}/workspace`, {
         body: JSON.stringify({
           path,
-          expectedVersion: projectVersion ?? loadedVersion,
+          expectedVersion,
           confirmRebind,
         }),
         headers: { "content-type": "application/json" },
         method: "PUT",
       });
-      const payload = (await response.json()) as WorkspaceState &
-        Partial<ApiError>;
+      const payload: unknown = await response.json();
       if (!response.ok) {
-        if (payload.error?.code === "REBIND_CONFIRMATION_REQUIRED") {
+        const apiError = payload as Partial<ApiError>;
+        if (apiError.error?.code === "REBIND_CONFIRMATION_REQUIRED") {
           updateConfirmation(true);
           return;
         }
-        throw new Error(workspaceError(payload));
+        if (apiError.error?.code === "RESOURCE_CONFLICT") {
+          setNeedsReload(true);
+        }
+        throw new KnownWorkspaceError(workspaceError(apiError));
       }
-      setWorkspace(payload.workspace);
-      setLoadedVersion(payload.projectVersion);
-      setPath(payload.workspace?.path ?? path);
-      onVersionChange?.(payload.projectVersion);
+      const parsed = parseWorkspaceGuideEnvelope(payload);
+      if (parsed.kind === "invalid") {
+        await reconcileUnknownWrite();
+        return;
+      }
+      setGuideFacts(parsed);
+      setGuideLoadError(false);
+      setWorkspace(parsed.workspace);
+      setLoadedVersion(parsed.projectVersion);
+      setPath(parsed.workspace?.path ?? path);
+      onVersionChange?.(parsed.projectVersion);
       updateConfirmation(false);
       setSuccess("工作区已保存。");
       setFocusSummary(true);
     } catch (cause) {
-      setError(cause instanceof Error ? cause.message : "无法绑定工作区。");
-      pathRef.current?.focus();
+      if (cause instanceof KnownWorkspaceError) {
+        updateConfirmation(false);
+        setError(cause.message);
+        pathRef.current?.focus();
+      } else {
+        await reconcileUnknownWrite();
+      }
     } finally {
       setIsSaving(false);
     }
@@ -201,6 +299,20 @@ export function WorkspaceSetup({
       <section aria-labelledby={`workspace-title-${projectId}`} className="stack">
         <div ref={contentRef}>
         <div className="stack">
+          {showGuide ? (
+            <WorkspaceOnboardingGuide
+              facts={guideFacts}
+              loading={isLoading}
+              loadError={guideLoadError}
+              onContinue={onGuideContinue}
+              onFocusWorkspace={() => {
+                if (guideFacts?.kind === "success") summaryRef.current?.focus();
+                else pathRef.current?.focus();
+              }}
+              onRetry={() => setReloadKey((current) => current + 1)}
+              onSkip={onGuideSkip}
+            />
+          ) : null}
           <h3 id={`workspace-title-${projectId}`}>本地工作区</h3>
           {isLoading ? (
             <p aria-busy="true" className="muted">
@@ -227,6 +339,7 @@ export function WorkspaceSetup({
                 aria-describedby={
                   error ? `workspace-error-${projectId}` : undefined
                 }
+                aria-invalid={error ? "true" : undefined}
                 id={`workspace-path-${projectId}`}
                 name="workspacePath"
                 onChange={(event) => setPath(event.target.value)}
@@ -235,13 +348,25 @@ export function WorkspaceSetup({
                 value={path}
               />
             </div>
-            <button disabled={isSaving} ref={saveRef} type="submit">
+            <button
+              aria-describedby={
+                isSaving ? `workspace-saving-reason-${projectId}` : undefined
+              }
+              disabled={isSaving}
+              ref={saveRef}
+              type="submit"
+            >
               {isSaving
                 ? "正在保存工作区…"
                 : workspace
                   ? "保存工作区"
                   : "绑定工作区"}
             </button>
+            {isSaving ? (
+              <p className="muted" id={`workspace-saving-reason-${projectId}`}>
+                正在核对并保存工作区，完成前不能重复提交。
+              </p>
+            ) : null}
           </form>
           {error ? (
             <div className="stack">
@@ -252,12 +377,12 @@ export function WorkspaceSetup({
               >
                 {error}
               </p>
-              {error.startsWith("无法加载") ? (
+              {error.startsWith("无法加载") || needsReload ? (
                 <button
                   onClick={() => setReloadKey((current) => current + 1)}
                   type="button"
                 >
-                  重试加载工作区
+                  {needsReload ? "重新加载工作区" : "重试加载工作区"}
                 </button>
               ) : null}
             </div>

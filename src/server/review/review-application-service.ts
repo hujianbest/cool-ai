@@ -188,7 +188,7 @@ function readReviewer(
     JOIN agents agent ON agent.id=membership.agent_id
     JOIN providers provider ON provider.id=agent.provider_id
     WHERE membership.project_id=? AND agent.id=? AND agent.review_capable=1
-      AND agent.id<>? AND provider.verified_at IS NOT NULL
+      AND agent.id<>? AND provider.verified_at<>''
   `).get(projectId, reviewerAgentId, executorAgentId) as ReviewerSnapshot | undefined;
   if (!row) {
     throw new ReviewSliceError(

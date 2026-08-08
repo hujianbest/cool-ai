@@ -259,11 +259,40 @@ describe("collaboration chat composer", () => {
       },
     };
     const urls: string[] = [];
+    let messagePersisted = false;
+    const message = ownerMessage();
+    const persistedRead = {
+      ...activeRead,
+      projectMessagesPage: { items: [message], nextAfter: null },
+      timelinePage: {
+        items: [
+          {
+            actorId: null,
+            actorType: "owner" as const,
+            createdAt: message.createdAt,
+            id: "event-owner-1",
+            payload: {
+              mentionAgentId: null,
+              mentionDisplayName: null,
+              messageId: message.id,
+              messageSequence: message.sequence,
+            },
+            runId: activeRead.run.id,
+            sequence: 1,
+            type: "owner_message" as const,
+          },
+        ],
+        nextAfter: null,
+      },
+    };
     installFetch((url) => {
-      if (url.endsWith("/collaboration")) return Response.json(activeRead);
+      if (url.endsWith("/collaboration")) {
+        return Response.json(messagePersisted ? persistedRead : activeRead);
+      }
       if (url.endsWith("/messages")) {
         urls.push(url);
-        return Response.json({ message: ownerMessage(), run: activeRead.run });
+        messagePersisted = true;
+        return Response.json({ message, run: activeRead.run });
       }
       return Response.json(members);
     });
@@ -273,8 +302,8 @@ describe("collaboration chat composer", () => {
     await user.type(composer, "Plan the release");
     await user.click(screen.getByRole("button", { name: "发送消息" }));
 
-    const message = await screen.findByText("Plan the release");
-    await waitFor(() => expect(message.closest("li")).toHaveFocus());
+    const renderedMessage = await screen.findByText("Plan the release");
+    await waitFor(() => expect(renderedMessage.closest("li")).toHaveFocus());
     expect(composer).toHaveValue("");
     expect(urls).toEqual(["/api/projects/project-1/messages"]);
   });

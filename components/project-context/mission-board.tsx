@@ -27,6 +27,20 @@ type ErrorPayload = Partial<ApiError> & {
   };
 };
 type MissionDraft = { title: string; goal: string };
+type MissionWriteReceipt =
+  | {
+      kind: "create";
+      expectedId?: string;
+      goal: string;
+      title: string;
+    }
+  | {
+      expectedVersion: number;
+      goal: string;
+      id: string;
+      kind: "update";
+      title: string;
+    };
 type WorkItemDraft = {
   title: string;
   description: string;
@@ -115,7 +129,67 @@ function dependencyNames(items: WorkItem[], ids: string[]): string {
     .join("、");
 }
 
-export function MissionBoard({ projectId }: { projectId: string }) {
+function parseMissionState(value: unknown, projectId: string): MissionState | null {
+  if (!value || typeof value !== "object" || Array.isArray(value)) return null;
+  const envelope = value as Record<string, unknown>;
+  if (
+    Object.keys(envelope).length !== 2 ||
+    !Object.hasOwn(envelope, "mission") ||
+    !Array.isArray(envelope.workItems)
+  ) {
+    return null;
+  }
+  if (envelope.mission === null) {
+    return { mission: null, workItems: envelope.workItems as WorkItem[] };
+  }
+  if (
+    typeof envelope.mission !== "object" ||
+    Array.isArray(envelope.mission)
+  ) {
+    return null;
+  }
+  const mission = envelope.mission as Record<string, unknown>;
+  const keys = [
+    "createdAt",
+    "goal",
+    "id",
+    "projectId",
+    "title",
+    "updatedAt",
+    "version",
+  ];
+  if (
+    Object.keys(mission).length !== keys.length ||
+    Object.keys(mission).some((key) => !keys.includes(key)) ||
+    typeof mission.id !== "string" ||
+    !mission.id ||
+    mission.projectId !== projectId ||
+    typeof mission.title !== "string" ||
+    !mission.title ||
+    typeof mission.goal !== "string" ||
+    !mission.goal ||
+    !Number.isSafeInteger(mission.version) ||
+    Number(mission.version) < 1 ||
+    typeof mission.createdAt !== "string" ||
+    !Number.isFinite(Date.parse(mission.createdAt)) ||
+    typeof mission.updatedAt !== "string" ||
+    !Number.isFinite(Date.parse(mission.updatedAt))
+  ) {
+    return null;
+  }
+  return {
+    mission: mission as Mission,
+    workItems: envelope.workItems as WorkItem[],
+  };
+}
+
+export function MissionBoard({
+  onGoalFactChanged,
+  projectId,
+}: {
+  onGoalFactChanged?: () => void;
+  projectId: string;
+}) {
   const errorId = `mission-board-error-${projectId}`;
   const [mission, setMission] = useState<Mission | null>(null);
   const [workItems, setWorkItems] = useState<WorkItem[]>([]);
@@ -125,6 +199,8 @@ export function MissionBoard({ projectId }: { projectId: string }) {
   const [error, setError] = useState<string | null>(null);
   const [conflict, setConflict] = useState(false);
   const [success, setSuccess] = useState("");
+  const [missionReceipt, setMissionReceipt] =
+    useState<MissionWriteReceipt | null>(null);
   const [reloadKey, setReloadKey] = useState(0);
   const [missionDraft, setMissionDraft] =
     useState<MissionDraft>(EMPTY_MISSION);
@@ -207,10 +283,131 @@ export function MissionBoard({ projectId }: { projectId: string }) {
     setError(null);
     setConflict(false);
     setSuccess("");
+    setMissionReceipt(null);
   }
 
-  async function saveMission(event: FormEvent<HTMLFormElement>) {
-    event.preventDefault();
+  async function reconcileMission(
+    receipt: MissionWriteReceipt,
+  ): Promise<Mission | null> {
+    try {
+      const response = await fetch(`/api/projects/${projectId}/mission`);
+      if (!response.ok) return null;
+      const state = parseMissionState(await response.json(), projectId);
+      if (!state?.mission) return null;
+      const matches =
+        state.mission.title === receipt.title &&
+        state.mission.goal === receipt.goal &&
+        (receipt.kind === "create"
+          ? receipt.expectedId === undefined ||
+            state.mission.id === receipt.expectedId
+          : state.mission.id === receipt.id &&
+            state.mission.version === receipt.expectedVersion + 1);
+      if (!matches) return null;
+      setMission(state.mission);
+      setWorkItems(state.workItems);
+      setMissionDraft({
+        goal: state.mission.goal,
+        title: state.mission.title,
+      });
+      setEditingMission(false);
+      setFocusMission(true);
+      onGoalFactChanged?.();
+      return state.mission;
+    } catch {
+      return null;
+    }
+  }
+
+  async function createMissionFromDraft() {
+    const receipt: MissionWriteReceipt = {
+      goal: missionDraft.goal,
+      kind: "create",
+      title: missionDraft.title,
+    };
+    setIsSaving(true);
+    setError(null);
+    setSuccess("");
+    setMissionReceipt(null);
+    let knownFailure = false;
+    try {
+      const response = await fetch(`/api/projects/${projectId}/mission`, {
+        body: JSON.stringify({
+          goal: missionDraft.goal,
+          title: missionDraft.title,
+        }),
+        headers: JSON_HEADERS,
+        method: "POST",
+      });
+      const payload = (await response.json()) as { mission?: Mission } &
+        ErrorPayload;
+      if (!response.ok) {
+        knownFailure = true;
+        setConflict(isConflict(payload));
+        throw new Error(apiMessage(payload));
+      }
+      const parsed = parseMissionState(
+        { mission: payload.mission, workItems: [] },
+        projectId,
+      );
+      const expected = parsed?.mission
+        ? { ...receipt, expectedId: parsed.mission.id }
+        : receipt;
+      const reconciled = await reconcileMission(expected);
+      if (!reconciled) {
+        setMissionReceipt(expected);
+        setError(
+          "使命创建响应已返回，但无法唯一确认使命事实。创建 receipt：项目唯一 Mission。请仅重新核对，或明确选择重试；不会自动重发。",
+        );
+        return;
+      }
+      setSuccess("使命已创建。目标已受理；尚未执行、复核或交付。");
+    } catch (cause) {
+      if (knownFailure) {
+        setError(cause instanceof Error ? cause.message : "操作失败，请重试。");
+        missionTitleInputRef.current?.focus();
+        return;
+      }
+      const reconciled = await reconcileMission(receipt);
+      if (reconciled) {
+        setSuccess(
+          "已通过事实核对确认目标已受理；尚未执行、复核或交付。",
+        );
+      } else {
+        setMissionReceipt(receipt);
+        setError(
+          "无法唯一确认使命是否已创建。创建 receipt：项目唯一 Mission。请仅重新核对，或明确选择重试；不会自动重发。",
+        );
+      }
+    } finally {
+      setIsSaving(false);
+    }
+  }
+
+  async function retryMissionReconciliation() {
+    if (!missionReceipt) return;
+    setIsSaving(true);
+    setError(null);
+    const reconciled = await reconcileMission(missionReceipt);
+    if (reconciled) {
+      const wasCreate = missionReceipt.kind === "create";
+      setMissionReceipt(null);
+      setSuccess(
+        wasCreate
+          ? "已通过事实核对确认目标已受理；尚未执行、复核或交付。"
+          : "已通过事实核对确认使命已保存。",
+      );
+    } else {
+      setError(
+        missionReceipt.kind === "create"
+          ? "无法唯一确认使命是否已创建。创建 receipt：项目唯一 Mission。请核对使命看板，或明确选择重试；不会自动重发。"
+          : `无法唯一确认使命更新结果。更新 receipt：version ${missionReceipt.expectedVersion}→${missionReceipt.expectedVersion + 1}。请仅重新核对，或由用户明确重新提交；不会自动重发。`,
+      );
+    }
+    setIsSaving(false);
+  }
+
+  async function saveMission(event?: FormEvent<HTMLFormElement>) {
+    event?.preventDefault();
     resetOperationState();
     if (!missionDraft.title.trim()) {
       setError("请输入使命标题。");
@@ -222,39 +419,72 @@ export function MissionBoard({ projectId }: { projectId: string }) {
       missionGoalInputRef.current?.focus();
       return;
     }
+    if (!mission) {
+      await createMissionFromDraft();
+      return;
+    }
     setIsSaving(true);
+    const receipt: MissionWriteReceipt = {
+      expectedVersion: mission.version,
+      goal: missionDraft.goal,
+      id: mission.id,
+      kind: "update",
+      title: missionDraft.title,
+    };
+    let knownFailure = false;
     try {
-      const response = await fetch(
-        mission
-          ? `/api/missions/${mission.id}`
-          : `/api/projects/${projectId}/mission`,
-        {
-          body: JSON.stringify({
-            title: missionDraft.title,
-            goal: missionDraft.goal,
-            ...(mission ? { expectedVersion: mission.version } : {}),
-          }),
-          headers: JSON_HEADERS,
-          method: mission ? "PATCH" : "POST",
-        },
-      );
+      const response = await fetch(`/api/missions/${mission.id}`, {
+        body: JSON.stringify({
+          title: missionDraft.title,
+          goal: missionDraft.goal,
+          expectedVersion: mission.version,
+        }),
+        headers: JSON_HEADERS,
+        method: "PATCH",
+      });
       const payload = (await response.json()) as { mission?: Mission } &
         ErrorPayload;
-      if (!response.ok || !payload.mission) {
+      if (!response.ok) {
+        knownFailure = true;
         setConflict(isConflict(payload));
         throw new Error(apiMessage(payload));
       }
-      setMission(payload.mission);
+      const parsed = parseMissionState(
+        { mission: payload.mission, workItems: [] },
+        projectId,
+      );
+      const reconciled = await reconcileMission(receipt);
+      if (!parsed?.mission || !reconciled) {
+        setMissionReceipt(receipt);
+        setError(
+          `无法唯一确认使命更新结果。更新 receipt：version ${receipt.expectedVersion}→${receipt.expectedVersion + 1}。请仅重新核对，或由用户明确重新提交；不会自动重发。`,
+        );
+        return;
+      }
+      setMission(reconciled);
       setMissionDraft({
-        title: payload.mission.title,
-        goal: payload.mission.goal,
+        goal: reconciled.goal,
+        title: reconciled.title,
       });
       setEditingMission(false);
-      setSuccess(mission ? "使命已保存。" : "使命已创建。");
+      setSuccess("使命已保存。");
       setFocusMission(true);
     } catch (cause) {
-      setError(cause instanceof Error ? cause.message : "操作失败，请重试。");
-      missionTitleInputRef.current?.focus();
+      if (knownFailure) {
+        setError(cause instanceof Error ? cause.message : "操作失败，请重试。");
+        missionTitleInputRef.current?.focus();
+      } else {
+        const reconciled = await reconcileMission(receipt);
+        if (reconciled) {
+          setMissionReceipt(null);
+          setSuccess("已通过事实核对确认使命已保存。");
+        } else {
+          setMissionReceipt(receipt);
+          setError(
+            `无法唯一确认使命更新结果。更新 receipt：version ${receipt.expectedVersion}→${receipt.expectedVersion + 1}。请仅重新核对，或由用户明确重新提交；不会自动重发。`,
+          );
+        }
+      }
     } finally {
       setIsSaving(false);
     }
@@ -769,6 +999,32 @@ export function MissionBoard({ projectId }: { projectId: string }) {
           <p className="error-text" id={errorId} role="alert">
             {error}
           </p>
+          {missionReceipt ? (
+            <div className="form-row">
+              <button
+                disabled={isSaving}
+                onClick={() => void retryMissionReconciliation()}
+                type="button"
+              >
+                {missionReceipt.kind === "create"
+                  ? "仅重新核对使命"
+                  : "仅重新核对使命更新"}
+              </button>
+              <button
+                disabled={isSaving}
+                onClick={() =>
+                  void (missionReceipt.kind === "create"
+                    ? createMissionFromDraft()
+                    : saveMission())
+                }
+                type="button"
+              >
+                {missionReceipt.kind === "create"
+                  ? "明确重试创建使命"
+                  : "明确重新提交使命更新"}
+              </button>
+            </div>
+          ) : null}
           {conflict ? (
             <button
               onClick={() => setReloadKey((current) => current + 1)}

@@ -278,4 +278,90 @@ describe("Provider configuration panel", () => {
     expect(screen.getByLabelText("服务名称")).toHaveValue("Primary");
     expect(screen.getByLabelText("API key")).toHaveValue(API_KEY);
   });
+
+  it("GET-reconciles an uncertain known-provider write without resending it", async () => {
+    let current = provider();
+    const calls: Array<{ method: string; url: string }> = [];
+    vi.stubGlobal(
+      "fetch",
+      vi.fn(async (input: RequestInfo | URL, init?: RequestInit) => {
+        const url = input.toString();
+        const method = init?.method ?? "GET";
+        calls.push({ method, url });
+        if (url === "/api/providers" && method === "GET") {
+          return Response.json({ providers: [current] });
+        }
+        if (url === "/api/providers/provider-1" && method === "PATCH") {
+          current = provider({ name: "Reconciled", version: 2 });
+          throw new TypeError("network response lost");
+        }
+        throw new Error(`Unexpected request: ${method} ${url}`);
+      }),
+    );
+    const user = userEvent.setup();
+    render(<TeamPanel section="providers" />);
+
+    await user.click(await screen.findByRole("button", { name: "编辑 Primary" }));
+    await user.clear(screen.getByLabelText("服务名称"));
+    await user.type(screen.getByLabelText("服务名称"), "Reconciled");
+    await user.click(screen.getByRole("button", { name: "保存服务" }));
+
+    expect(
+      await screen.findByText("已通过事实核对确认模型服务已保存。"),
+    ).toBeInTheDocument();
+    expect(screen.getByRole("heading", { name: "Reconciled" })).toHaveFocus();
+    expect(
+      calls.filter(({ method }) => method === "PATCH"),
+    ).toHaveLength(1);
+    expect(calls.at(-1)).toEqual({ method: "GET", url: "/api/providers" });
+  });
+
+  it("does not guess or resend an uncertain create when GET cannot identify its response", async () => {
+    const calls: Array<{ method: string; url: string }> = [];
+    let providerGets = 0;
+    vi.stubGlobal(
+      "fetch",
+      vi.fn(async (input: RequestInfo | URL, init?: RequestInit) => {
+        const url = input.toString();
+        const method = init?.method ?? "GET";
+        calls.push({ method, url });
+        if (url === "/api/providers" && method === "GET") {
+          providerGets += 1;
+          return Response.json({
+            providers: providerGets === 1 ? [] : [provider({ name: "Primary" })],
+          });
+        }
+        if (url === "/api/providers/verify") {
+          return Response.json({
+            expiresAt: "2026-08-08T00:05:00.000Z",
+            validationToken: "validation-token",
+            verifiedModel: "model-a",
+          });
+        }
+        if (url === "/api/providers" && method === "POST") {
+          throw new TypeError("network response lost");
+        }
+        throw new Error(`Unexpected request: ${method} ${url}`);
+      }),
+    );
+    const user = userEvent.setup();
+    render(<TeamPanel section="providers" />);
+
+    await screen.findByText("暂无模型服务。");
+    await user.type(screen.getByLabelText("服务名称"), "Primary");
+    await user.type(screen.getByLabelText("Base URL"), "https://example.test/v1");
+    await user.type(screen.getByLabelText("默认模型"), "model-a");
+    await user.type(screen.getByLabelText("API key"), API_KEY);
+    await user.click(screen.getByRole("button", { name: "验证连接" }));
+    await screen.findByText("已验证模型 model-a");
+    await user.click(screen.getByRole("button", { name: "保存服务" }));
+
+    expect(await screen.findByRole("alert")).toHaveTextContent(
+      "保存结果不确定，已核对列表但无法确认",
+    );
+    expect(screen.getByLabelText("服务名称")).toHaveValue("Primary");
+    expect(screen.getByLabelText("API key")).toHaveValue(API_KEY);
+    expect(calls.filter(({ method }) => method === "POST")).toHaveLength(2);
+    expect(calls.at(-1)).toEqual({ method: "GET", url: "/api/providers" });
+  });
 });

@@ -20,12 +20,11 @@ import type {
   CollaborationRun,
   DecisionRequest,
   ProjectMessage,
-  ProjectMessageResponse,
-  StartCollaborationResponse,
   TimelineEvent,
   UsageTotals,
 } from "@/src/shared/collaboration-contracts";
 import { ApiDisplayError, apiErrorCopy, caughtApiErrorCopy } from "@/src/shared/api-error-copy";
+import { parseCollaborationGuideEnvelope } from "@/src/shared/onboarding-guide-machine";
 import type {
   MembershipState,
   ProjectMember,
@@ -36,6 +35,8 @@ type CollaborationPanelProps = {
   surface?: "all" | "chat" | "run";
   modalBackgroundRef?: RefObject<HTMLElement | null>;
   onNestedModalChange?: (open: boolean) => void;
+  onGoalFactChanged?: () => void;
+  startOnly?: boolean;
 };
 
 async function readJson<T>(response: Response): Promise<T> {
@@ -62,6 +63,100 @@ function graphemeLength(value: string): number {
 
 const activeRunStatuses = new Set(["running", "waiting_owner", "paused", "failed"]);
 const POLL_INTERVAL_MS = 1_000;
+
+type CollaborationWriteReceipt = {
+  baselineMessageIds: string[];
+  mentionAgentId?: string;
+  message: string;
+  operationId: string;
+  runId: string;
+};
+
+function exactKeys(value: unknown, keys: string[]): value is Record<string, unknown> {
+  return Boolean(
+    value &&
+      typeof value === "object" &&
+      !Array.isArray(value) &&
+      Object.keys(value).length === keys.length &&
+      Object.keys(value).every((key) => keys.includes(key)),
+  );
+}
+
+function mutationIds(
+  value: unknown,
+  kind: "message" | "start",
+): { messageId: string; runId: string } | null {
+  const keys = kind === "start" ? ["created", "message", "run"] : ["message", "run"];
+  if (!exactKeys(value, keys)) return null;
+  if (kind === "start" && typeof value.created !== "boolean") return null;
+  if (!exactKeys(value.message, [
+    "authorAgentId",
+    "authorDisplayName",
+    "authorType",
+    "content",
+    "createdAt",
+    "id",
+    "mentionAgentId",
+    "mentionDisplayName",
+    "mentionMemberStatus",
+    "runId",
+    "sequence",
+  ])) return null;
+  if (!exactKeys(value.run, [
+    "createdAt",
+    "currentAgentId",
+    "id",
+    "pauseCategory",
+    "projectId",
+    "roundCount",
+    "status",
+    "updatedAt",
+    "version",
+  ])) return null;
+  const messageId = value.message.id;
+  const runId = value.run.id;
+  const validMessage =
+    typeof value.message.sequence === "number" &&
+    Number.isSafeInteger(value.message.sequence) &&
+    value.message.sequence >= 0 &&
+    value.message.authorType === "owner" &&
+    value.message.authorAgentId === null &&
+    typeof value.message.authorDisplayName === "string" &&
+    typeof value.message.content === "string" &&
+    value.message.runId === runId &&
+    (value.message.mentionAgentId === null ||
+      typeof value.message.mentionAgentId === "string") &&
+    (value.message.mentionDisplayName === null ||
+      typeof value.message.mentionDisplayName === "string") &&
+    (value.message.mentionMemberStatus === null ||
+      value.message.mentionMemberStatus === "current" ||
+      value.message.mentionMemberStatus === "left") &&
+    typeof value.message.createdAt === "string";
+  const validRun =
+    typeof value.run.projectId === "string" &&
+    typeof value.run.currentAgentId === "string" &&
+    typeof value.run.roundCount === "number" &&
+    Number.isSafeInteger(value.run.roundCount) &&
+    value.run.roundCount >= 0 &&
+    typeof value.run.version === "number" &&
+    Number.isSafeInteger(value.run.version) &&
+    value.run.version >= 1 &&
+    (value.run.pauseCategory === null ||
+      typeof value.run.pauseCategory === "string") &&
+    ["running", "waiting_owner", "paused", "failed", "planned", "stopped"].includes(
+      String(value.run.status),
+    ) &&
+    typeof value.run.createdAt === "string" &&
+    typeof value.run.updatedAt === "string";
+  return typeof messageId === "string" &&
+    messageId.length > 0 &&
+    typeof runId === "string" &&
+    runId.length > 0 &&
+    validMessage &&
+    validRun
+    ? { messageId, runId }
+    : null;
+}
 
 function mergeSequenced<T extends { id: string; sequence: number }>(
   current: T[],
@@ -491,8 +586,10 @@ function RunControls({
 
 export function CollaborationPanel({
   modalBackgroundRef,
+  onGoalFactChanged,
   onNestedModalChange,
   projectId,
+  startOnly = false,
   surface = "all",
 }: CollaborationPanelProps) {
   const [state, setState] = useState<CollaborationReadResponse | null>(null);
@@ -514,9 +611,18 @@ export function CollaborationPanel({
   const [advanceError, setAdvanceError] = useState<string | null>(null);
   const [advanceCycle, setAdvanceCycle] = useState(0);
   const [decisionSuccess, setDecisionSuccess] = useState(false);
+  const [startNotice, setStartNotice] = useState("");
+  const [startReceipt, setStartReceipt] = useState<{
+    baselineMessageIds: string[];
+    message: string;
+    mentionAgentId?: string;
+    operationId: string;
+  } | null>(null);
+  const [messageReceipt, setMessageReceipt] =
+    useState<CollaborationWriteReceipt | null>(null);
   const messageRefs = useRef(new Map<string, HTMLLIElement>());
   const mentionButtonRef = useRef<HTMLButtonElement>(null);
-  const logRef = useRef<HTMLOListElement>(null);
+  const logRef = useRef<HTMLDivElement>(null);
   const decisionSuccessRef = useRef<HTMLParagraphElement>(null);
   const atBottomRef = useRef(true);
   const scrollAfterRenderRef = useRef(false);
@@ -698,12 +804,12 @@ export function CollaborationPanel({
   }, [loadCollaboration, state?.run]);
 
   useEffect(() => {
-    if (state?.run?.status !== "running" || advanceError) return;
+    if (startOnly || state?.run?.status !== "running" || advanceError) return;
     const timer = window.setTimeout(() => {
       void advance();
     }, advanceCycle === 0 ? 0 : POLL_INTERVAL_MS);
     return () => window.clearTimeout(timer);
-  }, [advance, advanceCycle, advanceError, state?.run?.status]);
+  }, [advance, advanceCycle, advanceError, startOnly, state?.run?.status]);
 
   async function loadMembers() {
     if (members || membersLoading) return;
@@ -765,6 +871,162 @@ export function CollaborationPanel({
     }
   }
 
+  function confirmedStart(
+    payload: CollaborationReadResponse,
+    receipt: {
+      baselineMessageIds: string[];
+      message: string;
+      mentionAgentId?: string;
+    },
+    expected?: { messageId?: string; runId?: string },
+  ): { message: ProjectMessage; run: CollaborationRun } | null {
+    const run = payload.run;
+    if (
+      !run ||
+      run.projectId !== projectId ||
+      (expected?.runId !== undefined && run.id !== expected.runId)
+    ) {
+      return null;
+    }
+    const ownerMessages = payload.projectMessagesPage.items.filter(
+      (message) =>
+        message.authorType === "owner" &&
+        message.runId === run.id &&
+        (expected?.messageId !== undefined ||
+          (message.content === receipt.message &&
+            message.mentionAgentId === (receipt.mentionAgentId ?? null))) &&
+        !receipt.baselineMessageIds.includes(message.id) &&
+        (expected?.messageId === undefined || message.id === expected.messageId),
+    );
+    if (ownerMessages.length !== 1) return null;
+    const ownerMessage = ownerMessages[0];
+    const hasRunStarted = payload.timelinePage.items.some(
+      (event) =>
+        event.type === "run_started" &&
+        event.runId === run.id &&
+        event.payload.messageId === ownerMessage.id,
+    );
+    const hasOwnerMessage = payload.timelinePage.items.some(
+      (event) =>
+        event.type === "owner_message" &&
+        event.runId === run.id &&
+        event.payload.messageId === ownerMessage.id,
+    );
+    return hasRunStarted && hasOwnerMessage
+      ? { message: ownerMessage, run }
+      : null;
+  }
+
+  async function reconcileStart(
+    receipt: {
+      baselineMessageIds: string[];
+      message: string;
+      mentionAgentId?: string;
+    },
+    expected?: { messageId?: string; runId?: string },
+  ): Promise<boolean> {
+    try {
+      const response = await fetch(`/api/projects/${projectId}/collaboration`);
+      const raw = await readApiResponse<unknown>(
+        response,
+        "无法核对协作事实，请稍后重试。",
+      );
+      if (parseCollaborationGuideEnvelope(raw, projectId).kind === "invalid") {
+        return false;
+      }
+      const payload = raw as CollaborationReadResponse;
+      const confirmed = confirmedStart(payload, receipt, expected);
+      if (!confirmed) return false;
+      applyRead(payload, true);
+      setDraft("");
+      setSelectedMember(null);
+      setFocusMessageId(confirmed.message.id);
+      setSendError(null);
+      setStartReceipt(null);
+      setStartNotice(
+        "协作已启动；目标已受理，但尚未执行、复核或交付。",
+      );
+      onGoalFactChanged?.();
+      return true;
+    } catch {
+      return false;
+    }
+  }
+
+  async function startCollaboration(
+    message: string,
+    logicalOperationId: string,
+    mentionAgentId?: string,
+    existingReceipt?: {
+      baselineMessageIds: string[];
+      message: string;
+      mentionAgentId?: string;
+      operationId: string;
+    },
+  ) {
+    const receipt = existingReceipt ?? {
+      baselineMessageIds:
+        state?.projectMessagesPage.items.map((item) => item.id) ?? [],
+      message,
+      mentionAgentId,
+      operationId: logicalOperationId,
+    };
+    setSending(true);
+    setSendError(null);
+    setStartNotice("");
+    setStartReceipt(null);
+    let responseReceived = false;
+    try {
+      const response = await fetch(`/api/projects/${projectId}/runs`, {
+        body: JSON.stringify({
+          message,
+          ...(mentionAgentId ? { mentionAgentId } : {}),
+          operationId: logicalOperationId,
+        }),
+        headers: { "content-type": "application/json" },
+        method: "POST",
+      });
+      responseReceived = true;
+      const result = await readApiResponse<unknown>(
+        response,
+        "无法启动协作，请稍后重试。",
+      );
+      const ids = mutationIds(result, "start");
+      const reconciled = await reconcileStart(
+        receipt,
+        ids
+          ? { messageId: ids.messageId, runId: ids.runId }
+          : undefined,
+      );
+      if (reconciled) return;
+    } catch (cause) {
+      if (responseReceived && cause instanceof ApiDisplayError) {
+        setSendError(caughtApiErrorCopy(cause, "无法启动协作，请稍后重试。"));
+        return;
+      }
+      if (await reconcileStart(receipt)) return;
+    } finally {
+      setSending(false);
+    }
+    setStartReceipt(receipt);
+    setSendError(
+      `无法唯一确认协作是否已启动。operation receipt：${logicalOperationId}。请仅重新核对，或明确选择使用同一 receipt 重试；不会自动重发。`,
+    );
+  }
+
+  async function retryStartReconciliation() {
+    if (!startReceipt || sending) return;
+    setSending(true);
+    setSendError(null);
+    const reconciled = await reconcileStart(startReceipt);
+    if (!reconciled) {
+      setSendError(
+        `仍无法唯一确认协作是否已启动。operation receipt：${startReceipt.operationId}。不会自动重发。`,
+      );
+    }
+    setSending(false);
+  }
+
   async function handleSubmit(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
     const message = draft.trim();
@@ -775,58 +1037,127 @@ export function CollaborationPanel({
     }
     if (sending) return;
     setFieldError(null);
-    setSendError(null);
-    setSending(true);
+    const hasActiveRun = Boolean(
+      state?.run && activeRunStatuses.has(state.run.status),
+    );
+    if (!hasActiveRun) {
+      await startCollaboration(
+        message,
+        operationId(),
+        selectedMember?.agentId,
+      );
+      return;
+    }
+    const receipt: CollaborationWriteReceipt = {
+      baselineMessageIds:
+        state?.projectMessagesPage.items.map((item) => item.id) ?? [],
+      mentionAgentId: selectedMember?.agentId,
+      message,
+      operationId: operationId(),
+      runId: state!.run!.id,
+    };
+    await submitActiveMessage(receipt);
+  }
+
+  async function reconcileActiveMessage(
+    receipt: CollaborationWriteReceipt,
+    expectedMessageId?: string,
+  ): Promise<boolean> {
     try {
-      const hasActiveRun = Boolean(state?.run && activeRunStatuses.has(state.run.status));
-      const response = await fetch(
-        `/api/projects/${projectId}/${hasActiveRun ? "messages" : "runs"}`,
-        {
+      const response = await fetch(`/api/projects/${projectId}/collaboration`);
+      const raw = await readApiResponse<unknown>(
+        response,
+        "无法核对消息事实，请稍后重试。",
+      );
+      if (parseCollaborationGuideEnvelope(raw, projectId).kind === "invalid") {
+        return false;
+      }
+      const payload = raw as CollaborationReadResponse;
+      if (payload.run?.id !== receipt.runId) return false;
+      const matches = payload.projectMessagesPage.items.filter(
+        (candidate) =>
+          candidate.authorType === "owner" &&
+          candidate.runId === receipt.runId &&
+          candidate.content === receipt.message &&
+          candidate.mentionAgentId === (receipt.mentionAgentId ?? null) &&
+          !receipt.baselineMessageIds.includes(candidate.id) &&
+          (expectedMessageId === undefined ||
+            candidate.id === expectedMessageId),
+      );
+      if (matches.length !== 1) return false;
+      const linkedEvents = payload.timelinePage.items.filter(
+        (event) =>
+          event.type === "owner_message" &&
+          event.runId === receipt.runId &&
+          event.payload.messageId === matches[0].id,
+      );
+      if (linkedEvents.length !== 1) return false;
+      applyRead(payload, true);
+      setDraft("");
+      setSelectedMember(null);
+      setFocusMessageId(matches[0].id);
+      setMessageReceipt(null);
+      setSendError(null);
+      setStartNotice("已通过事实核对确认消息已发送。");
+      setAdvanceError(null);
+      setAdvanceCycle((cycle) => cycle + 1);
+      return true;
+    } catch {
+      return false;
+    }
+  }
+
+  async function submitActiveMessage(receipt: CollaborationWriteReceipt) {
+    setSendError(null);
+    setStartNotice("");
+    setMessageReceipt(null);
+    setSending(true);
+    let responseReceived = false;
+    try {
+      const response = await fetch(`/api/projects/${projectId}/messages`, {
         body: JSON.stringify({
-          ...(hasActiveRun ? { content: message } : { message }),
-          ...(selectedMember ? { mentionAgentId: selectedMember.agentId } : {}),
-          operationId: operationId(),
+          content: receipt.message,
+          ...(receipt.mentionAgentId
+            ? { mentionAgentId: receipt.mentionAgentId }
+            : {}),
+          operationId: receipt.operationId,
         }),
         headers: { "content-type": "application/json" },
         method: "POST",
-        },
+      });
+      responseReceived = true;
+      const result = await readApiResponse<unknown>(
+        response,
+        "无法发送消息，请稍后重试。",
       );
-      const result = hasActiveRun
-        ? await readApiResponse<ProjectMessageResponse>(
-            response,
-            "无法发送消息，请稍后重试。",
-          )
-        : await readApiResponse<StartCollaborationResponse>(
-            response,
-            "无法发送消息，请稍后重试。",
-          );
-      setState((current) =>
-        current
-          ? {
-              ...current,
-              projectMessagesPage: {
-                ...current.projectMessagesPage,
-                items: [
-                  ...current.projectMessagesPage.items.filter(
-                    (item) => item.id !== result.message.id,
-                  ),
-                  result.message,
-                ].sort((left, right) => left.sequence - right.sequence),
-              },
-              run: result.run,
-            }
-          : current,
-      );
-      setAdvanceError(null);
-      setAdvanceCycle((cycle) => cycle + 1);
-      setDraft("");
-      setSelectedMember(null);
-      setFocusMessageId(result.message.id);
+      const ids = mutationIds(result, "message");
+      if (await reconcileActiveMessage(receipt, ids?.messageId)) return;
     } catch (cause) {
-      setSendError(caughtApiErrorCopy(cause, "无法发送消息，请稍后重试。"));
+      if (responseReceived && cause instanceof ApiDisplayError) {
+        setSendError(caughtApiErrorCopy(cause, "无法发送消息，请稍后重试。"));
+        return;
+      }
+      if (await reconcileActiveMessage(receipt)) return;
     } finally {
       setSending(false);
     }
+    setMessageReceipt(receipt);
+    setSendError(
+      `无法唯一确认消息是否已发送。operation receipt：${receipt.operationId}。请仅重新核对，或由用户明确重新提交；不会自动重发。`,
+    );
+  }
+
+  async function retryMessageReconciliation() {
+    if (!messageReceipt || sending) return;
+    setSending(true);
+    setSendError(null);
+    const reconciled = await reconcileActiveMessage(messageReceipt);
+    if (!reconciled) {
+      setSendError(
+        `仍无法唯一确认消息是否已发送。operation receipt：${messageReceipt.operationId}。不会自动重发。`,
+      );
+    }
+    setSending(false);
   }
 
   const timelineMessages = new Map(
@@ -944,9 +1275,9 @@ export function CollaborationPanel({
           ) : null}
           {showChat && state && (state.timelinePage.items.length || standaloneMessages.length) ? (
             <>
-            <ol
+            <div
               aria-label="协作时间线"
-              className="timeline collaboration-timeline"
+              className="collaboration-timeline"
               onScroll={(event) => {
                 const log = event.currentTarget;
                 atBottomRef.current =
@@ -956,10 +1287,26 @@ export function CollaborationPanel({
               ref={logRef}
               role="log"
             >
+              <ol
+                className="timeline"
+              >
               {state.timelinePage.items.map((item) => {
                 const presentation = eventPresentation(item, timelineMessages);
+                const messageId =
+                  item.type === "owner_message" || item.type === "agent_message"
+                    ? item.payload.messageId
+                    : null;
                 return (
-                  <li className="timeline-item timeline-event" key={item.id}>
+                  <li
+                    className="timeline-item timeline-event"
+                    key={item.id}
+                    ref={(node) => {
+                      if (!messageId) return;
+                      if (node) messageRefs.current.set(messageId, node);
+                      else messageRefs.current.delete(messageId);
+                    }}
+                    tabIndex={messageId ? -1 : undefined}
+                  >
                     <div className="timeline-event-heading">
                       <h4>{presentation.heading}</h4>
                       <time dateTime={item.createdAt}>{readableTime(item.createdAt)}</time>
@@ -995,7 +1342,8 @@ export function CollaborationPanel({
                   <span>{message.content}</span>
                 </li>
               ))}
-            </ol>
+              </ol>
+            </div>
             {newEventCount > 0 ? (
               <button
                 onClick={() => {
@@ -1019,6 +1367,7 @@ export function CollaborationPanel({
               aria-label="时间线更新摘要"
               aria-live="polite"
               className="sr-only"
+              role="region"
             >
               {newEventCount > 0 ? `有 ${newEventCount} 条新事件` : ""}
             </p>
@@ -1145,10 +1494,62 @@ export function CollaborationPanel({
             </button>
           </form>
           ) : null}
-          {showChat && sendError ? (
-            <p className="error-text" role="alert">
-              {sendError}
+          {showChat && startNotice ? (
+            <p className="onboarding-guide-success" role="status">
+              {startNotice}
             </p>
+          ) : null}
+          {showChat && sendError ? (
+            <div className="state-message stack">
+              <p className="error-text" role="alert">
+                {sendError}
+              </p>
+              {startReceipt ? (
+                <div className="form-row">
+                  <button
+                    disabled={sending}
+                    onClick={() => void retryStartReconciliation()}
+                    type="button"
+                  >
+                    仅重新核对协作事实
+                  </button>
+                  <button
+                    disabled={sending}
+                    onClick={() =>
+                      void startCollaboration(
+                        startReceipt.message,
+                        startReceipt.operationId,
+                        startReceipt.mentionAgentId,
+                        startReceipt,
+                      )
+                    }
+                    type="button"
+                  >
+                    使用同一 operation receipt 明确重试启动
+                  </button>
+                </div>
+              ) : null}
+              {messageReceipt ? (
+                <div className="form-row">
+                  <button
+                    disabled={sending}
+                    onClick={() => void retryMessageReconciliation()}
+                    type="button"
+                  >
+                    仅重新核对消息事实
+                  </button>
+                  <button
+                    disabled={sending}
+                    onClick={() => {
+                      void submitActiveMessage(messageReceipt);
+                    }}
+                    type="button"
+                  >
+                    明确重新提交消息
+                  </button>
+                </div>
+              ) : null}
+            </div>
           ) : null}
         </>
       )}
