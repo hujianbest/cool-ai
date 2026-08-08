@@ -959,6 +959,7 @@ legend {
 
 .activity-bar {
   display: flex;
+  position: relative;
   flex-direction: column;
   gap: var(--space-1);
   background: var(--surface-panel);
@@ -974,6 +975,7 @@ legend {
   place-items: center;
   color: var(--text-secondary);
   background: transparent;
+  white-space: nowrap;
 }
 
 .activity-bar .activity-bar-item:hover {
@@ -989,4 +991,17 @@ legend {
 .activity-bar .activity-bar-item:focus-visible {
   outline: none;
   box-shadow: var(--focus-ring);
+}
+
+.activity-bar-status {
+  position: absolute;
+  inset-block-end: var(--space-2);
+  inset-inline-start: calc(var(--full-width) + var(--border-width));
+  width: var(--sidebar-width);
+  border: var(--border-width) solid var(--danger);
+  border-radius: var(--radius-sm);
+  padding: var(--space-2) var(--space-3);
+  background: var(--status-danger-surface);
+  color: var(--danger);
+  box-shadow: var(--shadow-panel);
 }

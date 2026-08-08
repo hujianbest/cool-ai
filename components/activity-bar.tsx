@@ -8,6 +8,10 @@ import {
   SETTINGS_SECTIONS,
 } from "@/components/settings-navigation";
 import { useSettingsPreferences } from "@/components/settings-preferences-store";
+import {
+  setThemePreference,
+  useThemePreference,
+} from "@/components/theme-preference-store";
 
 export type ActivityBarProps = {
   activePath: string;
@@ -69,6 +73,14 @@ export function ActivityBar({
   returnTo,
 }: ActivityBarProps) {
   const { preference } = useSettingsPreferences();
+  const themePreference = useThemePreference();
+  const themeStatus = themePreference.error
+    ? {
+        read: "主题偏好读取失败，已使用明色主题",
+        invalid: "主题偏好数据无效，已使用明色主题",
+        write: "主题偏好保存失败，仍保持当前主题",
+      }[themePreference.error]
+    : null;
   const settingsReturnTo = returnTo ?? activePath;
   const workIsActive =
     activePath === "/" || parseReturnTo(activePath) === activePath;
@@ -111,6 +123,47 @@ export function ActivityBar({
           </span>
         </a>
       ))}
+      <button
+        aria-busy={themePreference.hydrated ? undefined : true}
+        aria-label={
+          themePreference.hydrated
+            ? themePreference.theme === "light"
+              ? "当前为明色主题，切换到暗色主题"
+              : "当前为暗色主题，切换到明色主题"
+            : "主题偏好加载中"
+        }
+        aria-pressed={
+          themePreference.hydrated
+            ? themePreference.theme === "dark"
+            : undefined
+        }
+        className="activity-bar-item"
+        disabled={!themePreference.hydrated}
+        onClick={() =>
+          setThemePreference(
+            themePreference.theme === "light" ? "dark" : "light",
+          )
+        }
+        title={
+          themePreference.hydrated
+            ? themePreference.theme === "light"
+              ? "切换到暗色主题"
+              : "切换到明色主题"
+            : "主题偏好加载中"
+        }
+        type="button"
+      >
+        {themePreference.hydrated
+          ? themePreference.theme === "light"
+            ? "夜"
+            : "日"
+          : "·"}
+      </button>
+      {themeStatus ? (
+        <span className="activity-bar-status" role="status">
+          {themeStatus}
+        </span>
+      ) : null}
     </nav>
   );
 }

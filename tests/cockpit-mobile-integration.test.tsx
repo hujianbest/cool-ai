@@ -71,6 +71,37 @@ afterEach(() => {
 });
 
 describe("owner-controlled cockpit mobile surfaces", () => {
+  it("shows a keyboard-retryable project load error in the narrow main column", async () => {
+    stubViewport(true);
+    vi.stubGlobal("innerWidth", 390);
+    const fetchMock = vi.fn()
+      .mockResolvedValueOnce(
+        Response.json(
+          { error: { code: "STORAGE_UNAVAILABLE", message: "项目加载失败。" } },
+          { status: 503 },
+        ),
+      )
+      .mockResolvedValueOnce(Response.json({ projects: [] }));
+    vi.stubGlobal("fetch", fetchMock);
+    const user = userEvent.setup();
+
+    render(<ProjectPanel />);
+
+    const alert = await screen.findByRole("alert");
+    expect(alert).not.toHaveTextContent(/^\s*$/);
+    expect(alert.closest("[hidden]")).toBeNull();
+    expect(screen.getAllByRole("alert")).toHaveLength(1);
+
+    const retry = screen.getByRole("button", { name: "重试加载项目" });
+    expect(retry.closest("[hidden]")).toBeNull();
+    retry.focus();
+    expect(retry).toHaveFocus();
+    await user.keyboard("{Enter}");
+
+    await waitFor(() => expect(fetchMock).toHaveBeenCalledTimes(2));
+    await waitFor(() => expect(screen.queryByRole("alert")).not.toBeInTheDocument());
+  });
+
   it("pauses the project modal while rebind confirmation owns focus", async () => {
     stubViewport(true);
     stubCockpitRequests("D:\\old");

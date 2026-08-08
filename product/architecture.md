@@ -10,7 +10,7 @@
 
 ## 模块边界
 
-- Web 外壳与设计系统（`app/layout.tsx`、`app/tokens.css`、`app/cockpit.css`）：三栏协作驾驶舱、响应式布局和共享视觉 token。
+- Web 外壳与设计系统（`app/layout.tsx`、`app/tokens.css`、`app/cockpit.css`）：三栏协作驾驶舱、响应式布局、共享 light/dark token 与首绘前主题恢复。
 - 用户界面（`components/`）：项目、团队配置、协作、使命看板、安全执行、同伴复核与交付视图。
 - HTTP 边界（`app/api/`）：把用户操作映射为严格校验、可重试的项目/Agent/运行/执行/复核 API。
 - 领域与编排（`src/`）：项目上下文、Agent 协作、任务 DAG、执行生命周期、复核与交付规则。
@@ -36,5 +36,5 @@
 
 - 所有外部输入在 API 边界严格校验；凭据、隐藏思维链和原始 provider 响应不得进入 UI、日志或持久化。
 - 写操作使用 operation/version/lease 等确定性约束；失败关闭，重试不得补写旧动作或伪造成功。
-- UI 复用 `tokens.css`，保持温暖浅色、Agent 身份色、44px 控件、可见焦点与 loading/empty/error 三态。
+- UI 复用 `tokens.css`，保持 Cool 自有暖色 light/dark 层级、Agent 身份色、44px 控件、可见焦点与 loading/empty/error 三态；主题偏好仅保存非敏感枚举/修订并在首次绘制前恢复。
 - 新行为按 `tests/` 中对应领域测试先红后绿；全量 `npm test`、`npm run build` 与浏览器 smoke 作为交付证据。

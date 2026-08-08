@@ -299,6 +299,20 @@ export function ProjectPanel() {
           ) : null}
         </div>
       </header>
+      {projectLoadError && narrow ? (
+        <section className="narrow-project-load-error stack state-message">
+          <p className="error-text" role="alert">
+            {projectLoadError}
+          </p>
+          <button
+            className="button-secondary"
+            onClick={() => setReloadKey((current) => current + 1)}
+            type="button"
+          >
+            重试加载项目
+          </button>
+        </section>
+      ) : null}
 
       <aside
         aria-label={narrow ? undefined : "项目导航"}

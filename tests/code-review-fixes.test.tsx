@@ -53,6 +53,9 @@ describe("code review fixes", () => {
     render(<ProjectPanel />);
 
     const retry = await screen.findByRole("button", { name: "重试加载项目" });
+    const projectSurface = screen.getByRole("complementary", { name: "项目导航" });
+    expect(within(projectSurface).getByRole("alert")).not.toHaveTextContent(/^\s*$/);
+    expect(screen.getAllByRole("alert")).toHaveLength(1);
     await user.click(retry);
 
     expect(fetchMock).toHaveBeenCalledTimes(2);

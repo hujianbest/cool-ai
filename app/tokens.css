@@ -1,4 +1,6 @@
 :root {
+  color-scheme: light;
+
   --font-sans: -apple-system, "PingFang SC", "Noto Sans SC", "Segoe UI Variable", "Microsoft YaHei UI", system-ui, sans-serif;
   --font-mono: "Cascadia Mono", "Consolas", monospace;
   --sr-only-size: 1px;
@@ -89,10 +91,61 @@
   --timeline-gap: var(--space-3);
 }
 
+:root[data-theme="dark"] {
+  color-scheme: dark;
+
+  --surface-sunken: #151A18;
+  --surface-panel: #1B211F;
+  --surface-main: #202724;
+  --surface-card: #252D2A;
+  --text-primary: #F3EFE7;
+  --text-secondary: #D3CDC3;
+  --text-subtle: #B5ADA1;
+  --border-subtle: #807970;
+  --border-strong: #A69D91;
+  --interactive-primary: #83B3A8;
+  --interactive-primary-hover: #9AC6BC;
+  --interactive-soft: #2C403B;
+  --interactive-soft-hover: #365149;
+  --status-queued-surface: #3B3322;
+  --status-running-surface: #243B36;
+  --status-success-surface: #253A2C;
+  --status-danger-surface: #402925;
+  --agent-warm: #D88B72;
+  --success: #8FC69E;
+  --warning: #D4B66F;
+  --danger: #E79288;
+
+  --agent-sage-fg: #A6D6CB;
+  --agent-sage-bg: #243B36;
+  --agent-terracotta-fg: #E6A18C;
+  --agent-terracotta-bg: #402C27;
+  --agent-gold-fg: #E0C17A;
+  --agent-gold-bg: #3B3322;
+  --agent-slate-fg: #B9C7D6;
+  --agent-slate-bg: #29343D;
+  --agent-rose-fg: #E2A8B8;
+  --agent-rose-bg: #3D2930;
+  --agent-olive-fg: #C5CF8A;
+  --agent-olive-bg: #343822;
+
+  --shadow-1: 0 0.25rem 0.75rem rgba(0, 0, 0, 0.28);
+  --shadow-2: 0 0.625rem 1.875rem rgba(0, 0, 0, 0.42);
+  --shadow-panel: var(--shadow-1);
+  --focus-ring-color: #9AC6BC;
+  --focus-ring: 0 0 0 0.1875rem var(--focus-ring-color);
+}
+
 /* responsive-cockpit */
 @media (max-width: 56.25rem) {
   .collaboration-cockpit {
     grid-template-columns: var(--activity-bar-width) minmax(0, 1fr);
+    grid-template-rows: auto minmax(0, 1fr);
+  }
+
+  .activity-bar {
+    grid-column: 1;
+    grid-row: 1 / span 2;
   }
 
   .mobile-toolbar {
@@ -100,7 +153,8 @@
     position: sticky;
     top: 0;
     z-index: 3;
-    grid-column: 1;
+    grid-column: 2;
+    grid-row: 1;
     justify-content: space-between;
     gap: var(--space-2);
     padding: var(--safe-area-top) var(--safe-area-right) var(--space-2) var(--safe-area-left);
@@ -110,8 +164,15 @@
 
   .cockpit-flow {
     min-width: 0;
-    grid-column: 1;
     padding: var(--space-4);
+  }
+
+  .narrow-project-load-error {
+    min-width: 0;
+    align-self: start;
+    grid-column: 2;
+    grid-row: 2;
+    margin: var(--space-4);
   }
 
   .cockpit-sidebar,
@@ -133,6 +194,8 @@
     position: static;
     block-size: auto;
     z-index: auto;
+    grid-column: 2;
+    grid-row: 2;
     width: var(--full-width);
     padding: var(--space-4);
     overflow-y: visible;
@@ -156,7 +219,7 @@
 
   .cockpit-flow[data-open="true"] {
     inset: 0;
-    width: 100%;
+    width: var(--full-width);
   }
 
   .mission-board-grid {

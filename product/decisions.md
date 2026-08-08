@@ -30,3 +30,4 @@
 - D-25 2026-08-08 通知、外部集成与自动化按 owner 决定：继承 CI-7.1；不继承 CI-7.2~CI-7.7，即只纳入浏览器通知/PWA，外部 IM/连接器、定时 daemon/值班简报、Signals/协作研读/播客和外部社区发布均不进入产品范围 — 依据: `features/010-clowder-capability-inheritance/inheritance-catalog.md` 类别 7 及 AskQuestion `cat7_integrations_automation`
 - D-26 2026-08-08 导出、回放、桌面形态与其他体验按 owner 决定：已有保持 CI-8.6；继承 CI-8.1~CI-8.2、CI-8.4；延后 CI-8.3、CI-8.5、CI-8.7；不继承 CI-8.8~CI-8.9。八类合计为继承 42、已有保持 11、延后 9、不继承 10；D-19~D-26 扩大的是功能范围，D-8 与 D-18 的品牌、源码和资产禁用边界继续有效 — 依据: `features/010-clowder-capability-inheritance/inheritance-catalog.md` 类别 8、72 项最终决定及 AskQuestion `cat8_export_desktop`
 - D-27 2026-08-08 设置分区以 URL query 作为唯一导航状态，固定入口使用本地 LWW-map 偏好与最近 100 条非敏感审计事件；真实项目 returnTo 仅接受严格本站路径并由普通/固定入口共同保留 — 依据: S-9 全链 browser smoke、并发/安全测试与自动 demo 验收
+- D-28 2026-08-08 主题采用 Cool 自有暖色 light/dark token；非敏感偏好按严格 envelope 跨标签收敛，并由 head 内同源 parser-blocking 外部脚本在 FCP 前恢复，避免依赖 Next client bootstrap 造成亮色闪烁 — 依据: S-10 12 组合/7 状态真实浏览器证据与自动 demo 验收
