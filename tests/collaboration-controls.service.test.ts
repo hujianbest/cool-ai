@@ -5,13 +5,10 @@ import { afterEach, beforeEach, describe, expect, it } from "vitest";
 
 import * as runService from "@/src/server/collaboration/run-service";
 import { CollaborationError } from "@/src/server/collaboration/collaboration-errors";
+import { createThread } from "@/src/server/collaboration/thread-service";
 import { createCredentialVault } from "@/src/server/credential-vault";
-import { createV6FixtureDatabaseOpener } from "@/tests/v6-fixture-db";
-
-const openDatabase = createV6FixtureDatabaseOpener({
-  missingDeliveryHeadMissionIds: ["mission-1"],
-  missingReviewHeadResultIds: [],
-});
+import { openDatabase } from "@/src/server/db";
+import { initializeMissionDeliveryTx } from "@/src/server/migrations-v6";
 
 type ControlAction = "pause" | "continue" | "retry" | "stop";
 type ControlInput = {
@@ -25,22 +22,27 @@ type ControlResult = {
 };
 type ControlRun = (
   databasePath: string,
+  projectId: string,
+  threadId: string,
   runId: string,
   input: ControlInput,
 ) => ControlResult;
 type ControlRoute = {
   POST(
     request: Request,
-    context: { params: Promise<{ runId: string }> },
+    context: {
+      params: Promise<{ projectId: string; threadId: string; runId: string }>;
+    },
   ): Promise<Response>;
 };
 
 const routeModules = import.meta.glob<ControlRoute>(
-  "../app/api/runs/[runId]/control/route.ts",
+  "../app/api/projects/[projectId]/threads/[threadId]/runs/[runId]/control/route.ts",
 );
 
 let directory: string;
 let databasePath: string;
+let threadId: string;
 let runId: string;
 let operationSequence: number;
 
@@ -50,9 +52,10 @@ function operationId(): string {
 }
 
 function control(input: ControlInput): ControlResult {
-  const implementation = (runService as unknown as { controlRun?: ControlRun }).controlRun;
-  expect(implementation, "T-4 controlRun service must exist").toBeTypeOf("function");
-  return implementation!(databasePath, runId, input);
+  const implementation = (runService as unknown as { controlThreadRun?: ControlRun })
+    .controlThreadRun;
+  expect(implementation, "tuple control service must exist").toBeTypeOf("function");
+  return implementation!(databasePath, "project-1", threadId, runId, input);
 }
 
 function seedReadyRun(): void {
@@ -95,13 +98,68 @@ function seedReadyRun(): void {
         'mission-1', 'project-1', 'Mission', 'Goal', 1, '${timestamp}', '${timestamp}'
       );
     `);
+    initializeMissionDeliveryTx(database, {
+      id: "mission-1",
+      projectId: "project-1",
+      updatedAt: timestamp,
+    });
   } finally {
     database.close();
   }
-  runId = runService.createOrAppendRun(databasePath, "project-1", {
-    message: "Start",
+  threadId = createThread(databasePath, "project-1", {
+    memberAgentIds: ["agent-a", "agent-b"],
     operationId: operationId(),
-  }).body.run.id;
+    title: "Control thread",
+  }).body.thread.id;
+  runId = "run-control";
+  const seeded = openDatabase(databasePath);
+  try {
+    seeded.exec("BEGIN IMMEDIATE");
+    const thread = seeded.prepare(
+      `SELECT next_fact_sequence AS factSequence
+       FROM collaboration_threads WHERE project_id='project-1' AND id=?`,
+    ).get(threadId) as { factSequence: number };
+    const project = seeded.prepare(
+      `SELECT next_activity_sequence AS activitySequence
+       FROM collaboration_project_thread_sequences WHERE project_id='project-1'`,
+    ).get() as { activitySequence: number };
+    seeded.prepare(
+      `INSERT INTO collaboration_runs(
+         id,project_id,thread_id,status,current_agent_id,round_count,
+         next_event_sequence,version,execution_epoch,pause_reason,pause_category,
+         created_at,updated_at
+       ) VALUES (?,'project-1',?,'running','agent-a',0,1,1,1,NULL,NULL,?,?)`,
+    ).run(runId, threadId, timestamp, timestamp);
+    seeded.prepare(
+      `INSERT INTO collaboration_thread_facts(
+         id,project_id,thread_id,sequence,activity_sequence,type,actor_type,actor_id,
+         run_id,message_id,run_event_id,policy_revision_id,payload_json,created_at
+       ) VALUES ('fact-link-control','project-1',?,?,?,'run_linked','system',NULL,
+         ?,NULL,NULL,NULL,?,?)`,
+    ).run(
+      threadId,
+      thread.factSequence,
+      project.activitySequence,
+      runId,
+      JSON.stringify({ runId }),
+      timestamp,
+    );
+    seeded.prepare(
+      `UPDATE collaboration_threads
+       SET next_fact_sequence=next_fact_sequence+1,last_activity_sequence=?
+       WHERE project_id='project-1' AND id=?`,
+    ).run(project.activitySequence, threadId);
+    seeded.prepare(
+      `UPDATE collaboration_project_thread_sequences
+       SET next_activity_sequence=next_activity_sequence+1 WHERE project_id='project-1'`,
+    ).run();
+    seeded.exec("COMMIT");
+  } catch (error) {
+    if (seeded.isTransaction) seeded.exec("ROLLBACK");
+    throw error;
+  } finally {
+    seeded.close();
+  }
 }
 
 function forceRun(
@@ -115,32 +173,35 @@ function forceRun(
       .prepare(
         `UPDATE collaboration_runs
          SET status = ?, pause_category = ?, pause_reason = ?
-         WHERE id = ?`,
+         WHERE project_id='project-1' AND thread_id=? AND id = ?`,
       )
-      .run(status, pauseCategory, pauseReason, runId);
+      .run(status, pauseCategory, pauseReason, threadId, runId);
     if (pauseCategory === "provider_auth" || pauseCategory === "credential_unavailable") {
       const timestamp = "2026-07-30T00:00:00.000Z";
-      const operation = `failure-operation-${pauseCategory}`;
+      const operation =
+        pauseCategory === "provider_auth"
+          ? "00000000-0000-4000-8000-000000009901"
+          : "00000000-0000-4000-8000-000000009902";
       database
         .prepare(
           `INSERT INTO collaboration_operations (
-             id, project_id, run_id, kind, request_hash, status,
-             http_status, response_json, created_at, updated_at
-           ) VALUES (?, 'project-1', ?, 'advance', 'failure-hash', 'completed',
-             500, '{}', ?, ?)`,
+             id, project_id, thread_id, run_id, kind, request_hash, status,
+             http_status, response_json, response_schema_version, created_at, updated_at
+           ) VALUES (?, 'project-1', ?, ?, 'advance', 'failure-hash', 'completed',
+             500, '{"error":{"code":"INTERNAL_ERROR","message":"Failure."}}', 7, ?, ?)`,
         )
-        .run(operation, runId, timestamp, timestamp);
+        .run(operation, threadId, runId, timestamp, timestamp);
       database
         .prepare(
           `INSERT INTO collaboration_attempts (
-             id, project_id, run_id, agent_id, operation_id, status,
+             id, project_id, thread_id, run_id, agent_id, operation_id, status,
              lease_token, lease_expires_at, prompt_hash, acquire_execution_epoch,
              acquire_context_hash, included_message_sequence, error_category,
              failure_provider_id, failure_provider_version,
              failure_credential_version, failure_credential_generation,
              failure_verified_at, started_at, finished_at
            )
-           SELECT ?, 'project-1', ?, 'agent-a', ?, 'failed',
+           SELECT ?, 'project-1', ?, ?, 'agent-a', ?, 'failed',
              'failure-lease', ?, 'failure-prompt', 1, 'failure-context', 0, ?,
              providers.id, providers.version, providers.credential_version,
              providers.credential_generation, providers.verified_at, ?, ?
@@ -148,6 +209,7 @@ function forceRun(
         )
         .run(
           `failure-attempt-${pauseCategory}`,
+          threadId,
           runId,
           operation,
           timestamp,
@@ -195,19 +257,25 @@ function expectCode(operation: () => unknown, code: string, currentVersion?: num
 }
 
 async function route(): Promise<ControlRoute> {
-  const load = routeModules["../app/api/runs/[runId]/control/route.ts"];
-  expect(load, "T-4 run control route must exist").toBeTypeOf("function");
+  const load =
+    routeModules[
+      "../app/api/projects/[projectId]/threads/[threadId]/runs/[runId]/control/route.ts"
+    ];
+  expect(load, "tuple run control route must exist").toBeTypeOf("function");
   return load!();
 }
 
 async function post(input: ControlInput): Promise<Response> {
   return (await route()).POST(
-    new Request(`http://localhost/api/runs/${runId}/control`, {
+    new Request(
+      `http://localhost/api/projects/project-1/threads/${threadId}/runs/${runId}/control`,
+      {
       body: JSON.stringify(input),
       headers: { "content-type": "application/json" },
       method: "POST",
-    }),
-    { params: Promise.resolve({ runId }) },
+      },
+    ),
+    { params: Promise.resolve({ projectId: "project-1", runId, threadId }) },
   );
 }
 

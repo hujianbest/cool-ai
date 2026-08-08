@@ -30,7 +30,7 @@ function databasePath(): string {
 }
 
 function createMissingMission(path: string, missionId = "mission", projectId = "project"): void {
-  const initialized = openProductionDatabase(path);
+  const initialized = fixtureDb.openDatabaseAtV6(path);
   initialized.close();
   const database = new DatabaseSync(path);
   database.exec("PRAGMA foreign_keys=OFF");
@@ -48,7 +48,7 @@ function createResultGaps(
   path: string,
   options: { partialHead?: boolean; crossProject?: boolean } = {},
 ): void {
-  const initialized = openProductionDatabase(path);
+  const initialized = fixtureDb.openDatabaseAtV6(path);
   initialized.close();
   const database = new DatabaseSync(path);
   database.exec("PRAGMA foreign_keys=OFF");

@@ -5,12 +5,8 @@ import type { DatabaseSync } from "node:sqlite";
 import { afterEach, beforeEach, describe, expect, it } from "vitest";
 import { z } from "zod";
 
-import { createV6FixtureDatabaseOpener } from "@/tests/v6-fixture-db";
-
-const openDatabase = createV6FixtureDatabaseOpener({
-  missingDeliveryHeadMissionIds: ["mission"],
-  missingReviewHeadResultIds: [],
-});
+import { openDatabase } from "@/src/server/db";
+import { execV7Fixture } from "@/tests/v7-fixture-graph";
 
 const PROJECT_ID = "operation-project";
 const EXECUTION_ID = "operation-execution";
@@ -133,7 +129,7 @@ afterEach(() => {
 function seedExecution(): void {
   const database = openDatabase(databasePath);
   try {
-    database.exec(`
+    execV7Fixture(databasePath, database, `
       INSERT INTO projects (id,name,created_at,workspace_path,workspace_key,version)
       VALUES ('${PROJECT_ID}','Operations','${NOW}','D:\\workspace','d:/workspace',1);
       INSERT INTO providers (

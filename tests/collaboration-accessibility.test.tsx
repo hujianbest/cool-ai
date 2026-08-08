@@ -5,10 +5,20 @@ import { afterEach, describe, expect, it, vi } from "vitest";
 
 import { ProjectPanel } from "@/components/project-panel";
 import type {
-  CollaborationReadResponse,
   CollaborationRun,
   DecisionRequest,
 } from "@/src/shared/collaboration-contracts";
+import {
+  TEST_RUN_ID,
+  TEST_THREAD_ID,
+  threadDetailPayload,
+  threadFactsPayload,
+  threadListPayload,
+  threadMessage,
+  threadMessagesPayload,
+  threadRun,
+  threadTimelinePayload,
+} from "@/tests/cockpit-test-fetch";
 
 const project = {
   createdAt: "2026-07-30T00:00:00.000Z",
@@ -45,17 +55,7 @@ const members = {
 };
 
 function run(status: CollaborationRun["status"] = "paused"): CollaborationRun {
-  return {
-    createdAt: "2026-07-30T00:00:00.000Z",
-    currentAgentId: "agent-a",
-    id: "run-1",
-    pauseCategory: status === "paused" ? "manual" : null,
-    projectId: project.id,
-    roundCount: 2,
-    status,
-    updatedAt: "2026-07-30T00:00:00.000Z",
-    version: 3,
-  };
+  return threadRun(project.id, status);
 }
 
 const decision: DecisionRequest = {
@@ -73,26 +73,6 @@ const decision: DecisionRequest = {
   version: 1,
 };
 
-function collaboration(
-  status: CollaborationRun["status"] = "paused",
-): CollaborationReadResponse {
-  return {
-    pendingDecision: status === "waiting_owner" ? decision : null,
-    projectMessagesPage: { items: [], nextAfter: null },
-    readiness: { missing: [], ready: true },
-    run: run(status),
-    timelinePage: { items: [], nextAfter: null },
-    usage: {
-      byAgent: [],
-      completionTokens: 0,
-      promptTokens: 0,
-      repairCalls: 0,
-      totalTokens: 0,
-      unreportedCalls: 0,
-    },
-  };
-}
-
 function stubViewport(narrow: boolean): void {
   vi.stubGlobal(
     "matchMedia",
@@ -107,6 +87,11 @@ function stubViewport(narrow: boolean): void {
 
 function installFetch(status: CollaborationRun["status"] = "paused") {
   const calls: Array<{ body: Record<string, unknown>; url: string }> = [];
+  window.history.replaceState(
+    null,
+    "",
+    `/projects/${project.id}?thread=${TEST_THREAD_ID}&run=${TEST_RUN_ID}`,
+  );
   vi.stubGlobal(
     "fetch",
     vi.fn(async (input: RequestInfo | URL, init?: RequestInit) => {
@@ -114,21 +99,47 @@ function installFetch(status: CollaborationRun["status"] = "paused") {
       if (init?.method === "POST" && url.includes("/control")) {
         const body = JSON.parse(String(init.body)) as Record<string, unknown>;
         calls.push({ body, url });
-        return Response.json({ run: run(body.action === "stop" ? "stopped" : status) });
+        return Response.json({
+          fact: threadFactsPayload(project.id).items[1],
+          run: run(body.action === "stop" ? "stopped" : status),
+        });
       }
       if (init?.method === "POST" && url.includes("/decisions/")) {
         const body = JSON.parse(String(init.body)) as Record<string, unknown>;
         calls.push({ body, url });
+        const message = threadMessage(project.id);
+        const facts = threadFactsPayload(project.id).items;
         return Response.json({
-          decision: { ...decision, answer: body.answer, status: "answered", version: 2 },
+          decision: {
+            ...decision,
+            answer: body.answer,
+            projectId: project.id,
+            status: "answered",
+            threadId: TEST_THREAD_ID,
+            version: 2,
+          },
+          facts: [facts[0], facts[1]],
+          message,
           run: run("paused"),
         });
       }
       const payloads: Record<string, unknown> = {
         "/api/agents": { agents: [] },
         "/api/projects": { projects: [project] },
-        "/api/projects/project-1/collaboration": collaboration(status),
         "/api/projects/project-1/members": members,
+        "/api/projects/project-1/threads?limit=100":
+          threadListPayload(project.id),
+        [`/api/projects/project-1/threads/${TEST_THREAD_ID}?run=${TEST_RUN_ID}`]:
+          threadDetailPayload(project.id, status),
+        [`/api/projects/project-1/threads/${TEST_THREAD_ID}/messages`]:
+          threadMessagesPayload(project.id),
+        [`/api/projects/project-1/threads/${TEST_THREAD_ID}/facts`]:
+          threadFactsPayload(project.id),
+        [`/api/projects/project-1/threads/${TEST_THREAD_ID}/runs/${TEST_RUN_ID}/timeline`]:
+          threadTimelinePayload(
+            project.id,
+            status === "waiting_owner" ? decision : undefined,
+          ),
         "/api/projects/project-1/mission": {
           mission: {
             createdAt: "2026-07-30T00:00:00.000Z",

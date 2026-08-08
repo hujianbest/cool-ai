@@ -6,10 +6,11 @@ import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 vi.mock("server-only", () => ({}));
 
 import { POST as createMission } from "@/app/api/projects/[projectId]/mission/route";
-import { POST as startCollaboration } from "@/app/api/projects/[projectId]/runs/route";
+import { POST as startCollaboration } from "@/app/api/projects/[projectId]/threads/[threadId]/runs/route";
 import { PUT as bindWorkspace } from "@/app/api/projects/[projectId]/workspace/route";
 import { createCredentialVault } from "@/src/server/credential-vault";
 import { openDatabase } from "@/src/server/db";
+import { createThread } from "@/src/server/collaboration/thread-service";
 import {
   executionDtoFromDatabase,
   startExecution,
@@ -29,6 +30,7 @@ const REVIEWER_ID = "onboarding-reviewer";
 const NOW = "2026-08-08T04:00:00.000Z";
 const HASH = "a".repeat(64);
 const START_RUN_OPERATION = "13000000-0000-4000-8000-000000000001";
+const CREATE_THREAD_OPERATION = "13000000-0000-4000-8000-000000000005";
 const START_EXECUTION_OPERATION = "13000000-0000-4000-8000-000000000002";
 const START_REVIEW_OPERATION = "13000000-0000-4000-8000-000000000003";
 const GENERATE_DELIVERY_OPERATION = "13000000-0000-4000-8000-000000000004";
@@ -41,6 +43,10 @@ let executionRoot: string;
 
 function context() {
   return { params: Promise.resolve({ projectId: PROJECT_ID }) };
+}
+
+function threadContext(threadId: string) {
+  return { params: Promise.resolve({ projectId: PROJECT_ID, threadId }) };
 }
 
 function jsonRequest(url: string, method: "POST" | "PUT", body: unknown): Request {
@@ -98,6 +104,7 @@ function seedOnboardingResources(): void {
 async function establishFormalOnboardingGoal(): Promise<{
   missionId: string;
   runId: string;
+  threadId: string;
 }> {
   const workspaceResponse = await bindWorkspace(
     jsonRequest(
@@ -125,16 +132,22 @@ async function establishFormalOnboardingGoal(): Promise<{
   expect(missionResponse.status).toBe(201);
   const missionBody = await missionResponse.json() as { mission: { id: string } };
 
+  const threadBody = createThread(databasePath, PROJECT_ID, {
+    memberAgentIds: [EXECUTOR_ID, REVIEWER_ID],
+    operationId: CREATE_THREAD_OPERATION,
+    title: "Governed onboarding",
+  }).body;
+
   const runResponse = await startCollaboration(
     jsonRequest(
-      `http://localhost/api/projects/${PROJECT_ID}/runs`,
+      `http://localhost/api/projects/${PROJECT_ID}/threads/${threadBody.thread.id}/runs`,
       "POST",
       {
         message: "Accept this goal into formal collaboration.",
         operationId: START_RUN_OPERATION,
       },
     ),
-    context(),
+    threadContext(threadBody.thread.id),
   );
   expect(runResponse.status).toBe(201);
   const runBody = await runResponse.json() as {
@@ -162,10 +175,18 @@ async function establishFormalOnboardingGoal(): Promise<{
   } finally {
     database.close();
   }
-  return { missionId: missionBody.mission.id, runId: runBody.run.id };
+  return {
+    missionId: missionBody.mission.id,
+    runId: runBody.run.id,
+    threadId: threadBody.thread.id,
+  };
 }
 
-function planClaimedWork(missionId: string, runId: string): string {
+function planClaimedWork(
+  missionId: string,
+  threadId: string,
+  runId: string,
+): string {
   const workItemId = "onboarding-work";
   const database = openDatabase(databasePath);
   try {
@@ -185,15 +206,16 @@ function planClaimedWork(missionId: string, runId: string): string {
     `).run(workItemId, missionId, EXECUTOR_ID, NOW, NOW);
     database.prepare(`
       INSERT INTO collaboration_attempts(
-        id,project_id,run_id,agent_id,operation_id,status,lease_token,lease_expires_at,
+        id,project_id,thread_id,run_id,agent_id,operation_id,status,lease_token,lease_expires_at,
         prompt_hash,acquire_execution_epoch,acquire_context_hash,included_message_sequence,
         error_category,started_at,finished_at
       ) VALUES (
-        'onboarding-plan-attempt',?,?,?,?,'committed','lease',?,
+        'onboarding-plan-attempt',?,?,?,?,?,'committed','lease',?,
         ?,1,?,1,NULL,?,?
       )
     `).run(
       PROJECT_ID,
+      threadId,
       runId,
       EXECUTOR_ID,
       START_RUN_OPERATION,
@@ -205,17 +227,19 @@ function planClaimedWork(missionId: string, runId: string): string {
     );
     database.prepare(`
       INSERT INTO collaboration_turns(
-        id,attempt_id,run_id,agent_id,round_number,message_id,disposition,created_at
-      ) VALUES ('onboarding-plan-turn','onboarding-plan-attempt',?,?,1,?,'plan_ready',?)
-    `).run(runId, EXECUTOR_ID, message.id, NOW);
+        id,project_id,thread_id,attempt_id,run_id,agent_id,round_number,message_id,disposition,created_at
+      ) VALUES ('onboarding-plan-turn',?,?,'onboarding-plan-attempt',?,?,1,?,'plan_ready',?)
+    `).run(PROJECT_ID, threadId, runId, EXECUTOR_ID, message.id, NOW);
     const nextSequence = Number((database.prepare(`
       SELECT next_event_sequence AS sequence FROM collaboration_runs WHERE id=?
     `).get(runId) as { sequence: number }).sequence);
     database.prepare(`
       INSERT INTO collaboration_events(
-        id,run_id,sequence,type,actor_type,actor_id,payload_json,created_at
-      ) VALUES ('onboarding-task-claimed',?,?,'task_claimed','agent',?,?,?)
+        id,project_id,thread_id,run_id,sequence,type,actor_type,actor_id,payload_json,created_at
+      ) VALUES ('onboarding-task-claimed',?,?,?,?,'task_claimed','agent',?,?,?)
     `).run(
+      PROJECT_ID,
+      threadId,
       runId,
       nextSequence,
       EXECUTOR_ID,
@@ -229,6 +253,42 @@ function planClaimedWork(missionId: string, runId: string): string {
     database.prepare(`
       UPDATE collaboration_runs SET next_event_sequence=next_event_sequence+1 WHERE id=?
     `).run(runId);
+    const threadSequence = database.prepare(`
+      SELECT next_fact_sequence AS factSequence
+      FROM collaboration_threads WHERE project_id=? AND id=?
+    `).get(PROJECT_ID, threadId) as { factSequence: number };
+    const projectSequence = database.prepare(`
+      SELECT next_activity_sequence AS activitySequence
+      FROM collaboration_project_thread_sequences WHERE project_id=?
+    `).get(PROJECT_ID) as { activitySequence: number };
+    database.prepare(`
+      INSERT INTO collaboration_thread_facts(
+        id,project_id,thread_id,sequence,activity_sequence,type,actor_type,actor_id,
+        run_id,message_id,run_event_id,policy_revision_id,payload_json,created_at
+      ) VALUES (
+        'onboarding-task-claimed-fact',?,?,?,?, 'run_event','agent',?,
+        ?,NULL,'onboarding-task-claimed',NULL,?,?
+      )
+    `).run(
+      PROJECT_ID,
+      threadId,
+      threadSequence.factSequence,
+      projectSequence.activitySequence,
+      EXECUTOR_ID,
+      runId,
+      JSON.stringify({ eventType: "task_claimed" }),
+      NOW,
+    );
+    database.prepare(`
+      UPDATE collaboration_threads
+      SET next_fact_sequence=next_fact_sequence+1,last_activity_sequence=?,
+          version=version+1,updated_at=?
+      WHERE project_id=? AND id=?
+    `).run(projectSequence.activitySequence, NOW, PROJECT_ID, threadId);
+    database.prepare(`
+      UPDATE collaboration_project_thread_sequences
+      SET next_activity_sequence=next_activity_sequence+1 WHERE project_id=?
+    `).run(PROJECT_ID);
     database.prepare(`
       INSERT INTO project_validation_policy_revisions(
         id,project_id,created_operation_id,created_actor_type,revision_no,policy_hash,
@@ -271,6 +331,7 @@ function verifiedEmptyAdapter(openedRoots: string[]): SandboxFsAdapter {
 }
 
 async function startGovernedExecution(
+  threadId: string,
   runId: string,
   workItemId: string,
 ): Promise<string> {
@@ -290,7 +351,7 @@ async function startGovernedExecution(
     PROJECT_ID,
     {
       operationId: START_EXECUTION_OPERATION,
-      sourceCollaborationRunId: runId,
+      source: { projectId: PROJECT_ID, runId, threadId },
       workItemId,
     },
     async (input) => {
@@ -339,6 +400,7 @@ async function startGovernedExecution(
   expect(result.body).toMatchObject({
     execution: {
       sourceCollaborationRunId: runId,
+      sourceCollaborationThreadId: threadId,
       status: "queued",
       workItem: { id: workItemId },
     },
@@ -392,8 +454,9 @@ function prepareReviewMaterial(
   const database = openDatabase(databasePath);
   try {
     const attempt = database.prepare(`
-      SELECT id FROM execution_attempts WHERE execution_id=?
-    `).get(executionId) as { id: string };
+      SELECT id,frozen_context_hash AS frozenContextHash
+      FROM execution_attempts WHERE execution_id=?
+    `).get(executionId) as { frozenContextHash: string; id: string };
     const action = database.prepare(`
       SELECT id FROM execution_actions WHERE execution_id=? ORDER BY action_index LIMIT 1
     `).get(executionId) as { id: string };
@@ -417,7 +480,7 @@ function prepareReviewMaterial(
       action.id,
       HASH,
       HASH,
-      HASH,
+      attempt.frozenContextHash,
       "4f53cda18c2baa0c0354bb5f9a3ecbe5ed12ab4d8e11ba873c2f11161202b945",
       "b".repeat(64),
       NOW,
@@ -618,9 +681,14 @@ afterEach(() => {
 
 describe("progressive onboarding T-15 formal governance linkage", () => {
   it("keeps accepted/run_started distinct and preserves workspace, review, approval, and run provenance gates", async () => {
-    const { missionId, runId } = await establishFormalOnboardingGoal();
-    const workItemId = planClaimedWork(missionId, runId);
-    const executionId = await startGovernedExecution(runId, workItemId);
+    const { missionId, runId, threadId } =
+      await establishFormalOnboardingGoal();
+    const workItemId = planClaimedWork(missionId, threadId, runId);
+    const executionId = await startGovernedExecution(
+      threadId,
+      runId,
+      workItemId,
+    );
     const { resultId } = prepareReviewMaterial(executionId, missionId, workItemId);
     addIneligibleReviewers();
 
@@ -670,6 +738,7 @@ describe("progressive onboarding T-15 formal governance linkage", () => {
         result: {
           executionId,
           sourceCollaborationRunId: runId,
+          sourceCollaborationThreadId: threadId,
         },
       });
       expect(database.prepare(`

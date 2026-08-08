@@ -840,7 +840,7 @@ function validatedChunks(
     || header.bytes > MAX_BODY_BYTES
     || !/^[0-9a-f]{64}$/u.test(header.sha256)
     || rows.length > 17
-  ) throw publicFailure();
+  ) throw publicFailure("SCHEMA_DATA_INVALID");
   let offset = 0;
   const hasher = createHash("sha256");
   for (const [index, row] of rows.entries()) {
@@ -852,7 +852,7 @@ function validatedChunks(
       || row.byteLength < 1
       || row.byteLength > MAX_CHUNK_BYTES
       || createHash("sha256").update(bytes).digest("hex") !== row.sha256
-    ) throw publicFailure();
+    ) throw publicFailure("SCHEMA_DATA_INVALID");
     offset += bytes.length;
     hasher.update(bytes);
   }
@@ -860,7 +860,7 @@ function validatedChunks(
     offset !== header.bytes
     || (header.bytes === 0 ? rows.length !== 0 : rows.length === 0)
     || hasher.digest("hex") !== header.sha256
-  ) throw publicFailure();
+  ) throw publicFailure("SCHEMA_DATA_INVALID");
 }
 
 export async function listArtifactChunks(

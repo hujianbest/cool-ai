@@ -1,6 +1,7 @@
 import { render, screen, waitFor, within } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
+import type { ComponentType } from "react";
 
 import TeamPage from "@/app/team/page";
 import { ProjectPanel } from "@/components/project-panel";
@@ -92,6 +93,40 @@ describe("real project settings return path", () => {
     ).toHaveAttribute(
       "href",
       `/team?section=agents&returnTo=${expectedReturnTo}`,
+    );
+  });
+
+  it("preserves canonical thread and run selection across routed history props", async () => {
+    stubNarrow(false);
+    const RoutedProjectPanel = ProjectPanel as ComponentType<{
+      returnTo?: string;
+    }>;
+    const first =
+      `/projects/${project.id}?thread=thread-1&run=run-1`;
+    const second =
+      `/projects/${project.id}?thread=thread-2&run=run-2`;
+    window.history.replaceState(null, "", first);
+    const view = render(<RoutedProjectPanel returnTo={first} />);
+
+    await screen.findByRole("button", { name: project.name });
+    expect(screen.getByRole("link", { name: "团队" })).toHaveAttribute(
+      "href",
+      `/team?section=skills&returnTo=${encodeURIComponent(first)}`,
+    );
+
+    window.history.pushState(null, "", second);
+    window.dispatchEvent(new PopStateEvent("popstate"));
+    view.rerender(<RoutedProjectPanel returnTo={second} />);
+    expect(screen.getByRole("link", { name: "团队" })).toHaveAttribute(
+      "href",
+      `/team?section=skills&returnTo=${encodeURIComponent(second)}`,
+    );
+
+    window.history.back();
+    view.rerender(<RoutedProjectPanel returnTo={first} />);
+    expect(screen.getByRole("link", { name: "团队" })).toHaveAttribute(
+      "href",
+      `/team?section=skills&returnTo=${encodeURIComponent(first)}`,
     );
   });
 

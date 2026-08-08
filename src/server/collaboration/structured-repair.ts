@@ -12,6 +12,7 @@ import {
   type AgentTurn,
   parseAgentTurnContent,
 } from "./agent-turn-schema";
+import type { PublicTextCredentialCategory } from "./public-text-credential-classifier";
 
 export type StructuredModelCall = {
   kind: "primary" | "repair";
@@ -31,6 +32,10 @@ export type StructuredTurnResult = {
   calls: StructuredModelCall[];
   usage: StructuredCallUsage[];
 };
+
+type RawContentScanner = (
+  content: string,
+) => PublicTextCredentialCategory | null;
 
 function usageFor(call: StructuredModelCall): StructuredCallUsage {
   return {
@@ -53,6 +58,56 @@ function result(
     calls,
     usage: calls.map(usageFor),
   };
+}
+
+function credentialRejected(
+  calls: StructuredModelCall[],
+  context: OpenAiChatCallContext,
+): StructuredTurnResult {
+  const rejectedIndex = calls.length - 1;
+  return result(
+    "provider_failed",
+    null,
+    null,
+    calls.map((call, index) =>
+      index === rejectedIndex
+        ? {
+            ...call,
+            result: {
+              ...call.result,
+              content: null,
+              error: {
+                category: "credential_content_rejected",
+                code: "CREDENTIAL_CONTENT_REJECTED",
+                correlationId: context.correlationId,
+                httpStatus: 422,
+              },
+              status: "response_invalid",
+            },
+          }
+        : call,
+    ),
+  );
+}
+
+function publicTurnTexts(turn: AgentTurn): string[] {
+  const texts = [
+    turn.message,
+    ...turn.tasks.flatMap((task) => [task.title, task.description]),
+  ];
+  if (turn.disposition.type === "handoff") {
+    texts.push(turn.disposition.summary, turn.disposition.reason);
+  } else if (turn.disposition.type === "decision_request") {
+    texts.push(turn.disposition.question, ...turn.disposition.options);
+  }
+  return texts;
+}
+
+function parsedTurnContainsCredential(
+  turn: AgentTurn,
+  scanPublicText: RawContentScanner,
+): boolean {
+  return publicTurnTexts(turn).some((text) => scanPublicText(text) !== null);
 }
 
 function repairRequest(
@@ -83,6 +138,7 @@ function repairRequest(
 export async function executeStructuredTurn(
   primaryRequest: OpenAiChatRequest,
   context: OpenAiChatCallContext,
+  scanRawContent: RawContentScanner = () => null,
 ): Promise<StructuredTurnResult> {
   const primaryResult = await callOpenAiChat(primaryRequest, context);
   const primaryCall: StructuredModelCall = {
@@ -92,9 +148,15 @@ export async function executeStructuredTurn(
   if (primaryResult.status !== "succeeded" || primaryResult.content === null) {
     return result("provider_failed", null, null, [primaryCall]);
   }
+  if (scanRawContent(primaryResult.content)) {
+    return credentialRejected([primaryCall], context);
+  }
 
   const primaryTurn = parseAgentTurnContent(primaryResult.content);
   if (primaryTurn.success) {
+    if (parsedTurnContainsCredential(primaryTurn.turn, scanRawContent)) {
+      return credentialRejected([primaryCall], context);
+    }
     return result("completed", primaryTurn.turn, null, [primaryCall]);
   }
 
@@ -110,9 +172,15 @@ export async function executeStructuredTurn(
   if (repairResult.status !== "succeeded" || repairResult.content === null) {
     return result("provider_failed", null, null, calls);
   }
+  if (scanRawContent(repairResult.content)) {
+    return credentialRejected(calls, context);
+  }
 
   const repairedTurn = parseAgentTurnContent(repairResult.content);
-  return repairedTurn.success
-    ? result("completed", repairedTurn.turn, null, calls)
-    : result("paused", null, "structured_output_invalid", calls);
+  if (!repairedTurn.success) {
+    return result("paused", null, "structured_output_invalid", calls);
+  }
+  return parsedTurnContainsCredential(repairedTurn.turn, scanRawContent)
+    ? credentialRejected(calls, context)
+    : result("completed", repairedTurn.turn, null, calls);
 }

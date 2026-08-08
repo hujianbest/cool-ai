@@ -318,7 +318,7 @@ async function createAgent(page, {
   await page.getByLabel("创建方式").selectOption(template);
   await page.getByLabel("Agent 名称").fill(name);
   await page
-    .getByLabel("模型服务")
+    .getByLabel("模型服务", { exact: true })
     .selectOption({ label: "Collaboration Local Provider" });
   await page.getByRole("checkbox", { name: skill }).check();
   await page.getByLabel("Token 预算").fill("24000");

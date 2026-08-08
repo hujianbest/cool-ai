@@ -4,12 +4,8 @@ import { join } from "node:path";
 import type { DatabaseSync } from "node:sqlite";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
-import { createV6FixtureDatabaseOpener } from "@/tests/v6-fixture-db";
-
-const openDatabase = createV6FixtureDatabaseOpener({
-  missingDeliveryHeadMissionIds: ["mission", "other-mission"],
-  missingReviewHeadResultIds: [],
-});
+import { openDatabase } from "@/src/server/db";
+import { initializeMissingMissionHeads } from "@/tests/v7-fixture-graph";
 import {
   controlExecution,
   type ExecutionControlDependencies,
@@ -37,6 +33,8 @@ let dependencies: ExecutionControlDependencies;
 
 function seed(): void {
   database.exec(`
+    BEGIN;
+    PRAGMA defer_foreign_keys=ON;
     INSERT INTO projects (id,name,created_at,workspace_path,workspace_key,version)
     VALUES
       ('${PROJECT_ID}','Controls','${NOW}','D:\\canonical','d:/canonical',1),
@@ -70,12 +68,48 @@ function seed(): void {
     ) VALUES
       ('work','mission','Work','','in_progress','agent',1,'${NOW}','${NOW}'),
       ('other-work','other-mission','Other work','','in_progress','other-agent',1,'${NOW}','${NOW}');
+    INSERT INTO collaboration_operations (
+      id,project_id,thread_id,run_id,kind,request_hash,status,http_status,
+      response_json,response_schema_version,created_at,updated_at
+    ) VALUES
+      ('thread-op','${PROJECT_ID}','thread',NULL,'thread_create','thread-hash',
+       'completed',201,'{}',7,'${NOW}','${NOW}'),
+      ('other-thread-op','${OTHER_PROJECT_ID}','other-thread',NULL,'thread_create','other-thread-hash',
+       'completed',201,'{}',7,'${NOW}','${NOW}');
+    INSERT INTO collaboration_thread_policy_revisions (
+      id,project_id,thread_id,version,created_operation_id,created_at
+    ) VALUES
+      ('thread-policy','${PROJECT_ID}','thread',1,'thread-op','${NOW}'),
+      ('other-thread-policy','${OTHER_PROJECT_ID}','other-thread',1,'other-thread-op','${NOW}');
+    INSERT INTO collaboration_threads (
+      id,project_id,title,active_policy_revision_id,policy_version,next_fact_sequence,
+      last_activity_sequence,version,created_at,updated_at
+    ) VALUES
+      ('thread','${PROJECT_ID}','Thread','thread-policy',1,4,3,1,'${NOW}','${NOW}'),
+      ('other-thread','${OTHER_PROJECT_ID}','Other thread','other-thread-policy',1,4,3,1,'${NOW}','${NOW}');
+    INSERT INTO collaboration_thread_policy_members (
+      project_id,thread_id,revision_id,position,agent_id,agent_display_name
+    ) VALUES
+      ('${PROJECT_ID}','thread','thread-policy',0,'agent','Agent'),
+      ('${OTHER_PROJECT_ID}','other-thread','other-thread-policy',0,'other-agent','Other');
+    INSERT INTO collaboration_project_thread_sequences (project_id,next_activity_sequence)
+    VALUES ('${PROJECT_ID}',4),('${OTHER_PROJECT_ID}',4);
     INSERT INTO collaboration_runs (
-      id,project_id,status,current_agent_id,round_count,next_event_sequence,
+      id,project_id,thread_id,status,current_agent_id,round_count,next_event_sequence,
       version,execution_epoch,pause_reason,pause_category,created_at,updated_at
     ) VALUES
-      ('run','${PROJECT_ID}','planned','agent',1,1,1,1,NULL,NULL,'${NOW}','${NOW}'),
-      ('other-run','${OTHER_PROJECT_ID}','planned','other-agent',1,1,1,1,NULL,NULL,'${NOW}','${NOW}');
+      ('run','${PROJECT_ID}','thread','planned','agent',1,1,1,1,NULL,NULL,'${NOW}','${NOW}'),
+      ('other-run','${OTHER_PROJECT_ID}','other-thread','planned','other-agent',1,1,1,1,NULL,NULL,'${NOW}','${NOW}');
+    INSERT INTO collaboration_thread_facts (
+      id,project_id,thread_id,sequence,activity_sequence,type,actor_type,actor_id,
+      run_id,message_id,run_event_id,policy_revision_id,payload_json,created_at
+    ) VALUES
+      ('thread-created','${PROJECT_ID}','thread',1,1,'thread_created','system',NULL,NULL,NULL,NULL,NULL,'{"title":"Thread"}','${NOW}'),
+      ('thread-policy-fact','${PROJECT_ID}','thread',2,2,'policy_changed','system',NULL,NULL,NULL,NULL,'thread-policy','{"policyVersion":1}','${NOW}'),
+      ('thread-run-fact','${PROJECT_ID}','thread',3,3,'run_linked','system',NULL,'run',NULL,NULL,NULL,'{"runId":"run"}','${NOW}'),
+      ('other-thread-created','${OTHER_PROJECT_ID}','other-thread',1,1,'thread_created','system',NULL,NULL,NULL,NULL,NULL,'{"title":"Other thread"}','${NOW}'),
+      ('other-thread-policy-fact','${OTHER_PROJECT_ID}','other-thread',2,2,'policy_changed','system',NULL,NULL,NULL,NULL,'other-thread-policy','{"policyVersion":1}','${NOW}'),
+      ('other-thread-run-fact','${OTHER_PROJECT_ID}','other-thread',3,3,'run_linked','system',NULL,'other-run',NULL,NULL,NULL,'{"runId":"other-run"}','${NOW}');
     INSERT INTO project_validation_policy_revisions (
       id,project_id,created_operation_id,created_actor_type,revision_no,policy_hash,
       classifier_version,warning_accepted,canonical_bytes,entry_count,created_at
@@ -87,16 +121,17 @@ function seed(): void {
       ('${PROJECT_ID}','policy',1,'${NOW}'),
       ('${OTHER_PROJECT_ID}','other-policy',1,'${NOW}');
     INSERT INTO executions (
-      id,project_id,source_collaboration_run_id,mission_id,work_item_id,agent_id,
+      id,project_id,source_collaboration_thread_id,source_collaboration_run_id,
+      mission_id,work_item_id,agent_id,
       current_policy_revision_id,status,resume_target,reason_code,
       manual_recovery_required,recovery_resolution,current_attempt_no,
       business_round_count,tool_call_count,next_event_sequence,version,created_at,
       business_deadline_at,first_running_at,updated_at,merged_at
     ) VALUES
-      ('${EXECUTION_ID}','${PROJECT_ID}','run','mission','work','agent','policy',
+      ('${EXECUTION_ID}','${PROJECT_ID}','thread','run','mission','work','agent','policy',
        'running',NULL,NULL,0,NULL,1,3,4,1,1,'${NOW}',
        '2099-07-30T07:15:00.000Z','2099-07-30T07:00:00.000Z','${NOW}',NULL),
-      ('${OTHER_EXECUTION_ID}','${OTHER_PROJECT_ID}','other-run','other-mission',
+      ('${OTHER_EXECUTION_ID}','${OTHER_PROJECT_ID}','other-thread','other-run','other-mission',
        'other-work','other-agent','other-policy','running',NULL,NULL,0,NULL,1,0,0,1,1,
        '${NOW}','2099-07-30T07:15:00.000Z','2099-07-30T07:00:00.000Z','${NOW}',NULL);
     INSERT INTO execution_attempts (
@@ -110,7 +145,9 @@ function seed(): void {
        NULL,'${HASH}','${HASH}','{}','{}','${HASH}','policy',1,'${POLICY_HASH}','${NOW}',NULL),
       ('other-attempt','${OTHER_PROJECT_ID}','${OTHER_EXECUTION_ID}',1,'ready','D:\\other-sandbox',
        NULL,'${HASH}','${HASH}','{}','{}','${HASH}','other-policy',1,'${POLICY_HASH}','${NOW}',NULL);
+    COMMIT;
   `);
+  initializeMissingMissionHeads(database);
 }
 
 function setExecution(
@@ -235,6 +272,26 @@ describe("execution lifecycle controls", () => {
 
   it("retries stale execution as a new attempt and sandbox without resetting history or deadline", async () => {
     const oldDeadline = row("executions", "id=?", EXECUTION_ID).business_deadline_at;
+    database.exec(`
+      INSERT INTO collaboration_runs (
+        id,project_id,thread_id,status,current_agent_id,round_count,next_event_sequence,
+        version,execution_epoch,pause_reason,pause_category,created_at,updated_at
+      ) VALUES (
+        'newer-run','${PROJECT_ID}','thread','planned','agent',1,1,1,1,NULL,NULL,
+        '2026-07-30T07:01:00.000Z','2026-07-30T07:01:00.000Z'
+      );
+      INSERT INTO collaboration_thread_facts (
+        id,project_id,thread_id,sequence,activity_sequence,type,actor_type,actor_id,
+        run_id,message_id,run_event_id,policy_revision_id,payload_json,created_at
+      ) VALUES (
+        'newer-run-fact','${PROJECT_ID}','thread',4,4,'run_linked','system',NULL,
+        'newer-run',NULL,NULL,NULL,'{"runId":"newer-run"}','2026-07-30T07:01:00.000Z'
+      );
+      UPDATE collaboration_threads
+      SET next_fact_sequence=5,last_activity_sequence=4 WHERE id='thread';
+      UPDATE collaboration_project_thread_sequences
+      SET next_activity_sequence=5 WHERE project_id='${PROJECT_ID}';
+    `);
     const version = setExecution("stale", null, "STALE_EXECUTION");
     const pending = controlExecution(databasePath, EXECUTION_ID, {
       action: "retry",
@@ -255,6 +312,15 @@ describe("execution lifecycle controls", () => {
       .toBe("superseded");
     expect(row("execution_attempts", "execution_id=? AND attempt_no=2", EXECUTION_ID))
       .toMatchObject({ status: "preparing" });
+    const retryPublic = JSON.parse(String(
+      row("execution_attempts", "execution_id=? AND attempt_no=2", EXECUTION_ID)
+        .frozen_public_json,
+    )) as { facts: { source: unknown } };
+    expect(retryPublic.facts.source).toEqual({
+      projectId: PROJECT_ID,
+      runId: "run",
+      threadId: "thread",
+    });
     expect(sandboxInputs[0]?.sandboxRoot).toContain(join(EXECUTION_ID, "2", "sandbox"));
     expect(row("execution_operations", "id=?", operationId(20))).toMatchObject({
       kind: "retry",

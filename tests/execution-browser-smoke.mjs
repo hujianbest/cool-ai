@@ -378,7 +378,9 @@ async function createAgent(page, name, avatar, skill) {
   await page.getByRole("button", { name: "创建 Agent" }).click();
   await page.getByLabel("创建方式").selectOption("builder");
   await page.getByLabel("Agent 名称").fill(name);
-  await page.getByLabel("模型服务").selectOption({ label: "Execution Local Provider" });
+  await page
+    .getByLabel("模型服务", { exact: true })
+    .selectOption({ label: "Execution Local Provider" });
   await page.getByRole("checkbox", { name: skill }).check();
   await page.getByLabel("Token 预算").fill("24000");
   await page.getByLabel("接力轮次").fill("8");

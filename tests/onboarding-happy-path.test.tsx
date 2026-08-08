@@ -23,6 +23,7 @@ const project = {
   id: "project-onboarding",
   name: "Onboarding Project",
 };
+const threadId = "thread-onboarding";
 
 function collaborationState(started = false) {
   const message = {
@@ -35,8 +36,10 @@ function collaborationState(started = false) {
     mentionAgentId: null,
     mentionDisplayName: null,
     mentionMemberStatus: null,
+    projectId: project.id,
     runId: started ? "run-1" : null,
     sequence: 1,
+    threadId,
   };
   const run = {
     createdAt: "2026-08-08T00:01:00.000Z",
@@ -46,59 +49,140 @@ function collaborationState(started = false) {
     projectId: project.id,
     roundCount: 0,
     status: "running",
+    threadId,
     updatedAt: "2026-08-08T00:01:00.000Z",
     version: 1,
   };
+  const ownerFact = {
+    activitySequence: 3,
+    actorId: null,
+    actorType: "owner",
+    createdAt: message.createdAt,
+    id: "fact-owner",
+    message,
+    messageId: message.id,
+    payload: { messageId: message.id },
+    policyRevisionId: null,
+    projectId: project.id,
+    runEventId: null,
+    runId: run.id,
+    sequence: 3,
+    threadId,
+    type: "owner_message",
+  };
   return {
-    pendingDecision: null,
-    projectMessagesPage: { items: started ? [message] : [], nextAfter: null },
-    readiness: { missing: [], ready: true },
-    run: started ? run : null,
-    timelinePage: {
+    activeRun: started ? { runId: run.id, threadId } : null,
+    factsPage: {
       items: started
         ? [
             {
+              activitySequence: 1,
               actorId: null,
               actorType: "system",
               createdAt: "2026-08-08T00:01:00.000Z",
-              id: "event-started",
-              payload: {
-                currentAgentId: "agent-builder",
-                messageId: message.id,
-                messageSequence: 1,
-              },
+              id: "fact-linked",
+              message: null,
+              messageId: null,
+              payload: { runId: run.id },
+              policyRevisionId: null,
+              projectId: project.id,
+              runEventId: null,
               runId: run.id,
               sequence: 1,
-              type: "run_started",
+              threadId,
+              type: "run_linked",
             },
             {
+              activitySequence: 2,
               actorId: null,
-              actorType: "owner",
+              actorType: "system",
               createdAt: "2026-08-08T00:01:00.000Z",
-              id: "event-owner",
-              payload: {
-                mentionAgentId: null,
-                mentionDisplayName: null,
-                messageId: message.id,
-                messageSequence: 1,
-              },
+              id: "fact-started",
+              message: null,
+              messageId: null,
+              payload: { eventType: "run_started" },
+              policyRevisionId: null,
+              projectId: project.id,
+              runEventId: "event-started",
               runId: run.id,
               sequence: 2,
-              type: "owner_message",
+              threadId,
+              type: "run_event",
             },
+            ownerFact,
           ]
         : [],
       nextAfter: null,
     },
-    usage: {
-      byAgent: [],
-      completionTokens: 0,
-      promptTokens: 0,
-      repairCalls: 0,
-      totalTokens: 0,
-      unreportedCalls: 0,
+    messagesPage: { items: started ? [message] : [], nextAfter: null },
+    readiness: {
+      dispatch: "ready",
+      missingProjectFacts: [],
+      selectedMemberId: "agent-builder",
+    },
+    runs: started ? [run] : [],
+    selectedRun: started ? run : null,
+    thread: {
+      availability: "ready",
+      createdAt: "2026-08-08T00:00:00.000Z",
+      id: threadId,
+      lastActivitySequence: started ? 3 : 1,
+      policy: {
+        availability: "ready",
+        createdAt: "2026-08-08T00:00:00.000Z",
+        members: [
+          {
+            agentId: "agent-builder",
+            displayNameSnapshot: "Builder",
+            live: "current",
+            position: 0,
+          },
+          {
+            agentId: "agent-reviewer",
+            displayNameSnapshot: "Reviewer",
+            live: "current",
+            position: 1,
+          },
+        ],
+        revisionId: "revision-1",
+        unavailableMemberIds: [],
+        version: 1,
+      },
+      policyVersion: 1,
+      projectId: project.id,
+      title: "Onboarding thread",
+      updatedAt: "2026-08-08T00:01:00.000Z",
+      version: 1,
     },
   };
+}
+
+function threadReadResponse(
+  url: string,
+  started: boolean,
+): Response | null {
+  return threadStateResponse(url, collaborationState(started));
+}
+
+function threadStateResponse(
+  url: string,
+  state: ReturnType<typeof collaborationState>,
+): Response | null {
+  const base = `/api/projects/${project.id}/threads/${threadId}`;
+  if (url === base || url.startsWith(`${base}?run=`)) {
+    const { factsPage: _facts, messagesPage: _messages, ...detail } = state;
+    return Response.json(detail);
+  }
+  if (url === `${base}/messages` || url.startsWith(`${base}/messages?`)) {
+    return Response.json(state.messagesPage);
+  }
+  if (url === `${base}/facts` || url.startsWith(`${base}/facts?`)) {
+    return Response.json(state.factsPage);
+  }
+  if (url.startsWith(`${base}/runs/`) && url.includes("/timeline")) {
+    return Response.json({ items: [], nextAfter: null });
+  }
+  return null;
 }
 
 function installHappyPathFetch() {
@@ -236,17 +320,22 @@ function installHappyPathFetch() {
         }
         return Response.json({ mission, workItems: [] });
       }
-      if (url.startsWith(`/api/projects/${project.id}/collaboration`)) {
-        return Response.json(collaborationState(started));
-      }
-      if (url === `/api/projects/${project.id}/runs` && init?.method === "POST") {
+      const threadRead = !init?.method
+        ? threadReadResponse(url, started)
+        : null;
+      if (threadRead) return threadRead;
+      if (
+        url === `/api/projects/${project.id}/threads/${threadId}/runs` &&
+        init?.method === "POST"
+      ) {
         started = true;
         const state = collaborationState(true);
         return Response.json(
           {
             created: true,
-            message: state.projectMessagesPage.items[0],
-            run: state.run,
+            facts: state.factsPage.items,
+            message: state.messagesPage.items[0],
+            run: state.selectedRun,
           },
           { status: 201 },
         );
@@ -255,7 +344,9 @@ function installHappyPathFetch() {
         return Response.json({ executions: [] });
       }
       if (url.includes("/advance")) {
-        return Response.json({ run: { ...collaborationState(true).run, status: "failed" } });
+        return Response.json({
+          run: { ...collaborationState(true).selectedRun, status: "failed" },
+        });
       }
       throw new Error(`Unexpected request: ${url}`);
     },
@@ -306,7 +397,7 @@ describe("progressive onboarding T-1", () => {
     );
   });
 
-  it("uses the existing Mission and Collaboration surfaces without calling legacy tasks", async () => {
+  it("uses selected thread/run tuple routes without legacy collaboration, project-only, run-only, or tasks calls", async () => {
     const { requests } = installHappyPathFetch();
     const user = userEvent.setup();
     window.history.replaceState(null, "", "/?guide=project-select");
@@ -321,7 +412,11 @@ describe("progressive onboarding T-1", () => {
         `/projects/${project.id}?guide=workspace`,
       ),
     );
-    window.history.pushState(null, "", `/projects/${project.id}?guide=goal`);
+    window.history.pushState(
+      null,
+      "",
+      `/projects/${project.id}?thread=${threadId}&guide=goal`,
+    );
     window.dispatchEvent(new PopStateEvent("popstate"));
     const goalGuide = await screen.findByRole("region", {
       name: "首次使用引导",
@@ -360,7 +455,7 @@ describe("progressive onboarding T-1", () => {
       screen.getByLabelText("发送给项目群聊"),
       "Prepare the verified release plan",
     );
-    await user.click(screen.getByRole("button", { name: "发送并启动协作" }));
+    await user.click(screen.getByRole("button", { name: "发送并开始首次运行" }));
 
     expect(await screen.findByText("协作已启动")).toBeInTheDocument();
     expect(await screen.findByText("所有者发来消息")).toBeInTheDocument();
@@ -373,9 +468,37 @@ describe("progressive onboarding T-1", () => {
       ),
     ).toBeInTheDocument();
     expect(requests.some((url) => /\/tasks(?:\/|$|\?)/.test(url))).toBe(false);
+    expect(
+      requests.some((url) =>
+        url === `/api/projects/${project.id}/collaboration` ||
+        url === `/api/projects/${project.id}/runs` ||
+        url === `/api/projects/${project.id}/messages` ||
+        url.startsWith("/api/runs/")
+      ),
+    ).toBe(false);
+    expect(requests).toContain(
+      `/api/projects/${project.id}/threads/${threadId}`,
+    );
+    expect(requests).toContain(
+      `/api/projects/${project.id}/threads/${threadId}/facts`,
+    );
+    expect(requests).toContain(
+      `/api/projects/${project.id}/threads/${threadId}/messages`,
+    );
+    expect(requests).toContain(
+      `/api/projects/${project.id}/threads/${threadId}/runs`,
+    );
   });
 
   it("fails closed when the required resources are incomplete", async () => {
+    expect(
+      onboardingMachine.parseCollaborationGuideEnvelope(
+        collaborationState(false),
+        project.id,
+        threadId,
+        null,
+      ),
+    ).toEqual({ kind: "success", started: false });
     vi.stubGlobal(
       "fetch",
       vi.fn(async (input: RequestInfo | URL) => {
@@ -392,9 +515,10 @@ describe("progressive onboarding T-1", () => {
         if (url.endsWith("/mission")) {
           return Response.json({ mission: null, workItems: [] });
         }
-        if (url.includes("/collaboration")) {
-          return Response.json(collaborationState(false));
-        }
+        const threadRead = !init?.method
+          ? threadReadResponse(url, false)
+          : null;
+        if (threadRead) return threadRead;
         if (url.endsWith("/executions")) return Response.json({ executions: [] });
         throw new Error(`Unexpected request: ${url}`);
       }),
@@ -402,7 +526,7 @@ describe("progressive onboarding T-1", () => {
     window.history.replaceState(
       null,
       "",
-      `/projects/${project.id}?guide=goal`,
+      `/projects/${project.id}?thread=${threadId}&guide=goal`,
     );
     render(<ProjectPanel />);
 
@@ -864,9 +988,8 @@ describe("progressive onboarding T-6 explicit project selection", () => {
     if (url.endsWith("/mission")) {
       return Response.json({ mission: null, workItems: [] });
     }
-    if (url.endsWith("/collaboration")) {
-      return Response.json(collaborationState(false));
-    }
+    const threadRead = threadReadResponse(url, false);
+    if (threadRead) return threadRead;
     if (url.endsWith("/executions")) {
       return Response.json({ executions: [] });
     }
@@ -1149,9 +1272,8 @@ describe("progressive onboarding T-7 workspace binding", () => {
     if (url.endsWith("/mission")) {
       return Response.json({ mission: null, workItems: [] });
     }
-    if (url.endsWith("/collaboration")) {
-      return Response.json(collaborationState(false));
-    }
+    const threadRead = threadReadResponse(url, false);
+    if (threadRead) return threadRead;
     if (url.endsWith("/executions")) {
       return Response.json({ executions: [] });
     }
@@ -1760,7 +1882,9 @@ describe("progressive onboarding T-9 formal goal intake", () => {
         onSelectProject={vi.fn()}
         projectId={project.id}
         projects={[project]}
+        selectedRunId={null}
         step="goal"
+        threadId={threadId}
       />,
     );
     const guide = screen.getByRole("region", { name: "首次使用引导" });
@@ -1879,39 +2003,56 @@ describe("progressive onboarding T-9 formal goal intake", () => {
       "fetch",
       vi.fn(async (input: RequestInfo | URL, init?: RequestInit) => {
         const url = String(input);
-        if (url.endsWith("/collaboration")) {
-          collaborationGets += 1;
-          return Response.json(collaborationState(started));
+        const threadRead = !init?.method
+          ? threadReadResponse(url, started)
+          : null;
+        if (threadRead) {
+          if (url === `/api/projects/${project.id}/threads/${threadId}` ||
+            url.startsWith(`/api/projects/${project.id}/threads/${threadId}?run=`)) {
+            collaborationGets += 1;
+          }
+          return threadRead;
         }
-        if (url.endsWith("/runs") && init?.method === "POST") {
+        if (
+          url === `/api/projects/${project.id}/threads/${threadId}/runs` &&
+          init?.method === "POST"
+        ) {
           runPosts += 1;
           started = true;
           const state = collaborationState(true);
           return Response.json(
             {
               created: true,
-              message: state.projectMessagesPage.items[0],
-              run: state.run,
+              facts: state.factsPage.items,
+              message: state.messagesPage.items[0],
+              run: state.selectedRun,
             },
             { status: 201 },
           );
         }
         if (url.includes("/advance")) {
           advancePosts += 1;
-          return Response.json({ run: collaborationState(true).run });
+          return Response.json({ run: collaborationState(true).selectedRun });
         }
         throw new Error(`Unexpected request: ${url}`);
       }),
     );
     const user = userEvent.setup();
 
-    render(<CollaborationPanel projectId={project.id} startOnly />);
-    await screen.findByText("尚无协作消息。");
+    render(
+      <CollaborationPanel
+        projectId={project.id}
+        selectedRunId={null}
+        startOnly
+        threadId={threadId}
+      />,
+    );
+    await screen.findByText("尚无协作消息。请发送第一条消息。");
     await user.type(
       screen.getByLabelText("发送给项目群聊"),
       "Accept this goal for collaboration.",
     );
-    await user.click(screen.getByRole("button", { name: "发送并启动协作" }));
+    await user.click(screen.getByRole("button", { name: "发送并开始首次运行" }));
 
     expect(
       await screen.findByText("协作已启动；目标已受理，但尚未执行、复核或交付。"),
@@ -1929,11 +2070,19 @@ describe("progressive onboarding T-9 formal goal intake", () => {
       "fetch",
       vi.fn(async (input: RequestInfo | URL, init?: RequestInit) => {
         const url = String(input);
-        if (url.endsWith("/collaboration")) {
-          getCount += 1;
-          return Response.json(collaborationState(false));
+        const threadRead = !init?.method
+          ? threadReadResponse(url, false)
+          : null;
+        if (threadRead) {
+          if (url === `/api/projects/${project.id}/threads/${threadId}`) {
+            getCount += 1;
+          }
+          return threadRead;
         }
-        if (url.endsWith("/runs") && init?.method === "POST") {
+        if (
+          url === `/api/projects/${project.id}/threads/${threadId}/runs` &&
+          init?.method === "POST"
+        ) {
           postCount += 1;
           operationIds.push(
             (JSON.parse(String(init.body)) as { operationId: string }).operationId,
@@ -1945,13 +2094,20 @@ describe("progressive onboarding T-9 formal goal intake", () => {
     );
     const user = userEvent.setup();
 
-    render(<CollaborationPanel projectId={project.id} startOnly />);
-    await screen.findByText("尚无协作消息。");
+    render(
+      <CollaborationPanel
+        projectId={project.id}
+        selectedRunId={null}
+        startOnly
+        threadId={threadId}
+      />,
+    );
+    await screen.findByText("尚无协作消息。请发送第一条消息。");
     await user.type(
       screen.getByLabelText("发送给项目群聊"),
       "PRIVATE OWNER MESSAGE MUST NOT ENTER RECEIPT",
     );
-    await user.click(screen.getByRole("button", { name: "发送并启动协作" }));
+    await user.click(screen.getByRole("button", { name: "发送并开始首次运行" }));
 
     const receipt = await screen.findByRole("alert");
     expect(receipt).toHaveTextContent("operation receipt");
@@ -1985,7 +2141,6 @@ describe("progressive onboarding T-14 unknown-write reconciliation", () => {
     messages: Array<{ content: string; id: string; sequence: number }>,
   ) {
     const state = collaborationState(true);
-    const run = state.run!;
     const extraMessages = messages.map((message) => ({
       authorAgentId: null,
       authorDisplayName: "项目所有者",
@@ -1996,32 +2151,36 @@ describe("progressive onboarding T-14 unknown-write reconciliation", () => {
       mentionAgentId: null,
       mentionDisplayName: null,
       mentionMemberStatus: null,
-      runId: run.id,
+      projectId: project.id,
+      runId: null,
       sequence: message.sequence,
+      threadId,
     }));
-    const extraEvents = extraMessages.map((message, index) => ({
+    const extraFacts = extraMessages.map((message, index) => ({
+      activitySequence: 4 + index,
       actorId: null,
       actorType: "owner" as const,
       createdAt: message.createdAt,
-      id: `event-owner-${message.id}`,
-      payload: {
-        mentionAgentId: null,
-        mentionDisplayName: null,
-        messageId: message.id,
-        messageSequence: message.sequence,
-      },
-      runId: run.id,
-      sequence: 3 + index,
+      id: `fact-owner-${message.id}`,
+      message,
+      messageId: message.id,
+      payload: { messageId: message.id },
+      policyRevisionId: null,
+      projectId: project.id,
+      runEventId: null,
+      runId: null,
+      sequence: 4 + index,
+      threadId,
       type: "owner_message" as const,
     }));
     return {
       ...state,
-      projectMessagesPage: {
-        items: [...state.projectMessagesPage.items, ...extraMessages],
+      factsPage: {
+        items: [...state.factsPage.items, ...extraFacts],
         nextAfter: null,
       },
-      timelinePage: {
-        items: [...state.timelinePage.items, ...extraEvents],
+      messagesPage: {
+        items: [...state.messagesPage.items, ...extraMessages],
         nextAfter: null,
       },
     };
@@ -2135,17 +2294,26 @@ describe("progressive onboarding T-14 unknown-write reconciliation", () => {
       "fetch",
       vi.fn(async (input: RequestInfo | URL, init?: RequestInit) => {
         const url = String(input);
-        if (url.endsWith("/collaboration")) {
-          collaborationGets += 1;
-          return Response.json(
-            persisted
-              ? stateWithOwnerMessages([
-                  { content, id: "message-active", sequence: 2 },
-                ])
-              : collaborationState(true),
-          );
+        const threadRead = !init?.method
+          ? threadStateResponse(
+              url,
+              persisted
+                ? stateWithOwnerMessages([
+                    { content, id: "message-active", sequence: 2 },
+                  ])
+                : collaborationState(true),
+            )
+          : null;
+        if (threadRead) {
+          if (url.startsWith(
+            `/api/projects/${project.id}/threads/${threadId}?run=`,
+          )) collaborationGets += 1;
+          return threadRead;
         }
-        if (url.endsWith("/messages") && init?.method === "POST") {
+        if (
+          url === `/api/projects/${project.id}/threads/${threadId}/messages` &&
+          init?.method === "POST"
+        ) {
           messagePosts += 1;
           persisted = true;
           throw new TypeError("response lost after commit");
@@ -2158,7 +2326,14 @@ describe("progressive onboarding T-14 unknown-write reconciliation", () => {
     );
     const user = userEvent.setup();
 
-    render(<CollaborationPanel projectId={project.id} startOnly />);
+    render(
+      <CollaborationPanel
+        projectId={project.id}
+        selectedRunId="run-1"
+        startOnly
+        threadId={threadId}
+      />,
+    );
     const composer = await screen.findByLabelText("发送给项目群聊");
     await user.type(composer, content);
     await user.click(screen.getByRole("button", { name: "发送消息" }));
@@ -2179,17 +2354,24 @@ describe("progressive onboarding T-14 unknown-write reconciliation", () => {
       "fetch",
       vi.fn(async (input: RequestInfo | URL, init?: RequestInit) => {
         const url = String(input);
-        if (url.endsWith("/collaboration")) {
-          return Response.json(
-            ambiguous
-              ? stateWithOwnerMessages([
-                  { content, id: "message-ambiguous-a", sequence: 2 },
-                  { content, id: "message-ambiguous-b", sequence: 3 },
-                ])
-              : collaborationState(true),
-          );
+        const threadRead = !init?.method
+          ? threadStateResponse(
+              url,
+              ambiguous
+                ? stateWithOwnerMessages([
+                    { content, id: "message-ambiguous-a", sequence: 2 },
+                    { content, id: "message-ambiguous-b", sequence: 3 },
+                  ])
+                : collaborationState(true),
+            )
+          : null;
+        if (threadRead) {
+          return threadRead;
         }
-        if (url.endsWith("/messages") && init?.method === "POST") {
+        if (
+          url === `/api/projects/${project.id}/threads/${threadId}/messages` &&
+          init?.method === "POST"
+        ) {
           messagePosts += 1;
           operationIds.push(
             (JSON.parse(String(init.body)) as { operationId: string }).operationId,
@@ -2198,14 +2380,19 @@ describe("progressive onboarding T-14 unknown-write reconciliation", () => {
             return Response.json({
               extra: "invalid-envelope",
               message: { id: "forged-message" },
-              run: collaborationState(true).run,
+              run: null,
             });
           }
+          const explicitState = stateWithOwnerMessages([
+            { content, id: "message-explicit", sequence: 2 },
+          ]);
+          const explicitMessage = explicitState.messagesPage.items[1];
           return Response.json({
-            message: stateWithOwnerMessages([
-              { content, id: "message-explicit", sequence: 2 },
-            ]).projectMessagesPage.items[1],
-            run: collaborationState(true).run,
+            fact: explicitState.factsPage.items.find(
+              (fact) => fact.messageId === explicitMessage.id,
+            ),
+            message: explicitMessage,
+            run: null,
           });
         }
         if (url.endsWith("/members")) {
@@ -2216,7 +2403,14 @@ describe("progressive onboarding T-14 unknown-write reconciliation", () => {
     );
     const user = userEvent.setup();
 
-    render(<CollaborationPanel projectId={project.id} startOnly />);
+    render(
+      <CollaborationPanel
+        projectId={project.id}
+        selectedRunId="run-1"
+        startOnly
+        threadId={threadId}
+      />,
+    );
     await user.type(await screen.findByLabelText("发送给项目群聊"), content);
     await user.click(screen.getByRole("button", { name: "发送消息" }));
 
@@ -2246,14 +2440,20 @@ describe("progressive onboarding T-14 unknown-write reconciliation", () => {
       "fetch",
       vi.fn(async (input: RequestInfo | URL, init?: RequestInit) => {
         const url = String(input);
-        if (url.endsWith("/collaboration")) {
+        const threadRead = !init?.method
+          ? threadReadResponse(url, persisted)
+          : null;
+        if (threadRead) {
           if (failReconciliationGet) {
             failReconciliationGet = false;
             throw new TypeError("reconciliation GET interrupted");
           }
-          return Response.json(collaborationState(persisted));
+          return threadRead;
         }
-        if (url.endsWith("/runs") && init?.method === "POST") {
+        if (
+          url === `/api/projects/${project.id}/threads/${threadId}/runs` &&
+          init?.method === "POST"
+        ) {
           runPosts += 1;
           persisted = true;
           failReconciliationGet = true;
@@ -2264,16 +2464,30 @@ describe("progressive onboarding T-14 unknown-write reconciliation", () => {
     );
     const user = userEvent.setup();
 
-    const view = render(<CollaborationPanel projectId={project.id} startOnly />);
+    const view = render(
+      <CollaborationPanel
+        projectId={project.id}
+        selectedRunId={null}
+        startOnly
+        threadId={threadId}
+      />,
+    );
     await user.type(
       await screen.findByLabelText("发送给项目群聊"),
       "Refresh-safe start",
     );
-    await user.click(screen.getByRole("button", { name: "发送并启动协作" }));
+    await user.click(screen.getByRole("button", { name: "发送并开始首次运行" }));
     expect(await screen.findByRole("alert")).toHaveTextContent("无法唯一确认");
 
     view.unmount();
-    render(<CollaborationPanel projectId={project.id} startOnly />);
+    render(
+      <CollaborationPanel
+        projectId={project.id}
+        selectedRunId="run-1"
+        startOnly
+        threadId={threadId}
+      />,
+    );
     expect(await screen.findByText("所有者发来消息")).toBeInTheDocument();
     expect(runPosts).toBe(1);
   });

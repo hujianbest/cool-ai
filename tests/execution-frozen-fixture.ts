@@ -8,6 +8,7 @@ export function refreshExecutionFrozenFixture(
 ): string {
   const row = database.prepare(`
     SELECT e.agent_id AS agentId,e.mission_id AS missionId,e.project_id AS projectId,
+           e.source_collaboration_thread_id AS sourceThreadId,
            e.source_collaboration_run_id AS sourceRunId,e.work_item_id AS workItemId,
            a.id AS attemptId,a.baseline_manifest_hash AS baselineHash
     FROM executions e
@@ -22,6 +23,7 @@ export function refreshExecutionFrozenFixture(
     missionId: string;
     projectId: string;
     sourceRunId: string;
+    sourceThreadId: string;
     workItemId: string;
   };
   const frozen = captureExecutionFrozenInput(database, {
@@ -29,7 +31,11 @@ export function refreshExecutionFrozenFixture(
     baselineManifestHash: row.baselineHash,
     missionId: row.missionId,
     projectId: row.projectId,
-    sourceCollaborationRunId: row.sourceRunId,
+    source: {
+      projectId: row.projectId,
+      runId: row.sourceRunId,
+      threadId: row.sourceThreadId,
+    },
     workItemId: row.workItemId,
   });
   database.prepare(`

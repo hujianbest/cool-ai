@@ -7,16 +7,12 @@ import { PassThrough } from "node:stream";
 import type { DatabaseSync } from "node:sqlite";
 import { afterEach, beforeEach, describe, expect, it } from "vitest";
 
-import { createV6FixtureDatabaseOpener } from "@/tests/v6-fixture-db";
-
-const openDatabase = createV6FixtureDatabaseOpener({
-  missingDeliveryHeadMissionIds: ["mission"],
-  missingReviewHeadResultIds: [],
-});
+import { openDatabase } from "@/src/server/db";
 import {
   discardExecutionAction,
   reconcileExecutionAction,
 } from "@/src/server/execution/execution-actions";
+import { execV7Fixture } from "@/tests/v7-fixture-graph";
 
 type Clock = {
   clearInterval(handle: unknown): void;
@@ -196,7 +192,7 @@ function seedCommandAction(databasePath: string): void {
   const now = "2026-07-30T04:00:00.000Z";
   const hash = "a".repeat(64);
   try {
-    database.exec(`
+    execV7Fixture(databasePath, database, `
       INSERT INTO projects (id,name,created_at,workspace_path,workspace_key,version)
       VALUES ('process-project','Process','${now}','${sandboxRoot.replaceAll("'", "''")}','process-key',1);
       INSERT INTO providers (

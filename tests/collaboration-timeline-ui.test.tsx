@@ -10,6 +10,11 @@ import type {
   TimelineEvent,
 } from "@/src/shared/collaboration-contracts";
 import type { MembershipState } from "@/src/shared/project-context-contracts";
+import {
+  TEST_THREAD_ID,
+  threadPolicy,
+  threadSummary,
+} from "@/tests/cockpit-test-fetch";
 
 const members: MembershipState = {
   members: [
@@ -63,7 +68,7 @@ function read(
   return {
     pendingDecision: null,
     projectMessagesPage: {
-      items: [
+      items: events.some((item) => item.type === "agent_message") ? [
         {
           authorAgentId: "agent-a",
           authorDisplayName: "Alpha",
@@ -77,7 +82,7 @@ function read(
           runId: "run-1",
           sequence: 1,
         },
-      ],
+      ] : [],
       nextAfter: null,
     },
     readiness: { missing: [], ready: true },
@@ -96,6 +101,125 @@ function read(
 
 function response(payload: unknown, status = 200): Response {
   return Response.json(payload, { status });
+}
+
+function strictThreadResponse(
+  url: string,
+  payload: CollaborationReadResponse,
+): Response {
+  const projectId = decodeURIComponent(
+    url.match(/^\/api\/projects\/([^/]+)/)?.[1] ?? "project-1",
+  );
+  const messages = payload.projectMessagesPage.items.map((item) => ({
+    ...item,
+    projectId,
+    threadId: TEST_THREAD_ID,
+  }));
+  const linkedMessageIds = new Set(
+    payload.timelinePage.items.flatMap((item) =>
+      item.type === "owner_message" || item.type === "agent_message"
+        ? [item.payload.messageId]
+        : []
+    ),
+  );
+  const sources = [
+    ...payload.timelinePage.items.map((item) => ({
+      createdAt: item.createdAt,
+      event: item,
+      id: item.id,
+      message: item.type === "owner_message" || item.type === "agent_message"
+        ? messages.find((candidate) => candidate.id === item.payload.messageId) ?? null
+        : null,
+    })),
+    ...messages
+      .filter((item) => !linkedMessageIds.has(item.id))
+      .map((item) => ({
+        createdAt: item.createdAt,
+        event: null,
+        id: item.id,
+        message: item,
+      })),
+  ].sort((left, right) =>
+    left.createdAt.localeCompare(right.createdAt) || left.id.localeCompare(right.id)
+  );
+  const facts = sources.map((source, index) => {
+    const sequence = source.event?.sequence ?? source.message?.sequence ?? index + 1;
+    if (source.message) {
+      return {
+        activitySequence: sequence,
+        actorId: source.message.authorAgentId,
+        actorType: source.message.authorType,
+        createdAt: source.createdAt,
+        id: `fact-${source.message.id}`,
+        message: source.message,
+        messageId: source.message.id,
+        payload: { messageId: source.message.id },
+        policyRevisionId: null,
+        projectId,
+        runEventId: null,
+        runId: source.message.runId,
+        sequence,
+        threadId: TEST_THREAD_ID,
+        type: source.message.authorType === "owner" ? "owner_message" : "agent_message",
+      };
+    }
+    const event = source.event!;
+    return {
+      activitySequence: sequence,
+      actorId: event.actorId,
+      actorType: event.actorType,
+      createdAt: event.createdAt,
+      id: `fact-${event.id}`,
+      message: null,
+      messageId: null,
+      payload: { eventType: event.type },
+      policyRevisionId: null,
+      projectId,
+      runEventId: event.id,
+      runId: event.runId,
+      sequence,
+      threadId: TEST_THREAD_ID,
+      type: "run_event",
+    };
+  });
+  if (url.includes("/messages")) {
+    return response({ items: messages, nextAfter: payload.projectMessagesPage.nextAfter });
+  }
+  if (url.includes("/facts")) {
+    return response({
+      items: facts,
+      nextAfter: payload.timelinePage.nextAfter ?? payload.projectMessagesPage.nextAfter,
+    });
+  }
+  if (url.includes("/timeline")) {
+    return response({
+      items: payload.timelinePage.items.map((item) => ({
+        ...item,
+        projectId,
+        threadId: TEST_THREAD_ID,
+      })),
+      nextAfter: payload.timelinePage.nextAfter,
+    });
+  }
+  const selectedRun = payload.run
+    ? { ...payload.run, projectId, threadId: TEST_THREAD_ID }
+    : null;
+  return response({
+    activeRun: selectedRun
+      ? { runId: selectedRun.id, threadId: TEST_THREAD_ID }
+      : null,
+    readiness: {
+      dispatch: "ready",
+      missingProjectFacts: [],
+      selectedMemberId: selectedRun?.currentAgentId ?? null,
+    },
+    runs: selectedRun ? [selectedRun] : [],
+    selectedRun,
+    thread: {
+      ...threadSummary(projectId),
+      policy: threadPolicy(),
+    },
+  });
 }
 
 afterEach(() => {
@@ -125,11 +249,17 @@ describe("collaboration timeline and auto-loop", () => {
       vi.fn((input: RequestInfo | URL) =>
         String(input).endsWith("/members")
           ? Promise.resolve(response(members))
-          : Promise.resolve(response(read("paused", events))),
+          : Promise.resolve(
+              strictThreadResponse(String(input), read("paused", events)),
+            ),
       ),
     );
 
-    render(createElement(CollaborationPanel, { projectId: "project-1" }));
+    render(createElement(CollaborationPanel, {
+      projectId: "project-1",
+      selectedRunId: "run-1",
+      threadId: TEST_THREAD_ID,
+    }));
 
     const log = await screen.findByRole("log", { name: "协作时间线" });
     expect(log).toHaveTextContent("正在调用模型");
@@ -160,11 +290,20 @@ describe("collaboration timeline and auto-loop", () => {
         const url = String(input);
         if (url.endsWith("/members")) return Promise.resolve(response(members));
         reads += 1;
-        return Promise.resolve(response(read("paused", reads === 1 ? [first] : [first, second])));
+        return Promise.resolve(
+          strictThreadResponse(
+            url,
+            read("paused", reads <= 4 ? [first] : [first, second]),
+          ),
+        );
       }),
     );
 
-    render(createElement(CollaborationPanel, { projectId: "project-1" }));
+    render(createElement(CollaborationPanel, {
+      projectId: "project-1",
+      selectedRunId: "run-1",
+      threadId: TEST_THREAD_ID,
+    }));
     const log = await screen.findByRole("log", { name: "协作时间线" });
     Object.defineProperties(log, {
       clientHeight: { configurable: true, value: 100 },
@@ -199,45 +338,46 @@ describe("collaboration timeline and auto-loop", () => {
     });
     const firstPage = read("paused", [first]);
     firstPage.timelinePage.nextAfter = 1;
-    firstPage.projectMessagesPage.nextAfter = 1;
     const secondPage = read("paused", [second]);
-    secondPage.projectMessagesPage.items = [{
-      ...secondPage.projectMessagesPage.items[0],
-      id: "message-agent-2",
-      sequence: 2,
-    }];
     const pollPage = read("paused", [second, third]);
-    pollPage.projectMessagesPage.items = [
-      secondPage.projectMessagesPage.items[0],
-      {
-        ...secondPage.projectMessagesPage.items[0],
-        id: "message-agent-3",
-        sequence: 3,
-      },
-    ];
-    const collaborationUrls: string[] = [];
+    const factUrls: string[] = [];
     vi.stubGlobal(
       "fetch",
       vi.fn((input: RequestInfo | URL) => {
         const url = String(input);
         if (url.endsWith("/members")) return Promise.resolve(response(members));
-        collaborationUrls.push(url);
-        if (url.endsWith("/collaboration")) return Promise.resolve(response(firstPage));
-        if (url.includes("messageAfter=1") && url.includes("eventAfter=1")) {
-          return Promise.resolve(response(secondPage));
+        if (url.includes("/facts")) {
+          factUrls.push(url);
+          if (url.endsWith("/facts")) {
+            return Promise.resolve(strictThreadResponse(url, firstPage));
+          }
+          if (url.endsWith("/facts?after=1")) {
+            return Promise.resolve(strictThreadResponse(url, secondPage));
+          }
+          if (url.endsWith("/facts?after=2")) {
+            return Promise.resolve(strictThreadResponse(url, pollPage));
+          }
         }
-        if (url.includes("messageAfter=2") && url.includes("eventAfter=2")) {
-          return Promise.resolve(response(pollPage));
+        if (url.includes("?after=1")) {
+          return Promise.resolve(strictThreadResponse(url, secondPage));
         }
-        throw new Error(`Unexpected request: ${url}`);
+        return Promise.resolve(strictThreadResponse(url, firstPage));
       }),
     );
+    const user = userEvent.setup();
 
-    render(createElement(CollaborationPanel, { projectId: "project-1" }));
+    render(createElement(CollaborationPanel, {
+      projectId: "project-1",
+      selectedRunId: "run-1",
+      threadId: TEST_THREAD_ID,
+    }));
     const log = await screen.findByRole("log", { name: "协作时间线" });
+    expect(log.querySelectorAll("li:not([tabindex])")).toHaveLength(1);
+    await user.click(screen.getByRole("button", { name: "加载更多事实" }));
     await waitFor(() => expect(log.querySelectorAll("li:not([tabindex])")).toHaveLength(2));
-    expect(collaborationUrls[1]).toContain("messageAfter=1");
-    expect(collaborationUrls[1]).toContain("eventAfter=1");
+    expect(factUrls).toContain(
+      `/api/projects/project-1/threads/${TEST_THREAD_ID}/facts?after=1`,
+    );
 
     Object.defineProperties(log, {
       clientHeight: { configurable: true, value: 100 },
@@ -250,8 +390,7 @@ describe("collaboration timeline and auto-loop", () => {
     });
 
     await waitFor(() => expect(log.querySelectorAll("li:not([tabindex])")).toHaveLength(3));
-    expect(collaborationUrls.at(-1)).toContain("messageAfter=2");
-    expect(collaborationUrls.at(-1)).toContain("eventAfter=2");
+    expect(factUrls.at(-1)).toContain("/facts?after=2");
     expect(screen.getByLabelText("时间线更新摘要")).toHaveTextContent("有 1 条新事件");
     expect(log.scrollTop).toBe(100);
   });
@@ -275,12 +414,16 @@ describe("collaboration timeline and auto-loop", () => {
             ? firstAdvance
             : new Promise<Response>(() => undefined);
         }
-        return Promise.resolve(response(read("running")));
+        return Promise.resolve(strictThreadResponse(url, read("running")));
       }),
     );
 
-    render(createElement(CollaborationPanel, { projectId: "project-1" }));
-    await screen.findByRole("log", { name: "协作时间线" });
+    render(createElement(CollaborationPanel, {
+      projectId: "project-1",
+      selectedRunId: "run-1",
+      threadId: TEST_THREAD_ID,
+    }));
+    await screen.findByRole("region", { name: "运行控制" });
     await waitFor(() => expect(advanceBodies).toHaveLength(1));
     await act(async () => {
       await new Promise((resolve) => setTimeout(resolve, 1_100));
@@ -312,12 +455,19 @@ describe("collaboration timeline and auto-loop", () => {
           ["waiting_owner", "paused", "failed", "planned", "stopped"] as const
         ).find((status) => url.includes(`project-${status}`));
         return Promise.resolve(
-          response(read(projectStatus ?? (attempts ? "paused" : "running"))),
+          strictThreadResponse(
+            url,
+            read(projectStatus ?? (attempts ? "paused" : "running")),
+          ),
         );
       }),
     );
 
-    const view = render(createElement(CollaborationPanel, { projectId: "project-1" }));
+    const view = render(createElement(CollaborationPanel, {
+      projectId: "project-1",
+      selectedRunId: "run-1",
+      threadId: TEST_THREAD_ID,
+    }));
     expect(await screen.findByRole("button", { name: "重试推进" })).toBeInTheDocument();
     expect(screen.queryByText("network detail")).not.toBeInTheDocument();
     await user.click(screen.getByRole("button", { name: "重试推进" }));
@@ -334,9 +484,13 @@ describe("collaboration timeline and auto-loop", () => {
     ] as const) {
       const before = bodies.length;
       const stoppedView = render(
-        createElement(CollaborationPanel, { projectId: `project-${status}` }),
+        createElement(CollaborationPanel, {
+          projectId: `project-${status}`,
+          selectedRunId: "run-1",
+          threadId: TEST_THREAD_ID,
+        }),
       );
-      await screen.findByRole("log", { name: "协作时间线" });
+      await screen.findByRole("region", { name: "运行控制" });
       await new Promise((resolve) => setTimeout(resolve, 10));
       expect(bodies).toHaveLength(before);
       stoppedView.unmount();

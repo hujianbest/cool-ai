@@ -57,6 +57,16 @@ type ContentCandidate = {
 
 const requiredByMaterial = new WeakMap<object, Set<string>>();
 
+class ReviewMaterialInvalidError extends Error {
+  readonly code = "REVIEW_MATERIAL_INVALID";
+  readonly status = 422;
+
+  constructor() {
+    super("公开复核材料无效");
+    this.name = "ReviewMaterialInvalidError";
+  }
+}
+
 function sha256(value: string): string {
   return createHash("sha256").update(value, "utf8").digest("hex");
 }
@@ -232,12 +242,46 @@ export function freezeReviewMaterial(
   const result = database.prepare(`
     SELECT r.id,r.version,r.execution_id AS executionId,r.staged_result_id AS stagedResultId,
            r.merge_journal_id AS mergeJournalId,r.created_at AS createdAt,
-           (SELECT execution.source_collaboration_run_id
-            FROM executions execution WHERE execution.id=r.execution_id)
-             AS sourceCollaborationRunId
+           e.project_id AS sourceProjectId,
+           e.source_collaboration_thread_id AS sourceThreadId,
+           e.source_collaboration_run_id AS sourceRunId,
+           a.frozen_context_hash AS sourceContextHash,
+           json_extract(a.frozen_public_json,'$.facts.source.projectId')
+             AS frozenSourceProjectId,
+           json_extract(a.frozen_public_json,'$.facts.source.threadId')
+             AS frozenSourceThreadId,
+           json_extract(a.frozen_public_json,'$.facts.source.runId')
+             AS frozenSourceRunId,
+           json_extract(a.frozen_private_json,'$.facts.source.projectId')
+             AS privateSourceProjectId,
+           json_extract(a.frozen_private_json,'$.facts.source.threadId')
+             AS privateSourceThreadId,
+           json_extract(a.frozen_private_json,'$.facts.source.runId')
+             AS privateSourceRunId,
+           s.context_hash AS stagedContextHash
     FROM work_item_result_versions r
-    WHERE r.id=?
-  `).get(head.resultId) as any;
+    JOIN executions e
+      ON e.id=r.execution_id AND e.project_id=r.project_id
+       AND e.mission_id=r.mission_id AND e.work_item_id=r.work_item_id
+    JOIN execution_staged_results s
+      ON s.id=r.staged_result_id AND s.project_id=r.project_id
+       AND s.execution_id=r.execution_id
+    JOIN execution_attempts a
+      ON a.id=s.attempt_id AND a.project_id=s.project_id
+       AND a.execution_id=s.execution_id
+    JOIN collaboration_runs source_run
+      ON source_run.project_id=e.project_id
+       AND source_run.thread_id=e.source_collaboration_thread_id
+       AND source_run.id=e.source_collaboration_run_id
+    WHERE r.id=? AND r.project_id=? AND r.mission_id=?
+      AND r.work_item_id=? AND r.version=?
+  `).get(
+    head.resultId,
+    head.projectId,
+    head.missionId,
+    head.workItemId,
+    head.resultVersion,
+  ) as any;
   const project = database.prepare("SELECT id,name FROM projects WHERE id=?")
     .get(head.projectId) as any;
   const mission = database.prepare(`
@@ -263,7 +307,24 @@ export function freezeReviewMaterial(
   if (
     !result || !project || !mission || !task || !executor || !staged
     || result.version !== head.resultVersion
-  ) throw new Error("REVIEW_MATERIAL_INVALID");
+    || result.sourceProjectId !== head.projectId
+    || result.sourceContextHash !== result.stagedContextHash
+    || result.frozenSourceProjectId !== result.sourceProjectId
+    || result.frozenSourceThreadId !== result.sourceThreadId
+    || result.frozenSourceRunId !== result.sourceRunId
+    || (
+      result.privateSourceProjectId !== undefined
+      && result.privateSourceProjectId !== result.sourceProjectId
+    )
+    || (
+      result.privateSourceThreadId !== undefined
+      && result.privateSourceThreadId !== result.sourceThreadId
+    )
+    || (
+      result.privateSourceRunId !== undefined
+      && result.privateSourceRunId !== result.sourceRunId
+    )
+  ) throw new ReviewMaterialInvalidError();
 
   const dependencies = (database.prepare(`
     SELECT w.id,w.title,w.version,
@@ -474,7 +535,15 @@ export function freezeReviewMaterial(
       executionId: result.executionId,
       id: result.id,
       mergeJournalId: result.mergeJournalId,
-      sourceCollaborationRunId: result.sourceCollaborationRunId,
+      source: {
+        contextHash: result.sourceContextHash,
+        projectId: result.sourceProjectId,
+        runId: result.sourceRunId,
+        threadId: result.sourceThreadId,
+      },
+      sourceCollaborationRunId: result.sourceRunId,
+      sourceCollaborationThreadId: result.sourceThreadId,
+      sourceContextHash: result.sourceContextHash,
       stagedResultId: result.stagedResultId,
       version: result.version,
     },

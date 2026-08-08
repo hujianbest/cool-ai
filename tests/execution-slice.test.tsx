@@ -6,12 +6,8 @@ import { join } from "node:path";
 import { createElement, type ComponentType } from "react";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
-import { createV6FixtureDatabaseOpener } from "@/tests/v6-fixture-db";
-
-const openDatabase = createV6FixtureDatabaseOpener({
-  missingDeliveryHeadMissionIds: ["mission-execution"],
-  missingReviewHeadResultIds: [],
-});
+import { openDatabase } from "@/src/server/db";
+import { execV7Fixture } from "@/tests/v7-fixture-graph";
 
 type RouteContext = { params: Promise<{ projectId: string }> };
 type ExecutionRoute = {
@@ -32,6 +28,7 @@ const NOW = "2026-07-30T02:00:00.000Z";
 
 let directory: string;
 let databasePath: string;
+let sourceThreadId: string;
 
 beforeEach(() => {
   directory = mkdtempSync(join(tmpdir(), "cockpit-execution-slice-"));
@@ -63,11 +60,17 @@ async function executionRoute(): Promise<ExecutionRoute> {
   }
 }
 
-async function executionPanel(): Promise<ComponentType<{ projectId: string }>> {
+async function executionPanel(): Promise<ComponentType<{
+  projectId: string;
+  sourceTuple: { projectId: string; runId: string; threadId: string } | null;
+}>> {
   const componentId = "@/components/execution/execution-panel";
   try {
     const module = (await import(/* @vite-ignore */ componentId)) as {
-      ExecutionPanel: ComponentType<{ projectId: string }>;
+      ExecutionPanel: ComponentType<{
+        projectId: string;
+        sourceTuple: { projectId: string; runId: string; threadId: string } | null;
+      }>;
     };
     return module.ExecutionPanel;
   } catch {
@@ -89,7 +92,7 @@ function seedEligibleTask(): void {
   const emptyPolicyHash =
     "4f53cda18c2baa0c0354bb5f9a3ecbe5ed12ab4d8e11ba873c2f11161202b945";
   try {
-    database.exec(`
+    sourceThreadId = execV7Fixture(databasePath, database, `
       INSERT INTO projects (
         id, name, created_at, workspace_path, workspace_key, version
       ) VALUES (
@@ -190,7 +193,7 @@ function seedEligibleTask(): void {
       INSERT INTO project_validation_policies (
         project_id, active_revision_id, version, updated_at
       ) VALUES ('${PROJECT_ID}', 'policy-execution', 1, '${NOW}');
-    `);
+    `).get(PROJECT_ID)!;
   } finally {
     database.close();
   }
@@ -216,7 +219,11 @@ async function startPendingExecution(): Promise<{ responsePromise: Promise<Respo
     new Request(`http://localhost/api/projects/${PROJECT_ID}/executions`, {
       body: JSON.stringify({
         operationId: OPERATION_ID,
-        sourceCollaborationRunId: RUN_ID,
+        source: {
+          projectId: PROJECT_ID,
+          runId: RUN_ID,
+          threadId: sourceThreadId,
+        },
         workItemId: WORK_ITEM_ID,
       }),
       headers: { "content-type": "application/json" },
@@ -249,6 +256,9 @@ function installExecutionFetch(
   const fetchMock = vi.fn((input: RequestInfo | URL) => {
     const url = new URL(String(input), "http://localhost");
     if (url.pathname === `/api/projects/${PROJECT_ID}/executions`) return get();
+    if (url.pathname === `/api/projects/${PROJECT_ID}/mission`) {
+      return Promise.resolve(Response.json({ mission: null, workItems: [] }));
+    }
     throw new Error(`Unexpected request: ${url.pathname}`);
   });
   vi.stubGlobal("fetch", fetchMock);
@@ -327,7 +337,8 @@ describe("execution T-2 vertical slice", () => {
       return Response.json({ executions: [] });
     });
 
-    const loadingView = render(createElement(Panel, { projectId: PROJECT_ID }));
+    const sourceTuple = { projectId: PROJECT_ID, runId: RUN_ID, threadId: sourceThreadId };
+    const loadingView = render(createElement(Panel, { projectId: PROJECT_ID, sourceTuple }));
     expect(screen.getByText("正在加载执行…")).toBeInTheDocument();
     expect(screen.queryByText("尚无执行。")).not.toBeInTheDocument();
     releaseLoad();
@@ -346,7 +357,7 @@ describe("execution T-2 vertical slice", () => {
       }
       return Response.json({ executions: [] });
     });
-    const errorView = render(createElement(Panel, { projectId: PROJECT_ID }));
+    const errorView = render(createElement(Panel, { projectId: PROJECT_ID, sourceTuple }));
     expect(await screen.findByRole("alert")).toHaveTextContent(
       "服务暂时不可用，请稍后重试。",
     );
@@ -356,7 +367,7 @@ describe("execution T-2 vertical slice", () => {
 
     await startPendingExecution();
     installExecutionFetch();
-    const firstQueuedView = render(createElement(Panel, { projectId: PROJECT_ID }));
+    const firstQueuedView = render(createElement(Panel, { projectId: PROJECT_ID, sourceTuple }));
     const heading = await screen.findByRole("heading", {
       name: "Implement the slice",
     });
@@ -367,7 +378,7 @@ describe("execution T-2 vertical slice", () => {
     expect(retryButton).toHaveStyle({ minHeight: "var(--control-min)" });
     firstQueuedView.unmount();
 
-    render(createElement(Panel, { projectId: PROJECT_ID }));
+    render(createElement(Panel, { projectId: PROJECT_ID, sourceTuple }));
     expect(await screen.findByRole("heading", {
       name: "Implement the slice",
     })).toBeInTheDocument();

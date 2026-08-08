@@ -4,25 +4,31 @@ import { join } from "node:path";
 import { afterEach, beforeEach, describe, expect, it } from "vitest";
 
 import type { StructuredTurnResult } from "@/src/server/collaboration/structured-repair";
+import {
+  createThread,
+  startThreadRun,
+} from "@/src/server/collaboration/thread-service";
+import type { ProjectThreadRunTuple } from "@/src/server/collaboration/turn-orchestrator";
+import { createCredentialVault } from "@/src/server/credential-vault";
 import { openDatabase } from "@/src/server/db";
 import { initializeMissionDeliveryTx } from "@/src/server/migrations-v6";
 
 type RecoveryModule = {
   acquireAdvance: (
     databasePath: string,
-    runId: string,
+    tuple: ProjectThreadRunTuple,
     input: { operationId: string },
     dependencies: Dependencies,
   ) => { kind: "acquired"; attempt: { id: string; leaseToken: string } };
   finalizeAdvance: (
     databasePath: string,
-    runId: string,
+    tuple: ProjectThreadRunTuple,
     input: { attemptId: string; leaseToken: string; result: StructuredTurnResult },
     dependencies: Dependencies,
   ) => { affectedRows: number; body: unknown; status: number };
   recoverRun: (
     databasePath: string,
-    runId: string,
+    tuple: ProjectThreadRunTuple,
     input: { operationId: string },
     dependencies: Dependencies,
   ) => { body: { attempt: { id: string; status: string }; run: { status: string } }; status: number };
@@ -34,7 +40,8 @@ const modules = import.meta.glob<RecoveryModule>(
   "../src/server/collaboration/turn-orchestrator.ts",
 );
 const PROJECT_ID = "project-recovery";
-const RUN_ID = "run-recovery";
+let RUN_ID: string;
+let THREAD_ID: string;
 const AGENT_ID = "agent-recovery";
 const ACQUIRED_AT = "2026-07-30T01:00:00.000Z";
 const EXPIRED_AT = "2026-07-30T01:02:00.001Z";
@@ -64,6 +71,10 @@ async function implementation(): Promise<RecoveryModule> {
 }
 
 function seed(): void {
+  const credential = createCredentialVault().encrypt(
+    "provider-recovery",
+    "provider-secret-recovery",
+  );
   const database = openDatabase(databasePath);
   try {
     database.exec(`
@@ -79,7 +90,9 @@ function seed(): void {
         api_key_mask, verified_at, version, created_at, updated_at
       ) VALUES (
         'provider-recovery', 'Local', 'http://127.0.0.1:4000/v1', 'model',
-        'cipher', 'iv', 'tag', 1, 1, 'key-1', '***', '${ACQUIRED_AT}', 1,
+        '${credential.apiKeyCipher}', '${credential.apiKeyIv}',
+        '${credential.apiKeyTag}', 1, 1, '${credential.keyId}',
+        '${credential.apiKeyMask}', '${ACQUIRED_AT}', 1,
         '${ACQUIRED_AT}', '${ACQUIRED_AT}'
       );
       INSERT INTO agents (
@@ -106,25 +119,6 @@ function seed(): void {
         'mission-recovery', '${PROJECT_ID}', 'Mission', 'Recover safely', 1,
         '${ACQUIRED_AT}', '${ACQUIRED_AT}'
       );
-      INSERT INTO collaboration_runs (
-        id, project_id, status, current_agent_id, round_count,
-        next_event_sequence, version, execution_epoch, pause_reason,
-        pause_category, created_at, updated_at
-      ) VALUES (
-        '${RUN_ID}', '${PROJECT_ID}', 'running', '${AGENT_ID}', 0,
-        1, 1, 1, NULL, NULL, '${ACQUIRED_AT}', '${ACQUIRED_AT}'
-      );
-      INSERT INTO collaboration_project_sequences (
-        project_id, next_message_sequence
-      ) VALUES ('${PROJECT_ID}', 2);
-      INSERT INTO collaboration_messages (
-        id, project_id, run_id, author_type, author_agent_id,
-        author_display_name, content, mention_agent_id, mention_display_name,
-        sequence, consumed_at, created_at
-      ) VALUES (
-        'owner-recovery', '${PROJECT_ID}', '${RUN_ID}', 'owner', NULL,
-        'Owner', 'Recover this collaboration', NULL, NULL, 1, NULL, '${ACQUIRED_AT}'
-      );
     `);
     initializeMissionDeliveryTx(database, {
       id: "mission-recovery",
@@ -134,13 +128,26 @@ function seed(): void {
   } finally {
     database.close();
   }
+  THREAD_ID = createThread(databasePath, PROJECT_ID, {
+    memberAgentIds: [AGENT_ID, "agent-beta"],
+    operationId: "00000000-0000-4000-8000-000000001098",
+    title: "Recovery",
+  }).body.thread.id;
+  RUN_ID = startThreadRun(databasePath, PROJECT_ID, THREAD_ID, {
+    message: "Recover this collaboration",
+    operationId: "00000000-0000-4000-8000-000000001099",
+  }).body.run.id;
+}
+
+function tuple(): ProjectThreadRunTuple {
+  return { projectId: PROJECT_ID, runId: RUN_ID, threadId: THREAD_ID };
 }
 
 async function acquire() {
   const module = await implementation();
   return module.acquireAdvance(
     databasePath,
-    RUN_ID,
+    tuple(),
     { operationId: ADVANCE_ID },
     dependencies(ACQUIRED_AT),
   ).attempt;
@@ -236,11 +243,13 @@ function validResult(): StructuredTurnResult {
 beforeEach(() => {
   directory = mkdtempSync(join(tmpdir(), "collaboration-recovery-"));
   databasePath = join(directory, "cockpit.sqlite");
+  process.env.COCKPIT_MASTER_KEY = Buffer.alloc(32, 30).toString("base64url");
   uuid = 0;
   seed();
 });
 
 afterEach(() => {
+  delete process.env.COCKPIT_MASTER_KEY;
   rmSync(directory, { force: true, recursive: true });
 });
 
@@ -250,13 +259,13 @@ describe("expired collaboration attempt reconciliation", () => {
     const module = await implementation();
     const first = module.recoverRun(
       databasePath,
-      RUN_ID,
+      tuple(),
       { operationId: RECOVER_ID },
       dependencies("2026-07-30T01:01:59.999Z"),
     );
     const replay = module.recoverRun(
       databasePath,
-      RUN_ID,
+      tuple(),
       { operationId: RECOVER_ID },
       dependencies(EXPIRED_AT),
     );
@@ -278,13 +287,13 @@ describe("expired collaboration attempt reconciliation", () => {
     const module = await implementation();
     const first = module.recoverRun(
       databasePath,
-      RUN_ID,
+      tuple(),
       { operationId: RECOVER_ID },
       dependencies(EXPIRED_AT),
     );
     const second = module.recoverRun(
       databasePath,
-      RUN_ID,
+      tuple(),
       { operationId: "00000000-0000-4000-8000-000000001102" },
       dependencies(EXPIRED_AT),
     );
@@ -323,7 +332,7 @@ describe("expired collaboration attempt reconciliation", () => {
       Promise.resolve().then(() =>
         module.recoverRun(
           databasePath,
-          RUN_ID,
+          tuple(),
           { operationId: RECOVER_ID },
           dependencies(EXPIRED_AT),
         ),
@@ -331,7 +340,7 @@ describe("expired collaboration attempt reconciliation", () => {
       Promise.resolve().then(() =>
         module.recoverRun(
           databasePath,
-          RUN_ID,
+          tuple(),
           { operationId: "00000000-0000-4000-8000-000000001103" },
           dependencies(EXPIRED_AT),
         ),
@@ -351,7 +360,7 @@ describe("expired collaboration attempt reconciliation", () => {
     expect(
       restarted.recoverRun(
         databasePath,
-        RUN_ID,
+        tuple(),
         { operationId: "00000000-0000-4000-8000-000000001104" },
         dependencies(EXPIRED_AT),
       ),
@@ -363,14 +372,14 @@ describe("expired collaboration attempt reconciliation", () => {
     const module = await implementation();
     module.recoverRun(
       databasePath,
-      RUN_ID,
+      tuple(),
       { operationId: RECOVER_ID },
       dependencies(EXPIRED_AT),
     );
     const before = facts();
     const late = module.finalizeAdvance(
       databasePath,
-      RUN_ID,
+      tuple(),
       { attemptId: attempt.id, leaseToken: attempt.leaseToken, result: validResult() },
       dependencies(EXPIRED_AT),
     );

@@ -7,6 +7,7 @@ import { afterEach, beforeEach, describe, expect, it } from "vitest";
 
 import { openDatabase } from "@/src/server/db";
 import { discardExecutionAction } from "@/src/server/execution/execution-actions";
+import { execV7Fixture } from "@/tests/v7-fixture-graph";
 
 type Identity = {
   finalPath: string;
@@ -355,7 +356,7 @@ function operationId(index: number): string {
 
 function seedDatabase(index: number): DatabaseSync {
   const database = openDatabase(databasePath);
-  database.exec(`
+  execV7Fixture(databasePath, database, `
     INSERT INTO projects (id,name,created_at,workspace_path,workspace_key,version)
     VALUES ('${PROJECT_ID}','Read','${NOW}','D:\\workspace','d:/workspace',1);
     INSERT INTO providers (

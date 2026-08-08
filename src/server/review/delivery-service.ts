@@ -52,6 +52,22 @@ const href = z.string().min(1).max(8_192).refine((value) => {
     return false;
   }
 }, "Evidence href must be a safe versioned product-relative URL.");
+const sourceHref = z.string().min(1).max(8_192).refine((value) => {
+  if (!value.startsWith("/") || value.startsWith("//") || SAFE_PUBLIC_TEXT.test(value)) return false;
+  try {
+    const parsed = new URL(value, "https://delivery.invalid");
+    return parsed.origin === "https://delivery.invalid"
+      && parsed.hash === ""
+      && /^\/projects\/[^/]+$/u.test(parsed.pathname)
+      && [...parsed.searchParams.keys()].join(",") === "thread,run"
+      && parsed.searchParams.getAll("thread").length === 1
+      && parsed.searchParams.getAll("run").length === 1
+      && Boolean(parsed.searchParams.get("thread"))
+      && Boolean(parsed.searchParams.get("run"));
+  } catch {
+    return false;
+  }
+}, "Source href must be a canonical project thread/run URL.");
 const contentStatus = z.enum([
   "complete",
   "failed",
@@ -119,8 +135,21 @@ export const deliveryBuildInputSchema = z.object({
       mergeFileCount: z.number().int().min(0),
       mergeFinalBytes: z.number().int().min(0),
       sourceCollaborationRunId: identifier,
+      sourceCollaborationThreadId: identifier,
+      sourceHref,
       stagedHash: HASH,
-    }).strict(),
+    }).strict().superRefine((execution, context) => {
+      const parsed = new URL(execution.sourceHref, "https://delivery.invalid");
+      if (
+        parsed.searchParams.get("thread") !== execution.sourceCollaborationThreadId
+        || parsed.searchParams.get("run") !== execution.sourceCollaborationRunId
+      ) {
+        context.addIssue({
+          code: "custom",
+          message: "Source href does not bind the frozen collaboration tuple.",
+        });
+      }
+    }),
     executor: z.object({ agentId: identifier, name: publicText(5_000) }).strict(),
     result: z.object({ id: identifier, version: z.number().int().min(1) }).strict(),
     review: z.object({
@@ -176,7 +205,12 @@ export type DeliveryBundle = {
       artifacts: Array<{ href: string; id: string; version: string }>;
       changes: { mergeFileCount: number; mergeFinalBytes: number; stagedHash: string };
       decision: { choice: "pass"; id: string; publicSummary: string };
-      execution: { id: string; sourceCollaborationRunId: string };
+      execution: {
+        id: string;
+        sourceCollaborationRunId: string;
+        sourceCollaborationThreadId: string;
+        sourceHref: string;
+      };
       executor: { agentId: string; name: string };
       limitations: string[];
       memories: Array<{ href: string; id: string; version: string }>;
@@ -292,6 +326,8 @@ function fingerprintInput(input: z.output<typeof deliveryBuildInputSchema>) {
           ),
         executionId: task.execution.id,
         sourceCollaborationRunId: task.execution.sourceCollaborationRunId,
+        sourceCollaborationThreadId: task.execution.sourceCollaborationThreadId,
+        sourceHref: task.execution.sourceHref,
         memoryRefs: task.evidence
           .filter((entry) => entry.kind === "memory")
           .map(({ id, version: sourceVersion }) => ({ id, version: sourceVersion }))
@@ -385,6 +421,8 @@ export function buildDeliveryBundle(
         execution: {
           id: task.execution.id,
           sourceCollaborationRunId: task.execution.sourceCollaborationRunId,
+          sourceCollaborationThreadId: task.execution.sourceCollaborationThreadId,
+          sourceHref: task.execution.sourceHref,
         },
         executor: task.executor,
         limitations: task.decision.limitations,

@@ -11,7 +11,10 @@ import {
   finalizeAdvance,
 } from "@/src/server/collaboration/turn-orchestrator";
 import { openDatabase } from "@/src/server/db";
-import { initializeMissionDeliveryTx } from "@/src/server/migrations-v6";
+import {
+  execV7Fixture,
+  execV7TupleStatements,
+} from "@/tests/v7-fixture-graph";
 
 const NOW = "2026-07-30T06:00:00.000Z";
 const PROJECT_ID = "project-usage";
@@ -20,6 +23,7 @@ const AGENT_A = "agent-usage-a";
 const AGENT_B = "agent-usage-b";
 
 let databasePath: string;
+let threadId: string;
 let directory: string;
 let operationSequence: number;
 let uuidSequence: number;
@@ -42,7 +46,7 @@ function operationId(): string {
 function seedReadyRun(): void {
   const database = openDatabase(databasePath);
   try {
-    database.exec(`
+    threadId = execV7Fixture(databasePath, database, `
       INSERT INTO projects (
         id, name, created_at, workspace_path, workspace_key, version
       ) VALUES (
@@ -97,12 +101,7 @@ function seedReadyRun(): void {
         'owner-usage', '${PROJECT_ID}', '${RUN_ID}', 'owner', NULL,
         'Owner', 'Prepare the plan', NULL, NULL, 1, NULL, '${NOW}'
       );
-    `);
-    initializeMissionDeliveryTx(database, {
-      id: "mission-usage",
-      projectId: PROJECT_ID,
-      updatedAt: NOW,
-    });
+    `).get(PROJECT_ID)!;
   } finally {
     database.close();
   }
@@ -125,24 +124,25 @@ function insertCall(input: {
     database
       .prepare(
         `INSERT INTO collaboration_operations (
-           id, project_id, run_id, kind, request_hash, status,
-           http_status, response_json, created_at, updated_at
-         ) VALUES (?, ?, ?, 'advance', 'prior', 'completed', 200, '{}', ?, ?)`,
+           id, project_id, thread_id, run_id, kind, request_hash, status,
+           http_status, response_json, response_schema_version, created_at, updated_at
+         ) VALUES (?, ?, ?, ?, 'advance', 'prior', 'completed', 200, '{}', 7, ?, ?)`,
       )
-      .run(priorOperation, PROJECT_ID, RUN_ID, NOW, NOW);
+      .run(priorOperation, PROJECT_ID, threadId, RUN_ID, NOW, NOW);
     database
       .prepare(
         `INSERT INTO collaboration_attempts (
-           id, project_id, run_id, agent_id, operation_id, status,
+           id, project_id, thread_id, run_id, agent_id, operation_id, status,
            lease_token, lease_expires_at, prompt_hash, acquire_execution_epoch,
            acquire_context_hash, included_message_sequence, error_category,
            started_at, finished_at
-         ) VALUES (?, ?, ?, ?, ?, 'committed', ?, ?, 'prompt', 1, 'context', 1,
+         ) VALUES (?, ?, ?, ?, ?, ?, 'committed', ?, ?, 'prompt', 1, 'context', 1,
                    NULL, ?, ?)`,
       )
       .run(
         attemptId,
         PROJECT_ID,
+        threadId,
         RUN_ID,
         input.agentId,
         priorOperation,
@@ -258,7 +258,7 @@ function handoffTurn(): AgentTurn {
 function acquire() {
   return acquireAdvance(
     databasePath,
-    RUN_ID,
+    { projectId: PROJECT_ID, runId: RUN_ID, threadId },
     { operationId: operationId() },
     dependencies(),
   );
@@ -330,7 +330,7 @@ describe("persisted collaboration usage aggregate", () => {
 
     const database = openDatabase(databasePath);
     try {
-      database.exec(`
+      execV7TupleStatements(database, `
         UPDATE collaboration_runs SET round_count = 3 WHERE id = '${RUN_ID}';
         INSERT INTO collaboration_messages (
           id, project_id, run_id, author_type, author_agent_id,
@@ -426,7 +426,7 @@ describe("collaboration budget boundaries", () => {
     });
     const database = openDatabase(databasePath);
     try {
-      database.exec(`
+      execV7TupleStatements(database, `
         UPDATE agents SET max_handoffs = 1 WHERE id = '${AGENT_A}';
         INSERT INTO collaboration_messages (
           id, project_id, run_id, author_type, author_agent_id,
@@ -465,7 +465,7 @@ describe("collaboration budget boundaries", () => {
     if (acquired.kind !== "acquired") return;
     const response = finalizeAdvance(
       databasePath,
-      RUN_ID,
+      { projectId: PROJECT_ID, runId: RUN_ID, threadId },
       {
         attemptId: acquired.attempt.id,
         leaseToken: acquired.attempt.leaseToken,
@@ -538,7 +538,7 @@ describe("collaboration budget boundaries", () => {
 
     const response = finalizeAdvance(
       databasePath,
-      RUN_ID,
+      { projectId: PROJECT_ID, runId: RUN_ID, threadId },
       {
         attemptId: acquired.attempt.id,
         leaseToken: acquired.attempt.leaseToken,

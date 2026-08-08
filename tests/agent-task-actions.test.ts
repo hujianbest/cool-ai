@@ -5,13 +5,9 @@ import type { DatabaseSync } from "node:sqlite";
 import { afterEach, beforeEach, describe, expect, it } from "vitest";
 
 import type { StructuredTurnResult } from "@/src/server/collaboration/structured-repair";
-import { createV6FixtureDatabaseOpener } from "@/tests/v6-fixture-db";
-
-const openDatabase = createV6FixtureDatabaseOpener({
-  missingDeliveryHeadMissionIds: [],
-  missingReviewHeadResultIds: [],
-});
-import { createMission, createWorkItem } from "@/src/server/mission-service";
+import { openDatabase } from "@/src/server/db";
+import { createWorkItem } from "@/src/server/mission-service";
+import { seedV7AdvanceFixture } from "@/tests/v7-advance-fixture";
 
 type ProposedTask = {
   clientKey: string;
@@ -55,13 +51,13 @@ type CommitterModule = {
 type OrchestratorModule = {
   acquireAdvance?: (
     databasePath: string,
-    runId: string,
+    tuple: { projectId: string; threadId: string; runId: string },
     input: { operationId: string },
     dependencies: Dependencies,
   ) => { kind: "acquired"; attempt: { id: string; leaseToken: string } };
   finalizeAdvance?: (
     databasePath: string,
-    runId: string,
+    tuple: { projectId: string; threadId: string; runId: string },
     input: {
       attemptId: string;
       leaseToken: string;
@@ -88,56 +84,13 @@ const RUN_ID = "run-actions";
 const AGENT_A = "agent-actions-a";
 const AGENT_B = "agent-actions-b";
 const OPERATION_ID = "00000000-0000-4000-8000-000000001300";
+const MISSION_ID = "mission-actions";
 
 let directory: string;
 let databasePath: string;
 let missionId: string;
+let threadId: string;
 let uuidSequence: number;
-
-function seed(): void {
-  const database = openDatabase(databasePath);
-  try {
-    database.exec(`
-      INSERT INTO providers (
-        id, name, base_url, default_model, api_key_cipher, api_key_iv,
-        api_key_tag, credential_version, credential_generation, key_id,
-        api_key_mask, verified_at, version, created_at, updated_at
-      ) VALUES (
-        'provider-actions', 'Local', 'http://127.0.0.1:4000/v1', 'model',
-        'cipher', 'iv', 'tag', 1, 1, 'key', '***', '${NOW}', 1, '${NOW}', '${NOW}'
-      );
-      INSERT INTO agents (
-        id, name, role, system_prompt, provider_id, model, avatar_text,
-        accent_token, can_read, can_write, can_execute, max_tokens,
-        max_handoffs, version, created_at, updated_at
-      ) VALUES
-        (
-          '${AGENT_A}', 'Alpha', 'Planner', 'private-a', 'provider-actions',
-          'model', 'A', 'sage', 1, 1, 0, 1000, 5, 1, '${NOW}', '${NOW}'
-        ),
-        (
-          '${AGENT_B}', 'Beta', 'Reviewer', 'private-b', 'provider-actions',
-          'model', 'B', 'gold', 1, 1, 0, 1000, 5, 1, '${NOW}', '${NOW}'
-        );
-      INSERT INTO project_memberships (project_id, agent_id, joined_at) VALUES
-        ('${PROJECT_ID}', '${AGENT_A}', 'a'),
-        ('${PROJECT_ID}', '${AGENT_B}', 'b');
-      INSERT INTO collaboration_runs (
-        id, project_id, status, current_agent_id, round_count,
-        next_event_sequence, version, execution_epoch, pause_reason,
-        pause_category, created_at, updated_at
-      ) VALUES (
-        '${RUN_ID}', '${PROJECT_ID}', 'running', '${AGENT_A}', 0,
-        1, 1, 1, NULL, NULL, '${NOW}', '${NOW}'
-      );
-      INSERT INTO collaboration_project_sequences (
-        project_id, next_message_sequence
-      ) VALUES ('${PROJECT_ID}', 1);
-    `);
-  } finally {
-    database.close();
-  }
-}
 
 async function committer(): Promise<Required<CommitterModule>> {
   const load = committers["../src/server/collaboration/action-committer.ts"];
@@ -187,28 +140,28 @@ async function commit(input: Partial<CommitInput> = {}): Promise<CommitResult> {
   database
     .prepare(
       `INSERT OR IGNORE INTO collaboration_operations (
-         id, project_id, run_id, kind, request_hash, status,
-         http_status, response_json, created_at, updated_at
+         id, project_id, thread_id, run_id, kind, request_hash, status,
+         http_status, response_json, response_schema_version, created_at, updated_at
        ) VALUES (
-         'operation-actions-direct', ?, ?, 'advance', 'hash', 'pending',
-         NULL, NULL, ?, ?
+         'operation-actions-direct', ?, ?, ?, 'advance', 'hash', 'pending',
+         NULL, NULL, NULL, ?, ?
        )`,
     )
-    .run(PROJECT_ID, RUN_ID, NOW, NOW);
+    .run(PROJECT_ID, threadId, RUN_ID, NOW, NOW);
   database
     .prepare(
       `INSERT OR IGNORE INTO collaboration_attempts (
-         id, project_id, run_id, agent_id, operation_id, status,
+         id, project_id, thread_id, run_id, agent_id, operation_id, status,
          lease_token, lease_expires_at, prompt_hash, acquire_execution_epoch,
          acquire_context_hash, included_message_sequence, error_category,
          started_at, finished_at
        ) VALUES (
-         'attempt-actions', ?, ?, ?, 'operation-actions-direct', 'calling',
+         'attempt-actions', ?, ?, ?, ?, 'operation-actions-direct', 'calling',
          'lease', '2099-01-01T00:00:00.000Z', 'prompt', 1,
          'context', 0, NULL, ?, NULL
        )`,
     )
-    .run(PROJECT_ID, RUN_ID, AGENT_A, NOW);
+    .run(PROJECT_ID, threadId, RUN_ID, AGENT_A, NOW);
   database.exec("BEGIN IMMEDIATE");
   try {
     const result = implementation.commitAgentTaskActionsTx(database, {
@@ -219,6 +172,37 @@ async function commit(input: Partial<CommitInput> = {}): Promise<CommitResult> {
       turn: turn(),
       ...input,
     });
+    database.prepare(
+      `UPDATE collaboration_attempts
+       SET status='committed',finished_at=?
+       WHERE project_id=? AND thread_id=? AND run_id=? AND id=?`,
+    ).run(NOW, PROJECT_ID, threadId, RUN_ID, "attempt-actions");
+    const run = database.prepare(
+      `SELECT id,project_id AS projectId,thread_id AS threadId,status,
+              current_agent_id AS currentAgentId,round_count AS roundCount,
+              pause_category AS pauseCategory,version,created_at AS createdAt,
+              updated_at AS updatedAt
+       FROM collaboration_runs
+       WHERE project_id=? AND thread_id=? AND id=?`,
+    ).get(PROJECT_ID, threadId, RUN_ID);
+    database.prepare(
+      `UPDATE collaboration_operations
+       SET status='completed',http_status=200,response_json=?,
+           response_schema_version=7,updated_at=?
+       WHERE project_id=? AND thread_id=? AND run_id=? AND id=?`,
+    ).run(
+      JSON.stringify({
+        attempt: { id: "attempt-actions", status: "committed" },
+        attemptStatus: "committed",
+        events: [],
+        run,
+      }),
+      NOW,
+      PROJECT_ID,
+      threadId,
+      RUN_ID,
+      "operation-actions-direct",
+    );
     database.exec("COMMIT");
     return result;
   } catch (error) {
@@ -251,9 +235,17 @@ function counts(): {
              WHERE mission_id = ? AND assignee_agent_id IS NOT NULL) AS assigned,
            (SELECT version FROM missions WHERE id = ?) AS missionVersion,
            (SELECT next_message_sequence FROM collaboration_project_sequences
-             WHERE project_id = ?) AS nextMessageSequence`,
+             WHERE project_id = ? AND thread_id = ?) AS nextMessageSequence`,
       )
-      .get(RUN_ID, missionId, missionId, missionId, missionId, PROJECT_ID) as ReturnType<
+      .get(
+        RUN_ID,
+        missionId,
+        missionId,
+        missionId,
+        missionId,
+        PROJECT_ID,
+        threadId,
+      ) as ReturnType<
       typeof counts
     >;
   } finally {
@@ -306,20 +298,21 @@ beforeEach(() => {
   directory = mkdtempSync(join(tmpdir(), "agent-task-actions-"));
   databasePath = join(directory, "cockpit.sqlite");
   uuidSequence = 0;
-  const database = openDatabase(databasePath);
-  database
-    .prepare(
-      `INSERT INTO projects (
-         id, name, created_at, workspace_path, workspace_key, version
-       ) VALUES (?, 'Agent actions', ?, 'D:\\workspace', 'd:/workspace', 1)`,
-    )
-    .run(PROJECT_ID, NOW);
-  database.close();
-  seed();
-  missionId = createMission(databasePath, PROJECT_ID, {
-    goal: "Commit one complete Agent action transaction",
-    title: "Atomic task actions",
-  }).id;
+  threadId = seedV7AdvanceFixture(databasePath, {
+    agentId: AGENT_A,
+    agentPrompt: "private-a",
+    missionId: MISSION_ID,
+    now: NOW,
+    ownerMessage: null,
+    projectId: PROJECT_ID,
+    projectName: "Agent actions",
+    providerId: "provider-actions",
+    runId: RUN_ID,
+    secondAgentId: AGENT_B,
+    secondAgentPrompt: "private-b",
+    threadCreateOperationId: "13000000-0000-4000-8000-000000000000",
+  });
+  missionId = MISSION_ID;
 });
 
 afterEach(() => {
@@ -607,14 +600,14 @@ describe("Agent task action committer", () => {
     const implementation = await orchestrator();
     const acquired = implementation.acquireAdvance(
       databasePath,
-      RUN_ID,
+      { projectId: PROJECT_ID, runId: RUN_ID, threadId },
       { operationId: OPERATION_ID },
       dependencies(),
     );
     expect(acquired.kind).toBe("acquired");
     const response = implementation.finalizeAdvance(
       databasePath,
-      RUN_ID,
+      { projectId: PROJECT_ID, runId: RUN_ID, threadId },
       {
         attemptId: acquired.attempt.id,
         leaseToken: acquired.attempt.leaseToken,

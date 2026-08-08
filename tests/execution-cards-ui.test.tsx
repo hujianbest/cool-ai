@@ -50,6 +50,7 @@ function execution(
     reasonCode: status === "paused" ? "PROVIDER_TIMEOUT" : null,
     resumeTarget: status === "paused" ? "running" : null,
     sourceCollaborationRunId: RUN_ID,
+    sourceCollaborationThreadId: "thread-execution-cards",
     status,
     toolCalls: 7,
     updatedAt: "2026-07-30T08:05:00.000Z",

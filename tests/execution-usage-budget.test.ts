@@ -5,12 +5,8 @@ import type { DatabaseSync } from "node:sqlite";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
 import { createCredentialVault } from "@/src/server/credential-vault";
-import { createV6FixtureDatabaseOpener } from "@/tests/v6-fixture-db";
-
-const openDatabase = createV6FixtureDatabaseOpener({
-  missingDeliveryHeadMissionIds: ["mission"],
-  missingReviewHeadResultIds: [],
-});
+import { openDatabase } from "@/src/server/db";
+import { execV7Fixture } from "@/tests/v7-fixture-graph";
 import { refreshExecutionFrozenFixture } from "./execution-frozen-fixture";
 
 type AdvanceModule = {
@@ -43,15 +39,18 @@ function insertExecution(
 ): void {
   database.prepare(`
     INSERT INTO executions (
-      id,project_id,source_collaboration_run_id,mission_id,work_item_id,agent_id,
+      id,project_id,source_collaboration_run_id,source_collaboration_thread_id,
+      mission_id,work_item_id,agent_id,
       current_policy_revision_id,status,resume_target,reason_code,
       manual_recovery_required,recovery_resolution,current_attempt_no,
       business_round_count,tool_call_count,next_event_sequence,version,created_at,
       business_deadline_at,first_running_at,updated_at,merged_at
-    ) VALUES (?,?,'run','mission',?,?, 'policy','queued',NULL,NULL,0,NULL,1,0,0,1,1,
+    ) VALUES (?,?,'run',(
+      SELECT thread_id FROM collaboration_runs WHERE project_id=? AND id='run'
+    ),'mission',?,?, 'policy','queued',NULL,NULL,0,NULL,1,0,0,1,1,
       strftime('%Y-%m-%dT%H:%M:%fZ','now'),NULL,NULL,
       strftime('%Y-%m-%dT%H:%M:%fZ','now'),NULL)
-  `).run(executionId, PROJECT_ID, workItemId, agentId);
+  `).run(executionId, PROJECT_ID, PROJECT_ID, workItemId, agentId);
   database.prepare(`
     INSERT INTO execution_attempts (
       id,project_id,execution_id,attempt_no,status,sandbox_root,
@@ -68,7 +67,7 @@ function insertExecution(
 
 function seed(): void {
   const credential = createCredentialVault().encrypt("provider", "provider-secret");
-  database.exec(`
+  execV7Fixture(databasePath, database, `
     INSERT INTO projects (id,name,created_at,workspace_path,workspace_key,version)
     VALUES ('${PROJECT_ID}','Budget',strftime('%Y-%m-%dT%H:%M:%fZ','now'),
       'D:\\canonical','d:/canonical',1);

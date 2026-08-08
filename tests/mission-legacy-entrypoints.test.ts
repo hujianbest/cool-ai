@@ -5,6 +5,7 @@ import { join } from "node:path";
 import type { DatabaseSync } from "node:sqlite";
 import { afterEach, beforeEach, describe, expect, it } from "vitest";
 
+import { createThread } from "@/src/server/collaboration/thread-service";
 import { openDatabase } from "@/src/server/db";
 import { createProject } from "@/src/server/projects";
 
@@ -94,6 +95,35 @@ beforeEach(async () => {
   databasePath = join(directory, "cockpit.sqlite");
   domain = await import("@/src/server/mission-service") as MissionDomain;
   projectId = createProject("Legacy completion", databasePath).id;
+  const fixture = openDatabase(databasePath);
+  fixture.exec(`
+    INSERT INTO providers(
+      id,name,base_url,default_model,api_key_cipher,api_key_iv,api_key_tag,
+      credential_version,credential_generation,key_id,api_key_mask,verified_at,
+      version,created_at,updated_at
+    ) VALUES (
+      'legacy-provider','Fixture','http://127.0.0.1','model','cipher','iv','tag',
+      1,1,'key','***','2026-08-01T05:00:00.000Z',1,
+      '2026-08-01T05:00:00.000Z','2026-08-01T05:00:00.000Z'
+    );
+    INSERT INTO agents(
+      id,name,role,system_prompt,provider_id,model,avatar_text,accent_token,
+      can_read,can_write,can_execute,max_tokens,max_handoffs,version,created_at,updated_at
+    ) VALUES
+      ('legacy-agent-a','A','Fixture','Fixture','legacy-provider','model','A','sage',
+       1,0,0,1000,2,1,'2026-08-01T05:00:00.000Z','2026-08-01T05:00:00.000Z'),
+      ('legacy-agent-b','B','Fixture','Fixture','legacy-provider','model','B','sky',
+       1,0,0,1000,2,1,'2026-08-01T05:00:00.000Z','2026-08-01T05:00:00.000Z');
+    INSERT INTO project_memberships(project_id,agent_id,joined_at) VALUES
+      ('${projectId}','legacy-agent-a','2026-08-01T05:00:00.000Z'),
+      ('${projectId}','legacy-agent-b','2026-08-01T05:00:00.000Z');
+  `);
+  fixture.close();
+  createThread(databasePath, projectId, {
+    memberAgentIds: ["legacy-agent-a", "legacy-agent-b"],
+    operationId: randomUUID(),
+    title: "Legacy completion",
+  });
   missionId = domain.createMission(databasePath, projectId, {
     goal: "Close every completion bypass",
     title: "Legacy mission",
@@ -146,7 +176,7 @@ describe("legacy mission completion entrypoints", () => {
       SELECT kind,status,http_status AS httpStatus FROM collaboration_operations
       WHERE project_id=? AND id=?
     `).all(projectId, operationId)).toEqual([
-      { httpStatus: 409, kind: "legacy_work_item_transition", status: "completed" },
+      { httpStatus: 409, kind: "control", status: "completed" },
     ]);
     expect(database.prepare(
       "SELECT status,version FROM work_items WHERE id=?",

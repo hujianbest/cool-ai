@@ -10,6 +10,8 @@ export class CollaborationError extends Error {
     public readonly httpStatus: number,
     message: string,
     public readonly details: {
+      activeRunId?: string;
+      activeThreadId?: string;
       category?: RunErrorCategory;
       fields?: Record<string, string>;
       currentVersion?: number;
@@ -28,6 +30,10 @@ export function collaborationErrorBody(
     error: {
       code: error.code,
       message: error.message,
+      ...(error.details.activeThreadId
+        ? { activeThreadId: error.details.activeThreadId }
+        : {}),
+      ...(error.details.activeRunId ? { activeRunId: error.details.activeRunId } : {}),
       ...(error.details.category ? { category: error.details.category } : {}),
       ...(error.details.fields ? { fields: error.details.fields } : {}),
       ...(error.details.currentVersion !== undefined

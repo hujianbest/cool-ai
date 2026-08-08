@@ -44,6 +44,9 @@ type HeadRow = {
   projectId: string;
   resultId: string;
   resultVersion: number;
+  sourceContextHash: string;
+  sourceRunId: string;
+  sourceThreadId: string;
   state: "pending_review" | "reviewing" | "passed";
   workItemId: string;
   workItemTitle: string;
@@ -84,14 +87,47 @@ function head(database: DatabaseSync, workItemId: string): HeadRow {
            h.mission_id AS missionId,h.current_result_id AS resultId,
            h.current_attempt_id AS currentAttemptId,h.state,
            h.version AS headVersion,w.title AS workItemTitle,
-           r.version AS resultVersion,e.agent_id AS executorAgentId
+           r.version AS resultVersion,e.agent_id AS executorAgentId,
+           e.source_collaboration_thread_id AS sourceThreadId,
+           e.source_collaboration_run_id AS sourceRunId,
+           attempt.frozen_context_hash AS sourceContextHash,
+           staged.context_hash AS stagedContextHash,
+           json_extract(attempt.frozen_public_json,'$.facts.source.projectId')
+             AS frozenSourceProjectId,
+           json_extract(attempt.frozen_public_json,'$.facts.source.threadId')
+             AS frozenSourceThreadId,
+           json_extract(attempt.frozen_public_json,'$.facts.source.runId')
+             AS frozenSourceRunId
     FROM work_item_review_heads h
     JOIN work_items w ON w.id=h.work_item_id
     JOIN work_item_result_versions r ON r.id=h.current_result_id
     JOIN executions e ON e.id=r.execution_id
+    JOIN execution_staged_results staged
+      ON staged.id=r.staged_result_id AND staged.project_id=r.project_id
+       AND staged.execution_id=r.execution_id
+    JOIN execution_attempts attempt
+      ON attempt.id=staged.attempt_id AND attempt.project_id=staged.project_id
+       AND attempt.execution_id=staged.execution_id
+    JOIN collaboration_runs source_run
+      ON source_run.project_id=e.project_id
+       AND source_run.thread_id=e.source_collaboration_thread_id
+       AND source_run.id=e.source_collaboration_run_id
     WHERE h.work_item_id=?
-  `).get(workItemId) as HeadRow | undefined;
-  if (!row) throw new ReviewSliceError("RESULT_NOT_FOUND", 404, "未找到待复核结果");
+  `).get(workItemId) as (HeadRow & {
+    frozenSourceProjectId: string | null;
+    frozenSourceRunId: string | null;
+    frozenSourceThreadId: string | null;
+    stagedContextHash: string;
+  }) | undefined;
+  if (
+    !row
+    || row.frozenSourceProjectId !== row.projectId
+    || row.frozenSourceThreadId !== row.sourceThreadId
+    || row.frozenSourceRunId !== row.sourceRunId
+    || row.stagedContextHash !== row.sourceContextHash
+  ) {
+    throw new ReviewSliceError("RESULT_NOT_FOUND", 404, "未找到待复核结果");
+  }
   return row;
 }
 
@@ -536,6 +572,12 @@ export function readReviewWorkspace(
       result: {
         executorAgentId: row.executorAgentId,
         id: row.resultId,
+        source: {
+          contextHash: row.sourceContextHash,
+          projectId: row.projectId,
+          runId: row.sourceRunId,
+          threadId: row.sourceThreadId,
+        },
         version: row.resultVersion,
       },
       workItem: { id: row.workItemId, title: row.workItemTitle },

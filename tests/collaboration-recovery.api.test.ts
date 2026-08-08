@@ -4,17 +4,18 @@ import { join } from "node:path";
 import { afterEach, beforeEach, describe, expect, it } from "vitest";
 
 import { acquireAdvance } from "@/src/server/collaboration/turn-orchestrator";
-import { createV6FixtureDatabaseOpener } from "@/tests/v6-fixture-db";
-
-const openDatabase = createV6FixtureDatabaseOpener({
-  missingDeliveryHeadMissionIds: ["mission-recovery-api"],
-  missingReviewHeadResultIds: [],
-});
+import {
+  createThread,
+  startThreadRun,
+} from "@/src/server/collaboration/thread-service";
+import { createCredentialVault } from "@/src/server/credential-vault";
+import { initializeMissionDeliveryTx } from "@/src/server/migrations-v6";
+import { openDatabase } from "@/src/server/db";
 
 type GetRoute = {
   GET(
     request: Request,
-    context: { params: Promise<{ projectId: string }> },
+    context: { params: Promise<Record<string, string>> },
   ): Promise<Response>;
 };
 type PostRoute = {
@@ -25,13 +26,14 @@ type PostRoute = {
 };
 
 const routeModules = import.meta.glob<GetRoute | PostRoute>([
-  "../app/api/projects/[projectId]/collaboration/route.ts",
-  "../app/api/projects/[projectId]/messages/route.ts",
-  "../app/api/runs/[runId]/recover/route.ts",
+  "../app/api/projects/[projectId]/threads/[threadId]/route.ts",
+  "../app/api/projects/[projectId]/threads/[threadId]/messages/route.ts",
+  "../app/api/projects/[projectId]/threads/[threadId]/runs/[runId]/recover/route.ts",
 ]);
 
 const PROJECT_ID = "project-recovery-api";
-const RUN_ID = "run-recovery-api";
+let RUN_ID: string;
+let THREAD_ID: string;
 const AGENT_ID = "agent-recovery-api";
 const NOW = "2026-07-30T01:00:00.000Z";
 const ADVANCE_ID = "00000000-0000-4000-8000-000000001200";
@@ -41,6 +43,10 @@ let databasePath: string;
 let uuid = 0;
 
 function seed(): void {
+  const credential = createCredentialVault().encrypt(
+    "provider-recovery-api",
+    "provider-secret-recovery-api",
+  );
   const database = openDatabase(databasePath);
   try {
     database.exec(`
@@ -56,7 +62,9 @@ function seed(): void {
         api_key_mask, verified_at, version, created_at, updated_at
       ) VALUES (
         'provider-recovery-api', 'Local', 'http://127.0.0.1:4000/v1', 'model',
-        'cipher', 'iv', 'tag', 1, 1, 'key-1', '***', '${NOW}', 1, '${NOW}', '${NOW}'
+        '${credential.apiKeyCipher}', '${credential.apiKeyIv}',
+        '${credential.apiKeyTag}', 1, 1, '${credential.keyId}',
+        '${credential.apiKeyMask}', '${NOW}', 1, '${NOW}', '${NOW}'
       );
       INSERT INTO agents (
         id, name, role, system_prompt, provider_id, model, avatar_text,
@@ -80,35 +88,30 @@ function seed(): void {
         'mission-recovery-api', '${PROJECT_ID}', 'Mission', 'Recover safely', 1,
         '${NOW}', '${NOW}'
       );
-      INSERT INTO collaboration_runs (
-        id, project_id, status, current_agent_id, round_count,
-        next_event_sequence, version, execution_epoch, pause_reason,
-        pause_category, created_at, updated_at
-      ) VALUES (
-        '${RUN_ID}', '${PROJECT_ID}', 'running', '${AGENT_ID}', 0,
-        1, 1, 1, NULL, NULL, '${NOW}', '${NOW}'
-      );
-      INSERT INTO collaboration_project_sequences (
-        project_id, next_message_sequence
-      ) VALUES ('${PROJECT_ID}', 2);
-      INSERT INTO collaboration_messages (
-        id, project_id, run_id, author_type, author_agent_id,
-        author_display_name, content, mention_agent_id, mention_display_name,
-        sequence, consumed_at, created_at
-      ) VALUES (
-        'owner-recovery-api', '${PROJECT_ID}', '${RUN_ID}', 'owner', NULL,
-        'Owner', 'Recover API', NULL, NULL, 1, NULL, '${NOW}'
-      );
     `);
+    initializeMissionDeliveryTx(database, {
+      id: "mission-recovery-api",
+      projectId: PROJECT_ID,
+      updatedAt: NOW,
+    });
   } finally {
     database.close();
   }
+  THREAD_ID = createThread(databasePath, PROJECT_ID, {
+    memberAgentIds: [AGENT_ID, "agent-beta-api"],
+    operationId: "00000000-0000-4000-8000-000000001198",
+    title: "Recovery API",
+  }).body.thread.id;
+  RUN_ID = startThreadRun(databasePath, PROJECT_ID, THREAD_ID, {
+    message: "Recover API",
+    operationId: "00000000-0000-4000-8000-000000001199",
+  }).body.run.id;
 }
 
 function acquireExpired(): void {
   acquireAdvance(
     databasePath,
-    RUN_ID,
+    { projectId: PROJECT_ID, runId: RUN_ID, threadId: THREAD_ID },
     { operationId: ADVANCE_ID },
     {
       clock: () => new Date(NOW),
@@ -136,37 +139,53 @@ async function loadRoute<T extends GetRoute | PostRoute>(path: string): Promise<
 
 async function readCollaboration(): Promise<Response> {
   const route = await loadRoute<GetRoute>(
-    "../app/api/projects/[projectId]/collaboration/route.ts",
+    "../app/api/projects/[projectId]/threads/[threadId]/route.ts",
   );
   return route.GET(
-    new Request(`http://localhost/api/projects/${PROJECT_ID}/collaboration`),
-    { params: Promise.resolve({ projectId: PROJECT_ID }) },
+    new Request(
+      `http://localhost/api/projects/${PROJECT_ID}/threads/${THREAD_ID}?run=${RUN_ID}`,
+    ),
+    { params: Promise.resolve({ projectId: PROJECT_ID, threadId: THREAD_ID }) },
   );
 }
 
 async function postMessage(operationId: string): Promise<Response> {
   const route = await loadRoute<PostRoute>(
-    "../app/api/projects/[projectId]/messages/route.ts",
+    "../app/api/projects/[projectId]/threads/[threadId]/messages/route.ts",
   );
   return route.POST(
-    new Request(`http://localhost/api/projects/${PROJECT_ID}/messages`, {
+    new Request(
+      `http://localhost/api/projects/${PROJECT_ID}/threads/${THREAD_ID}/messages`,
+      {
       body: JSON.stringify({ content: "Mutation triggers recovery", operationId }),
       headers: { "content-type": "application/json" },
       method: "POST",
-    }),
-    { params: Promise.resolve({ projectId: PROJECT_ID }) },
+      },
+    ),
+    { params: Promise.resolve({ projectId: PROJECT_ID, threadId: THREAD_ID }) },
   );
 }
 
 async function recover(operationId: string): Promise<Response> {
-  const route = await loadRoute<PostRoute>("../app/api/runs/[runId]/recover/route.ts");
+  const route = await loadRoute<PostRoute>(
+    "../app/api/projects/[projectId]/threads/[threadId]/runs/[runId]/recover/route.ts",
+  );
   return route.POST(
-    new Request(`http://localhost/api/runs/${RUN_ID}/recover`, {
+    new Request(
+      `http://localhost/api/projects/${PROJECT_ID}/threads/${THREAD_ID}/runs/${RUN_ID}/recover`,
+      {
       body: JSON.stringify({ operationId }),
       headers: { "content-type": "application/json" },
       method: "POST",
-    }),
-    { params: Promise.resolve({ runId: RUN_ID }) },
+      },
+    ),
+    {
+      params: Promise.resolve({
+        projectId: PROJECT_ID,
+        runId: RUN_ID,
+        threadId: THREAD_ID,
+      }),
+    },
   );
 }
 
@@ -199,12 +218,14 @@ beforeEach(() => {
   directory = mkdtempSync(join(tmpdir(), "collaboration-recovery-api-"));
   databasePath = join(directory, "cockpit.sqlite");
   process.env.COCKPIT_DB_PATH = databasePath;
+  process.env.COCKPIT_MASTER_KEY = Buffer.alloc(32, 31).toString("base64url");
   uuid = 0;
   seed();
 });
 
 afterEach(() => {
   delete process.env.COCKPIT_DB_PATH;
+  delete process.env.COCKPIT_MASTER_KEY;
   rmSync(directory, { force: true, recursive: true });
 });
 
@@ -215,8 +236,7 @@ describe("collaboration recovery API triggers", () => {
 
     expect(response.status).toBe(200);
     await expect(response.json()).resolves.toMatchObject({
-      run: { pauseCategory: "interrupted", status: "paused" },
-      usage: { unreportedCalls: 1 },
+      selectedRun: { pauseCategory: "interrupted", status: "paused" },
     });
     expect(state()).toEqual({
       attemptStatus: "interrupted",
@@ -226,7 +246,7 @@ describe("collaboration recovery API triggers", () => {
     });
   });
 
-  it("reconciles before a relevant mutation and still durably completes that mutation", async () => {
+  it("keeps a thread message independent from run recovery and replays it", async () => {
     acquireExpired();
     const operationId = "00000000-0000-4000-8000-000000001201";
     const first = await postMessage(operationId);
@@ -237,13 +257,13 @@ describe("collaboration recovery API triggers", () => {
     expect(replay.status).toBe(201);
     expect(await replay.json()).toEqual(firstBody);
     expect(firstBody).toMatchObject({
-      message: { content: "Mutation triggers recovery", runId: RUN_ID },
-      run: { pauseCategory: "interrupted", status: "paused" },
+      message: { content: "Mutation triggers recovery", runId: null },
+      run: null,
     });
     expect(state()).toMatchObject({
-      attemptStatus: "interrupted",
-      events: 1,
-      runStatus: "paused",
+      attemptStatus: "calling",
+      events: 0,
+      runStatus: "running",
     });
   });
 

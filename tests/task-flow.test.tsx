@@ -234,7 +234,8 @@ describe("task event flow", () => {
 
     render(<ProjectPanel />);
 
-    expect(await screen.findByRole("alert")).toHaveTextContent("服务暂时不可用，请稍后重试。");
+    const loadAlert = await screen.findByText("服务暂时不可用，请稍后重试。");
+    expect(loadAlert.closest('[role="alert"]')).not.toBeNull();
     await user.click(screen.getByRole("button", { name: "重试任务历史" }));
     expect(await screen.findByText("暂无任务。输入目标即可运行示例 Agent。")).toBeInTheDocument();
   });
@@ -269,7 +270,8 @@ describe("task event flow", () => {
     await user.click(screen.getByRole("button", { name: "运行任务" }));
 
     expect(await screen.findByText("任务执行失败。")).toBeInTheDocument();
-    expect(screen.getByRole("alert")).toHaveTextContent("任务执行失败，请稍后重试。");
+    const executionAlert = screen.getByText("任务执行失败，请稍后重试。");
+    expect(executionAlert.closest('[role="alert"]')).not.toBeNull();
     expect(screen.getByLabelText("任务目标")).toHaveValue("Prepare launch notes");
   });
 });

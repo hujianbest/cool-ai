@@ -13,13 +13,20 @@ import {
 import { createPortal } from "react-dom";
 
 import { useModalSurface } from "@/components/mobile-dialog";
+import { useTargetRequestGuard } from "@/components/collaboration/use-target-request-guard";
 import type {
   AnswerDecisionResponse,
   CollaborationApiError,
   CollaborationReadResponse,
   CollaborationRun,
   DecisionRequest,
+  FactPageResponse,
+  MessagePageResponse,
   ProjectMessage,
+  RunStartResponse,
+  ThreadFactDto,
+  ThreadMessageDto,
+  ThreadRunDto,
   TimelineEvent,
   UsageTotals,
 } from "@/src/shared/collaboration-contracts";
@@ -32,10 +39,13 @@ import type {
 
 type CollaborationPanelProps = {
   projectId: string;
+  selectedRunId?: string | null;
   surface?: "all" | "chat" | "run";
+  threadId?: string | null;
   modalBackgroundRef?: RefObject<HTMLElement | null>;
   onNestedModalChange?: (open: boolean) => void;
   onGoalFactChanged?: () => void;
+  onRequestChat?: () => void;
   startOnly?: boolean;
 };
 
@@ -43,10 +53,21 @@ async function readJson<T>(response: Response): Promise<T> {
   return (await response.json()) as T;
 }
 
+class CollaborationResponseError extends ApiDisplayError {
+  constructor(
+    message: string,
+    readonly status: number,
+  ) {
+    super(message);
+  }
+}
+
+class InvalidThreadEnvelopeError extends Error {}
+
 async function readApiResponse<T>(response: Response, fallback: string): Promise<T> {
   const payload = await readJson<T & Partial<CollaborationApiError>>(response);
   if (!response.ok) {
-    throw new ApiDisplayError(apiErrorCopy(payload, fallback));
+    throw new CollaborationResponseError(apiErrorCopy(payload, fallback), response.status);
   }
   return payload;
 }
@@ -85,10 +106,14 @@ function exactKeys(value: unknown, keys: string[]): value is Record<string, unkn
 function mutationIds(
   value: unknown,
   kind: "message" | "start",
+  projectId: string,
+  threadId: string,
 ): { messageId: string; runId: string } | null {
-  const keys = kind === "start" ? ["created", "message", "run"] : ["message", "run"];
+  const keys = kind === "start"
+    ? ["created", "facts", "message", "run"]
+    : ["fact", "message", "run"];
   if (!exactKeys(value, keys)) return null;
-  if (kind === "start" && typeof value.created !== "boolean") return null;
+  if (kind === "start" && value.created !== true) return null;
   if (!exactKeys(value.message, [
     "authorAgentId",
     "authorDisplayName",
@@ -99,9 +124,18 @@ function mutationIds(
     "mentionAgentId",
     "mentionDisplayName",
     "mentionMemberStatus",
+    "projectId",
     "runId",
     "sequence",
+    "threadId",
   ])) return null;
+  if (kind === "message" && value.run === null) {
+    return typeof value.message.id === "string" &&
+      value.message.projectId === projectId &&
+      value.message.threadId === threadId
+      ? { messageId: value.message.id, runId: String(value.message.runId ?? "") }
+      : null;
+  }
   if (!exactKeys(value.run, [
     "createdAt",
     "currentAgentId",
@@ -110,6 +144,7 @@ function mutationIds(
     "projectId",
     "roundCount",
     "status",
+    "threadId",
     "updatedAt",
     "version",
   ])) return null;
@@ -123,6 +158,8 @@ function mutationIds(
     value.message.authorAgentId === null &&
     typeof value.message.authorDisplayName === "string" &&
     typeof value.message.content === "string" &&
+    value.message.projectId === projectId &&
+    value.message.threadId === threadId &&
     value.message.runId === runId &&
     (value.message.mentionAgentId === null ||
       typeof value.message.mentionAgentId === "string") &&
@@ -134,6 +171,8 @@ function mutationIds(
     typeof value.message.createdAt === "string";
   const validRun =
     typeof value.run.projectId === "string" &&
+    value.run.projectId === projectId &&
+    value.run.threadId === threadId &&
     typeof value.run.currentAgentId === "string" &&
     typeof value.run.roundCount === "number" &&
     Number.isSafeInteger(value.run.roundCount) &&
@@ -165,6 +204,322 @@ function mergeSequenced<T extends { id: string; sequence: number }>(
   return Array.from(
     new Map([...current, ...incoming].map((item) => [item.id, item])).values(),
   ).sort((left, right) => left.sequence - right.sequence);
+}
+
+function sameFact(left: ThreadFactDto, right: ThreadFactDto): boolean {
+  return JSON.stringify(left) === JSON.stringify(right);
+}
+
+function mergeThreadFacts(
+  current: ThreadFactDto[],
+  incoming: ThreadFactDto[],
+): { added: number; items: ThreadFactDto[] } {
+  const byId = new Map(current.map((fact) => [fact.id, fact]));
+  let added = 0;
+  for (const fact of incoming) {
+    const existing = byId.get(fact.id);
+    if (existing && !sameFact(existing, fact)) {
+      throw new Error("Thread fact identity collision.");
+    }
+    if (!existing) added += 1;
+    byId.set(fact.id, fact);
+  }
+  return {
+    added,
+    items: Array.from(byId.values()).sort(
+      (left, right) => left.sequence - right.sequence || left.id.localeCompare(right.id),
+    ),
+  };
+}
+
+function validFactTuple(
+  fact: ThreadFactDto,
+  projectId: string,
+  threadId: string,
+): boolean {
+  if (
+    !fact
+    || typeof fact !== "object"
+    || fact.projectId !== projectId
+    || fact.threadId !== threadId
+    || typeof fact.id !== "string"
+    || !Number.isSafeInteger(fact.sequence)
+    || fact.sequence < 1
+  ) return false;
+  if (fact.type === "owner_message" || fact.type === "agent_message") {
+    return fact.message !== null
+      && fact.message.id === fact.messageId
+      && fact.message.projectId === projectId
+      && fact.message.threadId === threadId
+      && fact.message.authorType === (fact.type === "owner_message" ? "owner" : "agent");
+  }
+  return fact.message === null;
+}
+
+function parseFactPage(
+  value: unknown,
+  projectId: string,
+  threadId: string,
+): FactPageResponse {
+  if (
+    !exactKeys(value, ["items", "nextAfter"])
+    || !Array.isArray(value.items)
+    || !value.items.every((fact) =>
+      validFactTuple(fact as ThreadFactDto, projectId, threadId)
+    )
+    || !(
+      value.nextAfter === null
+      || (Number.isSafeInteger(value.nextAfter) && Number(value.nextAfter) >= 1)
+    )
+  ) {
+    throw new Error("Invalid thread fact page.");
+  }
+  const page = value as FactPageResponse;
+  for (let index = 1; index < page.items.length; index += 1) {
+    if (page.items[index - 1]!.sequence >= page.items[index]!.sequence) {
+      throw new Error("Invalid thread fact order.");
+    }
+  }
+  return page;
+}
+
+type OnboardingThreadEnvelope = {
+  activeRun: { runId: string; threadId: string } | null;
+  factsPage: FactPageResponse;
+  messagesPage: MessagePageResponse;
+  readiness: unknown;
+  runs: ThreadRunDto[];
+  selectedRun: ThreadRunDto | null;
+  thread: unknown;
+};
+
+async function readAllThreadPages<T>(
+  url: string,
+  fallback: string,
+  signal: AbortSignal,
+): Promise<{ items: T[]; nextAfter: null }> {
+  const items: T[] = [];
+  let after = 0;
+  while (true) {
+    const response = await fetch(after > 0 ? `${url}?after=${after}` : url, { signal });
+    const page = await readApiResponse<unknown>(response, fallback);
+    if (
+      !exactKeys(page, ["items", "nextAfter"]) ||
+      !Array.isArray(page.items) ||
+      !(page.nextAfter === null ||
+        (Number.isSafeInteger(page.nextAfter) && Number(page.nextAfter) >= 0))
+    ) {
+      return page as { items: T[]; nextAfter: null };
+    }
+    items.push(...page.items as T[]);
+    if (page.nextAfter === null) break;
+    if (Number(page.nextAfter) <= after) {
+      throw new Error("Thread page cursor did not advance.");
+    }
+    after = Number(page.nextAfter);
+  }
+  return { items, nextAfter: null };
+}
+
+async function readOnboardingThread(
+  projectId: string,
+  threadId: string,
+  selectedRunId: string | null,
+  signal: AbortSignal,
+  allFacts = false,
+): Promise<{ envelope: OnboardingThreadEnvelope; state: CollaborationReadResponse }> {
+  const base = `/api/projects/${projectId}/threads/${threadId}`;
+  const detailUrl = selectedRunId
+    ? `${base}?run=${encodeURIComponent(selectedRunId)}`
+    : base;
+  const [detail, messagesPage, factsPage, tupleTimelinePage] = await Promise.all([
+    fetch(detailUrl, { signal }).then((response) =>
+      readApiResponse<Record<string, unknown>>(
+        response,
+        "无法加载协作线程，请稍后重试。",
+      )
+    ),
+    readAllThreadPages<ThreadMessageDto>(
+      `${base}/messages`,
+      "无法加载协作消息，请稍后重试。",
+      signal,
+    ),
+    allFacts
+      ? readAllThreadPages<ThreadFactDto>(
+          `${base}/facts`,
+          "无法加载协作事实，请稍后重试。",
+          signal,
+        )
+      : fetch(`${base}/facts`, { signal })
+          .then((response) =>
+            readApiResponse<unknown>(
+              response,
+              "无法加载协作事实，请稍后重试。",
+            )
+          )
+          .then((page) => parseFactPage(page, projectId, threadId)),
+    selectedRunId
+      ? readAllThreadPages<TimelineEvent>(
+          `${base}/runs/${encodeURIComponent(selectedRunId)}/timeline`,
+          "无法加载运行事件，请稍后重试。",
+          signal,
+        )
+      : Promise.resolve({ items: [], nextAfter: null } as const),
+  ]);
+  const envelope = {
+    ...detail,
+    factsPage,
+    messagesPage,
+  } as OnboardingThreadEnvelope;
+  const selectedRun = envelope.selectedRun;
+  const selectedMessages = messagesPage.items.filter(
+    (message) => message.runId === null || message.runId === selectedRun?.id,
+  );
+  const firstOwnerMessage = selectedMessages.find(
+    (message) =>
+      message.runId === selectedRun?.id && message.authorType === "owner",
+  );
+  const events = factsPage.items.flatMap((fact): TimelineEvent[] => {
+    if (fact.runId !== selectedRun?.id) return [];
+    if (
+      (fact.type === "owner_message" || fact.type === "agent_message") &&
+      fact.message
+    ) {
+      const message = fact.message;
+      return [{
+        actorId: fact.actorId,
+        actorType: fact.actorType,
+        createdAt: fact.createdAt,
+        id: fact.id,
+        payload: fact.type === "owner_message"
+          ? {
+              mentionAgentId: message.mentionAgentId,
+              mentionDisplayName: message.mentionDisplayName,
+              messageId: message.id,
+              messageSequence: message.sequence,
+            }
+          : {
+              agentDisplayName: message.authorDisplayName,
+              agentId: message.authorAgentId!,
+              messageId: message.id,
+              messageSequence: message.sequence,
+              turnId: fact.id,
+            },
+        runId: fact.runId!,
+        sequence: fact.sequence,
+        type: fact.type,
+      } as TimelineEvent];
+    }
+    if (fact.type === "run_event" && fact.payload.eventType === "run_started") {
+      return [{
+        actorId: fact.actorId,
+        actorType: fact.actorType,
+        createdAt: fact.createdAt,
+        id: fact.id,
+        payload: {
+          currentAgentId: selectedRun!.currentAgentId,
+          messageId: firstOwnerMessage?.id ?? fact.id,
+          messageSequence: firstOwnerMessage?.sequence ?? 1,
+        },
+        runId: fact.runId,
+        sequence: fact.sequence,
+        type: "run_started",
+      }];
+    }
+    return [];
+  });
+  const answeredDecisionIds = new Set(
+    tupleTimelinePage.items.flatMap((event) =>
+      event.type === "decision_answered"
+        ? [event.payload.decisionId]
+        : [],
+    ),
+  );
+  const pendingDecisionEvent = tupleTimelinePage.items.findLast(
+    (event) =>
+      event.type === "decision_requested"
+      && !answeredDecisionIds.has(event.payload.decisionId),
+  );
+  const pendingDecision: DecisionRequest | null =
+    pendingDecisionEvent?.type === "decision_requested"
+      ? {
+          answer: null,
+          answerMessageId: null,
+          answeredAt: null,
+          createdAt: pendingDecisionEvent.createdAt,
+          id: pendingDecisionEvent.payload.decisionId,
+          options: pendingDecisionEvent.payload.options,
+          question: pendingDecisionEvent.payload.question,
+          requestingAgentId: pendingDecisionEvent.payload.agentId,
+          runId: pendingDecisionEvent.runId,
+          status: "open",
+          turnId: pendingDecisionEvent.payload.turnId,
+          version: 1,
+        }
+      : null;
+  const usageByAgent = new Map<string, UsageTotals["byAgent"][number]>();
+  let promptTokens = 0;
+  let completionTokens = 0;
+  let totalTokens = 0;
+  let repairCalls = 0;
+  let unreportedCalls = 0;
+  for (const event of tupleTimelinePage.items) {
+    if (event.type === "usage_recorded") {
+      if (event.payload.kind === "repair") repairCalls += 1;
+      if (!event.payload.reported) {
+        unreportedCalls += 1;
+        continue;
+      }
+      promptTokens += event.payload.promptTokens;
+      completionTokens += event.payload.completionTokens;
+      totalTokens += event.payload.totalTokens;
+      if (event.actorId) {
+        const current = usageByAgent.get(event.actorId) ?? {
+          agentId: event.actorId,
+          completionTokens: 0,
+          handoffs: 0,
+          promptTokens: 0,
+          totalTokens: 0,
+        };
+        current.promptTokens += event.payload.promptTokens;
+        current.completionTokens += event.payload.completionTokens;
+        current.totalTokens += event.payload.totalTokens;
+        usageByAgent.set(event.actorId, current);
+      }
+    }
+    if (event.type === "handoff") {
+      const current = usageByAgent.get(event.payload.fromAgentId) ?? {
+        agentId: event.payload.fromAgentId,
+        completionTokens: 0,
+        handoffs: 0,
+        promptTokens: 0,
+        totalTokens: 0,
+      };
+      current.handoffs += 1;
+      usageByAgent.set(event.payload.fromAgentId, current);
+    }
+  }
+  return {
+    envelope,
+    state: {
+      pendingDecision,
+      projectMessagesPage: { items: selectedMessages, nextAfter: null },
+      readiness: {
+        missing: [],
+        ready: envelope.readiness !== null,
+      },
+      run: selectedRun,
+      timelinePage: { items: events, nextAfter: null },
+      usage: {
+        byAgent: Array.from(usageByAgent.values()),
+        completionTokens,
+        promptTokens,
+        repairCalls,
+        totalTokens,
+        unreportedCalls,
+      },
+    },
+  };
 }
 
 function eventActor(event: TimelineEvent, members: ProjectMember[]): string {
@@ -231,12 +586,80 @@ function eventPresentation(
   }
 }
 
+function factPresentation(
+  fact: ThreadFactDto,
+): { detail: string | null; heading: string } {
+  if (fact.type === "thread_created") {
+    return { detail: fact.payload.title, heading: "线程已创建" };
+  }
+  if (fact.type === "policy_changed") {
+    return { detail: null, heading: "协作成员策略已更新" };
+  }
+  if (fact.type === "run_linked") {
+    return { detail: null, heading: "运行已关联" };
+  }
+  if (fact.type === "owner_message") {
+    return { detail: fact.message.content, heading: "所有者发来消息" };
+  }
+  if (fact.type === "agent_message") {
+    return { detail: fact.message.content, heading: "Agent 发来消息" };
+  }
+  if (fact.type !== "run_event") {
+    return { detail: null, heading: "线程事实已记录" };
+  }
+  const event = {
+    actorId: fact.actorId,
+    actorType: fact.actorType,
+    createdAt: fact.createdAt,
+    id: fact.runEventId,
+    payload: {},
+    runId: fact.runId,
+    sequence: fact.sequence,
+    type: fact.payload.eventType,
+  } as TimelineEvent;
+  return eventPresentation(event, new Map());
+}
+
+function factActor(fact: ThreadFactDto, members: ProjectMember[]): string {
+  if (fact.type === "owner_message" || fact.type === "agent_message") {
+    return fact.message.authorDisplayName;
+  }
+  if (fact.actorType === "owner") return "项目所有者";
+  if (fact.actorType === "system") return "系统";
+  return members.find((member) => member.agentId === fact.actorId)?.name
+    ?? fact.actorId
+    ?? "Agent";
+}
+
 function readableTime(timestamp: string): string {
   return new Intl.DateTimeFormat("zh-CN", {
+    day: "2-digit",
     hour: "2-digit",
     minute: "2-digit",
+    month: "2-digit",
+    year: "numeric",
   }).format(new Date(timestamp));
 }
+
+function canonicalRunHref(
+  projectId: string,
+  threadId: string,
+  runId: string | null,
+): string {
+  const query = new URLSearchParams();
+  query.set("thread", threadId);
+  if (runId) query.set("run", runId);
+  return `/projects/${encodeURIComponent(projectId)}?${query.toString()}`;
+}
+
+function runChoiceLabel(run: ThreadRunDto): string {
+  return `${run.status} · ${readableTime(run.createdAt)} · ${run.id}`;
+}
+
+const terminalRunStatuses = new Set<CollaborationRun["status"]>([
+  "planned",
+  "stopped",
+]);
 
 type ControlAction = "pause" | "continue" | "retry" | "stop";
 
@@ -331,11 +754,18 @@ function DecisionPanel({
   decision,
   members,
   onAnswered,
+  projectId,
+  threadId,
 }: {
   decision: DecisionRequest;
   members: ProjectMember[];
   onAnswered: (result: AnswerDecisionResponse) => void;
+  projectId: string;
+  threadId: string;
 }) {
+  const targetGuard = useTargetRequestGuard(
+    `${projectId}|${threadId}|${decision.runId}`,
+  );
   const [selectedOption, setSelectedOption] = useState("");
   const [freeText, setFreeText] = useState("");
   const [mentionAgentId, setMentionAgentId] = useState("");
@@ -355,9 +785,14 @@ function DecisionPanel({
     }
     setSubmitting(true);
     setError(null);
+    const request = targetGuard.capture();
     try {
       const response = await fetch(
-        `/api/runs/${decision.runId}/decisions/${decision.id}/answer`,
+        `/api/projects/${encodeURIComponent(projectId)}/threads/${encodeURIComponent(
+          threadId,
+        )}/runs/${encodeURIComponent(decision.runId)}/decisions/${encodeURIComponent(
+          decision.id,
+        )}/answer`,
         {
           body: JSON.stringify({
             answer,
@@ -367,17 +802,26 @@ function DecisionPanel({
           }),
           headers: { "content-type": "application/json" },
           method: "POST",
+          signal: request.signal,
         },
       );
       const result = await readApiResponse<AnswerDecisionResponse>(
         response,
         "无法提交回答，请稍后重试。",
       );
-      onAnswered(result);
+      if (
+        result.run.projectId !== projectId
+        || result.run.id !== decision.runId
+        || result.decision.runId !== decision.runId
+        || result.decision.id !== decision.id
+      ) throw new Error("Invalid decision answer tuple.");
+      if (request.isCurrent()) onAnswered(result);
     } catch (cause) {
-      setError(caughtApiErrorCopy(cause, "无法提交回答，请稍后重试。"));
+      if (request.isCurrent()) {
+        setError(caughtApiErrorCopy(cause, "无法提交回答，请稍后重试。"));
+      }
     } finally {
-      setSubmitting(false);
+      if (request.isCurrent()) setSubmitting(false);
     }
   }
 
@@ -446,13 +890,18 @@ function RunControls({
   modalBackgroundRef,
   onModalChange,
   onRunChanged,
+  projectId,
   run,
+  threadId,
 }: {
   modalBackgroundRef?: RefObject<HTMLElement | null>;
   onModalChange?: (open: boolean) => void;
   onRunChanged: (run: CollaborationRun) => void;
+  projectId: string;
   run: CollaborationRun;
+  threadId: string;
 }) {
+  const targetGuard = useTargetRequestGuard(`${projectId}|${threadId}|${run.id}`);
   const [pending, setPending] = useState<ControlAction | null>(null);
   const [confirmStop, setConfirmStop] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -489,8 +938,13 @@ function RunControls({
     if (!enabled.has(action) || pending) return;
     setPending(action);
     setError(null);
+    const request = targetGuard.capture();
     try {
-      const response = await fetch(`/api/runs/${run.id}/control`, {
+      const response = await fetch(
+        `/api/projects/${encodeURIComponent(projectId)}/threads/${encodeURIComponent(
+          threadId,
+        )}/runs/${encodeURIComponent(run.id)}/control`,
+        {
         body: JSON.stringify({
           action,
           expectedVersion: run.version,
@@ -498,17 +952,27 @@ function RunControls({
         }),
         headers: { "content-type": "application/json" },
         method: "POST",
-      });
+        signal: request.signal,
+        },
+      );
       const result = await readApiResponse<{ run: CollaborationRun }>(
         response,
         "无法更新运行状态，请稍后重试。",
       );
+      if (
+        result.run.projectId !== projectId
+        || result.run.id !== run.id
+        || ("threadId" in result.run && result.run.threadId !== threadId)
+      ) throw new Error("Invalid run control tuple.");
+      if (!request.isCurrent()) return;
       setConfirmStop(false);
       onRunChanged(result.run);
     } catch (cause) {
-      setError(caughtApiErrorCopy(cause, "无法更新运行状态，请稍后重试。"));
+      if (request.isCurrent()) {
+        setError(caughtApiErrorCopy(cause, "无法更新运行状态，请稍后重试。"));
+      }
     } finally {
-      setPending(null);
+      if (request.isCurrent()) setPending(null);
     }
   }
 
@@ -588,9 +1052,12 @@ export function CollaborationPanel({
   modalBackgroundRef,
   onGoalFactChanged,
   onNestedModalChange,
+  onRequestChat,
   projectId,
+  selectedRunId = null,
   startOnly = false,
   surface = "all",
+  threadId = null,
 }: CollaborationPanelProps) {
   const [state, setState] = useState<CollaborationReadResponse | null>(null);
   const [draft, setDraft] = useState("");
@@ -599,6 +1066,11 @@ export function CollaborationPanel({
   const [loading, setLoading] = useState(true);
   const [sending, setSending] = useState(false);
   const [reloadKey, setReloadKey] = useState(0);
+  const [factsPage, setFactsPage] = useState<FactPageResponse | null>(null);
+  const [factsTargetKey, setFactsTargetKey] = useState("");
+  const [factsError, setFactsError] = useState<string | null>(null);
+  const [factsPending, setFactsPending] = useState(false);
+  const [factsStatus, setFactsStatus] = useState("");
   const [fieldError, setFieldError] = useState<string | null>(null);
   const [members, setMembers] = useState<ProjectMember[] | null>(null);
   const [membersLoading, setMembersLoading] = useState(false);
@@ -612,6 +1084,14 @@ export function CollaborationPanel({
   const [advanceCycle, setAdvanceCycle] = useState(0);
   const [decisionSuccess, setDecisionSuccess] = useState(false);
   const [startNotice, setStartNotice] = useState("");
+  const [runSelection, setRunSelection] = useState<Pick<
+    OnboardingThreadEnvelope,
+    "activeRun" | "runs" | "selectedRun"
+  > | null>(null);
+  const [runSelectionNotice, setRunSelectionNotice] = useState("");
+  const [runNavigationPending, setRunNavigationPending] = useState(false);
+  const [focusRunId, setFocusRunId] = useState<string | null>(null);
+  const onboardingSelectedRunIdRef = useRef<string | null>(selectedRunId);
   const [startReceipt, setStartReceipt] = useState<{
     baselineMessageIds: string[];
     message: string;
@@ -624,6 +1104,7 @@ export function CollaborationPanel({
   const mentionButtonRef = useRef<HTMLButtonElement>(null);
   const logRef = useRef<HTMLDivElement>(null);
   const decisionSuccessRef = useRef<HTMLParagraphElement>(null);
+  const runHeadingRef = useRef<HTMLHeadingElement>(null);
   const atBottomRef = useRef(true);
   const scrollAfterRenderRef = useRef(false);
   const refreshInFlightRef = useRef(false);
@@ -632,8 +1113,17 @@ export function CollaborationPanel({
   const advanceInFlightRef = useRef(false);
   const advanceOperationIdRef = useRef<string | null>(null);
   const mountedRef = useRef(true);
+  const targetEpochRef = useRef(0);
+  const factRequestRef = useRef(0);
+  const factRequestInFlightRef = useRef(false);
   const listboxId = `collaboration-members-${projectId}`;
   const fieldErrorId = `collaboration-message-error-${projectId}`;
+  const targetKey = `${projectId}|${threadId ?? ""}|${selectedRunId ?? ""}`;
+  const targetGuard = useTargetRequestGuard(targetKey);
+
+  useEffect(() => {
+    onboardingSelectedRunIdRef.current = selectedRunId;
+  }, [selectedRunId, threadId]);
 
   const applyRead = useCallback((payload: CollaborationReadResponse, replace: boolean) => {
     setState((current) => {
@@ -663,8 +1153,12 @@ export function CollaborationPanel({
     });
   }, []);
 
-  const loadCollaboration = useCallback(async (showLoading = false) => {
-    if (refreshInFlightRef.current) return;
+  const loadCollaboration = useCallback(async (
+    showLoading = false,
+    expectedEpoch = targetEpochRef.current,
+  ) => {
+    const request = targetGuard.capture();
+    if (refreshInFlightRef.current && expectedEpoch === targetEpochRef.current) return;
     refreshInFlightRef.current = true;
     if (showLoading) {
       setLoading(true);
@@ -673,84 +1167,239 @@ export function CollaborationPanel({
       eventAfterRef.current = 0;
     }
     try {
-      let messageAfter = showLoading ? 0 : messageAfterRef.current;
-      let eventAfter = showLoading ? 0 : eventAfterRef.current;
-      let latest: CollaborationReadResponse | null = null;
-      let messages: ProjectMessage[] = [];
-      let events: TimelineEvent[] = [];
-      let firstPage = true;
-      while (firstPage || latest?.projectMessagesPage.nextAfter !== null
-        || latest?.timelinePage.nextAfter !== null) {
-        const query = new URLSearchParams();
-        if (messageAfter > 0) query.set("messageAfter", String(messageAfter));
-        if (eventAfter > 0) query.set("eventAfter", String(eventAfter));
-        const suffix = query.size > 0 ? `?${query.toString()}` : "";
-        const response = await fetch(
-          `/api/projects/${projectId}/collaboration${suffix}`,
+      if (threadId) {
+        const result = await readOnboardingThread(
+          projectId,
+          threadId,
+          onboardingSelectedRunIdRef.current,
+          request.signal,
         );
-        const payload = await readApiResponse<CollaborationReadResponse>(
-          response,
-          "无法加载项目群聊，请稍后重试。",
+        const parsed = parseCollaborationGuideEnvelope(
+          result.envelope,
+          projectId,
+          threadId,
+          onboardingSelectedRunIdRef.current,
         );
-        latest = payload;
-        messages = mergeSequenced(messages, payload.projectMessagesPage.items);
-        events = mergeSequenced(events, payload.timelinePage.items);
-        messageAfter = Math.max(
-          messageAfter,
-          payload.projectMessagesPage.nextAfter ?? 0,
-          ...payload.projectMessagesPage.items.map((item) => item.sequence),
-        );
-        eventAfter = Math.max(
-          eventAfter,
-          payload.timelinePage.nextAfter ?? 0,
-          ...payload.timelinePage.items.map((item) => item.sequence),
-        );
-        firstPage = false;
+        if (parsed.kind === "invalid") throw new InvalidThreadEnvelopeError();
+        if (
+          mountedRef.current
+          && expectedEpoch === targetEpochRef.current
+          && request.isCurrent()
+        ) {
+          applyRead(result.state, true);
+          setRunSelection({
+            activeRun: result.envelope.activeRun,
+            runs: result.envelope.runs,
+            selectedRun: result.envelope.selectedRun,
+          });
+          setRunNavigationPending(false);
+          if (result.envelope.selectedRun) {
+            setRunSelectionNotice(
+              `已选择运行 ${result.envelope.selectedRun.id}`,
+            );
+          } else {
+            setRunSelectionNotice((current) =>
+              current === "所选运行无效或已失效，已清除选择。"
+                ? current
+                : "尚未选择运行"
+            );
+          }
+          if (showLoading) {
+            setFactsPage(result.envelope.factsPage);
+            setFactsTargetKey(targetKey);
+            setFactsError(null);
+          }
+        }
+        return;
       }
-      if (latest && mountedRef.current) {
-        messageAfterRef.current = messageAfter;
-        eventAfterRef.current = eventAfter;
-        applyRead(
-          {
-            ...latest,
-            projectMessagesPage: { items: messages, nextAfter: null },
-            timelinePage: { items: events, nextAfter: null },
-          },
-          showLoading,
-        );
-      }
+      throw new Error("thread tuple required");
     } catch (cause) {
-      if (mountedRef.current && showLoading) {
+      if (
+        selectedRunId
+        && (
+          cause instanceof InvalidThreadEnvelopeError
+          || (cause instanceof CollaborationResponseError && cause.status === 404)
+        )
+        && threadId
+        && expectedEpoch === targetEpochRef.current
+        && request.isCurrent()
+      ) {
+        const href = canonicalRunHref(projectId, threadId, null);
+        onboardingSelectedRunIdRef.current = null;
+        setRunSelectionNotice("所选运行无效或已失效，已清除选择。");
+        setRunNavigationPending(false);
+        window.history.replaceState(window.history.state, "", href);
+        window.dispatchEvent(new PopStateEvent("popstate"));
+        return;
+      }
+      if (
+        mountedRef.current
+        && showLoading
+        && expectedEpoch === targetEpochRef.current
+        && request.isCurrent()
+      ) {
         setLoadError(caughtApiErrorCopy(cause, "无法加载项目群聊，请稍后重试。"));
       }
     } finally {
-      refreshInFlightRef.current = false;
-      if (mountedRef.current && showLoading) setLoading(false);
+      if (request.isCurrent()) refreshInFlightRef.current = false;
+      if (
+        mountedRef.current
+        && showLoading
+        && expectedEpoch === targetEpochRef.current
+        && request.isCurrent()
+      ) setLoading(false);
     }
-  }, [applyRead, projectId]);
+  }, [
+    applyRead,
+    projectId,
+    targetKey,
+    threadId,
+    selectedRunId,
+    targetGuard,
+  ]);
+
+  useEffect(() => {
+    const epoch = targetEpochRef.current + 1;
+    targetEpochRef.current = epoch;
+    refreshInFlightRef.current = false;
+    factRequestRef.current += 1;
+    factRequestInFlightRef.current = false;
+    setState(null);
+    setRunSelection(null);
+    setFactsPage(null);
+    setFactsTargetKey("");
+    setFactsError(null);
+    setFactsPending(false);
+    setFactsStatus("");
+    setNewEventCount(0);
+    setLoading(true);
+    setLoadError(null);
+    setDraft("");
+    setMentionOpen(false);
+    setMembers(null);
+    setMembersError(null);
+    setMembersLoading(false);
+    setSelectedMember(null);
+    setStartReceipt(null);
+    setMessageReceipt(null);
+    setSendError(null);
+    setFieldError(null);
+    setStartNotice("");
+    setDecisionSuccess(false);
+    setAdvanceError(null);
+    setAdvanceCycle(0);
+    setSending(false);
+    advanceInFlightRef.current = false;
+    advanceOperationIdRef.current = null;
+    setFocusMessageId(null);
+    messageRefs.current.clear();
+    void loadCollaboration(true, epoch);
+  }, [loadCollaboration, reloadKey, targetKey]);
 
   useEffect(() => {
     mountedRef.current = true;
-    void loadCollaboration(true);
     return () => {
       mountedRef.current = false;
+      targetEpochRef.current += 1;
     };
-  }, [loadCollaboration, reloadKey]);
+  }, []);
+
+  const readNextFacts = useCallback(async (mode: "page" | "poll") => {
+    if (!threadId || factRequestInFlightRef.current) return;
+    const visiblePage = factsTargetKey === targetKey ? factsPage : null;
+    const after = mode === "page"
+      ? visiblePage?.nextAfter
+      : visiblePage?.items.at(-1)?.sequence ?? 0;
+    if (after === null || (mode === "page" && after === undefined)) return;
+    const epoch = targetEpochRef.current;
+    const targetRequest = targetGuard.capture();
+    const request = factRequestRef.current + 1;
+    factRequestRef.current = request;
+    factRequestInFlightRef.current = true;
+    if (mode === "page") setFactsPending(true);
+    setFactsError(null);
+    try {
+      const response = await fetch(
+        `/api/projects/${encodeURIComponent(projectId)}/threads/${encodeURIComponent(
+          threadId,
+        )}/facts?after=${after}`,
+        { signal: targetRequest.signal },
+      );
+      const payload = await readApiResponse<unknown>(
+        response,
+        "无法加载协作事实，请稍后重试。",
+      );
+      const nextPage = parseFactPage(payload, projectId, threadId);
+      if (
+        !mountedRef.current
+        || epoch !== targetEpochRef.current
+        || request !== factRequestRef.current
+        || !targetRequest.isCurrent()
+      ) return;
+      setFactsPage((current) => {
+        if (!current || factsTargetKey !== targetKey) return current;
+        const merged = mergeThreadFacts(current.items, nextPage.items);
+        if (merged.added > 0) {
+          if (mode === "poll") {
+            if (atBottomRef.current) scrollAfterRenderRef.current = true;
+            else setNewEventCount((count) => count + merged.added);
+          } else {
+            setFactsStatus(`已加载 ${merged.added} 条事实`);
+          }
+        } else if (mode === "page") {
+          setFactsStatus("没有更多事实");
+        }
+        return { items: merged.items, nextAfter: nextPage.nextAfter };
+      });
+    } catch (cause) {
+      if (
+        mountedRef.current
+        && epoch === targetEpochRef.current
+        && request === factRequestRef.current
+        && targetRequest.isCurrent()
+      ) {
+        setFactsError(caughtApiErrorCopy(cause, "无法加载协作事实，请稍后重试。"));
+      }
+    } finally {
+      if (request === factRequestRef.current) {
+        factRequestInFlightRef.current = false;
+        if (
+          mountedRef.current
+          && epoch === targetEpochRef.current
+          && targetRequest.isCurrent()
+        ) {
+          setFactsPending(false);
+        }
+      }
+    }
+  }, [factsPage, factsTargetKey, projectId, targetGuard, targetKey, threadId]);
 
   useEffect(() => {
     if (loading || loadError) return;
     const interval = window.setInterval(() => {
-      void loadCollaboration();
+      if (
+        factsTargetKey === targetKey
+        && factsPage?.nextAfter === null
+      ) {
+        void readNextFacts("poll");
+      }
     }, POLL_INTERVAL_MS);
     return () => window.clearInterval(interval);
-  }, [loadCollaboration, loadError, loading]);
+  }, [
+    factsPage?.nextAfter,
+    factsTargetKey,
+    loadError,
+    loading,
+    readNextFacts,
+    targetKey,
+  ]);
 
   useEffect(() => {
     if (!scrollAfterRenderRef.current) return;
     scrollAfterRenderRef.current = false;
     const log = logRef.current;
     if (log) log.scrollTop = log.scrollHeight;
-  }, [state?.timelinePage.items.length]);
+  }, [factsPage?.items.length, state?.timelinePage.items.length]);
 
   useEffect(() => {
     if (!focusMessageId) return;
@@ -761,6 +1410,17 @@ export function CollaborationPanel({
   useEffect(() => {
     if (decisionSuccess) decisionSuccessRef.current?.focus();
   }, [decisionSuccess]);
+
+  useEffect(() => {
+    if (
+      focusRunId
+      && runSelection?.selectedRun?.id === focusRunId
+      && !loading
+    ) {
+      runHeadingRef.current?.focus();
+      setFocusRunId(null);
+    }
+  }, [focusRunId, loading, runSelection?.selectedRun?.id]);
 
   useEffect(() => {
     if (state?.run && !members && !membersLoading) void loadMembers();
@@ -775,33 +1435,49 @@ export function CollaborationPanel({
       || !mountedRef.current
     ) return;
     const logicalOperationId = retryOperationId ?? operationId();
+    const request = targetGuard.capture();
     advanceOperationIdRef.current = logicalOperationId;
     advanceInFlightRef.current = true;
     try {
-      const response = await fetch(`/api/runs/${currentRun.id}/advance`, {
+      const response = await fetch(
+        `/api/projects/${encodeURIComponent(projectId)}/threads/${encodeURIComponent(
+          threadId!,
+        )}/runs/${encodeURIComponent(currentRun.id)}/advance`,
+        {
         body: JSON.stringify({ operationId: logicalOperationId }),
         headers: { "content-type": "application/json" },
         method: "POST",
-      });
+        signal: request.signal,
+        },
+      );
       const result = await readApiResponse<{ run?: CollaborationReadResponse["run"] }>(
         response,
         "无法推进协作，请稍后重试。",
       );
+      if (
+        result.run
+        && (
+          result.run.projectId !== projectId
+          || result.run.id !== currentRun.id
+          || ("threadId" in result.run && result.run.threadId !== threadId)
+        )
+      ) throw new Error("Invalid run advance tuple.");
+      if (!request.isCurrent()) return;
       advanceOperationIdRef.current = null;
-      if (result.run && mountedRef.current) {
+      if (result.run) {
         setState((current) => current ? { ...current, run: result.run ?? current.run } : current);
       }
-      if (mountedRef.current) setAdvanceError(null);
+      setAdvanceError(null);
       await loadCollaboration();
-      if (mountedRef.current) setAdvanceCycle((cycle) => cycle + 1);
+      if (request.isCurrent()) setAdvanceCycle((cycle) => cycle + 1);
     } catch (cause) {
-      if (mountedRef.current) {
+      if (request.isCurrent()) {
         setAdvanceError(caughtApiErrorCopy(cause, "无法推进协作，请稍后重试。"));
       }
     } finally {
-      advanceInFlightRef.current = false;
+      if (request.isCurrent()) advanceInFlightRef.current = false;
     }
-  }, [loadCollaboration, state?.run]);
+  }, [loadCollaboration, projectId, state?.run, targetGuard, threadId]);
 
   useEffect(() => {
     if (startOnly || state?.run?.status !== "running" || advanceError) return;
@@ -815,18 +1491,25 @@ export function CollaborationPanel({
     if (members || membersLoading) return;
     setMembersLoading(true);
     setMembersError(null);
+    const request = targetGuard.capture();
     try {
-      const response = await fetch(`/api/projects/${projectId}/members`);
+      const response = await fetch(`/api/projects/${projectId}/members`, {
+        signal: request.signal,
+      });
       const payload = await readApiResponse<MembershipState>(
         response,
         "无法加载项目成员，请稍后重试。",
       );
-      setMembers(payload.members);
-      setActiveMemberIndex(0);
+      if (request.isCurrent()) {
+        setMembers(payload.members);
+        setActiveMemberIndex(0);
+      }
     } catch (cause) {
-      setMembersError(caughtApiErrorCopy(cause, "无法加载项目成员，请稍后重试。"));
+      if (request.isCurrent()) {
+        setMembersError(caughtApiErrorCopy(cause, "无法加载项目成员，请稍后重试。"));
+      }
     } finally {
-      setMembersLoading(false);
+      if (request.isCurrent()) setMembersLoading(false);
     }
   }
 
@@ -925,19 +1608,35 @@ export function CollaborationPanel({
     },
     expected?: { messageId?: string; runId?: string },
   ): Promise<boolean> {
+    const request = targetGuard.capture();
     try {
-      const response = await fetch(`/api/projects/${projectId}/collaboration`);
-      const raw = await readApiResponse<unknown>(
-        response,
-        "无法核对协作事实，请稍后重试。",
+      if (!threadId) return false;
+      const targetRunId = expected?.runId ?? onboardingSelectedRunIdRef.current;
+      const result = await readOnboardingThread(
+        projectId,
+        threadId,
+        targetRunId,
+        request.signal,
+        true,
       );
-      if (parseCollaborationGuideEnvelope(raw, projectId).kind === "invalid") {
+      if (!request.isCurrent()) return false;
+      if (
+        parseCollaborationGuideEnvelope(
+          result.envelope,
+          projectId,
+          threadId,
+          targetRunId,
+        ).kind === "invalid"
+      ) {
         return false;
       }
-      const payload = raw as CollaborationReadResponse;
+      const payload = result.state;
       const confirmed = confirmedStart(payload, receipt, expected);
       if (!confirmed) return false;
+      onboardingSelectedRunIdRef.current = confirmed.run.id;
       applyRead(payload, true);
+      setFactsPage(result.envelope.factsPage);
+      setFactsTargetKey(targetKey);
       setDraft("");
       setSelectedMember(null);
       setFocusMessageId(confirmed.message.id);
@@ -946,6 +1645,15 @@ export function CollaborationPanel({
       setStartNotice(
         "协作已启动；目标已受理，但尚未执行、复核或交付。",
       );
+      const url = new URL(window.location.href);
+      url.searchParams.set("thread", threadId);
+      url.searchParams.set("run", confirmed.run.id);
+      window.history.replaceState(
+        window.history.state,
+        "",
+        `${url.pathname}?${url.searchParams.toString()}`,
+      );
+      window.dispatchEvent(new PopStateEvent("popstate"));
       onGoalFactChanged?.();
       return true;
     } catch {
@@ -964,6 +1672,7 @@ export function CollaborationPanel({
       operationId: string;
     },
   ) {
+    const request = targetGuard.capture();
     const receipt = existingReceipt ?? {
       baselineMessageIds:
         state?.projectMessagesPage.items.map((item) => item.id) ?? [],
@@ -977,7 +1686,10 @@ export function CollaborationPanel({
     setStartReceipt(null);
     let responseReceived = false;
     try {
-      const response = await fetch(`/api/projects/${projectId}/runs`, {
+      if (!threadId) throw new Error("thread tuple required");
+      const response = await fetch(
+        `/api/projects/${projectId}/threads/${threadId}/runs`,
+        {
         body: JSON.stringify({
           message,
           ...(mentionAgentId ? { mentionAgentId } : {}),
@@ -985,13 +1697,16 @@ export function CollaborationPanel({
         }),
         headers: { "content-type": "application/json" },
         method: "POST",
-      });
+        signal: request.signal,
+        },
+      );
       responseReceived = true;
       const result = await readApiResponse<unknown>(
         response,
         "无法启动协作，请稍后重试。",
       );
-      const ids = mutationIds(result, "start");
+      const ids = mutationIds(result, "start", projectId, threadId);
+      if (!request.isCurrent()) return;
       const reconciled = await reconcileStart(
         receipt,
         ids
@@ -1000,14 +1715,16 @@ export function CollaborationPanel({
       );
       if (reconciled) return;
     } catch (cause) {
+      if (!request.isCurrent()) return;
       if (responseReceived && cause instanceof ApiDisplayError) {
         setSendError(caughtApiErrorCopy(cause, "无法启动协作，请稍后重试。"));
         return;
       }
       if (await reconcileStart(receipt)) return;
     } finally {
-      setSending(false);
+      if (request.isCurrent()) setSending(false);
     }
+    if (!request.isCurrent()) return;
     setStartReceipt(receipt);
     setSendError(
       `无法唯一确认协作是否已启动。operation receipt：${logicalOperationId}。请仅重新核对，或明确选择使用同一 receipt 重试；不会自动重发。`,
@@ -1016,9 +1733,11 @@ export function CollaborationPanel({
 
   async function retryStartReconciliation() {
     if (!startReceipt || sending) return;
+    const request = targetGuard.capture();
     setSending(true);
     setSendError(null);
     const reconciled = await reconcileStart(startReceipt);
+    if (!request.isCurrent()) return;
     if (!reconciled) {
       setSendError(
         `仍无法唯一确认协作是否已启动。operation receipt：${startReceipt.operationId}。不会自动重发。`,
@@ -1036,6 +1755,16 @@ export function CollaborationPanel({
       return;
     }
     if (sending) return;
+    const selectedTerminalRun = Boolean(
+      runSelection?.selectedRun
+      && terminalRunStatuses.has(runSelection.selectedRun.status),
+    );
+    const firstRunAvailable = Boolean(
+      runSelection
+      && runSelection.runs.length === 0
+      && !runSelection.activeRun,
+    );
+    if (!state?.run && !selectedTerminalRun && !firstRunAvailable) return;
     setFieldError(null);
     const hasActiveRun = Boolean(
       state?.run && activeRunStatuses.has(state.run.status),
@@ -1063,21 +1792,33 @@ export function CollaborationPanel({
     receipt: CollaborationWriteReceipt,
     expectedMessageId?: string,
   ): Promise<boolean> {
+    const request = targetGuard.capture();
     try {
-      const response = await fetch(`/api/projects/${projectId}/collaboration`);
-      const raw = await readApiResponse<unknown>(
-        response,
-        "无法核对消息事实，请稍后重试。",
+      if (!threadId) return false;
+      const result = await readOnboardingThread(
+        projectId,
+        threadId,
+        receipt.runId,
+        request.signal,
+        true,
       );
-      if (parseCollaborationGuideEnvelope(raw, projectId).kind === "invalid") {
+      if (!request.isCurrent()) return false;
+      if (
+        parseCollaborationGuideEnvelope(
+          result.envelope,
+          projectId,
+          threadId,
+          receipt.runId,
+        ).kind === "invalid"
+      ) {
         return false;
       }
-      const payload = raw as CollaborationReadResponse;
+      const payload = result.state;
       if (payload.run?.id !== receipt.runId) return false;
-      const matches = payload.projectMessagesPage.items.filter(
+      const matches = result.envelope.messagesPage.items.filter(
         (candidate) =>
           candidate.authorType === "owner" &&
-          candidate.runId === receipt.runId &&
+          (candidate.runId === null || candidate.runId === receipt.runId) &&
           candidate.content === receipt.message &&
           candidate.mentionAgentId === (receipt.mentionAgentId ?? null) &&
           !receipt.baselineMessageIds.includes(candidate.id) &&
@@ -1085,14 +1826,16 @@ export function CollaborationPanel({
             candidate.id === expectedMessageId),
       );
       if (matches.length !== 1) return false;
-      const linkedEvents = payload.timelinePage.items.filter(
-        (event) =>
-          event.type === "owner_message" &&
-          event.runId === receipt.runId &&
-          event.payload.messageId === matches[0].id,
+      const linkedFacts = result.envelope.factsPage.items.filter(
+        (fact) =>
+          fact.type === "owner_message" &&
+          fact.messageId === matches[0].id &&
+          fact.runId === matches[0].runId,
       );
-      if (linkedEvents.length !== 1) return false;
+      if (linkedFacts.length !== 1) return false;
       applyRead(payload, true);
+      setFactsPage(result.envelope.factsPage);
+      setFactsTargetKey(targetKey);
       setDraft("");
       setSelectedMember(null);
       setFocusMessageId(matches[0].id);
@@ -1108,13 +1851,17 @@ export function CollaborationPanel({
   }
 
   async function submitActiveMessage(receipt: CollaborationWriteReceipt) {
+    const request = targetGuard.capture();
     setSendError(null);
     setStartNotice("");
     setMessageReceipt(null);
     setSending(true);
     let responseReceived = false;
     try {
-      const response = await fetch(`/api/projects/${projectId}/messages`, {
+      if (!threadId) throw new Error("thread tuple required");
+      const response = await fetch(
+        `/api/projects/${projectId}/threads/${threadId}/messages`,
+        {
         body: JSON.stringify({
           content: receipt.message,
           ...(receipt.mentionAgentId
@@ -1124,23 +1871,28 @@ export function CollaborationPanel({
         }),
         headers: { "content-type": "application/json" },
         method: "POST",
-      });
+        signal: request.signal,
+        },
+      );
       responseReceived = true;
       const result = await readApiResponse<unknown>(
         response,
         "无法发送消息，请稍后重试。",
       );
-      const ids = mutationIds(result, "message");
+      const ids = mutationIds(result, "message", projectId, threadId);
+      if (!request.isCurrent()) return;
       if (await reconcileActiveMessage(receipt, ids?.messageId)) return;
     } catch (cause) {
+      if (!request.isCurrent()) return;
       if (responseReceived && cause instanceof ApiDisplayError) {
         setSendError(caughtApiErrorCopy(cause, "无法发送消息，请稍后重试。"));
         return;
       }
       if (await reconcileActiveMessage(receipt)) return;
     } finally {
-      setSending(false);
+      if (request.isCurrent()) setSending(false);
     }
+    if (!request.isCurrent()) return;
     setMessageReceipt(receipt);
     setSendError(
       `无法唯一确认消息是否已发送。operation receipt：${receipt.operationId}。请仅重新核对，或由用户明确重新提交；不会自动重发。`,
@@ -1149,9 +1901,11 @@ export function CollaborationPanel({
 
   async function retryMessageReconciliation() {
     if (!messageReceipt || sending) return;
+    const request = targetGuard.capture();
     setSending(true);
     setSendError(null);
     const reconciled = await reconcileActiveMessage(messageReceipt);
+    if (!request.isCurrent()) return;
     if (!reconciled) {
       setSendError(
         `仍无法唯一确认消息是否已发送。operation receipt：${messageReceipt.operationId}。不会自动重发。`,
@@ -1160,24 +1914,43 @@ export function CollaborationPanel({
     setSending(false);
   }
 
-  const timelineMessages = new Map(
-    state?.projectMessagesPage.items.map((message) => [message.id, message]) ?? [],
+  const visibleFacts = factsTargetKey === targetKey ? factsPage?.items ?? [] : [];
+  const renderedFacts = visibleFacts.filter(
+    (fact) =>
+      fact.type !== "run_event"
+      || (fact.payload.eventType !== "owner_message"
+        && fact.payload.eventType !== "agent_message"),
   );
-  const referencedMessageIds = new Set(
-    state?.timelinePage.items.flatMap((item) =>
-      item.type === "owner_message" || item.type === "agent_message"
-        ? [item.payload.messageId]
-        : [],
-    ) ?? [],
-  );
-  const standaloneMessages = state?.projectMessagesPage.items.filter(
-    (message) => !referencedMessageIds.has(message.id),
-  ) ?? [];
   const currentMember = members?.find(
     (member) => member.agentId === state?.run?.currentAgentId,
   );
   const showChat = surface === "all" || surface === "chat";
   const showRun = surface === "all" || surface === "run";
+  const activeRunInOtherThread = Boolean(
+    runSelection?.activeRun
+    && runSelection.activeRun.threadId !== threadId,
+  );
+  const selectedTerminalRun = Boolean(
+    runSelection?.selectedRun
+    && terminalRunStatuses.has(runSelection.selectedRun.status),
+  );
+  const canStartFirstRun = Boolean(
+    runSelection
+    && runSelection.runs.length === 0
+    && !runSelection.activeRun,
+  );
+  const canSubmitMessage = Boolean(
+    state?.run || selectedTerminalRun || canStartFirstRun,
+  );
+
+  function navigateToRun(nextThreadId: string, nextRunId: string | null) {
+    const href = canonicalRunHref(projectId, nextThreadId, nextRunId);
+    setRunNavigationPending(true);
+    setRunSelectionNotice("正在切换运行…");
+    if (nextRunId) setFocusRunId(nextRunId);
+    window.history.pushState(window.history.state, "", href);
+    window.dispatchEvent(new PopStateEvent("popstate"));
+  }
 
   return (
     <section aria-labelledby="collaboration-title" className="stack">
@@ -1205,6 +1978,131 @@ export function CollaborationPanel({
         ) : null}
       </div>
 
+      {showRun ? (
+        <section
+          aria-labelledby={`run-selection-title-${projectId}`}
+          className="run-detail"
+        >
+          <div className="panel-heading">
+            <h3 id={`run-selection-title-${projectId}`}>运行选择</h3>
+            {runSelection?.selectedRun ? (
+              <span className="status-label">{runSelection.selectedRun.status}</span>
+            ) : null}
+          </div>
+          {loading ? (
+            <p aria-busy="true" className="muted">正在加载运行列表…</p>
+          ) : loadError ? (
+            <div
+              aria-label="运行加载失败"
+              className="stack"
+              role="region"
+            >
+              <p className="error-text">{loadError}</p>
+              <button
+                onClick={() => setReloadKey((value) => value + 1)}
+                type="button"
+              >
+                重试加载运行
+              </button>
+            </div>
+          ) : runSelection ? (
+            <>
+              <div className="form-field">
+                <label htmlFor={`thread-run-selection-${projectId}`}>
+                  选择线程运行
+                </label>
+                <select
+                  disabled={runNavigationPending || runSelection.runs.length === 0}
+                  id={`thread-run-selection-${projectId}`}
+                  onChange={(event) => {
+                    if (!threadId) return;
+                    navigateToRun(threadId, event.target.value || null);
+                  }}
+                  value={selectedRunId ?? ""}
+                >
+                  <option value="">不选择运行</option>
+                  {runSelection.runs.map((run) => (
+                    <option key={run.id} value={run.id}>
+                      {runChoiceLabel(run)}
+                    </option>
+                  ))}
+                </select>
+              </div>
+              {runNavigationPending ? (
+                <p aria-busy="true" className="muted">正在切换运行…</p>
+              ) : null}
+              {runSelection.runs.length === 0 ? (
+                <div className="empty-guide">
+                  <p>尚无运行。发送首条消息以开始首次运行。</p>
+                  <button
+                    onClick={() => {
+                      const composer = document.getElementById(
+                        `collaboration-message-${projectId}`,
+                      );
+                      if (composer instanceof HTMLElement) composer.focus();
+                      else onRequestChat?.();
+                    }}
+                    type="button"
+                  >
+                    撰写首条消息
+                  </button>
+                </div>
+              ) : null}
+              {runSelection.selectedRun ? (
+                <div className="stack">
+                  <h4 ref={runHeadingRef} tabIndex={-1}>
+                    运行 {runSelection.selectedRun.id}
+                  </h4>
+                  <p>
+                    {runChoiceLabel(runSelection.selectedRun)}
+                  </p>
+                  {terminalRunStatuses.has(runSelection.selectedRun.status) ? (
+                    <p className="muted">
+                      本轮已结束。发送新目标将开始新一轮，不会改变历史运行。
+                    </p>
+                  ) : (
+                    <p className="muted">本轮仍可继续，不会自动开始新一轮。</p>
+                  )}
+                </div>
+              ) : null}
+              {activeRunInOtherThread && runSelection.activeRun ? (
+                <div className="state-message">
+                  <p>
+                    项目活动运行属于另一线程；切换只查看该运行，不会暂停、停止或修改它。
+                  </p>
+                  <a
+                    aria-label={`返回活动线程 ${runSelection.activeRun.runId}`}
+                    href={canonicalRunHref(
+                      projectId,
+                      runSelection.activeRun.threadId,
+                      runSelection.activeRun.runId,
+                    )}
+                    onClick={(event) => {
+                      event.preventDefault();
+                      navigateToRun(
+                        runSelection.activeRun!.threadId,
+                        runSelection.activeRun!.runId,
+                      );
+                    }}
+                  >
+                    返回活动线程
+                  </a>
+                </div>
+              ) : null}
+            </>
+          ) : null}
+          <p
+            aria-atomic="true"
+            aria-label="运行选择状态"
+            aria-live="polite"
+            className="sr-only"
+            role="status"
+          >
+            {runSelectionNotice}
+          </p>
+        </section>
+      ) : null}
+
       {loading ? (
         <p aria-busy="true" className="state-message">
           正在加载项目群聊…
@@ -1222,6 +2120,7 @@ export function CollaborationPanel({
         <>
           {showRun && state?.pendingDecision ? (
             <DecisionPanel
+              key={`${targetKey}|decision|${state.pendingDecision.id}`}
               decision={state.pendingDecision}
               members={members ?? []}
               onAnswered={(result) => {
@@ -1238,6 +2137,8 @@ export function CollaborationPanel({
                 setAdvanceError(null);
                 setAdvanceCycle((cycle) => cycle + 1);
               }}
+              projectId={projectId}
+              threadId={threadId!}
             />
           ) : null}
           {showRun && decisionSuccess ? (
@@ -1255,6 +2156,7 @@ export function CollaborationPanel({
                 运行状态：{state.run.status}
               </p>
               <RunControls
+                key={`${targetKey}|controls`}
                 modalBackgroundRef={modalBackgroundRef}
                 onModalChange={onNestedModalChange}
                 onRunChanged={(updatedRun) => {
@@ -1264,7 +2166,9 @@ export function CollaborationPanel({
                   setAdvanceError(null);
                   setAdvanceCycle((cycle) => cycle + 1);
                 }}
+                projectId={projectId}
                 run={state.run}
+                threadId={threadId!}
               />
               <UsagePanel
                 members={members ?? []}
@@ -1272,10 +2176,26 @@ export function CollaborationPanel({
                 usage={state.usage}
               />
             </div>
+          ) : showRun ? (
+            <section aria-label="运行控制" className="run-detail" role="region">
+              <div className="panel-heading">
+                <h3>运行控制</h3>
+                <span className="status-label">未选择</span>
+              </div>
+              <div className="control-actions">
+                {["暂停", "继续", "重试", "停止"].map((label) => (
+                  <button disabled key={label} type="button">{label}</button>
+                ))}
+              </div>
+              <p className="muted">
+                请先明确选择此线程的一次运行；不会自动使用项目最新运行。
+              </p>
+            </section>
           ) : null}
-          {showChat && state && (state.timelinePage.items.length || standaloneMessages.length) ? (
+          {showChat && state && renderedFacts.length ? (
             <>
             <div
+              aria-busy={factsPending}
               aria-label="协作时间线"
               className="collaboration-timeline"
               onScroll={(event) => {
@@ -1286,64 +2206,60 @@ export function CollaborationPanel({
               }}
               ref={logRef}
               role="log"
+              tabIndex={0}
             >
               <ol
                 className="timeline"
               >
-              {state.timelinePage.items.map((item) => {
-                const presentation = eventPresentation(item, timelineMessages);
-                const messageId =
-                  item.type === "owner_message" || item.type === "agent_message"
-                    ? item.payload.messageId
+              {renderedFacts.map((fact) => {
+                const presentation = factPresentation(fact);
+                const message =
+                  fact.type === "owner_message" || fact.type === "agent_message"
+                    ? fact.message
                     : null;
                 return (
                   <li
                     className="timeline-item timeline-event"
-                    key={item.id}
+                    key={fact.id}
                     ref={(node) => {
-                      if (!messageId) return;
-                      if (node) messageRefs.current.set(messageId, node);
-                      else messageRefs.current.delete(messageId);
+                      if (!message) return;
+                      if (node) messageRefs.current.set(message.id, node);
+                      else messageRefs.current.delete(message.id);
                     }}
-                    tabIndex={messageId ? -1 : undefined}
+                    tabIndex={message ? -1 : undefined}
                   >
                     <div className="timeline-event-heading">
                       <h4>{presentation.heading}</h4>
-                      <time dateTime={item.createdAt}>{readableTime(item.createdAt)}</time>
+                      <time dateTime={fact.createdAt}>{readableTime(fact.createdAt)}</time>
                     </div>
-                    <p className="muted">{eventActor(item, members ?? [])}</p>
+                    <p className="muted">{factActor(fact, members ?? [])}</p>
+                    {message?.mentionAgentId && message.mentionDisplayName ? (
+                      <span className="mention-chip">
+                        @{message.mentionDisplayName}
+                        {message.mentionMemberStatus === "left" ? (
+                          <span className="status-label">已离组</span>
+                        ) : null}
+                      </span>
+                    ) : null}
                     {presentation.detail ? <p>{presentation.detail}</p> : null}
                   </li>
                 );
               })}
-              {standaloneMessages.map((message) => (
-                <li
-                  className="timeline-item timeline-event"
-                  key={message.id}
-                  ref={(node) => {
-                    if (node) messageRefs.current.set(message.id, node);
-                    else messageRefs.current.delete(message.id);
-                  }}
-                  tabIndex={-1}
-                >
-                  <div className="timeline-event-heading">
-                    <h4>{message.authorType === "owner" ? "所有者发来消息" : "Agent 发来消息"}</h4>
-                    <time dateTime={message.createdAt}>{readableTime(message.createdAt)}</time>
-                  </div>
-                  <strong>{message.authorDisplayName}</strong>
-                  {message.mentionAgentId && message.mentionDisplayName ? (
-                    <span className="mention-chip">
-                      @{message.mentionDisplayName}
-                      {message.mentionMemberStatus === "left" ? (
-                        <span className="status-label">已离组</span>
-                      ) : null}
-                    </span>
-                  ) : null}
-                  <span>{message.content}</span>
-                </li>
-              ))}
               </ol>
             </div>
+            {visibleFacts.length ? (
+              <button
+                disabled={factsPending || factsPage?.nextAfter === null}
+                onClick={() => void readNextFacts("page")}
+                type="button"
+              >
+                {factsPending
+                  ? "正在加载更多事实…"
+                  : factsPage?.nextAfter === null
+                    ? "已加载全部事实"
+                    : "加载更多事实"}
+              </button>
+            ) : null}
             {newEventCount > 0 ? (
               <button
                 onClick={() => {
@@ -1359,7 +2275,21 @@ export function CollaborationPanel({
             ) : null}
             </>
           ) : showChat ? (
-            <p className="state-message">尚无协作消息。</p>
+            <p className="state-message">尚无协作消息。请发送第一条消息。</p>
+          ) : null}
+          {showChat && factsError ? (
+            <div className="state-message">
+              <p className="error-text" role="alert">{factsError}</p>
+              <button
+                disabled={factsPending}
+                onClick={() =>
+                  void readNextFacts(factsPage?.nextAfter === null ? "poll" : "page")
+                }
+                type="button"
+              >
+                重试加载事实
+              </button>
+            </div>
           ) : null}
           {showChat ? (
             <p
@@ -1369,7 +2299,9 @@ export function CollaborationPanel({
               className="sr-only"
               role="region"
             >
-              {newEventCount > 0 ? `有 ${newEventCount} 条新事件` : ""}
+              {newEventCount > 0
+                ? `有 ${newEventCount} 条新事件`
+                : factsStatus}
             </p>
           ) : null}
           {showChat && advanceError ? (
@@ -1485,13 +2417,25 @@ export function CollaborationPanel({
                 </div>
               ) : null}
             </div>
-            <button disabled={!draft.trim() || sending} type="submit">
+            <button
+              disabled={!draft.trim() || sending || !canSubmitMessage}
+              type="submit"
+            >
               {sending
                 ? "正在发送…"
                 : state?.run && activeRunStatuses.has(state.run.status)
                   ? "发送消息"
-                  : "发送并启动协作"}
+                  : selectedTerminalRun
+                    ? "发送并开始新一轮"
+                    : "发送并开始首次运行"}
             </button>
+            {!canSubmitMessage ? (
+              <p className="muted">
+                {activeRunInOtherThread
+                  ? "另一线程有活动运行；可发送线程消息，但不能在此启动新一轮。"
+                  : "请先选择历史运行，以继续查看或从已结束运行开始新一轮。"}
+              </p>
+            ) : null}
           </form>
           ) : null}
           {showChat && startNotice ? (

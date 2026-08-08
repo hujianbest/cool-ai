@@ -5,6 +5,7 @@ import * as onboardingMachine from "@/src/shared/onboarding-guide-machine";
 
 const timestamp = "2026-08-08T00:00:00.000Z";
 const projectId = "project-1";
+const threadId = "thread-1";
 
 const provider = {
   apiKeyMask: "••••ABCD",
@@ -60,8 +61,15 @@ const run = {
   projectId,
   roundCount: 0,
   status: "running",
+  threadId,
   updatedAt: timestamp,
   version: 1,
+};
+
+const previousRun = {
+  ...run,
+  id: "run-previous",
+  status: "stopped",
 };
 
 const ownerMessage = {
@@ -74,59 +82,145 @@ const ownerMessage = {
   mentionAgentId: null,
   mentionDisplayName: null,
   mentionMemberStatus: null,
+  projectId,
   runId: run.id,
   sequence: 1,
+  threadId,
 };
 
-const runStarted = {
+const projectOnlyMessage = {
+  ...ownerMessage,
+  content: "Project-only owner note",
+  id: "message-project-only",
+  runId: null,
+  sequence: 2,
+};
+
+const previousRunMessage = {
+  ...ownerMessage,
+  content: "Previous run owner message",
+  id: "message-previous",
+  runId: previousRun.id,
+  sequence: 3,
+};
+
+const thread = {
+  availability: "ready",
+  createdAt: timestamp,
+  id: threadId,
+  lastActivitySequence: 7,
+  policy: {
+    availability: "ready",
+    createdAt: timestamp,
+    members: [
+      {
+        agentId: agent.id,
+        displayNameSnapshot: agent.name,
+        live: "current",
+        position: 0,
+      },
+      {
+        agentId: "agent-2",
+        displayNameSnapshot: "Reviewer",
+        live: "current",
+        position: 1,
+      },
+    ],
+    revisionId: "revision-1",
+    unavailableMemberIds: [],
+    version: 1,
+  },
+  policyVersion: 1,
+  projectId,
+  title: "Onboarding thread",
+  updatedAt: timestamp,
+  version: 1,
+};
+
+function messageFact(
+  message: typeof ownerMessage,
+  sequence: number,
+) {
+  return {
+    activitySequence: sequence + 2,
+    actorId: null,
+    actorType: "owner",
+    createdAt: timestamp,
+    id: `fact-${message.id}`,
+    message,
+    messageId: message.id,
+    payload: { messageId: message.id },
+    policyRevisionId: null,
+    projectId,
+    runEventId: null,
+    runId: message.runId,
+    sequence,
+    threadId,
+    type: "owner_message",
+  };
+}
+
+const runLinkedFact = {
+  activitySequence: 1,
   actorId: null,
   actorType: "system",
   createdAt: timestamp,
-  id: "event-1",
-  payload: {
-    currentAgentId: agent.id,
-    messageId: ownerMessage.id,
-    messageSequence: ownerMessage.sequence,
-  },
+  id: "fact-run-linked",
+  message: null,
+  messageId: null,
+  payload: { runId: run.id },
+  policyRevisionId: null,
+  projectId,
+  runEventId: null,
   runId: run.id,
   sequence: 1,
-  type: "run_started",
+  threadId,
+  type: "run_linked",
 };
 
-const ownerMessageEvent = {
+const runStartedFact = {
+  activitySequence: 2,
   actorId: null,
-  actorType: "owner",
+  actorType: "system",
   createdAt: timestamp,
-  id: "event-2",
-  payload: {
-    mentionAgentId: null,
-    mentionDisplayName: null,
-    messageId: ownerMessage.id,
-    messageSequence: ownerMessage.sequence,
-  },
+  id: "fact-run-started",
+  message: null,
+  messageId: null,
+  payload: { eventType: "run_started" },
+  policyRevisionId: null,
+  projectId,
+  runEventId: "event-1",
   runId: run.id,
   sequence: 2,
-  type: "owner_message",
+  threadId,
+  type: "run_event",
 };
 
 function collaboration(overrides: Record<string, unknown> = {}) {
   return {
-    pendingDecision: null,
-    projectMessagesPage: { items: [ownerMessage], nextAfter: null },
-    readiness: { missing: [], ready: true },
-    run,
-    timelinePage: {
-      items: [runStarted, ownerMessageEvent],
+    activeRun: { runId: "other-run", threadId: "other-thread" },
+    factsPage: {
+      items: [
+        runLinkedFact,
+        runStartedFact,
+        messageFact(ownerMessage, 3),
+        messageFact(projectOnlyMessage, 4),
+        messageFact(previousRunMessage, 5),
+      ],
       nextAfter: null,
     },
-    usage: {
-      byAgent: [],
-      completionTokens: 0,
-      promptTokens: 0,
-      repairCalls: 0,
-      totalTokens: 0,
-      unreportedCalls: 0,
+    messagesPage: {
+      items: [ownerMessage, projectOnlyMessage, previousRunMessage],
+      nextAfter: null,
     },
+    readiness: {
+      dispatch: "project_run_active",
+      missingProjectFacts: [],
+      selectedMemberId: agent.id,
+    },
+    runs: [run, previousRun],
+    selectedRun: run,
+    thread,
     ...overrides,
   };
 }
@@ -275,7 +369,7 @@ describe("T-13 strict runtime fact envelope parsers", () => {
     }
   });
 
-  it("exports a Collaboration parser that validates exact shape, status, project/run, and owner timeline links", () => {
+  it("accepts one thread's explicit selected run, legal multi-run history, project-only messages, and cross-thread active tuple", () => {
     expect(onboardingMachine).toHaveProperty(
       "parseCollaborationGuideEnvelope",
       expect.any(Function),
@@ -285,51 +379,87 @@ describe("T-13 strict runtime fact envelope parsers", () => {
         parseCollaborationGuideEnvelope: (
           value: unknown,
           expectedProjectId: string,
+          expectedThreadId: string,
+          expectedRunId: string | null,
         ) => { kind: string; started?: boolean };
       }
     ).parseCollaborationGuideEnvelope;
-    expect(parse(collaboration(), projectId)).toEqual({
+    expect(parse(collaboration(), projectId, threadId, run.id)).toEqual({
       kind: "success",
       started: true,
     });
+    expect(
+      parse(
+        collaboration({ selectedRun: null }),
+        projectId,
+        threadId,
+        null,
+      ),
+    ).toEqual({ kind: "success", started: false });
+  });
+
+  it("fails collaboration facts closed for malformed, extra, unknown, and cross-tuple data", () => {
+    const parse = onboardingMachine.parseCollaborationGuideEnvelope as (
+      value: unknown,
+      expectedProjectId: string,
+      expectedThreadId: string,
+      expectedRunId: string | null,
+    ) => { kind: string };
     for (const malformed of [
-      omit(collaboration(), "usage"),
+      omit(collaboration(), "factsPage"),
       { ...collaboration(), extra: true },
-      collaboration({ run: { ...run, projectId: "other-project" } }),
-      collaboration({ run: { ...run, status: "unknown" } }),
+      collaboration({ thread: { ...thread, projectId: "other-project" } }),
+      collaboration({ runs: [{ ...run, threadId: "other-thread" }, previousRun] }),
+      collaboration({ runs: [{ ...run, status: "unknown" }, previousRun] }),
+      collaboration({ selectedRun: previousRun }),
       collaboration({
-        projectMessagesPage: {
-          items: [{ ...ownerMessage, runId: "other-run" }],
+        messagesPage: {
+          items: [{ ...ownerMessage, runId: "unknown-run" }],
           nextAfter: null,
         },
       }),
       collaboration({
-        timelinePage: {
-          items: [{ ...runStarted, runId: "other-run" }, ownerMessageEvent],
+        messagesPage: {
+          items: [{ ...ownerMessage, projectId: "other-project" }],
           nextAfter: null,
         },
       }),
       collaboration({
-        timelinePage: {
+        factsPage: {
+          items: [{ ...runLinkedFact, runId: "unknown-run" }],
+          nextAfter: null,
+        },
+      }),
+      collaboration({
+        factsPage: {
           items: [
             {
-              ...runStarted,
-              payload: { ...runStarted.payload, messageId: "missing-message" },
+              ...messageFact(ownerMessage, 3),
+              message: { ...ownerMessage, threadId: "other-thread" },
             },
-            ownerMessageEvent,
           ],
           nextAfter: null,
         },
       }),
       collaboration({
-        timelinePage: {
-          items: [{ ...runStarted, status: "illegal" }, ownerMessageEvent],
+        activeRun: { runId: "other-run", threadId: "other-thread", extra: true },
+      }),
+      collaboration({
+        activeRun: { runId: "unknown-run", threadId },
+      }),
+      collaboration({
+        factsPage: {
+          items: [{ ...runStartedFact, payload: { eventType: "unknown" } }],
           nextAfter: null,
         },
       }),
-      collaboration({ projectMessagesPage: { items: ownerMessage, nextAfter: null } }),
+      collaboration({
+        messagesPage: { items: ownerMessage, nextAfter: null },
+      }),
     ]) {
-      expect(parse(malformed, projectId)).toEqual({ kind: "invalid" });
+      expect(parse(malformed, projectId, threadId, run.id)).toEqual({
+        kind: "invalid",
+      });
     }
   });
 });

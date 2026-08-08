@@ -674,11 +674,21 @@ export function readReviewWorkspace(
         w.version AS workItemVersion,w.status AS boardStatus,
         mission_head.state AS missionState,
         r.id AS resultId,r.version AS resultVersion,
-        r.executor_agent_id AS executorAgentId,r.created_at AS resultCreatedAt
+        r.executor_agent_id AS executorAgentId,r.created_at AS resultCreatedAt,
+        e.project_id AS sourceProjectId,
+        e.source_collaboration_thread_id AS sourceThreadId,
+        e.source_collaboration_run_id AS sourceRunId,
+        source_attempt.frozen_context_hash AS sourceContextHash
       FROM work_item_review_heads h
       JOIN work_items w ON w.id=h.work_item_id
       JOIN mission_delivery_heads mission_head ON mission_head.mission_id=h.mission_id
       LEFT JOIN work_item_result_versions r ON r.id=h.current_result_id
+      LEFT JOIN executions e
+        ON e.id=r.execution_id AND e.project_id=r.project_id
+      LEFT JOIN execution_attempts source_attempt
+        ON source_attempt.execution_id=e.id
+       AND source_attempt.project_id=e.project_id
+       AND source_attempt.attempt_no=e.current_attempt_no
       WHERE h.work_item_id=?
     `).get(workItemId) as Record<string, unknown> | undefined;
     if (!row) throw new ReviewApiError("WORK_ITEM_NOT_FOUND");
@@ -723,6 +733,12 @@ export function readReviewWorkspace(
             createdAt: row.resultCreatedAt,
             executorAgentId: row.executorAgentId,
             id: row.resultId,
+            source: {
+              contextHash: row.sourceContextHash,
+              projectId: row.sourceProjectId,
+              runId: row.sourceRunId,
+              threadId: row.sourceThreadId,
+            },
             version: row.resultVersion,
           }
         : null,

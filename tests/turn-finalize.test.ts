@@ -7,12 +7,8 @@ import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { CollaborationError } from "@/src/server/collaboration/collaboration-errors";
 import { canonicalRequestHash } from "@/src/server/collaboration/operation-receipts";
 import type { StructuredTurnResult } from "@/src/server/collaboration/structured-repair";
-import { createV6FixtureDatabaseOpener } from "@/tests/v6-fixture-db";
-
-const openDatabase = createV6FixtureDatabaseOpener({
-  missingDeliveryHeadMissionIds: ["mission-finalize"],
-  missingReviewHeadResultIds: [],
-});
+import { openDatabase } from "@/src/server/db";
+import { seedV7AdvanceFixture } from "@/tests/v7-advance-fixture";
 
 type Dependencies = {
   clock: () => Date;
@@ -43,7 +39,7 @@ type FinalizeResponse = {
 type OrchestratorModule = {
   acquireAdvance?: (
     databasePath: string,
-    runId: string,
+    tuple: { projectId: string; threadId: string; runId: string },
     input: { operationId: string },
     dependencies: Pick<Dependencies, "clock" | "randomUUID">,
   ) => {
@@ -52,7 +48,7 @@ type OrchestratorModule = {
   };
   finalizeAdvance?: (
     databasePath: string,
-    runId: string,
+    tuple: { projectId: string; threadId: string; runId: string },
     input: {
       attemptId: string;
       leaseToken: string;
@@ -74,6 +70,7 @@ const OPERATION_ID = "00000000-0000-4000-8000-000000001000";
 
 let directory: string;
 let databasePath: string;
+let threadId: string;
 let uuidSequence: number;
 
 function dependencies(
@@ -233,71 +230,20 @@ function schemaFailure(): StructuredTurnResult {
 }
 
 function seedReadyRun(): void {
-  const database = openDatabase(databasePath);
-  try {
-    database.exec(`
-      INSERT INTO projects (
-        id, name, created_at, workspace_path, workspace_key, version
-      ) VALUES (
-        '${PROJECT_ID}', 'Finalize Project', '${NOW}',
-        'D:\\workspace', 'd:/workspace', 1
-      );
-      INSERT INTO providers (
-        id, name, base_url, default_model, api_key_cipher, api_key_iv,
-        api_key_tag, credential_version, credential_generation, key_id,
-        api_key_mask, verified_at, version, created_at, updated_at
-      ) VALUES (
-        'provider-finalize', 'Local', 'http://127.0.0.1:4000/v1', 'model',
-        'cipher', 'iv', 'tag', 1, 1, 'key-1', '***', '${NOW}', 1,
-        '${NOW}', '${NOW}'
-      );
-      INSERT INTO agents (
-        id, name, role, system_prompt, provider_id, model, avatar_text,
-        accent_token, can_read, can_write, can_execute, max_tokens,
-        max_handoffs, version, created_at, updated_at
-      ) VALUES
-        (
-          '${AGENT_ID}', 'Alpha', 'Planner', 'alpha-private',
-          'provider-finalize', 'model', 'A', 'sage', 1, 0, 0, 1000, 2, 1,
-          '${NOW}', '${NOW}'
-        ),
-        (
-          'agent-beta', 'Beta', 'Reviewer', 'beta-private',
-          'provider-finalize', 'model', 'B', 'gold', 1, 0, 0, 1000, 2, 1,
-          '${NOW}', '${NOW}'
-        );
-      INSERT INTO project_memberships (project_id, agent_id, joined_at) VALUES
-        ('${PROJECT_ID}', '${AGENT_ID}', 'a'),
-        ('${PROJECT_ID}', 'agent-beta', 'b');
-      INSERT INTO missions (
-        id, project_id, title, goal, version, created_at, updated_at
-      ) VALUES (
-        'mission-finalize', '${PROJECT_ID}', 'Mission', 'Build safely', 1,
-        '${NOW}', '${NOW}'
-      );
-      INSERT INTO collaboration_runs (
-        id, project_id, status, current_agent_id, round_count,
-        next_event_sequence, version, execution_epoch, pause_reason,
-        pause_category, created_at, updated_at
-      ) VALUES (
-        '${RUN_ID}', '${PROJECT_ID}', 'running', '${AGENT_ID}', 0,
-        1, 1, 7, NULL, NULL, '${NOW}', '${NOW}'
-      );
-      INSERT INTO collaboration_project_sequences (
-        project_id, next_message_sequence
-      ) VALUES ('${PROJECT_ID}', 2);
-      INSERT INTO collaboration_messages (
-        id, project_id, run_id, author_type, author_agent_id,
-        author_display_name, content, mention_agent_id, mention_display_name,
-        sequence, consumed_at, created_at
-      ) VALUES (
-        'owner-message', '${PROJECT_ID}', '${RUN_ID}', 'owner', NULL,
-        'Owner', 'Please plan', NULL, NULL, 1, NULL, '${NOW}'
-      );
-    `);
-  } finally {
-    database.close();
-  }
+  threadId = seedV7AdvanceFixture(databasePath, {
+    agentId: AGENT_ID,
+    agentPrompt: "alpha-private",
+    missionId: "mission-finalize",
+    now: NOW,
+    ownerMessage: "Please plan",
+    projectId: PROJECT_ID,
+    projectName: "Finalize Project",
+    providerId: "provider-finalize",
+    runId: RUN_ID,
+    secondAgentId: "agent-beta",
+    secondAgentPrompt: "beta-private",
+    threadCreateOperationId: "00000000-0000-4000-8000-000000000990",
+  });
 }
 
 async function orchestrator(): Promise<Required<OrchestratorModule>> {
@@ -316,7 +262,7 @@ async function acquire() {
   const implementation = await orchestrator();
   const result = implementation.acquireAdvance(
     databasePath,
-    RUN_ID,
+    { projectId: PROJECT_ID, runId: RUN_ID, threadId },
     { operationId: OPERATION_ID },
     dependencies(),
   );
@@ -333,7 +279,7 @@ async function finalize(
   const attempt = attemptRow();
   return implementation.finalizeAdvance(
     databasePath,
-    RUN_ID,
+    { projectId: PROJECT_ID, runId: RUN_ID, threadId },
     {
       attemptId: inputOverrides.attemptId ?? attempt.id,
       leaseToken: inputOverrides.leaseToken ?? attempt.leaseToken,
@@ -618,15 +564,15 @@ describe("attempt finalize CAS", () => {
         database
           .prepare(
             `INSERT INTO collaboration_messages (
-               id, project_id, run_id, author_type, author_agent_id,
+               id,project_id,thread_id,run_id,author_type,author_agent_id,
                author_display_name, content, mention_agent_id,
                mention_display_name, sequence, consumed_at, created_at
              ) VALUES (
-               'must-rollback', ?, ?, 'agent', ?, 'Alpha', 'rollback me',
+               'must-rollback',?,?,?,'agent',?,'Alpha','rollback me',
                NULL, NULL, 2, NULL, ?
              )`,
           )
-          .run(PROJECT_ID, RUN_ID, AGENT_ID, NOW);
+          .run(PROJECT_ID, threadId, RUN_ID, AGENT_ID, NOW);
         throw new CollaborationError(
           "ACTION_INVALID",
           400,

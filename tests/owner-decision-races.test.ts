@@ -5,10 +5,13 @@ import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
 import type { AgentTurn } from "@/src/server/collaboration/agent-turn-schema";
 import {
-  answerDecision,
-  appendProjectMessage,
-  controlRun,
+  answerThreadDecision,
+  controlThreadRun,
 } from "@/src/server/collaboration/run-service";
+import {
+  createThread,
+  writeOwnerThreadMessage,
+} from "@/src/server/collaboration/thread-service";
 import type { StructuredTurnResult } from "@/src/server/collaboration/structured-repair";
 import {
   acquireAdvance,
@@ -22,6 +25,7 @@ const PROJECT_ID = "project-owner-decision-races";
 const RUN_ID = "run-owner-decision-races";
 const REQUESTER_ID = "agent-decision-requester";
 const REVIEWER_ID = "agent-decision-reviewer";
+let threadId: string;
 
 let databasePath: string;
 let directory: string;
@@ -80,9 +84,9 @@ function decision(options = ["Approve", "Revise"]): AgentTurn {
 }
 
 function ownerMessage(content: string, mentionAgentId?: string) {
-  return appendProjectMessage(databasePath, PROJECT_ID, {
+  return writeOwnerThreadMessage(databasePath, PROJECT_ID, threadId, {
     content,
-    mentionAgentId,
+    ...(mentionAgentId === undefined ? {} : { mentionAgentId }),
     operationId: operationId(),
   }).body.message;
 }
@@ -90,7 +94,7 @@ function ownerMessage(content: string, mentionAgentId?: string) {
 function acquire() {
   const acquired = acquireAdvance(
     databasePath,
-    RUN_ID,
+    { projectId: PROJECT_ID, runId: RUN_ID, threadId },
     { operationId: operationId() },
     dependencies(),
   );
@@ -102,7 +106,7 @@ function acquire() {
 function finalize(acquired: ReturnType<typeof acquire>, turn: AgentTurn) {
   return finalizeAdvance(
     databasePath,
-    RUN_ID,
+    { projectId: PROJECT_ID, runId: RUN_ID, threadId },
     {
       attemptId: acquired.attempt.id,
       leaseToken: acquired.attempt.leaseToken,
@@ -195,19 +199,54 @@ beforeEach(() => {
     INSERT INTO project_memberships (project_id, agent_id, joined_at) VALUES
       ('${PROJECT_ID}', '${REQUESTER_ID}', 'a'),
       ('${PROJECT_ID}', '${REVIEWER_ID}', 'b');
-    INSERT INTO collaboration_runs (
-      id, project_id, status, current_agent_id, round_count,
-      next_event_sequence, version, execution_epoch, pause_reason,
-      pause_category, created_at, updated_at
-    ) VALUES (
-      '${RUN_ID}', '${PROJECT_ID}', 'running', '${REQUESTER_ID}', 0,
-      1, 1, 1, NULL, NULL, '${NOW}', '${NOW}'
-    );
-    INSERT INTO collaboration_project_sequences (
-      project_id, next_message_sequence
-    ) VALUES ('${PROJECT_ID}', 1);
   `);
   database.close();
+  threadId = createThread(databasePath, PROJECT_ID, {
+    memberAgentIds: [REQUESTER_ID, REVIEWER_ID],
+    operationId: operationId(),
+    title: "Decision race thread",
+  }).body.thread.id;
+  const runDatabase = openDatabase(databasePath);
+  runDatabase.exec("BEGIN IMMEDIATE");
+  try {
+    const thread = runDatabase.prepare(
+      `SELECT next_fact_sequence AS sequence FROM collaboration_threads
+       WHERE project_id=? AND id=?`,
+    ).get(PROJECT_ID, threadId) as { sequence: number };
+    const activity = runDatabase.prepare(
+      `SELECT next_activity_sequence AS sequence
+       FROM collaboration_project_thread_sequences WHERE project_id=?`,
+    ).get(PROJECT_ID) as { sequence: number };
+    runDatabase.prepare(
+      `INSERT INTO collaboration_runs(
+         id,project_id,thread_id,status,current_agent_id,round_count,
+         next_event_sequence,version,execution_epoch,pause_reason,pause_category,
+         created_at,updated_at
+       ) VALUES (?,?,?,'running',?,0,1,1,1,NULL,NULL,?,?)`,
+    ).run(RUN_ID, PROJECT_ID, threadId, REQUESTER_ID, NOW, NOW);
+    runDatabase.prepare(
+      `INSERT INTO collaboration_thread_facts(
+         id,project_id,thread_id,sequence,activity_sequence,type,actor_type,actor_id,
+         run_id,message_id,run_event_id,policy_revision_id,payload_json,created_at
+       ) VALUES ('fact-run-owner-races',?,?,?,?,'run_linked','system',NULL,
+                 ?,NULL,NULL,NULL,json_object('runId',?),?)`,
+    ).run(PROJECT_ID, threadId, thread.sequence, activity.sequence, RUN_ID, RUN_ID, NOW);
+    runDatabase.prepare(
+      `UPDATE collaboration_threads
+       SET next_fact_sequence=next_fact_sequence+1,last_activity_sequence=?
+       WHERE project_id=? AND id=?`,
+    ).run(activity.sequence, PROJECT_ID, threadId);
+    runDatabase.prepare(
+      `UPDATE collaboration_project_thread_sequences
+       SET next_activity_sequence=next_activity_sequence+1 WHERE project_id=?`,
+    ).run(PROJECT_ID);
+    runDatabase.exec("COMMIT");
+  } catch (error) {
+    if (runDatabase.isTransaction) runDatabase.exec("ROLLBACK");
+    throw error;
+  } finally {
+    runDatabase.close();
+  }
   createMission(databasePath, PROJECT_ID, {
     goal: "Keep owner decision races durable and explicit",
     title: "Decision race mission",
@@ -267,7 +306,7 @@ describe("calling owner messages and decision requests", () => {
     expect(finalize(acquired, decision()).status).toBe(200);
 
     const openDecision = persistedState().decisionRows[0];
-    answerDecision(databasePath, RUN_ID, openDecision.id, {
+    answerThreadDecision(databasePath, PROJECT_ID, threadId, RUN_ID, openDecision.id, {
       answer: "Explicit owner answer",
       expectedVersion: 1,
       operationId: operationId(),
@@ -309,7 +348,7 @@ describe("calling owner messages and decision requests", () => {
     ).toBe(true);
 
     const failedRun = persistedState().run;
-    controlRun(databasePath, RUN_ID, {
+    controlThreadRun(databasePath, PROJECT_ID, threadId, RUN_ID, {
       action: "retry",
       expectedVersion: failedRun.version,
       operationId: operationId(),
@@ -327,7 +366,7 @@ describe("calling owner messages and decision requests", () => {
     const acquired = acquire();
     const pending = ownerMessage("Pending during discarded call", REVIEWER_ID);
     const runningVersion = persistedState().run.version;
-    controlRun(databasePath, RUN_ID, {
+    controlThreadRun(databasePath, PROJECT_ID, threadId, RUN_ID, {
       action: "pause",
       expectedVersion: runningVersion,
       operationId: operationId(),
@@ -343,7 +382,7 @@ describe("calling owner messages and decision requests", () => {
     ).toBe(true);
 
     const pausedRun = persistedState().run;
-    controlRun(databasePath, RUN_ID, {
+    controlThreadRun(databasePath, PROJECT_ID, threadId, RUN_ID, {
       action: "continue",
       expectedVersion: pausedRun.version,
       operationId: operationId(),

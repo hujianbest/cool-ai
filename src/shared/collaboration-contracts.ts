@@ -1,5 +1,34 @@
 import { z } from "zod";
 
+export type PolicyAvailability = "ready" | "repair_required";
+
+export type DispatchReadiness =
+  | "ready"
+  | "project_context_not_ready"
+  | "policy_repair_required"
+  | "selected_member_provider_unavailable"
+  | "project_run_active";
+
+export type MemberPolicyDto = {
+  revisionId: string;
+  version: number;
+  availability: PolicyAvailability;
+  members: Array<{
+    agentId: string;
+    displayNameSnapshot: string;
+    position: number;
+    live: "current" | "removed";
+  }>;
+  unavailableMemberIds: string[];
+  createdAt: string;
+};
+
+export type ThreadDispatchReadiness = {
+  dispatch: DispatchReadiness;
+  missingProjectFacts: string[];
+  selectedMemberId: string | null;
+};
+
 export type CollaborationRun = {
   id: string;
   projectId: string;
@@ -46,6 +75,7 @@ const sequence = z.number().int().nonnegative();
 const tokenCount = z.number().int().nonnegative();
 const modelCallKind = z.enum(["primary", "repair"]);
 const runErrorCategory = z.enum([
+  "credential_content_rejected",
   "credential_unavailable",
   "provider_auth",
   "rate_limited",
@@ -187,6 +217,118 @@ export type CursorPage<T> = {
   nextAfter: number | null;
 };
 
+export type ThreadMessageDto = {
+  id: string;
+  projectId: string;
+  threadId: string;
+  sequence: number;
+  runId: string | null;
+  authorType: "owner" | "agent";
+  authorAgentId: string | null;
+  authorDisplayName: string;
+  content: string;
+  mentionAgentId: string | null;
+  mentionDisplayName: string | null;
+  mentionMemberStatus: "current" | "left" | null;
+  createdAt: string;
+};
+
+export type ThreadFactBase = {
+  id: string;
+  projectId: string;
+  threadId: string;
+  sequence: number;
+  activitySequence: number;
+  actorType: "owner" | "agent" | "system";
+  actorId: string | null;
+  createdAt: string;
+};
+
+export type ThreadFactDto =
+  | (ThreadFactBase & {
+      type: "thread_created";
+      runId: null;
+      messageId: null;
+      runEventId: null;
+      policyRevisionId: null;
+      payload: { title: string };
+      message: null;
+    })
+  | (ThreadFactBase & {
+      type: "policy_changed";
+      runId: null;
+      messageId: null;
+      runEventId: null;
+      policyRevisionId: string;
+      payload: { policyVersion: number };
+      message: null;
+    })
+  | (ThreadFactBase & {
+      type: "owner_message" | "agent_message";
+      runId: string | null;
+      messageId: string;
+      runEventId: null;
+      policyRevisionId: null;
+      payload: { messageId: string };
+      message: ThreadMessageDto;
+    })
+  | (ThreadFactBase & {
+      type: "run_linked";
+      runId: string;
+      messageId: null;
+      runEventId: null;
+      policyRevisionId: null;
+      payload: { runId: string };
+      message: null;
+    })
+  | (ThreadFactBase & {
+      type: "run_event";
+      runId: string;
+      messageId: null;
+      runEventId: string;
+      policyRevisionId: null;
+      payload: { eventType: TimelineEventType };
+      message: null;
+    });
+
+export type MessagePageResponse = CursorPage<ThreadMessageDto>;
+export type FactPageResponse = CursorPage<ThreadFactDto>;
+
+export type ThreadRunDto = CollaborationRun & {
+  threadId: string;
+};
+
+export type RunStartResponse = {
+  created: true;
+  run: ThreadRunDto;
+  message: ThreadMessageDto;
+  facts: [
+    Extract<ThreadFactDto, { type: "run_linked" }>,
+    Extract<ThreadFactDto, { messageId: string }> & { type: "owner_message" },
+    Extract<ThreadFactDto, { type: "run_event" }>,
+  ];
+};
+
+export type ControlResponse = {
+  run: ThreadRunDto;
+  fact: Extract<ThreadFactDto, { type: "run_event" }>;
+};
+
+export type ThreadDecisionDto = DecisionRequest & {
+  projectId: string;
+  threadId: string;
+};
+
+export type DecisionAnswerResponse = {
+  decision: ThreadDecisionDto;
+  run: ThreadRunDto;
+  message: ThreadMessageDto;
+  facts: [
+    Extract<ThreadFactDto, { messageId: string }>,
+    Extract<ThreadFactDto, { type: "run_event" }>,
+  ];
+};
+
 export type CollaborationReadResponse = {
   run: CollaborationRun | null;
   projectMessagesPage: CursorPage<ProjectMessage>;
@@ -233,8 +375,11 @@ export type AnswerDecisionResponse = {
 export type CollaborationErrorCode =
   | "INVALID_JSON"
   | "INVALID_INPUT"
+  | "BODY_TOO_LARGE"
+  | "UNSUPPORTED_MEDIA_TYPE"
   | "STRUCTURED_OUTPUT_INVALID"
   | "ACTION_INVALID"
+  | "RESOURCE_NOT_FOUND"
   | "PROJECT_NOT_FOUND"
   | "RUN_NOT_FOUND"
   | "DECISION_NOT_FOUND"
@@ -247,8 +392,12 @@ export type CollaborationErrorCode =
   | "DECISION_ALREADY_ANSWERED"
   | "OPERATION_CONFLICT"
   | "OPERATION_IN_PROGRESS"
+  | "VERSION_CONFLICT"
+  | "PROJECT_RUN_ACTIVE"
+  | "THREAD_POLICY_REPAIR_REQUIRED"
   | "ACTION_CONFLICT"
   | "BOUNDARY_REACHED"
+  | "CREDENTIAL_CONTENT_REJECTED"
   | "PROVIDER_AUTH"
   | "RATE_LIMITED"
   | "PROVIDER_UPSTREAM"
@@ -260,6 +409,11 @@ export type CollaborationErrorCode =
   | "INTERNAL_ERROR";
 
 export type RunErrorCategory =
+  | "configured_provider_key"
+  | "private_key"
+  | "authorization_header"
+  | "credential_field"
+  | "credential_content_rejected"
   | "credential_unavailable"
   | "provider_auth"
   | "rate_limited"
@@ -295,6 +449,7 @@ export type ModelCallStatus =
 
 export type ModelCallPublicError = {
   code:
+    | "CREDENTIAL_CONTENT_REJECTED"
     | "PROVIDER_AUTH"
     | "RATE_LIMITED"
     | "PROVIDER_UPSTREAM"
@@ -302,6 +457,7 @@ export type ModelCallPublicError = {
     | "PROVIDER_RESPONSE_INVALID"
     | "PROVIDER_TIMEOUT";
   category:
+    | "credential_content_rejected"
     | "provider_auth"
     | "rate_limited"
     | "provider_upstream"
@@ -310,7 +466,7 @@ export type ModelCallPublicError = {
     | "provider_timeout"
     | "usage_invalid";
   correlationId: string;
-  httpStatus: 401 | 429 | 502 | 504;
+  httpStatus: 401 | 422 | 429 | 502 | 504;
 };
 
 export type ModelCallResult = {
@@ -330,5 +486,7 @@ export type CollaborationApiError = {
     fields?: Record<string, string>;
     currentVersion?: number;
     correlationId?: string;
+    activeThreadId?: string;
+    activeRunId?: string;
   };
 };

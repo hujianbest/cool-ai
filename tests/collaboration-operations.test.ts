@@ -5,6 +5,13 @@ import { afterEach, beforeEach, describe, expect, it } from "vitest";
 
 import { collaborationErrorResponse } from "@/src/server/collaboration/collaboration-api";
 import { CollaborationError } from "@/src/server/collaboration/collaboration-errors";
+import {
+  canonicalRequestHash,
+  readOperationReceipt,
+} from "@/src/server/collaboration/operation-receipts";
+import { createThread } from "@/src/server/collaboration/thread-service";
+import { createCredentialVault } from "@/src/server/credential-vault";
+import { initializeMissionDeliveryTx } from "@/src/server/migrations-v6";
 import { createV6FixtureDatabaseOpener } from "@/tests/v6-fixture-db";
 
 const openReadyDatabase = createV6FixtureDatabaseOpener({
@@ -21,19 +28,22 @@ import { apiErrorCopy } from "@/src/shared/api-error-copy";
 type Route = {
   POST(
     request: Request,
-    context: { params: Promise<{ projectId: string }> },
+    context: { params: Promise<{ projectId: string; threadId: string }> },
   ): Promise<Response>;
 };
 
 const routeModules = import.meta.glob<Route>(
-  "../app/api/projects/[projectId]/runs/route.ts",
+  "../app/api/projects/[projectId]/threads/[threadId]/runs/route.ts",
 );
 
 let directory: string;
 let databasePath: string;
+let threadId: string;
+const MASTER_KEY = Buffer.alloc(32, 37).toString("base64url");
 
 async function route(): Promise<Route> {
-  const load = routeModules["../app/api/projects/[projectId]/runs/route.ts"];
+  const load =
+    routeModules["../app/api/projects/[projectId]/threads/[threadId]/runs/route.ts"];
   expect(load).toBeTypeOf("function");
   return load();
 }
@@ -42,6 +52,7 @@ function seedProject(ready = true): void {
   openDatabase = ready ? openReadyDatabase : openLateDatabase;
   const database = openDatabase(databasePath);
   const timestamp = "2026-07-30T00:00:00.000Z";
+  const credential = createCredentialVault().encrypt("provider-1", "fixture-key");
   try {
     database
       .prepare(
@@ -62,10 +73,20 @@ function seedProject(ready = true): void {
            api_key_mask, verified_at, version, created_at, updated_at
          ) VALUES (
            'provider-1', 'Local', 'http://127.0.0.1:4000/v1', 'model',
-           'cipher', 'iv', 'tag', 1, 1, 'key-1', '***', ?, 1, ?, ?
+           ?, ?, ?, ?, 1, ?, ?, ?, 1, ?, ?
          )`,
       )
-      .run(timestamp, timestamp, timestamp);
+      .run(
+        credential.apiKeyCipher,
+        credential.apiKeyIv,
+        credential.apiKeyTag,
+        credential.credentialVersion,
+        credential.keyId,
+        credential.apiKeyMask,
+        timestamp,
+        timestamp,
+        timestamp,
+      );
     const insertAgent = database.prepare(
       `INSERT INTO agents (
          id, name, role, system_prompt, provider_id, model, avatar_text,
@@ -94,16 +115,24 @@ function seedProject(ready = true): void {
   } finally {
     database.close();
   }
+  threadId = createThread(databasePath, "project-1", {
+    memberAgentIds: ["agent-a", "agent-b"],
+    operationId: "00000000-0000-4000-8000-000000000300",
+    title: "Operation receipts",
+  }).body.thread.id;
 }
 
 async function post(body: Record<string, unknown>): Promise<Response> {
   return (await route()).POST(
-    new Request("http://localhost/api/projects/project-1/runs", {
+    new Request(
+      `http://localhost/api/projects/project-1/threads/${threadId}/runs`,
+      {
       body: JSON.stringify(body),
       headers: { "content-type": "application/json" },
       method: "POST",
-    }),
-    { params: Promise.resolve({ projectId: "project-1" }) },
+      },
+    ),
+    { params: Promise.resolve({ projectId: "project-1", threadId }) },
   );
 }
 
@@ -111,10 +140,12 @@ beforeEach(() => {
   directory = mkdtempSync(join(tmpdir(), "collaboration-operations-"));
   databasePath = join(directory, "cockpit.sqlite");
   process.env.COCKPIT_DB_PATH = databasePath;
+  process.env.COCKPIT_MASTER_KEY = MASTER_KEY;
 });
 
 afterEach(() => {
   delete process.env.COCKPIT_DB_PATH;
+  delete process.env.COCKPIT_MASTER_KEY;
   rmSync(directory, { force: true, recursive: true });
 });
 
@@ -158,19 +189,53 @@ describe("generalized collaboration operation receipts", () => {
     };
     await post(input);
     const database = openDatabase(databasePath);
+    let pending!: Response;
     try {
+      const original = database.prepare(
+        `SELECT http_status AS httpStatus,response_json AS responseJson,
+                response_schema_version AS schemaVersion
+         FROM collaboration_operations
+         WHERE project_id='project-1' AND id=?`,
+      ).get(input.operationId) as {
+        httpStatus: number;
+        responseJson: string;
+        schemaVersion: number;
+      };
       database
         .prepare(
           `UPDATE collaboration_operations
-           SET status = 'pending', http_status = NULL, response_json = NULL
+           SET status = 'pending', http_status = NULL, response_json = NULL,
+               response_schema_version = NULL
            WHERE project_id = 'project-1' AND id = ?`,
         )
         .run(input.operationId);
+      let error: unknown;
+      try {
+        readOperationReceipt(
+          database,
+          "project-1",
+          input.operationId,
+          "start",
+          canonicalRequestHash({ mentionAgentId: null, message: input.message }),
+        );
+      } catch (caught) {
+        error = caught;
+      }
+      pending = collaborationErrorResponse(error, "operation receipt test");
+      database.prepare(
+        `UPDATE collaboration_operations
+         SET status='completed',http_status=?,response_json=?,
+             response_schema_version=?
+         WHERE project_id='project-1' AND id=?`,
+      ).run(
+        original.httpStatus,
+        original.responseJson,
+        original.schemaVersion,
+        input.operationId,
+      );
     } finally {
       database.close();
     }
-
-    const pending = await post(input);
 
     expect(pending.status).toBe(409);
     await expect(pending.json()).resolves.toEqual({
@@ -209,12 +274,16 @@ describe("generalized collaboration operation receipts", () => {
            )`,
         )
         .run();
+      initializeMissionDeliveryTx(database, {
+        id: "mission-late",
+        projectId: "project-1",
+        updatedAt: "2026-07-30T00:00:00.000Z",
+      });
     } finally {
       database.close();
     }
 
     const replay = await post(input);
-
     expect(first.status).toBe(409);
     expect(replay.status).toBe(first.status);
     await expect(replay.json()).resolves.toEqual(firstBody);

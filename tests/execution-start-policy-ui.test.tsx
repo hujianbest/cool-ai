@@ -9,6 +9,11 @@ import { ExecutionPanel } from "@/components/execution/execution-panel";
 
 const PROJECT_ID = "project-policy-ui";
 const RUN_ID = "run-policy-ui";
+const SOURCE_TUPLE = {
+  projectId: PROJECT_ID,
+  runId: RUN_ID,
+  threadId: "thread-policy-ui",
+} as const;
 
 const emptyPolicy = {
   classifierVersion: 1,
@@ -50,6 +55,7 @@ const execution = {
   reasonCode: null,
   resumeTarget: null,
   sourceCollaborationRunId: RUN_ID,
+  sourceCollaborationThreadId: SOURCE_TUPLE.threadId,
   status: "queued",
   toolCalls: 0,
   updatedAt: "2026-07-30T08:00:00.000Z",
@@ -128,7 +134,10 @@ describe("T-27 execution start UI", () => {
       return Response.json({ execution }, { status: 201 });
     });
 
-    render(createElement(ExecutionPanel, { projectId: PROJECT_ID }));
+    render(createElement(ExecutionPanel, {
+      projectId: PROJECT_ID,
+      sourceTuple: SOURCE_TUPLE,
+    }));
     await user.click(await screen.findByRole("checkbox", { name: "Task A" }));
     await user.click(screen.getByRole("checkbox", { name: "Task B" }));
     expect(screen.getByRole("checkbox", { name: "Task C" })).toBeDisabled();
@@ -163,7 +172,10 @@ describe("T-27 append-only validation policy UI", () => {
       );
     });
 
-    render(createElement(ExecutionPanel, { projectId: PROJECT_ID }));
+    render(createElement(ExecutionPanel, {
+      projectId: PROJECT_ID,
+      sourceTuple: SOURCE_TUPLE,
+    }));
     await user.click(screen.getByRole("button", { name: "管理验证政策" }));
     expect(await screen.findByText("活动修订 #1")).toBeInTheDocument();
     expect(screen.getByText("不可变修订 #1")).toBeInTheDocument();
@@ -201,7 +213,10 @@ describe("T-27 append-only validation policy UI", () => {
       });
     });
 
-    render(createElement(ExecutionPanel, { projectId: PROJECT_ID }));
+    render(createElement(ExecutionPanel, {
+      projectId: PROJECT_ID,
+      sourceTuple: SOURCE_TUPLE,
+    }));
     await user.click(screen.getByRole("button", { name: "管理验证政策" }));
     await screen.findByText("活动修订 #1");
     await user.click(screen.getByRole("button", { name: "添加持续批准" }));

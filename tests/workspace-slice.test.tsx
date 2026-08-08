@@ -101,7 +101,8 @@ describe("workspace binding vertical slice", () => {
 
     await user.type(screen.getByLabelText("本地工作区路径"), "relative/path");
     await user.click(screen.getByRole("button", { name: "绑定工作区" }));
-    expect(screen.getByRole("alert")).toHaveTextContent("请输入绝对目录路径。");
+    const pathAlert = screen.getByText("请输入绝对目录路径。");
+    expect(pathAlert.closest('[role="alert"]')).not.toBeNull();
     expect(
       fetchMock.mock.calls.filter(
         ([input, init]) =>

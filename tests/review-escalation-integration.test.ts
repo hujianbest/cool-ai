@@ -9,9 +9,11 @@ import {
   POST as startReview,
 } from "@/app/api/work-items/[workItemId]/reviews/route";
 import { GET as getWorkspace } from "@/app/api/work-items/[workItemId]/review/route";
+import { createThread } from "@/src/server/collaboration/thread-service";
 import { createCredentialVault } from "@/src/server/credential-vault";
 import { openDatabase } from "@/src/server/db";
 import type { ModelCallResult } from "@/src/shared/collaboration-contracts";
+import { refreshExecutionFrozenFixture } from "./execution-frozen-fixture";
 
 type AnswerRoute = {
   POST(request: Request, context: {
@@ -128,23 +130,6 @@ function seed(): void {
     INSERT INTO work_items(
       id,mission_id,title,description,status,assignee_agent_id,version,created_at,updated_at
     ) VALUES ('work','mission','Work','Do work','in_progress','executor',1,'${NOW}','${NOW}');
-    INSERT INTO work_item_result_versions(
-      id,project_id,mission_id,work_item_id,version,execution_id,staged_result_id,
-      merge_journal_id,supersedes_result_id,executor_agent_id,created_at
-    ) VALUES ('result','project','mission','work',1,'execution','staged','journal',
-      NULL,'executor','${NOW}');
-    INSERT INTO execution_staged_results(
-      id,project_id,execution_id,attempt_id,action_id,baseline_manifest_hash,
-      sandbox_manifest_hash,context_hash,policy_hash,staged_hash,observed_path_count,
-      observed_final_bytes,merge_file_count,merge_final_bytes,blocker_count,
-      classification,block_reasons_json,created_at
-    ) VALUES ('staged','project','execution','execution-attempt','action',
-      '${"1".repeat(64)}','${"2".repeat(64)}','${"3".repeat(64)}','${"4".repeat(64)}',
-      '${"5".repeat(64)}',1,0,0,0,0,'auto_eligible','[]','${NOW}');
-    INSERT INTO work_item_review_heads(
-      work_item_id,project_id,mission_id,current_result_id,current_attempt_id,
-      state,version,updated_at
-    ) VALUES ('work','project','mission','result',NULL,'pending_review',1,'${NOW}');
     INSERT INTO mission_delivery_heads(
       mission_id,project_id,context_version,state,current_delivery_id,current_operation_id,
       generation_lease_token,generation_lease_expires_at,last_error_code,
@@ -153,6 +138,81 @@ function seed(): void {
   `);
   database.exec("PRAGMA foreign_keys=ON");
   database.close();
+  const threadId = createThread(databasePath, "project", {
+    memberAgentIds: ["executor", "reviewer"],
+    operationId: "25000000-0000-4000-8000-000000000000",
+    title: "Escalation source",
+  }).body.thread.id;
+  const seeded = openDatabase(databasePath);
+  const contextHash = "3".repeat(64);
+  const policyHash = "4".repeat(64);
+  seeded.exec(`
+    INSERT INTO collaboration_runs(
+      id,project_id,thread_id,status,current_agent_id,round_count,next_event_sequence,
+      version,execution_epoch,pause_reason,pause_category,created_at,updated_at
+    ) VALUES ('run','project','${threadId}','planned','executor',1,1,1,1,NULL,NULL,'${NOW}','${NOW}');
+    INSERT INTO collaboration_thread_facts(
+      id,project_id,thread_id,sequence,activity_sequence,type,actor_type,actor_id,
+      run_id,message_id,run_event_id,policy_revision_id,payload_json,created_at
+    ) VALUES ('run-linked','project','${threadId}',3,3,'run_linked','system',NULL,
+      'run',NULL,NULL,NULL,'{"runId":"run"}','${NOW}');
+    UPDATE collaboration_threads
+    SET next_fact_sequence=4,last_activity_sequence=3,version=version+1,updated_at='${NOW}'
+    WHERE project_id='project' AND id='${threadId}';
+    UPDATE collaboration_project_thread_sequences
+    SET next_activity_sequence=4 WHERE project_id='project';
+    INSERT INTO project_validation_policy_revisions(
+      id,project_id,created_operation_id,created_actor_type,revision_no,policy_hash,
+      classifier_version,warning_accepted,canonical_bytes,entry_count,created_at
+    ) VALUES ('policy','project',NULL,'system',1,'${policyHash}',1,0,2,0,'${NOW}');
+    INSERT INTO project_validation_policies(project_id,active_revision_id,version,updated_at)
+    VALUES ('project','policy',1,'${NOW}');
+    INSERT INTO executions(
+      id,project_id,source_collaboration_thread_id,source_collaboration_run_id,
+      mission_id,work_item_id,agent_id,current_policy_revision_id,status,resume_target,
+      reason_code,manual_recovery_required,recovery_resolution,current_attempt_no,
+      business_round_count,tool_call_count,next_event_sequence,version,created_at,
+      business_deadline_at,first_running_at,updated_at,merged_at
+    ) VALUES ('execution','project','${threadId}','run','mission','work','executor','policy',
+      'merged',NULL,NULL,0,NULL,1,0,0,1,1,'${NOW}',NULL,NULL,'${NOW}','${NOW}');
+    INSERT INTO execution_attempts(
+      id,project_id,execution_id,attempt_no,status,sandbox_root,baseline_manifest_path,
+      sandbox_manifest_path,baseline_manifest_hash,sandbox_manifest_hash,
+      frozen_public_json,frozen_private_json,frozen_context_hash,
+      frozen_policy_revision_id,frozen_policy_version,frozen_policy_hash,started_at,finished_at
+    ) VALUES ('execution-attempt','project','execution',1,'completed','sandbox',NULL,NULL,
+      '${"1".repeat(64)}','${"2".repeat(64)}','{}','{}','${contextHash}',
+      'policy',1,'${policyHash}','${NOW}','${NOW}');
+    INSERT INTO execution_operations(
+      id,project_id,execution_id,kind,request_hash,has_external_actions,action_count,
+      final_action_index,status,http_status,response_json,created_at,updated_at
+    ) VALUES ('stage-op','project','execution','stage','${policyHash}',1,1,0,
+      'completed',200,'{}','${NOW}','${NOW}');
+    INSERT INTO execution_actions(
+      id,project_id,execution_id,attempt_id,operation_id,action_index,kind,status,
+      request_hash,overall_deadline_at,result_json,created_at,started_at,finished_at
+    ) VALUES ('action','project','execution','execution-attempt','stage-op',0,'stage_compute',
+      'succeeded','${policyHash}','2026-08-01T10:15:00.000Z','{}','${NOW}','${NOW}','${NOW}');
+    INSERT INTO execution_staged_results(
+      id,project_id,execution_id,attempt_id,action_id,baseline_manifest_hash,
+      sandbox_manifest_hash,context_hash,policy_hash,staged_hash,observed_path_count,
+      observed_final_bytes,merge_file_count,merge_final_bytes,blocker_count,
+      classification,block_reasons_json,created_at
+    ) VALUES ('staged','project','execution','execution-attempt','action',
+      '${"1".repeat(64)}','${"2".repeat(64)}','${contextHash}','${policyHash}',
+      '${"5".repeat(64)}',1,0,0,0,0,'auto_eligible','[]','${NOW}');
+    INSERT INTO work_item_result_versions(
+      id,project_id,mission_id,work_item_id,version,execution_id,staged_result_id,
+      merge_journal_id,supersedes_result_id,executor_agent_id,created_at
+    ) VALUES ('result','project','mission','work',1,'execution','staged','journal',
+      NULL,'executor','${NOW}');
+    INSERT INTO work_item_review_heads(
+      work_item_id,project_id,mission_id,current_result_id,current_attempt_id,
+      state,version,updated_at
+    ) VALUES ('work','project','mission','result',NULL,'pending_review',1,'${NOW}');
+  `);
+  refreshExecutionFrozenFixture(seeded, "execution");
+  seeded.close();
 }
 
 async function answerRoute(): Promise<AnswerRoute> {
@@ -214,7 +274,7 @@ async function workspace() {
     new Request("http://localhost/api/work-items/work/review"),
     { params: Promise.resolve({ workItemId: "work" }) },
   );
-  expect(response.status).toBe(200);
+  expect(response.status, JSON.stringify(await response.clone().json())).toBe(200);
   return response.json() as Promise<Record<string, any>>;
 }
 

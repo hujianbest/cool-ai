@@ -18,12 +18,7 @@ import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
 vi.mock("server-only", () => ({}));
 
-import { createV6FixtureDatabaseOpener } from "@/tests/v6-fixture-db";
-
-const openDatabase = createV6FixtureDatabaseOpener({
-  missingDeliveryHeadMissionIds: ["mission"],
-  missingReviewHeadResultIds: [],
-});
+import { openDatabase } from "@/src/server/db";
 import { declareStaged } from "@/src/server/execution/action-orchestrator";
 import { ExecutionError } from "@/src/server/execution/execution-service";
 import { executeWriteToolAction } from "@/src/server/execution/file-tools";
@@ -32,6 +27,7 @@ import {
   createWindowsVerifiedExecutionAdapters,
   refreshSandboxManifest,
 } from "@/src/server/execution/windows-verified-execution-adapter";
+import { execV7Fixture } from "@/tests/v7-fixture-graph";
 
 const PROJECT_ID = "manifest-project";
 const EXECUTION_ID = "manifest-execution";
@@ -73,7 +69,7 @@ function operationId(index: number): string {
 
 function seedDatabase(initialHash: string): DatabaseSync {
   const database = openDatabase(databasePath);
-  database.exec(`
+  execV7Fixture(databasePath, database, `
     INSERT INTO projects (id,name,created_at,workspace_path,workspace_key,version)
     VALUES ('${PROJECT_ID}','Manifest','${NOW}','${workspace.replaceAll("'", "''")}',
       '${workspace.replaceAll("'", "''").toLocaleLowerCase("en-US")}',1);

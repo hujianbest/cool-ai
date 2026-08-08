@@ -159,7 +159,17 @@ const workspace: ReviewWorkspaceDto = {
   effectiveStatus: "reviewing",
   headVersion: 4,
   historyCount: 1,
-  result: { executorAgentId: "executor", id: "result-1", version: 7 },
+  result: {
+    executorAgentId: "executor",
+    id: "result-1",
+    source: {
+      contextHash: HASH,
+      projectId: "project",
+      runId: "run-a",
+      threadId: "thread-a",
+    },
+    version: 7,
+  },
   workItem: { id: "work-1", title: "公开复核工作区" },
 };
 
@@ -176,6 +186,15 @@ function attemptProps(
 }
 
 describe("desktop review workspace", () => {
+  it("links review provenance to the exact frozen thread and run", async () => {
+    render(<ReviewWorkspace load={async () => workspace} workItemId="work-1" />);
+
+    expect(await screen.findByRole("link", { name: "打开来源协作运行" })).toHaveAttribute(
+      "href",
+      "/projects/project?thread=thread-a&run=run-a",
+    );
+  });
+
   it("shows real diff, validation, artifact and event bodies with source/version/status", () => {
     render(<ReviewMaterialPanel material={material} />);
 

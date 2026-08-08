@@ -5,12 +5,9 @@ import { afterEach, beforeEach, describe, expect, it } from "vitest";
 
 import { CollaborationError } from "@/src/server/collaboration/collaboration-errors";
 import { canonicalRequestHash } from "@/src/server/collaboration/operation-receipts";
-import { createV6FixtureDatabaseOpener } from "@/tests/v6-fixture-db";
-
-const openDatabase = createV6FixtureDatabaseOpener({
-  missingDeliveryHeadMissionIds: ["mission-acquire"],
-  missingReviewHeadResultIds: [],
-});
+import { appendAgentMessageFactTx } from "@/src/server/collaboration/thread-service";
+import { openDatabase } from "@/src/server/db";
+import { seedV7AdvanceFixture } from "@/tests/v7-advance-fixture";
 
 type AcquireDependencies = {
   clock: () => Date;
@@ -46,7 +43,7 @@ type PausedAdvance = {
 
 type AcquireAdvance = (
   databasePath: string,
-  runId: string,
+  tuple: { projectId: string; threadId: string; runId: string },
   input: { operationId: string },
   dependencies: AcquireDependencies,
 ) => AcquiredAdvance | PausedAdvance;
@@ -66,6 +63,7 @@ const FIXED_NOW = "2026-07-30T01:02:03.000Z";
 let directory: string;
 let databasePath: string;
 let operationSequence: number;
+let threadId: string;
 let uuidSequence: number;
 
 function operationId(): string {
@@ -92,75 +90,88 @@ async function acquire(
   expect(load, "T-9 turn orchestrator must exist").toBeTypeOf("function");
   const implementation = (await load!()).acquireAdvance;
   expect(implementation, "T-9 acquireAdvance must exist").toBeTypeOf("function");
-  return implementation!(databasePath, RUN_ID, input, customDependencies);
+  return implementation!(
+    databasePath,
+    { projectId: PROJECT_ID, runId: RUN_ID, threadId },
+    input,
+    customDependencies,
+  );
 }
 
 function seedReadyRun(): void {
-  const database = openDatabase(databasePath);
-  try {
-    database.exec(`
-      INSERT INTO projects (
-        id, name, created_at, workspace_path, workspace_key, version
-      ) VALUES (
-        '${PROJECT_ID}', 'Acquire Project', '${FIXED_NOW}',
-        'D:\\workspace', 'd:/workspace', 1
-      );
-      INSERT INTO providers (
-        id, name, base_url, default_model, api_key_cipher, api_key_iv,
-        api_key_tag, credential_version, credential_generation, key_id,
-        api_key_mask, verified_at, version, created_at, updated_at
-      ) VALUES (
-        'provider-acquire', 'Local', 'http://127.0.0.1:4000/v1', 'model',
-        'cipher', 'iv', 'tag', 1, 1, 'key-1', '***', '${FIXED_NOW}', 1,
-        '${FIXED_NOW}', '${FIXED_NOW}'
-      );
-      INSERT INTO agents (
-        id, name, role, system_prompt, provider_id, model, avatar_text,
-        accent_token, can_read, can_write, can_execute, max_tokens,
-        max_handoffs, version, created_at, updated_at
-      ) VALUES
-        (
-          '${AGENT_ID}', 'Alpha', 'Planner', 'alpha-private-prompt',
-          'provider-acquire', 'model', 'A', 'sage', 1, 0, 0, 1000, 2, 1,
-          '${FIXED_NOW}', '${FIXED_NOW}'
-        ),
-        (
-          'agent-beta', 'Beta', 'Reviewer', 'beta-private-prompt',
-          'provider-acquire', 'model', 'B', 'gold', 1, 0, 0, 1000, 2, 1,
-          '${FIXED_NOW}', '${FIXED_NOW}'
-        );
-      INSERT INTO project_memberships (project_id, agent_id, joined_at) VALUES
-        ('${PROJECT_ID}', '${AGENT_ID}', 'a'),
-        ('${PROJECT_ID}', 'agent-beta', 'b');
-      INSERT INTO missions (
-        id, project_id, title, goal, version, created_at, updated_at
-      ) VALUES (
-        'mission-acquire', '${PROJECT_ID}', 'Mission', 'Build safely', 1,
-        '${FIXED_NOW}', '${FIXED_NOW}'
-      );
-      INSERT INTO collaboration_runs (
-        id, project_id, status, current_agent_id, round_count,
-        next_event_sequence, version, execution_epoch, pause_reason,
-        pause_category, created_at, updated_at
-      ) VALUES (
-        '${RUN_ID}', '${PROJECT_ID}', 'running', '${AGENT_ID}', 0,
-        1, 1, 7, NULL, NULL, '${FIXED_NOW}', '${FIXED_NOW}'
-      );
-      INSERT INTO collaboration_project_sequences (
-        project_id, next_message_sequence
-      ) VALUES ('${PROJECT_ID}', 2);
-      INSERT INTO collaboration_messages (
-        id, project_id, run_id, author_type, author_agent_id,
-        author_display_name, content, mention_agent_id, mention_display_name,
-        sequence, consumed_at, created_at
-      ) VALUES (
-        'message-owner', '${PROJECT_ID}', '${RUN_ID}', 'owner', NULL,
-        'Owner', 'Please make a plan', NULL, NULL, 1, NULL, '${FIXED_NOW}'
-      );
-    `);
-  } finally {
-    database.close();
-  }
+  threadId = seedV7AdvanceFixture(databasePath, {
+    agentId: AGENT_ID,
+    agentPrompt: "alpha-private-prompt",
+    missionId: "mission-acquire",
+    now: FIXED_NOW,
+    ownerMessage: "Please make a plan",
+    projectId: PROJECT_ID,
+    projectName: "Acquire Project",
+    providerId: "provider-acquire",
+    runId: RUN_ID,
+    secondAgentId: "agent-beta",
+    secondAgentPrompt: "beta-private-prompt",
+    threadCreateOperationId: "00000000-0000-4000-8000-000000000890",
+  });
+}
+
+function completedAdvanceBody(attemptId: string): string {
+  return JSON.stringify({
+    attempt: { id: attemptId, status: "committed" },
+    attemptStatus: "committed",
+    events: [],
+    run: {
+      createdAt: FIXED_NOW,
+      currentAgentId: AGENT_ID,
+      id: RUN_ID,
+      pauseCategory: null,
+      projectId: PROJECT_ID,
+      roundCount: 0,
+      status: "running",
+      threadId,
+      updatedAt: FIXED_NOW,
+      version: 1,
+    },
+  });
+}
+
+function insertCommittedAttempt(
+  database: ReturnType<typeof openDatabase>,
+  attemptId: string,
+  operation: string,
+): void {
+  database.prepare(
+    `INSERT INTO collaboration_operations(
+       id,project_id,thread_id,run_id,kind,request_hash,status,http_status,
+       response_json,response_schema_version,created_at,updated_at
+     ) VALUES (?,?,?,?,'advance','prior','completed',200,?,7,?,?)`,
+  ).run(
+    operation,
+    PROJECT_ID,
+    threadId,
+    RUN_ID,
+    completedAdvanceBody(attemptId),
+    FIXED_NOW,
+    FIXED_NOW,
+  );
+  database.prepare(
+    `INSERT INTO collaboration_attempts(
+       id,project_id,thread_id,run_id,agent_id,operation_id,status,lease_token,
+       lease_expires_at,prompt_hash,acquire_execution_epoch,acquire_context_hash,
+       included_message_sequence,error_category,started_at,finished_at
+     ) VALUES (?,?,?,?,?,?,'committed',? ,?,'prompt',7,'context',1,NULL,?,?)`,
+  ).run(
+    attemptId,
+    PROJECT_ID,
+    threadId,
+    RUN_ID,
+    AGENT_ID,
+    operation,
+    `token-${attemptId}`,
+    FIXED_NOW,
+    FIXED_NOW,
+    FIXED_NOW,
+  );
 }
 
 function expectCode(error: unknown, code: string): void {
@@ -343,48 +354,47 @@ describe("advance operation acquisition", () => {
   it("guards an open decision and another calling attempt", async () => {
     const database = openDatabase(databasePath);
     try {
-      database.exec(`
-        INSERT INTO collaboration_operations (
-          id, project_id, run_id, kind, request_hash, status,
-          http_status, response_json, created_at, updated_at
-        ) VALUES (
-          '00000000-0000-4000-8000-000000000700', '${PROJECT_ID}', '${RUN_ID}',
-          'advance', 'hash', 'pending', NULL, NULL, '${FIXED_NOW}', '${FIXED_NOW}'
-        );
-        INSERT INTO collaboration_attempts (
-          id, project_id, run_id, agent_id, operation_id, status, lease_token,
-          lease_expires_at, prompt_hash, acquire_execution_epoch,
-          acquire_context_hash, included_message_sequence, error_category,
-          started_at, finished_at
-        ) VALUES (
-          'existing-attempt', '${PROJECT_ID}', '${RUN_ID}', '${AGENT_ID}',
-          '00000000-0000-4000-8000-000000000700', 'committed', 'old-token',
-          '2026-07-30T01:00:00.000Z', 'prompt', 7, 'context', 1, NULL,
-          '${FIXED_NOW}', '${FIXED_NOW}'
-        );
-        INSERT INTO collaboration_messages (
-          id, project_id, run_id, author_type, author_agent_id,
-          author_display_name, content, mention_agent_id, mention_display_name,
-          sequence, consumed_at, created_at
-        ) VALUES (
-          'agent-message', '${PROJECT_ID}', '${RUN_ID}', 'agent', '${AGENT_ID}',
-          'Alpha', 'Question', NULL, NULL, 2, NULL, '${FIXED_NOW}'
-        );
-        INSERT INTO collaboration_turns (
-          id, attempt_id, run_id, agent_id, round_number, message_id,
-          disposition, created_at
-        ) VALUES (
-          'decision-turn', 'existing-attempt', '${RUN_ID}', '${AGENT_ID}', 1,
-          'agent-message', 'decision_request', '${FIXED_NOW}'
-        );
-        INSERT INTO decision_requests (
-          id, run_id, turn_id, requesting_agent_id, question, options_json,
-          status, answer, answer_message_id, version, created_at, answered_at
-        ) VALUES (
-          'decision-open', '${RUN_ID}', 'decision-turn', '${AGENT_ID}',
-          'Choose?', '["A","B"]', 'open', NULL, NULL, 1, '${FIXED_NOW}', NULL
-        );
-      `);
+      insertCommittedAttempt(
+        database,
+        "existing-attempt",
+        "00000000-0000-4000-8000-000000000700",
+      );
+      database.prepare(
+        `INSERT INTO collaboration_messages(
+           id,project_id,thread_id,run_id,author_type,author_agent_id,
+           author_display_name,content,mention_agent_id,mention_display_name,
+           sequence,consumed_at,created_at
+         ) VALUES ('agent-message',?,?,?,'agent',?,'Alpha','Question',
+                   NULL,NULL,2,NULL,?)`,
+      ).run(PROJECT_ID, threadId, RUN_ID, AGENT_ID, FIXED_NOW);
+      database.prepare(
+        `INSERT INTO collaboration_turns(
+           id,project_id,thread_id,attempt_id,run_id,agent_id,round_number,
+           message_id,disposition,created_at
+         ) VALUES ('decision-turn',?,?, 'existing-attempt',?,?,1,
+                   'agent-message','decision_request',?)`,
+      ).run(PROJECT_ID, threadId, RUN_ID, AGENT_ID, FIXED_NOW);
+      database.prepare(
+        `INSERT INTO decision_requests(
+           id,project_id,thread_id,run_id,turn_id,requesting_agent_id,question,
+           options_json,status,answer,answer_message_id,version,created_at,answered_at
+         ) VALUES ('decision-open',?,?,?,'decision-turn',?,'Choose?','["A","B"]',
+                   'open',NULL,NULL,1,?,NULL)`,
+      ).run(PROJECT_ID, threadId, RUN_ID, AGENT_ID, FIXED_NOW);
+      appendAgentMessageFactTx(database, {
+        agentId: AGENT_ID,
+        factId: "fact-agent-message",
+        messageId: "agent-message",
+        projectId: PROJECT_ID,
+        runId: RUN_ID,
+        threadId,
+        timestamp: FIXED_NOW,
+      });
+      database.prepare(
+        `UPDATE collaboration_project_sequences
+         SET next_message_sequence=next_message_sequence+1
+         WHERE project_id=? AND thread_id=?`,
+      ).run(PROJECT_ID, threadId);
     } finally {
       database.close();
     }
@@ -455,35 +465,7 @@ describe("advance operation acquisition", () => {
             const priorOperation = `00000000-0000-4000-8000-${(800 + index)
               .toString()
               .padStart(12, "0")}`;
-            database
-              .prepare(
-                `INSERT INTO collaboration_operations (
-                   id, project_id, run_id, kind, request_hash, status,
-                   http_status, response_json, created_at, updated_at
-                 ) VALUES (?, ?, ?, 'advance', 'prior', 'completed', 200, '{}', ?, ?)`,
-              )
-              .run(priorOperation, PROJECT_ID, RUN_ID, FIXED_NOW, FIXED_NOW);
-            database
-              .prepare(
-                `INSERT INTO collaboration_attempts (
-                   id, project_id, run_id, agent_id, operation_id, status,
-                   lease_token, lease_expires_at, prompt_hash,
-                   acquire_execution_epoch, acquire_context_hash,
-                   included_message_sequence, error_category, started_at, finished_at
-                 ) VALUES (?, ?, ?, ?, ?, 'committed', ?, ?, 'prompt', 7, 'context', 1,
-                           NULL, ?, ?)`,
-              )
-              .run(
-                `prior-attempt-${index}`,
-                PROJECT_ID,
-                RUN_ID,
-                AGENT_ID,
-                priorOperation,
-                `prior-token-${index}`,
-                FIXED_NOW,
-                FIXED_NOW,
-                FIXED_NOW,
-              );
+            insertCommittedAttempt(database, `prior-attempt-${index}`, priorOperation);
             if (boundary === "tokens") {
               database
                 .prepare(
@@ -497,22 +479,33 @@ describe("advance operation acquisition", () => {
               database
                 .prepare(
                   `INSERT INTO collaboration_messages (
-                     id, project_id, run_id, author_type, author_agent_id,
+                     id,project_id,thread_id,run_id,author_type,author_agent_id,
                      author_display_name, content, mention_agent_id, mention_display_name,
                      sequence, consumed_at, created_at
-                   ) VALUES (?, ?, ?, 'agent', ?, 'Alpha', 'handoff', NULL, NULL,
+                   ) VALUES (?,?,?,?,'agent',?,'Alpha','handoff',NULL,NULL,
                              ?, NULL, ?)`,
                 )
-                .run(`handoff-message-${index}`, PROJECT_ID, RUN_ID, AGENT_ID, index + 1, FIXED_NOW);
+                .run(
+                  `handoff-message-${index}`,
+                  PROJECT_ID,
+                  threadId,
+                  RUN_ID,
+                  AGENT_ID,
+                  index + 1,
+                  FIXED_NOW,
+                );
               database
                 .prepare(
                   `INSERT INTO collaboration_turns (
-                     id, attempt_id, run_id, agent_id, round_number, message_id,
+                     id,project_id,thread_id,attempt_id,run_id,agent_id,
+                     round_number,message_id,
                      disposition, created_at
-                   ) VALUES (?, ?, ?, ?, ?, ?, 'handoff', ?)`,
+                   ) VALUES (?,?,?,?,?,?,?,?,'handoff',?)`,
                 )
                 .run(
                   `handoff-turn-${index}`,
+                  PROJECT_ID,
+                  threadId,
                   `prior-attempt-${index}`,
                   RUN_ID,
                   AGENT_ID,
@@ -520,6 +513,20 @@ describe("advance operation acquisition", () => {
                   `handoff-message-${index}`,
                   FIXED_NOW,
                 );
+              appendAgentMessageFactTx(database, {
+                agentId: AGENT_ID,
+                factId: `fact-handoff-message-${index}`,
+                messageId: `handoff-message-${index}`,
+                projectId: PROJECT_ID,
+                runId: RUN_ID,
+                threadId,
+                timestamp: FIXED_NOW,
+              });
+              database.prepare(
+                `UPDATE collaboration_project_sequences
+                 SET next_message_sequence=next_message_sequence+1
+                 WHERE project_id=? AND thread_id=?`,
+              ).run(PROJECT_ID, threadId);
             }
           }
         }

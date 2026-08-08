@@ -65,8 +65,9 @@ export function readOperationReceipt<T>(
       "Operation is still in progress.",
     );
   }
+  const body = JSON.parse(row.responseJson) as T;
   return {
-    body: JSON.parse(row.responseJson) as T,
+    body,
     status: row.httpStatus,
   };
 }
@@ -76,6 +77,7 @@ export function completeOperationReceipt(
   input: {
     operationId: string;
     projectId: string;
+    threadId?: string;
     runId: string | null;
     kind: string;
     requestHash: string;
@@ -84,17 +86,41 @@ export function completeOperationReceipt(
     timestamp: string;
   },
 ): void {
+  const threadId =
+    input.threadId
+    ?? (
+      input.runId
+        ? (
+            database
+              .prepare(
+                `SELECT thread_id AS threadId
+                 FROM collaboration_runs
+                 WHERE project_id = ? AND id = ?`,
+              )
+              .get(input.projectId, input.runId) as { threadId: string } | undefined
+          )?.threadId
+        : undefined
+    );
+  if (!threadId) {
+    throw new CollaborationError(
+      "STORAGE_UNAVAILABLE",
+      503,
+      "Operation receipt storage is unavailable.",
+    );
+  }
   database
     .prepare(
       `INSERT INTO collaboration_operations (
-         id, project_id, run_id, kind, request_hash, status,
-         http_status, response_json, created_at, updated_at
-       ) VALUES (?, ?, ?, ?, ?, 'completed', ?, ?, ?, ?)
+         id, project_id, thread_id, run_id, kind, request_hash, status,
+         http_status, response_json, response_schema_version, created_at, updated_at
+       ) VALUES (?, ?, ?, ?, ?, ?, 'completed', ?, ?, 7, ?, ?)
        ON CONFLICT(project_id, id) DO UPDATE SET
+         thread_id = excluded.thread_id,
          run_id = excluded.run_id,
          status = 'completed',
          http_status = excluded.http_status,
          response_json = excluded.response_json,
+         response_schema_version = excluded.response_schema_version,
          updated_at = excluded.updated_at
        WHERE collaboration_operations.kind = excluded.kind
          AND collaboration_operations.request_hash = excluded.request_hash`,
@@ -102,6 +128,7 @@ export function completeOperationReceipt(
     .run(
       input.operationId,
       input.projectId,
+      threadId,
       input.runId,
       input.kind,
       input.requestHash,

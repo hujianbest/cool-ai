@@ -332,16 +332,17 @@ function newOperationId(): string {
 export function ExecutionPanel({
   embedded = false,
   projectId,
+  sourceTuple,
 }: {
   embedded?: boolean;
   projectId: string;
+  sourceTuple: { projectId: string; runId: string; threadId: string } | null;
 }) {
   const [executions, setExecutions] = useState<ExecutionDto[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [reloadKey, setReloadKey] = useState(0);
   const [workItems, setWorkItems] = useState<WorkItem[]>([]);
-  const [sourceRunId, setSourceRunId] = useState<string | null>(null);
   const [pickerLoading, setPickerLoading] = useState(true);
   const [pickerError, setPickerError] = useState<string | null>(null);
   const [selectedTaskIds, setSelectedTaskIds] = useState<string[]>([]);
@@ -626,25 +627,13 @@ export function ExecutionPanel({
     let active = true;
     setPickerLoading(true);
     setPickerError(null);
-    void Promise.resolve().then(() => Promise.all([
-      fetch(`/api/projects/${projectId}/mission`),
-      fetch(`/api/projects/${projectId}/collaboration`),
-    ])).then(async ([missionResponse, collaborationResponse]) => {
+    void fetch(`/api/projects/${projectId}/mission`).then(async (missionResponse) => {
       const mission = (await missionResponse.json()) as MissionState & Partial<ApiError>;
-      const collaboration = (await collaborationResponse.json()) as {
-        run?: { id: string; status: string } | null;
-      } & Partial<ApiError>;
       if (!missionResponse.ok) {
         throw new ApiDisplayError(apiErrorCopy(mission, "无法加载可执行任务。"));
       }
-      if (!collaborationResponse.ok) {
-        throw new ApiDisplayError(apiErrorCopy(collaboration, "无法加载协作计划。"));
-      }
       if (!active) return;
       setWorkItems(mission.workItems);
-      setSourceRunId(
-        collaboration.run?.status === "planned" ? collaboration.run.id : null,
-      );
     }).catch((cause: unknown) => {
       if (active) setPickerError(caughtApiErrorCopy(cause, "无法加载可执行任务。"));
     }).finally(() => {
@@ -717,7 +706,7 @@ export function ExecutionPanel({
       const response = await fetch(`/api/projects/${projectId}/executions`, {
         body: JSON.stringify({
           operationId: row.operationId,
-          sourceCollaborationRunId: sourceRunId,
+          source: sourceTuple,
           workItemId: row.taskId,
         }),
         headers: { "content-type": "application/json" },
@@ -758,7 +747,7 @@ export function ExecutionPanel({
   }
 
   function startSelected() {
-    if (!sourceRunId) return;
+    if (!sourceTuple || sourceTuple.projectId !== projectId) return;
     const rows = selectedTaskIds.map((taskId) => {
       const task = workItems.find(({ id }) => id === taskId);
       return {
@@ -819,9 +808,9 @@ export function ExecutionPanel({
                 );
               })}
             </div>
-            {!sourceRunId ? <p className="error-text">需要最新的已规划协作运行。</p> : null}
+            {!sourceTuple ? <p className="error-text">请选择一个已规划的协作运行。</p> : null}
             <button
-              disabled={!sourceRunId || selectedTaskIds.length === 0}
+              disabled={!sourceTuple || selectedTaskIds.length === 0}
               onClick={startSelected}
               style={{ minHeight: "var(--control-min)" }}
               type="button"

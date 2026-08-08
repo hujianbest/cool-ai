@@ -1,3 +1,4 @@
+import { createHash } from "node:crypto";
 import { mkdtempSync, rmSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
@@ -10,6 +11,10 @@ import {
   commandTupleHash,
   type CommandPolicyContext,
 } from "@/src/server/execution/command-policy";
+import {
+  assertV7Fixture,
+  execV7Fixture,
+} from "@/tests/v7-fixture-graph";
 
 type CommandRequest = {
   args: string[];
@@ -441,8 +446,11 @@ function seedDatabase(input: {
     required: policyEntry.required,
     workdir: policyEntry.workdir,
   }]) : "[]";
+  const fixturePolicyHash = policyEntry
+    ? POLICY_HASH
+    : createHash("sha256").update("[]").digest("hex");
   const canonicalBytes = Buffer.byteLength(policyCanonical, "utf8");
-  database.exec(`
+  execV7Fixture(databasePath, database, `
     INSERT INTO projects (id,name,created_at,workspace_path,workspace_key,version)
     VALUES ('${PROJECT_ID}','Command','${NOW}','D:\\project','d:/project',1);
     INSERT INTO providers (
@@ -477,7 +485,7 @@ function seedDatabase(input: {
       id,project_id,created_operation_id,created_actor_type,revision_no,policy_hash,
       classifier_version,warning_accepted,canonical_bytes,entry_count,created_at
     ) VALUES (
-      '${POLICY_ID}','${PROJECT_ID}',NULL,'system',1,'${POLICY_HASH}',
+      '${POLICY_ID}','${PROJECT_ID}',NULL,'system',1,'${fixturePolicyHash}',
       ${CLASSIFIER_VERSION},0,${canonicalBytes},${policyEntry ? 1 : 0},'${NOW}'
     );
     INSERT INTO project_validation_policies (
@@ -504,9 +512,9 @@ function seedDatabase(input: {
       '${ATTEMPT_ID}','${PROJECT_ID}','${EXECUTION_ID}',1,'acting',
       '${POLICY_CONTEXT.sandboxRoot}',NULL,'${manifestHash}','${manifestHash}',
       '{}','{}','${CONTEXT_HASH}',
-      '${POLICY_ID}',1,'${POLICY_HASH}','${NOW}',NULL
+      '${POLICY_ID}',1,'${fixturePolicyHash}','${NOW}',NULL
     );
-  `);
+  `, { validate: false });
   if (policyEntry && tupleHash) {
     database.prepare(`
       INSERT INTO project_validation_policy_entries (
@@ -525,6 +533,7 @@ function seedDatabase(input: {
       tupleHash,
     );
   }
+  assertV7Fixture(database);
   return database;
 }
 

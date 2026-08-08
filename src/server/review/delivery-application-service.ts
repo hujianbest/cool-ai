@@ -42,6 +42,10 @@ function href(path: string, version: string | number): string {
   return `${path}?version=${encodeURIComponent(String(version))}`;
 }
 
+function collaborationSourceHref(projectId: string, threadId: string, runId: string): string {
+  return `/projects/${encodeURIComponent(projectId)}?thread=${encodeURIComponent(threadId)}&run=${encodeURIComponent(runId)}`;
+}
+
 function publicTuple(
   missionId: string,
   input: GenerateDeliveryInput,
@@ -68,7 +72,7 @@ function contentStatus(truncated: unknown, bytes: unknown): DeliveryContentStatu
   return Number(bytes) >= 0 ? "complete" : "unreadable";
 }
 
-function buildInput(database: DatabaseSync, missionId: string): {
+export function buildDeliveryInput(database: DatabaseSync, missionId: string): {
   input: DeliveryBuildInput;
   projectId: string;
 } {
@@ -86,7 +90,28 @@ function buildInput(database: DatabaseSync, missionId: string): {
     SELECT item.id AS workItemId,item.title,item.version AS workItemVersion,
            result.id AS resultId,result.version AS resultVersion,
            result.execution_id AS executionId,result.staged_result_id AS stagedResultId,
+           execution.project_id AS sourceProjectId,
+           execution.source_collaboration_thread_id AS sourceCollaborationThreadId,
            execution.source_collaboration_run_id AS sourceCollaborationRunId,
+           source_run.id AS validatedSourceRunId,
+           json_extract(execution_attempt.frozen_public_json,'$.facts.source.projectId')
+             AS frozenSourceProjectId,
+           json_extract(execution_attempt.frozen_public_json,'$.facts.source.threadId')
+             AS frozenSourceThreadId,
+           json_extract(execution_attempt.frozen_public_json,'$.facts.source.runId')
+             AS frozenSourceRunId,
+           json_extract(execution_attempt.frozen_private_json,'$.facts.source.projectId')
+             AS privateSourceProjectId,
+           json_extract(execution_attempt.frozen_private_json,'$.facts.source.threadId')
+             AS privateSourceThreadId,
+           json_extract(execution_attempt.frozen_private_json,'$.facts.source.runId')
+             AS privateSourceRunId,
+           json_extract(attempt.frozen_material_json,'$.result.source.projectId')
+             AS reviewSourceProjectId,
+           json_extract(attempt.frozen_material_json,'$.result.source.threadId')
+             AS reviewSourceThreadId,
+           json_extract(attempt.frozen_material_json,'$.result.source.runId')
+             AS reviewSourceRunId,
            result.executor_agent_id AS executorAgentId,
            staged.staged_hash AS stagedHash,staged.merge_file_count AS mergeFileCount,
            staged.merge_final_bytes AS mergeFinalBytes,
@@ -101,9 +126,27 @@ function buildInput(database: DatabaseSync, missionId: string): {
     JOIN work_item_result_versions result
       ON result.id=head.current_result_id AND result.work_item_id=item.id
     JOIN executions execution ON execution.id=result.execution_id
+      AND execution.project_id=result.project_id
+      AND execution.mission_id=result.mission_id
+      AND execution.work_item_id=result.work_item_id
     JOIN execution_staged_results staged ON staged.id=result.staged_result_id
+      AND staged.project_id=result.project_id AND staged.execution_id=result.execution_id
+    JOIN execution_attempts execution_attempt ON execution_attempt.id=staged.attempt_id
+      AND execution_attempt.project_id=result.project_id
+      AND execution_attempt.execution_id=result.execution_id
+    LEFT JOIN collaboration_runs source_run
+      ON source_run.project_id=execution.project_id
+      AND source_run.thread_id=execution.source_collaboration_thread_id
+      AND source_run.id=execution.source_collaboration_run_id
     JOIN review_attempts attempt ON attempt.id=head.current_attempt_id
-    JOIN review_decisions decision ON decision.attempt_id=attempt.id AND decision.choice='pass'
+      AND attempt.project_id=result.project_id
+      AND attempt.mission_id=result.mission_id
+      AND attempt.work_item_id=result.work_item_id
+      AND attempt.result_id=result.id
+    JOIN review_decisions decision ON decision.attempt_id=attempt.id
+      AND decision.result_id=result.id
+      AND decision.reviewer_agent_id=attempt.reviewer_agent_id
+      AND decision.choice='pass'
     JOIN agents executor ON executor.id=result.executor_agent_id
     JOIN agents reviewer ON reviewer.id=attempt.reviewer_agent_id
     WHERE item.mission_id=? AND item.status='done' AND head.state='passed'
@@ -118,6 +161,34 @@ function buildInput(database: DatabaseSync, missionId: string): {
   }
 
   const assembled: DeliveryBuildInput["tasks"] = tasks.map((task) => {
+    const sourceProjectId = String(task.sourceProjectId);
+    const sourceThreadId = String(task.sourceCollaborationThreadId);
+    const sourceRunId = String(task.sourceCollaborationRunId);
+    const optionalFrozenTupleMatches = (
+      project: unknown,
+      thread: unknown,
+      run: unknown,
+    ) => project === null && thread === null && run === null
+      || project === sourceProjectId && thread === sourceThreadId && run === sourceRunId;
+    if (
+      sourceProjectId !== String(mission.projectId)
+      || task.validatedSourceRunId !== task.sourceCollaborationRunId
+      || !optionalFrozenTupleMatches(
+        task.frozenSourceProjectId,
+        task.frozenSourceThreadId,
+        task.frozenSourceRunId,
+      )
+      || !optionalFrozenTupleMatches(
+        task.privateSourceProjectId,
+        task.privateSourceThreadId,
+        task.privateSourceRunId,
+      )
+      || task.reviewSourceProjectId !== sourceProjectId
+      || task.reviewSourceThreadId !== sourceThreadId
+      || task.reviewSourceRunId !== sourceRunId
+    ) {
+      throw new ReviewApiError("DELIVERY_INVARIANT_FAILED");
+    }
     const evidenceReferences = jsonArray(task.evidenceRefsJson) as Array<Record<string, unknown>>;
     const referenced = new Set(evidenceReferences.map((ref) =>
       `${String(ref.type)}:${String(ref.id)}:${String(ref.version)}`));
@@ -240,7 +311,9 @@ function buildInput(database: DatabaseSync, missionId: string): {
         id: String(task.executionId),
         mergeFileCount: Number(task.mergeFileCount),
         mergeFinalBytes: Number(task.mergeFinalBytes),
-        sourceCollaborationRunId: String(task.sourceCollaborationRunId),
+        sourceCollaborationRunId: sourceRunId,
+        sourceCollaborationThreadId: sourceThreadId,
+        sourceHref: collaborationSourceHref(sourceProjectId, sourceThreadId, sourceRunId),
         stagedHash: String(task.stagedHash),
       },
       executor: { agentId: String(task.executorAgentId), name: String(task.executorName) },
@@ -275,7 +348,7 @@ function buildInput(database: DatabaseSync, missionId: string): {
 }
 
 function snapshot(database: DatabaseSync, missionId: string, completedAt: string): Snapshot {
-  const assembled = buildInput(database, missionId);
+  const assembled = buildDeliveryInput(database, missionId);
   return {
     buildInput: assembled.input,
     fingerprint: buildDeliveryBundle(assembled.input, completedAt).inputFingerprint,

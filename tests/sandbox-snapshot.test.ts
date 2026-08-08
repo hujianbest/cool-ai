@@ -7,14 +7,10 @@ import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
 vi.mock("server-only", () => ({}));
 
-import { createV6FixtureDatabaseOpener } from "@/tests/v6-fixture-db";
-
-const openDatabase = createV6FixtureDatabaseOpener({
-  missingDeliveryHeadMissionIds: ["mission"],
-  missingReviewHeadResultIds: [],
-});
+import { openDatabase } from "@/src/server/db";
 import { preflightSandbox, type SandboxPreflightResult } from "@/src/server/execution/sandbox-preflight";
 import { createWindowsNativeReadAdapter } from "@/src/server/execution/windows-native-read-adapter";
+import { execV7Fixture } from "@/tests/v7-fixture-graph";
 
 type SnapshotModule = typeof import("@/src/server/execution/sandbox-snapshot") & {
   cleanupOwnedSandbox(input: {
@@ -266,7 +262,7 @@ function seedSandboxAction(options: {
   const database = openDatabase(databasePath);
   const now = "2026-07-30T00:00:00.000Z";
   try {
-    database.exec(`
+    execV7Fixture(databasePath, database, `
       INSERT INTO projects (id,name,created_at,workspace_path,workspace_key,version)
       VALUES ('snapshot-project','Snapshot','${now}','D:\\workspace','d:/workspace',1);
       INSERT INTO providers (id,name,base_url,default_model,api_key_cipher,api_key_iv,api_key_tag,credential_version,credential_generation,key_id,api_key_mask,verified_at,version,created_at,updated_at)

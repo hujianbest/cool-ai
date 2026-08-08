@@ -12,6 +12,7 @@ import {
   createWindowsVerifiedMergeAdapter,
   type MergeVerifiedAdapter,
 } from "@/src/server/execution/merge-verified-adapter";
+import { execV7Fixture } from "@/tests/v7-fixture-graph";
 import { refreshExecutionFrozenFixture } from "./execution-frozen-fixture";
 
 vi.mock("server-only", () => ({}));
@@ -339,7 +340,7 @@ async function createFixture(label: string) {
   writeFileSync(join(sandboxRoot, "src/a.txt"), "new-a");
   writeFileSync(join(sandboxRoot, "src/z.txt"), "new-z");
   let database = openDatabase(databasePath);
-  seedDatabase(database, { sandboxRoot, workspaceRoot });
+  seedDatabase(databasePath, database, { sandboxRoot, workspaceRoot });
   const operationId = `00000000-0000-4000-8000-${sha256(label).slice(0, 12)}`;
   const fixture = {
     get database() { return database; },
@@ -366,12 +367,13 @@ async function createFixture(label: string) {
 }
 
 function seedDatabase(
+  databasePath: string,
   database: DatabaseSync,
   paths: { sandboxRoot: string; workspaceRoot: string },
 ): void {
   const workspace = paths.workspaceRoot.replaceAll("'", "''");
   const sandbox = paths.sandboxRoot.replaceAll("'", "''");
-  database.exec(`
+  execV7Fixture(databasePath, database, `
     INSERT INTO projects (id,name,created_at,workspace_path,workspace_key,version)
     VALUES ('${PROJECT_ID}','Merge','${NOW}','${workspace}','${workspace.toLowerCase()}',1);
     INSERT INTO providers (

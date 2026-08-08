@@ -1,14 +1,53 @@
+import { join } from "node:path";
+
 import { ProjectPanel } from "@/components/project-panel";
+import {
+  parseProjectSelection,
+  reconcileReturnTo,
+} from "@/components/settings-navigation";
+import { readThreadDetail } from "@/src/server/collaboration/thread-service";
 
 type SourceReferencePageProps = {
   params: Promise<{
     projectId: string;
     resource?: string[];
   }>;
-  searchParams: Promise<{
-    version?: string | string[];
-  }>;
+  searchParams: Promise<Record<string, string | string[] | undefined>>;
 };
+
+function databasePath(): string {
+  return process.env.COCKPIT_DB_PATH ?? join(process.cwd(), ".data", "cockpit.sqlite");
+}
+
+async function projectReturnTo(
+  projectId: string,
+  query: Record<string, string | string[] | undefined>,
+) {
+  const project = parseProjectSelection(
+    `/projects/${encodeURIComponent(projectId)}`,
+  );
+  if (!project) return "/" as const;
+  const searchParams = new URLSearchParams();
+  for (const [key, value] of Object.entries(query)) {
+    if (Array.isArray(value)) {
+      for (const item of value) searchParams.append(key, item);
+    } else if (value !== undefined) {
+      searchParams.append(key, value);
+    }
+  }
+  const candidate = searchParams.size > 0
+    ? `${project.projectHref}?${searchParams.toString()}`
+    : project.projectHref;
+  return reconcileReturnTo(candidate, (selectedProjectId, threadId, runId) => {
+    readThreadDetail(
+      databasePath(),
+      selectedProjectId,
+      threadId,
+      runId,
+    );
+    return true;
+  });
+}
 
 // 可追溯来源引用页面组件（当 resource 非空时渲染）
 function SourceReferencePage({
@@ -64,7 +103,7 @@ export default async function SourceReferencePageRoute({
   // 当 resource 为空时，渲染 ProjectPanel（项目路由化）
   // 当 resource 非空时，渲染来源引用页面（向后兼容）
   if (resource.length === 0) {
-    return <ProjectPanel />;
+    return <ProjectPanel returnTo={await projectReturnTo(projectId, query)} />;
   }
 
   return (

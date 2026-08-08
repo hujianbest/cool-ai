@@ -13,7 +13,7 @@ import {
   controlExecution,
   type ExecutionControlDependencies,
 } from "@/src/server/execution/execution-control-service";
-import { initializeMissionDeliveryTx } from "@/src/server/migrations-v6";
+import { execV7Fixture } from "@/tests/v7-fixture-graph";
 
 type Identity = {
   finalPath: string;
@@ -104,7 +104,7 @@ function identity(value: string, kind: Identity["kind"], finalPath: string, size
 
 function seed(): void {
   const credential = createCredentialVault().encrypt("provider", "provider-secret");
-  database.exec(`
+  execV7Fixture(databasePath, database, `
     INSERT INTO projects (id,name,created_at,workspace_path,workspace_key,version)
     VALUES ('${PROJECT_ID}','Orchestrator',strftime('%Y-%m-%dT%H:%M:%fZ','now'),
       'D:\\canonical','d:/canonical',1);
@@ -154,10 +154,6 @@ function seed(): void {
     INSERT INTO project_validation_policies (project_id,active_revision_id,version,updated_at)
     VALUES ('${PROJECT_ID}','policy',1,strftime('%Y-%m-%dT%H:%M:%fZ','now'));
   `);
-  const mission = database.prepare(`
-    SELECT id,project_id AS projectId,updated_at AS updatedAt FROM missions WHERE id='mission'
-  `).get() as { id: string; projectId: string; updatedAt: string };
-  initializeMissionDeliveryTx(database, mission);
   insertExecution(EXECUTION_ID, "agent-a", "work-a", "attempt-a");
   insertExecution(SECOND_EXECUTION_ID, "agent-b", "work-b", "attempt-b");
 }
@@ -170,13 +166,16 @@ function insertExecution(
 ): void {
   database.exec(`
     INSERT INTO executions (
-      id,project_id,source_collaboration_run_id,mission_id,work_item_id,agent_id,
+      id,project_id,source_collaboration_run_id,source_collaboration_thread_id,
+      mission_id,work_item_id,agent_id,
       current_policy_revision_id,status,resume_target,reason_code,
       manual_recovery_required,recovery_resolution,current_attempt_no,
       business_round_count,tool_call_count,next_event_sequence,version,created_at,
       business_deadline_at,first_running_at,updated_at,merged_at
     ) VALUES (
-      '${executionId}','${PROJECT_ID}','run','mission','${workItemId}','${agentId}','policy',
+      '${executionId}','${PROJECT_ID}','run',(
+        SELECT thread_id FROM collaboration_runs WHERE project_id='${PROJECT_ID}' AND id='run'
+      ),'mission','${workItemId}','${agentId}','policy',
       'queued',NULL,NULL,0,NULL,1,0,0,1,1,strftime('%Y-%m-%dT%H:%M:%fZ','now'),
       NULL,NULL,strftime('%Y-%m-%dT%H:%M:%fZ','now'),NULL
     );
@@ -206,7 +205,14 @@ function refreshFrozenExecution(
     baselineManifestHash: HASH,
     missionId: "mission",
     projectId: PROJECT_ID,
-    sourceCollaborationRunId: "run",
+    source: {
+      projectId: PROJECT_ID,
+      runId: "run",
+      threadId: (database.prepare(
+        `SELECT thread_id AS threadId FROM collaboration_runs
+         WHERE project_id=? AND id='run'`,
+      ).get(PROJECT_ID) as { threadId: string }).threadId,
+    },
     workItemId,
   });
   database.prepare(`

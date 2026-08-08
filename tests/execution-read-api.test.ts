@@ -5,12 +5,7 @@ import { join } from "node:path";
 import type { DatabaseSync } from "node:sqlite";
 import { afterEach, beforeEach, describe, expect, it } from "vitest";
 
-import { createV6FixtureDatabaseOpener } from "@/tests/v6-fixture-db";
-
-const openDatabase = createV6FixtureDatabaseOpener({
-  missingDeliveryHeadMissionIds: ["read-mission"],
-  missingReviewHeadResultIds: [],
-});
+import { openDatabase } from "@/src/server/db";
 import {
   createBoundedUtf8Text,
   persistArtifactOutput,
@@ -19,6 +14,10 @@ import {
   executionEventDtoSchema,
   executionEventTypeSchema,
 } from "@/src/shared/execution-contracts";
+import {
+  assertV7Fixture,
+  execV7Fixture,
+} from "@/tests/v7-fixture-graph";
 
 type ReadModule = typeof import("@/src/server/execution/execution-read-service");
 type GetRoute = {
@@ -232,7 +231,7 @@ function sha256(value: string): string {
 }
 
 function seed(): void {
-  database.exec(`
+  execV7Fixture(databasePath, database, `
     INSERT INTO projects (id,name,created_at,workspace_path,workspace_key,version)
     VALUES ('${PROJECT_ID}','Read project','${NOW}','D:\\canonical-secret','d:/canonical-secret',1);
     INSERT INTO providers (
@@ -325,7 +324,7 @@ function seed(): void {
       '${HASH}','${HASH}','${HASH}','${POLICY_HASH}','${HASH}',101,101,0,0,101,
       'blocked','["file_count_limit"]','${NOW}'
     );
-  `);
+  `, { validate: false });
   const insertObservation = database.prepare(`
     INSERT INTO execution_staged_observations (
       id,staged_result_id,position,path,path_key,kind,baseline_hash,observed_hash,
@@ -375,6 +374,7 @@ function seed(): void {
       NOW,
     );
   }
+  assertV7Fixture(database);
 }
 
 beforeEach(async () => {

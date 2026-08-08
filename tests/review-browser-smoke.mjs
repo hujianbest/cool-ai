@@ -369,7 +369,21 @@ async function createProject(page) {
     const project = (await (await fetch("/api/projects")).json()).projects[0];
     const missionState = await (await fetch(`/api/projects/${project.id}/mission`)).json();
     const agents = (await (await fetch("/api/agents")).json()).agents;
-    return { agents, mission: missionState.mission, project };
+    const memberAgentIds = agents
+      .filter(({ name }) => ["Review Executor", "Review Verifier"].includes(name))
+      .map(({ id }) => id);
+    const response = await fetch(`/api/projects/${project.id}/threads`, {
+      body: JSON.stringify({
+        memberAgentIds,
+        operationId: crypto.randomUUID(),
+        title: "Review smoke",
+      }),
+      headers: { "content-type": "application/json" },
+      method: "POST",
+    });
+    const created = await response.json();
+    if (response.status !== 201) throw new Error(JSON.stringify(created));
+    return { agents, mission: missionState.mission, project, thread: created.thread };
   });
 }
 
@@ -399,9 +413,9 @@ async function enableExecutor(page, agent) {
   assert.equal(result.status, 200, JSON.stringify(result.body));
 }
 
-async function planTask(page, projectId) {
-  const started = await page.evaluate(async ({ agentId, id }) => {
-    const response = await fetch(`/api/projects/${id}/runs`, {
+async function planTask(page, projectId, threadId) {
+  const started = await page.evaluate(async ({ agentId, id, thread }) => {
+    const response = await fetch(`/api/projects/${id}/threads/${thread}/runs`, {
       body: JSON.stringify({
         mentionAgentId: agentId,
         message: "Plan the single independently reviewed implementation task.",
@@ -411,27 +425,48 @@ async function planTask(page, projectId) {
       method: "POST",
     });
     return { body: await response.json(), status: response.status };
-  }, { agentId: executorAgentId, id: projectId });
+  }, { agentId: executorAgentId, id: projectId, thread: threadId });
   assert.equal(started.status, 201, JSON.stringify(started.body));
   const deadline = Date.now() + 60_000;
   while (Date.now() < deadline) {
-    const state = await page.evaluate(async (id) =>
-      (await (await fetch(`/api/projects/${id}/collaboration`)).json()), projectId);
-    if (state.run?.status === "planned") return state.run.id;
-    assert.equal(state.run?.status, "running", JSON.stringify(state));
+    const state = await page.evaluate(async ({ id, runId, thread }) =>
+      (await (await fetch(
+        `/api/projects/${id}/threads/${thread}?run=${encodeURIComponent(runId)}`,
+      )).json()), { id: projectId, runId: started.body.run.id, thread: threadId });
+    if (state.selectedRun?.status === "planned") return state.selectedRun.id;
+    assert.equal(state.selectedRun?.status, "running", JSON.stringify(state));
+    const advanced = await page.evaluate(async ({ id, runId, thread }) => {
+      const response = await fetch(
+        `/api/projects/${id}/threads/${thread}/runs/${runId}/advance`,
+        {
+          body: JSON.stringify({ operationId: crypto.randomUUID() }),
+          headers: { "content-type": "application/json" },
+          method: "POST",
+        },
+      );
+      return { body: await response.json(), status: response.status };
+    }, { id: projectId, runId: started.body.run.id, thread: threadId });
+    assert.ok(
+      advanced.status >= 200 && advanced.status < 300,
+      JSON.stringify(advanced.body),
+    );
     await new Promise((done) => setTimeout(done, 200));
   }
   throw new Error("Public collaboration did not produce the planned task.");
 }
 
-async function startExecution(page, projectId, runId) {
-  const result = await page.evaluate(async ({ id, sourceRunId }) => {
+async function startExecution(page, projectId, threadId, runId) {
+  const result = await page.evaluate(async ({ id, sourceRunId, sourceThreadId }) => {
     const mission = await (await fetch(`/api/projects/${id}/mission`)).json();
     const workItem = mission.workItems.at(-1);
     const response = await fetch(`/api/projects/${id}/executions`, {
       body: JSON.stringify({
         operationId: crypto.randomUUID(),
-        sourceCollaborationRunId: sourceRunId,
+        source: {
+          projectId: id,
+          runId: sourceRunId,
+          threadId: sourceThreadId,
+        },
         workItemId: workItem.id,
       }),
       headers: { "content-type": "application/json" },
@@ -442,7 +477,7 @@ async function startExecution(page, projectId, runId) {
       status: response.status,
       workItem,
     };
-  }, { id: projectId, sourceRunId: runId });
+  }, { id: projectId, sourceRunId: runId, sourceThreadId: threadId });
   assert.equal(result.status, 201, JSON.stringify(result.body));
   return { executionId: result.body.execution.id, workItem: result.workItem };
 }
@@ -628,8 +663,13 @@ try {
   reviewerAgentId = reviewer.id;
   await enableExecutor(page, executor);
 
-  const runId = await planTask(page, context.project.id);
-  const started = await startExecution(page, context.project.id, runId);
+  const runId = await planTask(page, context.project.id, context.thread.id);
+  const started = await startExecution(
+    page,
+    context.project.id,
+    context.thread.id,
+    runId,
+  );
   const staged = await advanceToStaged(page, started.executionId);
   const result = await approveAndMerge(page, started.executionId, staged);
   assert.equal(
@@ -640,6 +680,7 @@ try {
   const firstWorkspace = await page.evaluate(async (workItemId) =>
     (await (await fetch(`/api/work-items/${workItemId}/review`)).json()),
   started.workItem.id);
+  assert.ok(firstWorkspace.result, JSON.stringify(firstWorkspace));
   assert.equal(
     firstWorkspace.result.version,
     1,
@@ -661,7 +702,12 @@ try {
   assert.equal(providerSawReviewBody, true);
   assert.equal((await readWorkspace(page, started.workItem.id)).effectiveStatus, "rework");
 
-  const reworkExecution = await startExecution(page, context.project.id, runId);
+  const reworkExecution = await startExecution(
+    page,
+    context.project.id,
+    context.thread.id,
+    runId,
+  );
   assert.equal(reworkExecution.workItem.id, started.workItem.id);
   const reworkStaged = await advanceToStaged(page, reworkExecution.executionId);
   const revisedResult = await approveAndMerge(

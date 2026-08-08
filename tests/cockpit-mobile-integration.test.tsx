@@ -3,6 +3,15 @@ import userEvent from "@testing-library/user-event";
 import { afterEach, describe, expect, it, vi } from "vitest";
 
 import { ProjectPanel } from "@/components/project-panel";
+import {
+  TEST_RUN_ID,
+  TEST_THREAD_ID,
+  threadDetailPayload,
+  threadFactsPayload,
+  threadListPayload,
+  threadMessagesPayload,
+  threadTimelinePayload,
+} from "@/tests/cockpit-test-fetch";
 
 const project = {
   id: "project-1",
@@ -23,27 +32,27 @@ function stubViewport(narrow: boolean): void {
 }
 
 function stubCockpitRequests(workspacePath?: string): void {
+  window.history.replaceState(
+    null,
+    "",
+    `/projects/${project.id}?thread=${TEST_THREAD_ID}&run=${TEST_RUN_ID}`,
+  );
   vi.stubGlobal(
     "fetch",
     vi.fn(async (input: RequestInfo | URL) => {
       const url = String(input);
       const payloads: Record<string, unknown> = {
         "/api/projects": { projects: [project] },
-        "/api/projects/project-1/collaboration": {
-          pendingDecision: null,
-          projectMessagesPage: { items: [], nextAfter: null },
-          readiness: { missing: [], ready: true },
-          run: null,
-          timelinePage: { items: [], nextAfter: null },
-          usage: {
-            byAgent: [],
-            completionTokens: 0,
-            promptTokens: 0,
-            repairCalls: 0,
-            totalTokens: 0,
-            unreportedCalls: 0,
-          },
-        },
+        "/api/projects/project-1/threads?limit=100":
+          threadListPayload(project.id),
+        [`/api/projects/project-1/threads/${TEST_THREAD_ID}?run=${TEST_RUN_ID}`]:
+          threadDetailPayload(project.id),
+        [`/api/projects/project-1/threads/${TEST_THREAD_ID}/messages`]:
+          threadMessagesPayload(project.id),
+        [`/api/projects/project-1/threads/${TEST_THREAD_ID}/facts`]:
+          threadFactsPayload(project.id),
+        [`/api/projects/project-1/threads/${TEST_THREAD_ID}/runs/${TEST_RUN_ID}/timeline`]:
+          threadTimelinePayload(project.id),
         "/api/projects/project-1/tasks": { tasks: [], events: [] },
         "/api/projects/project-1/workspace": {
           workspace: workspacePath

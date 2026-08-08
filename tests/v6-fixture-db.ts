@@ -8,7 +8,10 @@ import {
   V6_TRIGGERS,
   validateV6,
 } from "@/src/server/migrations-v6";
-import { SchemaMigrationError } from "@/src/server/migrations";
+import {
+  migrateDatabase,
+  SchemaMigrationError,
+} from "@/src/server/migrations";
 
 export type V6FixtureOptions = {
   missingDeliveryHeadMissionIds: readonly string[];
@@ -239,8 +242,17 @@ export function openV6FixtureDatabase(handle: V6FixtureHandle): DatabaseSync {
     throw new Error("V6_FIXTURE_ALLOWLIST_DUPLICATE");
   }
 
+  if (definition.path !== ":memory:") {
+    const probe = new DatabaseSync(definition.path);
+    const version = (probe.prepare("PRAGMA user_version").get() as {
+      user_version: number;
+    }).user_version;
+    probe.close();
+    if (version === 7) return openProductionDatabase(definition.path);
+  }
+
   try {
-    const valid = openProductionDatabase(definition.path);
+    const valid = openDatabaseAtV6(definition.path);
     const signature = fixtureSignature(definition.options);
     if (
       expectedMissions.length === 0 && expectedResults.length === 0
@@ -293,4 +305,52 @@ export function createV6FixtureDatabaseOpener(
     }
     return openV6FixtureDatabase(handle);
   };
+}
+
+export function openDatabaseAtV6(path: string): DatabaseSync {
+  const database = new DatabaseSync(path);
+  database.exec("PRAGMA foreign_keys=ON");
+  const initialVersion = (database.prepare("PRAGMA user_version").get() as {
+    user_version: number;
+  }).user_version;
+  if (initialVersion > 6) {
+    database.close();
+    throw new SchemaMigrationError(
+      "SCHEMA_TOO_NEW",
+      "Database schema is newer than this application.",
+    );
+  }
+  try {
+    migrateDatabase(database, (step) => {
+      if (step === "precheck") throw new Error("STOP_AT_V6");
+    });
+  } catch (error) {
+    if (error instanceof SchemaMigrationError && error.code !== "STORAGE_UNAVAILABLE") {
+      database.close();
+      throw error;
+    }
+    if (!(error instanceof SchemaMigrationError)) {
+      database.close();
+      throw new SchemaMigrationError(
+        "STORAGE_UNAVAILABLE",
+        "Database migration failed.",
+      );
+    }
+  }
+  const version = (database.prepare("PRAGMA user_version").get() as {
+    user_version: number;
+  }).user_version;
+  if (version !== 6) {
+    database.close();
+    throw new Error("V6_FIXTURE_VERSION_MISMATCH");
+  }
+  const validation = validateV6(database);
+  if (validation !== null) {
+    database.close();
+    throw new SchemaMigrationError(
+      validation,
+      `Database version 6 ${validation === "SCHEMA_DRIFT" ? "schema" : "data"} is invalid.`,
+    );
+  }
+  return database;
 }

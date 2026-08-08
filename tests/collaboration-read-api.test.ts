@@ -3,12 +3,9 @@ import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { afterEach, beforeEach, describe, expect, it } from "vitest";
 
-import { createV6FixtureDatabaseOpener } from "@/tests/v6-fixture-db";
-
-const openDatabase = createV6FixtureDatabaseOpener({
-  missingDeliveryHeadMissionIds: ["mission-read"],
-  missingReviewHeadResultIds: [],
-});
+import { createThread } from "@/src/server/collaboration/thread-service";
+import { openDatabase } from "@/src/server/db";
+import { initializeMissingMissionHeads } from "@/tests/v7-fixture-graph";
 
 type GetRoute = {
   GET(
@@ -19,7 +16,7 @@ type GetRoute = {
 
 const routeModules = import.meta.glob<GetRoute>([
   "../app/api/projects/[projectId]/collaboration/route.ts",
-  "../app/api/runs/[runId]/timeline/route.ts",
+  "../app/api/projects/[projectId]/threads/[threadId]/runs/[runId]/timeline/route.ts",
 ]);
 
 const NOW = "2026-07-30T07:00:00.000Z";
@@ -30,6 +27,7 @@ const AGENT_B = "agent-read-b";
 
 let directory: string;
 let databasePath: string;
+let threadId: string;
 
 const eventFixtures = [
   ["run_started", { messageId: "message-1", messageSequence: 1, currentAgentId: AGENT_A }],
@@ -56,7 +54,7 @@ const eventFixtures = [
 ] as const;
 
 function seed(): void {
-  const database = openDatabase(databasePath);
+  let database = openDatabase(databasePath);
   try {
     database.exec(`
       INSERT INTO projects (
@@ -94,52 +92,68 @@ function seed(): void {
       ) VALUES (
         'mission-read', '${PROJECT_ID}', 'Mission', 'Read safely', 1, '${NOW}', '${NOW}'
       );
+    `);
+    initializeMissingMissionHeads(database);
+  } finally {
+    database.close();
+  }
+
+  threadId = createThread(databasePath, PROJECT_ID, {
+    memberAgentIds: [AGENT_A, AGENT_B],
+    operationId: "00000000-0000-4000-8000-000000001900",
+    title: "Default thread",
+  }).body.thread.id;
+
+  database = openDatabase(databasePath);
+  try {
+    database.exec("BEGIN IMMEDIATE");
+    database.exec(`
       INSERT INTO collaboration_runs (
-        id, project_id, status, current_agent_id, round_count,
+        id, project_id, thread_id, status, current_agent_id, round_count,
         next_event_sequence, version, execution_epoch, pause_reason,
         pause_category, created_at, updated_at
       ) VALUES (
-        '${RUN_ID}', '${PROJECT_ID}', 'waiting_owner', '${AGENT_A}', 2,
+        '${RUN_ID}', '${PROJECT_ID}', '${threadId}', 'waiting_owner', '${AGENT_A}', 2,
         ${eventFixtures.length + 1}, 3, 1, NULL, NULL, '${NOW}', '${NOW}'
       );
       INSERT INTO collaboration_project_sequences (
-        project_id, next_message_sequence
-      ) VALUES ('${PROJECT_ID}', 4);
+        project_id, thread_id, next_message_sequence
+      ) VALUES ('${PROJECT_ID}', '${threadId}', 4);
       INSERT INTO collaboration_messages (
-        id, project_id, run_id, author_type, author_agent_id,
+        id, project_id, thread_id, run_id, author_type, author_agent_id,
         author_display_name, content, mention_agent_id, mention_display_name,
         sequence, consumed_at, created_at
       ) VALUES
         (
-          'message-1', '${PROJECT_ID}', '${RUN_ID}', 'owner', NULL,
+          'message-1', '${PROJECT_ID}', '${threadId}', '${RUN_ID}', 'owner', NULL,
           'Owner Snapshot', 'Start', '${AGENT_B}', 'Beta Snapshot', 1, NULL, '${NOW}'
         ),
         (
-          'message-2', '${PROJECT_ID}', '${RUN_ID}', 'agent', '${AGENT_A}',
+          'message-2', '${PROJECT_ID}', '${threadId}', '${RUN_ID}', 'agent', '${AGENT_A}',
           'Alpha Snapshot', 'Drafted', NULL, NULL, 2, NULL, '${NOW}'
         ),
         (
-          'message-3', '${PROJECT_ID}', '${RUN_ID}', 'owner', NULL,
+          'message-3', '${PROJECT_ID}', '${threadId}', '${RUN_ID}', 'owner', NULL,
           'Owner Snapshot', 'Yes', '${AGENT_B}', 'Beta Snapshot', 3, NULL, '${NOW}'
         );
       INSERT INTO collaboration_operations (
-        id, project_id, run_id, kind, request_hash, status,
-        http_status, response_json, created_at, updated_at
+        id, project_id, thread_id, run_id, kind, request_hash, status,
+        http_status, response_json, response_schema_version, created_at, updated_at
       ) VALUES
-        ('00000000-0000-4000-8000-000000001901', '${PROJECT_ID}', '${RUN_ID}',
-         'advance', 'hash-1', 'completed', 200, '{}', '${NOW}', '${NOW}'),
-        ('00000000-0000-4000-8000-000000001902', '${PROJECT_ID}', '${RUN_ID}',
-         'advance', 'hash-2', 'completed', 200, '{}', '${NOW}', '${NOW}');
+        ('00000000-0000-4000-8000-000000001901', '${PROJECT_ID}', '${threadId}',
+         '${RUN_ID}', 'advance', 'hash-1', 'completed', 200, '{}', 7, '${NOW}', '${NOW}'),
+        ('00000000-0000-4000-8000-000000001902', '${PROJECT_ID}', '${threadId}',
+         '${RUN_ID}', 'advance', 'hash-2', 'completed', 200, '{}', 7, '${NOW}', '${NOW}');
       INSERT INTO collaboration_attempts (
-        id, project_id, run_id, agent_id, operation_id, status,
+        id, project_id, thread_id, run_id, agent_id, operation_id, status,
         lease_token, lease_expires_at, prompt_hash, acquire_execution_epoch,
         acquire_context_hash, included_message_sequence, error_category,
         started_at, finished_at
       ) VALUES
-        ('attempt-1', '${PROJECT_ID}', '${RUN_ID}', '${AGENT_A}',
+        ('attempt-1', '${PROJECT_ID}', '${threadId}', '${RUN_ID}', '${AGENT_A}',
          '00000000-0000-4000-8000-000000001901', 'committed', 'lease-1', '${NOW}',
          'prompt-1', 1, 'context-1', 1, NULL, '${NOW}', '${NOW}'),
-        ('attempt-2', '${PROJECT_ID}', '${RUN_ID}', '${AGENT_B}',
+        ('attempt-2', '${PROJECT_ID}', '${threadId}', '${RUN_ID}', '${AGENT_B}',
          '00000000-0000-4000-8000-000000001902', 'failed', 'lease-2', '${NOW}',
          'prompt-2', 1, 'context-2', 2, 'provider_timeout', '${NOW}', '${NOW}');
       INSERT INTO collaboration_model_calls (
@@ -151,28 +165,33 @@ function seed(): void {
         ('call-3', 'attempt-2', 'primary', 1, 'provider_failed', NULL, NULL, NULL,
          'provider_timeout', '${NOW}');
       INSERT INTO collaboration_turns (
-        id, attempt_id, run_id, agent_id, round_number, message_id,
+        id, project_id, thread_id, attempt_id, run_id, agent_id, round_number, message_id,
         disposition, created_at
       ) VALUES (
-        'turn-1', 'attempt-1', '${RUN_ID}', '${AGENT_A}', 1, 'message-2',
+        'turn-1', '${PROJECT_ID}', '${threadId}', 'attempt-1', '${RUN_ID}',
+        '${AGENT_A}', 1, 'message-2',
         'handoff', '${NOW}'
       );
       INSERT INTO decision_requests (
-        id, run_id, turn_id, requesting_agent_id, question, options_json,
+        id, project_id, thread_id, run_id, turn_id, requesting_agent_id, question, options_json,
         status, answer, answer_message_id, version, created_at, answered_at
       ) VALUES (
-        'decision-open', '${RUN_ID}', 'turn-1', '${AGENT_A}', 'Approve?',
+        'decision-open', '${PROJECT_ID}', '${threadId}', '${RUN_ID}', 'turn-1',
+        '${AGENT_A}', 'Approve?',
         '["Approve","Revise"]', 'open', NULL, NULL, 1, '${NOW}', NULL
       );
     `);
     const insertEvent = database.prepare(
       `INSERT INTO collaboration_events (
-         id, run_id, sequence, type, actor_type, actor_id, payload_json, created_at
-       ) VALUES (?, ?, ?, ?, ?, ?, ?, ?)`,
+         id, project_id, thread_id, run_id, sequence, type, actor_type, actor_id,
+         payload_json, created_at
+       ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
     );
     eventFixtures.forEach(([type, payload], index) => {
       insertEvent.run(
         `event-${index + 1}`,
+        PROJECT_ID,
+        threadId,
         RUN_ID,
         index + 1,
         type,
@@ -182,6 +201,96 @@ function seed(): void {
         NOW,
       );
     });
+
+    const thread = database.prepare(
+      `SELECT next_fact_sequence AS factSequence
+       FROM collaboration_threads WHERE project_id=? AND id=?`,
+    ).get(PROJECT_ID, threadId) as { factSequence: number };
+    const project = database.prepare(
+      `SELECT next_activity_sequence AS activitySequence
+       FROM collaboration_project_thread_sequences WHERE project_id=?`,
+    ).get(PROJECT_ID) as { activitySequence: number };
+    const insertFact = database.prepare(
+      `INSERT INTO collaboration_thread_facts(
+         id,project_id,thread_id,sequence,activity_sequence,type,actor_type,actor_id,
+         run_id,message_id,run_event_id,policy_revision_id,payload_json,created_at
+       ) VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?)`,
+    );
+    let factSequence = thread.factSequence;
+    let activitySequence = project.activitySequence;
+    insertFact.run(
+      `fact-link-${RUN_ID}`,
+      PROJECT_ID,
+      threadId,
+      factSequence++,
+      activitySequence++,
+      "run_linked",
+      "system",
+      null,
+      RUN_ID,
+      null,
+      null,
+      null,
+      JSON.stringify({ runId: RUN_ID }),
+      NOW,
+    );
+    const messageFacts = [
+      ["message-1", "owner_message", "owner", null],
+      ["message-2", "agent_message", "agent", AGENT_A],
+      ["message-3", "owner_message", "owner", null],
+    ] as const;
+    for (const [messageId, type, actorType, actorId] of messageFacts) {
+      insertFact.run(
+        `fact-${messageId}`,
+        PROJECT_ID,
+        threadId,
+        factSequence++,
+        activitySequence++,
+        type,
+        actorType,
+        actorId,
+        RUN_ID,
+        messageId,
+        null,
+        null,
+        JSON.stringify({ messageId }),
+        NOW,
+      );
+    }
+    eventFixtures.forEach(([type], index) => {
+      if (type === "owner_message" || type === "agent_message") return;
+      const eventId = `event-${index + 1}`;
+      const actorType = type.startsWith("run_") ? "owner" : "system";
+      insertFact.run(
+        `fact-${eventId}`,
+        PROJECT_ID,
+        threadId,
+        factSequence++,
+        activitySequence++,
+        "run_event",
+        actorType,
+        null,
+        RUN_ID,
+        null,
+        eventId,
+        null,
+        JSON.stringify({ eventType: type }),
+        NOW,
+      );
+    });
+    database.prepare(
+      `UPDATE collaboration_threads
+       SET next_fact_sequence=?,last_activity_sequence=?
+       WHERE project_id=? AND id=?`,
+    ).run(factSequence, activitySequence - 1, PROJECT_ID, threadId);
+    database.prepare(
+      `UPDATE collaboration_project_thread_sequences
+       SET next_activity_sequence=? WHERE project_id=?`,
+    ).run(activitySequence, PROJECT_ID);
+    database.exec("COMMIT");
+  } catch (error) {
+    if (database.isTransaction) database.exec("ROLLBACK");
+    throw error;
   } finally {
     database.close();
   }
@@ -202,10 +311,14 @@ async function collaboration(query = ""): Promise<Response> {
 }
 
 async function timeline(query = ""): Promise<Response> {
-  const route = await loadRoute("../app/api/runs/[runId]/timeline/route.ts");
+  const route = await loadRoute(
+    "../app/api/projects/[projectId]/threads/[threadId]/runs/[runId]/timeline/route.ts",
+  );
   return route.GET(
-    new Request(`http://localhost/api/runs/${RUN_ID}/timeline${query}`),
-    { params: Promise.resolve({ runId: RUN_ID }) },
+    new Request(
+      `http://localhost/api/projects/${PROJECT_ID}/threads/${threadId}/runs/${RUN_ID}/timeline${query}`,
+    ),
+    { params: Promise.resolve({ projectId: PROJECT_ID, threadId, runId: RUN_ID }) },
   );
 }
 

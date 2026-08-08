@@ -7,15 +7,8 @@ import { afterEach, describe, expect, it } from "vitest";
 import { openDatabase } from "@/src/server/db";
 import { createMission } from "@/src/server/mission-service";
 import { createProject } from "@/src/server/projects";
-import * as migrationsV6 from "@/src/server/migrations-v6";
+import { validateV7 } from "@/src/server/migrations-v7";
 
-const validateV6 = (database: DatabaseSync) => {
-  const validate = (migrationsV6 as {
-    validateV6?: (value: DatabaseSync) => "SCHEMA_DRIFT" | "SCHEMA_DATA_INVALID" | null;
-  }).validateV6;
-  expect(validate, "complete validateV6 must be exported").toBeTypeOf("function");
-  return validate!(database);
-};
 
 const directories: string[] = [];
 
@@ -65,7 +58,7 @@ describe("fresh v6 mission initialization", () => {
       type: "mission_review_initialized",
     });
     expect(database.prepare("PRAGMA foreign_key_check").all()).toEqual([]);
-    expect(validateV6(database)).toBeNull();
+    expect(validateV7(database)).toBeNull();
     database.close();
   });
 
@@ -111,7 +104,7 @@ describe("fresh v6 mission initialization", () => {
         (SELECT COUNT(*) FROM review_events) AS events
     `).get()).toEqual({ events: 1, heads: 1, missions: 1 });
     expect(database.prepare("PRAGMA foreign_key_check").all()).toEqual([]);
-    expect(validateV6(database)).toBeNull();
+    expect(validateV7(database)).toBeNull();
     database.close();
   });
 

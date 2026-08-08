@@ -91,6 +91,8 @@ function buildInput(): DeliveryBuildInput {
         mergeFileCount: 1,
         mergeFinalBytes: 12,
         sourceCollaborationRunId: "run",
+        sourceCollaborationThreadId: "thread",
+        sourceHref: "/projects/project?thread=thread&run=run",
         stagedHash: HASH,
       },
       executor: { agentId: "executor", name: "Executor" },

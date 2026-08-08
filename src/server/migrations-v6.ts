@@ -1,7 +1,10 @@
 import { createHash, randomUUID } from "node:crypto";
 import type { DatabaseSync } from "node:sqlite";
 
-import { validateV5Retained } from "@/src/server/migrations-v5";
+import {
+  validateV5Retained,
+  validateV5RetainedData,
+} from "@/src/server/migrations-v5";
 
 export const V6_TABLES = [
   "work_item_result_versions",
@@ -414,18 +417,22 @@ function count(database: DatabaseSync, sql: string): number {
 
 export function validateV6(
   database: DatabaseSync,
+  validateSchema = true,
+  validateV5Schema = validateSchema,
 ): "SCHEMA_DRIFT" | "SCHEMA_DATA_INVALID" | null {
-  const retainedValidation = validateV5Retained(database);
+  const retainedValidation = validateV5Schema
+    ? validateV5Retained(database)
+    : validateV5RetainedData(database);
   if (retainedValidation) return retainedValidation;
   const wanted = new Set<string>([...V6_TABLES, ...V6_INDEXES, ...V6_TRIGGERS]);
   const rows = database.prepare(
     "SELECT name,sql FROM sqlite_master WHERE name NOT LIKE 'sqlite_%'",
   ).all() as Array<{ name: string; sql: string | null }>;
   const actual = rows.filter(({ name }) => wanted.has(name));
-  if (
+  if (validateSchema && (
     actual.length !== wanted.size
     || actual.some(({ name, sql }) => !sql || normalizeSql(sql) !== expectedSql.get(name))
-  ) return "SCHEMA_DRIFT";
+  )) return "SCHEMA_DRIFT";
   const agentColumn = (database.prepare("PRAGMA table_info(agents)").all() as Array<{
     dflt_value: string | null; name: string; notnull: number; type: string;
   }>).find(({ name }) => name === "review_capable");
@@ -508,3 +515,15 @@ export function validateV6(
 export const createV6T1 = createV6;
 export const hasAnyV6T1Object = hasAnyV6Object;
 export const validateV6T1 = (database: DatabaseSync): boolean => validateV6(database) === null;
+
+export function validateV6RetainedData(
+  database: DatabaseSync,
+): "SCHEMA_DRIFT" | "SCHEMA_DATA_INVALID" | null {
+  return validateV6(database, false, false);
+}
+
+export function validateV6Retained(
+  database: DatabaseSync,
+): "SCHEMA_DRIFT" | "SCHEMA_DATA_INVALID" | null {
+  return validateV6(database, true, false);
+}

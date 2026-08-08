@@ -15,8 +15,13 @@ type Fixture = {
   artifactBody?: string | null;
   artifactVersion?: string;
   eventPayload?: Record<string, unknown>;
+  frozenSource?: { projectId: string; runId: string; threadId: string } | null;
+  latestRunId?: string;
   missionVersion?: number;
   optionalArtifact?: boolean;
+  sourceContextHash?: string;
+  sourceRunId?: string;
+  sourceThreadId?: string;
   taskVersion?: number;
   validationRequired?: boolean;
 };
@@ -35,8 +40,15 @@ function databaseFixture(overrides: Fixture = {}): DatabaseSync {
     artifactVersion: overrides.artifactVersion ?? (artifactBody === null ? "a".repeat(64) : sha256(artifactBody)),
     diff,
     eventPayload,
+    frozenSource: overrides.frozenSource === undefined
+      ? { projectId: "project", runId: "run-a", threadId: "thread-a" }
+      : overrides.frozenSource,
+    latestRunId: overrides.latestRunId ?? "run-newest",
     missionVersion: overrides.missionVersion ?? 3,
     optionalArtifact: overrides.optionalArtifact ?? true,
+    sourceContextHash: overrides.sourceContextHash ?? "c".repeat(64),
+    sourceRunId: overrides.sourceRunId ?? "run-a",
+    sourceThreadId: overrides.sourceThreadId ?? "thread-a",
     stdout,
     taskVersion: overrides.taskVersion ?? 7,
     validationRequired: overrides.validationRequired ?? true,
@@ -129,8 +141,16 @@ function databaseFixture(overrides: Fixture = {}): DatabaseSync {
         return {
           createdAt: "2026-08-01T00:00:00.000Z",
           executionId: "execution",
+          frozenSourceProjectId: rows.frozenSource?.projectId ?? null,
+          frozenSourceRunId: rows.frozenSource?.runId ?? null,
+          frozenSourceThreadId: rows.frozenSource?.threadId ?? null,
           id: "result",
           mergeJournalId: "journal",
+          sourceContextHash: rows.sourceContextHash,
+          sourceProjectId: "project",
+          sourceRunId: rows.sourceRunId,
+          sourceThreadId: rows.sourceThreadId,
+          stagedContextHash: rows.sourceContextHash,
           stagedResultId: "staged",
           version: 2,
         };
@@ -208,7 +228,87 @@ describe("frozen review material", () => {
       { id: "artifact", type: "artifact", version: sha256("artifact body") },
       { id: "event", type: "execution", version: "12" },
     ]));
+    expect(first.material.result.source).toEqual({
+      contextHash: "c".repeat(64),
+      projectId: "project",
+      runId: "run-a",
+      threadId: "thread-a",
+    });
     expect(first.json).not.toMatch(/[A-Z]:\\|private prompt|authorization|api[_-]?key|chain.of.thought/iu);
+  });
+
+  it("uses the result execution frozen tuple and remains stable after newer runs appear", () => {
+    const original = freezeReviewMaterial(databaseFixture({
+      latestRunId: "run-b",
+    }), head, "attempt");
+    const afterLaterRuns = freezeReviewMaterial(databaseFixture({
+      latestRunId: "run-c",
+    }), head, "attempt");
+
+    expect(afterLaterRuns.hash).toBe(original.hash);
+    expect(afterLaterRuns.material.result.source).toMatchObject({
+      runId: "run-a",
+      threadId: "thread-a",
+    });
+  });
+
+  it.each([
+    ["missing frozen source", null],
+    ["cross-thread frozen source", {
+      projectId: "project",
+      runId: "run-a",
+      threadId: "thread-b",
+    }],
+    ["cross-run frozen source", {
+      projectId: "project",
+      runId: "run-b",
+      threadId: "thread-a",
+    }],
+  ])("fails closed for %s", (_case, frozenSource) => {
+    expect(() => freezeReviewMaterial(databaseFixture({
+      frozenSource,
+    }), head, "attempt")).toThrow(expect.objectContaining({
+      code: "REVIEW_MATERIAL_INVALID",
+      message: "公开复核材料无效",
+    }));
+  });
+
+  it("uses each rework result execution's own frozen tuple", () => {
+    const rework = freezeReviewMaterial(databaseFixture({
+      frozenSource: {
+        projectId: "project",
+        runId: "run-rework",
+        threadId: "thread-rework",
+      },
+      sourceContextHash: "d".repeat(64),
+      sourceRunId: "run-rework",
+      sourceThreadId: "thread-rework",
+    }), head, "attempt-rework");
+
+    expect(rework.material.result.source).toEqual({
+      contextHash: "d".repeat(64),
+      projectId: "project",
+      runId: "run-rework",
+      threadId: "thread-rework",
+    });
+  });
+
+  it("preserves migrated legacy execution provenance", () => {
+    const legacy = freezeReviewMaterial(databaseFixture({
+      frozenSource: {
+        projectId: "project",
+        runId: "legacy-run",
+        threadId: "legacy-thread-project-hash",
+      },
+      sourceRunId: "legacy-run",
+      sourceThreadId: "legacy-thread-project-hash",
+    }), head, "legacy-attempt");
+
+    expect(legacy.material.result.source).toMatchObject({
+      projectId: "project",
+      runId: "legacy-run",
+      threadId: "legacy-thread-project-hash",
+    });
   });
 
   it("fails closed for header-only required content while optional missing content remains limited", () => {

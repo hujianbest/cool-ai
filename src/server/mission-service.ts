@@ -926,11 +926,17 @@ function insertTransitionReceipt(
   const status = input.receipt.ok ? 200 : input.receipt.error.status;
   database.prepare(`
     INSERT INTO collaboration_operations(
-      id,project_id,run_id,kind,request_hash,status,http_status,response_json,
+      id,project_id,thread_id,run_id,kind,request_hash,status,http_status,response_json,
       created_at,updated_at
-    ) VALUES (?, ?, NULL, 'legacy_work_item_transition', ?, 'completed', ?, ?, ?, ?)
+    ) VALUES (
+      ?, ?,
+      (SELECT id FROM collaboration_threads
+       WHERE project_id=? ORDER BY created_at,id LIMIT 1),
+      NULL, 'control', ?, 'completed', ?, ?, ?, ?
+    )
   `).run(
     input.operationId,
+    input.projectId,
     input.projectId,
     input.requestHash,
     status,
@@ -977,7 +983,7 @@ export function transitionWorkItem(
       } | undefined;
       if (prior) {
         if (
-          prior.kind !== "legacy_work_item_transition"
+          prior.kind !== "control"
           || prior.requestHash !== requestHash
         ) {
           throw new MissionError(

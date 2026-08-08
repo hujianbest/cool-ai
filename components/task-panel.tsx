@@ -10,6 +10,7 @@ import {
 } from "react";
 
 import { CollaborationPanel } from "@/components/collaboration/collaboration-panel";
+import { ThreadPolicyPanel } from "@/components/collaboration/thread-policy-panel";
 import { ExecutionPanel } from "@/components/execution/execution-panel";
 import { OnboardingGuide } from "@/components/onboarding-guide";
 import { MissionBoard } from "@/components/project-context/mission-board";
@@ -74,6 +75,7 @@ type TaskPanelProps = {
     step: "project-select" | "goal";
   } | null;
   legacyTasksEnabled?: boolean;
+  threadListState?: "loading" | "empty" | "ready" | "error" | null;
 };
 
 export function TaskPanel({
@@ -94,6 +96,7 @@ export function TaskPanel({
   onSelectProject,
   onboarding,
   legacyTasksEnabled = true,
+  threadListState = null,
 }: TaskPanelProps) {
   const [tasks, setTasks] = useState<TaskRun[]>([]);
   const [events, setEvents] = useState<TaskEvent[]>([]);
@@ -103,12 +106,68 @@ export function TaskPanel({
   const [isLoading, setIsLoading] = useState(false);
   const [isRunning, setIsRunning] = useState(false);
   const [reloadKey, setReloadKey] = useState(0);
+  const [locationVersion, setLocationVersion] = useState(0);
   const [collaborationSurface, setCollaborationSurface] = useState<
     "chat" | "board" | "run"
   >("chat");
   const [nestedModalOpen, setNestedModalOpen] = useState(false);
+  const [executionSource, setExecutionSource] = useState<{
+    projectId: string;
+    runId: string;
+    threadId: string;
+  } | null>(null);
+  const [collaborationTarget, setCollaborationTarget] = useState<{
+    selectedRunId: string | null;
+    threadId: string;
+  } | null>(() => {
+    if (!projectId || typeof window === "undefined") return null;
+    const query = new URLSearchParams(window.location.search);
+    const threadIds = query.getAll("thread");
+    const runIds = query.getAll("run");
+    return threadIds.length === 1 &&
+      threadIds[0]!.length > 0 &&
+      (runIds.length === 0 ||
+        (runIds.length === 1 && runIds[0]!.length > 0))
+      ? { selectedRunId: runIds[0] ?? null, threadId: threadIds[0]! }
+      : null;
+  });
   const collaborationTabRefs = useRef(new Map<string, HTMLButtonElement>());
   const taskGoalInputRef = useRef<HTMLInputElement>(null);
+
+  useEffect(() => {
+    const updateLocation = () => setLocationVersion((current) => current + 1);
+    window.addEventListener("popstate", updateLocation);
+    return () => window.removeEventListener("popstate", updateLocation);
+  }, []);
+
+  useEffect(() => {
+    if (!projectId || typeof window === "undefined") {
+      setExecutionSource(null);
+      setCollaborationTarget(null);
+      return;
+    }
+    const query = new URLSearchParams(window.location.search);
+    const threadIds = query.getAll("thread");
+    const runIds = query.getAll("run");
+    const validThread = threadIds.length === 1 && threadIds[0]!.length > 0;
+    const validRun = runIds.length === 0 ||
+      (runIds.length === 1 && runIds[0]!.length > 0);
+    setCollaborationTarget(
+      validThread && validRun
+        ? {
+            selectedRunId: runIds[0] ?? null,
+            threadId: threadIds[0]!,
+          }
+        : null,
+    );
+    setExecutionSource(
+      validThread
+      && runIds.length === 1
+      && runIds[0]!.length > 0
+        ? { projectId, runId: runIds[0]!, threadId: threadIds[0]! }
+        : null,
+    );
+  }, [locationVersion, projectId]);
 
   useEffect(() => {
     let active = true;
@@ -329,7 +388,9 @@ export function TaskPanel({
             projectId={projectId}
             projects={onboarding.projects}
             refreshKey={goalFactsVersion}
+            selectedRunId={collaborationTarget?.selectedRunId}
             step={onboarding.step}
+            threadId={collaborationTarget?.threadId}
           />
         ) : null}
 
@@ -393,6 +454,37 @@ export function TaskPanel({
                     />
                   ) : collaborationSurface === "run" ? (
                     <>
+                      {threadListState === "empty" ? (
+                        <p className="state-message">
+                          创建线程后即可开始协作。
+                        </p>
+                      ) : (
+                        <CollaborationPanel
+                          modalBackgroundRef={editorSurfaceRef}
+                          onGoalFactChanged={() =>
+                            setGoalFactsVersion((current) => current + 1)
+                          }
+                          onNestedModalChange={setNestedModalOpen}
+                          onRequestChat={() => setCollaborationSurface("chat")}
+                          projectId={projectId}
+                          selectedRunId={collaborationTarget?.selectedRunId}
+                          startOnly={onboarding?.step === "goal"}
+                          surface="run"
+                          threadId={collaborationTarget?.threadId}
+                        />
+                      )}
+                      <ExecutionPanel
+                        embedded
+                        projectId={projectId}
+                        sourceTuple={executionSource}
+                      />
+                    </>
+                  ) : (
+                    threadListState === "empty" ? (
+                      <p className="state-message">
+                        创建线程后即可开始协作。
+                      </p>
+                    ) : (
                       <CollaborationPanel
                         modalBackgroundRef={editorSurfaceRef}
                         onGoalFactChanged={() =>
@@ -400,41 +492,43 @@ export function TaskPanel({
                         }
                         onNestedModalChange={setNestedModalOpen}
                         projectId={projectId}
+                        selectedRunId={collaborationTarget?.selectedRunId}
                         startOnly={onboarding?.step === "goal"}
-                        surface="run"
+                        surface={collaborationSurface}
+                        threadId={collaborationTarget?.threadId}
                       />
-                      <ExecutionPanel embedded projectId={projectId} />
-                    </>
-                  ) : (
-                    <CollaborationPanel
-                      modalBackgroundRef={editorSurfaceRef}
-                      onGoalFactChanged={() =>
-                        setGoalFactsVersion((current) => current + 1)
-                      }
-                      onNestedModalChange={setNestedModalOpen}
-                      projectId={projectId}
-                      startOnly={onboarding?.step === "goal"}
-                      surface={collaborationSurface}
-                    />
+                    )
                   )}
                 </section>
               </>
             ) : (
               <>
-                <CollaborationPanel
-                  onGoalFactChanged={() =>
-                    setGoalFactsVersion((current) => current + 1)
-                  }
-                  projectId={projectId}
-                  startOnly={onboarding?.step === "goal"}
-                />
+                {threadListState === "empty" ? (
+                  <p className="state-message">
+                    创建线程后即可开始协作。
+                  </p>
+                ) : (
+                  <CollaborationPanel
+                    onGoalFactChanged={() =>
+                      setGoalFactsVersion((current) => current + 1)
+                    }
+                    projectId={projectId}
+                    selectedRunId={collaborationTarget?.selectedRunId}
+                    startOnly={onboarding?.step === "goal"}
+                    threadId={collaborationTarget?.threadId}
+                  />
+                )}
                 <MissionBoard
                   onGoalFactChanged={() =>
                     setGoalFactsVersion((current) => current + 1)
                   }
                   projectId={projectId}
                 />
-                <ExecutionPanel embedded projectId={projectId} />
+                <ExecutionPanel
+                  embedded
+                  projectId={projectId}
+                  sourceTuple={executionSource}
+                />
               </>
             )}
             {legacyTasksEnabled &&
@@ -553,33 +647,43 @@ export function TaskPanel({
         ) : projectError ? (
           <p className="state-message">{projectError}</p>
         ) : projectId ? (
-          <ProjectContextPanel
-            projectId={projectId}
-            skeleton={
-              latestTask ? (
-                <div className="context-body">
-                  <p className="context-label">目标</p>
-                  <p>{latestTask.goal}</p>
-                  <p className={`context-status status-${latestTask.status}`}>
-                    状态：{statusLabels[latestTask.status]}
-                  </p>
-                  <p className="context-label">更新时间</p>
-                  <time dateTime={latestTask.updatedAt}>
-                    {latestTask.updatedAt}
-                  </time>
-                  <p className="context-label">结果</p>
-                  <p>{latestTask.result ?? "暂无结果。"}</p>
-                  {latestTask.error ? (
-                    <p className="error-text">
-                      任务执行失败，请稍后重试。
+          <>
+            {collaborationTarget ? (
+              <ThreadPolicyPanel
+                modalBackgroundRef={contextSurfaceRef}
+                onModalChange={setNestedModalOpen}
+                projectId={projectId}
+                threadId={collaborationTarget.threadId}
+              />
+            ) : null}
+            <ProjectContextPanel
+              projectId={projectId}
+              skeleton={
+                latestTask ? (
+                  <div className="context-body">
+                    <p className="context-label">目标</p>
+                    <p>{latestTask.goal}</p>
+                    <p className={`context-status status-${latestTask.status}`}>
+                      状态：{statusLabels[latestTask.status]}
                     </p>
-                  ) : null}
-                </div>
-              ) : (
-                <p className="state-message">暂无当前任务。</p>
-              )
-            }
-          />
+                    <p className="context-label">更新时间</p>
+                    <time dateTime={latestTask.updatedAt}>
+                      {latestTask.updatedAt}
+                    </time>
+                    <p className="context-label">结果</p>
+                    <p>{latestTask.result ?? "暂无结果。"}</p>
+                    {latestTask.error ? (
+                      <p className="error-text">
+                        任务执行失败，请稍后重试。
+                      </p>
+                    ) : null}
+                  </div>
+                ) : (
+                  <p className="state-message">暂无当前任务。</p>
+                )
+              }
+            />
+          </>
         ) : (
           <div className="empty-guide state-message">
             <p>请先选择项目。</p>

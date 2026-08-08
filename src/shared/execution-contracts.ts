@@ -331,6 +331,7 @@ export const executionEventDtoSchema = z.discriminatedUnion("type", [
 export const executionDtoSchema = z.object({
   id: z.string().min(1),
   projectId: z.string().min(1),
+  sourceCollaborationThreadId: z.string().min(1),
   sourceCollaborationRunId: z.string().min(1),
   workItem: z.object({
     id: z.string().min(1),
@@ -384,7 +385,11 @@ export const executionListResponseSchema = z.object({
 
 export const startExecutionInputSchema = z.object({
   operationId: z.string().uuid(),
-  sourceCollaborationRunId: z.string().min(1),
+  source: z.object({
+    projectId: z.string().min(1),
+    threadId: z.string().min(1),
+    runId: z.string().min(1),
+  }).strict(),
   workItemId: z.string().min(1),
 }).strict();
 

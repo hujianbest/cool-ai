@@ -5,6 +5,7 @@ import type { DatabaseSync } from "node:sqlite";
 import { afterEach, beforeEach, describe, expect, it } from "vitest";
 
 import { createV6FixtureDatabaseOpener } from "@/tests/v6-fixture-db";
+import { execV7Fixture } from "@/tests/v7-fixture-graph";
 
 const openDatabase = createV6FixtureDatabaseOpener({
   missingDeliveryHeadMissionIds: ["mission"],
@@ -271,7 +272,7 @@ describe("append-only validation policy", () => {
     }, resolver);
 
     const database = openDatabase(databasePath);
-    seedFrozenExecution(database, project.id, saved.policy);
+    seedFrozenExecution(databasePath, database, project.id, saved.policy);
     const oldRevisionId = policy.listValidationPolicyRevisions(databasePath, project.id)[0]!.revisionId;
     const entryId = saved.policy.entries[0]!.id;
     expect(() => database.prepare(
@@ -313,7 +314,7 @@ describe("append-only validation policy", () => {
       warningAccepted: true,
     }, resolver).policy;
     const database = openDatabase(databasePath);
-    seedFrozenExecution(database, project.id, frozen);
+    seedFrozenExecution(databasePath, database, project.id, frozen);
     database.close();
     const later = policy.saveValidationPolicy(databasePath, project.id, {
       entries: [entry({ args: ["test", "later"] })],
@@ -357,9 +358,14 @@ describe("append-only validation policy", () => {
   });
 });
 
-function seedFrozenExecution(database: DatabaseSync, projectId: string, active: Policy): void {
+function seedFrozenExecution(
+  databasePath: string,
+  database: DatabaseSync,
+  projectId: string,
+  active: Policy,
+): void {
   const entryId = active.entries[0]!.id;
-  database.exec(`
+  execV7Fixture(databasePath, database, `
     INSERT INTO providers (
       id,name,base_url,default_model,api_key_cipher,api_key_iv,api_key_tag,
       credential_version,credential_generation,key_id,api_key_mask,verified_at,
@@ -376,7 +382,10 @@ function seedFrozenExecution(database: DatabaseSync, projectId: string, active: 
     INSERT INTO work_items VALUES (
       'work','mission','Work','Description','in_progress','agent',1,'${NOW}','${NOW}'
     );
-    INSERT INTO collaboration_runs VALUES (
+    INSERT INTO collaboration_runs (
+      id,project_id,status,current_agent_id,round_count,next_event_sequence,
+      version,execution_epoch,pause_reason,pause_category,created_at,updated_at
+    ) VALUES (
       'run','${projectId}','planned','agent',0,1,1,1,NULL,NULL,'${NOW}','${NOW}'
     );
     INSERT INTO executions (

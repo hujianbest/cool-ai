@@ -4,13 +4,10 @@ import { join } from "node:path";
 import type { DatabaseSync } from "node:sqlite";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
+import { createThread } from "@/src/server/collaboration/thread-service";
 import { createCredentialVault } from "@/src/server/credential-vault";
-import { createV6FixtureDatabaseOpener } from "@/tests/v6-fixture-db";
-
-const openDatabase = createV6FixtureDatabaseOpener({
-  missingDeliveryHeadMissionIds: ["mission"],
-  missingReviewHeadResultIds: [],
-});
+import { openDatabase } from "@/src/server/db";
+import { initializeMissionDeliveryTx } from "@/src/server/migrations-v6";
 import {
   captureExecutionFrozenInput,
   staleExecutionIfFrozenInputChanged,
@@ -38,6 +35,7 @@ let directory: string;
 let databasePath: string;
 let database: DatabaseSync;
 let advance: AdvanceModule;
+let sourceThreadId: string;
 
 function providerResponse(type: "list" | "staged" = "list"): Response {
   return new Response(JSON.stringify({
@@ -103,9 +101,15 @@ function seed(): void {
       'agent','Agent','Builder','private','provider','model','A','sage',
       1,1,1,100000,5,1,strftime('%Y-%m-%dT%H:%M:%fZ','now'),
       strftime('%Y-%m-%dT%H:%M:%fZ','now')
+    ),(
+      'reviewer','Reviewer','Reviewer','private','provider','model','R','slate',
+      1,0,0,100000,5,1,strftime('%Y-%m-%dT%H:%M:%fZ','now'),
+      strftime('%Y-%m-%dT%H:%M:%fZ','now')
     );
     INSERT INTO project_memberships (project_id,agent_id,joined_at)
-    VALUES ('${PROJECT_ID}','agent',strftime('%Y-%m-%dT%H:%M:%fZ','now'));
+    VALUES
+      ('${PROJECT_ID}','agent',strftime('%Y-%m-%dT%H:%M:%fZ','now')),
+      ('${PROJECT_ID}','reviewer',strftime('%Y-%m-%dT%H:%M:%fZ','now'));
     INSERT INTO missions (id,project_id,title,goal,version,created_at,updated_at)
     VALUES ('mission','${PROJECT_ID}','Mission','Ship',1,
       strftime('%Y-%m-%dT%H:%M:%fZ','now'),strftime('%Y-%m-%dT%H:%M:%fZ','now'));
@@ -115,11 +119,37 @@ function seed(): void {
       'work','mission','Original title','Original description','in_progress','agent',1,
       strftime('%Y-%m-%dT%H:%M:%fZ','now'),strftime('%Y-%m-%dT%H:%M:%fZ','now')
     );
+  `);
+  initializeMissionDeliveryTx(database, {
+    id: "mission",
+    projectId: PROJECT_ID,
+    updatedAt: new Date().toISOString(),
+  });
+  database.close();
+  const threadId = createThread(databasePath, PROJECT_ID, {
+    memberAgentIds: ["agent", "reviewer"],
+    operationId: operationId(1),
+    title: "Frozen source",
+  }).body.thread.id;
+  sourceThreadId = threadId;
+  database = openDatabase(databasePath);
+  database.exec(`
     INSERT INTO collaboration_runs (
-      id,project_id,status,current_agent_id,round_count,next_event_sequence,
+      id,project_id,thread_id,status,current_agent_id,round_count,next_event_sequence,
       version,execution_epoch,pause_reason,pause_category,created_at,updated_at
-    ) VALUES ('run','${PROJECT_ID}','planned','agent',1,1,1,1,NULL,NULL,
+    ) VALUES ('run','${PROJECT_ID}','${threadId}','planned','agent',1,1,1,1,NULL,NULL,
       strftime('%Y-%m-%dT%H:%M:%fZ','now'),strftime('%Y-%m-%dT%H:%M:%fZ','now'));
+    INSERT INTO collaboration_thread_facts(
+      id,project_id,thread_id,sequence,activity_sequence,type,actor_type,actor_id,
+      run_id,message_id,run_event_id,policy_revision_id,payload_json,created_at
+    ) VALUES ('run-linked','${PROJECT_ID}','${threadId}',3,3,'run_linked','system',
+      NULL,'run',NULL,NULL,NULL,'{"runId":"run"}',strftime('%Y-%m-%dT%H:%M:%fZ','now'));
+    UPDATE collaboration_threads
+    SET next_fact_sequence=4,last_activity_sequence=3,version=version+1,
+        updated_at=strftime('%Y-%m-%dT%H:%M:%fZ','now')
+    WHERE project_id='${PROJECT_ID}' AND id='${threadId}';
+    UPDATE collaboration_project_thread_sequences
+    SET next_activity_sequence=4 WHERE project_id='${PROJECT_ID}';
     INSERT INTO project_validation_policy_revisions (
       id,project_id,created_operation_id,created_actor_type,revision_no,policy_hash,
       classifier_version,warning_accepted,canonical_bytes,entry_count,created_at
@@ -133,22 +163,23 @@ function seed(): void {
     baselineManifestHash: HASH,
     missionId: "mission",
     projectId: PROJECT_ID,
-    sourceCollaborationRunId: "run",
+    source: { projectId: PROJECT_ID, runId: "run", threadId },
     workItemId: "work",
   });
   database.prepare(`
     INSERT INTO executions (
-      id,project_id,source_collaboration_run_id,mission_id,work_item_id,agent_id,
+      id,project_id,source_collaboration_thread_id,source_collaboration_run_id,
+      mission_id,work_item_id,agent_id,
       current_policy_revision_id,status,resume_target,reason_code,
       manual_recovery_required,recovery_resolution,current_attempt_no,
       business_round_count,tool_call_count,next_event_sequence,version,created_at,
       business_deadline_at,first_running_at,updated_at,merged_at
     ) VALUES (
-      ?,?,'run','mission','work','agent','policy','queued',NULL,NULL,0,NULL,1,0,0,1,1,
+      ?,?,?,'run','mission','work','agent','policy','queued',NULL,NULL,0,NULL,1,0,0,1,1,
       strftime('%Y-%m-%dT%H:%M:%fZ','now'),NULL,NULL,
       strftime('%Y-%m-%dT%H:%M:%fZ','now'),NULL
     )
-  `).run(EXECUTION_ID, PROJECT_ID);
+  `).run(EXECUTION_ID, PROJECT_ID, threadId);
   database.prepare(`
     INSERT INTO execution_attempts (
       id,project_id,execution_id,attempt_no,status,sandbox_root,
@@ -411,7 +442,7 @@ describe("execution frozen-input staleness", () => {
       baselineManifestHash: null,
       missionId: "mission",
       projectId: PROJECT_ID,
-      sourceCollaborationRunId: "run",
+      source: { projectId: PROJECT_ID, runId: "run", threadId: sourceThreadId },
       workItemId: "work",
     });
     database.prepare(`

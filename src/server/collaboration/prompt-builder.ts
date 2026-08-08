@@ -2,9 +2,11 @@ import { createHash } from "node:crypto";
 import type { DatabaseSync } from "node:sqlite";
 
 import {
-  collaborationContextFingerprintFromDatabase,
   createContextSnapshotFromDatabase,
 } from "@/src/server/context-snapshot-service";
+import {
+  CollaborationError,
+} from "@/src/server/collaboration/collaboration-errors";
 import { openDatabase } from "@/src/server/db";
 
 const MAX_PUBLIC_MESSAGES = 30;
@@ -91,6 +93,8 @@ export type PromptSafeSharedContext = {
 export type CollaborationPromptSnapshot = {
   schemaVersion: 1;
   agentId: string;
+  threadId: string;
+  policyVersion: number;
   currentAgent: {
     id: string;
     name: string;
@@ -151,6 +155,7 @@ export function collaborationPublicMessageWindow(
   database: DatabaseSync,
   projectId: string,
   maximumSequence?: number,
+  threadId?: string,
 ): PublicMessageRow[] {
   const newest = database
     .prepare(
@@ -161,12 +166,15 @@ export function collaborationPublicMessageWindow(
               mention_display_name AS mentionDisplayName
        FROM collaboration_messages
        WHERE project_id = ?
+         AND (? IS NULL OR thread_id = ?)
          AND (? IS NULL OR sequence <= ?)
        ORDER BY sequence DESC
        LIMIT ?`,
     )
     .all(
       projectId,
+      threadId ?? null,
+      threadId ?? null,
       maximumSequence ?? null,
       maximumSequence ?? null,
       MAX_PUBLIC_MESSAGES,
@@ -185,6 +193,11 @@ function promptMessages(
   currentAgent: CollaborationPromptSnapshot["currentAgent"],
   sharedContext: PromptSafeSharedContext,
   publicMessages: PublicMessageRow[],
+  scope: {
+    includedMessageSequence: number;
+    policyVersion: number;
+    threadId: string;
+  },
 ): PromptMessage[] {
   const messages: PromptMessage[] = [
     { content: PLATFORM_SYSTEM_PROMPT, role: "system" },
@@ -198,6 +211,7 @@ function promptMessages(
     {
       content: JSON.stringify({
         projectContext: sharedContext,
+        ...scope,
         scope: "prompt-safe-shared-context",
       }),
       role: "system",
@@ -222,12 +236,18 @@ function promptMessages(
 export function acquireCollaborationPrompt(
   databasePath: string,
   projectId: string,
+  threadId: string,
   agentId: string,
 ): CollaborationPromptSnapshot {
   const database = openDatabase(databasePath);
   database.exec("BEGIN");
   try {
-    const snapshot = buildCollaborationPromptFromDatabase(database, projectId, agentId);
+    const snapshot = buildCollaborationPromptFromDatabase(
+      database,
+      projectId,
+      threadId,
+      agentId,
+    );
     database.exec("COMMIT");
     return snapshot;
   } catch (error) {
@@ -245,11 +265,88 @@ export function acquireCollaborationPrompt(
 export function buildCollaborationPromptFromDatabase(
   database: DatabaseSync,
   projectId: string,
+  threadId: string,
   agentId: string,
+  maximumMessageSequence?: number,
 ): CollaborationPromptSnapshot {
+  const thread = database
+    .prepare(
+      `SELECT active_policy_revision_id AS revisionId,
+              policy_version AS policyVersion
+       FROM collaboration_threads
+       WHERE project_id=? AND id=?`,
+    )
+    .get(projectId, threadId) as
+    | { revisionId: string; policyVersion: number }
+    | undefined;
+  if (!thread) {
+    throw new CollaborationError("RESOURCE_NOT_FOUND", 404, "Resource was not found.");
+  }
   const context = createContextSnapshotFromDatabase(database, projectId, agentId);
-  const fingerprint = collaborationContextFingerprintFromDatabase(database, projectId);
-  const publicMessages = collaborationPublicMessageWindow(database, projectId);
+  const policyRows = database
+    .prepare(
+      `SELECT policy.agent_id AS agentId, policy.position,
+              membership.joined_at AS joinedAt,
+              agents.version AS agentVersion,
+              providers.id AS providerId,
+              providers.version AS providerVersion,
+              providers.credential_version AS credentialVersion,
+              providers.credential_generation AS credentialGeneration,
+              providers.verified_at AS verifiedAt
+       FROM collaboration_thread_policy_members AS policy
+       LEFT JOIN project_memberships AS membership
+         ON membership.project_id=policy.project_id
+        AND membership.agent_id=policy.agent_id
+       LEFT JOIN agents ON agents.id=membership.agent_id
+       LEFT JOIN providers ON providers.id=agents.provider_id
+       WHERE policy.project_id=? AND policy.thread_id=? AND policy.revision_id=?
+       ORDER BY policy.position ASC,policy.agent_id ASC`,
+    )
+    .all(projectId, threadId, thread.revisionId) as Array<{
+    agentId: string;
+    position: number;
+    joinedAt: string | null;
+    agentVersion: number | null;
+    providerId: string | null;
+    providerVersion: number | null;
+    credentialVersion: number | null;
+    credentialGeneration: number | null;
+    verifiedAt: string | null;
+  }>;
+  if (
+    policyRows.length < 2
+    || policyRows.some(
+      ({ agentVersion, joinedAt, providerId }) =>
+        joinedAt === null || agentVersion === null || providerId === null,
+    )
+    || !policyRows.some(({ agentId: policyAgentId }) => policyAgentId === agentId)
+  ) {
+    throw new CollaborationError(
+      "THREAD_POLICY_REPAIR_REQUIRED",
+      409,
+      "Thread policy requires repair.",
+    );
+  }
+  const projectRoster = new Map(
+    context.shared.roster.map((member) => [member.agentId, member]),
+  );
+  const policyRoster = policyRows.map(({ agentId: policyAgentId }) => {
+    const member = projectRoster.get(policyAgentId);
+    if (!member) {
+      throw new CollaborationError(
+        "THREAD_POLICY_REPAIR_REQUIRED",
+        409,
+        "Thread policy requires repair.",
+      );
+    }
+    return member;
+  });
+  const publicMessages = collaborationPublicMessageWindow(
+    database,
+    projectId,
+    maximumMessageSequence,
+    threadId,
+  );
   const currentAgent: CollaborationPromptSnapshot["currentAgent"] = {
     id: context.currentAgent.id,
     name: context.currentAgent.name,
@@ -274,7 +371,7 @@ export function buildCollaborationPromptFromDatabase(
       name: context.shared.project.name,
       workspaceBound: true,
     },
-    roster: context.shared.roster.map((member) => ({
+    roster: policyRoster.map((member) => ({
       ...member,
       permissions: { ...member.permissions },
       skillNames: [...member.skillNames],
@@ -284,16 +381,31 @@ export function buildCollaborationPromptFromDatabase(
       dependencyIds: [...item.dependencyIds],
     })),
   };
-  const messages = promptMessages(currentAgent, sharedContext, publicMessages);
+  const includedMessageSequence = publicMessages.at(-1)?.sequence ?? 0;
+  const scope = {
+    includedMessageSequence,
+    policyVersion: thread.policyVersion,
+    threadId,
+  };
+  const messages = promptMessages(currentAgent, sharedContext, publicMessages, scope);
+  const contextHash = canonicalPromptHash({
+    currentAgent,
+    policyConfiguration: policyRows,
+    publicMessages,
+    scope,
+    sharedContext,
+  });
   return deepFreeze({
     agentId,
-    contextHash: fingerprint.hash,
+    contextHash,
     currentAgent,
-    includedMessageSequence: publicMessages.at(-1)?.sequence ?? 0,
+    includedMessageSequence,
     messages,
+    policyVersion: thread.policyVersion,
     promptHash: canonicalPromptHash(messages),
     publicMessages,
     schemaVersion: 1,
     sharedContext,
+    threadId,
   });
 }

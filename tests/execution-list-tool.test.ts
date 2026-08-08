@@ -6,6 +6,7 @@ import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
 import { openDatabase } from "@/src/server/db";
 import { discardExecutionAction } from "@/src/server/execution/execution-actions";
+import { execV7Fixture } from "@/tests/v7-fixture-graph";
 
 vi.mock("server-only", () => ({}));
 
@@ -483,7 +484,7 @@ async function runList(fs: FakeAdapter, path: string, index: number) {
 
 function seedDatabase(index: number): DatabaseSync {
   const database = openDatabase(databasePath);
-  database.exec(`
+  execV7Fixture(databasePath, database, `
     INSERT INTO projects (id,name,created_at,workspace_path,workspace_key,version)
     VALUES ('${PROJECT_ID}','List','${NOW}','D:\\workspace','d:/workspace',1);
     INSERT INTO providers (

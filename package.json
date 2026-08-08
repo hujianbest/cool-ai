@@ -14,7 +14,8 @@
     "smoke:execution": "node tests/execution-browser-smoke.mjs",
     "smoke:review": "node tests/review-browser-smoke.mjs",
     "smoke:settings": "node tests/settings-navigation-browser-smoke.mjs",
-    "smoke:onboarding": "node tests/onboarding-browser-smoke.mjs"
+    "smoke:onboarding": "node tests/onboarding-browser-smoke.mjs",
+    "smoke:threads": "node tests/persistent-threads-browser-smoke.mjs"
   },
   "dependencies": {
     "koffi": "^3.1.2",

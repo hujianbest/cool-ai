@@ -37,6 +37,7 @@ type ExecutionRow = {
   reasonCode: string | null;
   resumeTarget: "queued" | "running" | "waiting_approval" | null;
   sourceRunId: string;
+  sourceThreadId: string;
   status: string;
   version: number;
   workItemId: string;
@@ -69,7 +70,9 @@ function transaction<T>(database: DatabaseSync, operation: () => T): T {
 
 function executionRow(database: DatabaseSync, executionId: string): ExecutionRow {
   const row = database.prepare(`
-    SELECT e.project_id AS projectId,e.source_collaboration_run_id AS sourceRunId,
+    SELECT e.project_id AS projectId,
+           e.source_collaboration_thread_id AS sourceThreadId,
+           e.source_collaboration_run_id AS sourceRunId,
            e.mission_id AS missionId,e.work_item_id AS workItemId,e.agent_id AS agentId,
            e.current_policy_revision_id AS currentPolicyRevisionId,e.status,
            e.resume_target AS resumeTarget,e.reason_code AS reasonCode,
@@ -320,12 +323,12 @@ function assertRetryEligibility(database: DatabaseSync, executionId: string, row
       "Task, Agent, provider, or workspace is no longer eligible.",
     );
   }
-  const latestRun = database.prepare(`
-    SELECT id,status FROM collaboration_runs
-    WHERE project_id=? ORDER BY created_at DESC,id DESC LIMIT 1
-  `).get(row.projectId) as { id: string; status: string } | undefined;
-  if (!latestRun || latestRun.id !== row.sourceRunId || latestRun.status !== "planned") {
-    throw new ExecutionError("TASK_NOT_ELIGIBLE", 409, "Source collaboration run is no longer current.");
+  const sourceRun = database.prepare(`
+    SELECT 1 FROM collaboration_runs
+    WHERE project_id=? AND thread_id=? AND id=? AND status='planned'
+  `).get(row.projectId, row.sourceThreadId, row.sourceRunId);
+  if (!sourceRun) {
+    throw new ExecutionError("TASK_NOT_ELIGIBLE", 409, "Source collaboration tuple is no longer eligible.");
   }
   if (database.prepare(`
     SELECT 1 FROM executions
@@ -504,7 +507,11 @@ export async function controlExecution(
           baselineManifestHash: null,
           missionId: row.missionId,
           projectId: row.projectId,
-          sourceCollaborationRunId: row.sourceRunId,
+          source: {
+            projectId: row.projectId,
+            runId: row.sourceRunId,
+            threadId: row.sourceThreadId,
+          },
           workItemId: row.workItemId,
         });
         const nextAttemptNo = row.currentAttemptNo + 1;

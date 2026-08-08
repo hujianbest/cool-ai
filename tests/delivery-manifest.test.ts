@@ -101,7 +101,9 @@ function input(): DeliveryBuildInput {
         id: "execution",
         mergeFileCount: 1,
         mergeFinalBytes: 42,
+        sourceCollaborationThreadId: "thread-a",
         sourceCollaborationRunId: "run",
+        sourceHref: "/projects/project?thread=thread-a&run=run",
         stagedHash: HASH,
       },
       executor: { agentId: "executor", name: "Executor" },
@@ -194,6 +196,10 @@ describe("delivery manifest", () => {
       (draft) => { draft.tasks[0]!.review.attemptId = "attempt-v2"; },
       (draft) => { draft.tasks[0]!.decision.id = "decision-v2"; },
       (draft) => {
+        draft.tasks[0]!.execution.sourceCollaborationThreadId = "thread-b";
+        draft.tasks[0]!.execution.sourceHref = "/projects/project?thread=thread-b&run=run";
+      },
+      (draft) => {
         const optional = draft.tasks[0]!.evidence.find((entry) => entry.id === "optional")!;
         optional.version = "v2";
         optional.href = "/projects/project/executions/execution/validations/optional?version=v2";
@@ -206,6 +212,26 @@ describe("delivery manifest", () => {
       expect(buildDeliveryBundle(draft, "2026-08-01T06:00:00.000Z").inputFingerprint)
         .not.toBe(original);
     }
+  });
+
+  it("keeps the exact frozen collaboration tuple in source metadata and navigation", () => {
+    const first = buildDeliveryBundle(input(), "2026-08-01T06:00:00.000Z");
+    const second = buildDeliveryBundle(input(), "2026-08-01T06:00:00.000Z");
+
+    expect(first.inputFingerprint).toBe(second.inputFingerprint);
+    expect(first.summary.tasks[0]!.execution).toEqual({
+      id: "execution",
+      sourceCollaborationRunId: "run",
+      sourceCollaborationThreadId: "thread-a",
+      sourceHref: "/projects/project?thread=thread-a&run=run",
+    });
+    const sourceUrl = new URL(
+      first.summary.tasks[0]!.execution.sourceHref,
+      "https://delivery.invalid",
+    );
+    expect(sourceUrl.pathname).toBe("/projects/project");
+    expect(sourceUrl.searchParams.getAll("thread")).toEqual(["thread-a"]);
+    expect(sourceUrl.searchParams.getAll("run")).toEqual(["run"]);
   });
 
   it("builds bounded public-fact-only strict DTOs with versioned hrefs", () => {

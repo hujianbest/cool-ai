@@ -7,18 +7,17 @@ import * as agentService from "@/src/server/agent-service";
 import * as contextSnapshotService from "@/src/server/context-snapshot-service";
 import * as providerService from "@/src/server/provider-service";
 import { createCredentialVault } from "@/src/server/credential-vault";
-import { createV6FixtureDatabaseOpener } from "@/tests/v6-fixture-db";
-
-const openDatabase = createV6FixtureDatabaseOpener({
-  missingDeliveryHeadMissionIds: ["mission-1"],
-  missingReviewHeadResultIds: [],
-});
+import { openDatabase } from "@/src/server/db";
 import { replaceMembers } from "@/src/server/membership-service";
 import {
   updateMission,
   updateWorkItem,
 } from "@/src/server/mission-service";
-import { createOrAppendRun } from "@/src/server/collaboration/run-service";
+import {
+  createThread,
+  startThreadRun,
+} from "@/src/server/collaboration/thread-service";
+import { initializeMissionDeliveryTx } from "@/src/server/migrations-v6";
 
 type ContextFingerprint = {
   hash: string;
@@ -134,10 +133,20 @@ function seedReadyRun(): void {
         1, '${timestamp}', '${timestamp}'
       );
     `);
+    initializeMissionDeliveryTx(database, {
+      id: "mission-1",
+      projectId: "project-1",
+      updatedAt: timestamp,
+    });
   } finally {
     database.close();
   }
-  runId = createOrAppendRun(databasePath, "project-1", {
+  const threadId = createThread(databasePath, "project-1", {
+    memberAgentIds: ["agent-a", "agent-b"],
+    operationId: "00000000-0000-4000-8000-000000000500",
+    title: "Context guard",
+  }).body.thread.id;
+  runId = startThreadRun(databasePath, "project-1", threadId, {
     message: "Start",
     operationId: "00000000-0000-4000-8000-000000000501",
   }).body.run.id;

@@ -23,13 +23,16 @@ import type {
   AnswerDecisionResponse,
   CollaborationReadResponse,
   CollaborationRun,
+  ControlResponse,
   CursorPage,
+  DecisionAnswerResponse,
   DecisionRequest,
   ProjectMessageResponse,
   ProjectMessage,
   StartCollaborationResponse,
   TimelineEvent,
   TimelineEventType,
+  ThreadRunDto,
   UsageTotals,
 } from "@/src/shared/collaboration-contracts";
 import { timelinePayloadSchemas } from "@/src/shared/collaboration-contracts";
@@ -190,10 +193,11 @@ function parseMessageInput(input: unknown): Required<MessageInput> {
 }
 
 function parseControlInput(input: unknown): ControlInput {
-  if (!input || typeof input !== "object") {
+  if (!input || typeof input !== "object" || Array.isArray(input)) {
     throw new CollaborationError("INVALID_INPUT", 400, "Run control input is invalid.");
   }
   const value = input as Record<string, unknown>;
+  const allowedKeys = new Set(["operationId", "action", "expectedVersion"]);
   const operationId = typeof value.operationId === "string" ? value.operationId : "";
   const action =
     value.action === "pause" ||
@@ -204,6 +208,12 @@ function parseControlInput(input: unknown): ControlInput {
       : null;
   const expectedVersion = value.expectedVersion;
   const fields: Record<string, string> = {};
+  for (const key of Object.keys(value)) {
+    if (!allowedKeys.has(key)) fields[key] = "unknown";
+  }
+  for (const key of allowedKeys) {
+    if (!Object.hasOwn(value, key)) fields[key] = "required";
+  }
   if (!/^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i.test(operationId)) {
     fields.operationId = "invalid_format";
   }
@@ -224,10 +234,16 @@ function parseControlInput(input: unknown): ControlInput {
 }
 
 function parseAnswerDecisionInput(input: unknown): Required<AnswerDecisionInput> {
-  if (!input || typeof input !== "object") {
+  if (!input || typeof input !== "object" || Array.isArray(input)) {
     throw new CollaborationError("INVALID_INPUT", 400, "Decision answer input is invalid.");
   }
   const value = input as Record<string, unknown>;
+  const allowedKeys = new Set([
+    "operationId",
+    "answer",
+    "mentionAgentId",
+    "expectedVersion",
+  ]);
   const operationId = typeof value.operationId === "string" ? value.operationId : "";
   const answer = typeof value.answer === "string" ? value.answer.trim() : "";
   const mentionAgentId =
@@ -238,6 +254,12 @@ function parseAnswerDecisionInput(input: unknown): Required<AnswerDecisionInput>
         : "\0";
   const expectedVersion = value.expectedVersion;
   const fields: Record<string, string> = {};
+  for (const key of Object.keys(value)) {
+    if (!allowedKeys.has(key)) fields[key] = "unknown";
+  }
+  for (const key of ["operationId", "answer", "expectedVersion"]) {
+    if (!Object.hasOwn(value, key)) fields[key] = "required";
+  }
   if (!/^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i.test(operationId)) {
     fields.operationId = "invalid_format";
   }
@@ -281,6 +303,24 @@ function runById(database: DatabaseSync, runId: string): CollaborationRun {
     throw new CollaborationError("RUN_NOT_FOUND", 404, "Collaboration run was not found.");
   }
   return runFromRow(row);
+}
+
+function reconcileLegacyRun(databasePath: string, runId: string): void {
+  const database = openDatabase(databasePath);
+  let tuple:
+    | { projectId: string; runId: string; threadId: string }
+    | undefined;
+  try {
+    tuple = database
+      .prepare(
+        `SELECT project_id AS projectId,thread_id AS threadId,id AS runId
+         FROM collaboration_runs WHERE id=?`,
+      )
+      .get(runId) as typeof tuple;
+  } finally {
+    database.close();
+  }
+  if (tuple) reconcileExpiredAttempt(databasePath, tuple);
 }
 
 function decisionFromRow(row: DecisionRow): DecisionRequest {
@@ -720,7 +760,7 @@ export function controlRun(
   runId: string,
   rawInput: unknown,
 ): { body: ControlRunResponse; status: number } {
-  reconcileExpiredAttempt(databasePath, runId);
+  reconcileLegacyRun(databasePath, runId);
   const input = parseControlInput(rawInput);
   const requestHash = canonicalRequestHash({
     action: input.action,
@@ -901,13 +941,893 @@ export function controlRun(
   }
 }
 
+export type ThreadControlFaultPoint =
+  | "after_receipt"
+  | "after_run"
+  | "after_event"
+  | "after_fact"
+  | "after_sequences";
+
+export type ThreadControlHooks = {
+  fault?: (point: ThreadControlFaultPoint) => void;
+};
+
+function tupleResourceNotFound(): never {
+  throw new CollaborationError(
+    "RESOURCE_NOT_FOUND",
+    404,
+    "Resource was not found.",
+  );
+}
+
+function threadRunFromDatabase(
+  database: DatabaseSync,
+  projectId: string,
+  threadId: string,
+  runId: string,
+): ThreadRunDto {
+  const row = database
+    .prepare(
+      `SELECT runs.id,runs.project_id AS projectId,runs.thread_id AS threadId,
+              runs.status,runs.current_agent_id AS currentAgentId,
+              runs.round_count AS roundCount,runs.pause_category AS pauseCategory,
+              runs.version,runs.created_at AS createdAt,runs.updated_at AS updatedAt
+       FROM collaboration_runs AS runs
+       JOIN collaboration_threads AS threads
+         ON threads.project_id=runs.project_id AND threads.id=runs.thread_id
+       WHERE runs.project_id=? AND runs.thread_id=? AND runs.id=?`,
+    )
+    .get(projectId, threadId, runId) as ThreadRunDto | undefined;
+  if (!row) tupleResourceNotFound();
+  return row;
+}
+
+function allocateThreadActivity(database: DatabaseSync, projectId: string): number {
+  const row = database
+    .prepare(
+      `SELECT next_activity_sequence AS sequence
+       FROM collaboration_project_thread_sequences WHERE project_id=?`,
+    )
+    .get(projectId) as { sequence: number } | undefined;
+  if (!row) {
+    throw new CollaborationError(
+      "STORAGE_UNAVAILABLE",
+      503,
+      "Run control storage is unavailable.",
+    );
+  }
+  return row.sequence;
+}
+
+export function controlThreadRun(
+  databasePath: string,
+  projectId: string,
+  threadId: string,
+  runId: string,
+  rawInput: unknown,
+  hooks: ThreadControlHooks = {},
+): { body: ControlResponse; status: 200 } {
+  const input = parseControlInput(rawInput);
+  const requestHash = canonicalRequestHash({
+    action: input.action,
+    expectedVersion: input.expectedVersion,
+  });
+  const database = openDatabase(databasePath);
+  database.exec("PRAGMA busy_timeout=5000");
+  let tupleExists = false;
+  try {
+    return transaction(database, () => {
+      const row = database
+        .prepare(
+          `SELECT runs.id,runs.project_id AS projectId,runs.thread_id AS threadId,
+                  runs.status,runs.current_agent_id AS currentAgentId,
+                  runs.round_count AS roundCount,runs.version,
+                  runs.execution_epoch AS executionEpoch,
+                  runs.pause_category AS pauseCategory,
+                  runs.pause_reason AS pauseReason,
+                  runs.next_event_sequence AS nextEventSequence,
+                  runs.created_at AS createdAt,
+                  threads.next_fact_sequence AS nextFactSequence
+           FROM collaboration_runs AS runs
+           JOIN collaboration_threads AS threads
+             ON threads.project_id=runs.project_id AND threads.id=runs.thread_id
+           WHERE runs.project_id=? AND runs.thread_id=? AND runs.id=?`,
+        )
+        .get(projectId, threadId, runId) as
+        | {
+            id: string;
+            projectId: string;
+            threadId: string;
+            status: CollaborationRun["status"];
+            currentAgentId: string;
+            roundCount: number;
+            version: number;
+            executionEpoch: number;
+            pauseCategory: string | null;
+            pauseReason: string | null;
+            nextEventSequence: number;
+            nextFactSequence: number;
+            createdAt: string;
+          }
+        | undefined;
+      if (!row) tupleResourceNotFound();
+      tupleExists = true;
+
+      const prior = readOperationReceipt<ControlResponse>(
+        database,
+        projectId,
+        input.operationId,
+        "control",
+        requestHash,
+      );
+      if (prior) {
+        if (
+          prior.body.run.projectId !== projectId
+          || prior.body.run.threadId !== threadId
+          || prior.body.run.id !== runId
+          || prior.body.fact.projectId !== projectId
+          || prior.body.fact.threadId !== threadId
+          || prior.body.fact.runId !== runId
+        ) {
+          throw new CollaborationError(
+            "OPERATION_CONFLICT",
+            409,
+            "Operation id was already used for different input.",
+          );
+        }
+        return prior as { body: ControlResponse; status: 200 };
+      }
+      if (row.version !== input.expectedVersion) {
+        throw new CollaborationError(
+          "RUN_STATE_CONFLICT",
+          409,
+          "Collaboration run version is stale.",
+          { currentVersion: row.version },
+        );
+      }
+      if (row.status === "planned" || row.status === "stopped") {
+        throw new CollaborationError(
+          "RUN_STATE_CONFLICT",
+          409,
+          "Collaboration run is terminal.",
+        );
+      }
+
+      let nextStatus: CollaborationRun["status"];
+      let nextCategory: string | null;
+      let eventType: "run_paused" | "run_resumed" | "run_retried" | "run_stopped";
+      let eventPayload: Record<string, string | null>;
+      if (input.action === "pause") {
+        if (row.status !== "running") {
+          throw new CollaborationError(
+            "RUN_STATE_CONFLICT",
+            409,
+            "Only a running collaboration can be paused.",
+          );
+        }
+        nextStatus = "paused";
+        nextCategory = "manual";
+        eventType = "run_paused";
+        eventPayload = { category: "manual" };
+      } else if (input.action === "continue") {
+        if (row.status !== "paused" || row.pauseCategory !== "manual") {
+          throw new CollaborationError(
+            "RUN_STATE_CONFLICT",
+            409,
+            "Only a manual pause can continue.",
+          );
+        }
+        ensureNoCallingAttempt(database, runId);
+        nextStatus = "running";
+        nextCategory = null;
+        eventType = "run_resumed";
+        eventPayload = { currentAgentId: row.currentAgentId };
+      } else if (input.action === "retry") {
+        if (
+          row.status !== "failed"
+          && !(row.status === "paused" && row.pauseCategory !== "manual")
+        ) {
+          throw new CollaborationError(
+            "RUN_STATE_CONFLICT",
+            409,
+            "This collaboration run cannot be retried.",
+          );
+        }
+        ensureNoCallingAttempt(database, runId);
+        if (
+          row.pauseCategory === "credential_unavailable"
+          || row.pauseCategory === "provider_auth"
+          || row.pauseCategory === "usage_invalid"
+        ) {
+          ensureProviderRetryReady(database, runId, row.currentAgentId, row.pauseCategory);
+        }
+        if (row.pauseCategory === "boundary_reached") {
+          ensureBoundaryRetryReady(database, row);
+        }
+        nextStatus = "running";
+        nextCategory = null;
+        eventType = "run_retried";
+        eventPayload = { currentAgentId: row.currentAgentId };
+      } else {
+        nextStatus = "stopped";
+        nextCategory = null;
+        eventType = "run_stopped";
+        eventPayload = {};
+      }
+
+      const timestamp = new Date().toISOString();
+      const eventId = randomUUID();
+      const factId = randomUUID();
+      const activitySequence = allocateThreadActivity(database, projectId);
+      const run: ThreadRunDto = {
+        createdAt: row.createdAt,
+        currentAgentId: row.currentAgentId,
+        id: runId,
+        pauseCategory: nextCategory,
+        projectId,
+        roundCount: row.roundCount,
+        status: nextStatus,
+        threadId,
+        updatedAt: timestamp,
+        version: row.version + 1,
+      };
+      const fact: ControlResponse["fact"] = {
+        activitySequence,
+        actorId: null,
+        actorType: "owner",
+        createdAt: timestamp,
+        id: factId,
+        message: null,
+        messageId: null,
+        payload: { eventType },
+        policyRevisionId: null,
+        projectId,
+        runEventId: eventId,
+        runId,
+        sequence: row.nextFactSequence,
+        threadId,
+        type: "run_event",
+      };
+      const body: ControlResponse = { fact, run };
+
+      completeOperationReceipt(database, {
+        body,
+        kind: "control",
+        operationId: input.operationId,
+        projectId,
+        requestHash,
+        runId,
+        status: 200,
+        threadId,
+        timestamp,
+      });
+      hooks.fault?.("after_receipt");
+
+      const update = database
+        .prepare(
+          `UPDATE collaboration_runs
+           SET status=?,pause_category=?,pause_reason=NULL,
+               version=version+1,execution_epoch=execution_epoch+1,
+               next_event_sequence=next_event_sequence+1,updated_at=?
+           WHERE project_id=? AND thread_id=? AND id=? AND version=?
+             AND next_event_sequence=?`,
+        )
+        .run(
+          nextStatus,
+          nextCategory,
+          timestamp,
+          projectId,
+          threadId,
+          runId,
+          input.expectedVersion,
+          row.nextEventSequence,
+        );
+      if (update.changes !== 1) {
+        const current = threadRunFromDatabase(database, projectId, threadId, runId);
+        throw new CollaborationError(
+          "RUN_STATE_CONFLICT",
+          409,
+          "Collaboration run version is stale.",
+          { currentVersion: current.version },
+        );
+      }
+      hooks.fault?.("after_run");
+
+      database
+        .prepare(
+          `INSERT INTO collaboration_events(
+             id,project_id,thread_id,run_id,sequence,type,actor_type,actor_id,
+             payload_json,created_at
+           ) VALUES (?,?,?,?,?,?,'owner',NULL,?,?)`,
+        )
+        .run(
+          eventId,
+          projectId,
+          threadId,
+          runId,
+          row.nextEventSequence,
+          eventType,
+          JSON.stringify(eventPayload),
+          timestamp,
+        );
+      hooks.fault?.("after_event");
+
+      database
+        .prepare(
+          `INSERT INTO collaboration_thread_facts(
+             id,project_id,thread_id,sequence,activity_sequence,type,actor_type,actor_id,
+             run_id,message_id,run_event_id,policy_revision_id,payload_json,created_at
+           ) VALUES (?,?,?,?,?,'run_event','owner',NULL,?,NULL,?,NULL,?,?)`,
+        )
+        .run(
+          factId,
+          projectId,
+          threadId,
+          row.nextFactSequence,
+          activitySequence,
+          runId,
+          eventId,
+          JSON.stringify(fact.payload),
+          timestamp,
+        );
+      hooks.fault?.("after_fact");
+
+      const threadUpdate = database
+        .prepare(
+          `UPDATE collaboration_threads
+           SET next_fact_sequence=next_fact_sequence+1,last_activity_sequence=?,
+               version=version+1,updated_at=?
+           WHERE project_id=? AND id=? AND next_fact_sequence=?`,
+        )
+        .run(
+          activitySequence,
+          timestamp,
+          projectId,
+          threadId,
+          row.nextFactSequence,
+        );
+      const activityUpdate = database
+        .prepare(
+          `UPDATE collaboration_project_thread_sequences
+           SET next_activity_sequence=next_activity_sequence+1
+           WHERE project_id=? AND next_activity_sequence=?`,
+        )
+        .run(projectId, activitySequence);
+      if (threadUpdate.changes !== 1 || activityUpdate.changes !== 1) {
+        throw new CollaborationError(
+          "STORAGE_UNAVAILABLE",
+          503,
+          "Run control storage is unavailable.",
+        );
+      }
+      hooks.fault?.("after_sequences");
+      return { body, status: 200 as const };
+    });
+  } catch (error) {
+    if (
+      tupleExists
+      && error instanceof CollaborationError
+      && error.code !== "OPERATION_CONFLICT"
+      && error.code !== "OPERATION_IN_PROGRESS"
+    ) {
+      const timestamp = new Date().toISOString();
+      completeOperationReceipt(database, {
+        body: collaborationErrorBody(error),
+        kind: "control",
+        operationId: input.operationId,
+        projectId,
+        requestHash,
+        runId,
+        status: error.httpStatus,
+        threadId,
+        timestamp,
+      });
+    }
+    throw error;
+  } finally {
+    database.close();
+  }
+}
+
+export type ThreadDecisionAnswerFaultPoint =
+  | "after_receipt"
+  | "after_message"
+  | "after_decision"
+  | "after_run"
+  | "after_event"
+  | "after_facts"
+  | "after_sequences";
+
+export type ThreadDecisionAnswerHooks = {
+  credentialCheck?: (content: string) => void;
+  fault?: (point: ThreadDecisionAnswerFaultPoint) => void;
+};
+
+type ThreadDecisionRow = DecisionRow & {
+  projectId: string;
+  threadId: string;
+};
+
+function threadDecisionFromRow(row: ThreadDecisionRow): DecisionAnswerResponse["decision"] {
+  return {
+    ...decisionFromRow(row),
+    projectId: row.projectId,
+    threadId: row.threadId,
+  };
+}
+
+export function answerThreadDecision(
+  databasePath: string,
+  projectId: string,
+  threadId: string,
+  runId: string,
+  decisionId: string,
+  rawInput: unknown,
+  hooks: ThreadDecisionAnswerHooks = {},
+): { body: DecisionAnswerResponse; status: 200 } {
+  const input = parseAnswerDecisionInput(rawInput);
+  hooks.credentialCheck?.(input.answer);
+  const requestHash = canonicalRequestHash({
+    answer: input.answer,
+    expectedVersion: input.expectedVersion,
+    mentionAgentId: input.mentionAgentId || null,
+  });
+  const database = openDatabase(databasePath);
+  database.exec("PRAGMA busy_timeout=5000");
+  let tupleExists = false;
+  try {
+    return transaction(database, () => {
+      const row = database
+        .prepare(
+          `SELECT decisions.id,decisions.project_id AS projectId,
+                  decisions.thread_id AS threadId,decisions.run_id AS runId,
+                  decisions.turn_id AS turnId,
+                  decisions.requesting_agent_id AS requestingAgentId,
+                  decisions.question,decisions.options_json AS optionsJson,
+                  decisions.status,decisions.answer,
+                  decisions.answer_message_id AS answerMessageId,
+                  decisions.version,decisions.created_at AS createdAt,
+                  decisions.answered_at AS answeredAt,
+                  runs.status AS runStatus,
+                  runs.current_agent_id AS currentAgentId,
+                  runs.round_count AS roundCount,
+                  runs.pause_category AS pauseCategory,
+                  runs.version AS runVersion,
+                  runs.next_event_sequence AS nextEventSequence,
+                  runs.created_at AS runCreatedAt,
+                  threads.next_fact_sequence AS nextFactSequence,
+                  sequences.next_message_sequence AS nextMessageSequence,
+                  activities.next_activity_sequence AS nextActivitySequence
+           FROM decision_requests AS decisions
+           JOIN collaboration_runs AS runs
+             ON runs.project_id=decisions.project_id
+            AND runs.thread_id=decisions.thread_id
+            AND runs.id=decisions.run_id
+           JOIN collaboration_threads AS threads
+             ON threads.project_id=runs.project_id AND threads.id=runs.thread_id
+           JOIN collaboration_project_sequences AS sequences
+             ON sequences.project_id=runs.project_id AND sequences.thread_id=runs.thread_id
+           JOIN collaboration_project_thread_sequences AS activities
+             ON activities.project_id=runs.project_id
+           WHERE decisions.project_id=? AND decisions.thread_id=?
+             AND decisions.run_id=? AND decisions.id=?`,
+        )
+        .get(projectId, threadId, runId, decisionId) as
+        | (ThreadDecisionRow & {
+            runStatus: CollaborationRun["status"];
+            currentAgentId: string;
+            roundCount: number;
+            pauseCategory: string | null;
+            runVersion: number;
+            nextEventSequence: number;
+            runCreatedAt: string;
+            nextFactSequence: number;
+            nextMessageSequence: number;
+            nextActivitySequence: number;
+          })
+        | undefined;
+      if (!row) tupleResourceNotFound();
+      tupleExists = true;
+
+      const receiptScope = database
+        .prepare(
+          `SELECT thread_id AS threadId,run_id AS runId
+           FROM collaboration_operations WHERE project_id=? AND id=?`,
+        )
+        .get(projectId, input.operationId) as
+        | { threadId: string; runId: string | null }
+        | undefined;
+      if (
+        receiptScope
+        && (receiptScope.threadId !== threadId || receiptScope.runId !== runId)
+      ) {
+        throw new CollaborationError(
+          "OPERATION_CONFLICT",
+          409,
+          "Operation id was already used for different input.",
+        );
+      }
+      const prior = readOperationReceipt<DecisionAnswerResponse>(
+        database,
+        projectId,
+        input.operationId,
+        "answer_decision",
+        requestHash,
+      );
+      if (prior) {
+        if ("decision" in prior.body && (
+          prior.body.decision.projectId !== projectId
+          || prior.body.decision.threadId !== threadId
+          || prior.body.decision.runId !== runId
+          || prior.body.decision.id !== decisionId
+        )) {
+          throw new CollaborationError(
+            "OPERATION_CONFLICT",
+            409,
+            "Operation id was already used for different input.",
+          );
+        }
+        return prior as { body: DecisionAnswerResponse; status: 200 };
+      }
+
+      if (row.status === "answered") {
+        throw new CollaborationError(
+          "DECISION_ALREADY_ANSWERED",
+          409,
+          "Decision request was already answered.",
+          { currentVersion: row.version },
+        );
+      }
+      if (row.version !== input.expectedVersion) {
+        throw new CollaborationError(
+          "RUN_STATE_CONFLICT",
+          409,
+          "Decision request version is stale.",
+          { currentVersion: row.version },
+        );
+      }
+      if (row.runStatus !== "waiting_owner") {
+        throw new CollaborationError(
+          "RUN_STATE_CONFLICT",
+          409,
+          "Collaboration run is not waiting for an owner decision.",
+          { currentVersion: row.version },
+        );
+      }
+
+      const policy = database
+        .prepare(
+          `SELECT count(*) AS total,
+                  sum(CASE WHEN membership.agent_id IS NOT NULL THEN 1 ELSE 0 END) AS live
+           FROM collaboration_threads AS threads
+           JOIN collaboration_thread_policy_members AS policy
+             ON policy.project_id=threads.project_id
+            AND policy.thread_id=threads.id
+            AND policy.revision_id=threads.active_policy_revision_id
+           LEFT JOIN project_memberships AS membership
+             ON membership.project_id=policy.project_id
+            AND membership.agent_id=policy.agent_id
+           WHERE threads.project_id=? AND threads.id=?`,
+        )
+        .get(projectId, threadId) as { total: number; live: number };
+      if (policy.total < 2 || policy.live !== policy.total) {
+        throw new CollaborationError(
+          "THREAD_POLICY_REPAIR_REQUIRED",
+          409,
+          "Thread policy requires repair.",
+        );
+      }
+      const nextAgentId = input.mentionAgentId || row.requestingAgentId;
+      const selected = database
+        .prepare(
+          `SELECT agents.name AS displayName
+           FROM collaboration_threads AS threads
+           JOIN collaboration_thread_policy_members AS policy
+             ON policy.project_id=threads.project_id
+            AND policy.thread_id=threads.id
+            AND policy.revision_id=threads.active_policy_revision_id
+           JOIN project_memberships AS membership
+             ON membership.project_id=policy.project_id
+            AND membership.agent_id=policy.agent_id
+           JOIN agents ON agents.id=membership.agent_id
+           WHERE threads.project_id=? AND threads.id=? AND policy.agent_id=?`,
+        )
+        .get(projectId, threadId, nextAgentId) as { displayName: string } | undefined;
+      if (!selected) {
+        throw new CollaborationError(
+          "AGENT_NOT_MEMBER",
+          409,
+          "Selected Agent is not available in the thread policy.",
+        );
+      }
+
+      const timestamp = new Date().toISOString();
+      const messageId = randomUUID();
+      const eventId = randomUUID();
+      const messageFactId = randomUUID();
+      const eventFactId = randomUUID();
+      const mentionAgentId = input.mentionAgentId || null;
+      const message: DecisionAnswerResponse["message"] = {
+        authorAgentId: null,
+        authorDisplayName: "Owner",
+        authorType: "owner",
+        content: input.answer,
+        createdAt: timestamp,
+        id: messageId,
+        mentionAgentId,
+        mentionDisplayName: mentionAgentId ? selected.displayName : null,
+        mentionMemberStatus: mentionAgentId ? "current" : null,
+        projectId,
+        runId,
+        sequence: row.nextMessageSequence,
+        threadId,
+      };
+      const decision: DecisionAnswerResponse["decision"] = {
+        ...threadDecisionFromRow(row),
+        answer: input.answer,
+        answerMessageId: messageId,
+        answeredAt: timestamp,
+        status: "answered",
+        version: row.version + 1,
+      };
+      const run: DecisionAnswerResponse["run"] = {
+        createdAt: row.runCreatedAt,
+        currentAgentId: nextAgentId,
+        id: runId,
+        pauseCategory: row.pauseCategory,
+        projectId,
+        roundCount: row.roundCount,
+        status: "running",
+        threadId,
+        updatedAt: timestamp,
+        version: row.runVersion + 1,
+      };
+      const messageFact: DecisionAnswerResponse["facts"][0] = {
+        activitySequence: row.nextActivitySequence,
+        actorId: null,
+        actorType: "owner",
+        createdAt: timestamp,
+        id: messageFactId,
+        message,
+        messageId,
+        payload: { messageId },
+        policyRevisionId: null,
+        projectId,
+        runEventId: null,
+        runId,
+        sequence: row.nextFactSequence,
+        threadId,
+        type: "owner_message",
+      };
+      const eventFact: DecisionAnswerResponse["facts"][1] = {
+        activitySequence: row.nextActivitySequence + 1,
+        actorId: null,
+        actorType: "owner",
+        createdAt: timestamp,
+        id: eventFactId,
+        message: null,
+        messageId: null,
+        payload: { eventType: "decision_answered" },
+        policyRevisionId: null,
+        projectId,
+        runEventId: eventId,
+        runId,
+        sequence: row.nextFactSequence + 1,
+        threadId,
+        type: "run_event",
+      };
+      const body: DecisionAnswerResponse = {
+        decision,
+        facts: [messageFact, eventFact],
+        message,
+        run,
+      };
+
+      completeOperationReceipt(database, {
+        body,
+        kind: "answer_decision",
+        operationId: input.operationId,
+        projectId,
+        requestHash,
+        runId,
+        status: 200,
+        threadId,
+        timestamp,
+      });
+      hooks.fault?.("after_receipt");
+      database.prepare(
+        `INSERT INTO collaboration_messages(
+           id,project_id,thread_id,run_id,author_type,author_agent_id,
+           author_display_name,content,mention_agent_id,mention_display_name,
+           sequence,consumed_at,created_at
+         ) VALUES (?,?,?,?,'owner',NULL,'Owner',?,?,?,?,NULL,?)`,
+      ).run(
+        messageId,
+        projectId,
+        threadId,
+        runId,
+        input.answer,
+        mentionAgentId,
+        message.mentionDisplayName,
+        row.nextMessageSequence,
+        timestamp,
+      );
+      hooks.fault?.("after_message");
+      const decisionUpdate = database.prepare(
+        `UPDATE decision_requests
+         SET status='answered',answer=?,answer_message_id=?,
+             version=version+1,answered_at=?
+         WHERE project_id=? AND thread_id=? AND run_id=? AND id=?
+           AND status='open' AND version=?`,
+      ).run(
+        input.answer,
+        messageId,
+        timestamp,
+        projectId,
+        threadId,
+        runId,
+        decisionId,
+        input.expectedVersion,
+      );
+      if (decisionUpdate.changes !== 1) {
+        throw new CollaborationError(
+          "RUN_STATE_CONFLICT",
+          409,
+          "Decision request changed while answering.",
+        );
+      }
+      hooks.fault?.("after_decision");
+      const runUpdate = database.prepare(
+        `UPDATE collaboration_runs
+         SET status='running',current_agent_id=?,version=version+1,
+             next_event_sequence=next_event_sequence+1,updated_at=?
+         WHERE project_id=? AND thread_id=? AND id=?
+           AND status='waiting_owner' AND version=? AND next_event_sequence=?`,
+      ).run(
+        nextAgentId,
+        timestamp,
+        projectId,
+        threadId,
+        runId,
+        row.runVersion,
+        row.nextEventSequence,
+      );
+      if (runUpdate.changes !== 1) {
+        throw new CollaborationError(
+          "RUN_STATE_CONFLICT",
+          409,
+          "Collaboration run changed while answering.",
+        );
+      }
+      hooks.fault?.("after_run");
+      database.prepare(
+        `INSERT INTO collaboration_events(
+           id,project_id,thread_id,run_id,sequence,type,actor_type,actor_id,
+           payload_json,created_at
+         ) VALUES (?,?,?,?,?,'decision_answered','owner',NULL,?,?)`,
+      ).run(
+        eventId,
+        projectId,
+        threadId,
+        runId,
+        row.nextEventSequence,
+        JSON.stringify({
+          answer: input.answer,
+          decisionId,
+          messageId,
+          messageSequence: row.nextMessageSequence,
+          nextAgentId,
+        }),
+        timestamp,
+      );
+      hooks.fault?.("after_event");
+      const insertFact = database.prepare(
+        `INSERT INTO collaboration_thread_facts(
+           id,project_id,thread_id,sequence,activity_sequence,type,actor_type,actor_id,
+           run_id,message_id,run_event_id,policy_revision_id,payload_json,created_at
+         ) VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?)`,
+      );
+      insertFact.run(
+        messageFactId,
+        projectId,
+        threadId,
+        row.nextFactSequence,
+        row.nextActivitySequence,
+        "owner_message",
+        "owner",
+        null,
+        runId,
+        messageId,
+        null,
+        null,
+        JSON.stringify(messageFact.payload),
+        timestamp,
+      );
+      insertFact.run(
+        eventFactId,
+        projectId,
+        threadId,
+        row.nextFactSequence + 1,
+        row.nextActivitySequence + 1,
+        "run_event",
+        "owner",
+        null,
+        runId,
+        null,
+        eventId,
+        null,
+        JSON.stringify(eventFact.payload),
+        timestamp,
+      );
+      hooks.fault?.("after_facts");
+      const threadUpdate = database.prepare(
+        `UPDATE collaboration_threads
+         SET next_fact_sequence=next_fact_sequence+2,last_activity_sequence=?,
+             version=version+1,updated_at=?
+         WHERE project_id=? AND id=? AND next_fact_sequence=?`,
+      ).run(
+        row.nextActivitySequence + 1,
+        timestamp,
+        projectId,
+        threadId,
+        row.nextFactSequence,
+      );
+      const activityUpdate = database.prepare(
+        `UPDATE collaboration_project_thread_sequences
+         SET next_activity_sequence=next_activity_sequence+2
+         WHERE project_id=? AND next_activity_sequence=?`,
+      ).run(projectId, row.nextActivitySequence);
+      const messageSequenceUpdate = database.prepare(
+        `UPDATE collaboration_project_sequences
+         SET next_message_sequence=next_message_sequence+1
+         WHERE project_id=? AND thread_id=? AND next_message_sequence=?`,
+      ).run(projectId, threadId, row.nextMessageSequence);
+      if (
+        threadUpdate.changes !== 1
+        || activityUpdate.changes !== 1
+        || messageSequenceUpdate.changes !== 1
+      ) {
+        throw new CollaborationError(
+          "STORAGE_UNAVAILABLE",
+          503,
+          "Decision answer storage is unavailable.",
+        );
+      }
+      hooks.fault?.("after_sequences");
+      return { body, status: 200 as const };
+    });
+  } catch (error) {
+    if (
+      tupleExists
+      && error instanceof CollaborationError
+      && error.code !== "OPERATION_CONFLICT"
+      && error.code !== "OPERATION_IN_PROGRESS"
+    ) {
+      completeOperationReceipt(database, {
+        body: collaborationErrorBody(error),
+        kind: "answer_decision",
+        operationId: input.operationId,
+        projectId,
+        requestHash,
+        runId,
+        status: error.httpStatus,
+        threadId,
+        timestamp: new Date().toISOString(),
+      });
+    }
+    throw error;
+  } finally {
+    database.close();
+  }
+}
+
 export function answerDecision(
   databasePath: string,
   runId: string,
   decisionId: string,
   rawInput: unknown,
 ): { body: AnswerDecisionResponse; status: number } {
-  reconcileExpiredAttempt(databasePath, runId);
+  reconcileLegacyRun(databasePath, runId);
   const input = parseAnswerDecisionInput(rawInput);
   const requestHash = canonicalRequestHash({
     answer: input.answer,
@@ -1512,7 +2432,7 @@ export function getRunTimeline(
   runId: string,
   cursor: ReadCursor,
 ): CursorPage<TimelineEvent> {
-  reconcileExpiredAttempt(databasePath, runId);
+  reconcileLegacyRun(databasePath, runId);
   const database = openDatabase(databasePath);
   try {
     runById(database, runId);

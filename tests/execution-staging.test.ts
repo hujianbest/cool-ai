@@ -1,8 +1,20 @@
 import { createHash } from "node:crypto";
+import { mkdtempSync, rmSync } from "node:fs";
+import { tmpdir } from "node:os";
+import { join } from "node:path";
 import type { DatabaseSync } from "node:sqlite";
-import { describe, expect, it } from "vitest";
+import { afterEach, describe, expect, it } from "vitest";
 
 import { openDatabase } from "@/src/server/db";
+import { execV7Fixture } from "@/tests/v7-fixture-graph";
+
+const databaseDirectories: string[] = [];
+
+afterEach(() => {
+  for (const directory of databaseDirectories.splice(0)) {
+    rmSync(directory, { force: true, recursive: true });
+  }
+});
 
 type Entry = {
   content?: string;
@@ -115,6 +127,7 @@ type StagingModule = {
 
 const hash = (value: string) => createHash("sha256").update(value, "utf8").digest("hex");
 const HASH = "a".repeat(64);
+const EMPTY_POLICY_HASH = createHash("sha256").update("[]").digest("hex");
 
 function text(path: string, content = path, modeTag = "644"): Entry {
   return {
@@ -169,10 +182,13 @@ function input(baseline: Iterable<Entry>, sandbox: Iterable<Entry>) {
 }
 
 function seedStageDatabase(): DatabaseSync {
-  const database = openDatabase(":memory:");
+  const directory = mkdtempSync(join(tmpdir(), "cool-ai-staging-"));
+  databaseDirectories.push(directory);
+  const databasePath = join(directory, "cockpit.sqlite");
+  const database = openDatabase(databasePath);
   const now = "2026-07-30T10:00:00.000Z";
-  const policyHash = "c".repeat(64);
-  database.exec(`
+  const policyHash = EMPTY_POLICY_HASH;
+  execV7Fixture(databasePath, database, `
     INSERT INTO projects (id,name,created_at,workspace_path,workspace_key,version)
     VALUES ('project','Project','${now}','D:\\canonical','d:/canonical',1);
     INSERT INTO providers (
@@ -190,6 +206,15 @@ function seedStageDatabase(): DatabaseSync {
     VALUES ('project','agent','${now}');
     INSERT INTO missions (id,project_id,title,goal,version,created_at,updated_at)
     VALUES ('mission','project','Mission','Goal',1,'${now}','${now}');
+    INSERT INTO mission_delivery_heads(
+      mission_id,project_id,context_version,state,current_delivery_id,current_operation_id,
+      generation_lease_token,generation_lease_expires_at,last_error_code,
+      next_event_sequence,version,updated_at
+    ) VALUES ('mission','project',1,'ongoing',NULL,NULL,NULL,NULL,NULL,2,1,'${now}');
+    INSERT INTO review_events(
+      id,project_id,mission_id,sequence,type,actor_type,actor_id,payload_json,created_at
+    ) VALUES ('staging-review-init','project','mission',1,
+      'mission_review_initialized','system',NULL,'{}','${now}');
     INSERT INTO work_items (
       id,mission_id,title,description,status,assignee_agent_id,version,created_at,updated_at
     ) VALUES ('work','mission','Work','','in_progress','agent',1,'${now}','${now}');
@@ -437,7 +462,7 @@ describe("execution staging", () => {
         executionId: "execution",
         expectedVersion: 1,
         leaseToken: "lease",
-        policyHash: "c".repeat(64),
+        policyHash: EMPTY_POLICY_HASH,
         projectId: "project",
         sandboxManifestHash: "d".repeat(64),
         snapshot,

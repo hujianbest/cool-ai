@@ -52,6 +52,7 @@ export function assertManualRecoveryNotRequired(
 type ExecutionRow = {
   id: string;
   projectId: string;
+  sourceCollaborationThreadId: string;
   sourceCollaborationRunId: string;
   workItemId: string;
   workItemTitle: string;
@@ -158,6 +159,7 @@ function executionRow(database: DatabaseSync, executionId: string): ExecutionRow
     .prepare(
       `SELECT
          e.id, e.project_id AS projectId,
+         e.source_collaboration_thread_id AS sourceCollaborationThreadId,
          e.source_collaboration_run_id AS sourceCollaborationRunId,
          e.work_item_id AS workItemId, w.title AS workItemTitle,
          e.agent_id AS agentId, a.name AS agentName,
@@ -187,6 +189,7 @@ function toDto(database: DatabaseSync, row: ExecutionRow): ExecutionDto {
   return executionDtoSchema.parse({
     id: row.id,
     projectId: row.projectId,
+    sourceCollaborationThreadId: row.sourceCollaborationThreadId,
     sourceCollaborationRunId: row.sourceCollaborationRunId,
     workItem: { id: row.workItemId, title: row.workItemTitle },
     agent: {
@@ -381,10 +384,10 @@ function qualifyTask(
   ).get(projectId) as { workspacePath: string | null } | undefined;
   if (!project) return rejection(input.workItemId, "NOT_FOUND");
 
-  const latestRun = database.prepare(
-    `SELECT id,status FROM collaboration_runs
-     WHERE project_id=? ORDER BY created_at DESC,id DESC LIMIT 1`,
-  ).get(projectId) as { id: string; status: string } | undefined;
+  const selectedRun = database.prepare(
+    `SELECT 1 FROM collaboration_runs
+     WHERE project_id=? AND thread_id=? AND id=? AND status='planned'`,
+  ).get(projectId, input.source.threadId, input.source.runId);
   const unavailableProvider = database.prepare(
     `SELECT 1 FROM project_memberships pm
      JOIN agents a ON a.id=pm.agent_id
@@ -393,9 +396,8 @@ function qualifyTask(
   ).get(projectId);
   if (
     !project.workspacePath
-    || !latestRun
-    || latestRun.id !== input.sourceCollaborationRunId
-    || latestRun.status !== "planned"
+    || input.source.projectId !== projectId
+    || !selectedRun
   ) {
     return rejection(input.workItemId, "NOT_FOUND");
   }
@@ -455,7 +457,7 @@ function qualifyTask(
        AND json_extract(ce.payload_json,'$.workItemId')=?
        AND json_extract(ce.payload_json,'$.agentId')=?
        AND ct.agent_id=? LIMIT 1`,
-  ).get(input.sourceCollaborationRunId, input.workItemId, basic.agentId, basic.agentId)) {
+  ).get(input.source.runId, input.workItemId, basic.agentId, basic.agentId)) {
     return rejection(input.workItemId, "NOT_FOUND");
   }
   if (database.prepare(
@@ -527,7 +529,7 @@ function qualifyTask(
              AND ct.agent_id=w.assignee_agent_id
          )`,
     )
-    .get(projectId, input.sourceCollaborationRunId, input.workItemId) as
+    .get(projectId, input.source.runId, input.workItemId) as
     | {
         agentId: string;
         missionId: string;
@@ -556,7 +558,7 @@ export async function startExecution(
   const requestHash = canonicalRequestHash({
     kind: "start",
     projectId,
-    sourceCollaborationRunId: input.sourceCollaborationRunId,
+    source: input.source,
     workItemId: input.workItemId,
   });
   const database = openDatabase(databasePath);
@@ -593,27 +595,29 @@ export async function startExecution(
         baselineManifestHash: null,
         missionId: task.missionId,
         projectId,
-        sourceCollaborationRunId: input.sourceCollaborationRunId,
+        source: input.source,
         workItemId: input.workItemId,
       });
 
       database
         .prepare(
           `INSERT INTO executions (
-             id, project_id, source_collaboration_run_id, mission_id, work_item_id,
+             id, project_id, source_collaboration_thread_id, source_collaboration_run_id,
+             mission_id, work_item_id,
              agent_id, current_policy_revision_id, status, resume_target,
              reason_code, manual_recovery_required, recovery_resolution,
              current_attempt_no, business_round_count, tool_call_count,
              next_event_sequence, version, created_at, business_deadline_at,
              first_running_at, updated_at, merged_at
            ) VALUES (
-             ?,?,?,?,?,?,?,'queued',NULL,NULL,0,NULL,1,0,0,3,1,?,NULL,NULL,?,NULL
+             ?,?,?,?,?,?,?,?,'queued',NULL,NULL,0,NULL,1,0,0,3,1,?,NULL,NULL,?,NULL
            )`,
         )
         .run(
           executionId,
           projectId,
-          input.sourceCollaborationRunId,
+          input.source.threadId,
+          input.source.runId,
           task.missionId,
           input.workItemId,
           task.agentId,

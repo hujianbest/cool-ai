@@ -6,6 +6,7 @@ import {
   hasAnyV6Object,
   validateV6,
 } from "@/src/server/migrations-v6";
+import { migrateV6ToV7, validateV7 } from "@/src/server/migrations-v7";
 
 type SchemaErrorCode =
   | "SCHEMA_DATA_INVALID"
@@ -1264,9 +1265,12 @@ function version(database: DatabaseSync): number {
   return (database.prepare("PRAGMA user_version").get() as { user_version: number }).user_version;
 }
 
-export function migrateDatabase(database: DatabaseSync): void {
+export function migrateDatabase(
+  database: DatabaseSync,
+  afterV7Step?: (step: string, database: DatabaseSync) => void,
+): void {
   let currentVersion = version(database);
-  if (currentVersion > 6) {
+  if (currentVersion > 7) {
     throw new SchemaMigrationError("SCHEMA_TOO_NEW", "Database schema is newer than supported.");
   }
 
@@ -1375,6 +1379,27 @@ export function migrateDatabase(database: DatabaseSync): void {
       throw new SchemaMigrationError(
         validation,
         "Database version 6 schema is invalid.",
+      );
+    }
+    try {
+      migrateV6ToV7(database, afterV7Step);
+    } catch (error) {
+      if (error instanceof SchemaMigrationError) throw error;
+      const code = error instanceof Error
+          && (error.message === "SCHEMA_DRIFT" || error.message === "SCHEMA_DATA_INVALID")
+        ? error.message
+        : "STORAGE_UNAVAILABLE";
+      throw new SchemaMigrationError(code, "Database version 7 migration failed.");
+    }
+    currentVersion = 7;
+  }
+
+  if (currentVersion === 7) {
+    const validation = validateV7(database);
+    if (validation) {
+      throw new SchemaMigrationError(
+        validation,
+        "Database version 7 schema is invalid.",
       );
     }
   }

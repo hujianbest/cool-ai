@@ -92,6 +92,12 @@ describe("POST /api/escalations/:escalationId/answer", () => {
         createdAt: "2026-08-01T08:00:00.000Z",
         executorAgentId: "executor",
         id: "result-1",
+        source: {
+          contextHash: "a".repeat(64),
+          projectId: "project-1",
+          runId: "run-1",
+          threadId: "thread-1",
+        },
         version: 1,
       },
       workItem: {

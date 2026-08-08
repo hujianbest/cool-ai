@@ -13,9 +13,15 @@ type CaptureInput = {
   baselineManifestHash: string | null;
   missionId: string;
   projectId: string;
-  sourceCollaborationRunId: string;
+  source: { projectId: string; runId: string; threadId: string };
   workItemId: string;
 };
+
+const sourceTupleSchema = z.object({
+  projectId: z.string(),
+  runId: z.string(),
+  threadId: z.string(),
+}).strict();
 
 const publicFactsSchema = z.object({
   dependencies: frozenExecutionPromptInputSchema.shape.dependencies,
@@ -43,7 +49,8 @@ const publicFactsSchema = z.object({
     name: z.string(),
   }).strict(),
   sharedMemory: frozenExecutionPromptInputSchema.shape.sharedContext,
-  sourceCollaborationRunId: z.string(),
+  source: sourceTupleSchema.optional(),
+  sourceCollaborationRunId: z.string().optional(),
   task: frozenExecutionPromptInputSchema.shape.task,
   validationPolicy: frozenExecutionPromptInputSchema.shape.validationPolicy,
   workspaceBaselineHash: z.string().nullable(),
@@ -51,6 +58,7 @@ const publicFactsSchema = z.object({
 
 const privateFactsSchema = z.object({
   currentAgent: frozenExecutionPromptInputSchema.shape.currentAgent,
+  source: sourceTupleSchema.optional(),
 }).strict();
 
 export const frozenPublicEnvelopeSchema = z.object({
@@ -320,13 +328,14 @@ export function captureExecutionFrozenInput(
       name: agent.providerName,
     },
     sharedMemory: memory,
-    sourceCollaborationRunId: input.sourceCollaborationRunId,
+    source: input.source,
     task,
     validationPolicy,
     workspaceBaselineHash: input.baselineManifestHash,
   };
   const privateFacts = {
     currentAgent: promptInput.currentAgent,
+    source: input.source,
   };
   const publicEnvelope = frozenPublicEnvelopeSchema.parse({
     facts: publicFacts,
@@ -383,7 +392,9 @@ export function staleExecutionIfFrozenInputChanged(
   database.exec("BEGIN IMMEDIATE");
   try {
     const row = database.prepare(`
-      SELECT e.id,e.project_id AS projectId,e.source_collaboration_run_id AS sourceRunId,
+      SELECT e.id,e.project_id AS projectId,
+             e.source_collaboration_thread_id AS sourceThreadId,
+             e.source_collaboration_run_id AS sourceRunId,
              e.mission_id AS missionId,e.work_item_id AS workItemId,e.agent_id AS agentId,
              e.current_attempt_no AS attemptNo,e.version,
              a.id AS attemptId,a.baseline_manifest_hash AS baselineHash,
@@ -404,6 +415,7 @@ export function staleExecutionIfFrozenInputChanged(
       projectId: string;
       publicJson: string;
       sourceRunId: string;
+      sourceThreadId: string;
       version: number;
       workItemId: string;
     } | undefined;
@@ -425,7 +437,11 @@ export function staleExecutionIfFrozenInputChanged(
       baselineManifestHash: frozenBaseline === null ? null : row.baselineHash,
       missionId: row.missionId,
       projectId: row.projectId,
-      sourceCollaborationRunId: row.sourceRunId,
+      source: {
+        projectId: row.projectId,
+        runId: row.sourceRunId,
+        threadId: row.sourceThreadId,
+      },
       workItemId: row.workItemId,
     });
     if (current.contextHash === row.contextHash) {
@@ -435,7 +451,11 @@ export function staleExecutionIfFrozenInputChanged(
           baselineManifestHash: row.baselineHash,
           missionId: row.missionId,
           projectId: row.projectId,
-          sourceCollaborationRunId: row.sourceRunId,
+          source: {
+            projectId: row.projectId,
+            runId: row.sourceRunId,
+            threadId: row.sourceThreadId,
+          },
           workItemId: row.workItemId,
         });
         const updated = database.prepare(`

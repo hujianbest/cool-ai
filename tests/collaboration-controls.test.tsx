@@ -38,6 +38,7 @@ const members: MembershipState = {
   ],
   projectVersion: 1,
 };
+const threadId = "thread-1";
 
 function run(
   status: CollaborationRun["status"],
@@ -117,7 +118,147 @@ function installFetch(
       const url = String(input);
       if (mutation && init?.method === "POST") return mutation(url, init);
       if (url.endsWith("/members")) return Response.json(members);
-      if (url.endsWith("/collaboration")) return Response.json(collaboration);
+      if (url.endsWith(`/threads/${threadId}?run=${collaboration.run?.id}`)) {
+        const selectedRun = collaboration.run
+          ? { ...collaboration.run, threadId }
+          : null;
+        return Response.json({
+          activeRun: selectedRun
+            ? { runId: selectedRun.id, threadId }
+            : null,
+          readiness: {
+            dispatch: "ready",
+            missingProjectFacts: [],
+            selectedMemberId: selectedRun?.currentAgentId ?? null,
+          },
+          runs: selectedRun ? [selectedRun] : [],
+          selectedRun,
+          thread: {
+            availability: "ready",
+            createdAt: "2026-07-30T00:00:00.000Z",
+            id: threadId,
+            lastActivitySequence: 1,
+            policy: {
+              availability: "ready",
+              createdAt: "2026-07-30T00:00:00.000Z",
+              members: [],
+              revisionId: "revision-1",
+              unavailableMemberIds: [],
+              version: 1,
+            },
+            policyVersion: 1,
+            projectId: "project-1",
+            title: "Thread",
+            updatedAt: "2026-07-30T00:00:00.000Z",
+            version: 1,
+          },
+        });
+      }
+      if (
+        url.endsWith(`/threads/${threadId}/messages`)
+        || url.endsWith(`/threads/${threadId}/facts`)
+      ) {
+        return Response.json({ items: [], nextAfter: null });
+      }
+      if (url.endsWith(`/threads/${threadId}/runs/run-1/timeline`)) {
+        let sequence = 0;
+        const timeline = [];
+        if (collaboration.pendingDecision) {
+          timeline.push({
+            actorId: collaboration.pendingDecision.requestingAgentId,
+            actorType: "agent",
+            createdAt: collaboration.pendingDecision.createdAt,
+            id: "event-decision",
+            payload: {
+              agentId: collaboration.pendingDecision.requestingAgentId,
+              decisionId: collaboration.pendingDecision.id,
+              options: collaboration.pendingDecision.options,
+              question: collaboration.pendingDecision.question,
+              turnId: collaboration.pendingDecision.turnId,
+            },
+            runId: "run-1",
+            sequence: ++sequence,
+            type: "decision_requested",
+          });
+        }
+        for (const usage of collaboration.usage.byAgent) {
+          timeline.push({
+            actorId: usage.agentId,
+            actorType: "agent",
+            createdAt: "2026-07-30T00:02:00.000Z",
+            id: `event-usage-${usage.agentId}`,
+            payload: {
+              attemptId: `attempt-${usage.agentId}`,
+              completionTokens: usage.completionTokens,
+              kind: "primary",
+              promptTokens: usage.promptTokens,
+              reported: true,
+              totalTokens: usage.totalTokens,
+            },
+            runId: "run-1",
+            sequence: ++sequence,
+            type: "usage_recorded",
+          });
+          for (let index = 0; index < usage.handoffs; index += 1) {
+            timeline.push({
+              actorId: usage.agentId,
+              actorType: "agent",
+              createdAt: "2026-07-30T00:03:00.000Z",
+              id: `event-handoff-${usage.agentId}-${index}`,
+              payload: {
+                fromAgentId: usage.agentId,
+                overriddenByMention: false,
+                reason: "Fixture handoff",
+                summary: "Fixture summary",
+                toAgentId: usage.agentId === "agent-a" ? "agent-b" : "agent-a",
+                turnId: `turn-handoff-${usage.agentId}-${index}`,
+              },
+              runId: "run-1",
+              sequence: ++sequence,
+              type: "handoff",
+            });
+          }
+        }
+        for (let index = 0; index < collaboration.usage.repairCalls; index += 1) {
+          timeline.push({
+            actorId: "agent-a",
+            actorType: "agent",
+            createdAt: "2026-07-30T00:04:00.000Z",
+            id: `event-repair-${index}`,
+            payload: {
+              attemptId: `attempt-repair-${index}`,
+              completionTokens: 0,
+              kind: "repair",
+              promptTokens: 0,
+              reported: true,
+              totalTokens: 0,
+            },
+            runId: "run-1",
+            sequence: ++sequence,
+            type: "usage_recorded",
+          });
+        }
+        for (let index = 0; index < collaboration.usage.unreportedCalls; index += 1) {
+          timeline.push({
+            actorId: "agent-a",
+            actorType: "agent",
+            createdAt: "2026-07-30T00:05:00.000Z",
+            id: `event-unreported-${index}`,
+            payload: {
+              attemptId: `attempt-unreported-${index}`,
+              completionTokens: 0,
+              kind: "primary",
+              promptTokens: 0,
+              reported: false,
+              totalTokens: 0,
+            },
+            runId: "run-1",
+            sequence: ++sequence,
+            type: "usage_recorded",
+          });
+        }
+        return Response.json({ items: timeline, nextAfter: null });
+      }
       throw new Error(`Unexpected request: ${url}`);
     },
   );
@@ -132,7 +273,11 @@ afterEach(() => {
 describe("collaboration decisions, controls, and usage", () => {
   it("renders a waiting decision, radio options, free text, usage totals, and per-Agent metrics", async () => {
     installFetch(read());
-    render(createElement(CollaborationPanel, { projectId: "project-1" }));
+    render(createElement(CollaborationPanel, {
+      projectId: "project-1",
+      selectedRunId: "run-1",
+      threadId,
+    }));
 
     expect(await screen.findByRole("heading", { name: "等待你的决策" })).toBeInTheDocument();
     expect(screen.getByText("When should we ship?")).toBeInTheDocument();
@@ -157,7 +302,11 @@ describe("collaboration decisions, controls, and usage", () => {
 
   it("enforces the 5000-grapheme decision answer boundary in the UI", async () => {
     const fetchMock = installFetch(read());
-    render(createElement(CollaborationPanel, { projectId: "project-1" }));
+    render(createElement(CollaborationPanel, {
+      projectId: "project-1",
+      selectedRunId: "run-1",
+      threadId,
+    }));
     const input = await screen.findByLabelText("其他回答");
     expect(input).toHaveAttribute("maxlength", "5000");
 
@@ -165,13 +314,17 @@ describe("collaboration decisions, controls, and usage", () => {
     fireEvent.click(screen.getByRole("button", { name: "提交回答" }));
 
     expect(await screen.findByRole("alert")).toHaveTextContent("请输入 1 至 5000 个字符。");
-    expect(fetchMock).toHaveBeenCalledTimes(2);
+    expect(
+      fetchMock.mock.calls.filter(([, init]) => init?.method === "POST"),
+    ).toHaveLength(0);
   });
 
   it("answers with expectedVersion, a stable operation id, optional mention, and focuses success", async () => {
     const bodies: Array<Record<string, unknown>> = [];
     installFetch(read(), (url, init) => {
-      expect(url).toBe("/api/runs/run-1/decisions/decision-1/answer");
+      expect(url).toBe(
+        `/api/projects/project-1/threads/${threadId}/runs/run-1/decisions/decision-1/answer`,
+      );
       const body = JSON.parse(String(init?.body)) as Record<string, unknown>;
       bodies.push(body);
       return Response.json({
@@ -180,7 +333,11 @@ describe("collaboration decisions, controls, and usage", () => {
       });
     });
     const user = userEvent.setup();
-    render(createElement(CollaborationPanel, { projectId: "project-1" }));
+    render(createElement(CollaborationPanel, {
+      projectId: "project-1",
+      selectedRunId: "run-1",
+      threadId,
+    }));
 
     await user.click(await screen.findByRole("radio", { name: "Ship now" }));
     await user.selectOptions(
@@ -192,7 +349,7 @@ describe("collaboration decisions, controls, and usage", () => {
     await waitFor(() => expect(bodies).toHaveLength(1));
     expect(bodies[0]).toMatchObject({
       answer: "Ship now",
-      expectedVersion: 3,
+      expectedVersion: 1,
       mentionAgentId: "agent-b",
     });
     expect(bodies[0].operationId).toMatch(
@@ -208,7 +365,11 @@ describe("collaboration decisions, controls, and usage", () => {
     });
     installFetch(read(), () => pending);
     const user = userEvent.setup();
-    render(createElement(CollaborationPanel, { projectId: "project-1" }));
+    render(createElement(CollaborationPanel, {
+      projectId: "project-1",
+      selectedRunId: "run-1",
+      threadId,
+    }));
     const input = await screen.findByLabelText("其他回答");
     await user.type(input, "Keep this decision draft");
     await user.click(screen.getByRole("button", { name: "提交回答" }));
@@ -221,9 +382,8 @@ describe("collaboration decisions, controls, and usage", () => {
         { status: 502 },
       ),
     );
-    expect(await screen.findByRole("alert")).toHaveTextContent(
-      "Provider 服务暂时异常。",
-    );
+    const providerAlert = await screen.findByText("Provider 服务暂时异常。");
+    expect(providerAlert.closest('[role="alert"]')).toBe(providerAlert);
     expect(input).toBeEnabled();
     expect(input).toHaveValue("Keep this decision draft");
     expect(screen.queryByText("raw provider stack")).not.toBeInTheDocument();
@@ -240,7 +400,11 @@ describe("collaboration decisions, controls, and usage", () => {
     "shows valid controls and disabled reasons for %s/%s",
     async (status, category, enabledName, disabledName, reason) => {
       installFetch(read(status, category, null));
-      render(createElement(CollaborationPanel, { projectId: "project-1" }));
+      render(createElement(CollaborationPanel, {
+        projectId: "project-1",
+        selectedRunId: "run-1",
+        threadId,
+      }));
       await screen.findByRole("region", { name: "运行控制" });
 
       if (enabledName) {
@@ -260,13 +424,17 @@ describe("collaboration decisions, controls, and usage", () => {
       return Response.json({ run: run(body.action === "stop" ? "stopped" : "paused", "manual") });
     });
     const user = userEvent.setup();
-    render(createElement(CollaborationPanel, { projectId: "project-1" }));
+    render(createElement(CollaborationPanel, {
+      projectId: "project-1",
+      selectedRunId: "run-1",
+      threadId,
+    }));
 
     await user.click(await screen.findByRole("button", { name: "暂停" }));
     await waitFor(() => expect(calls).toHaveLength(1));
     expect(calls[0]).toMatchObject({
       body: { action: "pause", expectedVersion: 4 },
-      url: "/api/runs/run-1/control",
+      url: `/api/projects/project-1/threads/${threadId}/runs/run-1/control`,
     });
 
     await user.click(screen.getByRole("button", { name: "停止" }));
@@ -280,39 +448,45 @@ describe("collaboration decisions, controls, and usage", () => {
     await waitFor(() => expect(calls).toHaveLength(2));
     expect(calls[1]).toMatchObject({
       body: { action: "stop", expectedVersion: 4 },
-      url: "/api/runs/run-1/control",
+      url: `/api/projects/project-1/threads/${threadId}/runs/run-1/control`,
     });
     expect(calls[1].body.operationId).not.toBe(calls[0].body.operationId);
   });
 
   it("shows controls and usage loading, empty, fixed category errors, and retry success", async () => {
-    let reads = 0;
+    const successfulFetch = installFetch({
+      ...read("paused", "action_invalid", null),
+      usage: {
+        byAgent: [],
+        completionTokens: 0,
+        promptTokens: 0,
+        repairCalls: 0,
+        totalTokens: 0,
+        unreportedCalls: 0,
+      },
+    });
+    let detailReads = 0;
     vi.stubGlobal(
       "fetch",
-      vi.fn(async (input: RequestInfo | URL) => {
+      vi.fn(async (input: RequestInfo | URL, init?: RequestInit) => {
         const url = String(input);
-        if (url.endsWith("/members")) return Response.json(members);
-        reads += 1;
-        if (reads === 1) {
+        if (url.endsWith(`/threads/${threadId}?run=run-1`)) {
+          detailReads += 1;
+        }
+        if (detailReads === 1 && url.endsWith(`/threads/${threadId}?run=run-1`)) {
           return Response.json(
             { error: { code: "ACTION_INVALID", message: "raw action response" } },
             { status: 400 },
           );
         }
-        return Response.json({
-          ...read("paused", "action_invalid", null),
-          usage: {
-            byAgent: [],
-            completionTokens: 0,
-            promptTokens: 0,
-            repairCalls: 0,
-            totalTokens: 0,
-            unreportedCalls: 0,
-          },
-        });
+        return successfulFetch(input, init);
       }),
     );
-    render(createElement(CollaborationPanel, { projectId: "project-1" }));
+    render(createElement(CollaborationPanel, {
+      projectId: "project-1",
+      selectedRunId: "run-1",
+      threadId,
+    }));
 
     expect(screen.getByText("正在加载项目群聊…")).toBeInTheDocument();
     expect(await screen.findByRole("alert")).toHaveTextContent(

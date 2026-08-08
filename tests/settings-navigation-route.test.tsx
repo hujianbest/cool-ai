@@ -50,12 +50,14 @@ describe("settings URL route", () => {
   it("normalizes server parameters before passing them to TeamPanel", async () => {
     const valid = await TeamPage({
       searchParams: Promise.resolve({
-        returnTo: "/projects/Project_1",
+        returnTo:
+          "/projects/Project_1?run=run%3A1&thread=thread%3A1",
         section: "providers",
       }),
     });
     expect(valid.props).toMatchObject({
-      returnTo: "/projects/Project_1",
+      returnTo:
+        "/projects/Project_1?thread=thread%3A1&run=run%3A1",
       section: "providers",
     });
 
@@ -75,9 +77,9 @@ describe("settings URL route", () => {
     stubResources();
     stubNarrow(false);
     const user = userEvent.setup();
-    const view = render(
-      <TeamPanel returnTo="/projects/project-1" section="providers" />,
-    );
+    const returnTo =
+      "/projects/project-1?thread=thread-1&run=run-1" as const;
+    const view = render(<TeamPanel returnTo={returnTo} section="providers" />);
 
     expect(screen.getByRole("tab", { name: "模型服务" })).toHaveAttribute(
       "aria-selected",
@@ -85,12 +87,12 @@ describe("settings URL route", () => {
     );
     expect(screen.getByRole("link", { name: "返回原位置" })).toHaveAttribute(
       "href",
-      "/projects/project-1",
+      returnTo,
     );
 
     await user.click(screen.getByRole("tab", { name: "Agent" }));
     expect(pushMock).toHaveBeenCalledWith(
-      "/team?section=agents&returnTo=%2Fprojects%2Fproject-1",
+      "/team?section=agents&returnTo=%2Fprojects%2Fproject-1%3Fthread%3Dthread-1%26run%3Drun-1",
     );
     expect(screen.getByRole("tab", { name: "模型服务" })).toHaveAttribute(
       "aria-selected",
@@ -98,7 +100,7 @@ describe("settings URL route", () => {
     );
 
     view.rerender(
-      <TeamPanel returnTo="/projects/project-1" section="agents" />,
+      <TeamPanel returnTo={returnTo} section="agents" />,
     );
     expect(screen.getByRole("tab", { name: "Agent" })).toHaveAttribute(
       "aria-selected",
@@ -106,7 +108,7 @@ describe("settings URL route", () => {
     );
 
     view.rerender(
-      <TeamPanel returnTo="/projects/project-1" section="skills" />,
+      <TeamPanel returnTo={returnTo} section="skills" />,
     );
     expect(screen.getByRole("tab", { name: "技能" })).toHaveAttribute(
       "aria-selected",

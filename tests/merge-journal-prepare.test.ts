@@ -12,17 +12,13 @@ import { dirname, join, relative, resolve } from "node:path";
 import type { DatabaseSync } from "node:sqlite";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
-import { createV6FixtureDatabaseOpener } from "@/tests/v6-fixture-db";
-
-const openDatabase = createV6FixtureDatabaseOpener({
-  missingDeliveryHeadMissionIds: ["mission"],
-  missingReviewHeadResultIds: [],
-});
-import { validateV6 } from "@/src/server/migrations-v6";
+import { openDatabase } from "@/src/server/db";
+import { validateV7 } from "@/src/server/migrations-v7";
 import {
   createWindowsVerifiedMergeAdapter,
   type MergeVerifiedAdapter,
 } from "@/src/server/execution/merge-verified-adapter";
+import { execV7Fixture } from "@/tests/v7-fixture-graph";
 import { refreshExecutionFrozenFixture } from "./execution-frozen-fixture";
 
 vi.mock("server-only", () => ({}));
@@ -248,13 +244,13 @@ describe("merge journal prepare and conditional apply", () => {
       expect(fixture.database.prepare(
         "SELECT status,consumed_at IS NOT NULL AS consumed FROM execution_approvals",
       ).get()).toEqual({ consumed: 1, status: "consumed" });
-      expect(validateV6(fixture.database)).toBeNull();
+      expect(validateV7(fixture.database)).toBeNull();
       fixture.database.prepare(`
         UPDATE execution_merge_files
         SET durable_new_ref_json=json_set(durable_new_ref_json,'$.ownerId','wrong-owner')
         WHERE journal_id=? AND position=0
       `).run(result.journalId);
-      expect(validateV6(fixture.database)).toBe("SCHEMA_DATA_INVALID");
+      expect(validateV7(fixture.database)).toBe("SCHEMA_DATA_INVALID");
     } finally {
       fixture.database.close();
     }
@@ -364,9 +360,10 @@ async function createFixture(label = "happy") {
   writeFileSync(join(sandboxRoot, "src/a.txt"), "new-a");
   writeFileSync(join(sandboxRoot, "src/z.txt"), "new-z");
 
-  const database = openDatabase(join(root, "cockpit.sqlite"));
+  const databasePath = join(root, "cockpit.sqlite");
+  const database = openDatabase(databasePath);
   try {
-    seedDatabase(database, { sandboxRoot, workspaceRoot });
+    seedDatabase(databasePath, database, { sandboxRoot, workspaceRoot });
   } catch (error) {
     database.close();
     throw error;
@@ -390,12 +387,13 @@ async function createFixture(label = "happy") {
 }
 
 function seedDatabase(
+  databasePath: string,
   database: DatabaseSync,
   paths: { sandboxRoot: string; workspaceRoot: string },
 ): void {
   const escapedWorkspace = paths.workspaceRoot.replaceAll("'", "''");
   const escapedSandbox = paths.sandboxRoot.replaceAll("'", "''");
-  database.exec(`
+  execV7Fixture(databasePath, database, `
     INSERT INTO projects (id,name,created_at,workspace_path,workspace_key,version)
     VALUES ('${PROJECT_ID}','Merge','${NOW}','${escapedWorkspace}','${escapedWorkspace.toLowerCase()}',1);
     INSERT INTO providers (
@@ -413,6 +411,15 @@ function seedDatabase(
     VALUES ('${PROJECT_ID}','agent','${NOW}');
     INSERT INTO missions (id,project_id,title,goal,version,created_at,updated_at)
     VALUES ('mission','${PROJECT_ID}','Mission','Goal',1,'${NOW}','${NOW}');
+    INSERT INTO mission_delivery_heads(
+      mission_id,project_id,context_version,state,current_delivery_id,current_operation_id,
+      generation_lease_token,generation_lease_expires_at,last_error_code,
+      next_event_sequence,version,updated_at
+    ) VALUES ('mission','${PROJECT_ID}',1,'ongoing',NULL,NULL,NULL,NULL,NULL,2,1,'${NOW}');
+    INSERT INTO review_events(
+      id,project_id,mission_id,sequence,type,actor_type,actor_id,payload_json,created_at
+    ) VALUES ('merge-review-init','${PROJECT_ID}','mission',1,
+      'mission_review_initialized','system',NULL,'{}','${NOW}');
     INSERT INTO work_items (
       id,mission_id,title,description,status,assignee_agent_id,version,created_at,updated_at
     ) VALUES ('work','mission','Work','','in_progress','agent',1,'${NOW}','${NOW}');

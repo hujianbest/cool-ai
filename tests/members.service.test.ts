@@ -10,6 +10,7 @@ const openDatabase = createV6FixtureDatabaseOpener({
   missingReviewHeadResultIds: [],
 });
 import { createProject } from "@/src/server/projects";
+import { initializeMissionDeliveryTx } from "@/src/server/migrations-v6";
 
 type ProjectMember = {
   agentId: string;
@@ -237,6 +238,11 @@ describe("project membership service", () => {
         1, 'now', 'now'
       );
     `);
+    initializeMissionDeliveryTx(database, {
+      id: "mission-1",
+      projectId: project.id,
+      updatedAt: "now",
+    });
     database.close();
 
     expect(() =>

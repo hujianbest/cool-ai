@@ -157,7 +157,8 @@ describe("narrow-screen and keyboard accessibility", () => {
     render(<ProjectPanel />);
 
     await screen.findByText("最新任务状态：已完成");
-    const status = screen.getByRole("status");
+    const status = screen.getByText("最新任务状态：已完成");
+    expect(status).toHaveAttribute("role", "status");
     expect(status).toHaveAttribute("aria-live", "polite");
     expect(status).toHaveTextContent("最新任务状态：已完成");
   });

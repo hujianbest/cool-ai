@@ -6,6 +6,7 @@
   --sr-only-size: 1px;
   --mission-board-columns: repeat(4, minmax(0, 1fr));
   --single-column: minmax(0, 1fr);
+  --leading-content-columns: auto minmax(0, 1fr);
   --execution-review-facts-columns: minmax(0, 1fr) minmax(0, 2fr);
 
   --surface-sunken: #F3EFE7;

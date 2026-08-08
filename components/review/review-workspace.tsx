@@ -150,6 +150,17 @@ export function ReviewWorkspace({
         Result {workspace.result?.id ?? "尚无"} · v{workspace.result?.version ?? "—"}
         {" · 历史 "}{workspace.historyCount ?? history.length} 次
       </p>
+      {workspace.result?.source ? (
+        <p>
+          <a
+            href={`/projects/${encodeURIComponent(workspace.result.source.projectId)}?thread=${
+              encodeURIComponent(workspace.result.source.threadId)
+            }&run=${encodeURIComponent(workspace.result.source.runId)}`}
+          >
+            打开来源协作运行
+          </a>
+        </p>
+      ) : null}
       <button
         aria-busy={loading}
         onClick={() => void loadWorkspace()}

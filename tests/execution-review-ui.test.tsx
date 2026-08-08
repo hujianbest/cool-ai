@@ -59,6 +59,7 @@ function execution(
     reasonCode: status === "stale" ? "STAGED_CONTEXT_STALE" : null,
     resumeTarget: null,
     sourceCollaborationRunId: RUN_ID,
+    sourceCollaborationThreadId: "thread-execution-review",
     status,
     toolCalls: 7,
     updatedAt: "2026-07-30T08:05:00.000Z",

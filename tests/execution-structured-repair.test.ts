@@ -6,6 +6,7 @@ import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
 import { openDatabase } from "@/src/server/db";
 import { heartbeatExecutionAction } from "@/src/server/execution/execution-actions";
+import { seedV7AdvanceFixture } from "@/tests/v7-advance-fixture";
 
 type Permissions = { read: boolean; write: boolean; execute: boolean };
 type ExecuteInput = {
@@ -94,40 +95,29 @@ async function loadModule(): Promise<StructuredModule> {
 }
 
 function seedDatabase(path: string): DatabaseSync {
+  seedV7AdvanceFixture(path, {
+    agentId: "agent",
+    agentPrompt: "private",
+    missionId: "mission",
+    now: "2026-08-08T09:00:00.000Z",
+    ownerMessage: "Implement the task.",
+    projectId: PROJECT_ID,
+    projectName: "Structured",
+    providerId: "provider",
+    runId: "run",
+    secondAgentId: "agent-reviewer",
+    secondAgentPrompt: "private reviewer",
+    threadCreateOperationId: "00000000-0000-4000-8000-000000000013",
+  });
   const seeded = openDatabase(path);
   seeded.exec(`
-    INSERT INTO projects (id,name,created_at,workspace_path,workspace_key,version)
-    VALUES ('${PROJECT_ID}','Structured',strftime('%Y-%m-%dT%H:%M:%fZ','now'),'D:\\workspace','d:/workspace',1);
-    INSERT INTO providers (
-      id,name,base_url,default_model,api_key_cipher,api_key_iv,api_key_tag,
-      credential_version,credential_generation,key_id,api_key_mask,verified_at,
-      version,created_at,updated_at
-    ) VALUES (
-      'provider','Provider','https://provider.example/v1','test-model','c','i','t',
-      1,1,'k','***',strftime('%Y-%m-%dT%H:%M:%fZ','now'),1,
-      strftime('%Y-%m-%dT%H:%M:%fZ','now'),strftime('%Y-%m-%dT%H:%M:%fZ','now')
-    );
-    INSERT INTO agents (
-      id,name,role,system_prompt,provider_id,model,avatar_text,accent_token,
-      can_read,can_write,can_execute,max_tokens,max_handoffs,version,created_at,updated_at
-    ) VALUES (
-      'agent','Agent','Builder','private','provider','test-model','A','sage',
-      1,1,1,100000,5,1,strftime('%Y-%m-%dT%H:%M:%fZ','now'),strftime('%Y-%m-%dT%H:%M:%fZ','now')
-    );
-    INSERT INTO project_memberships (project_id,agent_id,joined_at)
-    VALUES ('${PROJECT_ID}','agent',strftime('%Y-%m-%dT%H:%M:%fZ','now'));
-    INSERT INTO missions (id,project_id,title,goal,version,created_at,updated_at)
-    VALUES ('mission','${PROJECT_ID}','Mission','Goal',1,
-      strftime('%Y-%m-%dT%H:%M:%fZ','now'),strftime('%Y-%m-%dT%H:%M:%fZ','now'));
     INSERT INTO work_items (
       id,mission_id,title,description,status,assignee_agent_id,version,created_at,updated_at
     ) VALUES ('work','mission','Work','','in_progress','agent',1,
       strftime('%Y-%m-%dT%H:%M:%fZ','now'),strftime('%Y-%m-%dT%H:%M:%fZ','now'));
-    INSERT INTO collaboration_runs (
-      id,project_id,status,current_agent_id,round_count,next_event_sequence,
-      version,execution_epoch,pause_reason,pause_category,created_at,updated_at
-    ) VALUES ('run','${PROJECT_ID}','planned','agent',1,1,1,1,NULL,NULL,
-      strftime('%Y-%m-%dT%H:%M:%fZ','now'),strftime('%Y-%m-%dT%H:%M:%fZ','now'));
+    UPDATE collaboration_runs
+    SET status='planned',round_count=1
+    WHERE project_id='${PROJECT_ID}' AND id='run';
     INSERT INTO project_validation_policy_revisions (
       id,project_id,created_operation_id,created_actor_type,revision_no,policy_hash,
       classifier_version,warning_accepted,canonical_bytes,entry_count,created_at

@@ -12,6 +12,7 @@ import { afterEach, describe, expect, it, vi } from "vitest";
 import { ReviewSlice } from "@/components/review/review-slice";
 import { createCredentialVault } from "@/src/server/credential-vault";
 import { openDatabase } from "@/src/server/db";
+import { V7_DATA_INVARIANTS, validateV7 } from "@/src/server/migrations-v7";
 import {
   executeMergeCommit,
   executeMergePrepare,
@@ -20,6 +21,7 @@ import {
   readReviewWorkspace,
   startReview,
 } from "@/src/server/review/review-slice-service";
+import { createThread } from "@/src/server/collaboration/thread-service";
 import type { ReviewWorkspaceDto } from "@/src/shared/review-contracts";
 import { refreshExecutionFrozenFixture } from "./execution-frozen-fixture";
 
@@ -75,11 +77,12 @@ async function listenProvider(
 }
 
 function seed(
-  database: DatabaseSync,
+  databasePath: string,
   baseUrl: string,
   workspaceRoot: string,
   sandboxRoot: string,
-): void {
+): DatabaseSync {
+  const database = openDatabase(databasePath);
   const credential = createCredentialVault().encrypt("provider", "review-secret");
   const workspace = workspaceRoot.replaceAll("'", "''");
   const sandbox = sandboxRoot.replaceAll("'", "''");
@@ -122,10 +125,31 @@ function seed(
     INSERT INTO work_items (
       id,mission_id,title,description,status,assignee_agent_id,version,created_at,updated_at
     ) VALUES ('work','mission','Fresh work item','Change a file','in_progress','executor',1,'${NOW}','${NOW}');
+  `);
+  database.close();
+  const threadId = createThread(databasePath, "project", {
+    memberAgentIds: ["executor", "reviewer"],
+    operationId: "60000000-0000-4000-8000-000000000000",
+    title: "Review source",
+  }).body.thread.id;
+  const seeded = openDatabase(databasePath);
+  seeded.exec(`
     INSERT INTO collaboration_runs (
-      id,project_id,status,current_agent_id,round_count,next_event_sequence,
+      id,project_id,thread_id,status,current_agent_id,round_count,next_event_sequence,
       version,execution_epoch,pause_reason,pause_category,created_at,updated_at
-    ) VALUES ('run','project','planned','executor',1,1,1,1,NULL,NULL,'${NOW}','${NOW}');
+    ) VALUES ('run','project','${threadId}','planned','executor',1,1,1,1,NULL,NULL,'${NOW}','${NOW}');
+    INSERT INTO collaboration_thread_facts(
+      id,project_id,thread_id,sequence,activity_sequence,type,actor_type,actor_id,
+      run_id,message_id,run_event_id,policy_revision_id,payload_json,created_at
+    ) VALUES (
+      'run-linked','project','${threadId}',3,3,'run_linked','system',NULL,
+      'run',NULL,NULL,NULL,'{"runId":"run"}','${NOW}'
+    );
+    UPDATE collaboration_threads
+    SET next_fact_sequence=4,last_activity_sequence=3,version=version+1,updated_at='${NOW}'
+    WHERE project_id='project' AND id='${threadId}';
+    UPDATE collaboration_project_thread_sequences
+    SET next_activity_sequence=4 WHERE project_id='project';
     INSERT INTO project_validation_policy_revisions (
       id,project_id,created_operation_id,created_actor_type,revision_no,policy_hash,
       classifier_version,warning_accepted,canonical_bytes,entry_count,created_at
@@ -137,12 +161,13 @@ function seed(
     INSERT INTO project_validation_policies(project_id,active_revision_id,version,updated_at)
     VALUES ('project','policy',1,'${NOW}');
     INSERT INTO executions (
-      id,project_id,source_collaboration_run_id,mission_id,work_item_id,agent_id,
+      id,project_id,source_collaboration_thread_id,source_collaboration_run_id,
+      mission_id,work_item_id,agent_id,
       current_policy_revision_id,status,resume_target,reason_code,
       manual_recovery_required,recovery_resolution,current_attempt_no,
       business_round_count,tool_call_count,next_event_sequence,version,created_at,
       business_deadline_at,first_running_at,updated_at,merged_at
-    ) VALUES ('execution','project','run','mission','work','executor','policy',
+    ) VALUES ('execution','project','${threadId}','run','mission','work','executor','policy',
       'staged',NULL,NULL,0,NULL,1,1,1,1,7,'${NOW}',
       '2026-08-01T04:15:00.000Z','${NOW}','${NOW}',NULL);
     INSERT INTO execution_attempts (
@@ -206,7 +231,8 @@ function seed(
     ) VALUES ('file','staged','observation',0,'src/a.txt','src/a.txt','modified',
       '${sha256("old-a")}','${sha256("new-a")}',5);
   `);
-  refreshExecutionFrozenFixture(database, "execution");
+  refreshExecutionFrozenFixture(seeded, "execution");
+  return seeded;
 }
 
 async function createMergedFixture() {
@@ -223,8 +249,7 @@ async function createMergedFixture() {
   writeFileSync(join(workspaceRoot, "src", "a.txt"), "old-a");
   writeFileSync(join(sandboxRoot, "src", "a.txt"), "new-a");
   const databasePath = join(directory, "cockpit.sqlite");
-  const database = openDatabase(databasePath);
-  seed(database, baseUrl, workspaceRoot, sandboxRoot);
+  const database = seed(databasePath, baseUrl, workspaceRoot, sandboxRoot);
   const prepared = await executeMergePrepare({
     database,
     executionId: "execution",
@@ -236,6 +261,12 @@ async function createMergedFixture() {
     workspaceRoot,
   });
   const merged = await executeMergeCommit({ database, journalId: prepared.journalId });
+  expect({
+    foreignKeys: database.prepare("PRAGMA foreign_key_check").all(),
+    invariants: V7_DATA_INVARIANTS.flatMap((sql, index) =>
+      database.prepare(sql).get() === undefined ? [] : [index]),
+    validation: validateV7(database),
+  }).toEqual({ foreignKeys: [], invariants: [], validation: null });
   database.close();
   return {
     databasePath,
@@ -245,11 +276,17 @@ async function createMergedFixture() {
 }
 
 describe("peer review slice", () => {
-  it("runs fresh v6 execution merge through a selected non-executor and one provider decision", async () => {
+  it("runs a v7 execution merge through a selected non-executor and one provider decision", async () => {
     const fixture = await createMergedFixture();
     const before = readReviewWorkspace(fixture.databasePath, "work");
     expect(before.candidates.map(({ agent }) => agent.id)).toEqual(["reviewer"]);
     expect(before.currentAttempt).toBeNull();
+    expect(before.result.source).toMatchObject({
+      contextHash: expect.stringMatching(/^[0-9a-f]{64}$/u),
+      projectId: "project",
+      runId: "run",
+      threadId: expect.any(String),
+    });
 
     const reviewed = await startReview(fixture.databasePath, "work", {
       expectedHeadVersion: before.headVersion,

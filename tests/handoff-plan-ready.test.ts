@@ -12,16 +12,18 @@ import {
   finalizeAdvance,
 } from "@/src/server/collaboration/turn-orchestrator";
 import { openDatabase } from "@/src/server/db";
-import { createMission } from "@/src/server/mission-service";
+import { seedV7AdvanceFixture } from "@/tests/v7-advance-fixture";
 
 const NOW = "2026-07-30T04:00:00.000Z";
 const PROJECT_ID = "project-handoff";
 const RUN_ID = "run-handoff";
 const AGENT_A = "agent-handoff-a";
 const AGENT_B = "agent-handoff-b";
+const MISSION_ID = "mission-handoff";
 
 let directory: string;
 let databasePath: string;
+let threadId: string;
 let operationSequence: number;
 let uuidSequence: number;
 
@@ -95,7 +97,7 @@ function result(turn: AgentTurn): StructuredTurnResult {
 function advance(turn: AgentTurn) {
   const acquired = acquireAdvance(
     databasePath,
-    RUN_ID,
+    { projectId: PROJECT_ID, runId: RUN_ID, threadId },
     { operationId: operationId() },
     dependencies(),
   );
@@ -103,7 +105,7 @@ function advance(turn: AgentTurn) {
   if (acquired.kind !== "acquired") throw new Error("Expected an acquired turn.");
   return finalizeAdvance(
     databasePath,
-    RUN_ID,
+    { projectId: PROJECT_ID, runId: RUN_ID, threadId },
     {
       attemptId: acquired.attempt.id,
       leaseToken: acquired.attempt.leaseToken,
@@ -118,28 +120,28 @@ function withCommit(turn: AgentTurn): void {
   database
     .prepare(
       `INSERT OR IGNORE INTO collaboration_operations (
-         id, project_id, run_id, kind, request_hash, status,
-         http_status, response_json, created_at, updated_at
+         id, project_id, thread_id, run_id, kind, request_hash, status,
+         http_status, response_json, response_schema_version, created_at, updated_at
        ) VALUES (
-         'direct-operation', ?, ?, 'advance', 'hash', 'pending',
-         NULL, NULL, ?, ?
+         'direct-operation', ?, ?, ?, 'advance', 'hash', 'pending',
+         NULL, NULL, NULL, ?, ?
        )`,
     )
-    .run(PROJECT_ID, RUN_ID, NOW, NOW);
+    .run(PROJECT_ID, threadId, RUN_ID, NOW, NOW);
   database
     .prepare(
       `INSERT OR IGNORE INTO collaboration_attempts (
-         id, project_id, run_id, agent_id, operation_id, status,
+         id, project_id, thread_id, run_id, agent_id, operation_id, status,
          lease_token, lease_expires_at, prompt_hash, acquire_execution_epoch,
          acquire_context_hash, included_message_sequence, error_category,
          started_at, finished_at
        ) VALUES (
-         'direct-attempt', ?, ?, ?, 'direct-operation', 'calling',
+         'direct-attempt', ?, ?, ?, ?, 'direct-operation', 'calling',
          'lease', '2099-01-01T00:00:00.000Z', 'prompt', 1,
          'context', 0, NULL, ?, NULL
        )`,
     )
-    .run(PROJECT_ID, RUN_ID, AGENT_A, NOW);
+    .run(PROJECT_ID, threadId, RUN_ID, AGENT_A, NOW);
   database.exec("BEGIN IMMEDIATE");
   try {
     commitAgentTaskActionsTx(database, {
@@ -194,9 +196,10 @@ function snapshot(): {
     const sequence = database
       .prepare(
         `SELECT next_message_sequence AS nextMessageSequence
-         FROM collaboration_project_sequences WHERE project_id = ?`,
+         FROM collaboration_project_sequences
+         WHERE project_id = ? AND thread_id = ?`,
       )
-      .get(PROJECT_ID) as { nextMessageSequence: number };
+      .get(PROJECT_ID, threadId) as { nextMessageSequence: number };
     return {
       ...run,
       ...mission,
@@ -247,55 +250,19 @@ beforeEach(() => {
   databasePath = join(directory, "cockpit.sqlite");
   operationSequence = 0;
   uuidSequence = 0;
-  const database = openDatabase(databasePath);
-  database
-    .prepare(
-      `INSERT INTO projects (
-         id, name, created_at, workspace_path, workspace_key, version
-       ) VALUES (?, 'Handoff project', ?, 'D:\\workspace', 'd:/workspace', 1)`,
-    )
-    .run(PROJECT_ID, NOW);
-  database.exec(`
-    INSERT INTO providers (
-      id, name, base_url, default_model, api_key_cipher, api_key_iv,
-      api_key_tag, credential_version, credential_generation, key_id,
-      api_key_mask, verified_at, version, created_at, updated_at
-    ) VALUES (
-      'provider-handoff', 'Local', 'http://127.0.0.1:4000/v1', 'model',
-      'cipher', 'iv', 'tag', 1, 1, 'key', '***', '${NOW}', 1, '${NOW}', '${NOW}'
-    );
-    INSERT INTO agents (
-      id, name, role, system_prompt, provider_id, model, avatar_text,
-      accent_token, can_read, can_write, can_execute, max_tokens,
-      max_handoffs, version, created_at, updated_at
-    ) VALUES
-      (
-        '${AGENT_A}', 'Alpha', 'Planner', 'private-a', 'provider-handoff',
-        'model', 'A', 'sage', 1, 1, 0, 1000, 5, 1, '${NOW}', '${NOW}'
-      ),
-      (
-        '${AGENT_B}', 'Beta', 'Reviewer', 'private-b', 'provider-handoff',
-        'model', 'B', 'gold', 1, 1, 0, 1000, 5, 1, '${NOW}', '${NOW}'
-      );
-    INSERT INTO project_memberships (project_id, agent_id, joined_at) VALUES
-      ('${PROJECT_ID}', '${AGENT_A}', 'a'),
-      ('${PROJECT_ID}', '${AGENT_B}', 'b');
-    INSERT INTO collaboration_runs (
-      id, project_id, status, current_agent_id, round_count,
-      next_event_sequence, version, execution_epoch, pause_reason,
-      pause_category, created_at, updated_at
-    ) VALUES (
-      '${RUN_ID}', '${PROJECT_ID}', 'running', '${AGENT_A}', 0,
-      1, 1, 1, NULL, NULL, '${NOW}', '${NOW}'
-    );
-    INSERT INTO collaboration_project_sequences (
-      project_id, next_message_sequence
-    ) VALUES ('${PROJECT_ID}', 1);
-  `);
-  database.close();
-  createMission(databasePath, PROJECT_ID, {
-    goal: "Produce a committed multi-agent plan",
-    title: "Handoff mission",
+  threadId = seedV7AdvanceFixture(databasePath, {
+    agentId: AGENT_A,
+    agentPrompt: "private-a",
+    missionId: MISSION_ID,
+    now: NOW,
+    ownerMessage: null,
+    projectId: PROJECT_ID,
+    projectName: "Handoff project",
+    providerId: "provider-handoff",
+    runId: RUN_ID,
+    secondAgentId: AGENT_B,
+    secondAgentPrompt: "private-b",
+    threadCreateOperationId: "14000000-0000-4000-8000-000000000000",
   });
 });
 

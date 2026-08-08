@@ -12,6 +12,11 @@ import { usePathname, useRouter } from "next/navigation";
 
 import { useModalSurface, useNarrowMode } from "@/components/mobile-dialog";
 import { ActivityBar } from "@/components/activity-bar";
+import { ProjectThreadNavigation } from "@/components/project-thread-navigation";
+import {
+  parseReturnTo,
+  type ProjectReturnTo,
+} from "@/components/settings-navigation";
 import { ProjectSetupPanel } from "@/components/project-context/project-setup-panel";
 import { TaskPanel } from "@/components/task-panel";
 import {
@@ -33,7 +38,11 @@ async function errorMessage(response: Response): Promise<string> {
   return apiErrorCopy(payload);
 }
 
-export function ProjectPanel() {
+export function ProjectPanel({
+  returnTo,
+}: {
+  returnTo?: ProjectReturnTo;
+} = {}) {
   const pathname = usePathname();
   const router = useRouter();
   const [guideStep, setGuideStep] = useState<
@@ -58,7 +67,21 @@ export function ProjectPanel() {
   >(null);
   const [workspaceConfirmationOpen, setWorkspaceConfirmationOpen] =
     useState(false);
+  const [threadDialogOpen, setThreadDialogOpen] = useState(false);
+  const [threadListState, setThreadListState] = useState<
+    "loading" | "empty" | "ready" | "error" | null
+  >(null);
+  const [settingsReturnTo, setSettingsReturnTo] = useState<ProjectReturnTo>(
+    () =>
+      returnTo ??
+      (typeof window === "undefined"
+        ? "/"
+        : parseReturnTo(
+            `${window.location.pathname}${window.location.search}`,
+          )),
+  );
   const narrow = useNarrowMode();
+  const cockpitRef = useRef<HTMLElement>(null);
   const toolbarRef = useRef<HTMLDivElement>(null);
   const projectSurfaceRef = useRef<HTMLElement>(null);
   const editorSurfaceRef = useRef<HTMLElement>(null);
@@ -74,14 +97,15 @@ export function ProjectPanel() {
   const closeMobileSurface = useCallback(() => setMobileSurface(null), []);
   const projectModal = useMemo(
     () => ({
-      active: narrow && mobileSurface === "projects",
+      active:
+        narrow && mobileSurface === "projects" && !threadDialogOpen,
       dialogRef: projectSurfaceRef,
       inertRootRefs: [toolbarRef, editorSurfaceRef, contextSurfaceRef],
       initialFocusRef: projectCloseRef,
       restoreFocusRef: projectToggleRef,
       onClose: closeMobileSurface,
     }),
-    [closeMobileSurface, mobileSurface, narrow],
+    [closeMobileSurface, mobileSurface, narrow, threadDialogOpen],
   );
   const editorModal = useMemo(
     () => ({
@@ -108,6 +132,24 @@ export function ProjectPanel() {
   useModalSurface(projectModal);
   useModalSurface(editorModal);
   useModalSurface(contextModal);
+
+  useEffect(() => {
+    if (returnTo) setSettingsReturnTo(returnTo);
+  }, [returnTo]);
+
+  useEffect(() => {
+    const syncSettingsReturnTo = () => {
+      setSettingsReturnTo(
+        parseReturnTo(`${window.location.pathname}${window.location.search}`),
+      );
+    };
+    window.addEventListener("popstate", syncSettingsReturnTo);
+    return () => window.removeEventListener("popstate", syncSettingsReturnTo);
+  }, []);
+
+  const updateSettingsReturnTo = useCallback((href: string) => {
+    setSettingsReturnTo(parseReturnTo(href));
+  }, []);
 
   useEffect(() => {
     const syncGuideStep = () => {
@@ -365,9 +407,13 @@ export function ProjectPanel() {
   const currentProject = projects.find((project) => project.id === currentProjectId) ?? null;
 
   return (
-    <main className="collaboration-cockpit" data-testid="collaboration-cockpit">
+    <main
+      className="collaboration-cockpit"
+      data-testid="collaboration-cockpit"
+      ref={cockpitRef}
+    >
       <h1 className="sr-only">协作工作台</h1>
-      <ActivityBar activePath={pathname ?? "/"} />
+      <ActivityBar activePath={pathname ?? "/"} returnTo={settingsReturnTo} />
       <header className="mobile-toolbar">
         <div
           aria-label="驾驶舱面板"
@@ -458,7 +504,8 @@ export function ProjectPanel() {
         aria-modal={
           narrow &&
           mobileSurface === "projects" &&
-          !workspaceConfirmationOpen
+          !workspaceConfirmationOpen &&
+          !threadDialogOpen
             ? "true"
             : undefined
         }
@@ -471,7 +518,8 @@ export function ProjectPanel() {
         role={
           narrow &&
           mobileSurface === "projects" &&
-          !workspaceConfirmationOpen
+          !workspaceConfirmationOpen &&
+          !threadDialogOpen
             ? "dialog"
             : undefined
         }
@@ -592,6 +640,18 @@ export function ProjectPanel() {
             </>
           )}
         </section>
+        {currentProject &&
+        pathname?.startsWith(
+          `/projects/${encodeURIComponent(currentProject.id)}`,
+        ) ? (
+          <ProjectThreadNavigation
+            backgroundRef={cockpitRef}
+            onDialogChange={setThreadDialogOpen}
+            onNavigate={updateSettingsReturnTo}
+            onStateChange={setThreadListState}
+            projectId={currentProject.id}
+          />
+        ) : null}
         {currentProject ? (
           <ProjectSetupPanel
             onGuideContinue={(step) =>
@@ -654,6 +714,7 @@ export function ProjectPanel() {
         projectError={projectLoadError ?? routeProjectError}
         projectId={currentProjectId}
         projectLoading={isLoading}
+        threadListState={threadListState}
         legacyTasksEnabled={!guideActive}
       />
     </main>

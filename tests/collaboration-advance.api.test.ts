@@ -5,22 +5,20 @@ import { join } from "node:path";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
 import { createCredentialVault } from "@/src/server/credential-vault";
-import { createV6FixtureDatabaseOpener } from "@/tests/v6-fixture-db";
-
-const openDatabase = createV6FixtureDatabaseOpener({
-  missingDeliveryHeadMissionIds: ["mission-advance-api"],
-  missingReviewHeadResultIds: [],
-});
+import { openDatabase } from "@/src/server/db";
+import { seedV7AdvanceFixture } from "@/tests/v7-advance-fixture";
 
 type AdvanceRoute = {
   POST(
     request: Request,
-    context: { params: Promise<{ runId: string }> },
+    context: {
+      params: Promise<{ projectId: string; threadId: string; runId: string }>;
+    },
   ): Promise<Response>;
 };
 
 const routeModules = import.meta.glob<AdvanceRoute>(
-  "../app/api/runs/[runId]/advance/route.ts",
+  "../app/api/projects/[projectId]/threads/[threadId]/runs/[runId]/advance/route.ts",
 );
 const PROJECT_ID = "project-advance-api";
 const RUN_ID = "run-advance-api";
@@ -36,6 +34,7 @@ let databasePath: string;
 let provider: Server;
 let providerBaseUrl: string;
 let providerRequests: Array<{ authorization: string | undefined; body: string }>;
+let threadId: string;
 
 async function listen(server: Server): Promise<string> {
   await new Promise<void>((resolve) => server.listen(0, "127.0.0.1", resolve));
@@ -68,90 +67,55 @@ function validTurn(): string {
 function seed(): void {
   const vault = createCredentialVault();
   const credential = vault.encrypt("provider-advance-api", API_KEY);
+  threadId = seedV7AdvanceFixture(databasePath, {
+    agentId: AGENT_ID,
+    agentPrompt: PRIVATE_PROMPT,
+    missionId: "mission-advance-api",
+    now: NOW,
+    ownerMessage: "Prepare the release plan",
+    projectId: PROJECT_ID,
+    projectName: "Advance API",
+    providerId: "provider-advance-api",
+    runId: RUN_ID,
+    secondAgentId: TARGET_ID,
+    secondAgentPrompt: "BETA_PRIVATE",
+    threadCreateOperationId: "00000000-0000-4000-8000-000000002099",
+  });
   const database = openDatabase(databasePath);
   try {
     database
       .prepare(
-        `INSERT INTO projects (
-           id, name, created_at, workspace_path, workspace_key, version
-         ) VALUES (?, 'Advance API', ?, 'D:\\workspace', 'd:/workspace', 1)`,
-      )
-      .run(PROJECT_ID, NOW);
-    database
-      .prepare(
-        `INSERT INTO providers (
-           id, name, base_url, default_model, api_key_cipher, api_key_iv,
-           api_key_tag, credential_version, credential_generation, key_id,
-           api_key_mask, verified_at, version, created_at, updated_at
-         ) VALUES (?, 'Local', ?, 'provider-default', ?, ?, ?, 1, 1, ?, ?, ?, 1, ?, ?)`,
+        `UPDATE providers
+         SET base_url=?,default_model='provider-default',api_key_cipher=?,
+             api_key_iv=?,api_key_tag=?,credential_version=?,key_id=?,
+             api_key_mask=?
+         WHERE id='provider-advance-api'`,
       )
       .run(
-        "provider-advance-api",
         providerBaseUrl,
         credential.apiKeyCipher,
         credential.apiKeyIv,
         credential.apiKeyTag,
+        credential.credentialVersion,
         credential.keyId,
         credential.apiKeyMask,
-        NOW,
-        NOW,
-        NOW,
       );
-    const insertAgent = database.prepare(
-      `INSERT INTO agents (
-         id, name, role, system_prompt, provider_id, model, avatar_text,
-         accent_token, can_read, can_write, can_execute, max_tokens,
-         max_handoffs, version, created_at, updated_at
-       ) VALUES (?, ?, 'Peer', ?, 'provider-advance-api', ?, ?, ?, 1, 0, 0, 1000, 5, 1, ?, ?)`,
-    );
-    insertAgent.run(AGENT_ID, "Alpha", PRIVATE_PROMPT, "agent-specific-model", "A", "sage", NOW, NOW);
-    insertAgent.run(TARGET_ID, "Beta", "BETA_PRIVATE", "beta-model", "B", "gold", NOW, NOW);
-    const insertMembership = database.prepare(
-      `INSERT INTO project_memberships (project_id, agent_id, joined_at) VALUES (?, ?, ?)`,
-    );
-    insertMembership.run(PROJECT_ID, AGENT_ID, NOW);
-    insertMembership.run(PROJECT_ID, TARGET_ID, NOW);
     database
       .prepare(
-        `INSERT INTO missions (
-           id, project_id, title, goal, version, created_at, updated_at
-         ) VALUES ('mission-advance-api', ?, 'Release plan', 'Plan a safe release', 1, ?, ?)`,
+        `UPDATE agents
+         SET model=CASE id WHEN ? THEN 'agent-specific-model' ELSE 'beta-model' END
+         WHERE id IN (?,?)`,
       )
-      .run(PROJECT_ID, NOW, NOW);
-    database
-      .prepare(
-        `INSERT INTO collaboration_runs (
-           id, project_id, status, current_agent_id, round_count,
-           next_event_sequence, version, execution_epoch, pause_reason,
-           pause_category, created_at, updated_at
-         ) VALUES (?, ?, 'running', ?, 0, 1, 1, 1, NULL, NULL, ?, ?)`,
-      )
-      .run(RUN_ID, PROJECT_ID, AGENT_ID, NOW, NOW);
-    database
-      .prepare(
-        `INSERT INTO collaboration_project_sequences (project_id, next_message_sequence)
-         VALUES (?, 2)`,
-      )
-      .run(PROJECT_ID);
-    database
-      .prepare(
-        `INSERT INTO collaboration_messages (
-           id, project_id, run_id, author_type, author_agent_id,
-           author_display_name, content, mention_agent_id, mention_display_name,
-           sequence, consumed_at, created_at
-         ) VALUES (
-           'owner-advance-api', ?, ?, 'owner', NULL, 'Owner',
-           'Prepare the release plan', NULL, NULL, 1, NULL, ?
-         )`,
-      )
-      .run(PROJECT_ID, RUN_ID, NOW);
+      .run(AGENT_ID, AGENT_ID, TARGET_ID);
   } finally {
     database.close();
   }
 }
 
 async function route(): Promise<AdvanceRoute> {
-  const load = routeModules["../app/api/runs/[runId]/advance/route.ts"];
+  const load = routeModules[
+    "../app/api/projects/[projectId]/threads/[threadId]/runs/[runId]/advance/route.ts"
+  ];
   expect(load, "the real advance route must exist").toBeTypeOf("function");
   return load!();
 }
@@ -161,12 +125,15 @@ async function postAdvance(
 ): Promise<Response> {
   const implementation = await route();
   return implementation.POST(
-    new Request(`http://localhost/api/runs/${RUN_ID}/advance`, {
+    new Request(
+      `http://localhost/api/projects/${PROJECT_ID}/threads/${threadId}/runs/${RUN_ID}/advance`,
+      {
       body,
       headers: { "content-type": "application/json" },
       method: "POST",
-    }),
-    { params: Promise.resolve({ runId: RUN_ID }) },
+      },
+    ),
+    { params: Promise.resolve({ projectId: PROJECT_ID, runId: RUN_ID, threadId }) },
   );
 }
 

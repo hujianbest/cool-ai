@@ -493,6 +493,12 @@ export const reviewWorkspaceDtoSchema = z.object({
     createdAt: timestampSchema,
     executorAgentId: identifierSchema,
     id: identifierSchema,
+    source: z.object({
+      contextHash: hashSchema,
+      projectId: identifierSchema,
+      runId: identifierSchema,
+      threadId: identifierSchema,
+    }).strict(),
     version: z.number().int().positive(),
   }).strict().nullable(),
   workItem: z.object({
@@ -518,6 +524,7 @@ export type ReviewWorkspaceDto = {
     createdAt?: string;
     executorAgentId: string;
     id: string;
+    source: { contextHash: string; projectId: string; runId: string; threadId: string };
     version: number;
   };
   workItem: { boardStatus?: string; id: string; title: string; version?: number };
@@ -816,6 +823,8 @@ const deliveryBundleDtoSchema = z.object({
       execution: z.object({
         id: identifierSchema,
         sourceCollaborationRunId: identifierSchema,
+        sourceCollaborationThreadId: identifierSchema,
+        sourceHref: z.string().startsWith("/"),
       }).strict(),
       executor: z.object({ agentId: identifierSchema, name: z.string() }).strict(),
       limitations: z.array(z.string()),

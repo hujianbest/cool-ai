@@ -6,13 +6,9 @@ import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
 import { canonicalRequestHash } from "@/src/server/collaboration/operation-receipts";
 import { createCredentialVault } from "@/src/server/credential-vault";
-import { createV6FixtureDatabaseOpener } from "@/tests/v6-fixture-db";
-
-const openDatabase = createV6FixtureDatabaseOpener({
-  missingDeliveryHeadMissionIds: ["approval-mission"],
-  missingReviewHeadResultIds: [],
-});
+import { openDatabase } from "@/src/server/db";
 import { controlExecution } from "@/src/server/execution/execution-control-service";
+import { execV7Fixture } from "@/tests/v7-fixture-graph";
 import { refreshExecutionFrozenFixture } from "./execution-frozen-fixture";
 
 type ApprovalModule = {
@@ -90,7 +86,7 @@ function seed(): void {
   const credential = createCredentialVault().encrypt("approval-provider", "approval-secret");
   const sandboxRoot = join(directory, "sandbox").replaceAll("'", "''");
   mkdirSync(sandboxRoot, { recursive: true });
-  database.exec(`
+  execV7Fixture(databasePath, database, `
     INSERT INTO projects (id,name,created_at,workspace_path,workspace_key,version)
     VALUES ('${PROJECT_ID}','Approvals','${NOW}','D:\\approval','d:/approval',1);
     INSERT INTO providers (

@@ -39,6 +39,30 @@ function operationId(): string {
   return globalThis.crypto.randomUUID();
 }
 
+export async function createReworkExecution(
+  projectId: string,
+  workItemId: string,
+  source: { projectId: string; runId: string; threadId: string },
+  fetcher: typeof fetch = fetch,
+): Promise<{ executionId: string }> {
+  if (source.projectId !== projectId) {
+    throw new Error("返工 execution 的来源协作运行不可用。");
+  }
+  const response = await readJson<{ execution: { id: string } }>(
+    await fetcher(`/api/projects/${projectId}/executions`, {
+      body: JSON.stringify({
+        operationId: operationId(),
+        source,
+        workItemId,
+      }),
+      headers: { "content-type": "application/json" },
+      method: "POST",
+    }),
+    "无法创建返工 execution。",
+  );
+  return { executionId: response.execution.id };
+}
+
 export function ReviewProductSurface({
   missionId,
   projectId,
@@ -122,28 +146,11 @@ export function ReviewProductSurface({
   }
 
   async function startReworkExecution() {
-    const collaboration = await readJson<{
-      run: { id: string; status: string } | null;
-    }>(
-      await fetch(`/api/projects/${projectId}/collaboration`),
-      "无法读取当前协作运行。",
-    );
-    if (!collaboration.run || collaboration.run.status !== "planned") {
-      throw new Error("需要最新的已规划协作运行。");
+    const source = workspace?.result.source;
+    if (!source || source.projectId !== projectId) {
+      throw new Error("返工 execution 的来源协作运行不可用。");
     }
-    const response = await readJson<{ execution: { id: string } }>(
-      await fetch(`/api/projects/${projectId}/executions`, {
-        body: JSON.stringify({
-          operationId: operationId(),
-          sourceCollaborationRunId: collaboration.run.id,
-          workItemId,
-        }),
-        headers: { "content-type": "application/json" },
-        method: "POST",
-      }),
-      "无法创建返工 execution。",
-    );
-    return { executionId: response.execution.id };
+    return createReworkExecution(projectId, workItemId, source);
   }
 
   const title = `${workspace?.workItem.title ?? "任务"} 复核闭环`;

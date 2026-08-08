@@ -14,7 +14,10 @@ import {
 import { startExecution } from "@/src/server/execution/execution-service";
 import { cleanupOwnedSandbox } from "@/src/server/execution/sandbox-snapshot";
 import { createWindowsNativeReadAdapter } from "@/src/server/execution/windows-native-read-adapter";
-import { initializeMissionDeliveryTx } from "@/src/server/migrations-v6";
+import {
+  execV7Fixture,
+  execV7TupleStatements,
+} from "@/tests/v7-fixture-graph";
 
 const PROJECT_ID = "sandbox-orchestrator-project";
 const RUN_ID = "sandbox-orchestrator-run";
@@ -29,6 +32,7 @@ let workspace: string;
 let executionRoot: string;
 let databasePath: string;
 let originalCanonicalHash: string;
+let sourceThreadId: string;
 
 beforeEach(() => {
   root = mkdtempSync(join(tmpdir(), "cool-ai-sandbox-orchestrator-"));
@@ -60,7 +64,7 @@ function canonicalHash(): string {
 function seedEligibleTask(): void {
   const database = openDatabase(databasePath);
   try {
-    database.exec(`
+    sourceThreadId = execV7Fixture(databasePath, database, `
       INSERT INTO projects (id,name,created_at,workspace_path,workspace_key,version)
       VALUES ('${PROJECT_ID}','Sandbox orchestrator','${NOW}','placeholder','placeholder',1);
       INSERT INTO providers (
@@ -141,12 +145,7 @@ function seedEligibleTask(): void {
       );
       INSERT INTO project_validation_policies (project_id,active_revision_id,version,updated_at)
       VALUES ('${PROJECT_ID}','sandbox-policy',1,'${NOW}');
-    `);
-    initializeMissionDeliveryTx(database, {
-      id: "sandbox-mission",
-      projectId: PROJECT_ID,
-      updatedAt: NOW,
-    });
+    `).get(PROJECT_ID)!;
     database.prepare(
       "UPDATE projects SET workspace_path=?,workspace_key=? WHERE id=?",
     ).run(workspace, workspace.toLocaleLowerCase("en-US"), PROJECT_ID);
@@ -158,7 +157,7 @@ function seedEligibleTask(): void {
 function addSecondEligibleTask(): void {
   const database = openDatabase(databasePath);
   try {
-    database.exec(`
+    execV7TupleStatements(database, `
       INSERT INTO providers (
         id,name,base_url,default_model,api_key_cipher,api_key_iv,api_key_tag,
         credential_version,credential_generation,key_id,api_key_mask,verified_at,
@@ -224,7 +223,15 @@ function addSecondEligibleTask(): void {
 }
 
 function input(operationId = OPERATION_ID, workItemId = WORK_ITEM_ID) {
-  return { operationId, sourceCollaborationRunId: RUN_ID, workItemId };
+  return {
+    operationId,
+    source: {
+      projectId: PROJECT_ID,
+      runId: RUN_ID,
+      threadId: sourceThreadId,
+    },
+    workItemId,
+  };
 }
 
 async function startWith(
@@ -283,7 +290,11 @@ async function postStart(operationId = OPERATION_ID, workItemId = WORK_ITEM_ID):
     new Request(`http://localhost/api/projects/${PROJECT_ID}/executions`, {
       body: JSON.stringify({
         operationId,
-        sourceCollaborationRunId: RUN_ID,
+        source: {
+          projectId: PROJECT_ID,
+          runId: RUN_ID,
+          threadId: sourceThreadId,
+        },
         workItemId,
       }),
       headers: { "content-type": "application/json" },

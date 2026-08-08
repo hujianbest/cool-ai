@@ -16,10 +16,12 @@ import {
   type CollaborationPromptSnapshot,
 } from "@/src/server/collaboration/prompt-builder";
 import type { StructuredTurnResult } from "@/src/server/collaboration/structured-repair";
+import { appendRunEventFactTx } from "@/src/server/collaboration/thread-service";
 import { openDatabase } from "@/src/server/db";
 import {
   timelinePayloadSchemas,
   type CollaborationRun,
+  type ThreadFactDto,
   type TimelineEvent,
   type TimelineEventType,
 } from "@/src/shared/collaboration-contracts";
@@ -49,6 +51,12 @@ type AdvanceInput = {
   operationId: string;
 };
 
+export type ProjectThreadRunTuple = {
+  projectId: string;
+  threadId: string;
+  runId: string;
+};
+
 type RecoveryDependencies = AcquireDependencies;
 
 type RecoveryAttempt = {
@@ -56,6 +64,7 @@ type RecoveryAttempt = {
   leaseExpiresAt: string;
   operationId: string;
   projectId: string;
+  threadId: string;
   runId: string;
   status: "calling" | "committed" | "failed" | "interrupted" | "discarded";
 };
@@ -67,11 +76,13 @@ export type RecoverRunResponse = {
     status: RecoveryAttempt["status"];
   } | null;
   run: CollaborationRun;
+  fact: Extract<ThreadFactDto, { type: "run_event" }> | null;
 };
 
 type RunRow = {
   id: string;
   projectId: string;
+  threadId: string;
   status: CollaborationRun["status"];
   currentAgentId: string;
   roundCount: number;
@@ -138,48 +149,61 @@ function transaction<T>(database: DatabaseSync, operation: () => T): T {
 }
 
 function parseInput(input: unknown): AdvanceInput {
-  if (!input || typeof input !== "object") {
+  if (
+    !input
+    || typeof input !== "object"
+    || Array.isArray(input)
+  ) {
     throw new CollaborationError("INVALID_INPUT", 400, "Advance input is invalid.");
   }
-  const operationId = (input as Record<string, unknown>).operationId;
+  const record = input as Record<string, unknown>;
+  const fields: Record<string, string> = {};
+  for (const key of Object.keys(record)) {
+    if (key !== "operationId") fields[key] = "unknown";
+  }
+  if (!Object.hasOwn(record, "operationId")) fields.operationId = "required";
+  const operationId = record.operationId;
   if (
     typeof operationId !== "string" ||
     !/^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i.test(
       operationId,
     )
   ) {
-    throw new CollaborationError("INVALID_INPUT", 400, "Advance input is invalid.", {
-      fields: { operationId: "invalid_format" },
-    });
+    fields.operationId = "invalid_format";
   }
-  return { operationId };
+  if (Object.keys(fields).length > 0) {
+    throw new CollaborationError("INVALID_INPUT", 400, "Advance input is invalid.", { fields });
+  }
+  return { operationId: operationId as string };
 }
 
-function runRow(database: DatabaseSync, runId: string): RunRow {
+function runRow(
+  database: DatabaseSync,
+  tuple: ProjectThreadRunTuple,
+): RunRow {
+  const select = `SELECT id, project_id AS projectId, thread_id AS threadId, status,
+                         current_agent_id AS currentAgentId, round_count AS roundCount,
+                         pause_category AS pauseCategory, version,
+                         execution_epoch AS executionEpoch,
+                         created_at AS createdAt, updated_at AS updatedAt
+                  FROM collaboration_runs`;
   const row = database
-    .prepare(
-      `SELECT id, project_id AS projectId, status,
-              current_agent_id AS currentAgentId, round_count AS roundCount,
-              pause_category AS pauseCategory, version,
-              execution_epoch AS executionEpoch,
-              created_at AS createdAt, updated_at AS updatedAt
-       FROM collaboration_runs
-       WHERE id = ?`,
-    )
-    .get(runId) as RunRow | undefined;
+    .prepare(`${select} WHERE project_id = ? AND thread_id = ? AND id = ?`)
+    .get(tuple.projectId, tuple.threadId, tuple.runId);
   if (!row) {
-    throw new CollaborationError("RUN_NOT_FOUND", 404, "Collaboration run was not found.");
+    throw new CollaborationError("RESOURCE_NOT_FOUND", 404, "Resource was not found.");
   }
-  return row;
+  return row as RunRow;
 }
 
-function publicRun(row: RunRow): CollaborationRun {
+function publicRun(row: RunRow): CollaborationRun & { threadId: string } {
   return {
     createdAt: row.createdAt,
     currentAgentId: row.currentAgentId,
     id: row.id,
     pauseCategory: row.pauseCategory,
     projectId: row.projectId,
+    threadId: row.threadId,
     roundCount: row.roundCount,
     status: row.status,
     updatedAt: row.updatedAt,
@@ -187,50 +211,86 @@ function publicRun(row: RunRow): CollaborationRun {
   };
 }
 
+function requireNoOtherActiveProjectRun(
+  database: DatabaseSync,
+  run: RunRow,
+): void {
+  const active = database
+    .prepare(
+      `SELECT id AS runId,thread_id AS threadId
+       FROM collaboration_runs
+       WHERE project_id=?
+         AND status IN ('running','waiting_owner','paused','failed')
+         AND id<>?
+       ORDER BY created_at ASC,id ASC
+       LIMIT 1`,
+    )
+    .get(run.projectId, run.id) as
+    | { runId: string; threadId: string }
+    | undefined;
+  if (active) {
+    throw new CollaborationError(
+      "PROJECT_RUN_ACTIVE",
+      409,
+      "Another thread has an active project run.",
+      {
+        activeRunId: active.runId,
+        activeThreadId: active.threadId,
+      },
+    );
+  }
+}
+
 function recoveryAttempt(
   database: DatabaseSync,
-  runId: string,
+  tuple: ProjectThreadRunTuple,
 ): RecoveryAttempt | undefined {
   return database
     .prepare(
-      `SELECT id, project_id AS projectId, run_id AS runId,
+      `SELECT id, project_id AS projectId, thread_id AS threadId, run_id AS runId,
               operation_id AS operationId, status,
               lease_expires_at AS leaseExpiresAt
        FROM collaboration_attempts
-       WHERE run_id = ?
+       WHERE project_id = ? AND thread_id = ? AND run_id = ?
        ORDER BY started_at DESC, id DESC
        LIMIT 1`,
     )
-    .get(runId) as RecoveryAttempt | undefined;
+    .get(tuple.projectId, tuple.threadId, tuple.runId) as RecoveryAttempt | undefined;
 }
 
 function appendEvent(
   database: DatabaseSync,
   dependencies: AcquireDependencies,
-  runId: string,
-  type: string,
+  tuple: ProjectThreadRunTuple,
+  type: TimelineEventType,
   actorType: "agent" | "system",
   actorId: string | null,
   payload: Record<string, unknown>,
   timestamp: string,
-): void {
+): { eventId: string; factId: string } {
   const sequence = (
     database
       .prepare(
         `SELECT next_event_sequence AS sequence
-         FROM collaboration_runs WHERE id = ?`,
+         FROM collaboration_runs
+         WHERE project_id=? AND thread_id=? AND id=?`,
       )
-      .get(runId) as { sequence: number }
+      .get(tuple.projectId, tuple.threadId, tuple.runId) as { sequence: number }
   ).sequence;
+  const eventId = dependencies.randomUUID();
+  const factId = dependencies.randomUUID();
   database
     .prepare(
       `INSERT INTO collaboration_events (
-         id, run_id, sequence, type, actor_type, actor_id, payload_json, created_at
-       ) VALUES (?, ?, ?, ?, ?, ?, ?, ?)`,
+         id,project_id,thread_id,run_id,sequence,type,actor_type,actor_id,
+         payload_json,created_at
+       ) VALUES (?,?,?,?,?,?,?,?,?,?)`,
     )
     .run(
-      dependencies.randomUUID(),
-      runId,
+      eventId,
+      tuple.projectId,
+      tuple.threadId,
+      tuple.runId,
       sequence,
       type,
       actorType,
@@ -242,14 +302,27 @@ function appendEvent(
     .prepare(
       `UPDATE collaboration_runs
        SET next_event_sequence = next_event_sequence + 1, updated_at = ?
-       WHERE id = ?`,
+       WHERE project_id=? AND thread_id=? AND id=?`,
     )
-    .run(timestamp, runId);
+    .run(timestamp, tuple.projectId, tuple.threadId, tuple.runId);
+  appendRunEventFactTx(database, {
+    actorId,
+    actorType,
+    eventId,
+    eventType: type,
+    factId,
+    projectId: tuple.projectId,
+    runId: tuple.runId,
+    threadId: tuple.threadId,
+    timestamp,
+  });
+  return { eventId, factId };
 }
 
 type FinalizeAttemptRow = {
   id: string;
   projectId: string;
+  threadId: string;
   runId: string;
   agentId: string;
   operationId: string;
@@ -258,48 +331,58 @@ type FinalizeAttemptRow = {
   leaseExpiresAt: string;
   acquireExecutionEpoch: number;
   acquireContextHash: string;
+  includedMessageSequence: number;
 };
 
 function finalizeAttemptRow(
   database: DatabaseSync,
-  runId: string,
+  tuple: ProjectThreadRunTuple,
   attemptId: string,
 ): FinalizeAttemptRow | undefined {
   return database
     .prepare(
-      `SELECT id, project_id AS projectId, run_id AS runId,
+      `SELECT id, project_id AS projectId, thread_id AS threadId, run_id AS runId,
               agent_id AS agentId, operation_id AS operationId, status,
               lease_token AS leaseToken, lease_expires_at AS leaseExpiresAt,
               acquire_execution_epoch AS acquireExecutionEpoch,
-              acquire_context_hash AS acquireContextHash
+              acquire_context_hash AS acquireContextHash,
+              included_message_sequence AS includedMessageSequence
        FROM collaboration_attempts
-       WHERE id = ? AND run_id = ?`,
+       WHERE project_id=? AND thread_id=? AND run_id=? AND id=?`,
     )
-    .get(attemptId, runId) as FinalizeAttemptRow | undefined;
+    .get(tuple.projectId, tuple.threadId, tuple.runId, attemptId) as
+      | FinalizeAttemptRow
+      | undefined;
 }
 
-function publicFinalizeRun(database: DatabaseSync, runId: string): CollaborationRun {
-  return publicRun(runRow(database, runId));
+function publicFinalizeRun(
+  database: DatabaseSync,
+  tuple: ProjectThreadRunTuple,
+): CollaborationRun {
+  return publicRun(runRow(database, tuple));
 }
 
 function publicAttemptEvents(
   database: DatabaseSync,
-  runId: string,
+  tuple: ProjectThreadRunTuple,
   attemptId: string,
 ): TimelineEvent[] {
   const rows = database
     .prepare(
-      `SELECT id, run_id AS runId, sequence, type, actor_type AS actorType,
+      `SELECT id,project_id AS projectId,thread_id AS threadId,run_id AS runId,
+              sequence,type,actor_type AS actorType,
               actor_id AS actorId, payload_json AS payloadJson, created_at AS createdAt
        FROM collaboration_events
-       WHERE run_id = ?
+       WHERE project_id=? AND thread_id=? AND run_id=?
        ORDER BY sequence ASC`,
     )
-    .all(runId) as Array<{
+    .all(tuple.projectId, tuple.threadId, tuple.runId) as Array<{
       actorId: string | null;
       actorType: "owner" | "agent" | "system";
       createdAt: string;
       id: string;
+      projectId: string;
+      threadId: string;
       payloadJson: string;
       runId: string;
       sequence: number;
@@ -405,7 +488,7 @@ function persistCallAudit(
     appendEvent(
       database,
       dependencies,
-      attempt.runId,
+      { projectId: attempt.projectId, threadId: attempt.threadId, runId: attempt.runId },
       status === "succeeded" ? "model_call_succeeded" : "model_call_failed",
       "agent",
       attempt.agentId,
@@ -421,7 +504,7 @@ function persistCallAudit(
     appendEvent(
       database,
       dependencies,
-      attempt.runId,
+      { projectId: attempt.projectId, threadId: attempt.threadId, runId: attempt.runId },
       "usage_recorded",
       "agent",
       attempt.agentId,
@@ -474,21 +557,23 @@ function completeAdvance(
     requestHash: canonicalRequestHash({}),
     runId: attempt.runId,
     status,
+    threadId: attempt.threadId,
     timestamp,
   });
 }
 
 function reconcileExpiredAttemptTx(
   database: DatabaseSync,
-  runId: string,
+  tuple: ProjectThreadRunTuple,
   dependencies: RecoveryDependencies,
 ): {
   affectedRows: 0 | 1;
   attempt: RecoverRunResponse["attempt"];
+  fact: RecoverRunResponse["fact"];
   run: CollaborationRun;
 } {
-  const before = recoveryAttempt(database, runId);
-  const run = runRow(database, runId);
+  const run = runRow(database, tuple);
+  const before = recoveryAttempt(database, tuple);
   if (
     !before ||
     before.status !== "calling" ||
@@ -503,6 +588,7 @@ function reconcileExpiredAttemptTx(
             status: before.status,
           }
         : null,
+      fact: null,
       run: publicRun(run),
     };
   }
@@ -512,11 +598,19 @@ function reconcileExpiredAttemptTx(
     .prepare(
       `UPDATE collaboration_attempts
        SET status = 'interrupted', error_category = 'interrupted', finished_at = ?
-       WHERE id = ? AND status = 'calling' AND lease_expires_at <= ?`,
+       WHERE project_id = ? AND thread_id = ? AND run_id = ? AND id = ?
+         AND status = 'calling' AND lease_expires_at <= ?`,
     )
-    .run(timestamp, before.id, timestamp);
+    .run(
+      timestamp,
+      tuple.projectId,
+      tuple.threadId,
+      tuple.runId,
+      before.id,
+      timestamp,
+    );
   if (update.changes !== 1) {
-    const current = recoveryAttempt(database, runId);
+    const current = recoveryAttempt(database, tuple);
     return {
       affectedRows: 0,
       attempt: current
@@ -526,7 +620,8 @@ function reconcileExpiredAttemptTx(
             status: current.status,
           }
         : null,
-      run: publicRun(runRow(database, runId)),
+      fact: null,
+      run: publicRun(runRow(database, tuple)),
     };
   }
 
@@ -536,9 +631,9 @@ function reconcileExpiredAttemptTx(
        SET status = 'paused', pause_category = 'interrupted',
            pause_reason = 'interrupted', version = version + 1,
            execution_epoch = execution_epoch + 1, updated_at = ?
-       WHERE id = ?`,
+       WHERE project_id = ? AND thread_id = ? AND id = ?`,
     )
-    .run(timestamp, runId);
+    .run(timestamp, tuple.projectId, tuple.threadId, tuple.runId);
   database
     .prepare(
       `INSERT OR IGNORE INTO collaboration_model_calls (
@@ -548,19 +643,48 @@ function reconcileExpiredAttemptTx(
                  'interrupted', ?)`,
     )
     .run(dependencies.randomUUID(), before.id, timestamp);
-  appendEvent(
+  const appended = appendEvent(
     database,
     dependencies,
-    runId,
+    tuple,
     "attempt_interrupted",
     "system",
     null,
     { attemptId: before.id },
     timestamp,
   );
+  const factRow = database
+    .prepare(
+      `SELECT id,project_id AS projectId,thread_id AS threadId,sequence,
+              activity_sequence AS activitySequence,actor_type AS actorType,
+              actor_id AS actorId,run_id AS runId,run_event_id AS runEventId,
+              created_at AS createdAt
+       FROM collaboration_thread_facts
+       WHERE project_id=? AND thread_id=? AND id=?`,
+    )
+    .get(tuple.projectId, tuple.threadId, appended.factId) as {
+      activitySequence: number;
+      actorId: string | null;
+      actorType: "system";
+      createdAt: string;
+      id: string;
+      projectId: string;
+      runEventId: string;
+      runId: string;
+      sequence: number;
+      threadId: string;
+    };
+  const fact: Extract<ThreadFactDto, { type: "run_event" }> = {
+    ...factRow,
+    message: null,
+    messageId: null,
+    payload: { eventType: "attempt_interrupted" },
+    policyRevisionId: null,
+    type: "run_event",
+  };
   const body = {
     attemptStatus: "interrupted" as const,
-    run: publicRun(runRow(database, runId)),
+    run: publicRun(runRow(database, tuple)),
   };
   completeOperationReceipt(database, {
     body,
@@ -568,7 +692,7 @@ function reconcileExpiredAttemptTx(
     operationId: before.operationId,
     projectId: before.projectId,
     requestHash: canonicalRequestHash({}),
-    runId,
+    runId: tuple.runId,
     status: 200,
     timestamp,
   });
@@ -579,6 +703,7 @@ function reconcileExpiredAttemptTx(
       leaseExpiresAt: before.leaseExpiresAt,
       status: "interrupted",
     },
+    fact,
     run: body.run,
   };
 }
@@ -590,17 +715,18 @@ const defaultRecoveryDependencies: RecoveryDependencies = {
 
 export function reconcileExpiredAttempt(
   databasePath: string,
-  runId: string,
+  tuple: ProjectThreadRunTuple,
   dependencies: RecoveryDependencies = defaultRecoveryDependencies,
 ): {
   affectedRows: 0 | 1;
   attempt: RecoverRunResponse["attempt"];
+  fact: RecoverRunResponse["fact"];
   run: CollaborationRun;
 } {
   const database = openDatabase(databasePath);
   try {
     return transaction(database, () =>
-      reconcileExpiredAttemptTx(database, runId, dependencies),
+      reconcileExpiredAttemptTx(database, tuple, dependencies),
     );
   } finally {
     database.close();
@@ -617,15 +743,16 @@ export function reconcileProjectExpiredAttempt(
     transaction(database, () => {
       const row = database
         .prepare(
-          `SELECT runs.id
+          `SELECT runs.id AS runId,runs.project_id AS projectId,
+                  runs.thread_id AS threadId
            FROM collaboration_runs AS runs
            JOIN collaboration_attempts AS attempts ON attempts.run_id = runs.id
            WHERE runs.project_id = ? AND attempts.status = 'calling'
            ORDER BY attempts.started_at DESC
            LIMIT 1`,
         )
-        .get(projectId) as { id: string } | undefined;
-      if (row) reconcileExpiredAttemptTx(database, row.id, dependencies);
+        .get(projectId) as ProjectThreadRunTuple | undefined;
+      if (row) reconcileExpiredAttemptTx(database, row, dependencies);
     });
   } finally {
     database.close();
@@ -634,7 +761,7 @@ export function reconcileProjectExpiredAttempt(
 
 export function recoverRun(
   databasePath: string,
-  runId: string,
+  tuple: ProjectThreadRunTuple,
   rawInput: unknown,
   dependencies: RecoveryDependencies = defaultRecoveryDependencies,
 ): { body: RecoverRunResponse; status: number } {
@@ -643,7 +770,7 @@ export function recoverRun(
   const database = openDatabase(databasePath);
   try {
     return transaction(database, () => {
-      const run = runRow(database, runId);
+      const run = runRow(database, tuple);
       const prior = readOperationReceipt<RecoverRunResponse>(
         database,
         run.projectId,
@@ -651,10 +778,24 @@ export function recoverRun(
         "recover",
         requestHash,
       );
-      if (prior) return prior;
-      const reconciled = reconcileExpiredAttemptTx(database, runId, dependencies);
+      if (prior) {
+        if (
+          prior.body.run.projectId !== tuple.projectId
+          || prior.body.run.id !== tuple.runId
+          || ("threadId" in prior.body.run && prior.body.run.threadId !== tuple.threadId)
+        ) {
+          throw new CollaborationError(
+            "OPERATION_CONFLICT",
+            409,
+            "Operation id was already used for different input.",
+          );
+        }
+        return prior;
+      }
+      const reconciled = reconcileExpiredAttemptTx(database, tuple, dependencies);
       const body: RecoverRunResponse = {
         attempt: reconciled.attempt,
+        fact: reconciled.fact,
         run: reconciled.run,
       };
       const timestamp = dependencies.clock().toISOString();
@@ -664,7 +805,8 @@ export function recoverRun(
         operationId: input.operationId,
         projectId: run.projectId,
         requestHash,
-        runId,
+        runId: tuple.runId,
+        threadId: tuple.threadId,
         status: 200,
         timestamp,
       });
@@ -746,7 +888,7 @@ function markFailure(
   appendEvent(
     database,
     dependencies,
-    attempt.runId,
+    { projectId: attempt.projectId, threadId: attempt.threadId, runId: attempt.runId },
     error.details.category === "action_invalid" ? "action_rejected" : "run_paused",
     "system",
     null,
@@ -831,7 +973,7 @@ function discardAtTokenBoundary(
   appendEvent(
     database,
     dependencies,
-    attempt.runId,
+    { projectId: attempt.projectId, threadId: attempt.threadId, runId: attempt.runId },
     "boundary_paused",
     "system",
     null,
@@ -846,8 +988,8 @@ function discardAtTokenBoundary(
   const body = {
     attempt: { id: attempt.id, status: "discarded" as const },
     attemptStatus: "discarded" as const,
-    events: publicAttemptEvents(database, attempt.runId, attempt.id),
-    run: publicFinalizeRun(database, attempt.runId),
+    events: publicAttemptEvents(database, attempt, attempt.id),
+    run: publicFinalizeRun(database, attempt),
   };
   completeAdvance(database, attempt, 200, body, timestamp);
   return { affectedRows: 1, body, status: 200 };
@@ -855,7 +997,7 @@ function discardAtTokenBoundary(
 
 export function finalizeAdvance(
   databasePath: string,
-  runId: string,
+  tuple: ProjectThreadRunTuple,
   input: {
     attemptId: string;
     leaseToken: string;
@@ -869,7 +1011,7 @@ export function finalizeAdvance(
   try {
     try {
       return transaction(database, () => {
-        const attempt = finalizeAttemptRow(database, runId, input.attemptId);
+        const attempt = finalizeAttemptRow(database, tuple, input.attemptId);
         if (!attempt) {
           return {
             affectedRows: 0,
@@ -891,12 +1033,14 @@ export function finalizeAdvance(
         }
         failureContext.attempt = attempt;
         const timestamp = dependencies.clock().toISOString();
-        const run = runRow(database, runId);
+        const run = runRow(database, tuple);
         const leaseLive = timestamp < attempt.leaseExpiresAt;
         const contextHash = buildCollaborationPromptFromDatabase(
           database,
           attempt.projectId,
+          attempt.threadId,
           attempt.agentId,
+          attempt.includedMessageSequence,
         ).contextHash;
         const contextMatches = contextHash === attempt.acquireContextHash;
         const executionMatches = run.executionEpoch === attempt.acquireExecutionEpoch;
@@ -922,11 +1066,11 @@ export function finalizeAdvance(
                      updated_at = ?
                  WHERE id = ? AND status = 'running'`
               )
-              .run(timestamp, runId);
+              .run(timestamp, tuple.runId);
             appendEvent(
               database,
               dependencies,
-              runId,
+              tuple,
               "context_changed",
               "system",
               null,
@@ -937,8 +1081,8 @@ export function finalizeAdvance(
           const body = {
             attempt: { id: attempt.id, status: "discarded" as const },
             attemptStatus: "discarded" as const,
-            events: publicAttemptEvents(database, runId, attempt.id),
-            run: publicFinalizeRun(database, runId),
+            events: publicAttemptEvents(database, attempt, attempt.id),
+            run: publicFinalizeRun(database, attempt),
           };
           completeAdvance(database, attempt, 200, body, timestamp);
           return { affectedRows: 1, body, status: 200 };
@@ -982,18 +1126,18 @@ export function finalizeAdvance(
         commitBusinessTurn(database, {
           agentId: attempt.agentId,
           attemptId: attempt.id,
-          runId,
+          runId: tuple.runId,
           timestamp,
           turn: input.result.turn,
         });
-        const committedStatus = runRow(database, runId).status;
+        const committedStatus = runRow(database, tuple).status;
         const runUpdate = database
           .prepare(
             `UPDATE collaboration_runs
              SET round_count = round_count + 1, updated_at = ?
              WHERE id = ? AND status = ? AND execution_epoch = ?`,
           )
-          .run(timestamp, runId, committedStatus, attempt.acquireExecutionEpoch);
+            .run(timestamp, tuple.runId, committedStatus, attempt.acquireExecutionEpoch);
         if (runUpdate.changes !== 1) {
           throw new CollaborationError(
             "RUN_STATE_CONFLICT",
@@ -1018,8 +1162,8 @@ export function finalizeAdvance(
         const body = {
           attempt: { id: attempt.id, status: "committed" as const },
           attemptStatus: "committed" as const,
-          events: publicAttemptEvents(database, runId, attempt.id),
-          run: publicFinalizeRun(database, runId),
+          events: publicAttemptEvents(database, attempt, attempt.id),
+          run: publicFinalizeRun(database, attempt),
         };
         completeAdvance(database, attempt, 200, body, timestamp);
         return { affectedRows: 1, body, status: 200 };
@@ -1037,7 +1181,7 @@ export function finalizeAdvance(
               { category: "internal_failure" },
             );
       return transaction(database, () => {
-        const current = finalizeAttemptRow(database, runId, attempt.id);
+        const current = finalizeAttemptRow(database, tuple, attempt.id);
         if (!current || current.status !== "calling") {
           return current
             ? readDurableAdvance(database, current)
@@ -1172,7 +1316,7 @@ function pauseAtBoundary(
   appendEvent(
     database,
     dependencies,
-    run.id,
+    { projectId: run.projectId, threadId: run.threadId, runId: run.id },
     "boundary_paused",
     "system",
     null,
@@ -1187,7 +1331,13 @@ function pauseAtBoundary(
   const result: PausedAdvance = {
     boundary: boundary.boundary,
     kind: "paused",
-    run: publicRun(runRow(database, run.id)),
+    run: publicRun(
+      runRow(database, {
+        projectId: run.projectId,
+        runId: run.id,
+        threadId: run.threadId,
+      }),
+    ),
   };
   completeOperationReceipt(database, {
     body: result,
@@ -1197,6 +1347,7 @@ function pauseAtBoundary(
     requestHash,
     runId: run.id,
     status: 200,
+    threadId: run.threadId,
     timestamp,
   });
   return result;
@@ -1204,19 +1355,34 @@ function pauseAtBoundary(
 
 export function acquireAdvance(
   databasePath: string,
-  runId: string,
+  tuple: ProjectThreadRunTuple,
   rawInput: unknown,
   dependencies: AcquireDependencies,
 ): AcquiredAdvance | PausedAdvance | ReplayedAdvance {
   const input = parseInput(rawInput);
-  reconcileExpiredAttempt(databasePath, runId, dependencies);
   const requestHash = canonicalRequestHash({});
+  const lookup = openDatabase(databasePath);
+  try {
+    const run = runRow(lookup, tuple);
+    const prior = readOperationReceipt<unknown>(
+      lookup,
+      run.projectId,
+      input.operationId,
+      "advance",
+      requestHash,
+    );
+    if (prior) {
+      return { body: prior.body, kind: "replayed", status: prior.status };
+    }
+    requireNoOtherActiveProjectRun(lookup, run);
+  } finally {
+    lookup.close();
+  }
+  reconcileExpiredAttempt(databasePath, tuple, dependencies);
   const database = openDatabase(databasePath);
-  let projectId: string | null = null;
   try {
     return transaction(database, () => {
-      const run = runRow(database, runId);
-      projectId = run.projectId;
+      const run = runRow(database, tuple);
       const prior = readOperationReceipt<unknown>(
         database,
         run.projectId,
@@ -1228,6 +1394,7 @@ export function acquireAdvance(
         return { body: prior.body, kind: "replayed", status: prior.status };
       }
 
+      requireNoOtherActiveProjectRun(database, run);
       ensureAcquirable(database, run);
       const now = dependencies.clock();
       const timestamp = now.toISOString();
@@ -1247,6 +1414,7 @@ export function acquireAdvance(
       const prompt = buildCollaborationPromptFromDatabase(
         database,
         run.projectId,
+        run.threadId,
         run.currentAgentId,
       );
       const attemptId = dependencies.randomUUID();
@@ -1255,13 +1423,14 @@ export function acquireAdvance(
       database
         .prepare(
           `INSERT INTO collaboration_operations (
-             id, project_id, run_id, kind, request_hash, status,
-             http_status, response_json, created_at, updated_at
-           ) VALUES (?, ?, ?, 'advance', ?, 'pending', NULL, NULL, ?, ?)`,
+             id,project_id,thread_id,run_id,kind,request_hash,status,
+             http_status,response_json,response_schema_version,created_at,updated_at
+           ) VALUES (?,?,?,?,'advance',?,'pending',NULL,NULL,NULL,?,?)`,
         )
         .run(
           input.operationId,
           run.projectId,
+          run.threadId,
           run.id,
           requestHash,
           timestamp,
@@ -1270,17 +1439,18 @@ export function acquireAdvance(
       database
         .prepare(
           `INSERT INTO collaboration_attempts (
-             id, project_id, run_id, agent_id, operation_id, status,
+             id,project_id,thread_id,run_id,agent_id,operation_id,status,
              lease_token, lease_expires_at, prompt_hash,
              acquire_execution_epoch, acquire_context_hash,
              included_message_sequence, error_category, started_at, finished_at
            ) VALUES (
-             ?, ?, ?, ?, ?, 'calling', ?, ?, ?, ?, ?, ?, NULL, ?, NULL
+             ?, ?, ?, ?, ?, ?, 'calling', ?, ?, ?, ?, ?, ?, NULL, ?, NULL
            )`,
         )
         .run(
           attemptId,
           run.projectId,
+          run.threadId,
           run.id,
           run.currentAgentId,
           input.operationId,
@@ -1295,7 +1465,7 @@ export function acquireAdvance(
       appendEvent(
         database,
         dependencies,
-        run.id,
+        { projectId: run.projectId, threadId: run.threadId, runId: run.id },
         "model_call_started",
         "agent",
         run.currentAgentId,
@@ -1319,20 +1489,21 @@ export function acquireAdvance(
     });
   } catch (error) {
     if (
-      projectId &&
       error instanceof CollaborationError &&
       error.code !== "OPERATION_CONFLICT" &&
-      error.code !== "OPERATION_IN_PROGRESS"
+      error.code !== "OPERATION_IN_PROGRESS" &&
+      error.code !== "PROJECT_RUN_ACTIVE"
     ) {
       const timestamp = dependencies.clock().toISOString();
       completeOperationReceipt(database, {
         body: collaborationErrorBody(error),
         kind: "advance",
         operationId: input.operationId,
-        projectId,
+        projectId: tuple.projectId,
         requestHash,
-        runId,
+        runId: tuple.runId,
         status: error.httpStatus,
+        threadId: tuple.threadId,
         timestamp,
       });
     }

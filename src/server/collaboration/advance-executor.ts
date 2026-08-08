@@ -6,11 +6,13 @@ import {
 import {
   acquireAdvance,
   finalizeAdvance,
+  type ProjectThreadRunTuple,
 } from "@/src/server/collaboration/turn-orchestrator";
 import {
   executeStructuredTurn,
   type StructuredTurnResult,
 } from "@/src/server/collaboration/structured-repair";
+import { classifyPublicTextFromDatabase } from "@/src/server/collaboration/public-text-credential-classifier";
 import {
   createCredentialVault,
   CredentialVaultError,
@@ -113,7 +115,7 @@ function sanitizedInternalError(correlationId: string): CollaborationError {
   console.error({
     code: "INTERNAL_ERROR",
     correlationId,
-    route: "POST /api/runs/:runId/advance",
+    route: "POST /api/projects/:projectId/threads/:threadId/runs/:runId/advance",
   });
   return new CollaborationError(
     "INTERNAL_ERROR",
@@ -125,14 +127,14 @@ function sanitizedInternalError(correlationId: string): CollaborationError {
 
 export async function executeAdvance(
   databasePath: string,
-  runId: string,
+  tuple: ProjectThreadRunTuple,
   input: unknown,
 ): Promise<AdvanceExecutionResponse> {
   const dependencies = {
     clock: () => new Date(),
     randomUUID,
   };
-  const acquired = acquireAdvance(databasePath, runId, input, dependencies);
+  const acquired = acquireAdvance(databasePath, tuple, input, dependencies);
   if (acquired.kind === "replayed") {
     return { body: acquired.body, status: acquired.status };
   }
@@ -153,8 +155,9 @@ export async function executeAdvance(
       {
         attemptId: acquired.attempt.id,
         correlationId,
-        runId,
+        runId: tuple.runId,
       },
+      (content) => classifyPublicTextFromDatabase(databasePath, content),
     );
   } catch (error) {
     result = noCallFailure;
@@ -164,7 +167,7 @@ export async function executeAdvance(
 
   const finalized = finalizeAdvance(
     databasePath,
-    runId,
+    tuple,
     {
       attemptId: acquired.attempt.id,
       leaseToken: acquired.attempt.leaseToken,

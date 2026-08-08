@@ -21,6 +21,7 @@ import {
   recoverIncompleteMergeJournals,
   resolveManualRecovery,
 } from "@/src/server/execution/merge-journal-service";
+import { execV7Fixture } from "@/tests/v7-fixture-graph";
 import { refreshExecutionFrozenFixture } from "./execution-frozen-fixture";
 
 vi.mock("server-only", () => ({}));
@@ -71,7 +72,7 @@ async function fixture(index: number): Promise<Fixture> {
   writeFileSync(join(sandboxRoot, "src", "a.txt"), "new-a");
   const databasePath = join(root, "cockpit.sqlite");
   const database = openDatabase(databasePath);
-  seed(database, workspaceRoot, sandboxRoot);
+  seed(databasePath, database, workspaceRoot, sandboxRoot);
   return {
     database,
     databasePath,
@@ -90,10 +91,15 @@ async function fixture(index: number): Promise<Fixture> {
   };
 }
 
-function seed(database: DatabaseSync, workspaceRoot: string, sandboxRoot: string): void {
+function seed(
+  databasePath: string,
+  database: DatabaseSync,
+  workspaceRoot: string,
+  sandboxRoot: string,
+): void {
   const workspace = workspaceRoot.replaceAll("'", "''");
   const sandbox = sandboxRoot.replaceAll("'", "''");
-  database.exec(`
+  execV7Fixture(databasePath, database, `
     INSERT INTO projects (id,name,created_at,workspace_path,workspace_key,version)
     VALUES ('${PROJECT_ID}','Faults','${NOW}','${workspace}','${workspace.toLowerCase()}',1);
     INSERT INTO providers (

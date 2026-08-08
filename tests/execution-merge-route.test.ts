@@ -16,6 +16,7 @@ import { ExecutionError } from "@/src/server/execution/execution-service";
 import { createWindowsVerifiedMergeAdapter } from "@/src/server/execution/merge-verified-adapter";
 import { saveValidationPolicy } from "@/src/server/execution/validation-policy-service";
 import { recoveryMergeFileStatuses } from "@/src/shared/execution-contracts";
+import { execV7Fixture } from "@/tests/v7-fixture-graph";
 
 const PROJECT_ID = "merge-route-project";
 const RUN_ID = "merge-route-run";
@@ -30,6 +31,7 @@ let workspace: string;
 let executionRoot: string;
 let databasePath: string;
 let mergePoints: string[];
+let sourceThreadId: string;
 
 const operationId = (value: number) =>
   `00000000-0000-4000-8000-${String(value).padStart(12, "0")}`;
@@ -52,7 +54,7 @@ function seedEligibleTask(): void {
   const credential = createCredentialVault().encrypt("merge-route-provider", "test-secret");
   const database = openDatabase(databasePath);
   try {
-    database.exec(`
+    sourceThreadId = execV7Fixture(databasePath, database, `
       INSERT INTO projects (id,name,created_at,workspace_path,workspace_key,version)
       VALUES ('${PROJECT_ID}','Merge route','${NOW}','placeholder','placeholder',1);
       INSERT INTO providers (
@@ -145,7 +147,7 @@ function seedEligibleTask(): void {
       );
       INSERT INTO project_validation_policies (project_id,active_revision_id,version,updated_at)
       VALUES ('${PROJECT_ID}','merge-route-policy',1,'${NOW}');
-    `);
+    `).get(PROJECT_ID)!;
     database.prepare(
       "UPDATE projects SET workspace_path=?,workspace_key=? WHERE id=?",
     ).run(workspace, workspace.toLocaleLowerCase("en-US"), PROJECT_ID);
@@ -160,7 +162,11 @@ async function postStart(): Promise<Response> {
     new Request(`http://localhost/api/projects/${PROJECT_ID}/executions`, {
       body: JSON.stringify({
         operationId: operationId(1),
-        sourceCollaborationRunId: RUN_ID,
+        source: {
+          projectId: PROJECT_ID,
+          runId: RUN_ID,
+          threadId: sourceThreadId,
+        },
         workItemId: WORK_ITEM_ID,
       }),
       headers: { "content-type": "application/json" },

@@ -4,14 +4,14 @@ import { join } from "node:path";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
 import type { AgentTurn } from "@/src/server/collaboration/agent-turn-schema";
-import { appendProjectMessage } from "@/src/server/collaboration/run-service";
 import type { StructuredTurnResult } from "@/src/server/collaboration/structured-repair";
+import { writeOwnerThreadMessage } from "@/src/server/collaboration/thread-service";
 import {
   acquireAdvance,
   finalizeAdvance,
 } from "@/src/server/collaboration/turn-orchestrator";
 import { openDatabase } from "@/src/server/db";
-import { createMission } from "@/src/server/mission-service";
+import { seedV7AdvanceFixture } from "@/tests/v7-advance-fixture";
 
 const NOW = "2026-07-30T05:00:00.000Z";
 const PROJECT_ID = "project-owner-races";
@@ -19,9 +19,11 @@ const RUN_ID = "run-owner-races";
 const AGENT_A = "agent-owner-a";
 const AGENT_B = "agent-owner-b";
 const AGENT_C = "agent-owner-c";
+const MISSION_ID = "mission-owner-races";
 
 let databasePath: string;
 let directory: string;
+let threadId: string;
 let operationSequence: number;
 let uuidSequence: number;
 
@@ -91,7 +93,7 @@ function planReady(overrides: Partial<AgentTurn> = {}): AgentTurn {
 function acquire() {
   const acquired = acquireAdvance(
     databasePath,
-    RUN_ID,
+    { projectId: PROJECT_ID, runId: RUN_ID, threadId },
     { operationId: operationId() },
     dependencies(),
   );
@@ -103,7 +105,7 @@ function acquire() {
 function finalize(acquired: ReturnType<typeof acquire>, turn: AgentTurn) {
   return finalizeAdvance(
     databasePath,
-    RUN_ID,
+    { projectId: PROJECT_ID, runId: RUN_ID, threadId },
     {
       attemptId: acquired.attempt.id,
       leaseToken: acquired.attempt.leaseToken,
@@ -114,9 +116,9 @@ function finalize(acquired: ReturnType<typeof acquire>, turn: AgentTurn) {
 }
 
 function ownerMessage(content: string, mentionAgentId?: string) {
-  return appendProjectMessage(databasePath, PROJECT_ID, {
+  return writeOwnerThreadMessage(databasePath, PROJECT_ID, threadId, {
     content,
-    mentionAgentId,
+    ...(mentionAgentId === undefined ? {} : { mentionAgentId }),
     operationId: operationId(),
   }).body.message;
 }
@@ -175,61 +177,20 @@ beforeEach(() => {
   databasePath = join(directory, "cockpit.sqlite");
   operationSequence = 1_700;
   uuidSequence = 0;
-
-  const database = openDatabase(databasePath);
-  database
-    .prepare(
-      `INSERT INTO projects (
-         id, name, created_at, workspace_path, workspace_key, version
-       ) VALUES (?, 'Owner race project', ?, 'D:\\workspace', 'd:/workspace', 1)`,
-    )
-    .run(PROJECT_ID, NOW);
-  database.exec(`
-    INSERT INTO providers (
-      id, name, base_url, default_model, api_key_cipher, api_key_iv,
-      api_key_tag, credential_version, credential_generation, key_id,
-      api_key_mask, verified_at, version, created_at, updated_at
-    ) VALUES (
-      'provider-owner-races', 'Local', 'http://127.0.0.1:4000/v1', 'model',
-      'cipher', 'iv', 'tag', 1, 1, 'key', '***', '${NOW}', 1, '${NOW}', '${NOW}'
-    );
-    INSERT INTO agents (
-      id, name, role, system_prompt, provider_id, model, avatar_text,
-      accent_token, can_read, can_write, can_execute, max_tokens,
-      max_handoffs, version, created_at, updated_at
-    ) VALUES
-      (
-        '${AGENT_A}', 'Alpha', 'Planner', 'private-a', 'provider-owner-races',
-        'model', 'A', 'sage', 1, 1, 0, 10000, 10, 1, '${NOW}', '${NOW}'
-      ),
-      (
-        '${AGENT_B}', 'Beta', 'Reviewer', 'private-b', 'provider-owner-races',
-        'model', 'B', 'gold', 1, 1, 0, 10000, 10, 1, '${NOW}', '${NOW}'
-      ),
-      (
-        '${AGENT_C}', 'Gamma', 'Builder', 'private-c', 'provider-owner-races',
-        'model', 'C', 'sky', 1, 1, 0, 10000, 10, 1, '${NOW}', '${NOW}'
-      );
-    INSERT INTO project_memberships (project_id, agent_id, joined_at) VALUES
-      ('${PROJECT_ID}', '${AGENT_A}', 'a'),
-      ('${PROJECT_ID}', '${AGENT_B}', 'b'),
-      ('${PROJECT_ID}', '${AGENT_C}', 'c');
-    INSERT INTO collaboration_runs (
-      id, project_id, status, current_agent_id, round_count,
-      next_event_sequence, version, execution_epoch, pause_reason,
-      pause_category, created_at, updated_at
-    ) VALUES (
-      '${RUN_ID}', '${PROJECT_ID}', 'running', '${AGENT_A}', 0,
-      1, 1, 1, NULL, NULL, '${NOW}', '${NOW}'
-    );
-    INSERT INTO collaboration_project_sequences (
-      project_id, next_message_sequence
-    ) VALUES ('${PROJECT_ID}', 1);
-  `);
-  database.close();
-  createMission(databasePath, PROJECT_ID, {
-    goal: "Resolve owner messages without losing atomic model actions",
-    title: "Owner race mission",
+  threadId = seedV7AdvanceFixture(databasePath, {
+    additionalAgents: [{ id: AGENT_C, prompt: "private-c" }],
+    agentId: AGENT_A,
+    agentPrompt: "private-a",
+    missionId: MISSION_ID,
+    now: NOW,
+    ownerMessage: null,
+    projectId: PROJECT_ID,
+    projectName: "Owner race project",
+    providerId: "provider-owner-races",
+    runId: RUN_ID,
+    secondAgentId: AGENT_B,
+    secondAgentPrompt: "private-b",
+    threadCreateOperationId: "17000000-0000-4000-8000-000000000000",
   });
 });
 

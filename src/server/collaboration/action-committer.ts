@@ -5,10 +5,15 @@ import { CollaborationError } from "@/src/server/collaboration/collaboration-err
 import type { AgentTurn } from "@/src/server/collaboration/agent-turn-schema";
 import { collaborationPublicMessageWindow } from "@/src/server/collaboration/prompt-builder";
 import {
+  appendAgentMessageFactTx,
+  appendRunEventFactTx,
+} from "@/src/server/collaboration/thread-service";
+import {
   claimWorkItemTx,
   createWorkItemBatchTx,
   MissionError,
 } from "@/src/server/mission-service";
+import type { TimelineEventType } from "@/src/shared/collaboration-contracts";
 
 export type CommitAgentTaskActionsInput = {
   agentId: string;
@@ -31,6 +36,7 @@ type CommitContext = {
   includedMessageSequence: number;
   missionId: string;
   projectId: string;
+  threadId: string;
   roundCount: number;
 };
 
@@ -98,13 +104,15 @@ function commitContext(
 ): CommitContext {
   const row = database
     .prepare(
-      `SELECT runs.project_id AS projectId, runs.current_agent_id AS currentAgentId,
+      `SELECT runs.project_id AS projectId,runs.thread_id AS threadId,
+              runs.current_agent_id AS currentAgentId,
               runs.round_count AS roundCount, agents.name AS agentDisplayName,
               missions.id AS missionId,
               attempts.included_message_sequence AS includedMessageSequence
        FROM collaboration_runs AS runs
        JOIN collaboration_attempts AS attempts
-         ON attempts.id = ? AND attempts.run_id = runs.id
+         ON attempts.id=? AND attempts.project_id=runs.project_id
+        AND attempts.thread_id=runs.thread_id AND attempts.run_id=runs.id
        JOIN agents ON agents.id = runs.current_agent_id
        JOIN project_memberships AS memberships
          ON memberships.project_id = runs.project_id
@@ -121,6 +129,7 @@ function commitContext(
     includedMessageSequence: row.includedMessageSequence,
     missionId: row.missionId,
     projectId: row.projectId,
+    threadId: row.threadId,
     roundCount: row.roundCount,
   };
 }
@@ -128,7 +137,6 @@ function commitContext(
 function reconcilePendingOwnerMessages(
   database: DatabaseSync,
   context: CommitContext,
-  runId: string,
 ): OwnerRaceReconciliation {
   const row = database
     .prepare(
@@ -136,13 +144,13 @@ function reconcilePendingOwnerMessages(
          EXISTS(
            SELECT 1
            FROM collaboration_messages
-           WHERE project_id = ? AND run_id = ? AND author_type = 'owner'
+           WHERE project_id=? AND thread_id=? AND author_type='owner'
              AND consumed_at IS NULL AND sequence > ?
          ) AS hasPendingMessages,
          (
            SELECT mention_agent_id
            FROM collaboration_messages
-           WHERE project_id = ? AND run_id = ? AND author_type = 'owner'
+           WHERE project_id=? AND thread_id=? AND author_type='owner'
              AND consumed_at IS NULL AND sequence > ?
              AND mention_agent_id IS NOT NULL
            ORDER BY sequence DESC
@@ -151,10 +159,10 @@ function reconcilePendingOwnerMessages(
     )
     .get(
       context.projectId,
-      runId,
+      context.threadId,
       context.includedMessageSequence,
       context.projectId,
-      runId,
+      context.threadId,
       context.includedMessageSequence,
     ) as { hasPendingMessages: number; latestMentionAgentId: string | null };
   return {
@@ -172,6 +180,7 @@ function consumeIncludedOwnerMessages(
     database,
     context.projectId,
     context.includedMessageSequence,
+    context.threadId,
   )
     .filter(({ authorType }) => authorType === "owner")
     .map(({ id }) => id);
@@ -188,8 +197,9 @@ function consumeIncludedOwnerMessages(
 
 function appendEvent(
   database: DatabaseSync,
+  context: Pick<CommitContext, "projectId" | "threadId">,
   runId: string,
-  type: string,
+  type: TimelineEventType,
   actorType: "agent" | "system",
   actorId: string | null,
   payload: Record<string, unknown>,
@@ -199,18 +209,23 @@ function appendEvent(
     database
       .prepare(
         `SELECT next_event_sequence AS sequence
-         FROM collaboration_runs WHERE id = ?`,
+         FROM collaboration_runs
+         WHERE project_id=? AND thread_id=? AND id=?`,
       )
-      .get(runId) as { sequence: number }
+      .get(context.projectId, context.threadId, runId) as { sequence: number }
   ).sequence;
+  const eventId = randomUUID();
   database
     .prepare(
       `INSERT INTO collaboration_events (
-         id, run_id, sequence, type, actor_type, actor_id, payload_json, created_at
-       ) VALUES (?, ?, ?, ?, ?, ?, ?, ?)`,
+         id,project_id,thread_id,run_id,sequence,type,actor_type,actor_id,
+         payload_json,created_at
+       ) VALUES (?,?,?,?,?,?,?,?,?,?)`,
     )
     .run(
-      randomUUID(),
+      eventId,
+      context.projectId,
+      context.threadId,
       runId,
       sequence,
       type,
@@ -223,10 +238,21 @@ function appendEvent(
     .prepare(
       `UPDATE collaboration_runs
        SET next_event_sequence = next_event_sequence + 1, updated_at = ?
-       WHERE id = ? AND next_event_sequence = ?`,
+       WHERE project_id=? AND thread_id=? AND id=? AND next_event_sequence=?`,
     )
-    .run(timestamp, runId, sequence);
+    .run(timestamp, context.projectId, context.threadId, runId, sequence);
   if (updated.changes !== 1) throw actionConflict();
+  appendRunEventFactTx(database, {
+    actorId,
+    actorType,
+    eventId,
+    eventType: type,
+    factId: randomUUID(),
+    projectId: context.projectId,
+    runId,
+    threadId: context.threadId,
+    timestamp,
+  });
 }
 
 function validateHandoff(
@@ -324,27 +350,31 @@ function validateDecision(input: CommitAgentTaskActionsInput): void {
   }
 }
 
-function nextMessageSequence(database: DatabaseSync, projectId: string): number {
+function nextMessageSequence(
+  database: DatabaseSync,
+  projectId: string,
+  threadId: string,
+): number {
   database
     .prepare(
       `INSERT OR IGNORE INTO collaboration_project_sequences (
-         project_id, next_message_sequence
-       ) VALUES (?, 1)`,
+         project_id,thread_id,next_message_sequence
+       ) VALUES (?,?,1)`,
     )
-    .run(projectId);
+    .run(projectId, threadId);
   const row = database
     .prepare(
       `SELECT next_message_sequence AS sequence
-       FROM collaboration_project_sequences WHERE project_id = ?`,
+       FROM collaboration_project_sequences WHERE project_id=? AND thread_id=?`,
     )
-    .get(projectId) as { sequence: number };
+    .get(projectId, threadId) as { sequence: number };
   const updated = database
     .prepare(
       `UPDATE collaboration_project_sequences
        SET next_message_sequence = next_message_sequence + 1
-       WHERE project_id = ? AND next_message_sequence = ?`,
+       WHERE project_id=? AND thread_id=? AND next_message_sequence=?`,
     )
-    .run(projectId, row.sequence);
+    .run(projectId, threadId, row.sequence);
   if (updated.changes !== 1) throw actionConflict();
   return row.sequence;
 }
@@ -371,7 +401,7 @@ export function commitAgentTaskActionsTx(
   input: CommitAgentTaskActionsInput,
 ): CommitAgentTaskActionsResult {
   const context = commitContext(database, input.runId, input.agentId, input.attemptId);
-  const ownerRace = reconcilePendingOwnerMessages(database, context, input.runId);
+  const ownerRace = reconcilePendingOwnerMessages(database, context);
   const handoffTargetAgentId =
     input.turn.disposition.type === "handoff"
       ? ownerRace.latestMentionAgentId ?? input.turn.disposition.targetAgentId
@@ -412,18 +442,23 @@ export function commitAgentTaskActionsTx(
     );
     const messageId = randomUUID();
     const turnId = randomUUID();
-    const messageSequence = nextMessageSequence(database, context.projectId);
+    const messageSequence = nextMessageSequence(
+      database,
+      context.projectId,
+      context.threadId,
+    );
     database
       .prepare(
         `INSERT INTO collaboration_messages (
-           id, project_id, run_id, author_type, author_agent_id,
+           id,project_id,thread_id,run_id,author_type,author_agent_id,
            author_display_name, content, mention_agent_id, mention_display_name,
            sequence, consumed_at, created_at
-         ) VALUES (?, ?, ?, 'agent', ?, ?, ?, NULL, NULL, ?, NULL, ?)`,
+         ) VALUES (?,?,?,?,'agent',?,?,?,NULL,NULL,?,NULL,?)`,
       )
       .run(
         messageId,
         context.projectId,
+        context.threadId,
         input.runId,
         input.agentId,
         context.agentDisplayName,
@@ -431,6 +466,15 @@ export function commitAgentTaskActionsTx(
         messageSequence,
         input.timestamp,
       );
+    appendAgentMessageFactTx(database, {
+      agentId: input.agentId,
+      factId: randomUUID(),
+      messageId,
+      projectId: context.projectId,
+      runId: input.runId,
+      threadId: context.threadId,
+      timestamp: input.timestamp,
+    });
 
     let claimedWorkItemId: string | null = null;
     if (input.turn.claim) {
@@ -449,12 +493,14 @@ export function commitAgentTaskActionsTx(
     database
       .prepare(
         `INSERT INTO collaboration_turns (
-           id, attempt_id, run_id, agent_id, round_number,
+           id,project_id,thread_id,attempt_id,run_id,agent_id,round_number,
            message_id, disposition, created_at
-         ) VALUES (?, ?, ?, ?, ?, ?, ?, ?)`,
+         ) VALUES (?,?,?,?,?,?,?,?,?,?)`,
       )
       .run(
         turnId,
+        context.projectId,
+        context.threadId,
         input.attemptId,
         input.runId,
         input.agentId,
@@ -465,6 +511,7 @@ export function commitAgentTaskActionsTx(
       );
     appendEvent(
       database,
+      context,
       input.runId,
       "agent_message",
       "agent",
@@ -481,6 +528,7 @@ export function commitAgentTaskActionsTx(
     if (input.turn.tasks.length > 0) {
       appendEvent(
         database,
+        context,
         input.runId,
         "tasks_created",
         "agent",
@@ -499,6 +547,7 @@ export function commitAgentTaskActionsTx(
     if (claimedWorkItemId) {
       appendEvent(
         database,
+        context,
         input.runId,
         "task_claimed",
         "agent",
@@ -511,6 +560,7 @@ export function commitAgentTaskActionsTx(
       const disposition = input.turn.disposition;
       appendEvent(
         database,
+        context,
         input.runId,
         "handoff",
         "agent",
@@ -539,12 +589,15 @@ export function commitAgentTaskActionsTx(
       database
         .prepare(
           `INSERT INTO decision_requests (
-             id, run_id, turn_id, requesting_agent_id, question, options_json,
+             id,project_id,thread_id,run_id,turn_id,requesting_agent_id,
+             question,options_json,
              status, answer, answer_message_id, version, created_at, answered_at
-           ) VALUES (?, ?, ?, ?, ?, ?, 'open', NULL, NULL, 1, ?, NULL)`,
+           ) VALUES (?,?,?,?,?,?,?,?,'open',NULL,NULL,1,?,NULL)`,
         )
         .run(
           decisionId,
+          context.projectId,
+          context.threadId,
           input.runId,
           turnId,
           input.agentId,
@@ -554,6 +607,7 @@ export function commitAgentTaskActionsTx(
         );
       appendEvent(
         database,
+        context,
         input.runId,
         "decision_requested",
         "agent",
@@ -580,6 +634,7 @@ export function commitAgentTaskActionsTx(
       if (!ownerRace.hasPendingMessages) {
         appendEvent(
           database,
+          context,
           input.runId,
           "run_planned",
           "agent",

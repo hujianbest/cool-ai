@@ -3,6 +3,8 @@ import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { afterEach, beforeEach, describe, expect, it } from "vitest";
 
+import { createThread } from "@/src/server/collaboration/thread-service";
+import { createCredentialVault } from "@/src/server/credential-vault";
 import { createV6FixtureDatabaseOpener } from "@/tests/v6-fixture-db";
 
 const openDatabase = createV6FixtureDatabaseOpener({
@@ -13,20 +15,23 @@ const openDatabase = createV6FixtureDatabaseOpener({
 type Route = {
   POST(
     request: Request,
-    context: { params: Promise<{ projectId: string }> },
+    context: { params: Promise<{ projectId: string; threadId: string }> },
   ): Promise<Response>;
 };
 
 const routeModules = import.meta.glob<Route>([
-  "../app/api/projects/[projectId]/messages/route.ts",
-  "../app/api/projects/[projectId]/runs/route.ts",
+  "../app/api/projects/[projectId]/threads/[threadId]/messages/route.ts",
+  "../app/api/projects/[projectId]/threads/[threadId]/runs/route.ts",
 ]);
 
 let directory: string;
 let databasePath: string;
+let threadId: string;
+const MASTER_KEY = Buffer.alloc(32, 38).toString("base64url");
 
 async function route(path: "messages" | "runs"): Promise<Route> {
-  const key = `../app/api/projects/[projectId]/${path}/route.ts`;
+  const key =
+    `../app/api/projects/[projectId]/threads/[threadId]/${path}/route.ts`;
   const load = routeModules[key];
   expect(load, `${path} route must exist`).toBeTypeOf("function");
   return load();
@@ -34,6 +39,7 @@ async function route(path: "messages" | "runs"): Promise<Route> {
 
 function seedReadyProject(): void {
   const database = openDatabase(databasePath);
+  const credential = createCredentialVault().encrypt("provider-1", "fixture-key");
   try {
     database.exec(`
       INSERT INTO projects (
@@ -48,7 +54,9 @@ function seedReadyProject(): void {
         api_key_mask, verified_at, version, created_at, updated_at
       ) VALUES (
         'provider-1', 'Local', 'http://127.0.0.1:4000/v1', 'model',
-        'cipher', 'iv', 'tag', 1, 1, 'key-1', '***',
+        '${credential.apiKeyCipher}', '${credential.apiKeyIv}',
+        '${credential.apiKeyTag}', ${credential.credentialVersion}, 1,
+        '${credential.keyId}', '${credential.apiKeyMask}',
         '2026-07-30T00:00:00.000Z', 1,
         '2026-07-30T00:00:00.000Z', '2026-07-30T00:00:00.000Z'
       );
@@ -79,6 +87,11 @@ function seedReadyProject(): void {
   } finally {
     database.close();
   }
+  threadId = createThread(databasePath, "project-1", {
+    memberAgentIds: ["agent-a", "agent-b"],
+    operationId: "00000000-0000-4000-8000-000000000309",
+    title: "Project chat",
+  }).body.thread.id;
 }
 
 async function post(
@@ -86,12 +99,15 @@ async function post(
   body: Record<string, unknown>,
 ): Promise<Response> {
   return (await route(path)).POST(
-    new Request(`http://localhost/api/projects/project-1/${path}`, {
+    new Request(
+      `http://localhost/api/projects/project-1/threads/${threadId}/${path}`,
+      {
       body: JSON.stringify(body),
       headers: { "content-type": "application/json" },
       method: "POST",
-    }),
-    { params: Promise.resolve({ projectId: "project-1" }) },
+      },
+    ),
+    { params: Promise.resolve({ projectId: "project-1", threadId }) },
   );
 }
 
@@ -107,10 +123,12 @@ beforeEach(() => {
   directory = mkdtempSync(join(tmpdir(), "project-chat-api-"));
   databasePath = join(directory, "cockpit.sqlite");
   process.env.COCKPIT_DB_PATH = databasePath;
+  process.env.COCKPIT_MASTER_KEY = MASTER_KEY;
 });
 
 afterEach(() => {
   delete process.env.COCKPIT_DB_PATH;
+  delete process.env.COCKPIT_MASTER_KEY;
   rmSync(directory, { force: true, recursive: true });
 });
 
@@ -126,7 +144,6 @@ describe("project chat API terminal semantics", () => {
     expect(response.status).toBe(201);
     await expect(response.json()).resolves.toMatchObject({
       message: { content: "A note before collaboration", runId: null, sequence: 1 },
-      run: null,
     });
     const database = openDatabase(databasePath);
     try {
@@ -155,9 +172,16 @@ describe("project chat API terminal semantics", () => {
     expect(replay.status).toBe(first.status);
     expect(await replay.json()).toEqual(firstBody);
     expect(firstBody).toMatchObject({
-      message: { mentionAgentId: "agent-b", runId: started.run.id, sequence: 2 },
-      run: { id: started.run.id, status: "running" },
+      message: { mentionAgentId: "agent-b", runId: null, sequence: 2 },
     });
+    const database = openDatabase(databasePath);
+    try {
+      expect(database.prepare(
+        "SELECT status FROM collaboration_runs WHERE id=?",
+      ).get(started.run.id)).toEqual({ status: "running" });
+    } finally {
+      database.close();
+    }
   });
 
   it("rejects a reused project-message operation id with different content", async () => {
@@ -201,7 +225,6 @@ describe("project chat API terminal semantics", () => {
       expect(response.status).toBe(201);
       await expect(response.json()).resolves.toMatchObject({
         message: { runId: null },
-        run: null,
       });
       const check = openDatabase(databasePath);
       try {

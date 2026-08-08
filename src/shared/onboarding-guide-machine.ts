@@ -130,12 +130,13 @@ const WORK_ITEM_KEYS = new Set([
 ]);
 const WORK_ITEM_STATUSES = new Set(["todo", "in_progress", "blocked", "done"]);
 const COLLABORATION_ENVELOPE_KEYS = new Set([
-  "pendingDecision",
-  "projectMessagesPage",
+  "activeRun",
+  "factsPage",
+  "messagesPage",
   "readiness",
-  "run",
-  "timelinePage",
-  "usage",
+  "runs",
+  "selectedRun",
+  "thread",
 ]);
 const RUN_KEYS = new Set([
   "createdAt",
@@ -145,6 +146,7 @@ const RUN_KEYS = new Set([
   "projectId",
   "roundCount",
   "status",
+  "threadId",
   "updatedAt",
   "version",
 ]);
@@ -166,50 +168,76 @@ const MESSAGE_KEYS = new Set([
   "mentionAgentId",
   "mentionDisplayName",
   "mentionMemberStatus",
+  "projectId",
   "runId",
   "sequence",
+  "threadId",
 ]);
-const TIMELINE_EVENT_KEYS = new Set([
+const THREAD_KEYS = new Set([
+  "availability",
+  "createdAt",
+  "id",
+  "lastActivitySequence",
+  "policy",
+  "policyVersion",
+  "projectId",
+  "title",
+  "updatedAt",
+  "version",
+]);
+const POLICY_KEYS = new Set([
+  "availability",
+  "createdAt",
+  "members",
+  "revisionId",
+  "unavailableMemberIds",
+  "version",
+]);
+const POLICY_MEMBER_KEYS = new Set([
+  "agentId",
+  "displayNameSnapshot",
+  "live",
+  "position",
+]);
+const ACTIVE_RUN_KEYS = new Set(["runId", "threadId"]);
+const THREAD_READINESS_KEYS = new Set([
+  "dispatch",
+  "missingProjectFacts",
+  "selectedMemberId",
+]);
+const FACT_KEYS = new Set([
+  "activitySequence",
   "actorId",
   "actorType",
   "createdAt",
   "id",
+  "message",
+  "messageId",
   "payload",
+  "policyRevisionId",
+  "projectId",
+  "runEventId",
   "runId",
   "sequence",
+  "threadId",
   "type",
 ]);
 const CURSOR_PAGE_KEYS = new Set(["items", "nextAfter"]);
-const DECISION_KEYS = new Set([
-  "answer",
-  "answerMessageId",
-  "answeredAt",
-  "createdAt",
-  "id",
-  "options",
-  "question",
-  "requestingAgentId",
-  "runId",
-  "status",
-  "turnId",
-  "version",
+const FACT_TYPES = new Set([
+  "thread_created",
+  "policy_changed",
+  "owner_message",
+  "agent_message",
+  "run_linked",
+  "run_event",
 ]);
-const USAGE_KEYS = new Set([
-  "byAgent",
-  "completionTokens",
-  "promptTokens",
-  "repairCalls",
-  "totalTokens",
-  "unreportedCalls",
+const DISPATCH_READINESS = new Set([
+  "ready",
+  "project_context_not_ready",
+  "policy_repair_required",
+  "selected_member_provider_unavailable",
+  "project_run_active",
 ]);
-const AGENT_USAGE_KEYS = new Set([
-  "agentId",
-  "completionTokens",
-  "handoffs",
-  "promptTokens",
-  "totalTokens",
-]);
-const READINESS_KEYS = new Set(["missing", "ready"]);
 
 function isRecord(value: unknown): value is Record<string, unknown> {
   return Boolean(value) && typeof value === "object" && !Array.isArray(value);
@@ -245,11 +273,7 @@ function isNullableId(value: unknown): value is string | null {
 
 function isProjectId(value: unknown): value is string {
   return typeof value === "string" &&
-    value.length > 0 &&
-    value !== "." &&
-    value !== ".." &&
-    !value.includes("/") &&
-    !value.includes("\\");
+    /^[A-Za-z0-9][A-Za-z0-9:_-]{0,199}$/.test(value);
 }
 
 function parseProject(value: unknown): GuideProject | null {
@@ -487,23 +511,30 @@ export function parseMissionGuideEnvelope(
 type ParsedCollaborationRun = {
   id: string;
   projectId: string;
+  threadId: string;
 };
 
 type ParsedProjectMessage = {
   authorAgentId: string | null;
   authorType: "owner" | "agent";
+  content: string;
   id: string;
   mentionAgentId: string | null;
   mentionDisplayName: string | null;
   mentionMemberStatus: "current" | "left" | null;
+  projectId: string;
   runId: string | null;
   sequence: number;
+  threadId: string;
 };
 
-type ParsedTimelineEvent = {
+type ParsedThreadFact = {
+  eventType: string | null;
   id: string;
-  payload: Record<string, unknown>;
-  runId: string;
+  message: ParsedProjectMessage | null;
+  messageId: string | null;
+  runEventId: string | null;
+  runId: string | null;
   sequence: number;
   type: string;
 };
@@ -511,11 +542,13 @@ type ParsedTimelineEvent = {
 function parseCollaborationRun(
   value: unknown,
   expectedProjectId: string,
+  expectedThreadId: string,
 ): ParsedCollaborationRun | null {
   if (!isRecord(value) || !hasExactKeys(value, RUN_KEYS)) return null;
   if (
     !isNonEmptyString(value.id) ||
     value.projectId !== expectedProjectId ||
+    value.threadId !== expectedThreadId ||
     !RUN_STATUSES.has(String(value.status)) ||
     !isNonEmptyString(value.currentAgentId) ||
     !isSafeInteger(value.roundCount) ||
@@ -526,14 +559,24 @@ function parseCollaborationRun(
   ) {
     return null;
   }
-  return { id: value.id, projectId: value.projectId };
+  return {
+    id: value.id,
+    projectId: value.projectId,
+    threadId: value.threadId,
+  };
 }
 
-function parseProjectMessage(value: unknown): ParsedProjectMessage | null {
+function parseProjectMessage(
+  value: unknown,
+  expectedProjectId: string,
+  expectedThreadId: string,
+): ParsedProjectMessage | null {
   if (!isRecord(value) || !hasExactKeys(value, MESSAGE_KEYS)) return null;
   if (
     !isNonEmptyString(value.id) ||
-    !isSafeInteger(value.sequence) ||
+    value.projectId !== expectedProjectId ||
+    value.threadId !== expectedThreadId ||
+    !isSafeInteger(value.sequence, 1) ||
     !isNullableId(value.runId) ||
     (value.authorType !== "owner" && value.authorType !== "agent") ||
     !isNullableId(value.authorAgentId) ||
@@ -570,29 +613,161 @@ function parseProjectMessage(value: unknown): ParsedProjectMessage | null {
   return value as ParsedProjectMessage;
 }
 
-function parseTimelineEvent(value: unknown): ParsedTimelineEvent | null {
-  if (!isRecord(value) || !hasExactKeys(value, TIMELINE_EVENT_KEYS)) return null;
+function validPolicy(value: unknown): boolean {
+  if (!isRecord(value) || !hasExactKeys(value, POLICY_KEYS)) return false;
+  if (
+    !isNonEmptyString(value.revisionId) ||
+    !isSafeInteger(value.version, 1) ||
+    (value.availability !== "ready" && value.availability !== "repair_required") ||
+    !Array.isArray(value.members) ||
+    !Array.isArray(value.unavailableMemberIds) ||
+    !value.unavailableMemberIds.every(isNonEmptyString) ||
+    new Set(value.unavailableMemberIds).size !== value.unavailableMemberIds.length ||
+    !isTimestamp(value.createdAt)
+  ) {
+    return false;
+  }
+  const agentIds = new Set<string>();
+  const positions = new Set<number>();
+  for (const member of value.members) {
+    if (
+      !isRecord(member) ||
+      !hasExactKeys(member, POLICY_MEMBER_KEYS) ||
+      !isNonEmptyString(member.agentId) ||
+      agentIds.has(member.agentId) ||
+      !isNonEmptyString(member.displayNameSnapshot) ||
+      !isSafeInteger(member.position) ||
+      positions.has(member.position) ||
+      (member.live !== "current" && member.live !== "removed")
+    ) {
+      return false;
+    }
+    agentIds.add(member.agentId);
+    positions.add(member.position);
+  }
+  return [...positions].sort((left, right) => left - right)
+    .every((position, index) => position === index) &&
+    value.unavailableMemberIds.every((id) => agentIds.has(id));
+}
+
+function validThread(
+  value: unknown,
+  expectedProjectId: string,
+  expectedThreadId: string,
+): boolean {
+  if (!isRecord(value) || !hasExactKeys(value, THREAD_KEYS)) return false;
+  return (
+    value.id === expectedThreadId &&
+    value.projectId === expectedProjectId &&
+    isNonEmptyString(value.title) &&
+    isSafeInteger(value.policyVersion, 1) &&
+    (value.availability === "ready" || value.availability === "repair_required") &&
+    isSafeInteger(value.lastActivitySequence, 1) &&
+    isSafeInteger(value.version, 1) &&
+    isTimestamp(value.createdAt) &&
+    isTimestamp(value.updatedAt) &&
+    validPolicy(value.policy) &&
+    isRecord(value.policy) &&
+    value.policy.version === value.policyVersion &&
+    value.policy.availability === value.availability
+  );
+}
+
+function parseThreadFact(
+  value: unknown,
+  expectedProjectId: string,
+  expectedThreadId: string,
+): ParsedThreadFact | null {
+  if (!isRecord(value) || !hasExactKeys(value, FACT_KEYS)) return null;
   if (
     !isNonEmptyString(value.id) ||
-    !isNonEmptyString(value.runId) ||
-    !isSafeInteger(value.sequence) ||
-    !isNonEmptyString(value.type) ||
+    value.projectId !== expectedProjectId ||
+    value.threadId !== expectedThreadId ||
+    !isSafeInteger(value.sequence, 1) ||
+    !isSafeInteger(value.activitySequence, 1) ||
+    !FACT_TYPES.has(String(value.type)) ||
     !["owner", "agent", "system"].includes(String(value.actorType)) ||
     !isNullableId(value.actorId) ||
+    !isNullableId(value.runId) ||
+    !isNullableId(value.messageId) ||
+    !isNullableId(value.runEventId) ||
+    !isNullableId(value.policyRevisionId) ||
     !isTimestamp(value.createdAt)
   ) {
     return null;
   }
-  const schema = (
-    timelinePayloadSchemas as Record<
-      string,
-      { safeParse: (candidate: unknown) => { success: boolean } }
-    >
-  )[value.type];
-  if (!schema || !schema.safeParse(value.payload).success || !isRecord(value.payload)) {
-    return null;
+  if (!isRecord(value.payload)) return null;
+  const type = String(value.type);
+  let message: ParsedProjectMessage | null = null;
+  if (type === "thread_created") {
+    if (
+      value.runId !== null ||
+      value.messageId !== null ||
+      value.runEventId !== null ||
+      value.policyRevisionId !== null ||
+      value.message !== null ||
+      !hasExactKeys(value.payload, new Set(["title"])) ||
+      !isNonEmptyString(value.payload.title)
+    ) return null;
+  } else if (type === "policy_changed") {
+    if (
+      value.runId !== null ||
+      value.messageId !== null ||
+      value.runEventId !== null ||
+      !isNonEmptyString(value.policyRevisionId) ||
+      value.message !== null ||
+      !hasExactKeys(value.payload, new Set(["policyVersion"])) ||
+      !isSafeInteger(value.payload.policyVersion, 1)
+    ) return null;
+  } else if (type === "owner_message" || type === "agent_message") {
+    message = parseProjectMessage(
+      value.message,
+      expectedProjectId,
+      expectedThreadId,
+    );
+    if (
+      !message ||
+      !isNonEmptyString(value.messageId) ||
+      value.runEventId !== null ||
+      value.policyRevisionId !== null ||
+      !hasExactKeys(value.payload, new Set(["messageId"])) ||
+      value.payload.messageId !== value.messageId ||
+      message.id !== value.messageId ||
+      message.runId !== value.runId ||
+      message.authorType !== (type === "owner_message" ? "owner" : "agent")
+    ) return null;
+  } else if (type === "run_linked") {
+    if (
+      !isNonEmptyString(value.runId) ||
+      value.messageId !== null ||
+      value.runEventId !== null ||
+      value.policyRevisionId !== null ||
+      value.message !== null ||
+      !hasExactKeys(value.payload, new Set(["runId"])) ||
+      value.payload.runId !== value.runId
+    ) return null;
+  } else {
+    if (
+      !isNonEmptyString(value.runId) ||
+      value.messageId !== null ||
+      !isNonEmptyString(value.runEventId) ||
+      value.policyRevisionId !== null ||
+      value.message !== null ||
+      !hasExactKeys(value.payload, new Set(["eventType"])) ||
+      !isNonEmptyString(value.payload.eventType) ||
+      !Object.hasOwn(timelinePayloadSchemas, value.payload.eventType)
+    ) return null;
   }
-  return value as ParsedTimelineEvent;
+  return {
+    eventType: type === "run_event" ? String(value.payload.eventType) : null,
+    id: value.id,
+    message,
+    messageId: value.messageId,
+    runEventId: value.runEventId,
+    runId: value.runId,
+    sequence: value.sequence,
+    type,
+  };
 }
 
 function parseCursorPage<T>(
@@ -611,110 +786,74 @@ function parseCursorPage<T>(
   return { items: items as T[], nextAfter: value.nextAfter as number | null };
 }
 
-function validPendingDecision(value: unknown, runId: string | null): boolean {
-  if (value === null) return true;
-  if (!runId || !isRecord(value) || !hasExactKeys(value, DECISION_KEYS)) {
-    return false;
-  }
-  return (
-    isNonEmptyString(value.id) &&
-    value.runId === runId &&
-    isNonEmptyString(value.turnId) &&
-    isNonEmptyString(value.requestingAgentId) &&
-    isNonEmptyString(value.question) &&
-    Array.isArray(value.options) &&
-    value.options.length >= 2 &&
-    value.options.every(isNonEmptyString) &&
-    new Set(value.options).size === value.options.length &&
-    value.status === "open" &&
-    value.answer === null &&
-    value.answerMessageId === null &&
-    isSafeInteger(value.version, 1) &&
-    isTimestamp(value.createdAt) &&
-    value.answeredAt === null
-  );
-}
-
-function validUsage(value: unknown): boolean {
-  if (!isRecord(value) || !hasExactKeys(value, USAGE_KEYS)) return false;
-  const numericKeys = [
-    "completionTokens",
-    "promptTokens",
-    "repairCalls",
-    "totalTokens",
-    "unreportedCalls",
-  ] as const;
-  if (
-    numericKeys.some((key) => !isSafeInteger(value[key])) ||
-    !Array.isArray(value.byAgent)
-  ) {
-    return false;
-  }
-  const overallPromptTokens = value.promptTokens as number;
-  const overallCompletionTokens = value.completionTokens as number;
-  const overallTotalTokens = value.totalTokens as number;
-  const agentIds = new Set<string>();
-  let promptTokens = 0;
-  let completionTokens = 0;
-  let totalTokens = 0;
-  for (const candidate of value.byAgent) {
-    if (
-      !isRecord(candidate) ||
-      !hasExactKeys(candidate, AGENT_USAGE_KEYS) ||
-      !isNonEmptyString(candidate.agentId) ||
-      agentIds.has(candidate.agentId) ||
-      !isSafeInteger(candidate.promptTokens) ||
-      !isSafeInteger(candidate.completionTokens) ||
-      !isSafeInteger(candidate.totalTokens) ||
-      !isSafeInteger(candidate.handoffs) ||
-      candidate.totalTokens !== candidate.promptTokens + candidate.completionTokens
-    ) {
-      return false;
-    }
-    agentIds.add(candidate.agentId);
-    promptTokens += candidate.promptTokens;
-    completionTokens += candidate.completionTokens;
-    totalTokens += candidate.totalTokens;
-  }
-  return (
-    overallTotalTokens === overallPromptTokens + overallCompletionTokens &&
-    overallPromptTokens === promptTokens &&
-    overallCompletionTokens === completionTokens &&
-    overallTotalTokens === totalTokens
-  );
-}
-
 function validReadiness(value: unknown): boolean {
-  if (!isRecord(value) || !hasExactKeys(value, READINESS_KEYS)) return false;
+  if (!isRecord(value) || !hasExactKeys(value, THREAD_READINESS_KEYS)) return false;
   return (
-    typeof value.ready === "boolean" &&
-    Array.isArray(value.missing) &&
-    value.missing.every(isNonEmptyString) &&
-    new Set(value.missing).size === value.missing.length &&
-    value.ready === (value.missing.length === 0)
+    DISPATCH_READINESS.has(String(value.dispatch)) &&
+    Array.isArray(value.missingProjectFacts) &&
+    value.missingProjectFacts.every(isNonEmptyString) &&
+    new Set(value.missingProjectFacts).size === value.missingProjectFacts.length &&
+    isNullableId(value.selectedMemberId)
   );
 }
 
 export function parseCollaborationGuideEnvelope(
   value: unknown,
   expectedProjectId: string,
+  expectedThreadId: string,
+  expectedRunId: string | null,
 ): CollaborationGuideEnvelope {
   if (!isRecord(value) || !hasExactKeys(value, COLLABORATION_ENVELOPE_KEYS)) {
     return { kind: "invalid" };
   }
-  const run =
-    value.run === null
-      ? null
-      : parseCollaborationRun(value.run, expectedProjectId);
-  if (value.run !== null && !run) return { kind: "invalid" };
-  const messagesPage = parseCursorPage(value.projectMessagesPage, parseProjectMessage);
-  const timelinePage = parseCursorPage(value.timelinePage, parseTimelineEvent);
+  if (
+    !validThread(value.thread, expectedProjectId, expectedThreadId) ||
+    !Array.isArray(value.runs) ||
+    !validReadiness(value.readiness)
+  ) return { kind: "invalid" };
+  const runs = value.runs.map((run) =>
+    parseCollaborationRun(run, expectedProjectId, expectedThreadId)
+  );
+  if (
+    runs.some((run) => run === null) ||
+    new Set(runs.map((run) => run?.id)).size !== runs.length
+  ) return { kind: "invalid" };
+  const runIds = new Set((runs as ParsedCollaborationRun[]).map((run) => run.id));
+  const selectedRun = value.selectedRun === null
+    ? null
+    : parseCollaborationRun(value.selectedRun, expectedProjectId, expectedThreadId);
+  if (
+    (value.selectedRun !== null && !selectedRun) ||
+    (selectedRun?.id ?? null) !== expectedRunId ||
+    (selectedRun && !runIds.has(selectedRun.id))
+  ) return { kind: "invalid" };
+  if (selectedRun) {
+    const rawRun = (value.runs as unknown[]).find(
+      (candidate) => isRecord(candidate) && candidate.id === selectedRun.id,
+    );
+    if (JSON.stringify(rawRun) !== JSON.stringify(value.selectedRun)) {
+      return { kind: "invalid" };
+    }
+  }
+  if (value.activeRun !== null) {
+    if (
+      !isRecord(value.activeRun) ||
+      !hasExactKeys(value.activeRun, ACTIVE_RUN_KEYS) ||
+      !isNonEmptyString(value.activeRun.threadId) ||
+      !isNonEmptyString(value.activeRun.runId) ||
+      (value.activeRun.threadId === expectedThreadId &&
+        !runIds.has(value.activeRun.runId))
+    ) return { kind: "invalid" };
+  }
+  const messagesPage = parseCursorPage(value.messagesPage, (message) =>
+    parseProjectMessage(message, expectedProjectId, expectedThreadId)
+  );
+  const factsPage = parseCursorPage(value.factsPage, (fact) =>
+    parseThreadFact(fact, expectedProjectId, expectedThreadId)
+  );
   if (
     !messagesPage ||
-    !timelinePage ||
-    !validPendingDecision(value.pendingDecision, run?.id ?? null) ||
-    !validUsage(value.usage) ||
-    !validReadiness(value.readiness)
+    !factsPage
   ) {
     return { kind: "invalid" };
   }
@@ -723,60 +862,49 @@ export function parseCollaborationGuideEnvelope(
       messagesPage.items.length ||
     new Set(messagesPage.items.map((message) => message.sequence)).size !==
       messagesPage.items.length ||
-    new Set(timelinePage.items.map((event) => event.id)).size !==
-      timelinePage.items.length ||
-    new Set(timelinePage.items.map((event) => event.sequence)).size !==
-      timelinePage.items.length
+    new Set(factsPage.items.map((fact) => fact.id)).size !== factsPage.items.length ||
+    new Set(factsPage.items.map((fact) => fact.sequence)).size !== factsPage.items.length
   ) {
     return { kind: "invalid" };
-  }
-  if (!run) {
-    return timelinePage.items.length === 0 &&
-      messagesPage.items.every((message) => message.runId === null) &&
-      value.pendingDecision === null
-      ? { kind: "empty" }
-      : { kind: "invalid" };
   }
   if (
     messagesPage.items.some(
-      (message) => message.runId !== null && message.runId !== run.id,
+      (message) => message.runId !== null && !runIds.has(message.runId),
     ) ||
-    timelinePage.items.some((event) => event.runId !== run.id)
+    factsPage.items.some(
+      (fact) => fact.runId !== null && !runIds.has(fact.runId),
+    )
   ) {
     return { kind: "invalid" };
   }
-
-  const messagesById = new Map(
-    messagesPage.items.map((message) => [message.id, message]),
-  );
-  const linkedOwnerMessageIds = new Set<string>();
-  let runStartedCount = 0;
-  for (const event of timelinePage.items) {
-    if (event.type !== "run_started" && event.type !== "owner_message") continue;
-    const messageId = event.payload.messageId;
-    const messageSequence = event.payload.messageSequence;
-    if (!isNonEmptyString(messageId) || !isSafeInteger(messageSequence)) {
-      return { kind: "invalid" };
-    }
-    const message = messagesById.get(messageId);
+  const messagesById = new Map(messagesPage.items.map((message) => [message.id, message]));
+  for (const fact of factsPage.items) {
     if (
-      !message ||
-      message.authorType !== "owner" ||
-      message.runId !== run.id ||
-      message.sequence !== messageSequence
-    ) {
-      return { kind: "invalid" };
-    }
-    if (event.type === "run_started") runStartedCount += 1;
-    if (event.type === "owner_message") linkedOwnerMessageIds.add(messageId);
+      fact.message &&
+      JSON.stringify(messagesById.get(fact.message.id)) !== JSON.stringify(fact.message)
+    ) return { kind: "invalid" };
   }
-  if (runStartedCount > 1) return { kind: "invalid" };
-  const runStarted = timelinePage.items.find((event) => event.type === "run_started");
+  const selectedRunId = selectedRun?.id;
   return {
     kind: "success",
-    started:
-      Boolean(runStarted) &&
-      linkedOwnerMessageIds.has(String(runStarted?.payload.messageId)),
+    started: Boolean(
+      selectedRunId &&
+      factsPage.items.some(
+        (fact) => fact.type === "run_linked" && fact.runId === selectedRunId,
+      ) &&
+      factsPage.items.some(
+        (fact) =>
+          fact.type === "run_event" &&
+          fact.runId === selectedRunId &&
+          fact.eventType === "run_started",
+      ) &&
+      factsPage.items.some(
+        (fact) =>
+          fact.type === "owner_message" &&
+          fact.runId === selectedRunId &&
+          fact.message?.authorType === "owner",
+      ),
+    ),
   };
 }
 
@@ -891,7 +1019,32 @@ export function parseGuideUrl(
     return { kind: "guide", route: { href: guideHref(step), projectId: null, step } };
   }
 
-  const parameterError = exactParameters(url.searchParams, ["guide"]);
+  let parameterError: GuideUrlResult | null;
+  if (step === "goal") {
+    parameterError = null;
+    for (const key of url.searchParams.keys()) {
+      if (key !== "guide" && key !== "thread" && key !== "run") {
+        parameterError = error("unknown_parameter", key);
+        break;
+      }
+      if (url.searchParams.getAll(key).length !== 1) {
+        parameterError = error("duplicate_parameter", key);
+        break;
+      }
+    }
+    const threadId = url.searchParams.get("thread");
+    const runId = url.searchParams.get("run");
+    if (
+      !parameterError &&
+      ((runId !== null && threadId === null) ||
+        (threadId !== null && !isProjectId(threadId)) ||
+        (runId !== null && !isProjectId(runId)))
+    ) {
+      parameterError = error("invalid_path");
+    }
+  } else {
+    parameterError = exactParameters(url.searchParams, ["guide"]);
+  }
   if (parameterError) return parameterError;
 
   if (step === "project-select") {
@@ -926,7 +1079,11 @@ export function parseGuideUrl(
   }
   return {
     kind: "guide",
-    route: { href: guideHref(step, projectId), projectId, step },
+    route: {
+      href: step === "goal" ? `${url.pathname}${url.search}` : guideHref(step, projectId),
+      projectId,
+      step,
+    },
   };
 }
 

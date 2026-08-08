@@ -1,6 +1,6 @@
 import { pathToFileURL } from "node:url";
 import { join } from "node:path";
-import { describe, expect, it } from "vitest";
+import { describe, expect, it, vi } from "vitest";
 
 type NavigationModule = {
   SETTINGS_SECTIONS?: readonly {
@@ -17,6 +17,14 @@ type NavigationModule = {
   parseReturnTo?: (
     value: string | string[] | undefined,
   ) => "/" | `/projects/${string}`;
+  reconcileReturnTo?: (
+    value: string | string[] | undefined,
+    tupleExists: (
+      projectId: string,
+      threadId: string,
+      runId: string | null,
+    ) => boolean | Promise<boolean>,
+  ) => Promise<"/" | `/projects/${string}`>;
   buildSettingsHref?: (
     section: "skills" | "providers" | "agents",
     returnTo: string,
@@ -80,8 +88,27 @@ describe("settings navigation contract", () => {
     "/projects/project-1",
     "/projects/Project_123",
     "/projects/a",
+    "/projects/project-1?thread=thread-1",
+    "/projects/project-1?thread=thread%3A1",
+    "/projects/project-1?thread=thread-1&run=run_1",
   ])("accepts the strict return path %s", (value) => {
     expect(navigation.parseReturnTo?.(value)).toBe(value);
+  });
+
+  it("canonicalizes valid encoded selections without double encoding", () => {
+    expect(
+      navigation.parseReturnTo?.(
+        "/projects/project%3A1?run=run%3A1&thread=thread%3A1",
+      ),
+    ).toBe("/projects/project%3A1?thread=thread%3A1&run=run%3A1");
+    expect(
+      navigation.buildSettingsHref?.(
+        "agents",
+        "/projects/project%3A1?thread=thread%3A1&run=run%3A1",
+      ),
+    ).toBe(
+      "/team?section=agents&returnTo=%2Fprojects%2Fproject%253A1%3Fthread%3Dthread%253A1%26run%3Drun%253A1",
+    );
   });
 
   it.each([
@@ -100,7 +127,17 @@ describe("settings navigation contract", () => {
     "/projects\\a",
     "\\projects\\a",
     "/projects/a?tab=1",
+    "/projects/a?thread=thread-1&thread=thread-2",
+    "/projects/a?thread=thread-1&run=run-1&run=run-2",
+    "/projects/a?thread=thread-1&unknown=value",
+    "/projects/a?run=run-1",
+    "/projects/a?thread=",
+    "/projects/a?thread=bad%2Fid",
+    "/projects/a?thread=bad%5Cid",
+    "/projects/a?thread=bad%00id",
+    "/projects/a?thread=thread%253A1",
     "/projects/a#details",
+    "/projects/a?thread=thread-1#details",
     "https://example.com/projects/a",
     "//example.com/projects/a",
     "javascript:alert(1)",
@@ -122,6 +159,28 @@ describe("settings navigation contract", () => {
     );
     expect(new URL(href!, "https://cool-ai.test").searchParams.get("returnTo")).toBe(
       "/projects/Project_1",
+    );
+  });
+
+  it("falls back to the safe project when tuple reconciliation fails", async () => {
+    const exists = vi.fn().mockResolvedValue(false);
+    await expect(
+      navigation.reconcileReturnTo?.(
+        "/projects/project-1?thread=thread-1&run=run-1",
+        exists,
+      ),
+    ).resolves.toBe("/projects/project-1");
+    expect(exists).toHaveBeenCalledWith("project-1", "thread-1", "run-1");
+  });
+
+  it("preserves the exact canonical selection after tuple reconciliation", async () => {
+    await expect(
+      navigation.reconcileReturnTo?.(
+        "/projects/project%3A1?run=run%3A1&thread=thread%3A1",
+        () => true,
+      ),
+    ).resolves.toBe(
+      "/projects/project%3A1?thread=thread%3A1&run=run%3A1",
     );
   });
 });

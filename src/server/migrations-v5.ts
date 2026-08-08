@@ -539,7 +539,7 @@ function chunkFactsAreValid(database: DatabaseSync): boolean {
   return true;
 }
 
-function mergeDescriptorFactsAreValid(database: DatabaseSync): boolean {
+export function mergeDescriptorFactsAreValid(database: DatabaseSync): boolean {
   const rows = database.prepare(`
     SELECT f.path,f.old_target_ref_json AS oldTargetJson,
            f.post_target_ref_json AS postTargetJson,f.backup_ref_json AS backupRefJson,
@@ -675,8 +675,9 @@ function mergeDescriptorFactsAreValid(database: DatabaseSync): boolean {
 function validateV5Facts(
   database: DatabaseSync,
   retained = false,
+  validateSchema = true,
 ): "SCHEMA_DRIFT" | "SCHEMA_DATA_INVALID" | null {
-  if (!schemaIsExact(database, retained)) return "SCHEMA_DRIFT";
+  if (validateSchema && !schemaIsExact(database, retained)) return "SCHEMA_DRIFT";
   if ((database.prepare("PRAGMA foreign_key_check").all() as unknown[]).length > 0) {
     return "SCHEMA_DRIFT";
   }
@@ -790,4 +791,10 @@ export function validateV5Retained(
   database: DatabaseSync,
 ): "SCHEMA_DRIFT" | "SCHEMA_DATA_INVALID" | null {
   return validateV5Facts(database, true);
+}
+
+export function validateV5RetainedData(
+  database: DatabaseSync,
+): "SCHEMA_DRIFT" | "SCHEMA_DATA_INVALID" | null {
+  return validateV5Facts(database, true, false);
 }

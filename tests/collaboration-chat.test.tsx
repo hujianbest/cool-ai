@@ -9,6 +9,11 @@ import type {
   ProjectMessage,
 } from "@/src/shared/collaboration-contracts";
 import type { MembershipState } from "@/src/shared/project-context-contracts";
+import {
+  TEST_THREAD_ID,
+  threadPolicy,
+  threadSummary,
+} from "@/tests/cockpit-test-fetch";
 
 const emptyRead: CollaborationReadResponse = {
   pendingDecision: null,
@@ -74,9 +79,93 @@ function ownerMessage(overrides: Partial<ProjectMessage> = {}): ProjectMessage {
 function installFetch(
   handler?: (url: string, init?: RequestInit) => Promise<Response> | Response,
 ) {
+  async function strictRead(url: string, init?: RequestInit): Promise<Response> {
+    const legacyResponse = handler
+      ? await handler("/api/projects/project-1/collaboration", init)
+      : Response.json(emptyRead);
+    if (!legacyResponse.ok) return legacyResponse;
+    const read = await legacyResponse.json() as CollaborationReadResponse;
+    const messages = read.projectMessagesPage.items.map((item) => ({
+      ...item,
+      projectId: "project-1",
+      threadId: TEST_THREAD_ID,
+    }));
+    const facts = [
+      ...messages.map((item, index) => ({
+        activitySequence: index + 1,
+        actorId: item.authorAgentId,
+        actorType: item.authorType,
+        createdAt: item.createdAt,
+        id: `fact-${item.id}`,
+        message: item,
+        messageId: item.id,
+        payload: { messageId: item.id },
+        policyRevisionId: null,
+        projectId: "project-1",
+        runEventId: null,
+        runId: item.runId,
+        sequence: index + 1,
+        threadId: TEST_THREAD_ID,
+        type: item.authorType === "owner" ? "owner_message" : "agent_message",
+      })),
+      ...read.timelinePage.items
+        .filter((item) => item.type !== "owner_message" && item.type !== "agent_message")
+        .map((item, index) => ({
+          activitySequence: messages.length + index + 1,
+          actorId: item.actorId,
+          actorType: item.actorType,
+          createdAt: item.createdAt,
+          id: `fact-${item.id}`,
+          message: null,
+          messageId: null,
+          payload: { eventType: item.type },
+          policyRevisionId: null,
+          projectId: "project-1",
+          runEventId: item.id,
+          runId: item.runId,
+          sequence: messages.length + index + 1,
+          threadId: TEST_THREAD_ID,
+          type: "run_event",
+        })),
+    ];
+    if (url.endsWith("/messages")) {
+      return Response.json({ items: messages, nextAfter: null });
+    }
+    if (url.endsWith("/facts")) {
+      return Response.json({ items: facts, nextAfter: null });
+    }
+    if (url.includes("/timeline")) {
+      return Response.json({
+        items: read.timelinePage.items.map((item) => ({
+          ...item,
+          projectId: "project-1",
+          threadId: TEST_THREAD_ID,
+        })),
+        nextAfter: null,
+      });
+    }
+    const run = read.run ? { ...read.run, threadId: TEST_THREAD_ID } : null;
+    return Response.json({
+      activeRun: run ? { runId: run.id, threadId: TEST_THREAD_ID } : null,
+      readiness: {
+        dispatch: "ready",
+        missingProjectFacts: [],
+        selectedMemberId: run?.currentAgentId ?? null,
+      },
+      runs: run ? [run] : [],
+      selectedRun: url.includes("?run=") ? run : null,
+      thread: {
+        ...threadSummary("project-1"),
+        policy: threadPolicy(),
+      },
+    });
+  }
   const fetchMock = vi.fn(
     async (input: RequestInfo | URL, init?: RequestInit): Promise<Response> => {
       const url = String(input);
+      if (url.includes(`/threads/${TEST_THREAD_ID}`) && init?.method !== "POST") {
+        return strictRead(url, init);
+      }
       if (handler) {
         const response = await handler(url, init);
         if (response) return response;
@@ -108,10 +197,13 @@ describe("collaboration chat composer", () => {
       return Response.json(members);
     });
 
-    const view = render(createElement(CollaborationPanel, { projectId: "project-1" }));
+    const view = render(createElement(CollaborationPanel, {
+      projectId: "project-1",
+      threadId: TEST_THREAD_ID,
+    }));
     expect(screen.getByText("正在加载项目群聊…")).toHaveAttribute("aria-busy", "true");
     release();
-    expect(await screen.findByText("尚无协作消息。")).toBeInTheDocument();
+    expect(await screen.findByText(/尚无协作消息。/)).toBeInTheDocument();
     view.unmount();
 
     installFetch((url) =>
@@ -122,7 +214,10 @@ describe("collaboration chat composer", () => {
           )
         : Response.json(members),
     );
-    render(createElement(CollaborationPanel, { projectId: "project-1" }));
+    render(createElement(CollaborationPanel, {
+      projectId: "project-1",
+      threadId: TEST_THREAD_ID,
+    }));
     expect(await screen.findByRole("alert")).toHaveTextContent(
       "服务暂时不可用，请稍后重试。",
     );
@@ -132,9 +227,12 @@ describe("collaboration chat composer", () => {
   it("validates 1..10000 characters with a field-linked error", async () => {
     installFetch();
     const user = userEvent.setup();
-    render(createElement(CollaborationPanel, { projectId: "project-1" }));
+    render(createElement(CollaborationPanel, {
+      projectId: "project-1",
+      threadId: TEST_THREAD_ID,
+    }));
     const composer = await screen.findByLabelText("发送给项目群聊");
-    const send = screen.getByRole("button", { name: "发送并启动协作" });
+    const send = screen.getByRole("button", { name: "发送并开始首次运行" });
 
     fireEvent.change(composer, { target: { value: "   " } });
     fireEvent.submit(send.closest("form")!);
@@ -160,10 +258,13 @@ describe("collaboration chat composer", () => {
       return Response.json(members);
     });
     const user = userEvent.setup();
-    render(createElement(CollaborationPanel, { projectId: "project-1" }));
+    render(createElement(CollaborationPanel, {
+      projectId: "project-1",
+      threadId: TEST_THREAD_ID,
+    }));
     const composer = await screen.findByLabelText("发送给项目群聊");
     await user.type(composer, "Keep this draft");
-    await user.click(screen.getByRole("button", { name: "发送并启动协作" }));
+    await user.click(screen.getByRole("button", { name: "发送并开始首次运行" }));
 
     expect(composer).toBeDisabled();
     expect(composer).toHaveValue("Keep this draft");
@@ -215,8 +316,11 @@ describe("collaboration chat composer", () => {
       return Response.json(members);
     });
     const user = userEvent.setup();
-    render(createElement(CollaborationPanel, { projectId: "project-1" }));
-    await screen.findByText("尚无协作消息。");
+    render(createElement(CollaborationPanel, {
+      projectId: "project-1",
+      threadId: TEST_THREAD_ID,
+    }));
+    await screen.findByText(/尚无协作消息。/);
 
     const combo = screen.getByRole("combobox", { name: "@成员" });
     expect(combo).toHaveAttribute("aria-controls");
@@ -234,7 +338,7 @@ describe("collaboration chat composer", () => {
     expect(screen.queryByRole("listbox", { name: "项目成员" })).not.toBeInTheDocument();
 
     await user.type(screen.getByLabelText("发送给项目群聊"), "Ask @Alpha plainly");
-    await user.click(screen.getByRole("button", { name: "发送并启动协作" }));
+    await user.click(screen.getByRole("button", { name: "发送并开始首次运行" }));
     await screen.findByText("Ask @Alpha plainly");
     expect(sentBodies).toHaveLength(1);
     expect(sentBodies[0]).toMatchObject({
@@ -297,7 +401,11 @@ describe("collaboration chat composer", () => {
       return Response.json(members);
     });
     const user = userEvent.setup();
-    render(createElement(CollaborationPanel, { projectId: "project-1" }));
+    render(createElement(CollaborationPanel, {
+      projectId: "project-1",
+      selectedRunId: "run-1",
+      threadId: TEST_THREAD_ID,
+    }));
     const composer = await screen.findByLabelText("发送给项目群聊");
     await user.type(composer, "Plan the release");
     await user.click(screen.getByRole("button", { name: "发送消息" }));
@@ -305,7 +413,9 @@ describe("collaboration chat composer", () => {
     const renderedMessage = await screen.findByText("Plan the release");
     await waitFor(() => expect(renderedMessage.closest("li")).toHaveFocus());
     expect(composer).toHaveValue("");
-    expect(urls).toEqual(["/api/projects/project-1/messages"]);
+    expect(urls).toEqual([
+      `/api/projects/project-1/threads/${TEST_THREAD_ID}/messages`,
+    ]);
   });
 
   it("renders immutable mention snapshots and left-member state without parsing plain @ text", async () => {
@@ -320,6 +430,7 @@ describe("collaboration chat composer", () => {
                   mentionAgentId: "agent-gone",
                   mentionDisplayName: "Former Name",
                   mentionMemberStatus: "left",
+                  runId: null,
                 }),
               ],
               nextAfter: null,
@@ -327,7 +438,10 @@ describe("collaboration chat composer", () => {
           })
         : Response.json(members),
     );
-    render(createElement(CollaborationPanel, { projectId: "project-1" }));
+    render(createElement(CollaborationPanel, {
+      projectId: "project-1",
+      threadId: TEST_THREAD_ID,
+    }));
 
     expect(await screen.findByText("@Former Name")).toBeInTheDocument();
     expect(screen.getByText("已离组")).toBeInTheDocument();

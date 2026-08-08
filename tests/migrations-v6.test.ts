@@ -4,7 +4,7 @@ import { join } from "node:path";
 import { DatabaseSync } from "node:sqlite";
 import { afterEach, describe, expect, it } from "vitest";
 
-import { openDatabase } from "@/src/server/db";
+import { openDatabaseAtV6 as openDatabase } from "@/tests/v6-fixture-db";
 import * as migrationsV6 from "@/src/server/migrations-v6";
 
 type V6Module = {

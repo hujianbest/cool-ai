@@ -990,13 +990,63 @@ type OnboardingGuideProps = {
   projectId: string | null;
   projects: Project[];
   refreshKey?: number;
+  selectedRunId?: string | null;
   step: "project-select" | "goal";
+  threadId?: string | null;
 };
 
 async function readJson(url: string): Promise<unknown> {
   const response = await fetch(url);
   if (!response.ok) throw new Error("read");
   return response.json();
+}
+
+async function readCollaborationFacts(
+  projectId: string,
+  threadId: string,
+  selectedRunId: string | null,
+): Promise<unknown> {
+  const base = `/api/projects/${projectId}/threads/${threadId}`;
+  const detailUrl = selectedRunId
+    ? `${base}?run=${encodeURIComponent(selectedRunId)}`
+    : base;
+  const [detail, messagesPage, factsPage] = await Promise.all([
+    readJson(detailUrl),
+    readGuidePages(`${base}/messages`),
+    readGuidePages(`${base}/facts`),
+  ]);
+  return isGuideRecord(detail)
+    ? { ...detail, factsPage, messagesPage }
+    : detail;
+}
+
+async function readGuidePages(
+  url: string,
+): Promise<{ items: unknown[]; nextAfter: null }> {
+  const items: unknown[] = [];
+  let after = 0;
+  while (true) {
+    const page = await readJson(after > 0 ? `${url}?after=${after}` : url);
+    if (
+      !isGuideRecord(page) ||
+      Object.keys(page).length !== 2 ||
+      !Object.hasOwn(page, "items") ||
+      !Object.hasOwn(page, "nextAfter") ||
+      !Array.isArray(page.items) ||
+      !(page.nextAfter === null ||
+        (Number.isSafeInteger(page.nextAfter) && Number(page.nextAfter) >= 0))
+    ) {
+      throw new Error("invalid thread page");
+    }
+    items.push(...page.items);
+    if (page.nextAfter === null) return { items, nextAfter: null };
+    if (Number(page.nextAfter) <= after) throw new Error("invalid thread cursor");
+    after = Number(page.nextAfter);
+  }
+}
+
+function isGuideRecord(value: unknown): value is Record<string, unknown> {
+  return Boolean(value) && typeof value === "object" && !Array.isArray(value);
 }
 
 export function OnboardingGuide({
@@ -1008,7 +1058,9 @@ export function OnboardingGuide({
   projectId,
   projects,
   refreshKey = 0,
+  selectedRunId = null,
   step,
+  threadId = null,
 }: OnboardingGuideProps) {
   const [readiness, setReadiness] = useState<Readiness>(
     step === "goal" ? "loading" : "mission",
@@ -1025,7 +1077,9 @@ export function OnboardingGuide({
       readJson(`/api/projects/${projectId}/workspace`),
       readJson(`/api/projects/${projectId}/members`),
       readJson(`/api/projects/${projectId}/mission`),
-      readJson(`/api/projects/${projectId}/collaboration`),
+      threadId
+        ? readCollaborationFacts(projectId, threadId, selectedRunId)
+        : Promise.resolve(null),
     ])
       .then(([providerState, agentState, workspace, members, missionState, collaboration]) => {
         if (!active) return;
@@ -1036,10 +1090,14 @@ export function OnboardingGuide({
         );
         const workspaceFacts = parseWorkspaceGuideEnvelope(workspace);
         const missionFacts = parseMissionGuideEnvelope(missionState, projectId);
-        const collaborationFacts = parseCollaborationGuideEnvelope(
-          collaboration,
-          projectId,
-        );
+        const collaborationFacts = threadId
+          ? parseCollaborationGuideEnvelope(
+              collaboration,
+              projectId,
+              threadId,
+              selectedRunId,
+            )
+          : { kind: "empty" as const };
         if (
           agentFacts.kind === "invalid" ||
           workspaceFacts.kind === "invalid" ||
@@ -1072,7 +1130,14 @@ export function OnboardingGuide({
     return () => {
       active = false;
     };
-  }, [projectId, refreshKey, reloadKey, step]);
+  }, [
+    projectId,
+    refreshKey,
+    reloadKey,
+    selectedRunId,
+    step,
+    threadId,
+  ]);
 
   useEffect(() => {
     if (step !== "goal" || readiness === "loading") return;
