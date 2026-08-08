@@ -198,29 +198,17 @@ function close(server) {
   return new Promise((resolveClose) => server.close(() => resolveClose()));
 }
 
-const serverCommand =
-  process.platform === "win32"
-    ? {
-        args: [
-          "/d",
-          "/s",
-          "/c",
-          `npm run dev -- --hostname ${host} --port ${appPort}`,
-        ],
-        command: "cmd.exe",
-      }
-    : {
-        args: [
-          "run",
-          "dev",
-          "--",
-          "--hostname",
-          host,
-          "--port",
-          String(appPort),
-        ],
-        command: "npm",
-      };
+const serverCommand = {
+  args: [
+    resolve("node_modules", "next", "dist", "bin", "next"),
+    "start",
+    "--hostname",
+    host,
+    "--port",
+    String(appPort),
+  ],
+  command: process.execPath,
+};
 
 let appServer;
 let serverOutput = "";
@@ -251,9 +239,25 @@ function stopAppServer() {
       stdio: "ignore",
       windowsHide: true,
     });
+    const listeners = spawnSync(
+      "powershell.exe",
+      [
+        "-NoProfile",
+        "-Command",
+        `Start-Sleep -Milliseconds 1000; (Get-NetTCPConnection -State Listen -LocalPort ${appPort} -ErrorAction SilentlyContinue).OwningProcess`,
+      ],
+      { encoding: "utf8", windowsHide: true },
+    ).stdout;
+    for (const pid of listeners.match(/\d+/g) ?? []) {
+      spawnSync("taskkill", ["/pid", pid, "/T", "/F"], {
+        stdio: "ignore",
+        windowsHide: true,
+      });
+    }
   } else {
     appServer.kill("SIGTERM");
   }
+  appServer = undefined;
 }
 
 async function waitForApp() {
@@ -280,11 +284,11 @@ async function restartAppServer() {
   await waitForApp();
 }
 
-async function navigateAfterRestart(page) {
+async function navigateAfterRestart(page, href) {
   let lastError;
   for (let attempt = 0; attempt < 5; attempt += 1) {
     try {
-      await page.goto(`${baseUrl}/?restart=${Date.now()}`, {
+      await page.goto(`${baseUrl}${href}`, {
         waitUntil: "domcontentloaded",
       });
       return;
@@ -426,16 +430,95 @@ async function createProjectContext(page) {
   return project.id;
 }
 
-async function readCollaboration(page, projectId) {
-  return page.evaluate(async (id) => {
-    return (await (await fetch(`/api/projects/${id}/collaboration`)).json());
-  }, projectId);
+async function createThread(page, title, memberNames) {
+  await page.getByRole("button", { name: "创建线程" }).first().click();
+  const dialog = page.getByRole("dialog", { name: "创建线程" });
+  await dialog.getByLabel("线程标题").fill(title);
+  for (const memberName of memberNames) {
+    await dialog.getByLabel(memberName).check();
+  }
+  await dialog.getByRole("button", { name: "创建线程", exact: true }).click();
+  await dialog.waitFor({ state: "detached" });
+  await page.waitForURL((url) => Boolean(url.searchParams.get("thread")));
+  return new URL(page.url()).searchParams.get("thread");
 }
 
-async function waitForStatus(page, projectId, status) {
+async function readCollaboration(page, projectId, threadId) {
+  return page.evaluate(async ({ id, selectedThreadId }) => {
+    const base = `/api/projects/${id}/threads/${selectedThreadId}`;
+    const initial = await (await fetch(base)).json();
+    const selectedRunId =
+      new URL(window.location.href).searchParams.get("run") ??
+      initial.runs?.[0]?.id ??
+      null;
+    if (!selectedRunId) {
+      return { pendingDecision: null, run: null, usage: null };
+    }
+    const detail = await (
+      await fetch(`${base}?run=${encodeURIComponent(selectedRunId)}`)
+    ).json();
+    const timeline = [];
+    let after = 0;
+    while (true) {
+      const suffix = after > 0 ? `?after=${after}` : "";
+      const page = await (
+        await fetch(
+          `${base}/runs/${encodeURIComponent(selectedRunId)}/timeline${suffix}`,
+        )
+      ).json();
+      timeline.push(...page.items);
+      if (page.nextAfter === null) break;
+      after = page.nextAfter;
+    }
+    const answeredDecisionIds = new Set(
+      timeline
+        .filter((event) => event.type === "decision_answered")
+        .map((event) => event.payload.decisionId),
+    );
+    const pendingDecisionEvent = timeline.findLast(
+      (event) =>
+        event.type === "decision_requested" &&
+        !answeredDecisionIds.has(event.payload.decisionId),
+    );
+    const usageByAgent = new Map();
+    let completionTokens = 0;
+    let promptTokens = 0;
+    let repairCalls = 0;
+    let totalTokens = 0;
+    let unreportedCalls = 0;
+    for (const event of timeline) {
+      if (event.type !== "usage_recorded") continue;
+      if (event.payload.kind === "repair") repairCalls += 1;
+      if (!event.payload.reported) {
+        unreportedCalls += 1;
+        continue;
+      }
+      completionTokens += event.payload.completionTokens;
+      promptTokens += event.payload.promptTokens;
+      totalTokens += event.payload.totalTokens;
+      if (event.actorId) usageByAgent.set(event.actorId, true);
+    }
+    return {
+      pendingDecision: pendingDecisionEvent
+        ? { id: pendingDecisionEvent.payload.decisionId, status: "open" }
+        : null,
+      run: detail.selectedRun,
+      usage: {
+        byAgent: [...usageByAgent.keys()],
+        completionTokens,
+        promptTokens,
+        repairCalls,
+        totalTokens,
+        unreportedCalls,
+      },
+    };
+  }, { id: projectId, selectedThreadId: threadId });
+}
+
+async function waitForStatus(page, projectId, threadId, status) {
   const deadline = Date.now() + 45_000;
   while (Date.now() < deadline) {
-    const state = await readCollaboration(page, projectId);
+    const state = await readCollaboration(page, projectId, threadId);
     if (state.run?.status === status) return state;
     await new Promise((resolveDelay) => setTimeout(resolveDelay, 250));
   }
@@ -497,16 +580,23 @@ try {
   assert.ok(validationToken);
   assert.equal(providerAuthorizationCount, 1);
   const projectId = await createProjectContext(page);
+  const threadId = await createThread(
+    page,
+    "Collaboration smoke thread",
+    ["Collaboration Alpha", "Collaboration Beta"],
+  );
+  assert.ok(threadId);
+  await page.reload({ waitUntil: "networkidle" });
 
   await selectMentionByKeyboard(page, "Collaboration Alpha");
   const composer = page.getByLabel("发送给项目群聊");
   await composer.fill("Start the two-agent collaboration plan.");
   await page
-    .getByRole("button", { name: "发送并启动协作" })
+    .getByRole("button", { name: "发送并开始首次运行" })
     .focus();
   await page.keyboard.press("Enter");
 
-  const waiting = await waitForStatus(page, projectId, "waiting_owner");
+  const waiting = await waitForStatus(page, projectId, threadId, "waiting_owner");
   assert.equal(waiting.pendingDecision?.status, "open");
   assert.equal(waiting.run.currentAgentId, betaAgentId);
   assert.equal(waiting.usage.repairCalls, 1);
@@ -531,7 +621,7 @@ try {
   await page.getByRole("button", { name: "提交回答" }).focus();
   await page.keyboard.press("Enter");
 
-  const planned = await waitForStatus(page, projectId, "planned");
+  const planned = await waitForStatus(page, projectId, threadId, "planned");
   assert.equal(planned.run.currentAgentId, alphaAgentId);
   assert.equal(planned.run.roundCount, 3);
   assert.equal(planned.usage.promptTokens, 44);
@@ -543,15 +633,19 @@ try {
 
   await page.reload({ waitUntil: "networkidle" });
   await page.getByText("运行状态：planned", { exact: true }).waitFor();
-  assert.equal((await readCollaboration(page, projectId)).run.status, "planned");
+  assert.equal(
+    (await readCollaboration(page, projectId, threadId)).run.status,
+    "planned",
+  );
 
+  const restartHref = `${new URL(page.url()).pathname}${new URL(page.url()).search}`;
   await restartAppServer();
-  await navigateAfterRestart(page);
+  await navigateAfterRestart(page, restartHref);
   await page
     .getByRole("heading", { name: "Collaboration Smoke Mission" })
     .waitFor();
   await page.getByText("运行状态：planned", { exact: true }).waitFor();
-  const recovered = await readCollaboration(page, projectId);
+  const recovered = await readCollaboration(page, projectId, threadId);
   assert.equal(recovered.run.status, "planned");
   assert.equal(recovered.run.roundCount, 3);
   assert.equal(recovered.pendingDecision, null);

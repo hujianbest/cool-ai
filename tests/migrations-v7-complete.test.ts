@@ -4,7 +4,7 @@ import { join } from "node:path";
 import { DatabaseSync } from "node:sqlite";
 import { afterEach, describe, expect, it } from "vitest";
 
-import { validateV7 } from "@/src/server/migrations-v7";
+import { migrateV6ToV7, validateV7 } from "@/src/server/migrations-v7";
 import { migrateDatabase } from "@/src/server/migrations";
 
 type MigrationHook = (step: string, database: DatabaseSync) => void;
@@ -22,6 +22,45 @@ const directories: string[] = [];
 
 function version(database: DatabaseSync): number {
   return (database.prepare("PRAGMA user_version").get() as { user_version: number }).user_version;
+}
+
+function foreignKeys(database: DatabaseSync): number {
+  return (database.prepare("PRAGMA foreign_keys").get() as { foreign_keys: number })
+    .foreign_keys;
+}
+
+function legacyAlterTable(database: DatabaseSync): number {
+  return (
+    database.prepare("PRAGMA legacy_alter_table").get() as {
+      legacy_alter_table: number;
+    }
+  ).legacy_alter_table;
+}
+
+function faultingDatabase(
+  database: DatabaseSync,
+  faults: Array<{ error: Error; prefix: string; remaining?: number }>,
+): DatabaseSync {
+  return new Proxy(database, {
+    get(target, property) {
+      if (property === "exec") {
+        return (sql: string) => {
+          const fault = faults.find(
+            (candidate) =>
+              (candidate.remaining ?? 1) > 0
+              && sql.trimStart().startsWith(candidate.prefix),
+          );
+          if (fault) {
+            fault.remaining = (fault.remaining ?? 1) - 1;
+            throw fault.error;
+          }
+          return target.exec(sql);
+        };
+      }
+      const value = Reflect.get(target, property, target);
+      return typeof value === "function" ? value.bind(target) : value;
+    },
+  });
 }
 
 function createCompleteV6(path: string): void {
@@ -236,6 +275,37 @@ describe("complete v6 to v7 migration", () => {
       runId: RUN,
       threadId: thread.id,
     });
+    const executionThreadColumn = (database.prepare(
+      "PRAGMA table_info(executions)",
+    ).all() as Array<{ name: string; notnull: number }>).find(
+      ({ name }) => name === "source_collaboration_thread_id",
+    );
+    expect(executionThreadColumn).toMatchObject({ notnull: 1 });
+    const executionSourceForeignKey = database.prepare(
+      "PRAGMA foreign_key_list(executions)",
+    ).all() as Array<{
+      from: string;
+      id: number;
+      seq: number;
+      table: string;
+      to: string;
+    }>;
+    expect(
+      executionSourceForeignKey
+        .filter(({ table }) => table === "collaboration_runs")
+        .sort((left, right) => left.seq - right.seq)
+        .map(({ from, to }) => [from, to]),
+    ).toEqual([
+      ["project_id", "project_id"],
+      ["source_collaboration_thread_id", "thread_id"],
+      ["source_collaboration_run_id", "id"],
+    ]);
+    expect(() => database.prepare(
+      "UPDATE executions SET source_collaboration_thread_id=NULL WHERE id=?",
+    ).run(EXECUTION)).toThrow();
+    expect(() => database.prepare(
+      "UPDATE executions SET source_collaboration_thread_id='wrong-thread' WHERE id=?",
+    ).run(EXECUTION)).toThrow();
     expect(database.prepare(`
       SELECT id,run_id AS runId,thread_id AS threadId,sequence
       FROM collaboration_messages ORDER BY sequence
@@ -266,5 +336,60 @@ describe("complete v6 to v7 migration", () => {
     });
     expect(database.prepare("PRAGMA foreign_key_check").all()).toEqual([]);
     database.close();
+  });
+
+  it.each([
+    ["BEGIN", [{ prefix: "BEGIN IMMEDIATE" }]],
+    ["DDL", [{ prefix: "CREATE TABLE v7_collaboration_threads" }]],
+    ["COMMIT", [{ prefix: "COMMIT" }]],
+    ["ROLLBACK", [
+      { prefix: "CREATE TABLE v7_collaboration_threads" },
+      { prefix: "ROLLBACK", remaining: 1 },
+    ]],
+  ])("restores connection pragmas and atomic v6 state after %s failure", (
+    _case,
+    faultSpecs,
+  ) => {
+    const directory = mkdtempSync(join(tmpdir(), "cockpit-v7-fault-"));
+    directories.push(directory);
+    const path = join(directory, "cockpit.sqlite");
+    createCompleteV6(path);
+    const database = new DatabaseSync(path);
+    const expectedForeignKeys = _case === "DDL" ? 0 : 1;
+    const expectedLegacyAlterTable = _case === "COMMIT" || _case === "ROLLBACK"
+      ? 1
+      : 0;
+    database.exec(
+      `PRAGMA foreign_keys=${expectedForeignKeys ? "ON" : "OFF"};
+       PRAGMA legacy_alter_table=${expectedLegacyAlterTable ? "ON" : "OFF"}`,
+    );
+    const schemaBefore = database.prepare(`
+      SELECT type,name,sql FROM sqlite_master
+      WHERE name NOT LIKE 'sqlite_%' ORDER BY type,name
+    `).all();
+    const executionBefore = database.prepare("SELECT * FROM executions ORDER BY id").all();
+    const originalError = new Error(`fault-${_case}`);
+    const faults = faultSpecs.map((spec, index) => ({
+      error: index === 0 ? originalError : new Error(`secondary-${_case}`),
+      ...spec,
+    }));
+
+    try {
+      expect(() =>
+        migrateV6ToV7(faultingDatabase(database, faults))
+      ).toThrow(originalError);
+      expect(foreignKeys(database)).toBe(expectedForeignKeys);
+      expect(legacyAlterTable(database)).toBe(expectedLegacyAlterTable);
+      expect(database.isTransaction).toBe(false);
+      expect(version(database)).toBe(6);
+      expect(database.prepare(`
+        SELECT type,name,sql FROM sqlite_master
+        WHERE name NOT LIKE 'sqlite_%' ORDER BY type,name
+      `).all()).toEqual(schemaBefore);
+      expect(database.prepare("SELECT * FROM executions ORDER BY id").all())
+        .toEqual(executionBefore);
+    } finally {
+      database.close();
+    }
   });
 });

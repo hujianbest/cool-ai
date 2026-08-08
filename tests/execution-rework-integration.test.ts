@@ -93,12 +93,13 @@ function seed(database: DatabaseSync): void {
   for (const version of [1, 2]) {
     database.exec(`
       INSERT INTO executions(
-        id,project_id,source_collaboration_run_id,mission_id,work_item_id,agent_id,
+        id,project_id,source_collaboration_thread_id,source_collaboration_run_id,
+        mission_id,work_item_id,agent_id,
         current_policy_revision_id,status,resume_target,reason_code,
         manual_recovery_required,recovery_resolution,current_attempt_no,
         business_round_count,tool_call_count,next_event_sequence,version,created_at,
         business_deadline_at,first_running_at,updated_at,merged_at
-      ) VALUES ('execution-${version}','project','run','mission','work','executor','policy',
+      ) VALUES ('execution-${version}','project','thread','run','mission','work','executor','policy',
         'merged',NULL,NULL,0,NULL,1,0,0,1,2,'${NOW}',
         '2026-08-01T04:15:00.000Z','${NOW}','${NOW}','${NOW}');
       INSERT INTO execution_staged_results(

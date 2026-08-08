@@ -90,7 +90,7 @@ type CollaborationWriteReceipt = {
   mentionAgentId?: string;
   message: string;
   operationId: string;
-  runId: string;
+  runId: string | null;
 };
 
 function exactKeys(value: unknown, keys: string[]): value is Record<string, unknown> {
@@ -108,7 +108,7 @@ function mutationIds(
   kind: "message" | "start",
   projectId: string,
   threadId: string,
-): { messageId: string; runId: string } | null {
+): { messageId: string; runId: string | null } | null {
   const keys = kind === "start"
     ? ["created", "facts", "message", "run"]
     : ["fact", "message", "run"];
@@ -132,8 +132,9 @@ function mutationIds(
   if (kind === "message" && value.run === null) {
     return typeof value.message.id === "string" &&
       value.message.projectId === projectId &&
-      value.message.threadId === threadId
-      ? { messageId: value.message.id, runId: String(value.message.runId ?? "") }
+      value.message.threadId === threadId &&
+      value.message.runId === null
+      ? { messageId: value.message.id, runId: null }
       : null;
   }
   if (!exactKeys(value.run, [
@@ -160,7 +161,8 @@ function mutationIds(
     typeof value.message.content === "string" &&
     value.message.projectId === projectId &&
     value.message.threadId === threadId &&
-    value.message.runId === runId &&
+    (value.message.runId === runId ||
+      (kind === "message" && value.message.runId === null)) &&
     (value.message.mentionAgentId === null ||
       typeof value.message.mentionAgentId === "string") &&
     (value.message.mentionDisplayName === null ||
@@ -1112,6 +1114,7 @@ export function CollaborationPanel({
   const eventAfterRef = useRef(0);
   const advanceInFlightRef = useRef(false);
   const advanceOperationIdRef = useRef<string | null>(null);
+  const startNoticeAfterNavigationRef = useRef<string | null>(null);
   const mountedRef = useRef(true);
   const targetEpochRef = useRef(0);
   const factRequestRef = useRef(0);
@@ -1284,7 +1287,8 @@ export function CollaborationPanel({
     setMessageReceipt(null);
     setSendError(null);
     setFieldError(null);
-    setStartNotice("");
+    setStartNotice(startNoticeAfterNavigationRef.current ?? "");
+    startNoticeAfterNavigationRef.current = null;
     setDecisionSuccess(false);
     setAdvanceError(null);
     setAdvanceCycle(0);
@@ -1560,6 +1564,7 @@ export function CollaborationPanel({
       baselineMessageIds: string[];
       message: string;
       mentionAgentId?: string;
+      operationId: string;
     },
     expected?: { messageId?: string; runId?: string },
   ): { message: ProjectMessage; run: CollaborationRun } | null {
@@ -1605,13 +1610,44 @@ export function CollaborationPanel({
       baselineMessageIds: string[];
       message: string;
       mentionAgentId?: string;
+      operationId: string;
     },
     expected?: { messageId?: string; runId?: string },
   ): Promise<boolean> {
     const request = targetGuard.capture();
     try {
       if (!threadId) return false;
-      const targetRunId = expected?.runId ?? onboardingSelectedRunIdRef.current;
+      let resolvedExpected = expected;
+      if (!resolvedExpected?.runId) {
+        const lookupResponse = await fetch(
+          `/api/projects/${encodeURIComponent(projectId)}/threads/${encodeURIComponent(
+            threadId,
+          )}/operations/${encodeURIComponent(receipt.operationId)}`,
+          { signal: request.signal },
+        );
+        if (!lookupResponse.ok) return false;
+        const lookup = await readJson<unknown>(lookupResponse);
+        if (
+          !exactKeys(lookup, [
+            "httpStatus",
+            "kind",
+            "operationId",
+            "response",
+            "status",
+          ]) ||
+          lookup.operationId !== receipt.operationId ||
+          lookup.kind !== "start" ||
+          lookup.status !== "completed" ||
+          lookup.httpStatus !== 201
+        ) {
+          return false;
+        }
+        const ids = mutationIds(lookup.response, "start", projectId, threadId);
+        if (!ids?.runId) return false;
+        resolvedExpected = { messageId: ids.messageId, runId: ids.runId };
+      }
+      const targetRunId =
+        resolvedExpected.runId ?? onboardingSelectedRunIdRef.current;
       const result = await readOnboardingThread(
         projectId,
         threadId,
@@ -1631,7 +1667,7 @@ export function CollaborationPanel({
         return false;
       }
       const payload = result.state;
-      const confirmed = confirmedStart(payload, receipt, expected);
+      const confirmed = confirmedStart(payload, receipt, resolvedExpected);
       if (!confirmed) return false;
       onboardingSelectedRunIdRef.current = confirmed.run.id;
       applyRead(payload, true);
@@ -1642,9 +1678,9 @@ export function CollaborationPanel({
       setFocusMessageId(confirmed.message.id);
       setSendError(null);
       setStartReceipt(null);
-      setStartNotice(
-        "协作已启动；目标已受理，但尚未执行、复核或交付。",
-      );
+      const notice = "协作已启动；目标已受理，但尚未执行、复核或交付。";
+      setStartNotice(notice);
+      startNoticeAfterNavigationRef.current = notice;
       const url = new URL(window.location.href);
       url.searchParams.set("thread", threadId);
       url.searchParams.set("run", confirmed.run.id);
@@ -1709,7 +1745,7 @@ export function CollaborationPanel({
       if (!request.isCurrent()) return;
       const reconciled = await reconcileStart(
         receipt,
-        ids
+        ids?.runId
           ? { messageId: ids.messageId, runId: ids.runId }
           : undefined,
       );
@@ -1764,11 +1800,27 @@ export function CollaborationPanel({
       && runSelection.runs.length === 0
       && !runSelection.activeRun,
     );
-    if (!state?.run && !selectedTerminalRun && !firstRunAvailable) return;
+    if (
+      !state?.run
+      && !selectedTerminalRun
+      && !firstRunAvailable
+      && !activeRunInOtherThread
+    ) return;
     setFieldError(null);
     const hasActiveRun = Boolean(
       state?.run && activeRunStatuses.has(state.run.status),
     );
+    if (activeRunInOtherThread) {
+      await submitActiveMessage({
+        baselineMessageIds:
+          state?.projectMessagesPage.items.map((item) => item.id) ?? [],
+        mentionAgentId: selectedMember?.agentId,
+        message,
+        operationId: operationId(),
+        runId: null,
+      });
+      return;
+    }
     if (!hasActiveRun) {
       await startCollaboration(
         message,
@@ -1795,6 +1847,35 @@ export function CollaborationPanel({
     const request = targetGuard.capture();
     try {
       if (!threadId) return false;
+      let resolvedMessageId = expectedMessageId;
+      if (!resolvedMessageId) {
+        const lookupResponse = await fetch(
+          `/api/projects/${encodeURIComponent(projectId)}/threads/${encodeURIComponent(
+            threadId,
+          )}/operations/${encodeURIComponent(receipt.operationId)}`,
+          { signal: request.signal },
+        );
+        if (!lookupResponse.ok) return false;
+        const lookup = await readJson<unknown>(lookupResponse);
+        if (
+          !exactKeys(lookup, [
+            "httpStatus",
+            "kind",
+            "operationId",
+            "response",
+            "status",
+          ]) ||
+          lookup.operationId !== receipt.operationId ||
+          lookup.kind !== "message" ||
+          lookup.status !== "completed" ||
+          lookup.httpStatus !== 201
+        ) {
+          return false;
+        }
+        const ids = mutationIds(lookup.response, "message", projectId, threadId);
+        if (!ids) return false;
+        resolvedMessageId = ids.messageId;
+      }
       const result = await readOnboardingThread(
         projectId,
         threadId,
@@ -1814,7 +1895,7 @@ export function CollaborationPanel({
         return false;
       }
       const payload = result.state;
-      if (payload.run?.id !== receipt.runId) return false;
+      if ((payload.run?.id ?? null) !== receipt.runId) return false;
       const matches = result.envelope.messagesPage.items.filter(
         (candidate) =>
           candidate.authorType === "owner" &&
@@ -1822,8 +1903,7 @@ export function CollaborationPanel({
           candidate.content === receipt.message &&
           candidate.mentionAgentId === (receipt.mentionAgentId ?? null) &&
           !receipt.baselineMessageIds.includes(candidate.id) &&
-          (expectedMessageId === undefined ||
-            candidate.id === expectedMessageId),
+          candidate.id === resolvedMessageId,
       );
       if (matches.length !== 1) return false;
       const linkedFacts = result.envelope.factsPage.items.filter(
@@ -1940,7 +2020,7 @@ export function CollaborationPanel({
     && !runSelection.activeRun,
   );
   const canSubmitMessage = Boolean(
-    state?.run || selectedTerminalRun || canStartFirstRun,
+    state?.run || selectedTerminalRun || canStartFirstRun || activeRunInOtherThread,
   );
 
   function navigateToRun(nextThreadId: string, nextRunId: string | null) {
@@ -2423,13 +2503,15 @@ export function CollaborationPanel({
             >
               {sending
                 ? "正在发送…"
-                : state?.run && activeRunStatuses.has(state.run.status)
+                : activeRunInOtherThread
+                  ? "发送消息"
+                  : state?.run && activeRunStatuses.has(state.run.status)
                   ? "发送消息"
                   : selectedTerminalRun
                     ? "发送并开始新一轮"
                     : "发送并开始首次运行"}
             </button>
-            {!canSubmitMessage ? (
+            {!canSubmitMessage || activeRunInOtherThread ? (
               <p className="muted">
                 {activeRunInOtherThread
                   ? "另一线程有活动运行；可发送线程消息，但不能在此启动新一轮。"

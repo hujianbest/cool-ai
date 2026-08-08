@@ -36,12 +36,26 @@ type ResultVersionModule = {
       workItemId: string;
     },
   ) => void;
+  readReviewWorkspaceTx?: (
+    database: DatabaseSync,
+    workItemId: string,
+  ) => {
+    result: {
+      source: {
+        contextHash: string;
+        projectId: string;
+        runId: string;
+        threadId: string;
+      };
+    };
+  };
 };
 
 const resultVersions = reviewSlice as ResultVersionModule;
 const NOW = "2026-08-01T04:00:00.000Z";
 let directory: string;
 let database: DatabaseSync;
+let databasePath: string;
 
 function seed(): void {
   database.exec("PRAGMA foreign_keys=OFF");
@@ -75,18 +89,35 @@ function seed(): void {
     INSERT INTO review_events(
       id,project_id,mission_id,sequence,type,actor_type,actor_id,payload_json,created_at
     ) VALUES ('event-1','project','mission',1,'mission_review_initialized','system',NULL,'{}','${NOW}');
+    INSERT INTO collaboration_runs(
+      id,project_id,thread_id,status,current_agent_id,round_count,next_event_sequence,
+      version,execution_epoch,pause_reason,pause_category,created_at,updated_at
+    ) VALUES ('run','project','thread','stopped','executor',0,1,1,1,NULL,NULL,'${NOW}','${NOW}');
   `);
   for (const version of [1, 2, 3]) {
     database.exec(`
       INSERT INTO executions(
-        id,project_id,source_collaboration_run_id,mission_id,work_item_id,agent_id,
+        id,project_id,source_collaboration_thread_id,source_collaboration_run_id,
+        mission_id,work_item_id,agent_id,
         current_policy_revision_id,status,resume_target,reason_code,
         manual_recovery_required,recovery_resolution,current_attempt_no,
         business_round_count,tool_call_count,next_event_sequence,version,created_at,
         business_deadline_at,first_running_at,updated_at,merged_at
-      ) VALUES ('execution-${version}','project','run','mission','work','executor','policy',
+      ) VALUES ('execution-${version}','project','thread','run','mission','work','executor','policy',
         'merged',NULL,NULL,0,NULL,1,0,0,1,2,'${NOW}',
         '2026-08-01T04:15:00.000Z','${NOW}','${NOW}','${NOW}');
+      INSERT INTO execution_attempts(
+        id,project_id,execution_id,attempt_no,status,sandbox_root,
+        baseline_manifest_path,sandbox_manifest_path,baseline_manifest_hash,
+        sandbox_manifest_hash,frozen_public_json,frozen_private_json,
+        frozen_context_hash,frozen_policy_revision_id,frozen_policy_version,
+        frozen_policy_hash,started_at,finished_at
+      ) VALUES (
+        'attempt-${version}','project','execution-${version}',1,'completed','sandbox',
+        NULL,NULL,NULL,NULL,'{"facts":{"sourceCollaborationRunId":"run"}}','{}',
+        '${"c".repeat(64)}','policy',1,
+        '${"d".repeat(64)}','${NOW}','${NOW}'
+      );
       INSERT INTO execution_staged_results(
         id,project_id,execution_id,attempt_id,action_id,baseline_manifest_hash,
         sandbox_manifest_hash,context_hash,policy_hash,staged_hash,observed_path_count,
@@ -119,7 +150,8 @@ const input = (version: number): ResultInput => ({
 
 beforeEach(() => {
   directory = mkdtempSync(join(tmpdir(), "result-version-rework-"));
-  database = openDatabase(join(directory, "cockpit.sqlite"));
+  databasePath = join(directory, "cockpit.sqlite");
+  database = openDatabase(databasePath);
   seed();
 });
 
@@ -129,6 +161,38 @@ afterEach(() => {
 });
 
 describe("immutable result version chain", () => {
+  it("reads a migrated v6 frozen package from the execution tuple without choosing a later run", () => {
+    expect(resultVersions.initializeFirstResultHeadTx).toBeTypeOf("function");
+    expect(resultVersions.readReviewWorkspaceTx).toBeTypeOf("function");
+    database.exec("BEGIN IMMEDIATE");
+    resultVersions.initializeFirstResultHeadTx!(database, input(1));
+    database.exec("COMMIT");
+
+    expect(resultVersions.readReviewWorkspaceTx!(database, "work").result.source)
+      .toEqual({
+        contextHash: "c".repeat(64),
+        projectId: "project",
+        runId: "run",
+        threadId: "thread",
+      });
+  });
+
+  it("rejects a migrated v6 frozen package whose legacy run conflicts with the execution tuple", () => {
+    expect(resultVersions.initializeFirstResultHeadTx).toBeTypeOf("function");
+    expect(resultVersions.readReviewWorkspaceTx).toBeTypeOf("function");
+    database.exec("BEGIN IMMEDIATE");
+    resultVersions.initializeFirstResultHeadTx!(database, input(1));
+    database.exec("COMMIT");
+    database.prepare(`
+      UPDATE execution_attempts
+      SET frozen_public_json='{"facts":{"sourceCollaborationRunId":"other-run"}}'
+      WHERE id='attempt-1'
+    `).run();
+
+    expect(() => resultVersions.readReviewWorkspaceTx!(database, "work"))
+      .toThrow(expect.objectContaining({ code: "RESULT_NOT_FOUND" }));
+  });
+
   it("atomically initializes result v1, review head and the next mission event", () => {
     expect(resultVersions.initializeFirstResultHeadTx).toBeTypeOf("function");
     database.exec("BEGIN IMMEDIATE");

@@ -31,6 +31,10 @@ import type {
 } from "@/src/shared/project-context-contracts";
 
 type ThreadListState = "loading" | "empty" | "ready" | "error";
+type UrlThreadSelection =
+  | { kind: "none"; threadId: null }
+  | { kind: "invalid"; threadId: null }
+  | { kind: "selected"; threadId: string };
 
 type ProjectThreadNavigationProps = {
   backgroundRef: RefObject<HTMLElement | null>;
@@ -138,15 +142,27 @@ function canonicalThreadHref(projectId: string, threadId: string): string {
   return `/projects/${encodeURIComponent(projectId)}?thread=${encodeURIComponent(threadId)}`;
 }
 
-function canonicalProjectHref(projectId: string): string {
-  return `/projects/${encodeURIComponent(projectId)}`;
+function threadSelectionFromUrl(projectId: string): UrlThreadSelection {
+  const current = new URL(window.location.href);
+  if (
+    current.searchParams.getAll("guide").length === 1 &&
+    current.searchParams.get("guide") === "goal"
+  ) {
+    current.searchParams.delete("guide");
+  }
+  const selection = parseProjectSelection(
+    `${current.pathname}${current.search}${current.hash}`,
+  );
+  if (selection?.projectId === projectId && selection.threadId) {
+    return { kind: "selected", threadId: selection.threadId };
+  }
+  return current.searchParams.has("thread")
+    ? { kind: "invalid", threadId: null }
+    : { kind: "none", threadId: null };
 }
 
 function selectedThreadFromUrl(projectId: string): string | null {
-  const selection = parseProjectSelection(
-    `${window.location.pathname}${window.location.search}${window.location.hash}`,
-  );
-  return selection?.projectId === projectId ? selection.threadId : null;
+  return threadSelectionFromUrl(projectId).threadId;
 }
 
 function compareThreads(left: ThreadSummary, right: ThreadSummary): number {
@@ -228,6 +244,7 @@ export function ProjectThreadNavigation({
   const [threads, setThreads] = useState<ThreadSummary[]>([]);
   const [listState, setListState] = useState<ThreadListState>("loading");
   const [listError, setListError] = useState<string | null>(null);
+  const [selectionError, setSelectionError] = useState<string | null>(null);
   const [reloadKey, setReloadKey] = useState(0);
   const [locationVersion, setLocationVersion] = useState(0);
   const [dialogOpen, setDialogOpen] = useState(false);
@@ -312,6 +329,7 @@ export function ProjectThreadNavigation({
     const request = targetGuard.capture();
     setListState("loading");
     setListError(null);
+    setSelectionError(null);
     setThreads([]);
     setCreateNotice(null);
     setDialogOpen(false);
@@ -331,19 +349,21 @@ export function ProjectThreadNavigation({
         if (!request.isCurrent()) return;
         setThreads(loaded);
         setListState(loaded.length === 0 ? "empty" : "ready");
-        const selectedThreadId = selectedThreadFromUrl(projectId);
-        if (
-          loaded.length > 0 &&
-          (!selectedThreadId ||
-            !loaded.some((thread) => thread.id === selectedThreadId))
-        ) {
+        const selection = threadSelectionFromUrl(projectId);
+        if (loaded.length > 0 && selection.kind === "none") {
           const href = canonicalThreadHref(projectId, loaded[0]!.id);
           onNavigate?.(href);
           routerRef.current.replace(href);
-        } else if (loaded.length === 0 && selectedThreadId) {
-          const href = canonicalProjectHref(projectId);
-          onNavigate?.(href);
-          routerRef.current.replace(href);
+        } else if (
+          selection.kind === "invalid"
+          || (
+            selection.kind === "selected"
+            && !loaded.some((thread) => thread.id === selection.threadId)
+          )
+        ) {
+          setSelectionError(
+            "所选线程无效或不属于当前项目。请选择一个可用线程。",
+          );
         }
       })
       .catch((cause: unknown) => {
@@ -368,11 +388,21 @@ export function ProjectThreadNavigation({
 
   useEffect(() => {
     if (listState !== "ready" || threads.length === 0) return;
-    const selectedThreadId = selectedThreadFromUrl(projectId);
-    if (!selectedThreadId || !threads.some((thread) => thread.id === selectedThreadId)) {
+    const selection = threadSelectionFromUrl(projectId);
+    if (selection.kind === "none") {
+      setSelectionError(null);
       const href = canonicalThreadHref(projectId, threads[0]!.id);
       onNavigate?.(href);
       routerRef.current.replace(href);
+    } else if (
+      selection.kind === "invalid"
+      || !threads.some((thread) => thread.id === selection.threadId)
+    ) {
+      setSelectionError(
+        "所选线程无效或不属于当前项目。请选择一个可用线程。",
+      );
+    } else {
+      setSelectionError(null);
     }
   }, [listState, locationVersion, onNavigate, projectId, threads]);
 
@@ -415,6 +445,7 @@ export function ProjectThreadNavigation({
 
   function chooseThread(threadId: string) {
     setCreateNotice(null);
+    setSelectionError(null);
     setFocusThreadId(threadId);
     const href = canonicalThreadHref(projectId, threadId);
     onNavigate?.(href);
@@ -595,6 +626,11 @@ export function ProjectThreadNavigation({
             </button>
           ) : null}
         </div>
+        {selectionError ? (
+          <p className="error-text" role="alert">
+            {selectionError}
+          </p>
+        ) : null}
         <nav
           aria-busy={listState === "loading" ? "true" : undefined}
           aria-label="项目线程"

@@ -233,6 +233,30 @@ export type ReviewMaterialHead = {
   workItemId: string;
 };
 
+export function frozenSourceMatchesTuple(
+  frozen: {
+    projectId: string | null | undefined;
+    runId: string | null | undefined;
+    threadId: string | null | undefined;
+  },
+  source: { projectId: string; runId: string; threadId: string },
+  options: {
+    allowAbsent?: boolean;
+    legacyRunId?: unknown;
+  } = {},
+): boolean {
+  const values = [frozen.projectId, frozen.threadId, frozen.runId];
+  if (options.legacyRunId != null && options.legacyRunId !== source.runId) {
+    return false;
+  }
+  if (values.every((value) => value == null)) {
+    return options.legacyRunId === source.runId || options.allowAbsent === true;
+  }
+  return frozen.projectId === source.projectId
+    && frozen.threadId === source.threadId
+    && frozen.runId === source.runId;
+}
+
 export function freezeReviewMaterial(
   database: DatabaseSync,
   head: ReviewMaterialHead,
@@ -252,6 +276,8 @@ export function freezeReviewMaterial(
              AS frozenSourceThreadId,
            json_extract(a.frozen_public_json,'$.facts.source.runId')
              AS frozenSourceRunId,
+           json_extract(a.frozen_public_json,'$.facts.sourceCollaborationRunId')
+             AS legacySourceRunId,
            json_extract(a.frozen_private_json,'$.facts.source.projectId')
              AS privateSourceProjectId,
            json_extract(a.frozen_private_json,'$.facts.source.threadId')
@@ -309,20 +335,31 @@ export function freezeReviewMaterial(
     || result.version !== head.resultVersion
     || result.sourceProjectId !== head.projectId
     || result.sourceContextHash !== result.stagedContextHash
-    || result.frozenSourceProjectId !== result.sourceProjectId
-    || result.frozenSourceThreadId !== result.sourceThreadId
-    || result.frozenSourceRunId !== result.sourceRunId
-    || (
-      result.privateSourceProjectId !== undefined
-      && result.privateSourceProjectId !== result.sourceProjectId
+    || !frozenSourceMatchesTuple(
+      {
+        projectId: result.frozenSourceProjectId,
+        runId: result.frozenSourceRunId,
+        threadId: result.frozenSourceThreadId,
+      },
+      {
+        projectId: result.sourceProjectId,
+        runId: result.sourceRunId,
+        threadId: result.sourceThreadId,
+      },
+      { legacyRunId: result.legacySourceRunId },
     )
-    || (
-      result.privateSourceThreadId !== undefined
-      && result.privateSourceThreadId !== result.sourceThreadId
-    )
-    || (
-      result.privateSourceRunId !== undefined
-      && result.privateSourceRunId !== result.sourceRunId
+    || !frozenSourceMatchesTuple(
+      {
+        projectId: result.privateSourceProjectId,
+        runId: result.privateSourceRunId,
+        threadId: result.privateSourceThreadId,
+      },
+      {
+        projectId: result.sourceProjectId,
+        runId: result.sourceRunId,
+        threadId: result.sourceThreadId,
+      },
+      { allowAbsent: true },
     )
   ) throw new ReviewMaterialInvalidError();
 

@@ -121,20 +121,18 @@ function close(server) {
   return new Promise((resolveClose) => server.close(() => resolveClose()));
 }
 
-const command = process.platform === "win32"
-  ? {
-      command: "cmd.exe",
-      args: [
-        "/d",
-        "/s",
-        "/c",
-        `npm run dev -- --hostname ${host} --port ${appPort}`,
-      ],
-    }
-  : {
-      command: "npm",
-      args: ["run", "dev", "--", "--hostname", host, "--port", String(appPort)],
-    };
+const command = {
+  command: process.execPath,
+  args: [
+    resolve("node_modules", "next", "dist", "bin", "next"),
+    "dev",
+    "--webpack",
+    "--hostname",
+    host,
+    "--port",
+    String(appPort),
+  ],
+};
 
 function startApp() {
   appServer = spawn(command.command, command.args, {
@@ -163,9 +161,25 @@ function stopApp() {
       stdio: "ignore",
       windowsHide: true,
     });
+    const listeners = spawnSync(
+      "powershell.exe",
+      [
+        "-NoProfile",
+        "-Command",
+        `Start-Sleep -Milliseconds 1000; (Get-NetTCPConnection -State Listen -LocalPort ${appPort} -ErrorAction SilentlyContinue).OwningProcess`,
+      ],
+      { encoding: "utf8", windowsHide: true },
+    ).stdout;
+    for (const pid of listeners.match(/\d+/g) ?? []) {
+      spawnSync("taskkill", ["/pid", pid, "/T", "/F"], {
+        stdio: "ignore",
+        windowsHide: true,
+      });
+    }
   } else {
     appServer.kill("SIGTERM");
   }
+  appServer = undefined;
 }
 
 async function waitForApp() {
@@ -330,6 +344,11 @@ function inspectDatabase() {
         ON f.project_id=m.project_id AND f.thread_id=m.thread_id AND f.message_id=m.id
       ORDER BY m.thread_id,m.sequence
     `).all();
+    const facts = database.prepare(`
+      SELECT id,project_id AS projectId,thread_id AS threadId,sequence,type
+      FROM collaboration_thread_facts
+      ORDER BY project_id,thread_id,sequence,id
+    `).all();
     const policies = database.prepare(`
       SELECT t.id,t.active_policy_revision_id AS revisionId,
              r.version,group_concat(pm.agent_id,'|') AS members
@@ -347,7 +366,16 @@ function inspectDatabase() {
       WHERE project_id='legacy-project'
         AND status IN ('running','waiting_owner','paused','failed')
     `).get().count;
-    return { activeRuns, ownership, policies, threads, version };
+    return {
+      activeRuns,
+      factCount: facts.length,
+      factIds: facts.map((fact) => fact.id),
+      facts,
+      ownership,
+      policies,
+      threads,
+      version,
+    };
   } finally {
     database.close();
   }
@@ -541,10 +569,29 @@ try {
     await returnLink.getAttribute("href"),
     `/projects/legacy-project?thread=${firstThread}&run=${activeRun.id}`,
   );
+  const secondThreadComposer = page.getByLabel("发送给项目群聊");
+  await secondThreadComposer.fill("Second-thread owner note.");
+  await page.waitForFunction(() =>
+    [...document.querySelectorAll("button")].some(
+      (button) => button.textContent?.trim() === "发送消息" && !button.disabled,
+    )
+  );
   assert.equal(
-    await page.getByRole("button", { name: "发送并开始首次运行" }).isDisabled(),
+    await page.getByRole("button", { name: "发送消息" }).isEnabled(),
     true,
   );
+  await page.getByText(
+    "另一线程有活动运行；可发送线程消息，但不能在此启动新一轮。",
+    { exact: true },
+  ).waitFor();
+  const secondThreadMessageResponse = page.waitForResponse((response) =>
+    response.request().method() === "POST"
+    && response.url().endsWith(`/threads/${secondThread}/messages`)
+  );
+  await page.getByRole("button", { name: "发送消息" }).click();
+  assert.equal((await secondThreadMessageResponse).status(), 201);
+  await page.getByText("Second-thread owner note.", { exact: true }).waitFor();
+  assert.equal(inspectDatabase().activeRuns, 1);
   await returnLink.focus();
   await page.keyboard.press("Enter");
   await page.waitForURL((url) => url.searchParams.get("run") === activeRun.id);
@@ -653,17 +700,28 @@ try {
     `/api/projects/legacy-project/threads/${firstThread}/messages`,
     {
       body: JSON.stringify({
-        message: `Do not persist ${apiKey}`,
+        content: `Do not persist ${apiKey}`,
         operationId: randomUUID(),
       }),
       headers: { "content-type": "application/json" },
       method: "POST",
     },
   );
-  assert.equal(credentialAttempt.status, 400);
+  assert.equal(credentialAttempt.status, 422);
+  assert.equal(credentialAttempt.body?.error?.code, "CREDENTIAL_CONTENT_REJECTED");
   assert.equal(JSON.stringify(credentialAttempt.body).includes(apiKey), false);
   const afterCredential = inspectDatabase();
   assert.deepEqual(afterCredential.ownership, beforeCredential.ownership);
+  assert.equal(afterCredential.factCount, beforeCredential.factCount);
+  assert.deepEqual(afterCredential.factIds, beforeCredential.factIds);
+  assert.deepEqual(afterCredential.facts, beforeCredential.facts);
+  const credentialFacts = await api(
+    page,
+    `/api/projects/legacy-project/threads/${firstThread}/facts?after=0&limit=200`,
+  );
+  assert.equal(credentialFacts.status, 200);
+  assert.equal(JSON.stringify(credentialFacts.body).includes(apiKey), false);
+  assert.equal((await page.locator("body").innerText()).includes(apiKey), false);
   pass("configured-credential-rejected-atomically");
 
   const crossProject = await api(

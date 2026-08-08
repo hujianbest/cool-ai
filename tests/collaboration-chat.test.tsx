@@ -396,7 +396,38 @@ describe("collaboration chat composer", () => {
       if (url.endsWith("/messages")) {
         urls.push(url);
         messagePersisted = true;
-        return Response.json({ message, run: activeRead.run });
+        return Response.json({
+          fact: {
+            activitySequence: 1,
+            actorId: null,
+            actorType: "owner",
+            createdAt: message.createdAt,
+            id: `fact-${message.id}`,
+            message: {
+              ...message,
+              projectId: "project-1",
+              threadId: TEST_THREAD_ID,
+            },
+            messageId: message.id,
+            payload: { messageId: message.id },
+            policyRevisionId: null,
+            projectId: "project-1",
+            runEventId: null,
+            runId: message.runId,
+            sequence: 1,
+            threadId: TEST_THREAD_ID,
+            type: "owner_message",
+          },
+          message: {
+            ...message,
+            projectId: "project-1",
+            threadId: TEST_THREAD_ID,
+          },
+          run: {
+            ...activeRead.run,
+            threadId: TEST_THREAD_ID,
+          },
+        });
       }
       return Response.json(members);
     });

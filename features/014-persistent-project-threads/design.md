@@ -544,4 +544,4 @@ DTO 展示文本沿持久值返回；request 的 `title/message/content/answer` 
 - [x] T-31 实现 policy read/repair UI状态 (覆盖: FR-3, NFR-1) — 判据: `thread-policy-ui.test.tsx` removed/stale/keyboard/focus/disabled通过
 - [x] T-32 实现 run select与active-thread return UI状态 (覆盖: FR-4, NFR-1) — 判据: `thread-run-select-ui.test.tsx` null/active/error/focus通过
 - [x] T-33 实现 project/thread/run stale-request protection (覆盖: FR-2, FR-5, FR-6, NFR-1) — 判据: `thread-stale-response.test.tsx` delayed poll/write/reconcile均不能覆盖新target
-- [ ] T-34 新增持久线程真实浏览器回归并执行全套命令 (覆盖: FR-1, FR-2, FR-3, FR-4, FR-5, FR-6, FR-7, FR-8, FR-9, NFR-1, NFR-2) — 判据: 新 `persistent-threads-browser-smoke.mjs` 覆盖两线程/重启/设置返回/窄屏/axe，且第8节全套命令 exit 0
+- [x] T-34 新增持久线程真实浏览器回归并执行全套命令 (覆盖: FR-1, FR-2, FR-3, FR-4, FR-5, FR-6, FR-7, FR-8, FR-9, NFR-1, NFR-2) — 判据: 新 `persistent-threads-browser-smoke.mjs` 覆盖两线程/重启/设置返回/窄屏/axe，且第8节全套命令 exit 0

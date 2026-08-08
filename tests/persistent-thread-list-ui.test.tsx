@@ -349,6 +349,17 @@ describe("persistent project thread list and creation", () => {
     );
     window.dispatchEvent(new PopStateEvent("popstate"));
     await waitFor(() =>
+      expect(screen.getByRole("alert")).toHaveTextContent(
+        "所选线程无效或不属于当前项目",
+      ),
+    );
+    expect(window.location.search).toBe("?thread=foreign-thread&run=foreign-run");
+    expect(duplicateEntries[0]).not.toHaveAttribute("aria-current");
+    expect(duplicateEntries[1]).not.toHaveAttribute("aria-current");
+
+    window.history.replaceState(null, "", `/projects/${project.id}`);
+    window.dispatchEvent(new PopStateEvent("popstate"));
+    await waitFor(() =>
       expect(window.location.search).toBe(`?thread=${newest.id}`),
     );
   });

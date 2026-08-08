@@ -294,9 +294,25 @@ function stopAppServer() {
       stdio: "ignore",
       windowsHide: true,
     });
+    const listeners = spawnSync(
+      "powershell.exe",
+      [
+        "-NoProfile",
+        "-Command",
+        `Start-Sleep -Milliseconds 1000; (Get-NetTCPConnection -State Listen -LocalPort ${appPort} -ErrorAction SilentlyContinue).OwningProcess`,
+      ],
+      { encoding: "utf8", windowsHide: true },
+    ).stdout;
+    for (const pid of listeners.match(/\d+/g) ?? []) {
+      spawnSync("taskkill", ["/pid", pid, "/T", "/F"], {
+        stdio: "ignore",
+        windowsHide: true,
+      });
+    }
   } else {
     appServer.kill("SIGTERM");
   }
+  appServer = undefined;
 }
 
 async function waitForApp() {
@@ -436,10 +452,21 @@ async function createProject(page) {
     const project = (await (await fetch("/api/projects")).json()).projects[0];
     const mission = (await (await fetch(`/api/projects/${project.id}/mission`)).json()).mission;
     const agents = (await (await fetch("/api/agents")).json()).agents;
+    const threadResponse = await fetch(`/api/projects/${project.id}/threads`, {
+      body: JSON.stringify({
+        memberAgentIds: agents.map((agent) => agent.id),
+        operationId: crypto.randomUUID(),
+        title: "Execution smoke thread",
+      }),
+      headers: { "content-type": "application/json" },
+      method: "POST",
+    });
+    const thread = await threadResponse.json();
     return {
       agents,
       missionId: mission.id,
       projectId: project.id,
+      threadId: thread.thread.id,
     };
   });
 }
@@ -470,9 +497,9 @@ async function grantExecutionPermissions(page, agents) {
   assert.ok(results.every(({ status }) => status === 200), JSON.stringify(results));
 }
 
-async function planExecutableTasks(page, projectId, firstAgentId) {
-  const started = await page.evaluate(async ({ agentId, id }) => {
-    const response = await fetch(`/api/projects/${id}/runs`, {
+async function planExecutableTasks(page, projectId, threadId, firstAgentId) {
+  const started = await page.evaluate(async ({ agentId, id, selectedThreadId }) => {
+    const response = await fetch(`/api/projects/${id}/threads/${selectedThreadId}/runs`, {
       body: JSON.stringify({
         mentionAgentId: agentId,
         message: "Plan and assign the two independent execution tasks.",
@@ -482,23 +509,51 @@ async function planExecutableTasks(page, projectId, firstAgentId) {
       method: "POST",
     });
     return { body: await response.json(), status: response.status };
-  }, { agentId: firstAgentId, id: projectId });
+  }, { agentId: firstAgentId, id: projectId, selectedThreadId: threadId });
   assert.equal(started.status, 201, JSON.stringify(started.body));
   const runId = started.body.run.id;
+  await page.evaluate(({ id, selectedThreadId, selectedRunId }) => {
+    window.history.pushState(
+      window.history.state,
+      "",
+      `/projects/${encodeURIComponent(id)}?thread=${encodeURIComponent(
+        selectedThreadId,
+      )}&run=${encodeURIComponent(selectedRunId)}`,
+    );
+    window.dispatchEvent(new PopStateEvent("popstate"));
+  }, { id: projectId, selectedRunId: runId, selectedThreadId: threadId });
   const deadline = Date.now() + 90_000;
   while (Date.now() < deadline) {
-    const state = await page.evaluate(async (id) => (
-      await (await fetch(`/api/projects/${id}/collaboration`)).json()
-    ), projectId);
-    if (state.run?.status === "planned") return runId;
-    assert.equal(state.run?.status, "running", JSON.stringify(state));
+    const state = await page.evaluate(async ({ id, selectedRunId, selectedThreadId }) => (
+      await (
+        await fetch(
+          `/api/projects/${id}/threads/${selectedThreadId}?run=${selectedRunId}`,
+        )
+      ).json()
+    ), { id: projectId, selectedRunId: runId, selectedThreadId: threadId });
+    if (state.selectedRun?.status === "planned") return runId;
+    assert.equal(state.selectedRun?.status, "running", JSON.stringify(state));
+    await page.evaluate(async ({ id, selectedRunId, selectedThreadId }) => {
+      const response = await fetch(
+        `/api/projects/${id}/threads/${selectedThreadId}/runs/${selectedRunId}/advance`,
+        {
+          body: JSON.stringify({ operationId: crypto.randomUUID() }),
+          headers: { "content-type": "application/json" },
+          method: "POST",
+        },
+      );
+      if (!response.ok && response.status !== 409) {
+        throw new Error(`Collaboration advance failed: ${await response.text()}`);
+      }
+    }, { id: projectId, selectedRunId: runId, selectedThreadId: threadId });
     await new Promise((done) => setTimeout(done, 200));
   }
   throw new Error("Public collaboration did not produce a planned execution run.");
 }
 
-async function startPlannedExecutions(page, projectId, runId, workItemCount = 2) {
-  return page.evaluate(async ({ count, id, sourceRunId }) => {
+async function startPlannedExecutions(page, source, workItemCount = 2) {
+  return page.evaluate(async ({ count, sourceTuple }) => {
+    const id = sourceTuple.projectId;
     const mission = await (await fetch(`/api/projects/${id}/mission`, {
       cache: "no-store",
     })).json();
@@ -506,7 +561,7 @@ async function startPlannedExecutions(page, projectId, runId, workItemCount = 2)
       const response = await fetch(`/api/projects/${id}/executions`, {
         body: JSON.stringify({
           operationId: crypto.randomUUID(),
-          sourceCollaborationRunId: sourceRunId,
+          source: sourceTuple,
           workItemId: workItem.id,
         }),
         headers: { "content-type": "application/json" },
@@ -514,7 +569,7 @@ async function startPlannedExecutions(page, projectId, runId, workItemCount = 2)
       });
       return { body: await response.json(), status: response.status };
     }));
-  }, { count: workItemCount, id: projectId, sourceRunId: runId });
+  }, { count: workItemCount, sourceTuple: source });
 }
 
 async function openRunTab(page) {
@@ -758,7 +813,17 @@ try {
   await grantExecutionPermissions(page, [alpha, beta]);
   await openRunTab(page);
   await saveStandingPolicy(page);
-  const sourceRunId = await planExecutableTasks(page, context.projectId, alpha.id);
+  const sourceRunId = await planExecutableTasks(
+    page,
+    context.projectId,
+    context.threadId,
+    alpha.id,
+  );
+  const source = {
+    projectId: context.projectId,
+    runId: sourceRunId,
+    threadId: context.threadId,
+  };
   await page.reload({ waitUntil: "networkidle" });
   await openRunTab(page);
   const startRequests = [];
@@ -775,13 +840,13 @@ try {
     }
   });
 
-  const startStatuses = await page.evaluate(async ({ projectId, runId }) => {
+  const startStatuses = await page.evaluate(async ({ projectId, sourceTuple }) => {
     const mission = await (await fetch(`/api/projects/${projectId}/mission`)).json();
     return Promise.all(mission.workItems.map(async (workItem) => {
       const response = await fetch(`/api/projects/${projectId}/executions`, {
         body: JSON.stringify({
           operationId: crypto.randomUUID(),
-          sourceCollaborationRunId: runId,
+          source: sourceTuple,
           workItemId: workItem.id,
         }),
         headers: { "content-type": "application/json" },
@@ -789,7 +854,7 @@ try {
       });
       return response.status;
     }));
-  }, { projectId: context.projectId, runId: sourceRunId });
+  }, { projectId: context.projectId, sourceTuple: source });
   assert.deepEqual(startStatuses, [201, 201]);
   try {
     await waitForDatabase(
@@ -1033,8 +1098,17 @@ try {
   collaborationStep = 0;
   executionPhase = "conflict";
   modelSteps.clear();
-  const conflictRunId = await planExecutableTasks(page, context.projectId, alpha.id);
-  const conflictStarts = await startPlannedExecutions(page, context.projectId, conflictRunId);
+  const conflictRunId = await planExecutableTasks(
+    page,
+    context.projectId,
+    context.threadId,
+    alpha.id,
+  );
+  const conflictStarts = await startPlannedExecutions(page, {
+    projectId: context.projectId,
+    runId: conflictRunId,
+    threadId: context.threadId,
+  });
   assert.equal(conflictStarts.filter(({ status }) => status === 201).length, 2);
   await advanceUntilStatus(page, context.projectId, "conflicted", 2);
   const conflicted = await page.evaluate(async (projectId) => (
@@ -1047,8 +1121,17 @@ try {
   collaborationStep = 0;
   executionPhase = "manual";
   modelSteps.clear();
-  const manualRunId = await planExecutableTasks(page, context.projectId, alpha.id);
-  const manualStarts = await startPlannedExecutions(page, context.projectId, manualRunId, 1);
+  const manualRunId = await planExecutableTasks(
+    page,
+    context.projectId,
+    context.threadId,
+    alpha.id,
+  );
+  const manualStarts = await startPlannedExecutions(page, {
+    projectId: context.projectId,
+    runId: manualRunId,
+    threadId: context.threadId,
+  }, 1);
   assert.equal(manualStarts.length, 1);
   assert.equal(manualStarts[0].status, 201, JSON.stringify(manualStarts[0].body));
   const manualExecutionId = manualStarts[0].body.execution.id;

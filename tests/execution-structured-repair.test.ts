@@ -95,7 +95,7 @@ async function loadModule(): Promise<StructuredModule> {
 }
 
 function seedDatabase(path: string): DatabaseSync {
-  seedV7AdvanceFixture(path, {
+  const threadId = seedV7AdvanceFixture(path, {
     agentId: "agent",
     agentPrompt: "private",
     missionId: "mission",
@@ -127,13 +127,15 @@ function seedDatabase(path: string): DatabaseSync {
     INSERT INTO project_validation_policies (project_id,active_revision_id,version,updated_at)
     VALUES ('${PROJECT_ID}','policy',1,strftime('%Y-%m-%dT%H:%M:%fZ','now'));
     INSERT INTO executions (
-      id,project_id,source_collaboration_run_id,mission_id,work_item_id,agent_id,
+      id,project_id,source_collaboration_thread_id,source_collaboration_run_id,
+      mission_id,work_item_id,agent_id,
       current_policy_revision_id,status,resume_target,reason_code,
       manual_recovery_required,recovery_resolution,current_attempt_no,
       business_round_count,tool_call_count,next_event_sequence,version,created_at,
       business_deadline_at,first_running_at,updated_at,merged_at
     ) VALUES (
-      '${EXECUTION_ID}','${PROJECT_ID}','run','mission','work','agent','policy',
+      '${EXECUTION_ID}','${PROJECT_ID}','${threadId}','run',
+      'mission','work','agent','policy',
       'running',NULL,NULL,0,NULL,1,0,0,1,1,
       strftime('%Y-%m-%dT%H:%M:%fZ','now'),
       strftime('%Y-%m-%dT%H:%M:%fZ','now','+900 seconds'),

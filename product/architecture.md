@@ -22,8 +22,12 @@
 
 - Provider、Skill、AgentTemplate 与 Agent 组成可复用团队资源；Agent 身份与模型绑定分离。
 - Project 绑定一个规范工作区并拥有 Members、Mission、WorkItems、Memories 与 ValidationPolicy。
-- CollaborationRun 由公开 TimelineEvents、Turns、Decisions、Usage 和显式 handoff 串成可恢复接力。
+- Project 内包含稳定持久 Thread；消息与版本化成员策略属于线程，Mission、看板和 active memory 仍是项目共享事实。
+- v7 协作数据以 project/thread/run 复合 ownership 约束读写与迁移，跨 tuple 访问失败关闭。
+- `collaboration_thread_facts` 是消息与公开 run 事件的唯一渲染流。
+- CollaborationRun 明确归属一个 Thread，并由公开 TimelineEvents、Turns、Decisions、Usage 和显式 handoff 串成可恢复接力。
 - Execution/Attempt/Action 在隔离 sandbox 产出 Validation、StagedChange、Approval、Artifact 与 MergeJournal。
+- 冻结 `SourceTuple={projectId,threadId,runId}` 驱动 Execution、Review 与 Delivery 的来源恢复，禁止以项目最新 run 替代。
 - Result 经非执行者 ReviewAttempt 裁决后形成版本链，并把带精确来源的记忆与 Delivery 留在项目中。
 
 ## 关键流程

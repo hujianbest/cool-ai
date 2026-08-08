@@ -11,6 +11,7 @@ import {
 import {
   assertReviewMaterialPassable,
   freezeReviewMaterial,
+  frozenSourceMatchesTuple,
   reviewMaterialIsCurrent,
 } from "@/src/server/review/review-material";
 import {
@@ -97,7 +98,11 @@ function head(database: DatabaseSync, workItemId: string): HeadRow {
            json_extract(attempt.frozen_public_json,'$.facts.source.threadId')
              AS frozenSourceThreadId,
            json_extract(attempt.frozen_public_json,'$.facts.source.runId')
-             AS frozenSourceRunId
+             AS frozenSourceRunId,
+           json_extract(
+             attempt.frozen_public_json,
+             '$.facts.sourceCollaborationRunId'
+           ) AS legacySourceRunId
     FROM work_item_review_heads h
     JOIN work_items w ON w.id=h.work_item_id
     JOIN work_item_result_versions r ON r.id=h.current_result_id
@@ -117,13 +122,24 @@ function head(database: DatabaseSync, workItemId: string): HeadRow {
     frozenSourceProjectId: string | null;
     frozenSourceRunId: string | null;
     frozenSourceThreadId: string | null;
+    legacySourceRunId: string | null;
     stagedContextHash: string;
   }) | undefined;
   if (
     !row
-    || row.frozenSourceProjectId !== row.projectId
-    || row.frozenSourceThreadId !== row.sourceThreadId
-    || row.frozenSourceRunId !== row.sourceRunId
+    || !frozenSourceMatchesTuple(
+      {
+        projectId: row.frozenSourceProjectId,
+        runId: row.frozenSourceRunId,
+        threadId: row.frozenSourceThreadId,
+      },
+      {
+        projectId: row.projectId,
+        runId: row.sourceRunId,
+        threadId: row.sourceThreadId,
+      },
+      { legacyRunId: row.legacySourceRunId },
+    )
     || row.stagedContextHash !== row.sourceContextHash
   ) {
     throw new ReviewSliceError("RESULT_NOT_FOUND", 404, "未找到待复核结果");
@@ -555,33 +571,40 @@ export function requestResultReworkTx(
   });
 }
 
+export function readReviewWorkspaceTx(
+  database: DatabaseSync,
+  workItemId: string,
+): ReviewWorkspaceDto {
+  const row = head(database, workItemId);
+  const eligible = qualifiedCandidates(database, row.projectId, row.executorAgentId);
+  return {
+    blockers: eligible.length === 0 ? [{ code: "NO_INDEPENDENT_REVIEWER" }] : [],
+    candidates: eligible,
+    currentAttempt: attemptDto(database, row.currentAttemptId),
+    effectiveStatus: row.state,
+    headVersion: row.headVersion,
+    result: {
+      executorAgentId: row.executorAgentId,
+      id: row.resultId,
+      source: {
+        contextHash: row.sourceContextHash,
+        projectId: row.projectId,
+        runId: row.sourceRunId,
+        threadId: row.sourceThreadId,
+      },
+      version: row.resultVersion,
+    },
+    workItem: { id: row.workItemId, title: row.workItemTitle },
+  };
+}
+
 export function readReviewWorkspace(
   databasePath: string,
   workItemId: string,
 ): ReviewWorkspaceDto {
   const database = openDatabase(databasePath);
   try {
-    const row = head(database, workItemId);
-    const eligible = qualifiedCandidates(database, row.projectId, row.executorAgentId);
-    return {
-      blockers: eligible.length === 0 ? [{ code: "NO_INDEPENDENT_REVIEWER" }] : [],
-      candidates: eligible,
-      currentAttempt: attemptDto(database, row.currentAttemptId),
-      effectiveStatus: row.state,
-      headVersion: row.headVersion,
-      result: {
-        executorAgentId: row.executorAgentId,
-        id: row.resultId,
-        source: {
-          contextHash: row.sourceContextHash,
-          projectId: row.projectId,
-          runId: row.sourceRunId,
-          threadId: row.sourceThreadId,
-        },
-        version: row.resultVersion,
-      },
-      workItem: { id: row.workItemId, title: row.workItemTitle },
-    };
+    return readReviewWorkspaceTx(database, workItemId);
   } finally {
     database.close();
   }

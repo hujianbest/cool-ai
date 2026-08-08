@@ -252,9 +252,25 @@ function stopAppServer() {
       stdio: "ignore",
       windowsHide: true,
     });
+    const listeners = spawnSync(
+      "powershell.exe",
+      [
+        "-NoProfile",
+        "-Command",
+        `Start-Sleep -Milliseconds 1000; (Get-NetTCPConnection -State Listen -LocalPort ${appPort} -ErrorAction SilentlyContinue).OwningProcess`,
+      ],
+      { encoding: "utf8", windowsHide: true },
+    ).stdout;
+    for (const pid of listeners.match(/\d+/g) ?? []) {
+      spawnSync("taskkill", ["/pid", pid, "/T", "/F"], {
+        stdio: "ignore",
+        windowsHide: true,
+      });
+    }
   } else {
     appServer.kill("SIGTERM");
   }
+  appServer = undefined;
 }
 
 async function waitForApp() {

@@ -157,6 +157,103 @@ describe("selected thread run selection", () => {
     expect(screen.queryByText(/运行状态：running/)).not.toBeInTheDocument();
   });
 
+  it("keeps owner messages writable while another thread owns the active run", async () => {
+    const activeOther = run(
+      "run-other",
+      "running",
+      "2026-08-08T09:00:00.000Z",
+      "thread-other",
+    );
+    const ownerMessage = {
+      authorAgentId: null,
+      authorDisplayName: "Owner",
+      authorType: "owner",
+      content: "Keep this thread moving",
+      createdAt: "2026-08-08T09:01:00.000Z",
+      id: "message-owner",
+      mentionAgentId: null,
+      mentionDisplayName: null,
+      mentionMemberStatus: null,
+      projectId,
+      runId: null,
+      sequence: 1,
+      threadId,
+    };
+    const ownerFact = {
+      activitySequence: 4,
+      actorId: null,
+      actorType: "owner",
+      createdAt: ownerMessage.createdAt,
+      id: "fact-owner",
+      message: ownerMessage,
+      messageId: ownerMessage.id,
+      payload: { messageId: ownerMessage.id },
+      policyRevisionId: null,
+      projectId,
+      runEventId: null,
+      runId: null,
+      sequence: 1,
+      threadId,
+      type: "owner_message",
+    };
+    let persisted = false;
+    const postedBodies: unknown[] = [];
+    vi.stubGlobal("fetch", vi.fn(async (
+      input: RequestInfo | URL,
+      init?: RequestInit,
+    ) => {
+      const url = String(input);
+      if (url.endsWith(`/threads/${threadId}/messages`) && init?.method === "POST") {
+        postedBodies.push(JSON.parse(String(init.body)));
+        persisted = true;
+        return Response.json({
+          fact: ownerFact,
+          message: ownerMessage,
+          run: null,
+        }, { status: 201 });
+      }
+      if (url.endsWith(`/threads/${threadId}`)) {
+        return Response.json(detail({
+          activeRun: { runId: activeOther.id, threadId: activeOther.threadId },
+          runs: [],
+          selectedRun: null,
+        }));
+      }
+      if (url.endsWith(`/threads/${threadId}/messages`)) {
+        return Response.json({
+          items: persisted ? [ownerMessage] : [],
+          nextAfter: null,
+        });
+      }
+      if (url.endsWith(`/threads/${threadId}/facts`)) {
+        return Response.json({
+          items: persisted ? [ownerFact] : [],
+          nextAfter: null,
+        });
+      }
+      if (url.endsWith(`/projects/${projectId}/members`)) {
+        return Response.json({ members: [], projectVersion: 1 });
+      }
+      throw new Error(`Unexpected request: ${url}`);
+    }));
+    window.history.replaceState(null, "", `/projects/${projectId}?thread=${threadId}`);
+    const user = userEvent.setup();
+
+    render(<UrlHarness />);
+
+    expect(await screen.findByText(/另一线程有活动运行/)).toBeVisible();
+    const composer = screen.getByLabelText("发送给项目群聊");
+    await user.type(composer, ownerMessage.content);
+    const submit = screen.getByRole("button", { name: "发送消息" });
+    expect(submit).toBeEnabled();
+    await user.click(submit);
+
+    expect(await screen.findByText(ownerMessage.content)).toBeVisible();
+    expect(postedBodies).toHaveLength(1);
+    expect(postedBodies[0]).toMatchObject({ content: ownerMessage.content });
+    expect(screen.getByText(/不能在此启动新一轮/)).toBeVisible();
+  });
+
   it("selects the exact historical run instead of project latest, uses canonical history, announces, and focuses", async () => {
     const pendingSelection = deferredResponse();
     let olderReads = 0;

@@ -108,13 +108,13 @@ const serverCommand =
           "/d",
           "/s",
           "/c",
-          `npm run dev -- --hostname ${host} --port ${port}`,
+          `npx next start --hostname ${host} --port ${port}`,
         ],
         command: "cmd.exe",
       }
     : {
-        args: ["run", "dev", "--", "--hostname", host, "--port", String(port)],
-        command: "npm",
+        args: ["next", "start", "--hostname", host, "--port", String(port)],
+        command: "npx",
       };
 
 let appServer;
@@ -165,9 +165,35 @@ function stopServer() {
       stdio: "ignore",
       windowsHide: true,
     });
+    Atomics.wait(new Int32Array(new SharedArrayBuffer(4)), 0, 0, 1_500);
+    spawnSync(
+      "powershell.exe",
+      [
+        "-NoProfile",
+        "-Command",
+        `Get-CimInstance Win32_Process | Where-Object { $_.CommandLine -like '*next*--port ${port}*' } | ForEach-Object { taskkill /pid $_.ProcessId /T /F | Out-Null }`,
+      ],
+      { stdio: "ignore", windowsHide: true },
+    );
+    const listeners = spawnSync(
+      "powershell.exe",
+      [
+        "-NoProfile",
+        "-Command",
+        `(Get-NetTCPConnection -State Listen -LocalPort ${port} -ErrorAction SilentlyContinue).OwningProcess`,
+      ],
+      { encoding: "utf8", windowsHide: true },
+    ).stdout;
+    for (const pid of listeners.match(/\d+/g) ?? []) {
+      spawnSync("taskkill", ["/pid", pid, "/T", "/F"], {
+        stdio: "ignore",
+        windowsHide: true,
+      });
+    }
   } else {
     appServer.kill("SIGTERM");
   }
+  appServer = undefined;
 }
 
 async function waitForApp() {
@@ -1013,6 +1039,8 @@ try {
     false,
   );
   await page.setViewportSize({ height: 1000, width: 1440 });
+  await page.reload({ waitUntil: "networkidle" });
+  await workspaceGuide.waitFor();
 
   await workspaceGuide.getByRole("button", { name: "继续" }).click();
   await page.waitForURL(`${baseUrl}/projects/${projectId}?guide=members`);
@@ -1082,7 +1110,7 @@ try {
 
   let malformedMissionGets = 0;
   await page.route(`**/api/projects/${projectId}/mission`, async (route) => {
-    if (route.request().method() !== "GET" || malformedMissionGets > 0) {
+    if (route.request().method() !== "GET") {
       await route.continue();
       return;
     }
@@ -1185,16 +1213,40 @@ try {
   await page.unroute(`**/api/missions/**`);
   await page.unroute(`**/api/projects/${projectId}/mission`);
 
+  const threadId = await page.evaluate(async (id) => {
+    const members = await (await fetch(`/api/projects/${id}/members`)).json();
+    const response = await fetch(`/api/projects/${id}/threads`, {
+      body: JSON.stringify({
+        memberAgentIds: members.members.map((member) => member.agentId),
+        operationId: crypto.randomUUID(),
+        title: "Onboarding collaboration",
+      }),
+      headers: { "content-type": "application/json" },
+      method: "POST",
+    });
+    const payload = await response.json();
+    if (!response.ok) throw new Error(JSON.stringify(payload));
+    return payload.thread.id;
+  }, projectId);
+  await page.goto(
+    `${baseUrl}/projects/${projectId}?thread=${encodeURIComponent(threadId)}&guide=goal`,
+    { waitUntil: "networkidle" },
+  );
   let uncertainRunPosts = 0;
   let runReconciliationGets = 0;
-  await page.route(`**/api/projects/${projectId}/runs`, async (route) => {
+  await page.route(
+    `**/api/projects/${projectId}/threads/${threadId}/runs`,
+    async (route) => {
     uncertainRunPosts += 1;
     await route.fetch();
     await route.abort("failed");
-  });
-  await page.route(`**/api/projects/${projectId}/collaboration**`, async (route) => {
-    if (uncertainRunPosts > 0) runReconciliationGets += 1;
-    await route.continue();
+    },
+  );
+  await page.route(`**/api/projects/${projectId}/threads/${threadId}**`, async (route) => {
+    if (uncertainRunPosts > 0 && route.request().method() === "GET") {
+      runReconciliationGets += 1;
+    }
+    await route.fallback();
   });
   await guide.getByRole("button", { name: "在项目群聊启动协作" }).click();
   const composer = page.getByLabel("发送给项目群聊");
@@ -1203,7 +1255,7 @@ try {
   );
   assert.equal(await composer.evaluate((node) => document.activeElement === node), true);
   await composer.fill("Start the verified onboarding collaboration.");
-  await page.getByRole("button", { name: "发送并启动协作" }).click();
+  await page.getByRole("button", { name: "发送并开始首次运行" }).click();
   await page.getByText("协作已启动", { exact: true }).waitFor();
   await page.getByText("所有者发来消息", { exact: true }).waitFor();
   await page
@@ -1217,19 +1269,28 @@ try {
   await scanSurfaceMatrix(page, "collaboration active complete page");
   assert.equal(uncertainRunPosts, 1);
   assert.equal(runReconciliationGets >= 1, true);
-  await page.unroute(`**/api/projects/${projectId}/runs`);
-  await page.unroute(`**/api/projects/${projectId}/collaboration**`);
+  await page.unroute(`**/api/projects/${projectId}/threads/${threadId}/runs`);
+  await page.unroute(`**/api/projects/${projectId}/threads/${threadId}**`);
 
   let uncertainMessagePosts = 0;
   let messageReconciliationGets = 0;
-  await page.route(`**/api/projects/${projectId}/messages`, async (route) => {
+  await page.route(
+    `**/api/projects/${projectId}/threads/${threadId}/messages`,
+    async (route) => {
+    if (route.request().method() !== "POST") {
+      await route.fallback();
+      return;
+    }
     uncertainMessagePosts += 1;
     await route.fetch();
     await route.abort("failed");
-  });
-  await page.route(`**/api/projects/${projectId}/collaboration**`, async (route) => {
-    if (uncertainMessagePosts > 0) messageReconciliationGets += 1;
-    await route.continue();
+    },
+  );
+  await page.route(`**/api/projects/${projectId}/threads/${threadId}**`, async (route) => {
+    if (uncertainMessagePosts > 0 && route.request().method() === "GET") {
+      messageReconciliationGets += 1;
+    }
+    await route.fallback();
   });
   await composer.fill("Follow-up after the active run started.");
   await page.getByRole("button", { name: "发送消息" }).click();
@@ -1241,21 +1302,25 @@ try {
     .waitFor();
   assert.equal(uncertainMessagePosts, 1);
   assert.equal(messageReconciliationGets >= 1, true);
-  await page.unroute(`**/api/projects/${projectId}/messages`);
-  await page.unroute(`**/api/projects/${projectId}/collaboration**`);
+  await page.unroute(`**/api/projects/${projectId}/threads/${threadId}/messages`);
+  await page.unroute(`**/api/projects/${projectId}/threads/${threadId}**`);
 
-  const facts = await page.evaluate(async (id) => {
-    const [mission, collaboration] = await Promise.all([
+  const facts = await page.evaluate(async ({ id, selectedThreadId }) => {
+    const [mission, messages, threadFacts] = await Promise.all([
       fetch(`/api/projects/${id}/mission`).then((response) => response.json()),
-      fetch(`/api/projects/${id}/collaboration`).then((response) => response.json()),
+      fetch(`/api/projects/${id}/threads/${selectedThreadId}/messages`)
+        .then((response) => response.json()),
+      fetch(`/api/projects/${id}/threads/${selectedThreadId}/facts`)
+        .then((response) => response.json()),
     ]);
-    return { collaboration, mission };
-  }, projectId);
+    return { mission, messages, threadFacts };
+  }, { id: projectId, selectedThreadId: threadId });
   assert.equal(facts.mission.mission.title, "Updated Onboarding Mission");
-  assert.equal(facts.collaboration.projectMessagesPage.items[0].authorType, "owner");
+  assert.equal(facts.messages.items[0].authorType, "owner");
   assert.equal(
-    facts.collaboration.timelinePage.items.some(
-      (event) => event.type === "run_started",
+    facts.threadFacts.items.some(
+      (fact) =>
+        fact.type === "run_event" && fact.payload.eventType === "run_started",
     ),
     true,
   );
@@ -1270,11 +1335,21 @@ try {
     runReconciliationGets,
   };
   assert.equal(
-    facts.collaboration.timelinePage.items.some(
-      (event) => event.type === "owner_message",
+    facts.threadFacts.items.some(
+      (fact) => fact.type === "owner_message",
     ),
     true,
   );
+  await page.reload({ waitUntil: "networkidle" });
+  await page.waitForFunction(() => {
+    const raw = window.localStorage.getItem("cool-ai:onboarding-preference:v1");
+    if (!raw) return false;
+    try {
+      return JSON.parse(raw).status?.value === "completed";
+    } catch {
+      return false;
+    }
+  });
   const completedPreference = JSON.parse(
     await page.evaluate(() =>
       window.localStorage.getItem("cool-ai:onboarding-preference:v1"),

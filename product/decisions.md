@@ -32,3 +32,9 @@
 - D-27 2026-08-08 设置分区以 URL query 作为唯一导航状态，固定入口使用本地 LWW-map 偏好与最近 100 条非敏感审计事件；真实项目 returnTo 仅接受严格本站路径并由普通/固定入口共同保留 — 依据: S-9 全链 browser smoke、并发/安全测试与自动 demo 验收
 - D-28 2026-08-08 主题采用 Cool 自有暖色 light/dark token；非敏感偏好按严格 envelope 跨标签收敛，并由 head 内同源 parser-blocking 外部脚本在 FCP 前恢复，避免依赖 Next client bootstrap 造成亮色闪烁 — 依据: S-10 12 组合/7 状态真实浏览器证据与自动 demo 验收
 - D-29 2026-08-08 首次使用引导采用跨既有表面的渐进旅程：业务完成度始终从 Provider、Agent、项目、workspace、members、Mission 与 CollaborationRun 事实派生，只把 skip/dismiss/resume/completed 等非敏感控制事件保存在本机 LWW 偏好；所有未知写结果只 GET 对账，目标受理不等于执行、复核或交付 — 依据: S-11 正式全链 browser demo、治理联结测试与自动验收
+- D-30 2026-08-09 Thread 是项目内稳定公开会话容器，标题不承担身份；消息上下文只在线程内续接，Mission、看板和 active memory 仍是项目共享事实，CollaborationRun 保持独立身份并明确归属一个线程 — 依据: S-12 真实 browser demo、迁移/tuple 测试与 auto 验收
+- D-31 2026-08-09 线程成员策略由 owner 在创建或修复时显式选择并形成不可变可追溯版本；项目 roster 变化不自动改写策略，历史作者名称保持快照，失效成员使 Agent 续接失败关闭直至 owner 修复 — 依据: S-12 真实 browser demo、迁移/tuple 测试与 auto 验收
+- D-32 2026-08-09 同一项目最多一个非终态 CollaborationRun；切换线程不暂停、终止、迁移或重放运行，其他线程仍可写 owner 消息，但 Agent dispatch 被阻止并提供返回活动线程的入口 — 依据: S-12 真实 browser demo、迁移/tuple 测试与 auto 验收
+- D-33 2026-08-09 有效 thread/run 深链是当前选择事实；无 thread 参数时恢复项目最近公开活动线程，重启和恢复只对账持久事实，不自动重发任何外部调用 — 依据: S-12 真实 browser demo、迁移/tuple 测试与 auto 验收
+- D-34 2026-08-09 公开消息凭据拒绝采用可枚举边界：拒绝已配置 Provider 密钥明文、PEM 私钥块、Authorization Basic/Bearer 值，以及 api-key/api_key/apikey/token/secret/password 字段后的非占位值；`***`、`<redacted>`、`${ENV_NAME}` 与仅字段名示例放行，命中内容不得持久化、返回、记录或渲染，且不宣称识别任意自然语言秘密 — 依据: S-12 真实 browser demo、迁移/tuple 测试与 auto 验收
+- D-35 2026-08-09 v7 升级为每个 legacy 项目确定性建立一个默认线程，保留原消息顺序、run 与下游来源，按迁移时有效成员形成初始策略并仅保留已移除作者快照；迁移原子、失败关闭且重复运行不得重复线程、策略或公开事实 — 依据: S-12 真实 browser demo、迁移/tuple 测试与 auto 验收

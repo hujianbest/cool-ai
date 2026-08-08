@@ -194,6 +194,45 @@ export const V7_TABLE_SQL = new Map<string, string>([
 );`],
 ]);
 
+export const V7_EXECUTIONS_SQL = `CREATE TABLE executions(
+ id TEXT PRIMARY KEY, project_id TEXT NOT NULL,
+ source_collaboration_thread_id TEXT NOT NULL, source_collaboration_run_id TEXT NOT NULL,
+ mission_id TEXT NOT NULL, work_item_id TEXT NOT NULL,
+ agent_id TEXT NOT NULL, current_policy_revision_id TEXT NOT NULL,
+ status TEXT NOT NULL CHECK(status IN ('queued','running','waiting_approval','paused','staged','stale','conflicted','failed','stopped','merged')),
+ resume_target TEXT CHECK(resume_target IS NULL OR resume_target IN ('queued','running','waiting_approval')),
+ reason_code TEXT,
+ manual_recovery_required INTEGER NOT NULL DEFAULT 0 CHECK(manual_recovery_required IN (0,1)),
+ recovery_resolution TEXT CHECK(recovery_resolution IS NULL OR recovery_resolution IN ('recovered_old','recovered_new','abandoned')),
+ current_attempt_no INTEGER NOT NULL CHECK(current_attempt_no>=1),
+ business_round_count INTEGER NOT NULL DEFAULT 0 CHECK(business_round_count>=0),
+ tool_call_count INTEGER NOT NULL DEFAULT 0 CHECK(tool_call_count>=0),
+ next_event_sequence INTEGER NOT NULL DEFAULT 1 CHECK(next_event_sequence>=1),
+ version INTEGER NOT NULL DEFAULT 1 CHECK(version>=1),
+ created_at TEXT NOT NULL CHECK(created_at GLOB '????-??-??T??:??:??.???Z'),
+ business_deadline_at TEXT CHECK(business_deadline_at IS NULL OR business_deadline_at GLOB '????-??-??T??:??:??.???Z'),
+ first_running_at TEXT CHECK(first_running_at IS NULL OR first_running_at GLOB '????-??-??T??:??:??.???Z'),
+ updated_at TEXT NOT NULL CHECK(updated_at GLOB '????-??-??T??:??:??.???Z'),
+ merged_at TEXT CHECK(merged_at IS NULL OR merged_at GLOB '????-??-??T??:??:??.???Z'),
+ UNIQUE(project_id,id), UNIQUE(project_id,mission_id,work_item_id,id),
+ FOREIGN KEY(project_id) REFERENCES projects(id) ON DELETE CASCADE,
+ FOREIGN KEY(project_id,source_collaboration_thread_id,source_collaboration_run_id)
+  REFERENCES collaboration_runs(project_id,thread_id,id),
+ FOREIGN KEY(project_id,mission_id) REFERENCES missions(project_id,id),
+ FOREIGN KEY(mission_id,work_item_id) REFERENCES work_items(mission_id,id),
+ FOREIGN KEY(project_id,agent_id) REFERENCES project_memberships(project_id,agent_id),
+ FOREIGN KEY(project_id,current_policy_revision_id) REFERENCES project_validation_policy_revisions(project_id,id),
+ CHECK((manual_recovery_required=1 AND status='conflicted' AND recovery_resolution IS NULL) OR manual_recovery_required=0),
+ CHECK((status='merged') = (merged_at IS NOT NULL)),
+ CHECK((first_running_at IS NULL AND business_deadline_at IS NULL) OR (first_running_at IS NOT NULL AND business_deadline_at IS NOT NULL))
+);`;
+
+export const V7_EXECUTION_INDEX_SQL = new Map<string, string>([
+  ["execution_one_active_task", "CREATE UNIQUE INDEX execution_one_active_task ON executions(work_item_id) WHERE status IN ('queued','running','waiting_approval','paused','staged');"],
+  ["execution_one_active_agent", "CREATE UNIQUE INDEX execution_one_active_agent ON executions(agent_id) WHERE status IN ('queued','running','waiting_approval','paused','staged');"],
+  ["executions_project_status", "CREATE INDEX executions_project_status ON executions(project_id,status,created_at,id);"],
+]);
+
 export const V7_INDEX_TRIGGER_SQL = new Map<string, string>([
   ["collaboration_one_active_project", "CREATE UNIQUE INDEX collaboration_one_active_project ON collaboration_runs(project_id) WHERE status IN('running','waiting_owner','paused','failed');"],
   ["collaboration_one_calling_attempt", "CREATE UNIQUE INDEX collaboration_one_calling_attempt ON collaboration_attempts(run_id) WHERE status='calling';"],
@@ -238,6 +277,10 @@ export const EXPECTED_V7_SQL = new Map<string, string>([
   ...V7_TABLE_SQL,
   ...V7_INDEX_TRIGGER_SQL,
 ].map(([name, sql]) => [name, normalizeSql(sql)]));
+const EXPECTED_V7_EXECUTION_SQL = normalizeSql(V7_EXECUTIONS_SQL);
+const EXPECTED_V7_EXECUTION_INDEX_SQL = new Map(
+  [...V7_EXECUTION_INDEX_SQL].map(([name, sql]) => [name, normalizeSql(sql)]),
+);
 
 const V7_OBJECT_NAMES = new Set(EXPECTED_V7_SQL.keys());
 
@@ -332,10 +375,23 @@ export function validateV7(
     "SELECT 1 FROM sqlite_master WHERE type='table' AND name='executions'",
   ).get() !== undefined;
   if (hasExecutions) {
-    const executionColumns = database.prepare("PRAGMA table_info(executions)").all() as Array<{
-      name: string;
-    }>;
-    if (!executionColumns.some(({ name }) => name === "source_collaboration_thread_id")) {
+    const executionObject = database.prepare(
+      "SELECT sql FROM sqlite_master WHERE type='table' AND name='executions'",
+    ).get() as { sql: string | null } | undefined;
+    const executionIndexes = database.prepare(
+      `SELECT name,sql FROM sqlite_master
+       WHERE type='index' AND name IN (
+         'execution_one_active_task','execution_one_active_agent','executions_project_status'
+       )`,
+    ).all() as Array<{ name: string; sql: string | null }>;
+    if (
+      !executionObject?.sql
+      || normalizeSql(executionObject.sql) !== EXPECTED_V7_EXECUTION_SQL
+      || executionIndexes.length !== EXPECTED_V7_EXECUTION_INDEX_SQL.size
+      || executionIndexes.some(({ name, sql }) =>
+        !sql || normalizeSql(sql) !== EXPECTED_V7_EXECUTION_INDEX_SQL.get(name)
+      )
+    ) {
       return "SCHEMA_DRIFT";
     }
     if (database.prepare(`
@@ -1554,8 +1610,20 @@ export function migrateV6ToV7(
   afterStep?: MigrationStepHook,
 ): void {
   const notify = (step: string) => afterStep?.(step, database);
-  database.exec("BEGIN IMMEDIATE");
+  const foreignKeysEnabled = (
+    database.prepare("PRAGMA foreign_keys").get() as { foreign_keys: number }
+  ).foreign_keys === 1;
+  const legacyAlterTableEnabled = (
+    database.prepare("PRAGMA legacy_alter_table").get() as {
+      legacy_alter_table: number;
+    }
+  ).legacy_alter_table === 1;
+  let failed = false;
+  let failure: unknown;
+  let restorationFailure: unknown;
   try {
+    database.exec("PRAGMA foreign_keys=OFF");
+    database.exec("BEGIN IMMEDIATE");
     database.exec("PRAGMA defer_foreign_keys=ON");
     notify("precheck");
     for (const sql of renderV7("v7_").slice(0, V7_TABLE_SQL.size)) database.exec(sql);
@@ -1574,17 +1642,30 @@ export function migrateV6ToV7(
       database.exec(`INSERT INTO "${table}" SELECT * FROM "v7_${table}"`);
       notify(`copy-final-${table}`);
     }
-    database.exec(
-      "ALTER TABLE executions ADD COLUMN source_collaboration_thread_id TEXT",
-    );
+    database.exec("PRAGMA legacy_alter_table=ON");
+    database.exec("ALTER TABLE executions RENAME TO v6_executions");
+    database.exec(V7_EXECUTIONS_SQL);
     database.exec(`
-      UPDATE executions
-      SET source_collaboration_thread_id=(
-        SELECT run.thread_id FROM collaboration_runs run
-        WHERE run.project_id=executions.project_id
-          AND run.id=executions.source_collaboration_run_id
+      INSERT INTO executions(
+        id,project_id,source_collaboration_thread_id,source_collaboration_run_id,
+        mission_id,work_item_id,agent_id,current_policy_revision_id,status,
+        resume_target,reason_code,manual_recovery_required,recovery_resolution,
+        current_attempt_no,business_round_count,tool_call_count,next_event_sequence,
+        version,created_at,business_deadline_at,first_running_at,updated_at,merged_at
       )
+      SELECT e.id,e.project_id,r.thread_id,e.source_collaboration_run_id,
+             e.mission_id,e.work_item_id,e.agent_id,e.current_policy_revision_id,
+             e.status,e.resume_target,e.reason_code,e.manual_recovery_required,
+             e.recovery_resolution,e.current_attempt_no,e.business_round_count,
+             e.tool_call_count,e.next_event_sequence,e.version,e.created_at,
+             e.business_deadline_at,e.first_running_at,e.updated_at,e.merged_at
+      FROM v6_executions e
+      JOIN collaboration_runs r
+        ON r.project_id=e.project_id AND r.id=e.source_collaboration_run_id
     `);
+    database.exec("DROP TABLE v6_executions");
+    for (const sql of V7_EXECUTION_INDEX_SQL.values()) database.exec(sql);
+    database.exec("PRAGMA legacy_alter_table=OFF");
     notify("backfill-execution-source-tuples");
     for (const table of [...V7_TABLE_SQL.keys()].reverse()) {
       database.exec(`DROP TABLE "v7_${table}"`);
@@ -1600,7 +1681,35 @@ export function migrateV6ToV7(
     database.exec("PRAGMA user_version=7");
     database.exec("COMMIT");
   } catch (error) {
-    if (database.isTransaction) database.exec("ROLLBACK");
-    throw error;
+    failed = true;
+    failure = error;
+    if (database.isTransaction) {
+      try {
+        database.exec("ROLLBACK");
+      } catch {
+        if (database.isTransaction) {
+          try {
+            database.exec("ROLLBACK");
+          } catch {
+            // Preserve the original migration error; restoration below is best effort.
+          }
+        }
+      }
+    }
+  } finally {
+    try {
+      database.exec(
+        `PRAGMA legacy_alter_table=${legacyAlterTableEnabled ? "ON" : "OFF"}`,
+      );
+    } catch (error) {
+      restorationFailure = error;
+    }
+    try {
+      database.exec(`PRAGMA foreign_keys=${foreignKeysEnabled ? "ON" : "OFF"}`);
+    } catch (error) {
+      restorationFailure ??= error;
+    }
   }
+  if (failed) throw failure;
+  if (restorationFailure) throw restorationFailure;
 }

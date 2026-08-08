@@ -15,7 +15,12 @@ type Fixture = {
   artifactBody?: string | null;
   artifactVersion?: string;
   eventPayload?: Record<string, unknown>;
-  frozenSource?: { projectId: string; runId: string; threadId: string } | null;
+  frozenSource?: Partial<{
+    projectId: string;
+    runId: string;
+    threadId: string;
+  }> | null;
+  legacySourceRunId?: string | null;
   latestRunId?: string;
   missionVersion?: number;
   optionalArtifact?: boolean;
@@ -44,6 +49,9 @@ function databaseFixture(overrides: Fixture = {}): DatabaseSync {
       ? { projectId: "project", runId: "run-a", threadId: "thread-a" }
       : overrides.frozenSource,
     latestRunId: overrides.latestRunId ?? "run-newest",
+    legacySourceRunId: overrides.legacySourceRunId === undefined
+      ? (overrides.sourceRunId ?? "run-a")
+      : overrides.legacySourceRunId,
     missionVersion: overrides.missionVersion ?? 3,
     optionalArtifact: overrides.optionalArtifact ?? true,
     sourceContextHash: overrides.sourceContextHash ?? "c".repeat(64),
@@ -144,6 +152,7 @@ function databaseFixture(overrides: Fixture = {}): DatabaseSync {
           frozenSourceProjectId: rows.frozenSource?.projectId ?? null,
           frozenSourceRunId: rows.frozenSource?.runId ?? null,
           frozenSourceThreadId: rows.frozenSource?.threadId ?? null,
+          legacySourceRunId: rows.legacySourceRunId,
           id: "result",
           mergeJournalId: "journal",
           sourceContextHash: rows.sourceContextHash,
@@ -252,8 +261,42 @@ describe("frozen review material", () => {
     });
   });
 
+  it("restores a v6 frozen package without source fields from its validated execution tuple", () => {
+    const legacy = freezeReviewMaterial(databaseFixture({
+      frozenSource: null,
+      latestRunId: "run-newest-must-not-be-used",
+      legacySourceRunId: "legacy-run",
+      sourceRunId: "legacy-run",
+      sourceThreadId: "legacy-thread-project-hash",
+    }), head, "legacy-attempt");
+
+    expect(legacy.material.result.source).toEqual({
+      contextHash: "c".repeat(64),
+      projectId: "project",
+      runId: "legacy-run",
+      threadId: "legacy-thread-project-hash",
+    });
+  });
+
   it.each([
-    ["missing frozen source", null],
+    ["missing legacy run identity", null, null],
+    ["conflicting legacy run identity", null, "run-other"],
+    ["partial source tuple", { projectId: "project", runId: "run-a" }, "run-a"],
+    ["explicit tuple with conflicting legacy run", {
+      projectId: "project",
+      runId: "run-a",
+      threadId: "thread-a",
+    }, "run-other"],
+  ])("fails closed for %s", (_case, frozenSource, legacySourceRunId) => {
+    expect(() => freezeReviewMaterial(databaseFixture({
+      frozenSource,
+      legacySourceRunId,
+    }), head, "attempt")).toThrow(expect.objectContaining({
+      code: "REVIEW_MATERIAL_INVALID",
+    }));
+  });
+
+  it.each([
     ["cross-thread frozen source", {
       projectId: "project",
       runId: "run-a",

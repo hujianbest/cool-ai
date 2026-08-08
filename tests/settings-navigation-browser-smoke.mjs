@@ -56,29 +56,17 @@ for (const stablePath of [desktopScreenshot, narrowScreenshot, resultsPath]) {
   rmSync(stablePath, { force: true });
 }
 
-const serverCommand =
-  process.platform === "win32"
-    ? {
-        command: "cmd.exe",
-        args: [
-          "/d",
-          "/s",
-          "/c",
-          `npm run dev -- --hostname ${host} --port ${appPort}`,
-        ],
-      }
-    : {
-        command: "npm",
-        args: [
-          "run",
-          "dev",
-          "--",
-          "--hostname",
-          host,
-          "--port",
-          String(appPort),
-        ],
-      };
+const serverCommand = {
+  command: process.execPath,
+  args: [
+    resolve("node_modules", "next", "dist", "bin", "next"),
+    "start",
+    "--hostname",
+    host,
+    "--port",
+    String(appPort),
+  ],
+};
 
 let appServer;
 let browser;
@@ -99,7 +87,6 @@ function startAppServer() {
     env: {
       ...process.env,
       COCKPIT_DB_PATH: databasePath,
-      NEXT_DIST_DIR: smokeDistDirectory,
     },
     stdio: ["ignore", "pipe", "pipe"],
     windowsHide: true,
@@ -119,9 +106,25 @@ function stopAppServer() {
       stdio: "ignore",
       windowsHide: true,
     });
+    const listeners = spawnSync(
+      "powershell.exe",
+      [
+        "-NoProfile",
+        "-Command",
+        `Start-Sleep -Milliseconds 1000; (Get-NetTCPConnection -State Listen -LocalPort ${appPort} -ErrorAction SilentlyContinue).OwningProcess`,
+      ],
+      { encoding: "utf8", windowsHide: true },
+    ).stdout;
+    for (const pid of listeners.match(/\d+/g) ?? []) {
+      spawnSync("taskkill", ["/pid", pid, "/T", "/F"], {
+        stdio: "ignore",
+        windowsHide: true,
+      });
+    }
   } else {
     appServer.kill("SIGTERM");
   }
+  appServer = undefined;
 }
 
 async function waitForApp() {
@@ -181,7 +184,9 @@ try {
   page.setDefaultTimeout(60_000);
 
   await page.goto(baseUrl, { waitUntil: "networkidle" });
-  await page.getByRole("button", { name: "创建项目" }).click();
+  await page.locator('button[type="button"]').getByText("创建项目", {
+    exact: true,
+  }).click();
   await page.getByLabel("项目名称").fill("Settings Smoke Project");
   await page
     .locator("form")

@@ -1,0 +1,40 @@
+# 任务票 — 项目内持久线程与上下文续接
+
+- 来源: [`design.md` 第 9 节](./design.md#9-任务清单)
+- 性质: 已批准旧设计 T-1～T-34 的兼容迁移索引；编号仅规范化为 T-01～T-34，勾选状态保持原记录。
+- 证据边界: 下列“判据”原样保留旧设计的验收测试要点，不新增 RED/GREEN、测试运行或通过证据；`Blocked by` 仅表达交付物的真实前置关系。
+
+- [x] T-01 建立唯一 V7_OBJECT_SQL renderer、normalized expected map与纯 validateV7 — Blocked by: None — 覆盖: FR-6, NFR-2；判据: `migrations-v7-schema.test.ts` 先红后绿验证完整 table/index/trigger/FK/deferrability SQL；本任务不运行迁移、不创建/替换业务表、不写 user_version
+- [x] T-02 用T-01 map执行完整 v6→v7 shadow replacement、全部 backfill/event/receipt转换、最终校验并仅一次设置 user_version=7 — Blocked by: T-01 — 覆盖: FR-3, FR-5, FR-6, FR-8, FR-9, NFR-2；判据: `migrations-v7-complete.test.ts` 从完整v6 fixture单次得到最终v7，任一中间hook观察均仍是 transaction内user_version=6，COMMIT前无可打开中间v7
+- [x] T-03 增加 legacy thread/policy/run/message 边界fixture并修正完整迁移 — Blocked by: T-02 — 覆盖: FR-3, FR-5, FR-8；判据: `migrations-v7-backfill.test.ts` 多项目/多run/project-only/removed author先红后绿
+- [x] T-04 增加 completed receipt 全 kind/created true|false/error replay fixture并修正转换 — Blocked by: T-02 — 覆盖: FR-8, FR-9, NFR-2；判据: `migrations-v7-receipts.test.ts` identity/status/body严格重放先红后绿
+- [x] T-05 增加 pending advance与非法pending start fixture并修正对账 — Blocked by: T-02 — 覆盖: FR-5, FR-8, NFR-2；判据: `migrations-v7-pending.test.ts` missing/duplicate calling attempt失败、无Provider resend、同operation完成一次
+- [x] T-06 增加全部 legacy event type与非法event fixture并修正映射 — Blocked by: T-02 — 覆盖: FR-8, FR-9, NFR-2；判据: `migrations-v7-events.test.ts` 穷尽 `TimelineEventType` 且unknown/malformed/duplicate先红后绿
+- [x] T-07 实现 thread create/list及确定 activity cursor — Blocked by: T-02 — 覆盖: FR-1, FR-9；判据: `thread-service.test.ts` 同名、边界、并发排序、receipt replay通过
+- [x] T-08 实现 policy revision/head与 stale version conflict — Blocked by: T-07 — 覆盖: FR-3, FR-9, NFR-2；判据: `thread-policy.test.ts` immutable/head/deferred FK/concurrency通过
+- [x] T-09 实现 policy availability与确定 Agent 选择 — Blocked by: T-08 — 覆盖: FR-3, FR-4；判据: `thread-readiness.test.ts` removed/new/rename/mention/handoff/provider scope通过
+- [x] T-10 实现 tuple-scoped thread detail与显式 run选择 GET — Blocked by: T-07, T-09 — 覆盖: FR-1, FR-4, FR-6；判据: `thread-detail-api.test.ts` null/run/duplicate/unknown/cross tuple通过
+- [x] T-11 实现 message/fact 两个独立严格分页读契约 — Blocked by: T-07 — 覆盖: FR-2, FR-6, FR-9；判据: `thread-history-api.test.ts` cursor/end/null/tuple/嵌套message通过
+- [x] T-12 实现 owner message 的 tuple write+receipt+fact 原子提交 — Blocked by: T-07 — 覆盖: FR-2, FR-6, FR-9；判据: `thread-message-api.test.ts` replay/cross tuple/零部分写入通过
+- [x] T-13 实现新 run 的 tuple write 与固定三 fact 原子提交 — Blocked by: T-09, T-12 — 覆盖: FR-4, FR-6, FR-9；判据: `thread-run-start-api.test.ts` fact order/receipt/active conflict通过
+- [x] T-14 迁移 timeline GET 到完整 tuple并移除旧入口 — Blocked by: T-13 — 覆盖: FR-4, FR-6；判据: `run-timeline-tuple.test.ts` unknown与cross tuple同404
+- [x] T-15 迁移 control POST 到完整 tuple并移除旧入口 — Blocked by: T-13 — 覆盖: FR-4, FR-6；判据: `run-control-tuple.test.ts` pause/continue/retry/stop严格归属通过
+- [x] T-16 迁移 decision answer POST 到完整 tuple并移除旧入口 — Blocked by: T-13 — 覆盖: FR-4, FR-6；判据: `decision-answer-tuple.test.ts` decision/run/thread三重错配同404
+- [x] T-17 迁移 advance POST 到完整 tuple — Blocked by: T-13 — 覆盖: FR-4, FR-6；判据: `run-advance-tuple.test.ts` 不返回prompt且cross tuple不调用Provider
+- [x] T-18 迁移 recover POST并实现 restart reconciliation — Blocked by: T-17 — 覆盖: FR-4, FR-5, FR-6；判据: `run-recover-tuple.test.ts` pending/expired/no-resend通过
+- [x] T-19 实现 owner 三个 ingress 的共享凭据拒绝 — Blocked by: T-12, T-13, T-16 — 覆盖: FR-7；判据: `owner-public-text-security.test.ts` 四类别/占位/零事实通过
+- [x] T-20 在 structured repair 前扫描 primary/repair raw — Blocked by: T-17 — 覆盖: FR-7；判据: `structured-repair-credential.test.ts` primary命中时 Provider call count=1、repair命中不parse
+- [x] T-21 原子扫描 AgentTurn 全部公开文本字段 — Blocked by: T-20 — 覆盖: FR-7, FR-9；判据: `agent-turn-credential.test.ts` 每字段×类别拒绝且无 message/task/event/receipt原值
+- [x] T-22 隔离 thread prompt、policy roster与 context hash — Blocked by: T-09, T-17 — 覆盖: FR-2, FR-3, FR-6；判据: `collaboration-prompt.test.ts` 两线程互斥、项目共享、非policy roster无关
+- [x] T-23 修正 active run与 Continue/Retry/新一轮规则 — Blocked by: T-13, T-15, T-17, T-18 — 覆盖: FR-4, FR-5；判据: `multi-thread-run-lifecycle.test.ts` owner消息可写、dispatch阻止、身份不迁移
+- [x] T-24 冻结 execution source tuple并删除 latestRun读取 — Blocked by: T-13 — 覆盖: FR-4, FR-6；判据: execution start/retry/rework tests 显式 tuple通过
+- [x] T-25 由 frozen execution tuple构造 review material — Blocked by: T-24 — 覆盖: FR-4, FR-6, FR-8；判据: review material tests 多 run不替代
+- [x] T-26 由 frozen execution tuple构造 delivery来源与链接 — Blocked by: T-24 — 覆盖: FR-4, FR-6, FR-8；判据: delivery source/navigation tests 多 run不替代
+- [x] T-27 更新 onboarding strict parser支持 thread+多 run envelope — Blocked by: T-02, T-10 — 覆盖: FR-5, FR-8；判据: `onboarding-fact-parsers.test.ts` 合法多 run与 malformed tuple通过
+- [x] T-28 实现 safe returnTo parser与 URL恢复 — Blocked by: T-10 — 覆盖: FR-5, FR-6；判据: settings navigation tests 覆盖 duplicate/unknown/fragment/cross tuple
+- [x] T-29 实现 thread list/create UI状态与URL选择 — Blocked by: T-07, T-10, T-28 — 覆盖: FR-1, FR-5, NFR-1；判据: `persistent-thread-list-ui.test.tsx` loading/empty/error/pending/success/focus通过
+- [x] T-30 实现 fact-only transcript分页渲染 — Blocked by: T-11, T-29 — 覆盖: FR-2, FR-9, NFR-1；判据: `thread-transcript-ui.test.tsx` message只出现一次且分页按fact.id去重
+- [x] T-31 实现 policy read/repair UI状态 — Blocked by: T-08, T-09, T-29 — 覆盖: FR-3, NFR-1；判据: `thread-policy-ui.test.tsx` removed/stale/keyboard/focus/disabled通过
+- [x] T-32 实现 run select与active-thread return UI状态 — Blocked by: T-10, T-23, T-29 — 覆盖: FR-4, NFR-1；判据: `thread-run-select-ui.test.tsx` null/active/error/focus通过
+- [x] T-33 实现 project/thread/run stale-request protection — Blocked by: T-29, T-30, T-31, T-32 — 覆盖: FR-2, FR-5, FR-6, NFR-1；判据: `thread-stale-response.test.tsx` delayed poll/write/reconcile均不能覆盖新target
+- [x] T-34 新增持久线程真实浏览器回归并执行全套命令 — Blocked by: T-01–T-33 — 覆盖: FR-1, FR-2, FR-3, FR-4, FR-5, FR-6, FR-7, FR-8, FR-9, NFR-1, NFR-2；判据: 新 `persistent-threads-browser-smoke.mjs` 覆盖两线程/重启/设置返回/窄屏/axe，且第8节全套命令 exit 0

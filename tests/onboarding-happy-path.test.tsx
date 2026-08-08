@@ -2070,6 +2070,13 @@ describe("progressive onboarding T-9 formal goal intake", () => {
       "fetch",
       vi.fn(async (input: RequestInfo | URL, init?: RequestInit) => {
         const url = String(input);
+        if (url.includes(`/threads/${threadId}/operations/`)) {
+          getCount += 1;
+          return Response.json(
+            { error: { code: "RESOURCE_NOT_FOUND", message: "Not found." } },
+            { status: 404 },
+          );
+        }
         const threadRead = !init?.method
           ? threadReadResponse(url, false)
           : null;
@@ -2290,10 +2297,30 @@ describe("progressive onboarding T-14 unknown-write reconciliation", () => {
     let persisted = false;
     let messagePosts = 0;
     let collaborationGets = 0;
+    let operationId = "";
     vi.stubGlobal(
       "fetch",
       vi.fn(async (input: RequestInfo | URL, init?: RequestInit) => {
         const url = String(input);
+        if (url.includes(`/threads/${threadId}/operations/`) && operationId) {
+          const state = stateWithOwnerMessages([
+            { content, id: "message-active", sequence: 2 },
+          ]);
+          const message = state.messagesPage.items[1];
+          return Response.json({
+            httpStatus: 201,
+            kind: "message",
+            operationId,
+            response: {
+              fact: state.factsPage.items.find(
+                (fact) => fact.messageId === message.id,
+              ),
+              message,
+              run: state.selectedRun,
+            },
+            status: "completed",
+          });
+        }
         const threadRead = !init?.method
           ? threadStateResponse(
               url,
@@ -2315,6 +2342,9 @@ describe("progressive onboarding T-14 unknown-write reconciliation", () => {
           init?.method === "POST"
         ) {
           messagePosts += 1;
+          operationId = (
+            JSON.parse(String(init.body)) as { operationId: string }
+          ).operationId;
           persisted = true;
           throw new TypeError("response lost after commit");
         }
@@ -2440,6 +2470,16 @@ describe("progressive onboarding T-14 unknown-write reconciliation", () => {
       "fetch",
       vi.fn(async (input: RequestInfo | URL, init?: RequestInit) => {
         const url = String(input);
+        if (url.includes(`/threads/${threadId}/operations/`)) {
+          if (failReconciliationGet) {
+            failReconciliationGet = false;
+            throw new TypeError("reconciliation GET interrupted");
+          }
+          return Response.json(
+            { error: { code: "RESOURCE_NOT_FOUND", message: "Not found." } },
+            { status: 404 },
+          );
+        }
         const threadRead = !init?.method
           ? threadReadResponse(url, persisted)
           : null;

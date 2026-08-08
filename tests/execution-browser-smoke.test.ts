@@ -28,7 +28,9 @@ describe("execution browser smoke harness contract", () => {
 
   it("creates permissions and executable work through public product routes", () => {
     expect(harness).toContain("/api/agents/${agentId}");
-    expect(harness).toContain("/api/projects/${id}/runs");
+    expect(harness).toContain(
+      "/api/projects/${id}/threads/${selectedThreadId}/runs",
+    );
     expect(harness).not.toContain("UPDATE agents SET");
     expect(harness).not.toContain("INSERT INTO collaboration_");
   });
