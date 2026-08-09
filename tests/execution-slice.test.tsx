@@ -40,7 +40,7 @@ beforeEach(() => {
 afterEach(async () => {
   vi.unstubAllGlobals();
   try {
-    const moduleId = "@/src/server/execution/sandbox-executor";
+    const moduleId = "@/src/adapters/outbound/workspace/sandbox-executor";
     const sandbox = (await import(/* @vite-ignore */ moduleId)) as SandboxModule;
     sandbox.setSandboxExecutorForTests(null);
   } catch {
@@ -79,7 +79,7 @@ async function executionPanel(): Promise<ComponentType<{
 }
 
 async function sandboxModule(): Promise<SandboxModule> {
-  const moduleId = "@/src/server/execution/sandbox-executor";
+  const moduleId = "@/src/adapters/outbound/workspace/sandbox-executor";
   try {
     return (await import(/* @vite-ignore */ moduleId)) as SandboxModule;
   } catch {

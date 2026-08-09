@@ -1,6 +1,6 @@
 import { join } from "node:path";
 
-import { decideExecutionApproval } from "@/src/server/execution/execution-approval-service";
+import { decideExecutionApproval } from "@/src/adapters/outbound/sqlite/safe-execution/execution-approval-service";
 import {
   executionErrorResponse,
   readBoundedExecutionJson,

@@ -48,7 +48,7 @@ const adapterSources = [
   "../../../src/server/collaboration/collaboration-api.ts",
   "../../../src/server/context-api.ts",
   "../../../src/server/execution/execution-api.ts",
-  "../../../src/server/execution/execution-read-service.ts",
+  "../../../src/adapters/outbound/sqlite/safe-execution/execution-read-service.ts",
   "../../../src/server/membership-api.ts",
   "../../../src/server/memory-api.ts",
   "../../../src/server/mission-api.ts",

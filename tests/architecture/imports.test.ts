@@ -7,12 +7,49 @@ import { importEdges, readSource, resolveSpecifier, sourceFiles } from "./helper
  * Hard rules block now (vacuous for not-yet-populated target dirs); ratchets only shrink.
  * T-04 transition exemption: an owner's sqlite adapter may import that same owner's
  * module internal/ until credential-vault gains a public entry and this exemption is removed.
+ * T-09 transition exemption: safe-execution's own adapters import its internal/ pure
+ * policies (command-policy/action-schema/prompt-builder); project-workspace's
+ * validation-policy-service keeps its registered cross-domain read of command-policy
+ * (feature architecture "分类逻辑留 safe-execution"; T-13 收编).
  */
 const ALLOWED_MODULE_INTERNAL_EDGES: Record<string, RegExp[]> = {
   "src/adapters/outbound/sqlite/identity-capability": [
     /^src\/modules\/identity-capability\/internal\//u,
   ],
+  "src/adapters/outbound/sqlite/safe-execution": [
+    /^src\/modules\/safe-execution\/internal\//u,
+    // T-09 transition: model 调用经 credential-vault 解密 provider 凭据；
+    // 跨 owner internal 读在 T-13 Workflow 提取时收编。
+    /^src\/modules\/identity-capability\/internal\/credential-vault$/u,
+  ],
+  "src/adapters/outbound/sqlite/project-workspace": [
+    /^src\/modules\/safe-execution\/internal\/command-policy$/u,
+  ],
 };
+
+/**
+ * T-09: safe-execution has two legal adapter dirs (write-ownership manifest):
+ * sqlite/safe-execution (SQL domain services) and workspace (verified-handle/fs/process).
+ * Same-owner edges between them are the target form, not cross-owner leakage.
+ */
+function isSafeExecutionSameOwnerEdge(file: string, resolved: string): boolean {
+  const sqliteDir = /^src\/adapters\/outbound\/sqlite\/safe-execution\//u;
+  const workspaceDir = /^src\/adapters\/outbound\/workspace\//u;
+  return (sqliteDir.test(file) && workspaceDir.test(resolved))
+    || (workspaceDir.test(file) && sqliteDir.test(resolved));
+}
+
+/**
+ * T-09 transition: sandbox-executor 直开 sqlite connection 写 execution 表
+ *（writers.test.ts 已登记 workspace/ 为 safe-execution 合法 writer 目录）；
+ * T-13/T-14 收编为事务协调 Port 形态后移除。
+ */
+const TRANSITIONAL_ADAPTER_EDGES: Array<{ file: string; specifier: string }> = [
+  {
+    file: "src/adapters/outbound/workspace/sandbox-executor.ts",
+    specifier: "@/src/adapters/outbound/sqlite/connection",
+  },
+];
 
 // Module 事务内命令 Interface 允许依赖 src/application 的事务协调 Port 类型（product/architecture.md 第 3 节）
 const FORBIDDEN_IN_MODULES = [
@@ -117,7 +154,13 @@ describe("target-layer import boundaries", () => {
           found.push(`${file} -> ${edge.specifier} (composition)`);
         }
         const otherTech = resolved.match(/^src\/adapters\/outbound\/([^/]+)\//u)?.[1];
-        if (otherTech && ownTech && otherTech !== ownTech) {
+        if (
+          otherTech && ownTech && otherTech !== ownTech
+          && !isSafeExecutionSameOwnerEdge(file, resolved)
+          && !TRANSITIONAL_ADAPTER_EDGES.some(
+            (entry) => entry.file === file && entry.specifier === edge.specifier,
+          )
+        ) {
           found.push(`${file} -> ${edge.specifier} (cross-technology adapter)`);
         }
       }

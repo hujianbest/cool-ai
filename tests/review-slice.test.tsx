@@ -17,7 +17,7 @@ import { validateFixtureDatabase } from "@/tests/fixtures/execution/current-grap
 import {
   executeMergeCommit,
   executeMergePrepare,
-} from "@/src/server/execution/merge-journal-service";
+} from "@/src/adapters/outbound/sqlite/safe-execution/merge-journal-service";
 import {
   readReviewWorkspace,
   startReview,

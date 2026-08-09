@@ -9,11 +9,11 @@ import {
   executionReadResponse,
   readQuery,
 } from "@/src/server/execution/execution-read-api";
-import { listProjectExecutions } from "@/src/server/execution/execution-read-service";
+import { listProjectExecutions } from "@/src/adapters/outbound/sqlite/safe-execution/execution-read-service";
 import {
   startExecution,
-} from "@/src/server/execution/execution-service";
-import { sandboxExecutor } from "@/src/server/execution/sandbox-executor";
+} from "@/src/adapters/outbound/sqlite/safe-execution/execution-service";
+import { sandboxExecutor } from "@/src/adapters/outbound/workspace/sandbox-executor";
 import { startExecutionInputSchema } from "@/src/shared/execution-contracts";
 
 type RouteContext = { params: Promise<{ projectId: string }> };

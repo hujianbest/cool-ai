@@ -1,13 +1,13 @@
 import { join } from "node:path";
 
-import { advanceExecution } from "@/src/server/execution/action-orchestrator";
+import { advanceExecution } from "@/src/adapters/outbound/sqlite/safe-execution/action-orchestrator";
 import {
   executionErrorResponse,
   readBoundedExecutionJson,
 } from "@/src/server/execution/execution-api";
 import {
   createWindowsVerifiedExecutionAdapters,
-} from "@/src/server/execution/windows-verified-execution-adapter";
+} from "@/src/adapters/outbound/workspace/windows-verified-execution-adapter";
 import { advanceExecutionInputSchema } from "@/src/shared/execution-contracts";
 
 type RouteContext = { params: Promise<{ executionId: string }> };

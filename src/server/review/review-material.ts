@@ -1,7 +1,7 @@
 import { createHash } from "node:crypto";
 import type { DatabaseSync } from "node:sqlite";
 
-import { redactProcessOutput } from "@/src/server/execution/process-runner";
+import { redactProcessOutput } from "@/src/adapters/outbound/workspace/process-runner";
 import { executionEventDtoSchema } from "@/src/shared/execution-contracts";
 
 const MAX_MATERIAL_BYTES = 2 * 1024 * 1024;

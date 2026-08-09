@@ -14,11 +14,11 @@ import { createThread } from "@/src/server/collaboration/thread-service";
 import {
   executionDtoFromDatabase,
   startExecution,
-} from "@/src/server/execution/execution-service";
+} from "@/src/adapters/outbound/sqlite/safe-execution/execution-service";
 import {
   preflightSandbox,
   type SandboxFsAdapter,
-} from "@/src/server/execution/sandbox-preflight";
+} from "@/src/adapters/outbound/workspace/sandbox-preflight";
 import { generatePublicDelivery } from "@/src/server/review/delivery-application-service";
 import { startPublicReview } from "@/src/server/review/review-application-service";
 import { parseWorkspaceGuideEnvelope } from "@/src/shared/onboarding-guide-machine";

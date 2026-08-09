@@ -4,7 +4,7 @@ import {
   executionErrorResponse,
   readBoundedExecutionJson,
 } from "@/src/server/execution/execution-api";
-import { mergeExecution } from "@/src/server/execution/merge-service";
+import { mergeExecution } from "@/src/adapters/outbound/sqlite/safe-execution/merge-service";
 import { mergeExecutionInputSchema } from "@/src/shared/execution-contracts";
 
 type RouteContext = { params: Promise<{ executionId: string }> };

@@ -1,5 +1,5 @@
 import { internalErrorResponse, storageErrorResponse } from "@/src/server/api-errors";
-import { ExecutionError } from "@/src/server/execution/execution-service";
+import { ExecutionError } from "@/src/modules/safe-execution";
 import { SchemaError } from "@/src/adapters/outbound/sqlite/schema-error";
 
 export async function readBoundedExecutionJson(

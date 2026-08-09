@@ -2,7 +2,7 @@ import {
   executionDatabasePath,
   executionReadResponse,
 } from "@/src/server/execution/execution-read-api";
-import { readExecutionDetail } from "@/src/server/execution/execution-read-service";
+import { readExecutionDetail } from "@/src/adapters/outbound/sqlite/safe-execution/execution-read-service";
 
 type RouteContext = { params: Promise<{ executionId: string }> };
 

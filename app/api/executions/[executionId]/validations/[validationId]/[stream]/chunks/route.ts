@@ -3,7 +3,7 @@ import {
   executionReadResponse,
   readQuery,
 } from "@/src/server/execution/execution-read-api";
-import { listValidationChunks } from "@/src/server/execution/execution-read-service";
+import { listValidationChunks } from "@/src/adapters/outbound/sqlite/safe-execution/execution-read-service";
 
 type RouteContext = {
   params: Promise<{ executionId: string; stream: string; validationId: string }>;

@@ -1,6 +1,6 @@
 import type { DatabaseSync } from "node:sqlite";
 
-import { captureExecutionFrozenInput } from "@/src/server/execution/execution-frozen-input";
+import { captureExecutionFrozenInput } from "@/src/adapters/outbound/sqlite/safe-execution/execution-frozen-input";
 
 export function refreshExecutionFrozenFixture(
   database: DatabaseSync,

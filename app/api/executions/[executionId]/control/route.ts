@@ -1,12 +1,12 @@
 import { join } from "node:path";
 
-import { controlExecution } from "@/src/server/execution/execution-control-service";
+import { controlExecution } from "@/src/adapters/outbound/sqlite/safe-execution/execution-control-service";
 import {
   executionErrorResponse,
   readBoundedExecutionJson,
 } from "@/src/server/execution/execution-api";
-import { requestExecutionProcessTermination } from "@/src/server/execution/process-runner";
-import { sandboxExecutor } from "@/src/server/execution/sandbox-executor";
+import { requestExecutionProcessTermination } from "@/src/adapters/outbound/workspace/process-runner";
+import { sandboxExecutor } from "@/src/adapters/outbound/workspace/sandbox-executor";
 import { executionControlInputSchema } from "@/src/shared/execution-contracts";
 
 type RouteContext = { params: Promise<{ executionId: string }> };

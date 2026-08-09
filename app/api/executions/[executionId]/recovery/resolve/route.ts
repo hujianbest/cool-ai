@@ -8,8 +8,8 @@ import {
 } from "@/src/server/execution/execution-api";
 import {
   executionDtoFromDatabase,
-} from "@/src/server/execution/execution-service";
-import { resolveManualRecovery } from "@/src/server/execution/merge-journal-service";
+} from "@/src/adapters/outbound/sqlite/safe-execution/execution-service";
+import { resolveManualRecovery } from "@/src/adapters/outbound/sqlite/safe-execution/merge-journal-service";
 
 type RouteContext = { params: Promise<{ executionId: string }> };
 

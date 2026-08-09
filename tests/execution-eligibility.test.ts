@@ -20,7 +20,7 @@ function openDatabase(path: string): DatabaseSync {
   database.exec("PRAGMA foreign_keys=ON");
   return database;
 }
-import { startExecution } from "@/src/server/execution/execution-service";
+import { startExecution } from "@/src/adapters/outbound/sqlite/safe-execution/execution-service";
 
 const PROJECT_ID = "eligibility-project";
 const THREAD_ID = "eligibility-thread";

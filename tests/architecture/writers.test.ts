@@ -49,6 +49,7 @@ const MIGRATED_OWNERS: string[] = [
   "mission-work",
   "knowledge-provenance",
   "governance",
+  "safe-execution",
 ];
 
 /**
@@ -57,6 +58,9 @@ const MIGRATED_OWNERS: string[] = [
  * T-11 review-delivery wave and the T-13 workflow extraction land. This set may only shrink.
  * T-07: review-finalizer still persists review_memory_candidates inline inside the
  * finalization transaction; the candidate write path is formalized in T-11/T-13.
+ * T-09: validation-policy-service persists its idempotent operation receipt in
+ * safe-execution's execution_operations (the T-05 registered cross-domain seam);
+ * the receipt write path is formalized in T-13/T-14.
  */
 const TRANSITIONAL_NON_OWNER_WRITERS: Array<{ file: string; owner: string; table: string }> = [
   { file: "src/server/review/completion-gate.ts", owner: "mission-work", table: "work_items" },
@@ -65,6 +69,11 @@ const TRANSITIONAL_NON_OWNER_WRITERS: Array<{ file: string; owner: string; table
     file: "src/server/review/review-finalizer.ts",
     owner: "knowledge-provenance",
     table: "review_memory_candidates",
+  },
+  {
+    file: "src/adapters/outbound/sqlite/project-workspace/validation-policy-service.ts",
+    owner: "safe-execution",
+    table: "execution_operations",
   },
 ];
 

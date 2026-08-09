@@ -1,4 +1,4 @@
-import { redactProcessOutput } from "@/src/server/execution/process-runner";
+import { redactProcessOutput } from "@/src/adapters/outbound/workspace/process-runner";
 import {
   reviewOutputSchema,
   type ReviewOutput,
