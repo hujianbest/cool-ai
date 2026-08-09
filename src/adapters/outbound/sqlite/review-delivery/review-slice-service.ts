@@ -3,7 +3,7 @@ import type { DatabaseSync } from "node:sqlite";
 
 import { createCredentialVault } from "@/src/modules/identity-capability/internal/credential-vault";
 import { openDatabase } from "@/src/adapters/outbound/sqlite/connection";
-import { callOpenAiChat } from "@/src/server/collaboration/openai-chat-client";
+import { callOpenAiChat } from "@/src/adapters/outbound/model-runtime/openai-chat-client";
 import {
   invalidateCompletionTx,
   projectPassedWorkItemTx,

@@ -27,8 +27,8 @@ const applicationModules = import.meta.glob<ApplicationModule>(
   "../../../src/adapters/outbound/sqlite/review-delivery/review-application-service.ts",
 );
 const callOpenAiChat = vi.hoisted(() => vi.fn());
-vi.mock("@/src/server/collaboration/openai-chat-client", async (load) => ({
-  ...await load<typeof import("@/src/server/collaboration/openai-chat-client")>(),
+vi.mock("@/src/adapters/outbound/model-runtime/openai-chat-client", async (load) => ({
+  ...await load<typeof import("@/src/adapters/outbound/model-runtime/openai-chat-client")>(),
   callOpenAiChat,
 }));
 vi.mock("@/src/adapters/outbound/sqlite/connection", async (load) => {

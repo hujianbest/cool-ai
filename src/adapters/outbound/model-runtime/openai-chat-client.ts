@@ -3,7 +3,7 @@ import type {
   ModelCallResult,
   ModelCallUsage,
   OpenAiChatMessage,
-} from "../../shared/collaboration-contracts";
+} from "@/src/shared/collaboration-contracts";
 
 export const OPENAI_CHAT_TIMEOUT_MILLISECONDS = 90_000;
 export const OPENAI_CHAT_RESPONSE_LIMIT_BYTES = 1024 * 1024;

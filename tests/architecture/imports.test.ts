@@ -20,6 +20,10 @@ import { importEdges, readSource, resolveSpecifier, sourceFiles } from "./helper
  * T-11 transition exemption: review-delivery's sqlite adapters keep the registered
  * cross-owner read of identity-capability's credential-vault (reviewer 凭据解密);
  * T-13 收编.
+ * T-12 transition exemption: model-runtime outbound Adapter（provider-verifier/
+ * openai-chat-client）落地后，sqlite 各 owner Adapter 对其形成跨技术读，
+ * public-collaboration 的 structured-repair 仍直调该 Adapter（迁移前经 src/server
+ * legacy 路径引用同一客户端）；T-13 收编为显式 Port/能力后移除。
  */
 const ALLOWED_MODULE_INTERNAL_EDGES: Record<string, RegExp[]> = {
   "src/adapters/outbound/sqlite/identity-capability": [
@@ -85,6 +89,45 @@ const TRANSITIONAL_ADAPTER_EDGES: Array<{ file: string; specifier: string }> = [
     file: "src/adapters/outbound/sqlite/review-delivery/review-schema.ts",
     specifier: "@/src/adapters/outbound/workspace/process-runner",
   },
+  // T-12 transition: sqlite 各 owner Adapter 跨技术读 model-runtime 的
+  // provider-verifier/openai-chat-client（迁移前同经 src/server legacy 路径）；
+  // T-13 收编为显式能力后移除。
+  {
+    file: "src/adapters/outbound/sqlite/identity-capability/provider-service.ts",
+    specifier: "@/src/adapters/outbound/model-runtime/provider-verifier",
+  },
+  {
+    file: "src/adapters/outbound/sqlite/review-delivery/review-slice-service.ts",
+    specifier: "@/src/adapters/outbound/model-runtime/openai-chat-client",
+  },
+  {
+    file: "src/adapters/outbound/sqlite/review-delivery/review-orchestrator.ts",
+    specifier: "@/src/adapters/outbound/model-runtime/openai-chat-client",
+  },
+  {
+    file: "src/adapters/outbound/sqlite/review-delivery/review-structured-repair.ts",
+    specifier: "@/src/adapters/outbound/model-runtime/openai-chat-client",
+  },
+  {
+    file: "src/adapters/outbound/sqlite/safe-execution/action-orchestrator.ts",
+    specifier: "@/src/adapters/outbound/model-runtime/openai-chat-client",
+  },
+  {
+    file: "src/adapters/outbound/sqlite/safe-execution/execution-structured-repair.ts",
+    specifier: "@/src/adapters/outbound/model-runtime/openai-chat-client",
+  },
+];
+
+/**
+ * T-12 transition: public-collaboration 的 structured-repair 仍直调 model-runtime
+ * outbound Adapter（迁移前经 src/server legacy 路径引用同一客户端，当时
+ * src/server 不在 FORBIDDEN_IN_MODULES 内）；T-13 收编为显式 Port 注入后移除。
+ */
+const TRANSITIONAL_MODULE_ADAPTER_EDGES: Array<{ file: string; specifier: string }> = [
+  {
+    file: "src/modules/public-collaboration/internal/structured-repair.ts",
+    specifier: "@/src/adapters/outbound/model-runtime/openai-chat-client",
+  },
 ];
 
 // Module 事务内命令 Interface 允许依赖 src/application 的事务协调 Port 类型（product/architecture.md 第 3 节）
@@ -141,7 +184,13 @@ describe("target-layer import boundaries", () => {
 
   it("keeps domain modules free of sqlite/adapter/application/inbound deps", () => {
     const files = sourceFiles("src/modules");
-    expect(violations(files, FORBIDDEN_IN_MODULES)).toEqual([]);
+    const found = violations(files, FORBIDDEN_IN_MODULES).filter(
+      (entry) =>
+        !TRANSITIONAL_MODULE_ADAPTER_EDGES.some(
+          (edge) => entry === `${edge.file} -> ${edge.specifier}`,
+        ),
+    );
+    expect(found).toEqual([]);
   });
 
   it("keeps modules from deep-importing another module's internal/ports", () => {

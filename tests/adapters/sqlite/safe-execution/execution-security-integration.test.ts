@@ -16,7 +16,7 @@ vi.mock("server-only", () => ({}));
 import {
   callOpenAiChat,
   OPENAI_CHAT_TIMEOUT_MILLISECONDS,
-} from "@/src/server/collaboration/openai-chat-client";
+} from "@/src/adapters/outbound/model-runtime/openai-chat-client";
 import {
   classifyExecutionCommand,
   classifyPolicyEntry,

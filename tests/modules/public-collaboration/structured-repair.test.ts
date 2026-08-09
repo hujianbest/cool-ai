@@ -1,12 +1,12 @@
 import { beforeEach, describe, expect, it, vi } from "vitest";
 
-import { callOpenAiChat } from "../../../src/server/collaboration/openai-chat-client";
+import { callOpenAiChat } from "../../../src/adapters/outbound/model-runtime/openai-chat-client";
 import type {
   ModelCallResult,
   OpenAiChatMessage,
 } from "../../../src/shared/collaboration-contracts";
 
-vi.mock("../../../src/server/collaboration/openai-chat-client", () => ({
+vi.mock("../../../src/adapters/outbound/model-runtime/openai-chat-client", () => ({
   callOpenAiChat: vi.fn(),
 }));
 

@@ -13,7 +13,7 @@ import { openDatabase } from "@/src/adapters/outbound/sqlite/connection";
 import {
   normalizeProviderBaseUrl,
   verifyProviderConnection,
-} from "@/src/server/provider-verifier";
+} from "@/src/adapters/outbound/model-runtime/provider-verifier";
 import type {
   CreateProviderDraft,
   Provider,

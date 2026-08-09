@@ -18,7 +18,7 @@ type ClientModule = {
 };
 
 const clientModules = import.meta.glob<ClientModule>(
-  "../src/server/collaboration/openai-chat-client.ts",
+  "../../../src/adapters/outbound/model-runtime/openai-chat-client.ts",
 );
 
 const API_KEY = "chat-key-DO-NOT-LEAK";
@@ -39,7 +39,7 @@ let redirectTargetRequests = 0;
 const captured: CapturedRequest[] = [];
 
 async function loadClient(): Promise<ClientModule> {
-  const load = clientModules["../src/server/collaboration/openai-chat-client.ts"];
+  const load = clientModules["../../../src/adapters/outbound/model-runtime/openai-chat-client.ts"];
   expect(load, "the OpenAI chat client must exist").toBeTypeOf("function");
   return load();
 }

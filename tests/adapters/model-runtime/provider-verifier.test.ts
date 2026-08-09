@@ -23,7 +23,7 @@ type VerifierModule = {
 };
 
 const verifierModules = import.meta.glob<VerifierModule>(
-  "../src/server/provider-verifier.ts",
+  "../../../src/adapters/outbound/model-runtime/provider-verifier.ts",
 );
 const API_KEY = "provider-key-DO-NOT-LEAK-ABCD";
 const TOKEN = "validation-token-DO-NOT-LEAK";
@@ -56,7 +56,7 @@ function close(serverToClose: Server): Promise<void> {
 }
 
 async function loadVerifier(): Promise<VerifierModule> {
-  const load = verifierModules["../src/server/provider-verifier.ts"];
+  const load = verifierModules["../../../src/adapters/outbound/model-runtime/provider-verifier.ts"];
   expect(load, "the provider network verifier must exist").toBeTypeOf("function");
   return load();
 }

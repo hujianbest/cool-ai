@@ -1,6 +1,6 @@
 import { randomUUID } from "node:crypto";
 
-import { ProviderVerificationError } from "@/src/server/provider-verifier";
+import { ProviderVerificationError } from "@/src/adapters/outbound/model-runtime/provider-verifier";
 import { ProviderServiceError } from "@/src/modules/identity-capability";
 import { SchemaError } from "@/src/adapters/outbound/sqlite/schema-error";
 

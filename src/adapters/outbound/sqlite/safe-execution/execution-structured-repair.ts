@@ -9,7 +9,7 @@ import {
   callOpenAiChat,
   type OpenAiChatCallContext,
   type OpenAiChatRequest,
-} from "@/src/server/collaboration/openai-chat-client";
+} from "@/src/adapters/outbound/model-runtime/openai-chat-client";
 import {
   EXECUTION_ACTION_SCHEMA_INSTRUCTIONS,
   type ExecutionAction,
