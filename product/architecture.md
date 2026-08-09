@@ -1,8 +1,9 @@
-# Cool AI 目标架构与迁移地图
+# Cool AI 产品架构
 
 - 日期: 2026-08-09
-- 状态: 产品级目标架构；目标架构收敛是后续功能开发的阻塞前置
-- 用户确认: 2026-08-09 采用领域模块化单体 + Ports/Adapters + 跨域 Application Workflow；2026-08-09 确认先把当前工程实现完整迁入目标架构，再恢复后续功能开发
+- 状态: 产品级架构基线；目标架构收敛已完成（特性 019，D-45），后续功能开发按本文件准入
+- 用户确认: 2026-08-09 采用领域模块化单体 + Ports/Adapters + 跨域 Application Workflow；2026-08-09 确认先把当前工程实现完整迁入目标架构，再恢复后续功能开发；2026-08-09 确认解除架构优先冻结（D-45）
+- 更新: 2026-08-09 收敛完成后按 hf-to-product-architecture 刷新——第 8 节现状证据、第 9 节收敛完成记录，新增第 11 节关键场景与第 12 节横切约定
 - 决策依据: `docs/adr/0002-domain-modular-monolith.md`、`docs/adr/0003-pre-release-canonical-database-schema.md`、`docs/adr/0004-architecture-first-convergence.md`
 
 ## 1. 架构目标
@@ -261,7 +262,7 @@ Workflow 只拥有流程 operation、步骤/checkpoint 和补偿状态，不拥�
 
 ## 7. 目标状态目录结构
 
-目标目录把逻辑所有权落实为可机械检查的物理接缝。当前工程必须先完成这次架构收敛，后续产品功能才可恢复实现。收敛不是一次不可验证的大搬家：它按 owner 与调用接缝拆成连续波次，每一波同时迁移 Interface、Implementation、Adapter、调用方与测试，并始终保持仓库可构建、公共行为不回退；全部波次完成前不在旧结构上继续叠加功能。
+目标目录把逻辑所有权落实为可机械检查的物理接缝。当前工程已完成架构收敛（第 9 节），本节结构即当前现实；后续产品功能必须直接落在目标结构上，不得在旧结构或目录外重建入口。`runtime` 与 `operations-projection` 尚无自有命令事实，按 A-101 不建空壳 Module，待对应 Capability 切片建立时再补目录。
 
 ```text
 cool-ai/
@@ -402,11 +403,11 @@ tests/
 - Adapter 契约测试复用 Module 提供的 Port contract suite；不得 mock 被测 Module 来证明 Adapter 正确。
 - 浏览器测试按可演示纵切组织，不镜像页面文件树；架构测试单独验证跨域 deep import、循环依赖、未知 writer 和未登记表。
 - TypeScript path alias 只为公开入口和稳定顶层角色服务；不得为 `internal/`、`ports/` 或具体 Adapter 建立绕过规则的捷径。
-- `src/server/`、按技术类别聚集的根级 `*-service.ts`，以及 route 内的跨域编排不属于目标状态。只有当调用方、测试、writer 清单和依赖检查全部迁走后，旧路径才能删除。
+- `src/server/`、按技术类别聚集的根级 `*-service.ts`，以及 route 内的跨域编排不属于目标状态；这些旧入口已随架构收敛删除，架构测试阻断其重新出现。
 
-### 目录迁移完成判据
+### 子系统目录完成判据
 
-一个子系统只有同时满足以下条件，才可标记为已迁入目标目录：
+一个子系统（含未来新增 Module）只有同时满足以下条件，才视为符合目标目录：
 
 1. 命令事实和写表清单登记唯一 owner，运行时写入只来自该 owner 的 Adapter。
 2. 公开调用方只通过 Module `index.ts` 或命名 Workflow 进入，不存在跨域 deep import。
@@ -416,41 +417,31 @@ tests/
 
 ## 8. 当前已实现
 
-当前现实仍是一个按技术层和历史切片逐步形成的 Next.js 16 / React 19 / strict TypeScript / SQLite 单仓应用：
+架构收敛已于 2026-08-09 完成（特性 019，PR #1；D-45 解除功能冻结）。当前工程即第 1～7 节描述的领域模块化单体：Next.js 16 / React 19 / strict TypeScript / SQLite 单仓，`src/server/` 已删除。
 
-- **App Router 与 React 产品面已存在**：页面/API 同仓，协作驾驶舱、Mission、执行、复核和交付仍按产品表面组织。证据索引：`app/api/projects/[projectId]/threads/route.ts`、`app/api/projects/[projectId]/mission/route.ts`、`app/api/projects/[projectId]/executions/route.ts`、`components/collaboration/collaboration-panel.tsx`、`components/project-context/mission-board.tsx`、`components/execution/execution-panel.tsx`、`components/review/review-product-surface.tsx`。
-- **服务端已有主要领域服务，但尚未按目标十子系统完成边界迁移**：可确认项目、Mission、协作、执行、复核/交付、记忆和 Provider 服务并存；“是否全部收敛到目标 owner”待写表/导入全量扫描后核验。证据索引：`src/server/projects.ts`、`src/server/mission-service.ts`、`src/server/collaboration/thread-service.ts`、`src/server/execution/execution-service.ts`、`src/server/review/review-application-service.ts`、`src/server/review/delivery-service.ts`、`src/server/memory-service.ts`、`src/server/provider-service.ts`。
-- **SQLite 已承载 tuple、版本、operation/lease 和恢复约束**：唯一 `CURRENT_SCHEMA`、fresh bootstrap 与 exact reopen tests 是当前证据；“仍有多少运行时 direct writer”尚未完整扫描，标记待核验，不视为既成多写事实。证据索引：`src/server/storage/current-schema.ts`、`src/server/storage/bootstrap-current-schema.ts`、`src/server/storage/validate-current-schema.ts`、`tests/current-schema.test.ts`、`tests/collaboration-operations.test.ts`。
-- **Safe Execution 核心已交付**：Windows verified-handle、sandbox orchestration、Validation、Staged Change、Approval、冲突检查与 Merge 路径已有源文件和公共行为测试。证据索引：`src/server/execution/windows-verified-execution-adapter.ts`、`src/server/execution/execution-service.ts`、`src/server/execution/execution-approval-service.ts`、`tests/execution-security-integration.test.ts`、`tests/execution-write-stage-integration.test.ts`、`tests/execution-merge-route.test.ts`。
-- **公开 Thread Fact 流与 S-12 tuple 已交付**：`collaboration_thread_facts` 由 current canonical schema 和唯一 writer seam 支撑，线程读取按 fact 分页；S-12 已 ship。证据索引：`src/server/storage/current-schema.ts`、`src/server/collaboration/thread-fact-store.ts`、`tests/thread-fact-store.test.ts`、`tests/thread-history-api.test.ts`、`features/014-persistent-project-threads/progress.md`。
-- **S-13 已实现大量结构化消息代码但尚未 ship**：不能视为已交付 Capability；当前阶段和票据状态以 feature 记录为准。证据索引：`src/server/storage/current-schema.ts`、`src/server/structured-messages/structured-message-store.ts`、`src/server/structured-messages/inline-decision-service.ts`、`tests/current-schema.test.ts`、`features/015-structured-messages-inline-decisions/tickets.md`、`features/015-structured-messages-inline-decisions/progress.md`。
-- **通用 outbox/Operations Projection 骨架：待核验后仍按未交付治理**。本轮对 `src/**/*.ts` 的限定搜索未命中 `outbox`，但未完成所有生成物/运行路径扫描；因此 backlog 将 `CAP-OPS-01` 标为规划中，而不是断言仓库绝对不存在任何局部事件表。
-- **第三方通用插件宿主：待核验后仍按未交付治理**。当前产品/ADR 禁止任意进程内插件，尚未对所有依赖和动态加载路径完成供应链级扫描；`CAP-RUN-04` 保持规划中，不能作为现有能力。
+- **App Router 与 React 入站 Adapter**：页面/API 同仓，route 只做传输校验、上下文组装与错误映射；HTTP 共享助手归 `app/api/_shared/`（A-100）。证据索引：`app/api/projects/[projectId]/threads/route.ts`、`components/collaboration/collaboration-panel.tsx`、`components/project-context/mission-board.tsx`、`components/execution/execution-panel.tsx`、`components/review/review-product-surface.tsx`。
+- **领域 Module 已按 8 个有事实 owner 的子系统收敛**：identity-capability、project-workspace、mission-work、public-collaboration、safe-execution、governance、review-delivery、knowledge-provenance，均为 `index.ts` + `public/{commands,queries,dto,errors}.ts` + `internal/` 骨架；公开调用只经 Module `index.ts` 或命名 Workflow。证据索引：`src/modules/public-collaboration/public/commands.ts`、`src/modules/safe-execution/index.ts`、`src/modules/governance/public/commands.ts`。
+- **SQLite Adapter 按 owner 分治**：共享 connection、`CURRENT_SCHEMA` bootstrap/validator、数据不变量与 unit-of-work 只提供技术能力；repository 按 owner 分目录，canonical bootstrap 之外无未登记 writer。证据索引：`src/adapters/outbound/sqlite/current-schema.ts`、`src/adapters/outbound/sqlite/bootstrap-current-schema.ts`、`src/adapters/outbound/sqlite/validate-current-schema.ts`、`src/adapters/outbound/sqlite/sqlite-unit-of-work.ts`、`tests/adapters/sqlite/current-schema.test.ts`。
+- **Application Workflow 与事务协调 Port 已显式化**：跨 owner 结果由命名 Workflow 编排；事务协调 Port 归应用层、SQLite 实现归 outbound Adapter（A-99）。证据索引：`src/application/workflows/create-mission/workflow.ts`、`src/application/workflows/project-context-snapshot/workflow.ts`、`src/application/unit-of-work.ts`、`tests/workflows/create-mission/`。
+- **composition root 唯一装配**：concrete Adapter 与 Interface 的构造注入集中在 `src/composition/`，不含业务分支。证据索引：`src/composition/index.ts`、`src/composition/server-composition.ts`。
+- **Safe Execution 边界保持**：Windows verified-handle、sandbox、Validation、Staged Change、Approval、冲突检查与 Merge 路径按 owner/技术接缝归位；`execution_approvals` 写 SQL 已提取为 Governance approval-store 能力。证据索引：`src/adapters/outbound/workspace/windows-verified-execution-adapter.ts`、`src/adapters/outbound/sqlite/safe-execution/execution-service.ts`、`src/adapters/outbound/sqlite/governance/approval-store.ts`、`tests/adapters/sqlite/safe-execution/execution-security-integration.test.ts`、`tests/modules/safe-execution/execution-approvals.test.ts`。
+- **公开 Thread Fact 流与 S-12 tuple 已交付**：`collaboration_thread_facts` 由 current canonical schema 和唯一 writer seam 支撑，线程读取按 fact 分页。证据索引：`src/adapters/outbound/sqlite/public-collaboration/thread-fact-store.ts`、`tests/modules/public-collaboration/thread-fact-store.test.ts`、`tests/modules/public-collaboration/thread-history-api.test.ts`、`features/014-persistent-project-threads/progress.md`。
+- **S-13 结构化消息代码在途、尚未 ship**：block/decision 持久化位于 public-collaboration owner 与其 SQLite Adapter，不能视为已交付 Capability；阶段与票据状态以 feature 记录为准。证据索引：`src/adapters/outbound/sqlite/public-collaboration/structured-message-store.ts`、`src/adapters/outbound/sqlite/public-collaboration/inline-decision-service.ts`、`src/modules/public-collaboration/internal/structured-message-schema.ts`、`features/015-structured-messages-inline-decisions/progress.md`。
+- **机械约束已阻断化**：import 边界、写表 owner、运行时 writer、依赖图与测试分区检查已进入 `tests/architecture/` 并阻断回退。证据索引：`tests/architecture/imports.test.ts`、`tests/architecture/ownership.test.ts`、`tests/architecture/writers.test.ts`、`tests/architecture/dependency-graph.test.ts`、`tests/architecture/test-partition.test.ts`。
+- **通用 outbox/Operations Projection 未交付**：收敛后扫描确认 `src/` 无 outbox 实现；`CAP-OPS-01/02` 保持规划中，由 S-23 拆分片按第 5 节建立。
+- **第三方通用插件宿主未交付**：产品/ADR 继续禁止任意进程内插件；`CAP-RUN-04` 保持规划中，不能作为现有能力。
 
-因此，“目标子系统已定义”不等于当前工程已经符合目标架构。接下来的工程主线是先完成全量架构收敛；除恢复既有行为、安全边界或构建基线所必需且单独记录验证的阻塞缺陷外，暂停新增产品行为、Capability 和 Adapter，非阻塞缺陷与体验扩展继续冻结。收敛期间以运行行为、事实 owner 和不变量为准，不以文件名宣称完成。
+后续功能切片必须直接落在目标结构上：新命令事实先登记唯一 owner 与写表清单，跨 owner 结果新增命名 Workflow，禁止在 route 内重建编排、跨域 deep import 或绕过机械约束。
 
-## 9. 迁移顺序
+## 9. 架构收敛完成记录
 
-### 执行政策
+目标架构收敛作为架构优先基础交付（ADR-0004）已于 2026-08-09 完成，用户同日确认解除功能冻结（D-45）。
 
-- **架构优先冻结**：目标架构收敛建立独立基础特性/计划；它通过全部机械门禁、测试、构建、浏览器验收与用户确认前，后续产品特性不得进入 implement。已经实现但尚未 ship 的代码属于当前基线并纳入迁移；仍停留在规格、架构或票据阶段的后续行为暂停，不借迁移偷渡实现。Review 是否执行服从 `AGENTS.md` 当前项目级政策，不以本节静默恢复已豁免的 review。
-- **完整目标、分波执行**：必须把全部现有生产代码和测试迁入第 7 节目标目录并删除旧入口，但实现按 2～5 张同模块、同接缝票据的波次推进。每个波次可独立验证、保持构建通过；不建立长期双写、双 Interface 或新旧实现并行。
-- **行为保持**：本次只改变模块位置、依赖方向、Interface/Adapter 所有权和装配方式，不新增产品能力。公共行为、安全组合、错误 envelope、事务原子性与不可变历史保持不变；只允许修复恢复既有行为、安全或构建基线所必需的阻塞缺陷，并要求独立票据、失败证据与聚焦验证；其他发现只记录，不在纯搬迁中静默修正。
-- **首次发布前数据政策**：项目尚未发布，不迁移或兼容任何历史 SQLite schema、本地开发数据或 legacy fixture。只保留 `CURRENT_SCHEMA` 的 fresh bootstrap、exact reopen 和非法非空数据库失败关闭；开发数据库由开发者显式删除重建，应用不得静默清库。
-- **完成前不宣布收敛**：仅创建目录、barrel export、alias 或包装旧 `src/server` 不算迁移。旧实现、旧导入、跨 owner writer 和 route 编排全部消失，机械约束通过后才解除冻结。
-
-### 收敛波次
-
-1. **冻结基线与建立清单**：固定当前源代码和公共行为测试基线；建立机器可读的 Module、依赖、写表 owner 和运行时 writer 清单，列出全部 `src/server/`、route 编排、跨域 deep import 与技术类型泄漏。
-2. **建立目标骨架与机械护栏**：创建 `src/modules/`、`src/application/workflows/`、`src/adapters/`、`src/composition/` 及目标测试分区；先让 import、owner、writer 和依赖图检查可报告，再在各迁移波次完成后逐项转为阻断。
-3. **收敛 current storage**：把 connection、transaction、`CURRENT_SCHEMA` bootstrap/validator 放入 SQLite Adapter；按 owner 切分 repository 和 fixture。删除历史 migration、legacy schema 和旧数据兼容残留，不改变 current schema 业务不变量。
-4. **迁移领域 Module**：按事实 owner 逐个迁移现有 Identity & Capability、Project & Workspace、Mission & Work、Public Collaboration、Safe Execution、Governance、Review & Delivery、Knowledge & Provenance、Runtime 和已有 Operations Projection 代码。每波同时迁移公开 Interface、Implementation、Port、SQLite/外部 Adapter 与对应测试；未实现的计划能力不创建空壳。
-5. **显式化 Application Workflow**：把现有跨 owner 用户结果从 route、页面和跨域调用中提取为命名 Workflow，保留同 SQLite 事务、operation/version/lease 与 acquire/checkpoint/finalize 语义。
-6. **迁移入站与装配**：让 `app/`、`components/` 和其他 inbound Adapter 只依赖 Workflow entry contract 或 Module Query Interface；把 concrete Adapter 构造集中到 `src/composition/`，删除 route 内业务分支和隐式 service locator。
-7. **迁移并分治测试**：按第 7 节测试树移动且深化现有测试，使用 owner fixture builder 和公共 Interface；删除只证明旧目录、旧 schema migration 或私有实现的测试，保留并增强行为、current reopen、恢复与安全证据。
-8. **收缩旧结构并验收**：删除 `src/server/`、根级 `*-service.ts`、兼容 re-export、临时 alias 和重复 fixture；运行架构检查、聚焦测试、全量测试、生产构建及现有浏览器 smoke。全部强制验证与用户确认完成后才恢复后续功能开发；Review 按届时 `AGENTS.md` 生效政策执行。
-
-每个波次推进前都必须满足同一退出门禁：适用的第 407～415 行目录迁移完成判据已满足，聚焦测试与生产构建通过，该波旧入口已删除，且不存在双写、双事实 owner、双 Interface 或只转发旧实现的长期兼容层。未通过时不得开始下一波。
+- 全部生产代码与测试已迁入第 7 节目录；`src/server/`、根级 `*-service.ts`、route 内业务编排、兼容 re-export 与临时 alias 已删除，无长期双写、双事实 owner 或双 Interface 残留。
+- 写表 owner 清单与 import/dependency/writer/测试分区架构检查已转为阻断并通过；冻结基线中的 Windows 环境性失败（A-102）不计入回归判据。
+- 迁移保持公共行为、安全组合、错误 envelope、事务原子性与不可变历史不变；fresh bootstrap / exact reopen / 非法非空库失败关闭语义不变（ADR-0003）。
+- 分波执行、过渡口登记与各波验证证据见 `features/019-architecture-convergence/progress.md`（T-01～T-15，PR #1）；过渡口已在收编波次删除。
+- 后续约束：新功能切片不得重建已删除的旧入口形态；新增写表、Module、Workflow 或 Adapter 必须先满足第 7 节子系统目录完成判据与第 10 节机械约束，再进入 implement。
 
 ## 10. 建议的机械约束
 
@@ -466,3 +457,24 @@ tests/
 - 对 Adapter 建立能力/权限清单和架构测试，禁止数据库连接、主密钥、任意 host path 或通用 shell 穿过 Port。
 - 对 Operations Projection 建立只读约束：投影代码不能链接命令 repository，重建过程不能写业务 owner 表。
 - 首次发布前 storage lifecycle 只允许 atomic/idempotent fresh bootstrap、current exact-schema validation 和 drift fail-closed；禁止版本间 migration、legacy adoption 与 backfill。
+
+## 11. 关键场景（垂直切片判据）
+
+以下端到端路径是切片准入与验收的共同判据。每个进入 implement 的切片必须声明自己推进哪条路径的哪一段，沿路径上的 owner 顺序走公开 Interface 或命名 Workflow，不得旁路。
+
+1. **组队与立项**（已交付 S-1～S-3）：owner 配置并验证 Provider、创建 Agent/Skill（Identity & Capability）→ 创建 Project、绑定工作区、组成项目组（Project & Workspace）→ 建立 Mission 与 Work Item（Mission & Work）。对应 Workflow：`create-mission`。
+2. **公开协作接力**（已交付 S-4、S-12）：owner 在 Thread 公开发言/@Agent → Collaboration Run 受理、Turn/Attempt、结构化交棒与 owner 决策请求/回答（Public Collaboration）→ 暂停/恢复与可恢复时间线。治理点：凭据拒绝、Project/Thread/Run tuple、预算与轮次上限。
+3. **受控执行与合入**（已交付 S-5）：Resolve Effective Runtime Grant（配置权限 ∩ 项目范围 ∩ Approval → Runtime 投影，第 2 节）→ Safe Execution acquire/checkpoint/finalize → sandbox 内工具动作与验证 → Staged Change 冲突/陈旧检查 → Merge Journal 原子合入或失败关闭。
+4. **独立复核与交付**（已交付 S-6）：owner 显式发起、合格非执行者 Agent 复核裁决（Review & Delivery）→ 署名记忆候选沉淀（Knowledge & Provenance）→ Delivery 持久化 → Mission 完成门槛判定（Mission & Work）。
+5. **脱敏运维读侧**（规划中，S-23 拆分片建立）：source owner 在命令事务内提交公开事件 envelope → Operations Projection 幂等消费、checkpoint/rebuild 与 freshness → owner 只读查询并跳回精确来源；投影永不回写命令事实（第 5 节）。
+
+## 12. 横切约定
+
+只写约定与链接，字段级细节归各特性规格与 Module 公开契约。
+
+- **错误**：公共错误使用稳定、脱敏 envelope；不得返回原始异常、Provider 响应、提示词、凭据、宿主路径或隐藏推理（`AGENTS.md` 契约标准；各 Module `public/errors.ts`）。
+- **身份与授权**：本地优先、单 owner、无登录；授权按第 2 节权限事实四分转换，不存在通用 `grant`；高风险动作必须经 Governance Approval，卡片点击或通知不等于批准。
+- **持久化**：首次发布前只支持唯一 current canonical schema 的空库原子 bootstrap 与 exact reopen，其余失败关闭（ADR-0003、`CONTEXT.md`）；不保留版本间 migration 与 backfill。
+- **观测**：服务健康、用量、审计、时间轴与回放只经 Operations Projection 只读投影（第 5 节）；投影缺失或陈旧显示 freshness/error，不伪造成业务状态。
+- **安全**：verified-handle、sandbox、Approval、脱敏、审计与独立复核按动作风险组合适用（第 4 节；`product/product.md` 设计原则 6）；任何 Interface 或 Adapter 不得旁路。
+- **可访问性**：关键交互覆盖 loading/empty/error/disabled/success/focus，语义化 HTML、键盘操作、≥44×44px 控件、WCAG AA 并以 axe 验证受影响界面（`AGENTS.md` UI 标准）。

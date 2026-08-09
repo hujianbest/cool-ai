@@ -25,18 +25,18 @@ Capability ID 是稳定治理标识；owner 是唯一逻辑子系统，不等于
 
 ### Identity & Capability
 
-- `CAP-IDC-01` Provider / Agent / Skill Core — owner: Identity & Capability — 状态: 已交付核心 — 证据/建立切片: S-2；`src/server/provider-service.ts`、`src/server/agent-service.ts`、`tests/providers.service.test.ts`
+- `CAP-IDC-01` Provider / Agent / Skill Core — owner: Identity & Capability — 状态: 已交付核心 — 证据/建立切片: S-2；`src/adapters/outbound/sqlite/identity-capability/provider-service.ts`、`src/adapters/outbound/sqlite/identity-capability/agent-service.ts`、`tests/modules/identity-capability/providers.service.test.ts`
 - `CAP-IDC-03` Capability & Rule Insight — owner: Identity & Capability — 状态: 规划中 — 建立切片: S-33、S-34
 
 ### Project & Workspace
 
-- `CAP-PWS-01` Project / Workspace Binding Core — owner: Project & Workspace — 状态: 已交付核心 — 证据/建立切片: S-3；`src/server/projects.ts`、`tests/projects.service.test.ts`
+- `CAP-PWS-01` Project / Workspace Binding Core — owner: Project & Workspace — 状态: 已交付核心 — 证据/建立切片: S-3；`src/adapters/outbound/sqlite/project-workspace/projects.ts`、`tests/modules/project-workspace/projects.service.test.ts`
 - `CAP-PWS-02` Verified Workspace Browse — owner: Project & Workspace — 状态: 规划中 — 建立切片: S-22
 - `CAP-PWS-03` Public Project Events — owner: Project & Workspace — 状态: 规划中 — 建立路径: S-23 的 Project & Workspace 审计纵切；该片复用已交付 `CAP-OPS-01/02`，以 owner 可查询脱敏 Project 事件并精确导航为独立结果
 
 ### Mission & Work
 
-- `CAP-MWK-01` Mission / Work Core — owner: Mission & Work — 状态: 已交付核心 — 证据/建立切片: S-3～S-6；`src/server/mission-service.ts`、`tests/mission-crud.test.ts`
+- `CAP-MWK-01` Mission / Work Core — owner: Mission & Work — 状态: 已交付核心 — 证据/建立切片: S-3～S-6；`src/adapters/outbound/sqlite/mission-work/mission-service.ts`、`tests/modules/mission-work/mission-crud.test.ts`
 - `CAP-MWK-02` Mission Dependency Insight — owner: Mission & Work — 状态: 规划中 — 建立切片: S-25
 - `CAP-MWK-03` SOP State Projection — owner: Mission & Work — 状态: 规划中 — 建立切片: S-26
 - `CAP-MWK-04` Dispatch Lease Control — owner: Mission & Work — 状态: 规划中 — 建立切片: S-27
@@ -44,7 +44,7 @@ Capability ID 是稳定治理标识；owner 是唯一逻辑子系统，不等于
 
 ### Public Collaboration
 
-- `CAP-COL-01` Public Collaboration Core — owner: Public Collaboration — 状态: 已交付核心 — 证据/建立切片: S-4、S-12；`src/server/collaboration/thread-service.ts`、`tests/thread-message-api.test.ts`
+- `CAP-COL-01` Public Collaboration Core — owner: Public Collaboration — 状态: 已交付核心 — 证据/建立切片: S-4、S-12；`src/adapters/outbound/sqlite/public-collaboration/thread-service.ts`、`tests/modules/public-collaboration/thread-message-api.test.ts`
 - `CAP-COL-02` Thread Catalog & Lifecycle — owner: Public Collaboration — 状态: 部分可用（Thread 创建、列表、切换、成员策略已交付；引用、标签、收藏和回收站未交付）— 证据/建立切片: S-12 [`progress.md`](../features/014-persistent-project-threads/progress.md)；扩展 S-14、S-18～S-20
 - `CAP-COL-03` Structured Content & Inline Decision — owner: Public Collaboration — 状态: 部分可用（S-13 代码与票据在途，未 ship，不可作为已交付前置）— 证据/建立切片: S-13 [`tickets.md`](../features/015-structured-messages-inline-decisions/tickets.md)、[`progress.md`](../features/015-structured-messages-inline-decisions/progress.md)
 - `CAP-COL-04` Composer & Queue Continuity — owner: Public Collaboration — 状态: 规划中 — 建立切片: S-15、S-21
@@ -53,30 +53,30 @@ Capability ID 是稳定治理标识；owner 是唯一逻辑子系统，不等于
 
 ### Safe Execution 与 Governance
 
-- `CAP-EXE-01` Safe Execution Core — owner: Safe Execution — 状态: 已交付核心 — 证据/建立切片: S-5；`src/server/execution/execution-service.ts`、`src/server/execution/windows-verified-execution-adapter.ts`、`tests/execution-security-integration.test.ts`
+- `CAP-EXE-01` Safe Execution Core — owner: Safe Execution — 状态: 已交付核心 — 证据/建立切片: S-5；`src/adapters/outbound/sqlite/safe-execution/execution-service.ts`、`src/adapters/outbound/workspace/windows-verified-execution-adapter.ts`、`tests/adapters/sqlite/safe-execution/execution-security-integration.test.ts`
 - `CAP-EXE-02` Controlled Workspace Mutation — owner: Safe Execution — 状态: 规划中 — 建立切片: S-42
 - `CAP-EXE-03` Interactive Process & Preview — owner: Safe Execution — 状态: 规划中 — 建立切片: S-43
 - `CAP-EXE-04` Recovery Operations — owner: Safe Execution — 状态: 规划中 — 建立切片: S-44
 - `CAP-EXE-05` Public Execution Events — owner: Safe Execution — 状态: 规划中 — 建立路径: 作为 S-23 `AUD-MVP` 的协作 Capability，在以 `CAP-OPS-02` 为主 Capability 的同一可演示纵切中原子写入 source-owner event
-- `CAP-GOV-01` Safe Execution Approval & Operation — owner: Governance — 状态: 部分可用（只覆盖 Safe Execution 冻结 execution/staged-merge 路径，不是通用 Governance）— 证据/建立切片: S-5；`src/server/execution/execution-approval-service.ts`、`tests/execution-approvals.test.ts`
+- `CAP-GOV-01` Safe Execution Approval & Operation — owner: Governance — 状态: 部分可用（只覆盖 Safe Execution 冻结 execution/staged-merge 路径，不是通用 Governance）— 证据/建立切片: S-5；`src/adapters/outbound/sqlite/safe-execution/execution-approval-service.ts`、`tests/modules/safe-execution/execution-approvals.test.ts`
 - `CAP-GOV-02` Unified Governance — owner: Governance — 状态: 规划中 — 建立切片: S-24
 - `CAP-GOV-03` Public Governance Events — owner: Governance — 状态: 规划中 — 建立路径: S-23 的 Governance 审计纵切；该片复用已交付 `CAP-OPS-01/02`，以 owner 可查询脱敏 Approval 事件并精确导航为独立结果
 
 ### Review、Knowledge、Runtime 与 Projection
 
-- `CAP-REV-01` Independent Review & Delivery Core — owner: Review & Delivery — 状态: 已交付核心 — 证据/建立切片: S-6；`src/server/review/review-application-service.ts`、`src/server/review/delivery-service.ts`、`tests/review-production-application.test.ts`
-- `CAP-KNW-01` Provenance Memory Core — owner: Knowledge & Provenance — 状态: 已交付核心 — 证据/建立切片: S-3、S-6；`src/server/memory-service.ts`、`tests/memory-source-navigation.test.ts`
+- `CAP-REV-01` Independent Review & Delivery Core — owner: Review & Delivery — 状态: 已交付核心 — 证据/建立切片: S-6；`src/adapters/outbound/sqlite/review-delivery/review-application-service.ts`、`src/adapters/outbound/sqlite/review-delivery/delivery-service.ts`、`tests/modules/review-delivery/review-production-application.test.ts`
+- `CAP-KNW-01` Provenance Memory Core — owner: Knowledge & Provenance — 状态: 已交付核心 — 证据/建立切片: S-3、S-6；`src/adapters/outbound/sqlite/knowledge-provenance/memory-service.ts`、`tests/modules/knowledge-provenance/memory-source-navigation.test.ts`
 - `CAP-KNW-02` Knowledge Search & Index Lifecycle — owner: Knowledge & Provenance — 状态: 规划中 — 建立切片: S-28；健康扩展 S-29
 - `CAP-KNW-03` Collections & Provenance Graph — owner: Knowledge & Provenance — 状态: 规划中 — 建立切片: S-30、S-31
 - `CAP-KNW-04` Agent Curation — owner: Knowledge & Provenance — 状态: 规划中 — 建立切片: S-32
-- `CAP-RUN-01` OpenAI Runtime Core — owner: Runtime — 状态: 已交付核心 — 证据/建立切片: S-2、S-4；`src/server/provider-verifier.ts`、`tests/provider-verifier.test.ts`
+- `CAP-RUN-01` OpenAI Runtime Core — owner: Runtime — 状态: 已交付核心 — 证据/建立切片: S-2、S-4；`src/adapters/outbound/model-runtime/provider-verifier.ts`、`tests/adapters/model-runtime/provider-verifier.test.ts`
 - `CAP-RUN-02` External Runtime Host — owner: Runtime — 状态: 规划中 — 建立切片: S-45、S-46
 - `CAP-RUN-03` MCP Host — owner: Runtime — 状态: 规划中 — 建立切片: S-47
 - `CAP-RUN-04` Extension Lifecycle & Catalog — owner: Runtime — 状态: 规划中 — 建立切片: S-48、S-49
 - `CAP-RUN-05` Browser Notification — owner: Runtime — 状态: 规划中 — 建立切片: S-41
 - `CAP-RUN-06` Voice Adapter — owner: Runtime — 状态: 规划中 — 建立切片: S-50
 - `CAP-RUN-07` Public Runtime Events — owner: Runtime — 状态: 规划中 — 建立路径: S-23 的 Runtime 审计纵切；该片复用已交付 `CAP-OPS-01/02`，以 owner 可查询脱敏 Runtime session 事件并精确导航为独立结果
-- `CAP-OPS-01` Projection Consumer Foundation — owner: Operations Projection — 状态: 规划中（限定扫描未发现通用 consumer/checkpoint/rebuild 骨架；完整现状待核验）— 建立路径: 作为主 Capability `CAP-OPS-02` 的基础依赖，由 S-23 `AUD-MVP` 同片建立 consumer、checkpoint、rebuild 与 freshness；只消费 source owner 已提交事件，不拥有 producer
+- `CAP-OPS-01` Projection Consumer Foundation — owner: Operations Projection — 状态: 规划中（架构收敛后扫描确认 `src/` 无 outbox/consumer/checkpoint 骨架）— 建立路径: 作为主 Capability `CAP-OPS-02` 的基础依赖，由 S-23 `AUD-MVP` 同片建立 consumer、checkpoint、rebuild 与 freshness；只消费 source owner 已提交事件，不拥有 producer
 - `CAP-OPS-02` Audit / Search / Timeline Projection — owner: Operations Projection — 状态: 规划中 — 建立路径: 作为 S-23 `AUD-MVP` 的主 Capability，先建立 Safe Execution 审计的最薄只读查询/展示；后续各 source-owner 纵切复用并扩充可查询事件，最终统一审计浏览器只组合已交付查询；S-17、S-39 在其各自用户结果内扩展
 - `CAP-OPS-03` Health / Usage / Contribution Insight — owner: Operations Projection — 状态: 规划中 — 建立切片: S-29、S-35～S-37
 - `CAP-OPS-04` Redacted Export & Delivery Replay — owner: Operations Projection — 状态: 规划中 — 建立切片: S-38、S-40
