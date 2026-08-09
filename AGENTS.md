@@ -16,7 +16,6 @@ Cool AI 是一个本地优先、单 owner 的多 Agent 协作驾驶舱。
 
 - `app/`：页面、布局、路由处理器和全局样式。
 - `components/`：React 产品界面。
-- `src/server/`：待架构收敛删除的历史服务端结构；不得继续新增产品实现。
 - `src/modules/`：目标领域 Module 与唯一公开 Interface。
 - `src/application/workflows/`：目标跨 owner Application Workflow。
 - `src/adapters/`：目标入站/出站 Adapter；`src/composition/`：唯一生产装配根。
@@ -29,14 +28,9 @@ Cool AI 是一个本地优先、单 owner 的多 Agent 协作驾驶舱。
 ## 每个开发任务的起点
 
 1. 读取 `.agents/skills/hf-workflow/SKILL.md`；磁盘上的技能是权威来源。
-2. 运行：
-
-   ```powershell
-   python ".agents/skills/hf-workflow/scripts/hf_gate.py" status
-   ```
-
+2. 读取各特性与 `product` 的 `progress.md` 恢复工作流状态，不靠聊天记忆。
 3. 只读取当前特性的 `progress.md`、`spec.md`、`architecture.md`、`tickets.md`、相关评审，以及存在时的 `CONTEXT.md`。
-4. 只有当前特性的阶段门禁通过后，才能进入该阶段。
+4. 只有当前阶段的评审（或被豁免）与确认完成后，才能进入下一阶段。
 5. 只加载当前阶段技能及匹配的 `ext-*` 技能。
 
 不得从聊天历史推断工作流状态。不得仅因旧工件早于当前 HarnessFlow 格式就重启历史特性；应明确协调当前活跃特性。
@@ -51,23 +45,23 @@ Cool AI 是一个本地优先、单 owner 的多 Agent 协作驾驶舱。
 
 - 用户已明确决定：当前工程在首次正式发布前的连续开发中跳过 HarnessFlow 的全部 review 环节，包括 spec review、architecture review、`hf-review` 与 `hf-code-review`。
 - 本豁免优先于本文件其他要求独立 review、review 确认或 review 工件的条款；不得为了通过流程而伪造 review 结论、确认行或评审文件。
-- 若 `hf_gate.py` 仅因缺少 review/确认而失败，应在对应 `progress.md` 记录“项目级 review 豁免”及日期，并继续下一阶段；其他门禁条件仍必须满足。
+- 因本豁免跳过 review 时，应在对应 `progress.md` 记录“项目级 review 豁免”及日期后继续下一阶段；测试、构建与验收等其他完成条件仍必须满足。
 - Review 豁免不免除 TDD、聚焦测试、最终全量测试、类型检查、生产构建、受影响浏览器冒烟、axe、真实 UI 验收、安全边界、任务票勾选、commit 与 push。
-- 首次正式发布前必须由用户明确决定是否恢复 review；恢复前修改本节及相关机械门禁，不得静默恢复或继续豁免。
+- 首次正式发布前必须由用户明确决定是否恢复 review；恢复前须修改本节及相关技能描述，不得静默恢复或继续豁免。
 
 ### 当前架构优先冻结
 
 - 用户已明确决定：后续产品功能实现暂停，先按 `product/architecture.md` 第 7～10 节和 ADR-0004 把当前全部生产代码、测试、writer 与装配迁入目标架构。
-- 架构收敛通过全部机械门禁、测试、构建、浏览器验收与用户确认前，非收敛特性不得进入 `implement`；规格、架构或票据阶段的未实现行为不得借迁移落地。
+- 架构收敛通过全部架构检查、测试、构建、浏览器验收与用户确认前，非收敛特性不得进入 `implement`；规格、架构或票据阶段的未实现行为不得借迁移落地。
 - 只允许修复恢复既有行为、安全边界或构建基线所必需的阻塞缺陷；必须有独立票据、失败证据和聚焦验证。非阻塞缺陷、体验扩展与新 Capability/Adapter 继续冻结。
 - 收敛按 owner/接缝分波，每波必须同步迁移 Interface、Implementation、Adapter、调用方、fixture 与测试，并删除该波旧入口；禁止长期双写、双事实 owner、双 Interface 或仅转发 `src/server/` 的兼容层。
 - 首次发布前不迁移历史 SQLite schema 或本地开发数据；只维护唯一 `CURRENT_SCHEMA` 的 fresh bootstrap、exact reopen 和非法非空数据库失败关闭。
-- Review 继续服从上一节项目级豁免；该豁免不降低架构检查、测试、构建、浏览器验收与用户确认门禁。
+- Review 继续服从上一节项目级豁免；该豁免不降低架构检查、测试、构建、浏览器验收与用户确认要求。
 
 - 同一时间只处理一张未阻塞的前沿任务票。
 - 产品实现与任务票工作必须委派给 subagent。
 - 评审必须使用不同的 subagent 或全新会话。
-- `auto` 模式只可在独立批准且门禁通过后自动推进。
+- `auto` 模式只可在独立批准且评审通过（或被豁免）后自动推进。
 - 用户可感知工作在 `ship` 前必须有真实浏览器演示和已落盘的验收记录。
 - 默认选择必须记录到 `product/assumptions.md`，不得静默扩张范围。
 
@@ -201,7 +195,7 @@ npm test -- tests/<target>.test.ts
 - 受影响 UI 已完成真实渲染与可访问性验证；
 - 独立 Standards 与 Spec 评审通过；
 - 用户可感知工作已记录演示验收；
-- `ship` 门禁通过；
+- `ship` 阶段完成（评审与验收记录齐备）；
 - 产品、上下文与假设记录已更新；
 - 工作树不存在意外工件；
 - 用户要求的 commit 与 push 已成功。
