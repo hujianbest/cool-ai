@@ -1,7 +1,7 @@
 import { join } from "node:path";
 
 import { contextApiError } from "@/src/server/context-api";
-import { createContextSnapshot } from "@/src/server/context-snapshot-service";
+import { createContextSnapshot } from "@/src/application/workflows/project-context-snapshot";
 
 type RouteContext = { params: Promise<{ projectId: string }> };
 

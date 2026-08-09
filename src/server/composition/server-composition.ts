@@ -1,7 +1,7 @@
 import {
   createMissionWorkflow,
   type CreateMissionWorkflow,
-} from "@/src/server/application/create-mission-workflow";
+} from "@/src/application/workflows/create-mission";
 import type { UnitOfWork } from "@/src/application/unit-of-work";
 import type { MissionCommandCapability } from "@/src/modules/mission-work";
 import { SqliteMissionCommandCapability } from "@/src/adapters/outbound/sqlite/mission-work/sqlite-mission-command-capability";

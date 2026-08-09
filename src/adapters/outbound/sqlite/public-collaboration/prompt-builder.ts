@@ -3,7 +3,7 @@ import type { DatabaseSync } from "node:sqlite";
 
 import {
   createContextSnapshotFromDatabase,
-} from "@/src/server/context-snapshot-service";
+} from "@/src/application/workflows/project-context-snapshot";
 import {
   CollaborationError,
 } from "@/src/modules/public-collaboration";

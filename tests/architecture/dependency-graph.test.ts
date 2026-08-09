@@ -8,6 +8,18 @@ import { importEdges, resolveSpecifier, sourceFiles } from "./helpers";
  * Domain->domain edges are a transition form (A-104) and ratchet to zero at T-13.
  */
 
+/**
+ * T-13 transition exemption: project-context-snapshot 跨 owner 只读组合暂以直接
+ * SQL 实现（经 sqlite connection Adapter）；待各 owner 查询能力或
+ * Operations Projection 落地后收编。
+ */
+const TRANSITIONAL_WORKFLOW_EDGES: Array<{ file: string; specifier: string }> = [
+  {
+    file: "src/application/workflows/project-context-snapshot/workflow.ts",
+    specifier: "@/src/adapters/outbound/sqlite/connection",
+  },
+];
+
 function moduleOf(file: string): string | null {
   return file.match(/^src\/modules\/([^/]+)\//u)?.[1] ?? null;
 }
@@ -55,17 +67,17 @@ describe("module dependency graph", () => {
     }
   });
 
-  it("ratchets domain->domain edges toward zero (blocking at T-13)", () => {
+  it("blocks domain->domain edges (zero since T-13)", () => {
     const graph = moduleGraph();
     const edges = [...graph.entries()].flatMap(([from, tos]) =>
       [...tos].map((to) => `${from} -> ${to}`),
     );
-    // A-104: during T-04..T-12 cross-domain facts flow via the other module's public
-    // Interface; T-13 extracts named workflows and this count must reach 0.
+    // A-104: T-13 提取命名 Workflow 后，模块公开面之间不应再有 import 边；
+    // 该计数阻断在 0，新增跨领域事实流必须经 Workflow 编排。
     expect(
       edges.length,
       `domain->domain edges: ${edges.join("; ")}`,
-    ).toBeLessThanOrEqual(12);
+    ).toBeLessThanOrEqual(0);
   });
 
   it("keeps workflows depending only on module public entries", () => {
@@ -74,8 +86,11 @@ describe("module dependency graph", () => {
       for (const edge of importEdges(file)) {
         const resolved = resolveSpecifier(edge.specifier, file) ?? edge.specifier;
         if (
-          /^src\/modules\/[^/]+\/(?:internal|ports)\//u.test(resolved) ||
-          /^src\/adapters\//u.test(resolved)
+          (/^src\/modules\/[^/]+\/(?:internal|ports)\//u.test(resolved)
+            || /^src\/adapters\//u.test(resolved))
+          && !TRANSITIONAL_WORKFLOW_EDGES.some(
+            (entry) => entry.file === file && entry.specifier === edge.specifier,
+          )
         ) {
           found.push(`${file} -> ${edge.specifier}`);
         }

@@ -10,7 +10,7 @@ import { importEdges, readSource, resolveSpecifier, sourceFiles } from "./helper
  * T-09 transition exemption: safe-execution's own adapters import its internal/ pure
  * policies (command-policy/action-schema/prompt-builder); project-workspace's
  * validation-policy-service keeps its registered cross-domain read of command-policy
- * (feature architecture "分类逻辑留 safe-execution"; T-13 收编).
+ * (feature architecture "分类逻辑留 safe-execution"; T-14 后由独立缺陷票评估).
  * T-10 transition exemption: public-collaboration's own adapters import its internal/
  * pure logic (agent-turn-schema/structured-repair/structured-message-codec/
  * structured-message-schema/public-text-credential-classifier pure core) and keep the
@@ -32,7 +32,7 @@ const ALLOWED_MODULE_INTERNAL_EDGES: Record<string, RegExp[]> = {
   "src/adapters/outbound/sqlite/safe-execution": [
     /^src\/modules\/safe-execution\/internal\//u,
     // T-09 transition: model 调用经 credential-vault 解密 provider 凭据；
-    // 跨 owner internal 读在 T-13 Workflow 提取时收编。
+    // 跨 owner internal 读为运行时凭据读取，T-14 后由独立缺陷票评估。
     /^src\/modules\/identity-capability\/internal\/credential-vault$/u,
   ],
   "src/adapters/outbound/sqlite/project-workspace": [
@@ -130,6 +130,14 @@ const TRANSITIONAL_MODULE_ADAPTER_EDGES: Array<{ file: string; specifier: string
   },
 ];
 
+/**
+ * T-13 transition exemption: project-context-snapshot 跨 owner 只读组合暂以直接
+ * SQL 实现；待各 owner 查询能力或 Operations Projection 落地后收编。
+ */
+const TRANSITIONAL_APPLICATION_WORKFLOW_FILES = new Set([
+  "src/application/workflows/project-context-snapshot/workflow.ts",
+]);
+
 // Module 事务内命令 Interface 允许依赖 src/application 的事务协调 Port 类型（product/architecture.md 第 3 节）
 const FORBIDDEN_IN_MODULES = [
   /^node:sqlite$/u,
@@ -212,7 +220,9 @@ describe("target-layer import boundaries", () => {
   });
 
   it("keeps application workflows free of sqlite/adapter/inbound deps", () => {
-    const files = sourceFiles("src/application");
+    const files = sourceFiles("src/application").filter(
+      (file) => !TRANSITIONAL_APPLICATION_WORKFLOW_FILES.has(file),
+    );
     expect(violations(files, FORBIDDEN_IN_APPLICATION)).toEqual([]);
   });
 

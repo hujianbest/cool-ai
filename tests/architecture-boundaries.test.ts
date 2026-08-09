@@ -36,7 +36,7 @@ describe("mission workflow architecture boundaries", () => {
   });
 
   it("keeps Workflow and public capabilities free of SQLite details", () => {
-    const workflow = source("src/server/application/create-mission-workflow.ts");
+    const workflow = source("src/application/workflows/create-mission/workflow.ts");
     expect(workflow).toContain("@/src/application/unit-of-work");
     expect(workflow).toContain("@/src/modules/mission-work");
     expect(workflow).toContain("@/src/modules/review-delivery");

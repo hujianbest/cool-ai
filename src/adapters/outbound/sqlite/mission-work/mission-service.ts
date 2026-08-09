@@ -1,12 +1,12 @@
 import { randomUUID } from "node:crypto";
 import type { DatabaseSync } from "node:sqlite";
 
+import { CompletionGateError } from "@/src/modules/review-delivery";
 import {
-  CompletionGateError,
   invalidateCompletionTx,
-  invalidateMissionContextTx,
   writeWorkItemStatusTx,
-} from "@/src/server/application/mission-review-effects";
+} from "@/src/adapters/outbound/sqlite/review-delivery/completion-gate";
+import { invalidateMissionContextTx } from "@/src/adapters/outbound/sqlite/review-delivery/delivery-service";
 import { canonicalRequestHash } from "@/src/adapters/outbound/sqlite/public-collaboration/operation-receipts";
 import { createServerComposition } from "@/src/server/composition/server-composition";
 import { openDatabase } from "@/src/adapters/outbound/sqlite/connection";

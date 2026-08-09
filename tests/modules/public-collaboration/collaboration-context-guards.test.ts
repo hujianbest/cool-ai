@@ -4,7 +4,7 @@ import { join } from "node:path";
 import { afterEach, beforeEach, describe, expect, it } from "vitest";
 
 import * as agentService from "@/src/adapters/outbound/sqlite/identity-capability/agent-service";
-import * as contextSnapshotService from "@/src/server/context-snapshot-service";
+import * as contextSnapshotService from "@/src/application/workflows/project-context-snapshot";
 import * as providerService from "@/src/adapters/outbound/sqlite/identity-capability/provider-service";
 import { createCredentialVault } from "@/src/modules/identity-capability/internal/credential-vault";
 import { openDatabase } from "@/src/adapters/outbound/sqlite/connection";

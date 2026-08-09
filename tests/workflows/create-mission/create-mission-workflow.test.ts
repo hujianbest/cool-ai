@@ -1,7 +1,7 @@
 import { describe, expect, it } from "vitest";
 
 import { createTransactionContext } from "@/src/application/transaction-context";
-import { createMissionWorkflow } from "@/src/server/application/create-mission-workflow";
+import { createMissionWorkflow } from "@/src/application/workflows/create-mission";
 import type { UnitOfWork } from "@/src/application/unit-of-work";
 import type {
   MissionCommandCapability,
