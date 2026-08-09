@@ -1,0 +1,95 @@
+{
+  "version": 1,
+  "date": "2026-08-09",
+  "policy": "product/architecture.md section 2 + section 10; each writable table has exactly one fact owner; runtime writes only from that owner's adapter",
+  "notes": {
+    "model_calls": "per-domain visible usage facts (collaboration/execution/review) follow the domain owner per section-2 'visible usage facts' clauses, not the Runtime session-log capability (CAP-RUN-02+, unimplemented)",
+    "review_memory": "review_memory_candidates/associations are memory-domain facts (actor/source/version per A-64/A-65) owned by knowledge-provenance; physical writer currently review/memory-committer.ts — cross-domain write path to be formalized in T-07/T-11/T-13",
+    "execution_approvals": "Approval requests/rulings owned by governance per section-2; currently physically inside execution/ — extracted in T-08",
+    "sequences": "collaboration_*_sequences counters are collaboration-internal identity infrastructure"
+  },
+  "owners": {
+    "identity-capability": [
+      "providers",
+      "agents",
+      "skills",
+      "agent_skills"
+    ],
+    "project-workspace": [
+      "projects",
+      "project_memberships",
+      "project_validation_policies",
+      "project_validation_policy_revisions",
+      "project_validation_policy_entries",
+      "project_validation_policy_audits"
+    ],
+    "mission-work": [
+      "missions",
+      "work_items",
+      "work_item_dependencies",
+      "task_events",
+      "task_runs"
+    ],
+    "public-collaboration": [
+      "collaboration_runs",
+      "collaboration_turns",
+      "collaboration_attempts",
+      "collaboration_messages",
+      "collaboration_events",
+      "collaboration_operations",
+      "collaboration_model_calls",
+      "collaboration_threads",
+      "collaboration_thread_facts",
+      "collaboration_thread_policy_revisions",
+      "collaboration_thread_policy_members",
+      "collaboration_project_sequences",
+      "collaboration_project_thread_sequences",
+      "decision_requests",
+      "structured_message_blocks",
+      "structured_message_state_heads",
+      "structured_message_state_revisions",
+      "inline_decisions",
+      "business_action_receipts"
+    ],
+    "safe-execution": [
+      "executions",
+      "execution_attempts",
+      "execution_actions",
+      "execution_events",
+      "execution_operations",
+      "execution_model_calls",
+      "execution_tool_calls",
+      "execution_artifacts",
+      "execution_artifact_chunks",
+      "execution_staged_files",
+      "execution_staged_results",
+      "execution_staged_observations",
+      "execution_staged_blockers",
+      "execution_validation_results",
+      "execution_validation_output_chunks",
+      "execution_merge_journals",
+      "execution_merge_files"
+    ],
+    "governance": [
+      "execution_approvals"
+    ],
+    "review-delivery": [
+      "review_attempts",
+      "review_decisions",
+      "review_escalations",
+      "review_escalation_answers",
+      "review_events",
+      "review_operations",
+      "review_model_calls",
+      "mission_deliveries",
+      "mission_delivery_heads",
+      "work_item_result_versions",
+      "work_item_review_heads"
+    ],
+    "knowledge-provenance": [
+      "memory_entries",
+      "review_memory_candidates",
+      "review_memory_associations"
+    ]
+  }
+}

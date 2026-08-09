@@ -65,8 +65,9 @@ describe("current schema Contract boundaries", () => {
       /src\/server\/migrations-v[78]\.ts|tests\/migrations-v[78][^`\s]*\.test\.ts/u,
     );
     expect(architecture).not.toContain("每一步都必须保持旧数据可迁移");
-    expect(architecture).toContain("D-43");
-    expect(architecture).toContain("superseded");
+    expect(architecture).toContain("0003-pre-release-canonical-database-schema");
+    expect(architecture).toContain("fresh bootstrap");
+    expect(architecture).toContain("exact reopen");
   });
 
   it("has no historical migration modules, fixtures, or upgrade-only tests", () => {
