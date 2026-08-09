@@ -6,7 +6,7 @@ import { afterEach, beforeEach, describe, expect, it } from "vitest";
 
 import { openDatabase } from "@/src/adapters/outbound/sqlite/connection";
 import { listMemoriesInDatabase } from "@/src/server/memory-service";
-import { createMission, createWorkItem } from "@/src/server/mission-service";
+import { createMission, createWorkItem } from "@/src/adapters/outbound/sqlite/mission-work/mission-service";
 import { createProject } from "@/src/adapters/outbound/sqlite/project-workspace/projects";
 
 type SourceResolverModule = {

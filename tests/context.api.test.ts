@@ -3,7 +3,7 @@ import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { afterEach, beforeEach, describe, expect, it } from "vitest";
 
-import { createMission } from "@/src/server/mission-service";
+import { createMission } from "@/src/adapters/outbound/sqlite/mission-work/mission-service";
 import { createProject } from "@/src/adapters/outbound/sqlite/project-workspace/projects";
 import { openDatabase } from "@/src/adapters/outbound/sqlite/connection";
 

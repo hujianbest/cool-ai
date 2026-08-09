@@ -1,6 +1,6 @@
 import { randomUUID } from "node:crypto";
 
-import { MissionError } from "@/src/server/mission-service";
+import { MissionError } from "@/src/modules/mission-work";
 import { CompletionGateError } from "@/src/server/review/completion-gate";
 import { SchemaError } from "@/src/adapters/outbound/sqlite/schema-error";
 

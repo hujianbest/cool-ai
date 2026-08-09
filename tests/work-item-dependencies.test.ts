@@ -10,7 +10,7 @@ import {
   createWorkItem,
   getMissionState,
   updateWorkItem,
-} from "@/src/server/mission-service";
+} from "@/src/adapters/outbound/sqlite/mission-work/mission-service";
 
 type WorkItem = ReturnType<typeof createWorkItem>;
 

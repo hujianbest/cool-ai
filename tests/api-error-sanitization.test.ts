@@ -14,7 +14,7 @@ vi.mock("@/src/adapters/outbound/sqlite/project-workspace/projects", () => ({
   },
 }));
 
-vi.mock("@/src/server/tasks", () => {
+vi.mock("@/src/adapters/outbound/sqlite/mission-work/tasks", () => {
   class TaskDomainError extends Error {
     code = "DOMAIN";
   }

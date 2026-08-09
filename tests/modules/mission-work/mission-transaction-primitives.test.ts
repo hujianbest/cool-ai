@@ -11,7 +11,7 @@ import {
   createWorkItem,
   getMissionState,
   updateWorkItem,
-} from "@/src/server/mission-service";
+} from "@/src/adapters/outbound/sqlite/mission-work/mission-service";
 
 type Proposal = {
   clientKey: string;
@@ -76,7 +76,7 @@ function seed(): void {
 }
 
 async function primitives(): Promise<Required<Primitives>> {
-  const domain = (await import("@/src/server/mission-service")) as Primitives;
+  const domain = (await import("@/src/adapters/outbound/sqlite/mission-work/mission-service")) as Primitives;
   expect(domain.createWorkItemBatchTx, "batch transaction primitive must be exported").toBeTypeOf(
     "function",
   );

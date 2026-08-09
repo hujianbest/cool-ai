@@ -10,7 +10,12 @@ import {
 import { canonicalRequestHash } from "@/src/server/collaboration/operation-receipts";
 import { createServerComposition } from "@/src/server/composition/server-composition";
 import { openDatabase } from "@/src/adapters/outbound/sqlite/connection";
-import { MissionError } from "@/src/server/mission/public";
+import {
+  insertTransitionReceipt,
+  readControlOperationPrior,
+} from "@/src/adapters/outbound/sqlite/public-collaboration/mission-control-receipts";
+import { MissionError } from "@/src/modules/mission-work";
+import type { TransitionReceipt } from "@/src/modules/public-collaboration";
 import type {
   Mission,
   MissionState,
@@ -18,7 +23,7 @@ import type {
   WorkItemStatus,
 } from "@/src/shared/project-context-contracts";
 
-export { MissionError } from "@/src/server/mission/public";
+export { MissionError } from "@/src/modules/mission-work";
 
 type MissionRow = Omit<Mission, "projectId"> & { projectId: string };
 type WorkItemRow = Omit<WorkItem, "dependencyIds" | "status"> & {
@@ -895,19 +900,6 @@ export function transitionWorkItemTx(
   return workItemById(database, input.workItemId)!;
 }
 
-type TransitionReceipt =
-  | { ok: true; workItem: WorkItem }
-  | {
-      error: {
-        blockers?: Array<{ code: string; workItemId: string | null }>;
-        code: string;
-        currentVersion?: number;
-        message: string;
-        status: number;
-      };
-      ok: false;
-    };
-
 function receiptError(receipt: Extract<TransitionReceipt, { ok: false }>): never {
   const error = receipt.error;
   if (error.blockers) {
@@ -925,39 +917,6 @@ function receiptError(receipt: Extract<TransitionReceipt, { ok: false }>): never
     error.message,
     undefined,
     error.currentVersion,
-  );
-}
-
-function insertTransitionReceipt(
-  database: DatabaseSync,
-  input: {
-    operationId: string;
-    projectId: string;
-    requestHash: string;
-    receipt: TransitionReceipt;
-  },
-): void {
-  const timestamp = new Date().toISOString();
-  const status = input.receipt.ok ? 200 : input.receipt.error.status;
-  database.prepare(`
-    INSERT INTO collaboration_operations(
-      id,project_id,thread_id,run_id,kind,request_hash,status,http_status,response_json,
-      created_at,updated_at
-    ) VALUES (
-      ?, ?,
-      (SELECT id FROM collaboration_threads
-       WHERE project_id=? ORDER BY created_at,id LIMIT 1),
-      NULL, 'control', ?, 'completed', ?, ?, ?, ?
-    )
-  `).run(
-    input.operationId,
-    input.projectId,
-    input.projectId,
-    input.requestHash,
-    status,
-    JSON.stringify(input.receipt),
-    timestamp,
-    timestamp,
   );
 }
 
@@ -987,15 +946,7 @@ export function transitionWorkItem(
     const mission = missionById(database, current.missionId)!;
     const requestHash = canonicalRequestHash({ ...input, workItemId });
     if (input.operationId) {
-      const prior = database.prepare(`
-        SELECT kind,request_hash AS requestHash,status,response_json AS responseJson
-        FROM collaboration_operations WHERE project_id=? AND id=?
-      `).get(mission.projectId, input.operationId) as {
-        kind: string;
-        requestHash: string;
-        responseJson: string;
-        status: string;
-      } | undefined;
+      const prior = readControlOperationPrior(database, mission.projectId, input.operationId);
       if (prior) {
         if (
           prior.kind !== "control"

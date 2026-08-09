@@ -12,7 +12,7 @@ import { replaceMembers } from "@/src/adapters/outbound/sqlite/project-workspace
 import {
   updateMission,
   updateWorkItem,
-} from "@/src/server/mission-service";
+} from "@/src/adapters/outbound/sqlite/mission-work/mission-service";
 import {
   createThread,
   startThreadRun,

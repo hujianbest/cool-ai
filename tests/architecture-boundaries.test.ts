@@ -20,9 +20,12 @@ function TypeScriptFiles(relativeDirectory: string): string[] {
 describe("mission workflow architecture boundaries", () => {
   it("keeps runtime Mission code independent from migrations and Review internals", () => {
     const missionSources = [
-      "src/server/mission-service.ts",
-      "src/server/mission/public.ts",
-      "src/server/mission/sqlite-mission-command-capability.ts",
+      "src/adapters/outbound/sqlite/mission-work/mission-service.ts",
+      "src/adapters/outbound/sqlite/mission-work/sqlite-mission-command-capability.ts",
+      "src/modules/mission-work/public/commands.ts",
+      "src/modules/mission-work/public/dto.ts",
+      "src/modules/mission-work/public/errors.ts",
+      "src/modules/mission-work/public/queries.ts",
     ].map(source);
 
     for (const missionSource of missionSources) {
@@ -35,14 +38,17 @@ describe("mission workflow architecture boundaries", () => {
   it("keeps Workflow and public capabilities free of SQLite details", () => {
     const workflow = source("src/server/application/create-mission-workflow.ts");
     expect(workflow).toContain("@/src/application/unit-of-work");
-    expect(workflow).toContain("@/src/server/mission/public");
+    expect(workflow).toContain("@/src/modules/mission-work");
     expect(workflow).toContain("@/src/server/review/public");
     expect(workflow).not.toMatch(/storage\/sqlite|node:sqlite|DatabaseSync|\.prepare\(/u);
 
     for (const publicBoundary of [
       source("src/application/transaction-context.ts"),
       source("src/application/unit-of-work.ts"),
-      source("src/server/mission/public.ts"),
+      source("src/modules/mission-work/public/commands.ts"),
+      source("src/modules/mission-work/public/dto.ts"),
+      source("src/modules/mission-work/public/errors.ts"),
+      source("src/modules/mission-work/public/queries.ts"),
       source("src/server/review/public.ts"),
     ]) {
       expect(publicBoundary).not.toMatch(/node:sqlite|DatabaseSync|\.prepare\(|\b(?:SELECT|INSERT|UPDATE|DELETE)\b/u);

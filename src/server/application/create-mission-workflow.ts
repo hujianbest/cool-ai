@@ -2,7 +2,7 @@ import type { UnitOfWork } from "@/src/application/unit-of-work";
 import type {
   CreateMissionCommand,
   MissionCommandCapability,
-} from "@/src/server/mission/public";
+} from "@/src/modules/mission-work";
 import type { ReviewDeliveryCommandCapability } from "@/src/server/review/public";
 import type { Mission } from "@/src/shared/project-context-contracts";
 

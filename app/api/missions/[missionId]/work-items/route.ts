@@ -1,7 +1,7 @@
 import { join } from "node:path";
 
 import { missionApiError, readMissionJson } from "@/src/server/mission-api";
-import { createWorkItem } from "@/src/server/mission-service";
+import { createWorkItem } from "@/src/adapters/outbound/sqlite/mission-work/mission-service";
 
 type RouteContext = { params: Promise<{ missionId: string }> };
 type CreateWorkItemInput = {

@@ -52,7 +52,7 @@ type TransitionRoute = {
 };
 
 const serviceModules =
-  import.meta.glob<MissionServiceModule>("../src/server/mission-service.ts");
+  import.meta.glob<MissionServiceModule>("../src/adapters/outbound/sqlite/mission-work/mission-service.ts");
 const routeModules =
   import.meta.glob<TransitionRoute>(
     "../app/api/work-items/[workItemId]/transition/route.ts",
@@ -66,7 +66,7 @@ async function service(): Promise<
     transitionWorkItem: NonNullable<MissionServiceModule["transitionWorkItem"]>;
   }
 > {
-  const load = serviceModules["../src/server/mission-service.ts"];
+  const load = serviceModules["../src/adapters/outbound/sqlite/mission-work/mission-service.ts"];
   expect(load).toBeTypeOf("function");
   const domain = await load();
   expect(

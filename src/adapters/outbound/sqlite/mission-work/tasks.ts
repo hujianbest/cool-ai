@@ -3,38 +3,16 @@ import type { DatabaseSync } from "node:sqlite";
 
 import type {
   TaskEvent,
-  TaskFailureResponse,
   TaskRun,
   TaskStateResponse,
   TaskStatus,
 } from "@/src/shared/contracts";
 import { openDatabase } from "@/src/adapters/outbound/sqlite/connection";
-
-export type TaskErrorCode =
-  | "EMPTY_GOAL"
-  | "PROJECT_NOT_FOUND"
-  | "TASK_NOT_FOUND"
-  | "TASK_NOT_STARTABLE"
-  | "TASK_NOT_EXECUTABLE";
-
-export class TaskDomainError extends Error {
-  constructor(
-    readonly code: TaskErrorCode,
-    message: string,
-  ) {
-    super(message);
-    this.name = "TaskDomainError";
-  }
-}
-
-export class TaskExecutionError extends Error {
-  constructor(readonly response: TaskFailureResponse) {
-    super(response.error.message);
-    this.name = "TaskExecutionError";
-  }
-}
-
-export type TaskExecutor = (goal: string) => string;
+import {
+  TaskDomainError,
+  TaskExecutionError,
+  type TaskExecutor,
+} from "@/src/modules/mission-work";
 
 type TaskRow = {
   id: string;

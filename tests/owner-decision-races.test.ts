@@ -18,7 +18,7 @@ import {
   finalizeAdvance,
 } from "@/src/server/collaboration/turn-orchestrator";
 import { openDatabase } from "@/src/adapters/outbound/sqlite/connection";
-import { createMission } from "@/src/server/mission-service";
+import { createMission } from "@/src/adapters/outbound/sqlite/mission-work/mission-service";
 
 const NOW = "2026-07-30T06:30:00.000Z";
 const PROJECT_ID = "project-owner-decision-races";

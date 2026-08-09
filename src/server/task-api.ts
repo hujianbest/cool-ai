@@ -4,15 +4,17 @@ import {
   internalErrorResponse,
   storageErrorResponse,
 } from "@/src/server/api-errors";
-import type { TaskExecutor } from "@/src/server/tasks";
+import type { TaskExecutor } from "@/src/modules/mission-work";
+import {
+  TaskDomainError,
+  TaskExecutionError,
+} from "@/src/modules/mission-work";
 import {
   createTask,
   executeTask,
   listProjectTasks,
   startTask,
-  TaskDomainError,
-  TaskExecutionError,
-} from "@/src/server/tasks";
+} from "@/src/adapters/outbound/sqlite/mission-work/tasks";
 
 export type RouteContext<Key extends string> = {
   params: Promise<Record<Key, string>>;

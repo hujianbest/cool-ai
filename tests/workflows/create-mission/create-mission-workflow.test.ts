@@ -6,7 +6,7 @@ import type { UnitOfWork } from "@/src/application/unit-of-work";
 import type {
   MissionCommandCapability,
   MissionCreated,
-} from "@/src/server/mission/public";
+} from "@/src/modules/mission-work";
 import type { ReviewDeliveryCommandCapability } from "@/src/server/review/public";
 
 describe("create mission application workflow", () => {

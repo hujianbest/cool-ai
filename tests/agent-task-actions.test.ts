@@ -7,7 +7,7 @@ import { afterEach, beforeEach, describe, expect, it } from "vitest";
 import type { StructuredTurnResult } from "@/src/server/collaboration/structured-repair";
 import type { AgentStructuredBlock } from "@/src/server/collaboration/agent-turn-schema";
 import { openDatabase } from "@/src/adapters/outbound/sqlite/connection";
-import { createWorkItem } from "@/src/server/mission-service";
+import { createWorkItem } from "@/src/adapters/outbound/sqlite/mission-work/mission-service";
 import { seedCurrentAdvanceFixture as seedV7AdvanceFixture } from "@/tests/fixtures/collaboration/current-advance";
 
 type ProposedTask = {

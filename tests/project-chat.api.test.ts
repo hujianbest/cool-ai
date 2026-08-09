@@ -6,7 +6,7 @@ import { afterEach, beforeEach, describe, expect, it } from "vitest";
 import { createThread } from "@/src/server/collaboration/thread-service";
 import { createCredentialVault } from "@/src/modules/identity-capability/internal/credential-vault";
 import { openDatabase } from "@/src/adapters/outbound/sqlite/connection";
-import { createMission } from "@/src/server/mission-service";
+import { createMission } from "@/src/adapters/outbound/sqlite/mission-work/mission-service";
 
 type Route = {
   POST(

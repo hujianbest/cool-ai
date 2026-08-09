@@ -14,10 +14,10 @@ const ALLOWED_MODULE_INTERNAL_EDGES: Record<string, RegExp[]> = {
   ],
 };
 
+// Module 事务内命令 Interface 允许依赖 src/application 的事务协调 Port 类型（product/architecture.md 第 3 节）
 const FORBIDDEN_IN_MODULES = [
   /^node:sqlite$/u,
   /^src\/adapters\//u,
-  /^src\/application\//u,
   /^src\/composition\//u,
   /^app\//u,
   /^components\//u,

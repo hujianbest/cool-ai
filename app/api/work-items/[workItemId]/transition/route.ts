@@ -1,7 +1,7 @@
 import { join } from "node:path";
 
 import { missionApiError, readMissionJson } from "@/src/server/mission-api";
-import { transitionWorkItem } from "@/src/server/mission-service";
+import { transitionWorkItem } from "@/src/adapters/outbound/sqlite/mission-work/mission-service";
 import type { WorkItemStatus } from "@/src/shared/project-context-contracts";
 
 type RouteContext = { params: Promise<{ workItemId: string }> };

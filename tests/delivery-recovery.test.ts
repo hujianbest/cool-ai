@@ -5,7 +5,7 @@ import { DatabaseSync } from "node:sqlite";
 import { afterEach, describe, expect, it } from "vitest";
 
 import { openDatabase } from "@/src/adapters/outbound/sqlite/connection";
-import { createMission, updateMission } from "@/src/server/mission-service";
+import { createMission, updateMission } from "@/src/adapters/outbound/sqlite/mission-work/mission-service";
 import { createProject } from "@/src/adapters/outbound/sqlite/project-workspace/projects";
 import {
   acquireDeliveryGeneration,

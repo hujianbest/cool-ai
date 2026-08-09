@@ -10,8 +10,8 @@ import {
 import {
   claimWorkItemTx,
   createWorkItemBatchTx,
-  MissionError,
-} from "@/src/server/mission-service";
+} from "@/src/adapters/outbound/sqlite/mission-work/mission-service";
+import { MissionError } from "@/src/modules/mission-work";
 import type { TimelineEventType } from "@/src/shared/collaboration-contracts";
 import {
   commitStructuredMessageTx,

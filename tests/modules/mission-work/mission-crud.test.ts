@@ -92,31 +92,31 @@ type MissionContext = { params: Promise<{ missionId: string }> };
 type WorkItemContext = { params: Promise<{ workItemId: string }> };
 
 const serviceModules =
-  import.meta.glob<MissionServiceModule>("../src/server/mission-service.ts");
+  import.meta.glob<MissionServiceModule>("../../../src/adapters/outbound/sqlite/mission-work/mission-service.ts");
 const projectRouteModules =
-  import.meta.glob<ProjectMissionRoute>("../app/api/projects/[projectId]/mission/route.ts");
+  import.meta.glob<ProjectMissionRoute>("../../../app/api/projects/[projectId]/mission/route.ts");
 const missionRouteModules =
-  import.meta.glob<MissionRoute>("../app/api/missions/[missionId]/route.ts");
+  import.meta.glob<MissionRoute>("../../../app/api/missions/[missionId]/route.ts");
 const workItemsRouteModules =
-  import.meta.glob<WorkItemsRoute>("../app/api/missions/[missionId]/work-items/route.ts");
+  import.meta.glob<WorkItemsRoute>("../../../app/api/missions/[missionId]/work-items/route.ts");
 const workItemRouteModules =
-  import.meta.glob<WorkItemRoute>("../app/api/work-items/[workItemId]/route.ts");
+  import.meta.glob<WorkItemRoute>("../../../app/api/work-items/[workItemId]/route.ts");
 
 let directory: string;
 let databasePath: string;
 
 async function service(): Promise<MissionServiceModule> {
-  const load = serviceModules["../src/server/mission-service.ts"];
+  const load = serviceModules["../../../src/adapters/outbound/sqlite/mission-work/mission-service.ts"];
   expect(load, "the mission service must exist").toBeTypeOf("function");
   return load();
 }
 
 async function routes() {
-  const project = projectRouteModules["../app/api/projects/[projectId]/mission/route.ts"];
-  const mission = missionRouteModules["../app/api/missions/[missionId]/route.ts"];
+  const project = projectRouteModules["../../../app/api/projects/[projectId]/mission/route.ts"];
+  const mission = missionRouteModules["../../../app/api/missions/[missionId]/route.ts"];
   const workItems =
-    workItemsRouteModules["../app/api/missions/[missionId]/work-items/route.ts"];
-  const workItem = workItemRouteModules["../app/api/work-items/[workItemId]/route.ts"];
+    workItemsRouteModules["../../../app/api/missions/[missionId]/work-items/route.ts"];
+  const workItem = workItemRouteModules["../../../app/api/work-items/[workItemId]/route.ts"];
   expect(project, "the project mission route must exist").toBeTypeOf("function");
   expect(mission, "the mission route must exist").toBeTypeOf("function");
   expect(workItems, "the mission work-items route must exist").toBeTypeOf("function");

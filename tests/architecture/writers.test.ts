@@ -43,7 +43,17 @@ const OWNER_WRITER_DIRS: Record<string, RegExp[]> = {
 };
 
 /** Owners whose migration wave has landed; writer rule blocks for these. */
-const MIGRATED_OWNERS: string[] = ["identity-capability", "project-workspace"];
+const MIGRATED_OWNERS: string[] = ["identity-capability", "project-workspace", "mission-work"];
+
+/**
+ * Known transitional non-owner writers, frozen 2026-08-09 (see the ratchet below):
+ * review-delivery completion projections write mission-work's work_items until the
+ * T-11 review-delivery wave and the T-13 workflow extraction land. This set may only shrink.
+ */
+const TRANSITIONAL_NON_OWNER_WRITERS: Array<{ file: string; owner: string; table: string }> = [
+  { file: "src/server/review/completion-gate.ts", owner: "mission-work", table: "work_items" },
+  { file: "src/server/review/review-finalizer.ts", owner: "mission-work", table: "work_items" },
+];
 
 const WRITE_RE =
   /\b(?:INSERT\s+(?:OR\s+\w+\s+)?INTO|UPDATE(?:\s+OR\s+\w+)?|DELETE\s+FROM|REPLACE\s+INTO)\s+([A-Za-z_]\w*)/giu;
@@ -87,7 +97,13 @@ describe("writer location by owner", () => {
       for (const table of MANIFEST.owners[owner] ?? []) {
         for (const file of byTable.get(table) ?? []) {
           if (!allowed.some((pattern) => pattern.test(file))) {
-            found.push(`${table} (${owner}) written by ${file}`);
+            const exempt = TRANSITIONAL_NON_OWNER_WRITERS.some(
+              (entry) =>
+                entry.owner === owner && entry.table === table && entry.file === file,
+            );
+            if (!exempt) {
+              found.push(`${table} (${owner}) written by ${file}`);
+            }
           }
         }
       }

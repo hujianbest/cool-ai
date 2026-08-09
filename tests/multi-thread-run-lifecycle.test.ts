@@ -18,7 +18,7 @@ import {
 } from "@/src/server/collaboration/turn-orchestrator";
 import { createCredentialVault } from "@/src/modules/identity-capability/internal/credential-vault";
 import { openDatabase } from "@/src/adapters/outbound/sqlite/connection";
-import { createMission } from "@/src/server/mission-service";
+import { createMission } from "@/src/adapters/outbound/sqlite/mission-work/mission-service";
 
 const NOW = "2026-08-08T08:00:00.000Z";
 const MASTER_KEY = Buffer.alloc(32, 23).toString("base64url");

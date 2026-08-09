@@ -4,7 +4,7 @@ import { missionApiError, readMissionJson } from "@/src/server/mission-api";
 import {
   createMission,
   getMissionState,
-} from "@/src/server/mission-service";
+} from "@/src/adapters/outbound/sqlite/mission-work/mission-service";
 
 type RouteContext = { params: Promise<{ projectId: string }> };
 

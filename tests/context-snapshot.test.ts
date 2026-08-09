@@ -7,7 +7,7 @@ import { createMemory } from "@/src/server/memory-service";
 import {
   createMission,
   createWorkItem,
-} from "@/src/server/mission-service";
+} from "@/src/adapters/outbound/sqlite/mission-work/mission-service";
 import { createProject } from "@/src/adapters/outbound/sqlite/project-workspace/projects";
 import { openDatabase } from "@/src/adapters/outbound/sqlite/connection";
 

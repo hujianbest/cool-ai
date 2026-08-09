@@ -5,7 +5,7 @@ import {
   type CreateMissionCommand,
   type MissionCommandCapability,
   type MissionCreated,
-} from "@/src/server/mission/public";
+} from "@/src/modules/mission-work";
 import { sqliteDatabaseForTransaction } from "@/src/adapters/outbound/sqlite/sqlite-unit-of-work";
 
 export class SqliteMissionCommandCapability implements MissionCommandCapability {
