@@ -1,14 +1,14 @@
 # 进度
 
 - 特性: 019-architecture-convergence
-- 当前阶段: implement
+- 当前阶段: 完成（冻结已解除）
 - 执行模式: auto
 - 已加载扩展: 无
-- 下一步: 执行 T-01（冻结基线与清单 + 修复 stale 架构门禁断言）
+- 下一步: 无（T-01～T-15 已随 PR #1 合并；T-16 的全量测试/构建/浏览器 smoke 证据未单独落盘，随 2026-08-09 用户确认解除冻结关闭）
 - 门禁输出: RESULT: FAIL（仅缺 spec-review/architecture-review 评审记录）— 项目级 review 豁免（AGENTS.md 当前开发阶段条款，2026-08-09）：豁免 spec review、architecture review、hf-review 与 hf-code-review；不伪造评审工件
 - 共享理解: auto-approved 2026-08-09（用户指示有待确认项按推荐结果接受）
 - 用户可感知: 否（纯结构调整；ADR-0004 验收仍要求浏览器 smoke）
-- 阻塞关系: 收敛完成前，015/017/018 及全部后续产品特性不得进入 implement
+- 阻塞关系: 已解除（2026-08-09，D-45）
 - 规模检查: 16 票超 8 票阈值，属基础重构性质；按 AGENTS.md 以有边界扩张—收缩批次处理（每波独立验证、保持构建通过）；例外与验证成本已记录（用户 2026-08-09 明确要求按最新架构完成收敛）
 - 评审状态: 项目级豁免（2026-08-09）；不伪造 spec-review、architecture-review 或 code-review
 
@@ -24,7 +24,8 @@
 - 2026-08-09 T-07 ✅ 提交：knowledge-provenance（3 文件，含 review/memory-committer 归属裁决）；聚焦测试绿（1 个 review-production-application 失败经 master 对照为既有失败）、构建绿。
 - 2026-08-09 T-08 ✅ 提交：governance（execution_approvals 全部 11 处写 SQL 提取为 approval-store 能力，execution 域零直接写）；聚焦 33+10 测试绿、构建绿。
 - 2026-08-09 T-09 ✅ 提交：safe-execution（36 文件：15 领域服务入 SQLite Adapter、14 工作区技术 Adapter 归位、3 纯逻辑入 internal）；聚焦 394 测试中 116 失败均为 Windows 环境性（与基线一致）、构建绿。
-- 进行中：T-10 public-collaboration（26 文件，含 S-12/S-13 在途代码）。
+- 2026-08-09 T-10～T-15 ✅ 合并（PR #1）：public-collaboration、review-delivery、model-runtime Adapter、Application Workflow 显式化、入站与装配收编（`src/server/` 清空）、测试分治归位（tests/modules|workflows|adapters|browser|shared）。
+- 2026-08-09 用户确认解除架构优先冻结（D-45）：015/017/018 及全部后续产品特性恢复 implement 准入；AGENTS.md 冻结节移除。
 
 ## 过渡口登记（T-13/T-14 收编，非长期兼容层）
 
