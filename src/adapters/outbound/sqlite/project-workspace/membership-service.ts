@@ -1,7 +1,7 @@
 import type { DatabaseSync } from "node:sqlite";
 
 import { MembershipError } from "@/src/modules/project-workspace";
-import { hasActiveCollaborationForProject } from "@/src/server/collaboration/active-run-guards";
+import { hasActiveCollaborationForProject } from "@/src/adapters/outbound/sqlite/public-collaboration/active-run-guards";
 import { openDatabase } from "@/src/adapters/outbound/sqlite/connection";
 import type {
   MembershipState,

@@ -1,8 +1,8 @@
 import { join } from "node:path";
 
 import { collaborationErrorResponse } from "@/src/server/collaboration/collaboration-api";
-import { CollaborationError } from "@/src/server/collaboration/collaboration-errors";
-import { readRunTimeline } from "@/src/server/collaboration/run-timeline-service";
+import { CollaborationError } from "@/src/modules/public-collaboration";
+import { readRunTimeline } from "@/src/adapters/outbound/sqlite/public-collaboration/run-timeline-service";
 
 type RouteContext = {
   params: Promise<{ projectId: string; threadId: string; runId: string }>;

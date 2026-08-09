@@ -1,6 +1,6 @@
 import type { DatabaseSync } from "node:sqlite";
 
-import { createThread } from "@/src/server/collaboration/thread-service";
+import { createThread } from "@/src/adapters/outbound/sqlite/public-collaboration/thread-service";
 import { validateCurrentDataInvariants } from "@/src/adapters/outbound/sqlite/current-data-invariants";
 import { seedMissionInitialization } from "@/tests/fixtures/review/mission-initialization";
 

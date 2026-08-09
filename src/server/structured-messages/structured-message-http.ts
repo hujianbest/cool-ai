@@ -4,21 +4,21 @@ import { createHash } from "node:crypto";
 import { z } from "zod";
 
 import { collaborationErrorResponse } from "@/src/server/collaboration/collaboration-api";
-import { CollaborationError } from "@/src/server/collaboration/collaboration-errors";
+import { CollaborationError } from "@/src/modules/public-collaboration";
 import { openDatabase } from "@/src/adapters/outbound/sqlite/connection";
 import {
   decodeStructuredBlockPayload,
   type StructuredBlock,
-} from "@/src/server/structured-messages/structured-message-store";
+} from "@/src/adapters/outbound/sqlite/public-collaboration/structured-message-store";
 import {
   ingestStructuredJson,
   type StructuredMessageSchema,
-} from "@/src/server/structured-messages/structured-message-codec";
-import { resolveVerifiedSource } from "@/src/server/structured-messages/verified-source-projection";
+} from "@/src/modules/public-collaboration/internal/structured-message-codec";
+import { resolveVerifiedSource } from "@/src/adapters/outbound/sqlite/public-collaboration/verified-source-projection";
 import {
   decideInline,
   readInlineOperation,
-} from "@/src/server/structured-messages/inline-decision-service";
+} from "@/src/adapters/outbound/sqlite/public-collaboration/inline-decision-service";
 
 type RouteContext = {
   params: Promise<Record<string, string>>;

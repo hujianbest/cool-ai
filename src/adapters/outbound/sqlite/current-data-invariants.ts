@@ -6,11 +6,11 @@ import {
   decodePersistedStructuredJson,
   hashCanonicalBytes,
   parseCanonicalStructuredJson,
-} from "@/src/server/structured-messages/structured-message-codec";
+} from "@/src/modules/public-collaboration/internal/structured-message-codec";
 import {
   blockCodecSchema,
   persistedStructuredBlockSchema,
-} from "@/src/server/structured-messages/structured-message-schema";
+} from "@/src/modules/public-collaboration/internal/structured-message-schema";
 
 export const CURRENT_DATA_INVARIANTS = [
   `SELECT p.project_id FROM project_validation_policies p

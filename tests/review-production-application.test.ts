@@ -11,7 +11,7 @@ import {
   GET as getReviews,
   POST,
 } from "@/app/api/work-items/[workItemId]/reviews/route";
-import { createThread } from "@/src/server/collaboration/thread-service";
+import { createThread } from "@/src/adapters/outbound/sqlite/public-collaboration/thread-service";
 import { createCredentialVault } from "@/src/modules/identity-capability/internal/credential-vault";
 import { openDatabase } from "@/src/adapters/outbound/sqlite/connection";
 import { validateCurrentDataInvariants } from "@/src/adapters/outbound/sqlite/current-data-invariants";

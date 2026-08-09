@@ -1,9 +1,9 @@
 import { join } from "node:path";
 import { TextDecoder } from "node:util";
 
-import { executeAdvance } from "@/src/server/collaboration/advance-executor";
+import { executeAdvance } from "@/src/adapters/outbound/sqlite/public-collaboration/advance-executor";
 import { collaborationErrorResponse } from "@/src/server/collaboration/collaboration-api";
-import { CollaborationError } from "@/src/server/collaboration/collaboration-errors";
+import { CollaborationError } from "@/src/modules/public-collaboration";
 
 type RouteContext = {
   params: Promise<{ projectId: string; threadId: string; runId: string }>;

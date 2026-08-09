@@ -2,7 +2,7 @@ import { rmSync } from "node:fs";
 import { afterEach, describe, expect, it } from "vitest";
 
 import { createServerComposition } from "@/src/server/composition/server-composition";
-import { canonicalRequestHash } from "@/src/server/collaboration/operation-receipts";
+import { canonicalRequestHash } from "@/src/adapters/outbound/sqlite/public-collaboration/operation-receipts";
 import { openDatabase } from "@/src/adapters/outbound/sqlite/connection";
 import { createMission } from "@/src/adapters/outbound/sqlite/mission-work/mission-service";
 import { createProject } from "@/src/adapters/outbound/sqlite/project-workspace/projects";

@@ -11,6 +11,12 @@ import { importEdges, readSource, resolveSpecifier, sourceFiles } from "./helper
  * policies (command-policy/action-schema/prompt-builder); project-workspace's
  * validation-policy-service keeps its registered cross-domain read of command-policy
  * (feature architecture "分类逻辑留 safe-execution"; T-13 收编).
+ * T-10 transition exemption: public-collaboration's own adapters import its internal/
+ * pure logic (agent-turn-schema/structured-repair/structured-message-codec/
+ * structured-message-schema/public-text-credential-classifier pure core) and keep the
+ * registered cross-owner read of identity-capability's credential-vault (T-13 收编);
+ * the sqlite lifecycle invariants validator keeps its registered read of the pure
+ * codec/schema to check structured_message_* data invariants (T-16 收编).
  */
 const ALLOWED_MODULE_INTERNAL_EDGES: Record<string, RegExp[]> = {
   "src/adapters/outbound/sqlite/identity-capability": [
@@ -24,6 +30,17 @@ const ALLOWED_MODULE_INTERNAL_EDGES: Record<string, RegExp[]> = {
   ],
   "src/adapters/outbound/sqlite/project-workspace": [
     /^src\/modules\/safe-execution\/internal\/command-policy$/u,
+  ],
+  "src/adapters/outbound/sqlite/public-collaboration": [
+    /^src\/modules\/public-collaboration\/internal\//u,
+    // T-10 transition: 与 T-09 相同的 credential-vault 跨 owner internal 读
+    //（run/thread/advance/classifier 解密 provider 凭据做公开文本凭据分类）；T-13 收编。
+    /^src\/modules\/identity-capability\/internal\/credential-vault$/u,
+  ],
+  "src/adapters/outbound/sqlite": [
+    // T-10 transition: current-data-invariants 校验 structured_message_* 数据不变量
+    // 需要纯 codec/schema（零 SQL）；T-16 收敛末期随 src/server 删除一并收编。
+    /^src\/modules\/public-collaboration\/internal\/structured-message-(codec|schema)$/u,
   ],
 };
 

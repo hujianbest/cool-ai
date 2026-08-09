@@ -2,8 +2,8 @@ import { join } from "node:path";
 import { TextDecoder } from "node:util";
 
 import { collaborationErrorResponse } from "@/src/server/collaboration/collaboration-api";
-import { CollaborationError } from "@/src/server/collaboration/collaboration-errors";
-import { recoverRun } from "@/src/server/collaboration/turn-orchestrator";
+import { CollaborationError } from "@/src/modules/public-collaboration";
+import { recoverRun } from "@/src/adapters/outbound/sqlite/public-collaboration/turn-orchestrator";
 
 type RouteContext = {
   params: Promise<{ projectId: string; threadId: string; runId: string }>;

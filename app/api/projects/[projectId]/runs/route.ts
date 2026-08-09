@@ -4,7 +4,7 @@ import {
   collaborationErrorResponse,
   readCollaborationJson,
 } from "@/src/server/collaboration/collaboration-api";
-import { createOrAppendRun } from "@/src/server/collaboration/run-service";
+import { createOrAppendRun } from "@/src/adapters/outbound/sqlite/public-collaboration/run-service";
 
 type RouteContext = { params: Promise<{ projectId: string }> };
 

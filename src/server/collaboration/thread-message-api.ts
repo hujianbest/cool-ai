@@ -2,12 +2,12 @@ import { join } from "node:path";
 import { TextDecoder } from "node:util";
 
 import { collaborationErrorResponse } from "@/src/server/collaboration/collaboration-api";
-import { CollaborationError } from "@/src/server/collaboration/collaboration-errors";
-import { assertPublicTextHasNoCredentials } from "@/src/server/collaboration/public-text-credential-classifier";
+import { CollaborationError } from "@/src/modules/public-collaboration";
+import { assertPublicTextHasNoCredentials } from "@/src/adapters/outbound/sqlite/public-collaboration/public-text-credential-classifier";
 import {
   readThreadOperation,
   writeOwnerThreadMessage,
-} from "@/src/server/collaboration/thread-service";
+} from "@/src/adapters/outbound/sqlite/public-collaboration/thread-service";
 
 type MessageRouteContext = {
   params: Promise<{ projectId: string; threadId: string }>;

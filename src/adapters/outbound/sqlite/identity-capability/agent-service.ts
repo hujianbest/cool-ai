@@ -5,7 +5,7 @@ import type { ZodIssue } from "zod";
 import { createCredentialVault } from "@/src/modules/identity-capability/internal/credential-vault";
 import type { CredentialEnvelope } from "@/src/modules/identity-capability";
 import { AgentServiceError } from "@/src/modules/identity-capability";
-import { isAgentInActiveCollaboration } from "@/src/server/collaboration/active-run-guards";
+import { isAgentInActiveCollaboration } from "@/src/adapters/outbound/sqlite/public-collaboration/active-run-guards";
 import { openDatabase } from "@/src/adapters/outbound/sqlite/connection";
 import type {
   AgentInput,

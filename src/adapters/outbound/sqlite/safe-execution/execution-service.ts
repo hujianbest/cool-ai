@@ -2,7 +2,7 @@ import { randomUUID } from "node:crypto";
 import { join } from "node:path";
 import type { DatabaseSync } from "node:sqlite";
 
-import { canonicalRequestHash } from "@/src/server/collaboration/operation-receipts";
+import { canonicalRequestHash } from "@/src/adapters/outbound/sqlite/public-collaboration/operation-receipts";
 import { openDatabase } from "@/src/adapters/outbound/sqlite/connection";
 import { acquireExecutionAction } from "@/src/adapters/outbound/sqlite/safe-execution/execution-actions";
 import { captureExecutionFrozenInput } from "@/src/adapters/outbound/sqlite/safe-execution/execution-frozen-input";

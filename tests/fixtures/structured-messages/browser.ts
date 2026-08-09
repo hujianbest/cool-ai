@@ -8,7 +8,7 @@ import {
   commitStructuredMessageTx,
   ingestStructuredBlocks,
   materializeStructuredBlocks,
-} from "@/src/server/structured-messages/structured-message-store";
+} from "@/src/adapters/outbound/sqlite/public-collaboration/structured-message-store";
 
 const databasePath = process.env.STRUCTURED_SMOKE_DB_PATH;
 const mode = process.env.STRUCTURED_SMOKE_FIXTURE_MODE ?? "sources";

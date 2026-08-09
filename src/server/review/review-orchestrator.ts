@@ -1,7 +1,7 @@
 import { createHash, randomUUID as nodeRandomUUID } from "node:crypto";
 import type { DatabaseSync } from "node:sqlite";
 
-import { canonicalRequestHash } from "@/src/server/collaboration/operation-receipts";
+import { canonicalRequestHash } from "@/src/adapters/outbound/sqlite/public-collaboration/operation-receipts";
 import {
   callOpenAiChat,
   type OpenAiChatCallContext,

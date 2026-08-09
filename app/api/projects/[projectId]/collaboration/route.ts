@@ -4,7 +4,7 @@ import { collaborationErrorResponse } from "@/src/server/collaboration/collabora
 import {
   getCollaboration,
   parseReadCursor,
-} from "@/src/server/collaboration/run-service";
+} from "@/src/adapters/outbound/sqlite/public-collaboration/run-service";
 
 type RouteContext = { params: Promise<{ projectId: string }> };
 

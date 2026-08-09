@@ -5,7 +5,7 @@ import {
   parseProjectSelection,
   reconcileReturnTo,
 } from "@/components/settings-navigation";
-import { readThreadDetail } from "@/src/server/collaboration/thread-service";
+import { readThreadDetail } from "@/src/adapters/outbound/sqlite/public-collaboration/thread-service";
 
 type SourceReferencePageProps = {
   params: Promise<{

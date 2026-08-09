@@ -1,4 +1,4 @@
-import { createThread } from "@/src/server/collaboration/thread-service";
+import { createThread } from "@/src/adapters/outbound/sqlite/public-collaboration/thread-service";
 import { openDatabase } from "@/src/adapters/outbound/sqlite/connection";
 import { seedMissionInitialization } from "@/tests/fixtures/review/mission-initialization";
 

@@ -2,9 +2,9 @@ import { join } from "node:path";
 import { TextDecoder } from "node:util";
 
 import { collaborationErrorResponse } from "@/src/server/collaboration/collaboration-api";
-import { CollaborationError } from "@/src/server/collaboration/collaboration-errors";
-import { assertPublicTextHasNoCredentials } from "@/src/server/collaboration/public-text-credential-classifier";
-import { answerThreadDecision } from "@/src/server/collaboration/run-service";
+import { CollaborationError } from "@/src/modules/public-collaboration";
+import { assertPublicTextHasNoCredentials } from "@/src/adapters/outbound/sqlite/public-collaboration/public-text-credential-classifier";
+import { answerThreadDecision } from "@/src/adapters/outbound/sqlite/public-collaboration/run-service";
 
 type RouteContext = {
   params: Promise<{

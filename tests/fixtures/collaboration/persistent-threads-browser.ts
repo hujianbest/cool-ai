@@ -1,4 +1,4 @@
-import { createThread } from "@/src/server/collaboration/thread-service";
+import { createThread } from "@/src/adapters/outbound/sqlite/public-collaboration/thread-service";
 import { createCredentialVault } from "@/src/modules/identity-capability/internal/credential-vault";
 import { openDatabase } from "@/src/adapters/outbound/sqlite/connection";
 import { execV7TupleStatements } from "@/tests/fixtures/execution/current-graph";

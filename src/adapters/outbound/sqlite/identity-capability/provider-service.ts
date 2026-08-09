@@ -8,7 +8,7 @@ import {
   ProviderServiceError,
 } from "@/src/modules/identity-capability";
 import type { CredentialEnvelope } from "@/src/modules/identity-capability";
-import { isProviderInActiveCollaboration } from "@/src/server/collaboration/active-run-guards";
+import { isProviderInActiveCollaboration } from "@/src/adapters/outbound/sqlite/public-collaboration/active-run-guards";
 import { openDatabase } from "@/src/adapters/outbound/sqlite/connection";
 import {
   normalizeProviderBaseUrl,

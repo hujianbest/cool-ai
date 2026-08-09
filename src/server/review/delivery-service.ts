@@ -3,7 +3,7 @@ import type { DatabaseSync } from "node:sqlite";
 
 import { z } from "zod";
 
-import { canonicalRequestHash } from "@/src/server/collaboration/operation-receipts";
+import { canonicalRequestHash } from "@/src/adapters/outbound/sqlite/public-collaboration/operation-receipts";
 import { completionBlockersTx } from "@/src/server/review/completion-gate";
 
 const MAX_DELIVERY_BYTES = 256 * 1024;

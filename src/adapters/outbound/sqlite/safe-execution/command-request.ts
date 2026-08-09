@@ -3,7 +3,7 @@ import type { DatabaseSync } from "node:sqlite";
 
 import { insertCommandApprovalRequest } from "@/src/adapters/outbound/sqlite/governance/approval-store";
 import { CommandRequestError } from "@/src/modules/safe-execution";
-import { canonicalRequestHash } from "@/src/server/collaboration/operation-receipts";
+import { canonicalRequestHash } from "@/src/adapters/outbound/sqlite/public-collaboration/operation-receipts";
 import {
   CLASSIFIER_VERSION,
   classifyExecutionCommand,

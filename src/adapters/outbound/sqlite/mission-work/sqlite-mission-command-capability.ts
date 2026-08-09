@@ -1,5 +1,5 @@
 import type { TransactionContext } from "@/src/application/transaction-context";
-import { canonicalRequestHash } from "@/src/server/collaboration/operation-receipts";
+import { canonicalRequestHash } from "@/src/adapters/outbound/sqlite/public-collaboration/operation-receipts";
 import {
   MissionError,
   type CreateMissionCommand,

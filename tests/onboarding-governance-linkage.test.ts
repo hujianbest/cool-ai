@@ -10,7 +10,7 @@ import { POST as startCollaboration } from "@/app/api/projects/[projectId]/threa
 import { PUT as bindWorkspace } from "@/app/api/projects/[projectId]/workspace/route";
 import { createCredentialVault } from "@/src/modules/identity-capability/internal/credential-vault";
 import { openDatabase } from "@/src/adapters/outbound/sqlite/connection";
-import { createThread } from "@/src/server/collaboration/thread-service";
+import { createThread } from "@/src/adapters/outbound/sqlite/public-collaboration/thread-service";
 import {
   executionDtoFromDatabase,
   startExecution,

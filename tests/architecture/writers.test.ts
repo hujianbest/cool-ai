@@ -50,6 +50,7 @@ const MIGRATED_OWNERS: string[] = [
   "knowledge-provenance",
   "governance",
   "safe-execution",
+  "public-collaboration",
 ];
 
 /**

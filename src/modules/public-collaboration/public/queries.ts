@@ -1,0 +1,82 @@
+import type {
+  CollaborationReadResponse,
+  CursorPage,
+  FactPageResponse,
+  MessagePageResponse,
+  PublicCollaborationPageCursor,
+  TimelineEvent,
+} from "./dto";
+
+import type { PublicCollaborationCommandResult } from "./commands";
+
+/**
+ * public-collaboration 公开查询面（DTO 级声明，不要求具体实现 implements）。
+ * 当前具体实现为 src/adapters/outbound/sqlite/public-collaboration/ 下的
+ * thread-service/run-service/run-timeline-service/structured-message-store/
+ * inline-decision-service 的 DatabaseSync 自由函数。
+ * ThreadListResponse/ThreadDetailResponse/ThreadOperationLookupResponse 等精确 DTO
+ * 尚未沉淀进 src/shared 契约，先以 Record<string, unknown> 登记读 seam，
+ * 随契约沉淀收窄（同 safe-execution 先例）。
+ */
+export interface PublicCollaborationQueries {
+  listThreads(
+    databasePath: string,
+    projectId: string,
+    rawInput?: unknown,
+  ): PublicCollaborationCommandResult<Record<string, unknown>>;
+  readThreadDetail(
+    databasePath: string,
+    projectId: string,
+    threadId: string,
+    selectedRunId: string | null,
+  ): PublicCollaborationCommandResult<Record<string, unknown>>;
+  readThreadMessages(
+    databasePath: string,
+    projectId: string,
+    threadId: string,
+    rawInput?: unknown,
+  ): PublicCollaborationCommandResult<MessagePageResponse>;
+  readThreadFacts(
+    databasePath: string,
+    projectId: string,
+    threadId: string,
+    rawInput?: unknown,
+  ): PublicCollaborationCommandResult<FactPageResponse>;
+  readThreadOperation(
+    databasePath: string,
+    projectId: string,
+    threadId: string,
+    operationId: string,
+  ): PublicCollaborationCommandResult<Record<string, unknown>>;
+
+  getCollaboration(
+    databasePath: string,
+    projectId: string,
+    options?: {
+      events?: PublicCollaborationPageCursor;
+      messages?: PublicCollaborationPageCursor;
+    },
+  ): CollaborationReadResponse;
+  getRunTimeline(
+    databasePath: string,
+    runId: string,
+    cursor: PublicCollaborationPageCursor,
+  ): CursorPage<TimelineEvent>;
+  readRunTimeline(
+    databasePath: string,
+    projectId: string,
+    threadId: string,
+    runId: string,
+    cursor: PublicCollaborationPageCursor,
+  ): PublicCollaborationCommandResult<CursorPage<TimelineEvent>>;
+
+  readStructuredMessage(
+    databasePath: string,
+    tuple: { messageId: string; projectId: string; threadId: string },
+  ): unknown;
+  readInlineOperation(
+    databasePath: string,
+    tuple: { projectId: string; runId: string; threadId: string },
+    operationId: string,
+  ): PublicCollaborationCommandResult<unknown>;
+}

@@ -3,7 +3,7 @@ import { realpathSync, statSync } from "node:fs";
 import { dirname } from "node:path";
 import type { DatabaseSync } from "node:sqlite";
 
-import { canonicalRequestHash } from "@/src/server/collaboration/operation-receipts";
+import { canonicalRequestHash } from "@/src/adapters/outbound/sqlite/public-collaboration/operation-receipts";
 import type { OpenAiChatRequest } from "@/src/server/collaboration/openai-chat-client";
 import { createCredentialVault } from "@/src/modules/identity-capability/internal/credential-vault";
 import {

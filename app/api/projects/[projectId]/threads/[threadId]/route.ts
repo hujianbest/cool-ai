@@ -1,9 +1,9 @@
 import { join } from "node:path";
 
 import { collaborationErrorResponse } from "@/src/server/collaboration/collaboration-api";
-import { CollaborationError } from "@/src/server/collaboration/collaboration-errors";
-import { readThreadDetail } from "@/src/server/collaboration/thread-service";
-import { reconcileExpiredAttempt } from "@/src/server/collaboration/turn-orchestrator";
+import { CollaborationError } from "@/src/modules/public-collaboration";
+import { readThreadDetail } from "@/src/adapters/outbound/sqlite/public-collaboration/thread-service";
+import { reconcileExpiredAttempt } from "@/src/adapters/outbound/sqlite/public-collaboration/turn-orchestrator";
 
 type RouteContext = {
   params: Promise<{ projectId: string; threadId: string }>;

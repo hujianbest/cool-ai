@@ -1,7 +1,7 @@
 import {
   collaborationErrorBody,
   CollaborationError,
-} from "@/src/server/collaboration/collaboration-errors";
+} from "@/src/modules/public-collaboration";
 import {
   internalErrorResponse,
   storageErrorResponse,
