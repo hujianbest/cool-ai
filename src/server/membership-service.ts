@@ -1,7 +1,7 @@
 import type { DatabaseSync } from "node:sqlite";
 
 import { hasActiveCollaborationForProject } from "@/src/server/collaboration/active-run-guards";
-import { openDatabase } from "@/src/server/db";
+import { openDatabase } from "@/src/adapters/outbound/sqlite/connection";
 import type {
   MembershipState,
   ProjectMember,

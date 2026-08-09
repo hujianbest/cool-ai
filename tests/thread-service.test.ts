@@ -5,7 +5,7 @@ import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
 import { CollaborationError } from "@/src/server/collaboration/collaboration-errors";
 import { createThread, listThreads } from "@/src/server/collaboration/thread-service";
-import { openDatabase } from "@/src/server/db";
+import { openDatabase } from "@/src/adapters/outbound/sqlite/connection";
 
 const NOW = "2026-08-08T08:00:00.000Z";
 const OPERATION_1 = "00000000-0000-4000-8000-000000000701";

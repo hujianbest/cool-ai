@@ -1,11 +1,11 @@
-import type { TransactionContext } from "@/src/server/application/transaction-context";
+import type { TransactionContext } from "@/src/application/transaction-context";
 import {
   MissionInitializationError,
   type InitializeMissionDeliveryCommand,
   type MissionDeliveryInitialized,
   type ReviewDeliveryCommandCapability,
 } from "@/src/server/review/public";
-import { sqliteDatabaseForTransaction } from "@/src/server/storage/sqlite/sqlite-unit-of-work";
+import { sqliteDatabaseForTransaction } from "@/src/adapters/outbound/sqlite/sqlite-unit-of-work";
 
 type DeliveryHeadRow = {
   contextVersion: number;

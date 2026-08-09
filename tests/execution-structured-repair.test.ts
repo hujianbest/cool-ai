@@ -4,7 +4,7 @@ import { join } from "node:path";
 import type { DatabaseSync } from "node:sqlite";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
-import { openDatabase } from "@/src/server/db";
+import { openDatabase } from "@/src/adapters/outbound/sqlite/connection";
 import { heartbeatExecutionAction } from "@/src/server/execution/execution-actions";
 import { seedCurrentAdvanceFixture as seedV7AdvanceFixture } from "@/tests/fixtures/collaboration/current-advance";
 

@@ -7,7 +7,7 @@ import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
 vi.mock("server-only", () => ({}));
 
-import { openDatabase } from "@/src/server/db";
+import { openDatabase } from "@/src/adapters/outbound/sqlite/connection";
 import { preflightSandbox, type SandboxPreflightResult } from "@/src/server/execution/sandbox-preflight";
 import { createWindowsNativeReadAdapter } from "@/src/server/execution/windows-native-read-adapter";
 import { execV7Fixture } from "@/tests/fixtures/execution/current-graph";

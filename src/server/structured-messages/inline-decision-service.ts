@@ -4,7 +4,7 @@ import { z } from "zod";
 
 import { CollaborationError } from "@/src/server/collaboration/collaboration-errors";
 import { appendBatchTx } from "@/src/server/collaboration/thread-fact-store";
-import { openDatabase } from "@/src/server/db";
+import { openDatabase } from "@/src/adapters/outbound/sqlite/connection";
 import {
   hashCanonicalBytes,
   ingestStructuredJson,

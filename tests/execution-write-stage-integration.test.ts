@@ -18,7 +18,7 @@ import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
 vi.mock("server-only", () => ({}));
 
-import { openDatabase } from "@/src/server/db";
+import { openDatabase } from "@/src/adapters/outbound/sqlite/connection";
 import { declareStaged } from "@/src/server/execution/action-orchestrator";
 import { ExecutionError } from "@/src/server/execution/execution-service";
 import { executeWriteToolAction } from "@/src/server/execution/file-tools";

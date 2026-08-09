@@ -8,7 +8,7 @@ import {
   type CredentialEnvelope,
 } from "@/src/server/credential-vault";
 import { isProviderInActiveCollaboration } from "@/src/server/collaboration/active-run-guards";
-import { openDatabase } from "@/src/server/db";
+import { openDatabase } from "@/src/adapters/outbound/sqlite/connection";
 import {
   normalizeProviderBaseUrl,
   verifyProviderConnection,

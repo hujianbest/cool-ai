@@ -9,7 +9,7 @@ import {
   createWorkItem,
 } from "@/src/server/mission-service";
 import { createProject } from "@/src/server/projects";
-import { openDatabase } from "@/src/server/db";
+import { openDatabase } from "@/src/adapters/outbound/sqlite/connection";
 
 type ContextSnapshot = {
   schemaVersion: 1;

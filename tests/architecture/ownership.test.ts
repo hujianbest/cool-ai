@@ -8,8 +8,8 @@ const MANIFEST = JSON.parse(
   readFileSync(resolve(ROOT, "tests/architecture/write-ownership.manifest.json"), "utf8"),
 ) as { owners: Record<string, string[]> };
 
-/** The canonical schema DDL source of truth (moves to the sqlite adapter in T-03). */
-const CANONICAL_SCHEMA_SOURCE = "src/server/storage/current-schema.ts";
+/** The canonical schema DDL source of truth (sqlite adapter, since T-03). */
+const CANONICAL_SCHEMA_SOURCE = "src/adapters/outbound/sqlite/current-schema.ts";
 
 const CREATE_TABLE_RE = /\bCREATE\s+TABLE\s+(?:IF\s+NOT\s+EXISTS\s+)?([A-Za-z_]\w*)/giu;
 

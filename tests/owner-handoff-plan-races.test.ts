@@ -10,7 +10,7 @@ import {
   acquireAdvance,
   finalizeAdvance,
 } from "@/src/server/collaboration/turn-orchestrator";
-import { openDatabase } from "@/src/server/db";
+import { openDatabase } from "@/src/adapters/outbound/sqlite/connection";
 import { seedCurrentAdvanceFixture as seedV7AdvanceFixture } from "@/tests/fixtures/collaboration/current-advance";
 
 const NOW = "2026-07-30T05:00:00.000Z";

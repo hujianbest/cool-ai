@@ -7,7 +7,7 @@ import {
   type CredentialEnvelope,
 } from "@/src/server/credential-vault";
 import { isAgentInActiveCollaboration } from "@/src/server/collaboration/active-run-guards";
-import { openDatabase } from "@/src/server/db";
+import { openDatabase } from "@/src/adapters/outbound/sqlite/connection";
 import type {
   AgentInput,
   AgentProfile,

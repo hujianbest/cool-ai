@@ -6,7 +6,7 @@ import { afterEach, beforeEach, describe, expect, it } from "vitest";
 import { CollaborationError } from "@/src/server/collaboration/collaboration-errors";
 import { canonicalRequestHash } from "@/src/server/collaboration/operation-receipts";
 import { appendAgentMessageFactTx } from "@/src/server/collaboration/thread-service";
-import { openDatabase } from "@/src/server/db";
+import { openDatabase } from "@/src/adapters/outbound/sqlite/connection";
 import { seedCurrentAdvanceFixture as seedV7AdvanceFixture } from "@/tests/fixtures/collaboration/current-advance";
 
 type AcquireDependencies = {

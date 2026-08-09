@@ -2,12 +2,12 @@ import {
   createMissionWorkflow,
   type CreateMissionWorkflow,
 } from "@/src/server/application/create-mission-workflow";
-import type { UnitOfWork } from "@/src/server/application/unit-of-work";
+import type { UnitOfWork } from "@/src/application/unit-of-work";
 import type { MissionCommandCapability } from "@/src/server/mission/public";
 import { SqliteMissionCommandCapability } from "@/src/server/mission/sqlite-mission-command-capability";
 import type { ReviewDeliveryCommandCapability } from "@/src/server/review/public";
 import { SqliteReviewDeliveryCommandCapability } from "@/src/server/review/sqlite-review-delivery-command-capability";
-import { SqliteUnitOfWork } from "@/src/server/storage/sqlite/sqlite-unit-of-work";
+import { SqliteUnitOfWork } from "@/src/adapters/outbound/sqlite/sqlite-unit-of-work";
 
 export type ServerComposition = {
   createMissionWorkflow: CreateMissionWorkflow;

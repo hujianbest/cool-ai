@@ -8,7 +8,7 @@ import type {
   TaskStateResponse,
   TaskStatus,
 } from "@/src/shared/contracts";
-import { openDatabase } from "@/src/server/db";
+import { openDatabase } from "@/src/adapters/outbound/sqlite/connection";
 
 export type TaskErrorCode =
   | "EMPTY_GOAL"

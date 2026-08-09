@@ -9,7 +9,7 @@ import {
 } from "@/src/server/application/mission-review-effects";
 import { canonicalRequestHash } from "@/src/server/collaboration/operation-receipts";
 import { createServerComposition } from "@/src/server/composition/server-composition";
-import { openDatabase } from "@/src/server/db";
+import { openDatabase } from "@/src/adapters/outbound/sqlite/connection";
 import { MissionError } from "@/src/server/mission/public";
 import type {
   Mission,

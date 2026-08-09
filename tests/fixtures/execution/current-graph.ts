@@ -1,7 +1,7 @@
 import type { DatabaseSync } from "node:sqlite";
 
 import { createThread } from "@/src/server/collaboration/thread-service";
-import { validateCurrentDataInvariants } from "@/src/server/storage/current-data-invariants";
+import { validateCurrentDataInvariants } from "@/src/adapters/outbound/sqlite/current-data-invariants";
 import { seedMissionInitialization } from "@/tests/fixtures/review/mission-initialization";
 
 const NOW = "2026-07-30T00:00:00.000Z";

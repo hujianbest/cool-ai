@@ -9,8 +9,8 @@ import {
   commitStructuredMessageTx,
   ingestStructuredBlocks,
 } from "@/src/server/structured-messages/structured-message-store";
-import { openDatabase } from "@/src/server/db";
-import { validateCurrentSchema } from "@/src/server/storage/validate-current-schema";
+import { openDatabase } from "@/src/adapters/outbound/sqlite/connection";
+import { validateCurrentSchema } from "@/src/adapters/outbound/sqlite/validate-current-schema";
 import { seedCurrentAdvanceFixture as seedV7AdvanceFixture } from "@/tests/fixtures/collaboration/current-advance";
 
 type DecisionModule = {

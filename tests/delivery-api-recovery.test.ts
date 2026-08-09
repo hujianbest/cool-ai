@@ -4,7 +4,7 @@ import { join } from "node:path";
 import { DatabaseSync } from "node:sqlite";
 import { afterEach, describe, expect, it, vi } from "vitest";
 
-vi.mock("@/src/server/db", () => ({
+vi.mock("@/src/adapters/outbound/sqlite/connection", () => ({
   openDatabase(path: string) {
     const database = new DatabaseSync(path);
     database.exec("PRAGMA foreign_keys=ON");

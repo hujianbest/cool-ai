@@ -8,7 +8,7 @@ import {
   type ThreadControlFaultPoint,
 } from "@/src/server/collaboration/run-service";
 import { createThread } from "@/src/server/collaboration/thread-service";
-import { openDatabase } from "@/src/server/db";
+import { openDatabase } from "@/src/adapters/outbound/sqlite/connection";
 
 type TupleRoute = {
   POST(

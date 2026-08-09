@@ -3,10 +3,10 @@ import { afterEach, describe, expect, it } from "vitest";
 
 import { createServerComposition } from "@/src/server/composition/server-composition";
 import { canonicalRequestHash } from "@/src/server/collaboration/operation-receipts";
-import { openDatabase } from "@/src/server/db";
+import { openDatabase } from "@/src/adapters/outbound/sqlite/connection";
 import { createMission } from "@/src/server/mission-service";
 import { createProject } from "@/src/server/projects";
-import { openEmptyCurrentDatabase } from "@/tests/fixtures/current-database";
+import { openEmptyCurrentDatabase } from "@/tests/fixtures/sqlite/current-database";
 
 const directories: string[] = [];
 

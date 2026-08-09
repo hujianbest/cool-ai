@@ -4,9 +4,9 @@ import {
   CURRENT_SCHEMA,
   type CurrentSchemaManifest,
   orderedCurrentSchemaObjects,
-} from "@/src/server/storage/current-schema";
-import { SchemaError } from "@/src/server/storage/schema-error";
-import { validateCurrentSchema } from "@/src/server/storage/validate-current-schema";
+} from "@/src/adapters/outbound/sqlite/current-schema";
+import { SchemaError } from "@/src/adapters/outbound/sqlite/schema-error";
+import { validateCurrentSchema } from "@/src/adapters/outbound/sqlite/validate-current-schema";
 
 let bootstrapObjectHookForTests: ((createdObjectCount: number) => void) | undefined;
 

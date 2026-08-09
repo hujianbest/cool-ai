@@ -9,12 +9,12 @@ import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { afterEach, describe, expect, it } from "vitest";
 
-import { openDatabase } from "@/src/server/db";
-import { SchemaError, type SchemaErrorCode } from "@/src/server/storage/schema-error";
+import { openDatabase } from "@/src/adapters/outbound/sqlite/connection";
+import { SchemaError, type SchemaErrorCode } from "@/src/adapters/outbound/sqlite/schema-error";
 import {
   createUnsupportedSchemaInput,
   type UnsupportedSchemaInput,
-} from "@/tests/fixtures/unsupported-schema-input";
+} from "@/tests/fixtures/sqlite/unsupported-schema-input";
 
 const temporaryDirectories: string[] = [];
 

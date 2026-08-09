@@ -11,8 +11,8 @@ import {
   readThreadFacts,
   readThreadMessages,
 } from "@/src/server/collaboration/thread-service";
-import { openDatabase } from "@/src/server/db";
-import { SchemaError } from "@/src/server/storage/schema-error";
+import { openDatabase } from "@/src/adapters/outbound/sqlite/connection";
+import { SchemaError } from "@/src/adapters/outbound/sqlite/schema-error";
 import {
   decideInline,
   readInlineOperation,

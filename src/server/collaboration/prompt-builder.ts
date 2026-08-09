@@ -7,7 +7,7 @@ import {
 import {
   CollaborationError,
 } from "@/src/server/collaboration/collaboration-errors";
-import { openDatabase } from "@/src/server/db";
+import { openDatabase } from "@/src/adapters/outbound/sqlite/connection";
 
 const MAX_PUBLIC_MESSAGES = 30;
 const MAX_PUBLIC_MESSAGE_CHARACTERS = 60_000;

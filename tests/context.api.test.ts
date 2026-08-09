@@ -5,7 +5,7 @@ import { afterEach, beforeEach, describe, expect, it } from "vitest";
 
 import { createMission } from "@/src/server/mission-service";
 import { createProject } from "@/src/server/projects";
-import { openDatabase } from "@/src/server/db";
+import { openDatabase } from "@/src/adapters/outbound/sqlite/connection";
 
 type ContextRoute = {
   GET(

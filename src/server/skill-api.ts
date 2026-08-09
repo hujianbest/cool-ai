@@ -1,7 +1,7 @@
 import { randomUUID } from "node:crypto";
 
 import { SkillServiceError } from "@/src/server/skill-service";
-import { SchemaError } from "@/src/server/storage/schema-error";
+import { SchemaError } from "@/src/adapters/outbound/sqlite/schema-error";
 
 export async function readSkillJson(
   request: Request,

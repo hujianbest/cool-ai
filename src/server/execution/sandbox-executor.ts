@@ -3,7 +3,7 @@ import { mkdir, rename, writeFile } from "node:fs/promises";
 import { dirname, join } from "node:path";
 import type { DatabaseSync } from "node:sqlite";
 
-import { openDatabase } from "@/src/server/db";
+import { openDatabase } from "@/src/adapters/outbound/sqlite/connection";
 import { executionDtoFromDatabase, ExecutionError } from "@/src/server/execution/execution-service";
 import { startExecutionResponseSchema } from "@/src/shared/execution-contracts";
 

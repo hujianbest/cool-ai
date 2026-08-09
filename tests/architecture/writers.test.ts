@@ -17,11 +17,11 @@ const MANIFEST = JSON.parse(
 
 /** Canonical bootstrap/validation lifecycle entry — DDL only, exempt from writer rules. */
 const LIFECYCLE_FILES = new Set([
-  "src/server/storage/current-schema.ts",
-  "src/server/storage/bootstrap-current-schema.ts",
-  "src/server/storage/validate-current-schema.ts",
-  "src/server/storage/current-data-invariants.ts",
-  "src/server/storage/schema-error.ts",
+  "src/adapters/outbound/sqlite/current-schema.ts",
+  "src/adapters/outbound/sqlite/bootstrap-current-schema.ts",
+  "src/adapters/outbound/sqlite/validate-current-schema.ts",
+  "src/adapters/outbound/sqlite/current-data-invariants.ts",
+  "src/adapters/outbound/sqlite/schema-error.ts",
 ]);
 
 /** Per-owner allowed production writer dirs (adapter layer of that owner). */

@@ -6,7 +6,7 @@ import {
   internalErrorResponse,
   storageErrorResponse,
 } from "@/src/server/api-errors";
-import { SchemaError } from "@/src/server/storage/schema-error";
+import { SchemaError } from "@/src/adapters/outbound/sqlite/schema-error";
 
 export async function readCollaborationJson(
   request: Request,

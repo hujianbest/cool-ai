@@ -1,4 +1,4 @@
-import type { UnitOfWork } from "@/src/server/application/unit-of-work";
+import type { UnitOfWork } from "@/src/application/unit-of-work";
 import type {
   CreateMissionCommand,
   MissionCommandCapability,

@@ -10,7 +10,7 @@ import {
   acquireAdvance,
   finalizeAdvance,
 } from "@/src/server/collaboration/turn-orchestrator";
-import { openDatabase } from "@/src/server/db";
+import { openDatabase } from "@/src/adapters/outbound/sqlite/connection";
 import {
   execV7Fixture,
   execV7TupleStatements,

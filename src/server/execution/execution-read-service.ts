@@ -3,7 +3,7 @@ import { resolve } from "node:path";
 import type { DatabaseSync } from "node:sqlite";
 import { z } from "zod";
 
-import { openDatabase } from "@/src/server/db";
+import { openDatabase } from "@/src/adapters/outbound/sqlite/connection";
 import { normalizeCanonicalRelativePath } from "@/src/server/execution/execution-conflicts";
 import {
   ExecutionError,
@@ -17,7 +17,7 @@ import {
   recoveryMergeFileStatusSchema,
   type RecoveryFileDto,
 } from "@/src/shared/execution-contracts";
-import { SchemaError } from "@/src/server/storage/schema-error";
+import { SchemaError } from "@/src/adapters/outbound/sqlite/schema-error";
 
 type ReadQuery = {
   after?: string;

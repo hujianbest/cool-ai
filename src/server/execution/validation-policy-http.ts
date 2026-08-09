@@ -1,4 +1,4 @@
-import { SchemaError } from "@/src/server/storage/schema-error";
+import { SchemaError } from "@/src/adapters/outbound/sqlite/schema-error";
 
 export function validationPolicySchemaErrorResponse(error: unknown): Response {
   if (!(error instanceof SchemaError)) {

@@ -17,7 +17,7 @@ import {
 } from "@/src/server/collaboration/prompt-builder";
 import type { StructuredTurnResult } from "@/src/server/collaboration/structured-repair";
 import { appendRunEventFactTx } from "@/src/server/collaboration/thread-service";
-import { openDatabase } from "@/src/server/db";
+import { openDatabase } from "@/src/adapters/outbound/sqlite/connection";
 import {
   timelinePayloadSchemas,
   type CollaborationRun,

@@ -7,7 +7,7 @@ import * as runService from "@/src/server/collaboration/run-service";
 import { CollaborationError } from "@/src/server/collaboration/collaboration-errors";
 import { createThread } from "@/src/server/collaboration/thread-service";
 import { createCredentialVault } from "@/src/server/credential-vault";
-import { openDatabase } from "@/src/server/db";
+import { openDatabase } from "@/src/adapters/outbound/sqlite/connection";
 import { seedMissionInitializationForMission as initializeMissionDeliveryTx } from "@/tests/fixtures/review/mission-initialization";
 
 type ControlAction = "pause" | "continue" | "retry" | "stop";

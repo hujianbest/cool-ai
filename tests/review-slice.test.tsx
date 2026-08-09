@@ -11,8 +11,8 @@ import { afterEach, describe, expect, it, vi } from "vitest";
 
 import { ReviewSlice } from "@/components/review/review-slice";
 import { createCredentialVault } from "@/src/server/credential-vault";
-import { openDatabase } from "@/src/server/db";
-import { CURRENT_DATA_INVARIANTS } from "@/src/server/storage/current-data-invariants";
+import { openDatabase } from "@/src/adapters/outbound/sqlite/connection";
+import { CURRENT_DATA_INVARIANTS } from "@/src/adapters/outbound/sqlite/current-data-invariants";
 import { validateFixtureDatabase } from "@/tests/fixtures/execution/current-graph";
 import {
   executeMergeCommit,

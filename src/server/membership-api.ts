@@ -1,7 +1,7 @@
 import { randomUUID } from "node:crypto";
 
 import { MembershipError } from "@/src/server/membership-service";
-import { SchemaError } from "@/src/server/storage/schema-error";
+import { SchemaError } from "@/src/adapters/outbound/sqlite/schema-error";
 
 export async function readMembershipJson(
   request: Request,

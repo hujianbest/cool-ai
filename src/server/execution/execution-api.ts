@@ -1,6 +1,6 @@
 import { internalErrorResponse, storageErrorResponse } from "@/src/server/api-errors";
 import { ExecutionError } from "@/src/server/execution/execution-service";
-import { SchemaError } from "@/src/server/storage/schema-error";
+import { SchemaError } from "@/src/adapters/outbound/sqlite/schema-error";
 
 export async function readBoundedExecutionJson(
   request: Request,

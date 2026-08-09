@@ -9,7 +9,7 @@ import { POST as createMission } from "@/app/api/projects/[projectId]/mission/ro
 import { POST as startCollaboration } from "@/app/api/projects/[projectId]/threads/[threadId]/runs/route";
 import { PUT as bindWorkspace } from "@/app/api/projects/[projectId]/workspace/route";
 import { createCredentialVault } from "@/src/server/credential-vault";
-import { openDatabase } from "@/src/server/db";
+import { openDatabase } from "@/src/adapters/outbound/sqlite/connection";
 import { createThread } from "@/src/server/collaboration/thread-service";
 import {
   executionDtoFromDatabase,

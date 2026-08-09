@@ -17,7 +17,7 @@ import {
   reconcileExpiredAttempt,
 } from "@/src/server/collaboration/turn-orchestrator";
 import { createCredentialVault } from "@/src/server/credential-vault";
-import { openDatabase } from "@/src/server/db";
+import { openDatabase } from "@/src/adapters/outbound/sqlite/connection";
 import { createMission } from "@/src/server/mission-service";
 
 const NOW = "2026-08-08T08:00:00.000Z";

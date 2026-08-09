@@ -1,4 +1,4 @@
-import type { TransactionContext } from "@/src/server/application/transaction-context";
+import type { TransactionContext } from "@/src/application/transaction-context";
 import { canonicalRequestHash } from "@/src/server/collaboration/operation-receipts";
 import {
   MissionError,
@@ -6,7 +6,7 @@ import {
   type MissionCommandCapability,
   type MissionCreated,
 } from "@/src/server/mission/public";
-import { sqliteDatabaseForTransaction } from "@/src/server/storage/sqlite/sqlite-unit-of-work";
+import { sqliteDatabaseForTransaction } from "@/src/adapters/outbound/sqlite/sqlite-unit-of-work";
 
 export class SqliteMissionCommandCapability implements MissionCommandCapability {
   createMission(

@@ -3,7 +3,7 @@ import type { DatabaseSync } from "node:sqlite";
 
 import { canonicalRequestHash } from "@/src/server/collaboration/operation-receipts";
 import { createCredentialVault } from "@/src/server/credential-vault";
-import { openDatabase } from "@/src/server/db";
+import { openDatabase } from "@/src/adapters/outbound/sqlite/connection";
 import {
   finalizeCheckpointedReview,
 } from "@/src/server/review/review-finalizer";

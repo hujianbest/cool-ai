@@ -22,7 +22,7 @@ import {
   createCredentialVault,
   type CredentialEnvelope,
 } from "@/src/server/credential-vault";
-import { openDatabase } from "@/src/server/db";
+import { openDatabase } from "@/src/adapters/outbound/sqlite/connection";
 import type {
   AnswerDecisionResponse,
   CollaborationReadResponse,

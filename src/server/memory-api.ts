@@ -1,7 +1,7 @@
 import { randomUUID } from "node:crypto";
 
 import { MemoryError } from "@/src/server/memory-service";
-import { SchemaError } from "@/src/server/storage/schema-error";
+import { SchemaError } from "@/src/adapters/outbound/sqlite/schema-error";
 
 export async function readMemoryJson(
   request: Request,

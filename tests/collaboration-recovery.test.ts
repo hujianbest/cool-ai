@@ -10,7 +10,7 @@ import {
 } from "@/src/server/collaboration/thread-service";
 import type { ProjectThreadRunTuple } from "@/src/server/collaboration/turn-orchestrator";
 import { createCredentialVault } from "@/src/server/credential-vault";
-import { openDatabase } from "@/src/server/db";
+import { openDatabase } from "@/src/adapters/outbound/sqlite/connection";
 import { seedMissionInitializationForMission as initializeMissionDeliveryTx } from "@/tests/fixtures/review/mission-initialization";
 
 type RecoveryModule = {
@@ -398,7 +398,7 @@ import { join } from "node:path";
 import { afterEach, beforeEach, describe, expect, it } from "vitest";
 
 import { canonicalRequestHash } from "@/src/server/collaboration/operation-receipts";
-import { openDatabase } from "@/src/server/db";
+import { openDatabase } from "@/src/adapters/outbound/sqlite/connection";
 
 type RecoveryModule = {
   reconcileExpiredAttempt?: (

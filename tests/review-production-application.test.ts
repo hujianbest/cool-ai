@@ -13,8 +13,8 @@ import {
 } from "@/app/api/work-items/[workItemId]/reviews/route";
 import { createThread } from "@/src/server/collaboration/thread-service";
 import { createCredentialVault } from "@/src/server/credential-vault";
-import { openDatabase } from "@/src/server/db";
-import { validateCurrentDataInvariants } from "@/src/server/storage/current-data-invariants";
+import { openDatabase } from "@/src/adapters/outbound/sqlite/connection";
+import { validateCurrentDataInvariants } from "@/src/adapters/outbound/sqlite/current-data-invariants";
 import {
   buildDeliveryInput,
   generatePublicDelivery,
@@ -31,8 +31,8 @@ vi.mock("@/src/server/collaboration/openai-chat-client", async (load) => ({
   ...await load<typeof import("@/src/server/collaboration/openai-chat-client")>(),
   callOpenAiChat,
 }));
-vi.mock("@/src/server/db", async (load) => {
-  const actual = await load<typeof import("@/src/server/db")>();
+vi.mock("@/src/adapters/outbound/sqlite/connection", async (load) => {
+  const actual = await load<typeof import("@/src/adapters/outbound/sqlite/connection")>();
   return {
     ...actual,
     openDatabase(path: string) {

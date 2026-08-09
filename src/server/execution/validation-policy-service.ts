@@ -3,7 +3,7 @@ import { realpathSync, statSync } from "node:fs";
 import type { DatabaseSync } from "node:sqlite";
 
 import { canonicalRequestHash } from "@/src/server/collaboration/operation-receipts";
-import { openDatabase } from "@/src/server/db";
+import { openDatabase } from "@/src/adapters/outbound/sqlite/connection";
 import {
   CLASSIFIER_VERSION,
   classifyPolicyEntry,

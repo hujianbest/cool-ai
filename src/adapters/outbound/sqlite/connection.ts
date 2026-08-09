@@ -2,9 +2,9 @@ import { mkdirSync } from "node:fs";
 import { dirname } from "node:path";
 import { DatabaseSync } from "node:sqlite";
 
-import { bootstrapCurrentSchema } from "@/src/server/storage/bootstrap-current-schema";
-import { SchemaError } from "@/src/server/storage/schema-error";
-import { validateCurrentSchema } from "@/src/server/storage/validate-current-schema";
+import { bootstrapCurrentSchema } from "@/src/adapters/outbound/sqlite/bootstrap-current-schema";
+import { SchemaError } from "@/src/adapters/outbound/sqlite/schema-error";
+import { validateCurrentSchema } from "@/src/adapters/outbound/sqlite/validate-current-schema";
 
 function hasUserSchemaObjects(database: DatabaseSync): boolean {
   return database.prepare(`

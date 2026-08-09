@@ -1,7 +1,7 @@
 import type { DatabaseSync } from "node:sqlite";
 
 import { CollaborationError } from "@/src/server/collaboration/collaboration-errors";
-import { openDatabase } from "@/src/server/db";
+import { openDatabase } from "@/src/adapters/outbound/sqlite/connection";
 import {
   timelinePayloadSchemas,
   type CursorPage,

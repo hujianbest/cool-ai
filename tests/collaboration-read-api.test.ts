@@ -4,7 +4,7 @@ import { join } from "node:path";
 import { afterEach, beforeEach, describe, expect, it } from "vitest";
 
 import { createThread } from "@/src/server/collaboration/thread-service";
-import { openDatabase } from "@/src/server/db";
+import { openDatabase } from "@/src/adapters/outbound/sqlite/connection";
 import { initializeMissingMissionHeads } from "@/tests/fixtures/execution/current-graph";
 
 type GetRoute = {

@@ -1,4 +1,4 @@
-import type { TransactionContext } from "@/src/server/application/transaction-context";
+import type { TransactionContext } from "@/src/application/transaction-context";
 import type { Mission } from "@/src/shared/project-context-contracts";
 
 type FieldError = { field: string; code: string };

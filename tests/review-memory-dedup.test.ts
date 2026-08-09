@@ -5,7 +5,7 @@ import { join } from "node:path";
 import { DatabaseSync } from "node:sqlite";
 import { afterEach, beforeEach, describe, expect, it } from "vitest";
 
-import { openDatabase } from "@/src/server/db";
+import { openDatabase } from "@/src/adapters/outbound/sqlite/connection";
 import { finalizeCheckpointedReview } from "@/src/server/review/review-finalizer";
 
 const NOW = "2026-08-01T10:00:00.000Z";

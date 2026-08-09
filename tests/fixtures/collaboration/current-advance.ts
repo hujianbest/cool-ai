@@ -1,5 +1,5 @@
 import { createThread } from "@/src/server/collaboration/thread-service";
-import { openDatabase } from "@/src/server/db";
+import { openDatabase } from "@/src/adapters/outbound/sqlite/connection";
 import { seedMissionInitialization } from "@/tests/fixtures/review/mission-initialization";
 
 export type CurrentAdvanceFixtureInput = {

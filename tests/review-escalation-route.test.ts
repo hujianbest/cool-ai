@@ -5,7 +5,7 @@ const close = vi.hoisted(() => vi.fn());
 const openDatabase = vi.hoisted(() => vi.fn(() => ({ close })));
 const readReviewWorkspace = vi.hoisted(() => vi.fn());
 
-vi.mock("@/src/server/db", () => ({ openDatabase }));
+vi.mock("@/src/adapters/outbound/sqlite/connection", () => ({ openDatabase }));
 vi.mock("@/src/server/review/review-escalation-service", () => ({
   answerEscalation,
 }));

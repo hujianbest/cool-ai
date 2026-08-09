@@ -21,7 +21,7 @@ import {
   CredentialVaultError,
   type CredentialEnvelope,
 } from "@/src/server/credential-vault";
-import { openDatabase } from "@/src/server/db";
+import { openDatabase } from "@/src/adapters/outbound/sqlite/connection";
 import { readPublicStructuredBlocksTx } from "@/src/server/structured-messages/structured-message-store";
 import { timelinePayloadSchemas } from "@/src/shared/collaboration-contracts";
 import type {

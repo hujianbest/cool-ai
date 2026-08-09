@@ -7,7 +7,7 @@ import * as agentService from "@/src/server/agent-service";
 import * as contextSnapshotService from "@/src/server/context-snapshot-service";
 import * as providerService from "@/src/server/provider-service";
 import { createCredentialVault } from "@/src/server/credential-vault";
-import { openDatabase } from "@/src/server/db";
+import { openDatabase } from "@/src/adapters/outbound/sqlite/connection";
 import { replaceMembers } from "@/src/server/membership-service";
 import {
   updateMission,

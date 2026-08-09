@@ -34,14 +34,14 @@ describe("mission workflow architecture boundaries", () => {
 
   it("keeps Workflow and public capabilities free of SQLite details", () => {
     const workflow = source("src/server/application/create-mission-workflow.ts");
-    expect(workflow).toContain("@/src/server/application/unit-of-work");
+    expect(workflow).toContain("@/src/application/unit-of-work");
     expect(workflow).toContain("@/src/server/mission/public");
     expect(workflow).toContain("@/src/server/review/public");
     expect(workflow).not.toMatch(/storage\/sqlite|node:sqlite|DatabaseSync|\.prepare\(/u);
 
     for (const publicBoundary of [
-      source("src/server/application/transaction-context.ts"),
-      source("src/server/application/unit-of-work.ts"),
+      source("src/application/transaction-context.ts"),
+      source("src/application/unit-of-work.ts"),
       source("src/server/mission/public.ts"),
       source("src/server/review/public.ts"),
     ]) {
@@ -50,7 +50,7 @@ describe("mission workflow architecture boundaries", () => {
   });
 
   it("keeps the shared current fixture technical and fact-free", () => {
-    const fixture = source("tests/fixtures/current-database.ts");
+    const fixture = source("tests/fixtures/sqlite/current-database.ts");
     expect(fixture).toContain("export function openEmptyCurrentDatabase");
     expect(fixture.match(/\bexport\b/gu)).toHaveLength(1);
     expect(fixture).toContain("openDatabase(databasePath)");
@@ -94,7 +94,7 @@ describe("current schema Contract boundaries", () => {
   });
 
   it("keeps CURRENT_SCHEMA as the only production DDL source", () => {
-    const serverFiles = TypeScriptFiles("src/server");
+    const serverFiles = TypeScriptFiles("src");
     const migrationImports = serverFiles.filter((path) =>
       /from\s+["'][^"']*migrations(?:-v\d+)?["']|migrateDatabase/u.test(
         readFileSync(path, "utf8"),
@@ -106,9 +106,9 @@ describe("current schema Contract boundaries", () => {
         readFileSync(path, "utf8"),
       ));
     expect(ddlSources).toEqual([
-      resolve(process.cwd(), "src/server/storage/current-schema.ts"),
+      resolve(process.cwd(), "src/adapters/outbound/sqlite/current-schema.ts"),
     ]);
-    expect(source("src/server/storage/current-schema.ts")).not.toContain(
+    expect(source("src/adapters/outbound/sqlite/current-schema.ts")).not.toContain(
       "CURRENT_IDENTITY",
     );
   });

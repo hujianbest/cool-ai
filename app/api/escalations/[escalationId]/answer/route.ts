@@ -1,7 +1,7 @@
 import { join } from "node:path";
 import { z } from "zod";
 
-import { openDatabase } from "@/src/server/db";
+import { openDatabase } from "@/src/adapters/outbound/sqlite/connection";
 import { answerEscalation } from "@/src/server/review/review-escalation-service";
 import {
   ReviewApiError,

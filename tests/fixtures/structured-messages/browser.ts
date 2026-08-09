@@ -1,9 +1,9 @@
 import { createHash, randomUUID } from "node:crypto";
 import { DatabaseSync } from "node:sqlite";
 
-import { openDatabase } from "@/src/server/db";
-import { CURRENT_SCHEMA } from "@/src/server/storage/current-schema";
-import { validateCurrentSchema } from "@/src/server/storage/validate-current-schema";
+import { openDatabase } from "@/src/adapters/outbound/sqlite/connection";
+import { CURRENT_SCHEMA } from "@/src/adapters/outbound/sqlite/current-schema";
+import { validateCurrentSchema } from "@/src/adapters/outbound/sqlite/validate-current-schema";
 import {
   commitStructuredMessageTx,
   ingestStructuredBlocks,

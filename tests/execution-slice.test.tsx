@@ -6,7 +6,7 @@ import { join } from "node:path";
 import { createElement, type ComponentType } from "react";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
-import { openDatabase } from "@/src/server/db";
+import { openDatabase } from "@/src/adapters/outbound/sqlite/connection";
 import { execV7Fixture } from "@/tests/fixtures/execution/current-graph";
 
 type RouteContext = { params: Promise<{ projectId: string }> };

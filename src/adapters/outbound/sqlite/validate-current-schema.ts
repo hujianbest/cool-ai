@@ -1,13 +1,13 @@
 import type { DatabaseSync } from "node:sqlite";
 
-import { validateCurrentDataInvariants } from "@/src/server/storage/current-data-invariants";
+import { validateCurrentDataInvariants } from "@/src/adapters/outbound/sqlite/current-data-invariants";
 import {
   assertCurrentSchemaManifest,
   CURRENT_SCHEMA,
   type CurrentSchemaManifest,
   normalizeCanonicalSql,
-} from "@/src/server/storage/current-schema";
-import { SchemaError } from "@/src/server/storage/schema-error";
+} from "@/src/adapters/outbound/sqlite/current-schema";
+import { SchemaError } from "@/src/adapters/outbound/sqlite/schema-error";
 
 type SchemaRow = {
   name: string;

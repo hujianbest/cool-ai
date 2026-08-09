@@ -5,7 +5,7 @@ import type { DatabaseSync } from "node:sqlite";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
 import { createCredentialVault } from "@/src/server/credential-vault";
-import { openDatabase } from "@/src/server/db";
+import { openDatabase } from "@/src/adapters/outbound/sqlite/connection";
 import { execV7Fixture } from "@/tests/fixtures/execution/current-graph";
 import { refreshExecutionFrozenFixture } from "@/tests/fixtures/execution/frozen-input";
 

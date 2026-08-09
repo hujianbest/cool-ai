@@ -12,7 +12,7 @@ import { join } from "node:path";
 import type { DatabaseSync } from "node:sqlite";
 import { afterEach, describe, expect, it, vi } from "vitest";
 
-import { openDatabase } from "@/src/server/db";
+import { openDatabase } from "@/src/adapters/outbound/sqlite/connection";
 import { compareCanonicalPathStates } from "@/src/server/execution/execution-conflicts";
 import {
   executeMergeCommit,

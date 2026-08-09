@@ -9,7 +9,7 @@ import {
   type ThreadMessageWriteFaultPoint,
 } from "@/src/server/collaboration/thread-service";
 import { createCredentialVault } from "@/src/server/credential-vault";
-import { openDatabase } from "@/src/server/db";
+import { openDatabase } from "@/src/adapters/outbound/sqlite/connection";
 
 type MessageRoute = {
   POST(

@@ -10,7 +10,7 @@ import { createElement } from "react";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
 import { ExecutionPanel } from "@/components/execution/execution-panel";
-import { openDatabase as openMigratedDatabase } from "@/src/server/db";
+import { openDatabase as openMigratedDatabase } from "@/src/adapters/outbound/sqlite/connection";
 import { initializeMissingMissionHeads } from "@/tests/fixtures/execution/current-graph";
 
 let seeded = false;

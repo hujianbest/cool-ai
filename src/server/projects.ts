@@ -1,7 +1,7 @@
 import { randomUUID } from "node:crypto";
 
 import type { Project } from "@/src/shared/contracts";
-import { openDatabase } from "@/src/server/db";
+import { openDatabase } from "@/src/adapters/outbound/sqlite/connection";
 import { initializeValidationPolicy } from "@/src/server/execution/validation-policy-service";
 
 type ProjectRow = {

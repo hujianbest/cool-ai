@@ -1,6 +1,6 @@
 import { DatabaseSync } from "node:sqlite";
 
-import { openDatabase } from "@/src/server/db";
+import { openDatabase } from "@/src/adapters/outbound/sqlite/connection";
 
 export type UnsupportedSchemaInput =
   | { readonly kind: "legacy-identity"; readonly userVersion: 1 | 2 | 3 | 4 | 5 | 6 | 7 | 8 }

@@ -14,7 +14,7 @@ import { validationPolicySchemaErrorResponse } from "@/src/server/execution/vali
 import {
   SchemaError,
   type SchemaErrorCode,
-} from "@/src/server/storage/schema-error";
+} from "@/src/adapters/outbound/sqlite/schema-error";
 
 type SchemaAdapter = (error: unknown, route: string) => Response;
 
@@ -44,16 +44,16 @@ const stableCases: Array<{ code: SchemaErrorCode; message: string }> = [
 ];
 
 const adapterSources = [
-  "../src/server/agent-api.ts",
-  "../src/server/collaboration/collaboration-api.ts",
-  "../src/server/context-api.ts",
-  "../src/server/execution/execution-api.ts",
-  "../src/server/execution/execution-read-service.ts",
-  "../src/server/membership-api.ts",
-  "../src/server/memory-api.ts",
-  "../src/server/mission-api.ts",
-  "../src/server/provider-api.ts",
-  "../src/server/skill-api.ts",
+  "../../../src/server/agent-api.ts",
+  "../../../src/server/collaboration/collaboration-api.ts",
+  "../../../src/server/context-api.ts",
+  "../../../src/server/execution/execution-api.ts",
+  "../../../src/server/execution/execution-read-service.ts",
+  "../../../src/server/membership-api.ts",
+  "../../../src/server/memory-api.ts",
+  "../../../src/server/mission-api.ts",
+  "../../../src/server/provider-api.ts",
+  "../../../src/server/skill-api.ts",
 ] as const;
 
 describe("schema error inbound adapters", () => {
@@ -91,7 +91,7 @@ describe("schema error inbound adapters", () => {
   it("imports SchemaError only from the current storage boundary", () => {
     for (const sourcePath of adapterSources) {
       const source = readFileSync(new URL(sourcePath, import.meta.url), "utf8");
-      expect(source).toContain('from "@/src/server/storage/schema-error"');
+      expect(source).toContain('from "@/src/adapters/outbound/sqlite/schema-error"');
       expect(source).not.toContain('from "@/src/server/migrations"');
       expect(source).not.toContain("SchemaMigrationError");
     }

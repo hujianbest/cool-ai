@@ -12,7 +12,7 @@ import * as threadRoute from "@/app/api/projects/[projectId]/threads/[threadId]/
 import * as runsRoute from "@/app/api/projects/[projectId]/threads/[threadId]/runs/route";
 import { createThread } from "@/src/server/collaboration/thread-service";
 import { createCredentialVault } from "@/src/server/credential-vault";
-import { openDatabase } from "@/src/server/db";
+import { openDatabase } from "@/src/adapters/outbound/sqlite/connection";
 import { seedMissionInitializationForMission as initializeMissionDeliveryTx } from "@/tests/fixtures/review/mission-initialization";
 
 let rootDirectory: string;

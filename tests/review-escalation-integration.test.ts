@@ -11,7 +11,7 @@ import {
 import { GET as getWorkspace } from "@/app/api/work-items/[workItemId]/review/route";
 import { createThread } from "@/src/server/collaboration/thread-service";
 import { createCredentialVault } from "@/src/server/credential-vault";
-import { openDatabase } from "@/src/server/db";
+import { openDatabase } from "@/src/adapters/outbound/sqlite/connection";
 import type { ModelCallResult } from "@/src/shared/collaboration-contracts";
 import { refreshExecutionFrozenFixture } from "@/tests/fixtures/execution/frozen-input";
 
@@ -29,8 +29,8 @@ vi.mock("@/src/server/collaboration/openai-chat-client", async (load) => ({
   ...await load<typeof import("@/src/server/collaboration/openai-chat-client")>(),
   callOpenAiChat,
 }));
-vi.mock("@/src/server/db", async (load) => {
-  const actual = await load<typeof import("@/src/server/db")>();
+vi.mock("@/src/adapters/outbound/sqlite/connection", async (load) => {
+  const actual = await load<typeof import("@/src/adapters/outbound/sqlite/connection")>();
   return {
     ...actual,
     openDatabase(path: string) {

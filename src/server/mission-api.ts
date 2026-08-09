@@ -2,7 +2,7 @@ import { randomUUID } from "node:crypto";
 
 import { MissionError } from "@/src/server/mission-service";
 import { CompletionGateError } from "@/src/server/review/completion-gate";
-import { SchemaError } from "@/src/server/storage/schema-error";
+import { SchemaError } from "@/src/adapters/outbound/sqlite/schema-error";
 
 export async function readMissionJson(
   request: Request,

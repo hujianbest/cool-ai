@@ -8,7 +8,7 @@ import {
   createThread,
   updateThreadPolicy,
 } from "@/src/server/collaboration/thread-service";
-import { openDatabase } from "@/src/server/db";
+import { openDatabase } from "@/src/adapters/outbound/sqlite/connection";
 
 const NOW = "2026-08-08T08:00:00.000Z";
 const CREATE_OPERATION = "00000000-0000-4000-8000-000000000701";

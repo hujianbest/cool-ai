@@ -4,13 +4,13 @@ import { join } from "node:path";
 import { DatabaseSync } from "node:sqlite";
 import { afterEach, describe, expect, it } from "vitest";
 
-import { openDatabase } from "@/src/server/db";
-import { setCurrentSchemaBootstrapHookForTests } from "@/src/server/storage/bootstrap-current-schema";
+import { openDatabase } from "@/src/adapters/outbound/sqlite/connection";
+import { setCurrentSchemaBootstrapHookForTests } from "@/src/adapters/outbound/sqlite/bootstrap-current-schema";
 import {
   CURRENT_SCHEMA,
   orderedCurrentSchemaObjects,
-} from "@/src/server/storage/current-schema";
-import { setCurrentSchemaSnapshotHookForTests } from "@/src/server/storage/validate-current-schema";
+} from "@/src/adapters/outbound/sqlite/current-schema";
+import { setCurrentSchemaSnapshotHookForTests } from "@/src/adapters/outbound/sqlite/validate-current-schema";
 
 const temporaryDirectories: string[] = [];
 

@@ -3,9 +3,9 @@ import type { DatabaseSync } from "node:sqlite";
 import {
   createTransactionContext,
   type TransactionContext,
-} from "@/src/server/application/transaction-context";
-import type { UnitOfWork } from "@/src/server/application/unit-of-work";
-import { openDatabase } from "@/src/server/db";
+} from "@/src/application/transaction-context";
+import type { UnitOfWork } from "@/src/application/unit-of-work";
+import { openDatabase } from "@/src/adapters/outbound/sqlite/connection";
 
 const databasesByTransaction = new WeakMap<TransactionContext, DatabaseSync>();
 

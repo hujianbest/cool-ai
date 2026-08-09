@@ -1,7 +1,7 @@
 import { randomUUID } from "node:crypto";
 import type { ZodIssue } from "zod";
 
-import { openDatabase } from "@/src/server/db";
+import { openDatabase } from "@/src/adapters/outbound/sqlite/connection";
 import type { Skill, SkillInput, UpdateSkillInput } from "@/src/shared/team-contracts";
 import {
   skillInputSchema,
