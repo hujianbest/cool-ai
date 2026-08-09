@@ -29,6 +29,8 @@ export * as publicTextCredentialClassifier from "@/src/adapters/outbound/sqlite/
 export * as runService from "@/src/adapters/outbound/sqlite/public-collaboration/run-service";
 export * as runTimelineService from "@/src/adapters/outbound/sqlite/public-collaboration/run-timeline-service";
 export * as structuredMessageStore from "@/src/adapters/outbound/sqlite/public-collaboration/structured-message-store";
+export * as inputHistoryService from "@/src/adapters/outbound/sqlite/public-collaboration/input-history-service";
+export * as threadDraftService from "@/src/adapters/outbound/sqlite/public-collaboration/thread-draft-service";
 export * as threadService from "@/src/adapters/outbound/sqlite/public-collaboration/thread-service";
 export * as turnOrchestrator from "@/src/adapters/outbound/sqlite/public-collaboration/turn-orchestrator";
 export * as verifiedSourceProjection from "@/src/adapters/outbound/sqlite/public-collaboration/verified-source-projection";

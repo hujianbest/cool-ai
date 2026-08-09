@@ -199,7 +199,11 @@ describe("generalized collaboration operation receipts", () => {
           "project-1",
           input.operationId,
           "advance",
-          canonicalRequestHash({ mentionAgentId: null, message: input.message }),
+          canonicalRequestHash({
+            mentionAgentId: null,
+            message: input.message,
+            recordInputHistory: true,
+          }),
         );
       } catch (caught) {
         error = caught;

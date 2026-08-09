@@ -10,6 +10,7 @@ import {
   finalizeAdvance,
 } from "@/src/adapters/outbound/sqlite/public-collaboration/turn-orchestrator";
 import { openDatabase } from "@/src/adapters/outbound/sqlite/connection";
+import { createCredentialVault } from "@/src/modules/identity-capability/internal/credential-vault";
 import { seedCurrentAdvanceFixture as seedV7AdvanceFixture } from "@/tests/fixtures/collaboration/current-advance";
 import { memoryDatabasePath } from "@/tests/fixtures/sqlite/memory-database";
 
@@ -20,6 +21,8 @@ const AGENT_A = "agent-owner-a";
 const AGENT_B = "agent-owner-b";
 const AGENT_C = "agent-owner-c";
 const MISSION_ID = "mission-owner-races";
+const PROVIDER_ID = "provider-owner-races";
+const MASTER_KEY = Buffer.alloc(32, 41).toString("base64url");
 
 let databasePath: string;
 let threadId: string;
@@ -173,6 +176,7 @@ beforeEach(() => {
   vi.useFakeTimers();
   vi.setSystemTime(new Date(NOW));
   databasePath = memoryDatabasePath();
+  process.env.COCKPIT_MASTER_KEY = MASTER_KEY;
   operationSequence = 1_700;
   uuidSequence = 0;
   threadId = seedV7AdvanceFixture(databasePath, {
@@ -184,16 +188,38 @@ beforeEach(() => {
     ownerMessage: null,
     projectId: PROJECT_ID,
     projectName: "Owner race project",
-    providerId: "provider-owner-races",
+    providerId: PROVIDER_ID,
     runId: RUN_ID,
     secondAgentId: AGENT_B,
     secondAgentPrompt: "private-b",
     threadCreateOperationId: "17000000-0000-4000-8000-000000000000",
   });
+  // The send path classifies content against real provider keys (fail-closed),
+  // so the fixture's placeholder cipher row must be upgraded to a real envelope.
+  const vault = createCredentialVault();
+  const encrypted = vault.encrypt(PROVIDER_ID, `key-${PROVIDER_ID}`);
+  const database = openDatabase(databasePath);
+  try {
+    database.prepare(
+      `UPDATE providers SET api_key_cipher=?, api_key_iv=?, api_key_tag=?,
+       credential_version=?, key_id=?, api_key_mask=? WHERE id=?`,
+    ).run(
+      encrypted.apiKeyCipher,
+      encrypted.apiKeyIv,
+      encrypted.apiKeyTag,
+      encrypted.credentialVersion,
+      encrypted.keyId,
+      encrypted.apiKeyMask,
+      PROVIDER_ID,
+    );
+  } finally {
+    database.close();
+  }
 });
 
 afterEach(() => {
   vi.useRealTimers();
+  delete process.env.COCKPIT_MASTER_KEY;
 });
 
 describe("calling owner messages and handoff", () => {

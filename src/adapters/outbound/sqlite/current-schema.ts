@@ -12,7 +12,7 @@ export type CurrentSchemaManifest = {
 
 const CURRENT_SCHEMA_DEFINITION = {
   "identity": {
-    "userVersion": 10
+    "userVersion": 12
   },
   "objects": [
     {
@@ -331,6 +331,24 @@ const CURRENT_SCHEMA_DEFINITION = {
       "kind": "table",
       "name": "collaboration_messages",
       "createSql": "CREATE TABLE collaboration_messages(\n id TEXT PRIMARY KEY,project_id TEXT NOT NULL,thread_id TEXT NOT NULL,run_id TEXT,\n author_type TEXT NOT NULL CHECK(author_type IN('owner','agent')),author_agent_id TEXT,\n author_display_name TEXT NOT NULL CHECK(length(author_display_name)>=1),content TEXT NOT NULL CHECK(length(content)>=1),\n mention_agent_id TEXT,mention_display_name TEXT,sequence INTEGER NOT NULL CHECK(sequence>=1),\n reply_to_message_id TEXT,reply_to_sequence INTEGER CHECK(reply_to_sequence IS NULL OR reply_to_sequence>=1),\n reply_to_author_display_name TEXT,reply_to_excerpt TEXT,\n consumed_at TEXT CHECK(consumed_at IS NULL OR consumed_at GLOB '????-??-??T??:??:??.???Z'),\n created_at TEXT NOT NULL CHECK(created_at GLOB '????-??-??T??:??:??.???Z'),\n UNIQUE(project_id,thread_id,id),UNIQUE(project_id,thread_id,run_id,id),UNIQUE(project_id,thread_id,sequence),\n CHECK((author_type='owner' AND author_agent_id IS NULL) OR (author_type='agent' AND author_agent_id IS NOT NULL)),\n CHECK((mention_agent_id IS NULL AND mention_display_name IS NULL) OR\n       (mention_agent_id IS NOT NULL AND mention_display_name IS NOT NULL)),\n FOREIGN KEY(project_id,thread_id) REFERENCES collaboration_threads(project_id,id) ON DELETE CASCADE,\n FOREIGN KEY(project_id,thread_id,run_id) REFERENCES collaboration_runs(project_id,thread_id,id) ON DELETE NO ACTION,\n FOREIGN KEY(project_id,thread_id,reply_to_message_id)\n  REFERENCES collaboration_messages(project_id,thread_id,id) ON DELETE NO ACTION,\n FOREIGN KEY(author_agent_id) REFERENCES agents(id) ON DELETE NO ACTION,\n FOREIGN KEY(mention_agent_id) REFERENCES agents(id) ON DELETE NO ACTION\n)",
+      "dependsOn": []
+    },
+    {
+      "kind": "table",
+      "name": "thread_drafts",
+      "createSql": "CREATE TABLE thread_drafts(\n project_id TEXT NOT NULL,thread_id TEXT NOT NULL,\n content TEXT NOT NULL,\n attachments_json TEXT NOT NULL DEFAULT '[]' CHECK(json_valid(attachments_json) AND json_type(attachments_json)='array' AND length(CAST(attachments_json AS BLOB))<=65536),\n reply_to_message_id TEXT,\n version INTEGER NOT NULL CHECK(version>=1),\n updated_at TEXT NOT NULL CHECK(updated_at GLOB '????-??-??T??:??:??.???Z'),\n PRIMARY KEY(project_id,thread_id),\n FOREIGN KEY(project_id,thread_id) REFERENCES collaboration_threads(project_id,id) ON DELETE CASCADE\n)",
+      "dependsOn": []
+    },
+    {
+      "kind": "table",
+      "name": "input_history_entries",
+      "createSql": "CREATE TABLE input_history_entries(\n id TEXT PRIMARY KEY,\n project_id TEXT NOT NULL,thread_id TEXT NOT NULL,\n content TEXT NOT NULL,\n created_at TEXT NOT NULL CHECK(created_at GLOB '????-??-??T??:??:??.???Z'),\n FOREIGN KEY(project_id,thread_id) REFERENCES collaboration_threads(project_id,id) ON DELETE CASCADE\n)",
+      "dependsOn": []
+    },
+    {
+      "kind": "table",
+      "name": "input_history_clear_events",
+      "createSql": "CREATE TABLE input_history_clear_events(\n id TEXT PRIMARY KEY,\n project_id TEXT NOT NULL REFERENCES projects(id) ON DELETE CASCADE,\n cleared_at TEXT NOT NULL CHECK(cleared_at GLOB '????-??-??T??:??:??.???Z')\n)",
       "dependsOn": []
     },
     {
@@ -705,6 +723,14 @@ const CURRENT_SCHEMA_DEFINITION = {
       "createSql": "CREATE INDEX collaboration_threads_activity_page ON collaboration_threads(project_id,last_activity_sequence DESC,id)",
       "dependsOn": [
         "collaboration_threads"
+      ]
+    },
+    {
+      "kind": "index",
+      "name": "input_history_entries_project_page",
+      "createSql": "CREATE INDEX input_history_entries_project_page ON input_history_entries(project_id,created_at,id)",
+      "dependsOn": [
+        "input_history_entries"
       ]
     },
     {

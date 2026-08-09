@@ -2,8 +2,10 @@ import type {
   CollaborationReadResponse,
   CursorPage,
   FactPageResponse,
+  InputHistorySearchResponse,
   MessagePageResponse,
   PublicCollaborationPageCursor,
+  ThreadDraftReadResponse,
   TimelineEvent,
 } from "./dto";
 
@@ -48,6 +50,16 @@ export interface PublicCollaborationQueries {
     threadId: string,
     operationId: string,
   ): PublicCollaborationCommandResult<Record<string, unknown>>;
+  readThreadDraft(
+    databasePath: string,
+    projectId: string,
+    threadId: string,
+  ): PublicCollaborationCommandResult<ThreadDraftReadResponse>;
+  searchInputHistory(
+    databasePath: string,
+    projectId: string,
+    query: string,
+  ): PublicCollaborationCommandResult<InputHistorySearchResponse>;
 
   getCollaboration(
     databasePath: string,

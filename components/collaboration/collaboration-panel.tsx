@@ -13,8 +13,10 @@ import {
 import { createPortal } from "react-dom";
 
 import { useModalSurface } from "@/components/mobile-dialog";
+import { InputHistoryPanel } from "@/components/collaboration/input-history-panel";
 import { StructuredMessageBlock } from "@/components/collaboration/structured-message-block";
 import { useTargetRequestGuard } from "@/components/collaboration/use-target-request-guard";
+import { useInputHistoryRecording } from "@/components/input-history-recording-store";
 import type {
   AnswerDecisionResponse,
   CollaborationApiError,
@@ -84,6 +86,87 @@ function graphemeLength(value: string): number {
     : Array.from(value).length;
 }
 
+const DRAFT_SAVE_DEBOUNCE_MS = 500;
+const MAX_COMPOSER_ATTACHMENTS = 8;
+const REPLY_EXCERPT_GRAPHEMES = 40;
+
+type ComposerAttachment = {
+  name: string;
+  size: number;
+};
+
+type ComposerDraftState = {
+  attachments: ComposerAttachment[];
+  content: string;
+  replyToMessageId: string | null;
+};
+
+function draftExcerpt(text: string): string {
+  const graphemes = typeof Intl.Segmenter === "function"
+    ? Array.from(new Intl.Segmenter().segment(text), (part) => part.segment)
+    : Array.from(text);
+  return graphemes.length > REPLY_EXCERPT_GRAPHEMES
+    ? `${graphemes.slice(0, REPLY_EXCERPT_GRAPHEMES).join("")}…`
+    : text;
+}
+
+function parseDraftReadResponse(
+  value: unknown,
+  projectId: string,
+  threadId: string,
+): ComposerDraftState | "invalid" | null {
+  if (!exactKeys(value, ["draft"])) return "invalid";
+  const draft = value.draft;
+  if (draft === null) return null;
+  if (
+    !exactKeys(draft, [
+      "attachments",
+      "content",
+      "projectId",
+      "replyToMessageId",
+      "threadId",
+      "updatedAt",
+      "version",
+    ])
+    || draft.projectId !== projectId
+    || draft.threadId !== threadId
+    || typeof draft.content !== "string"
+    || !(draft.replyToMessageId === null || typeof draft.replyToMessageId === "string")
+    || typeof draft.updatedAt !== "string"
+    || !Number.isSafeInteger(draft.version)
+    || Number(draft.version) < 1
+    || !Array.isArray(draft.attachments)
+  ) {
+    return "invalid";
+  }
+  const attachments: ComposerAttachment[] = [];
+  for (const raw of draft.attachments) {
+    if (
+      !exactKeys(raw, ["name", "size"])
+      || typeof raw.name !== "string"
+      || raw.name.length === 0
+      || graphemeLength(raw.name) > 255
+      || !Number.isSafeInteger(raw.size)
+      || Number(raw.size) < 0
+    ) {
+      return "invalid";
+    }
+    attachments.push({ name: raw.name, size: Number(raw.size) });
+  }
+  return {
+    attachments,
+    content: draft.content,
+    replyToMessageId: draft.replyToMessageId,
+  };
+}
+
+function parseDraftSaveResponse(value: unknown): { contentSaved: boolean } | null {
+  if (!exactKeys(value, ["contentSaved", "draft"])) return null;
+  return typeof value.contentSaved === "boolean"
+    ? { contentSaved: value.contentSaved }
+    : null;
+}
+
 const activeRunStatuses = new Set(["running", "waiting_owner", "paused", "failed"]);
 const POLL_INTERVAL_MS = 1_000;
 
@@ -92,6 +175,7 @@ type CollaborationWriteReceipt = {
   mentionAgentId?: string;
   message: string;
   operationId: string;
+  replyToMessageId?: string;
   runId: string | null;
 };
 
@@ -965,6 +1049,11 @@ export function CollaborationPanel({
 }: CollaborationPanelProps) {
   const [state, setState] = useState<CollaborationReadResponse | null>(null);
   const [draft, setDraft] = useState("");
+  const [composerAttachments, setComposerAttachments] = useState<ComposerAttachment[]>([]);
+  const [replyTargetMessageId, setReplyTargetMessageId] = useState<string | null>(null);
+  const [draftError, setDraftError] = useState<string | null>(null);
+  const [draftRestoring, setDraftRestoring] = useState(false);
+  const [draftSensitiveHint, setDraftSensitiveHint] = useState(false);
   const [loadError, setLoadError] = useState<string | null>(null);
   const [sendError, setSendError] = useState<string | null>(null);
   const [loading, setLoading] = useState(true);
@@ -980,6 +1069,7 @@ export function CollaborationPanel({
   const [membersLoading, setMembersLoading] = useState(false);
   const [membersError, setMembersError] = useState<string | null>(null);
   const [mentionOpen, setMentionOpen] = useState(false);
+  const [historyOpen, setHistoryOpen] = useState(false);
   const [activeMemberIndex, setActiveMemberIndex] = useState(0);
   const [selectedMember, setSelectedMember] = useState<ProjectMember | null>(null);
   const [focusMessageId, setFocusMessageId] = useState<string | null>(null);
@@ -1028,6 +1118,11 @@ export function CollaborationPanel({
   const fieldErrorId = `collaboration-message-error-${projectId}`;
   const targetKey = `${projectId}|${threadId ?? ""}|${selectedRunId ?? ""}`;
   const targetGuard = useTargetRequestGuard(targetKey);
+  const draftGuard = useTargetRequestGuard(targetKey);
+  const inputHistoryRecording = useInputHistoryRecording();
+  const draftSaveTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const attachmentInputRef = useRef<HTMLInputElement>(null);
+  const historyEntryRef = useRef<HTMLButtonElement | null>(null);
 
   useEffect(() => {
     onboardingSelectedRunIdRef.current = selectedRunId;
@@ -1182,8 +1277,8 @@ export function CollaborationPanel({
     setNewEventCount(0);
     setLoading(true);
     setLoadError(null);
-    setDraft("");
     setMentionOpen(false);
+    setHistoryOpen(false);
     setMembers(null);
     setMembersError(null);
     setMembersLoading(false);
@@ -1207,6 +1302,45 @@ export function CollaborationPanel({
     messageRefs.current.clear();
     void loadCollaboration(true, epoch);
   }, [loadCollaboration, reloadKey, targetKey]);
+
+  useEffect(() => {
+    cancelPendingDraftSave();
+    setDraft("");
+    setComposerAttachments([]);
+    setReplyTargetMessageId(null);
+    setDraftSensitiveHint(false);
+    setDraftError(null);
+    if (!threadId) {
+      setDraftRestoring(false);
+      return () => cancelPendingDraftSave();
+    }
+    const request = draftGuard.capture();
+    setDraftRestoring(true);
+    void (async () => {
+      try {
+        const response = await fetch(
+          `/api/projects/${encodeURIComponent(projectId)}/threads/${encodeURIComponent(threadId)}/draft`,
+          { signal: request.signal },
+        );
+        if (!response.ok) throw new Error("draft read failed");
+        const payload = await readJson<unknown>(response);
+        const restored = parseDraftReadResponse(payload, projectId, threadId);
+        if (!request.isCurrent()) return;
+        if (restored !== "invalid" && restored) {
+          setDraft(restored.content);
+          setComposerAttachments(restored.attachments);
+          setReplyTargetMessageId(restored.replyToMessageId);
+        }
+      } catch {
+        if (request.isCurrent()) {
+          setDraftError("草稿恢复失败，可继续输入；新的输入仍会尝试保存。");
+        }
+      } finally {
+        if (request.isCurrent()) setDraftRestoring(false);
+      }
+    })();
+    return () => cancelPendingDraftSave();
+  }, [draftGuard, projectId, threadId, targetKey]);
 
   useEffect(() => {
     mountedRef.current = true;
@@ -1676,7 +1810,7 @@ export function CollaborationPanel({
       applyRead(payload, true);
       setFactsPage(result.envelope.factsPage);
       setFactsTargetKey(targetKey);
-      setDraft("");
+      clearComposerDraftState();
       setSelectedMember(null);
       setFocusMessageId(confirmed.message.id);
       setSendError(null);
@@ -1732,6 +1866,7 @@ export function CollaborationPanel({
         body: JSON.stringify({
           message,
           ...(mentionAgentId ? { mentionAgentId } : {}),
+          ...(inputHistoryRecording.record ? {} : { recordInputHistory: false }),
           operationId: logicalOperationId,
         }),
         headers: { "content-type": "application/json" },
@@ -1785,6 +1920,130 @@ export function CollaborationPanel({
     setSending(false);
   }
 
+  function cancelPendingDraftSave() {
+    if (draftSaveTimerRef.current) {
+      clearTimeout(draftSaveTimerRef.current);
+      draftSaveTimerRef.current = null;
+    }
+  }
+
+  function scheduleDraftSave(next: ComposerDraftState) {
+    if (!threadId || sending) return;
+    cancelPendingDraftSave();
+    const targetThreadId = threadId;
+    draftSaveTimerRef.current = setTimeout(() => {
+      draftSaveTimerRef.current = null;
+      void flushDraftSave(targetThreadId, next);
+    }, DRAFT_SAVE_DEBOUNCE_MS);
+  }
+
+  async function flushDraftSave(targetThreadId: string, next: ComposerDraftState) {
+    const request = draftGuard.capture();
+    const empty = next.content === ""
+      && next.attachments.length === 0
+      && next.replyToMessageId === null;
+    try {
+      const response = await fetch(
+        `/api/projects/${encodeURIComponent(projectId)}/threads/${encodeURIComponent(targetThreadId)}/draft`,
+        empty
+          ? { method: "DELETE", signal: request.signal }
+          : {
+              body: JSON.stringify({
+                attachments: next.attachments,
+                content: next.content,
+                replyToMessageId: next.replyToMessageId,
+              }),
+              headers: { "content-type": "application/json" },
+              method: "PUT",
+              signal: request.signal,
+            },
+      );
+      if (!response.ok) throw new Error("draft save failed");
+      const payload = await readJson<unknown>(response);
+      if (!request.isCurrent()) return;
+      if (empty) {
+        setDraftSensitiveHint(false);
+        setDraftError(null);
+        return;
+      }
+      const parsed = parseDraftSaveResponse(payload);
+      if (!parsed) throw new Error("draft save response invalid");
+      setDraftSensitiveHint(!parsed.contentSaved);
+      setDraftError(null);
+    } catch {
+      if (request.isCurrent()) {
+        setDraftError("草稿保存失败，继续输入会自动重试。");
+      }
+    }
+  }
+
+  function handleDraftChange(value: string) {
+    setDraft(value);
+    if (fieldError) setFieldError(null);
+    scheduleDraftSave({
+      attachments: composerAttachments,
+      content: value,
+      replyToMessageId: replyTargetMessageId,
+    });
+  }
+
+  function closeInputHistory(returnFocus: boolean) {
+    setHistoryOpen(false);
+    if (returnFocus) historyEntryRef.current?.focus();
+  }
+
+  function handleInputHistoryFill(content: string) {
+    handleDraftChange(content);
+    setHistoryOpen(false);
+    const composer = document.getElementById(`collaboration-message-${projectId}`);
+    if (composer instanceof HTMLElement) composer.focus();
+  }
+
+  function addAttachmentPlaceholders(files: FileList | null) {
+    if (!files || sending) return;
+    const next = [...composerAttachments];
+    for (const file of Array.from(files)) {
+      if (next.length >= MAX_COMPOSER_ATTACHMENTS) break;
+      if (!file.name || graphemeLength(file.name) > 255) continue;
+      next.push({ name: file.name, size: file.size });
+    }
+    if (next.length === composerAttachments.length) return;
+    setComposerAttachments(next);
+    scheduleDraftSave({
+      attachments: next,
+      content: draft,
+      replyToMessageId: replyTargetMessageId,
+    });
+  }
+
+  function removeAttachmentPlaceholder(index: number) {
+    const next = composerAttachments.filter((_, position) => position !== index);
+    setComposerAttachments(next);
+    scheduleDraftSave({
+      attachments: next,
+      content: draft,
+      replyToMessageId: replyTargetMessageId,
+    });
+  }
+
+  function changeReplyTarget(messageId: string | null) {
+    setReplyTargetMessageId(messageId);
+    scheduleDraftSave({
+      attachments: composerAttachments,
+      content: draft,
+      replyToMessageId: messageId,
+    });
+  }
+
+  function clearComposerDraftState() {
+    cancelPendingDraftSave();
+    setDraft("");
+    setComposerAttachments([]);
+    setReplyTargetMessageId(null);
+    setDraftSensitiveHint(false);
+    setDraftError(null);
+  }
+
   async function handleSubmit(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
     const message = draft.trim();
@@ -1813,6 +2072,11 @@ export function CollaborationPanel({
     const hasActiveRun = Boolean(
       state?.run && activeRunStatuses.has(state.run.status),
     );
+    if (replyTargetMessageId && !hasActiveRun && !activeRunInOtherThread) {
+      setFieldError("启动新一轮运行时暂不能携带回复链接；请先移除回复链接。");
+      return;
+    }
+    cancelPendingDraftSave();
     if (activeRunInOtherThread) {
       await submitActiveMessage({
         baselineMessageIds:
@@ -1820,6 +2084,7 @@ export function CollaborationPanel({
         mentionAgentId: selectedMember?.agentId,
         message,
         operationId: operationId(),
+        replyToMessageId: replyTargetMessageId ?? undefined,
         runId: null,
       });
       return;
@@ -1838,6 +2103,7 @@ export function CollaborationPanel({
       mentionAgentId: selectedMember?.agentId,
       message,
       operationId: operationId(),
+      replyToMessageId: replyTargetMessageId ?? undefined,
       runId: state!.run!.id,
     };
     await submitActiveMessage(receipt);
@@ -1919,7 +2185,7 @@ export function CollaborationPanel({
       applyRead(payload, true);
       setFactsPage(result.envelope.factsPage);
       setFactsTargetKey(targetKey);
-      setDraft("");
+      clearComposerDraftState();
       setSelectedMember(null);
       setFocusMessageId(matches[0].id);
       setMessageReceipt(null);
@@ -1950,6 +2216,10 @@ export function CollaborationPanel({
           ...(receipt.mentionAgentId
             ? { mentionAgentId: receipt.mentionAgentId }
             : {}),
+          ...(receipt.replyToMessageId
+            ? { replyToMessageId: receipt.replyToMessageId }
+            : {}),
+          ...(inputHistoryRecording.record ? {} : { recordInputHistory: false }),
           operationId: receipt.operationId,
         }),
         headers: { "content-type": "application/json" },
@@ -2015,6 +2285,12 @@ export function CollaborationPanel({
       : [],
   );
   const factsExhausted = factsTargetKey === targetKey && factsPage?.nextAfter === null;
+  const replyTargetEntry = replyTargetMessageId && transcript.kind === "ready"
+    ? transcript.entries.find((entry) => entry.messageId === replyTargetMessageId)
+    : undefined;
+  const replyTargetLabel = replyTargetEntry
+    ? `${replyTargetEntry.actorLabel}：${draftExcerpt(replyTargetEntry.text ?? "")}`
+    : "来源消息";
   const currentMember = members?.find(
     (member) => member.agentId === state?.run?.currentAgentId,
   );
@@ -2376,6 +2652,26 @@ export function CollaborationPanel({
                         targetKey={targetKey}
                       />
                     ))}
+                    {entry.messageId ? (
+                      <button
+                        aria-label={
+                          entry.text
+                            ? `回复 ${entry.actorLabel} 的消息：${draftExcerpt(entry.text)}`
+                            : `回复 ${entry.actorLabel} 的消息`
+                        }
+                        disabled={sending}
+                        onClick={() => {
+                          changeReplyTarget(entry.messageId);
+                          const composer = document.getElementById(
+                            `collaboration-message-${projectId}`,
+                          );
+                          if (composer instanceof HTMLElement) composer.focus();
+                        }}
+                        type="button"
+                      >
+                        回复
+                      </button>
+                    ) : null}
                   </li>
                 );
               })}
@@ -2461,10 +2757,7 @@ export function CollaborationPanel({
                 aria-invalid={fieldError ? "true" : undefined}
                 disabled={sending}
                 id={`collaboration-message-${projectId}`}
-                onChange={(event) => {
-                  setDraft(event.target.value);
-                  if (fieldError) setFieldError(null);
-                }}
+                onChange={(event) => handleDraftChange(event.target.value)}
                 value={draft}
               />
               {fieldError ? (
@@ -2473,6 +2766,50 @@ export function CollaborationPanel({
                 </p>
               ) : null}
             </div>
+            {replyTargetMessageId || composerAttachments.length ? (
+              <div className="mention-picker">
+                {replyTargetMessageId ? (
+                  <span className="mention-chip">
+                    回复 {replyTargetLabel}
+                    <button
+                      aria-label="移除回复链接"
+                      disabled={sending}
+                      onClick={() => changeReplyTarget(null)}
+                      type="button"
+                    >
+                      移除
+                    </button>
+                  </span>
+                ) : null}
+                {composerAttachments.map((attachment, index) => (
+                  <span
+                    className="mention-chip"
+                    key={`${attachment.name}:${index}`}
+                  >
+                    {attachment.name} · {attachment.size} B
+                    <button
+                      aria-label={`移除附件 ${attachment.name}`}
+                      disabled={sending}
+                      onClick={() => removeAttachmentPlaceholder(index)}
+                      type="button"
+                    >
+                      移除
+                    </button>
+                  </span>
+                ))}
+              </div>
+            ) : null}
+            {draftRestoring ? (
+              <p aria-busy="true" className="muted">正在恢复草稿…</p>
+            ) : null}
+            {draftError ? (
+              <p className="muted">{draftError}</p>
+            ) : null}
+            {draftSensitiveHint ? (
+              <p className="muted" role="status">
+                检测到疑似敏感内容，草稿正文未保存；附件占位与回复链接仍会保留。
+              </p>
+            ) : null}
             <div className="mention-picker">
               {selectedMember ? (
                 <span className="mention-chip">
@@ -2487,6 +2824,36 @@ export function CollaborationPanel({
                   </button>
                 </span>
               ) : null}
+              <button
+                aria-label="添加附件占位"
+                disabled={sending}
+                onClick={() => attachmentInputRef.current?.click()}
+                type="button"
+              >
+                添加附件占位
+              </button>
+              <input
+                aria-label="选择附件文件"
+                className="sr-only"
+                multiple
+                onChange={(event) => {
+                  addAttachmentPlaceholders(event.target.files);
+                  event.target.value = "";
+                }}
+                ref={attachmentInputRef}
+                tabIndex={-1}
+                type="file"
+              />
+              <button
+                aria-controls={`collaboration-input-history-${projectId}`}
+                aria-expanded={historyOpen}
+                disabled={sending}
+                onClick={() => setHistoryOpen((open) => !open)}
+                ref={historyEntryRef}
+                type="button"
+              >
+                输入历史
+              </button>
               <button
                 aria-activedescendant={
                   mentionOpen && members?.[activeMemberIndex]
@@ -2573,6 +2940,14 @@ export function CollaborationPanel({
               </p>
             ) : null}
           </form>
+          ) : null}
+          {showChat && historyOpen ? (
+            <InputHistoryPanel
+              disabled={sending}
+              onFill={handleInputHistoryFill}
+              onRequestClose={() => closeInputHistory(true)}
+              projectId={projectId}
+            />
           ) : null}
           {showChat && startNotice ? (
             <p className="onboarding-guide-success" role="status">

@@ -16,6 +16,7 @@ import {
   nextThreadActivitySequenceTx,
   type ThreadFactIntent,
 } from "@/src/adapters/outbound/sqlite/public-collaboration/thread-fact-store";
+import { recordOwnerInputAndClearDraftTx } from "@/src/adapters/outbound/sqlite/public-collaboration/input-history-service";
 import { createCredentialVault } from "@/src/modules/identity-capability/internal/credential-vault";
 import {
   CredentialVaultError,
@@ -207,12 +208,14 @@ type MessageInput = {
   content: string;
   mentionAgentId: string | null;
   replyToMessageId: string | null;
+  recordInputHistory: boolean;
 };
 
 type RunStartInput = {
   operationId: string;
   message: string;
   mentionAgentId: string | null;
+  recordInputHistory: boolean;
 };
 
 export type ThreadRunStartFaultPoint =
@@ -368,7 +371,13 @@ function parseMessageInput(rawInput: unknown): MessageInput {
     invalidInput("Message input is invalid.", { input: "invalid_format" });
   }
   const input = rawInput as Record<string, unknown>;
-  const allowedKeys = new Set(["operationId", "content", "mentionAgentId", "replyToMessageId"]);
+  const allowedKeys = new Set([
+    "operationId",
+    "content",
+    "mentionAgentId",
+    "replyToMessageId",
+    "recordInputHistory",
+  ]);
   const fields: Record<string, string> = {};
   for (const key of Object.keys(input)) {
     if (!allowedKeys.has(key)) fields[key] = "unknown";
@@ -409,10 +418,23 @@ function parseMessageInput(rawInput: unknown): MessageInput {
     }
   }
 
+  if (
+    Object.hasOwn(input, "recordInputHistory")
+    && typeof input.recordInputHistory !== "boolean"
+  ) {
+    fields.recordInputHistory = "invalid_format";
+  }
+
   if (Object.keys(fields).length > 0) {
     invalidInput("Message input is invalid.", fields);
   }
-  return { content, mentionAgentId, operationId, replyToMessageId };
+  return {
+    content,
+    mentionAgentId,
+    operationId,
+    recordInputHistory: input.recordInputHistory !== false,
+    replyToMessageId,
+  };
 }
 
 function parseRunStartInput(rawInput: unknown): RunStartInput {
@@ -420,7 +442,12 @@ function parseRunStartInput(rawInput: unknown): RunStartInput {
     invalidInput("Run start input is invalid.", { input: "invalid_format" });
   }
   const input = rawInput as Record<string, unknown>;
-  const allowedKeys = new Set(["operationId", "message", "mentionAgentId"]);
+  const allowedKeys = new Set([
+    "operationId",
+    "message",
+    "mentionAgentId",
+    "recordInputHistory",
+  ]);
   const fields: Record<string, string> = {};
   for (const key of Object.keys(input)) {
     if (!allowedKeys.has(key)) fields[key] = "unknown";
@@ -447,10 +474,21 @@ function parseRunStartInput(rawInput: unknown): RunStartInput {
       mentionAgentId = input.mentionAgentId;
     }
   }
+  if (
+    Object.hasOwn(input, "recordInputHistory")
+    && typeof input.recordInputHistory !== "boolean"
+  ) {
+    fields.recordInputHistory = "invalid_format";
+  }
   if (Object.keys(fields).length > 0) {
     invalidInput("Run start input is invalid.", fields);
   }
-  return { message, mentionAgentId, operationId };
+  return {
+    message,
+    mentionAgentId,
+    operationId,
+    recordInputHistory: input.recordInputHistory !== false,
+  };
 }
 
 function parseListInput(rawInput: unknown): { cursor: CursorValue | null; limit: number } {
@@ -1436,6 +1474,7 @@ export function writeOwnerThreadMessage(
   const requestHash = canonicalRequestHash({
     content: input.content,
     mentionAgentId: input.mentionAgentId,
+    recordInputHistory: input.recordInputHistory,
     replyToMessageId: input.replyToMessageId,
   });
   const database = openDatabase(databasePath);
@@ -1581,6 +1620,14 @@ export function writeOwnerThreadMessage(
         )
         .run(projectId, threadId, messageSequence);
       hooks.fault?.("after_thread_update");
+      recordOwnerInputAndClearDraftTx(
+        database,
+        projectId,
+        threadId,
+        input.content,
+        timestamp,
+        input.recordInputHistory,
+      );
       return { body, status: 201 as const };
     });
   } finally {
@@ -1600,6 +1647,7 @@ export function startThreadRun(
   const requestHash = canonicalRequestHash({
     mentionAgentId: input.mentionAgentId,
     message: input.message,
+    recordInputHistory: input.recordInputHistory,
   });
   const database = openDatabase(databasePath);
   database.exec("PRAGMA busy_timeout=5000");
@@ -1908,6 +1956,14 @@ export function startThreadRun(
         );
       }
       hooks.fault?.("after_sequences");
+      recordOwnerInputAndClearDraftTx(
+        database,
+        projectId,
+        threadId,
+        input.message,
+        timestamp,
+        input.recordInputHistory,
+      );
       return { body, status: 201 as const };
     });
   } catch (error) {

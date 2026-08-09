@@ -4,9 +4,12 @@ import type { WorkItem } from "@/src/shared/project-context-contracts";
 import type {
   ControlResponse,
   DecisionAnswerResponse,
+  InputHistoryClearResponse,
   ProjectMessageResponse,
   RunStartResponse,
   StartCollaborationResponse,
+  ThreadDraftClearResponse,
+  ThreadDraftSaveResponse,
 } from "./dto";
 
 export type TransitionReceipt =
@@ -88,6 +91,22 @@ export interface PublicCollaborationCommands {
     threadId: string,
     rawInput: unknown,
   ): PublicCollaborationCommandResult<Record<string, unknown>>;
+
+  saveThreadDraft(
+    databasePath: string,
+    projectId: string,
+    threadId: string,
+    rawInput: unknown,
+  ): PublicCollaborationCommandResult<ThreadDraftSaveResponse>;
+  clearThreadDraft(
+    databasePath: string,
+    projectId: string,
+    threadId: string,
+  ): PublicCollaborationCommandResult<ThreadDraftClearResponse>;
+  clearInputHistory(
+    databasePath: string,
+    projectId: string,
+  ): PublicCollaborationCommandResult<InputHistoryClearResponse>;
 
   startThreadRun(
     databasePath: string,

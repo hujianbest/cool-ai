@@ -18,6 +18,7 @@ import {
 } from "@/src/adapters/outbound/sqlite/public-collaboration/turn-orchestrator";
 import { openDatabase } from "@/src/adapters/outbound/sqlite/connection";
 import { createMission } from "@/src/composition/mission-commands";
+import { createCredentialVault } from "@/src/modules/identity-capability/internal/credential-vault";
 import { memoryDatabasePath } from "@/tests/fixtures/sqlite/memory-database";
 
 const NOW = "2026-07-30T06:30:00.000Z";
@@ -25,6 +26,8 @@ const PROJECT_ID = "project-owner-decision-races";
 const RUN_ID = "run-owner-decision-races";
 const REQUESTER_ID = "agent-decision-requester";
 const REVIEWER_ID = "agent-decision-reviewer";
+const PROVIDER_ID = "provider-owner-decisions";
+const MASTER_KEY = Buffer.alloc(32, 43).toString("base64url");
 let threadId: string;
 
 let databasePath: string;
@@ -159,6 +162,7 @@ beforeEach(() => {
   vi.useFakeTimers();
   vi.setSystemTime(new Date(NOW));
   databasePath = memoryDatabasePath();
+  process.env.COCKPIT_MASTER_KEY = MASTER_KEY;
   operationSequence = 1_800;
   uuidSequence = 0;
 
@@ -170,15 +174,34 @@ beforeEach(() => {
        ) VALUES (?, 'Decision race project', ?, 'D:\\workspace', 'd:/workspace', 1)`,
     )
     .run(PROJECT_ID, NOW);
-  database.exec(`
-    INSERT INTO providers (
-      id, name, base_url, default_model, api_key_cipher, api_key_iv,
-      api_key_tag, credential_version, credential_generation, key_id,
-      api_key_mask, verified_at, version, created_at, updated_at
-    ) VALUES (
-      'provider-owner-decisions', 'Local', 'http://127.0.0.1:4000/v1', 'model',
-      'cipher', 'iv', 'tag', 1, 1, 'key', '***', '${NOW}', 1, '${NOW}', '${NOW}'
+  // The send path classifies content against real provider keys (fail-closed),
+  // so the provider row must carry a real encrypted envelope.
+  const vault = createCredentialVault();
+  const encrypted = vault.encrypt(PROVIDER_ID, `key-${PROVIDER_ID}`);
+  database
+    .prepare(
+      `INSERT INTO providers (
+         id, name, base_url, default_model, api_key_cipher, api_key_iv,
+         api_key_tag, credential_version, credential_generation, key_id,
+         api_key_mask, verified_at, version, created_at, updated_at
+       ) VALUES (
+         ?, 'Local', 'http://127.0.0.1:4000/v1', 'model',
+         ?, ?, ?, ?, 1, ?, ?, ?, 1, ?, ?
+       )`,
+    )
+    .run(
+      PROVIDER_ID,
+      encrypted.apiKeyCipher,
+      encrypted.apiKeyIv,
+      encrypted.apiKeyTag,
+      encrypted.credentialVersion,
+      encrypted.keyId,
+      encrypted.apiKeyMask,
+      NOW,
+      NOW,
+      NOW,
     );
+  database.exec(`
     INSERT INTO agents (
       id, name, role, system_prompt, provider_id, model, avatar_text,
       accent_token, can_read, can_write, can_execute, max_tokens,
@@ -186,12 +209,12 @@ beforeEach(() => {
     ) VALUES
       (
         '${REQUESTER_ID}', 'Requester', 'Planner', 'private-requester',
-        'provider-owner-decisions', 'model', 'R', 'sage',
+        '${PROVIDER_ID}', 'model', 'R', 'sage',
         1, 1, 0, 10000, 10, 1, '${NOW}', '${NOW}'
       ),
       (
         '${REVIEWER_ID}', 'Reviewer', 'Reviewer', 'private-reviewer',
-        'provider-owner-decisions', 'model', 'V', 'gold',
+        '${PROVIDER_ID}', 'model', 'V', 'gold',
         1, 1, 0, 10000, 10, 1, '${NOW}', '${NOW}'
       );
     INSERT INTO project_memberships (project_id, agent_id, joined_at) VALUES
@@ -255,6 +278,7 @@ beforeEach(() => {
 
 afterEach(() => {
   vi.useRealTimers();
+  delete process.env.COCKPIT_MASTER_KEY;
 });
 
 describe("calling owner messages and decision requests", () => {

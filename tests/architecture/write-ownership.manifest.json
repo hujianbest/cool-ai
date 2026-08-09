@@ -49,7 +49,10 @@
       "structured_message_state_heads",
       "structured_message_state_revisions",
       "inline_decisions",
-      "business_action_receipts"
+      "business_action_receipts",
+      "thread_drafts",
+      "input_history_entries",
+      "input_history_clear_events"
     ],
     "safe-execution": [
       "executions",

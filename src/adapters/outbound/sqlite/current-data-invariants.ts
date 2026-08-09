@@ -224,6 +224,13 @@ export const CURRENT_DATA_INVARIANTS = [
   `SELECT project_id FROM collaboration_runs
    WHERE status IN('running','waiting_owner','paused','failed')
    GROUP BY project_id HAVING count(*)>1`,
+  `SELECT d.project_id FROM thread_drafts d
+   WHERE d.reply_to_message_id IS NOT NULL
+     AND NOT EXISTS(SELECT 1 FROM collaboration_messages m
+                    WHERE (m.project_id,m.thread_id,m.id)=(d.project_id,d.thread_id,d.reply_to_message_id))`,
+  `SELECT h.project_id FROM input_history_entries h
+   WHERE NOT EXISTS(SELECT 1 FROM collaboration_threads t
+                    WHERE (t.project_id,t.id)=(h.project_id,h.thread_id))`,
 ] as const;
 
 function canonicalJson(value: string, maximum: number): unknown {

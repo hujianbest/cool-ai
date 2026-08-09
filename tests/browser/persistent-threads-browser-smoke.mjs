@@ -43,6 +43,14 @@ const evidence = {
     evidenceDirectory,
     "persistent-threads-reply-reference.png",
   ),
+  draftRestored: join(
+    evidenceDirectory,
+    "persistent-threads-draft-restored.png",
+  ),
+  inputHistory: join(
+    evidenceDirectory,
+    "persistent-threads-input-history.png",
+  ),
   results: join(evidenceDirectory, "persistent-threads-results.json"),
 };
 const stableConfig = ["next-env.d.ts", "tsconfig.json"]
@@ -430,6 +438,7 @@ try {
     viewport: { height: 1050, width: 1500 },
   });
   const page = await context.newPage();
+  globalThis.__threadSmokePage = page;
   page.setDefaultTimeout(60_000);
   page.on("response", async (response) => {
     if (response.url().startsWith(baseUrl) && response.url().includes("/api/")) {
@@ -457,7 +466,7 @@ try {
   assert.equal(persisted.body.threads.length, 1);
   assert.equal(persisted.body.threads[0].title, "历史协作");
   const legacyThreadId = persisted.body.threads[0].id;
-  assert.equal(inspectDatabase().version, 10);
+  assert.equal(inspectDatabase().version, 12);
   pass("current-persistent-default-thread", { legacyThreadId });
   await axe(page, "current persistent project");
 
@@ -992,6 +1001,264 @@ try {
   await page.unroute(cutFactsRoute, cutFactsHandler);
   pass("reply-reference-narrow-44px-axe");
 
+  await page.keyboard.press("Escape");
+  await narrowEditor.waitFor({ state: "detached" });
+  await page.setViewportSize({ height: 1050, width: 1500 });
+  await page.goto(`${baseUrl}${firstHref}`, { waitUntil: "networkidle" });
+  const draftComposer = page.getByLabel("发送给项目群聊");
+  await draftComposer.waitFor();
+  const draftText = "Draft continuity smoke note.";
+  const attachmentName = "smoke-notes.txt";
+  const attachmentSize = Buffer.from("thread smoke attachment").length;
+  const draftPut = (match) => page.waitForResponse((response) => {
+    const request = response.request();
+    if (request.method() !== "PUT" || !request.url().endsWith(`/threads/${firstThread}/draft`)) {
+      return false;
+    }
+    try {
+      return match(JSON.parse(request.postData() ?? "null"));
+    } catch {
+      return false;
+    }
+  });
+
+  const sensitiveSample = "token=sk-smoke-sensitive-sample";
+  const sensitiveSave = draftPut((body) => body?.content === sensitiveSample);
+  await draftComposer.fill(sensitiveSample);
+  const sensitiveResponse = await sensitiveSave;
+  const sensitiveBody = await sensitiveResponse.json();
+  assert.equal(sensitiveBody.contentSaved, false);
+  await page.getByText(/检测到疑似敏感内容，草稿正文未保存/).waitFor();
+  const sensitiveDraft = await api(
+    page,
+    `/api/projects/legacy-project/threads/${firstThread}/draft`,
+  );
+  assert.equal(sensitiveDraft.body.draft?.content, "");
+  assert.equal(
+    JSON.stringify(sensitiveDraft.body).includes(sensitiveSample),
+    false,
+  );
+  const sensitiveClear = page.waitForResponse((response) =>
+    response.request().method() === "DELETE"
+    && response.url().endsWith(`/threads/${firstThread}/draft`)
+  );
+  await draftComposer.fill("");
+  assert.equal((await sensitiveClear).status(), 200);
+  const clearedSensitiveDraft = await api(
+    page,
+    `/api/projects/legacy-project/threads/${firstThread}/draft`,
+  );
+  assert.equal(clearedSensitiveDraft.body.draft, null);
+  pass("draft-sensitive-content-skipped-server-evidence");
+
+  const fullDraftSave = draftPut((body) =>
+    body?.content === draftText
+    && Array.isArray(body?.attachments)
+    && body.attachments.length === 1
+    && typeof body?.replyToMessageId === "string"
+  );
+  await draftComposer.fill(draftText);
+  await page.getByLabel("选择附件文件").setInputFiles({
+    buffer: Buffer.from("thread smoke attachment"),
+    mimeType: "text/plain",
+    name: attachmentName,
+  });
+  await page.getByRole("button", { name: /^回复 .+ 的消息/ }).first().click();
+  const fullDraftResponse = await fullDraftSave;
+  assert.equal((await fullDraftResponse.json()).contentSaved, true);
+  const savedDraftBody = JSON.parse(fullDraftResponse.request().postData());
+  assert.deepEqual(savedDraftBody.attachments, [
+    { name: attachmentName, size: attachmentSize },
+  ]);
+
+  await page.reload({ waitUntil: "networkidle" });
+  await page.waitForFunction((expected) => {
+    const composer = document.querySelector("form.composer textarea");
+    return composer && composer.value === expected;
+  }, draftText);
+  await page
+    .locator("form.composer .mention-chip", { hasText: `${attachmentName} · ${attachmentSize} B` })
+    .waitFor();
+  await page
+    .locator("form.composer .mention-chip", { hasText: /^回复 / })
+    .waitFor();
+  await axe(page, "desktop light draft restored");
+  await page.screenshot({ fullPage: true, path: evidence.draftRestored });
+  pass("draft-restore-text-attachment-reply-after-reload");
+
+  const draftRunSelector = page.getByRole("combobox", { name: "选择线程运行" });
+  await draftRunSelector.selectOption(activeRun.id);
+  await page.waitForURL((url) => url.searchParams.get("run") === activeRun.id);
+  await page.waitForFunction((expected) => {
+    const composer = document.querySelector("form.composer textarea");
+    return composer && composer.value === expected;
+  }, draftText);
+  await page
+    .locator("form.composer .mention-chip", { hasText: /^回复 / })
+    .waitFor();
+
+  const replyRemovalSave = draftPut((body) =>
+    body?.content === draftText && body?.replyToMessageId === null
+  );
+  await page.getByRole("button", { name: "移除回复链接" }).focus();
+  await page.keyboard.press("Enter");
+  await replyRemovalSave;
+  const restartRun = page.waitForResponse((response) =>
+    response.request().method() === "POST"
+    && response.url().endsWith(`/threads/${firstThread}/runs`)
+  );
+  await page.getByRole("button", { name: "发送并开始新一轮" }).click();
+  assert.equal((await restartRun).status(), 201);
+  await page.waitForFunction(() => {
+    const composer = document.querySelector("form.composer textarea");
+    return composer && composer.value === "";
+  });
+  await page.reload({ waitUntil: "networkidle" });
+  await page.waitForFunction(() => {
+    const composer = document.querySelector("form.composer textarea");
+    return composer && composer.value === "";
+  });
+  assert.equal(await page.locator("form.composer .mention-chip").count(), 0);
+  const draftAfterSend = await api(
+    page,
+    `/api/projects/legacy-project/threads/${firstThread}/draft`,
+  );
+  assert.equal(draftAfterSend.body.draft, null);
+  pass("draft-survives-run-selection-clears-after-send-reload");
+
+  const historyEntry = page.getByRole("button", { name: "输入历史" });
+  await historyEntry.focus();
+  await page.keyboard.press("Enter");
+  const historyRegion = page.getByRole("region", { name: "输入历史" });
+  await historyRegion.waitFor();
+  const historyItem = historyRegion.getByRole("button", {
+    name: new RegExp(draftText.replaceAll(".", "\\.")),
+  });
+  await historyItem.waitFor();
+  const searchInput = historyRegion.getByLabel("搜索输入历史");
+  assert.equal(
+    await searchInput.evaluate((node) => document.activeElement === node),
+    true,
+  );
+  await searchInput.fill("continuity");
+  await searchInput.press("Enter");
+  await historyItem.waitFor();
+  await searchInput.fill("没有命中");
+  await searchInput.press("Enter");
+  await historyRegion.getByText("没有匹配的输入历史。", { exact: true }).waitFor();
+  assert.equal(await historyItem.count(), 0);
+  await searchInput.fill("");
+  await searchInput.press("Enter");
+  await historyItem.waitFor();
+  await historyItem.focus();
+  await page.keyboard.press("Enter");
+  await historyRegion.waitFor({ state: "detached" });
+  await page.waitForFunction((expected) => {
+    const composer = document.querySelector("form.composer textarea");
+    return composer && composer.value === expected;
+  }, draftText);
+  assert.equal(
+    await draftComposer.evaluate((node) => document.activeElement === node),
+    true,
+  );
+  await historyEntry.focus();
+  await page.keyboard.press("Enter");
+  await historyRegion.waitFor();
+  await page.keyboard.press("Escape");
+  await historyRegion.waitFor({ state: "detached" });
+  assert.equal(
+    await historyEntry.evaluate((node) => document.activeElement === node),
+    true,
+  );
+  await historyEntry.click();
+  await historyRegion.waitFor();
+  await historyItem.waitFor();
+  await axe(page, "desktop light input history");
+  await page.screenshot({ fullPage: true, path: evidence.inputHistory });
+  await page.getByRole("button", { name: /切换到暗色主题/ }).click();
+  await page.getByRole("button", { name: /切换到明色主题/ }).waitFor();
+  await historyItem.waitFor();
+  await axe(page, "desktop dark input history");
+  await page.getByRole("button", { name: /切换到明色主题/ }).click();
+  await page.getByRole("button", { name: /切换到暗色主题/ }).waitFor();
+  pass("input-history-search-keyboard-fill-escape-light-dark-axe");
+
+  await page.setViewportSize({ height: 844, width: 390 });
+  await page.reload({ waitUntil: "networkidle" });
+  const draftEditorOpener = page.getByRole("button", { name: "打开编辑" });
+  await draftEditorOpener.focus();
+  await page.keyboard.press("Enter");
+  const draftEditor = page.getByRole("dialog", { name: "任务编辑" });
+  await draftEditor.getByRole("tab", { name: "群聊" }).click();
+  const narrowHistoryEntry = draftEditor.getByRole("button", { name: "输入历史" });
+  await narrowHistoryEntry.click();
+  const narrowHistoryRegion = draftEditor.getByRole("region", { name: "输入历史" });
+  const narrowHistoryItem = narrowHistoryRegion.getByRole("button", {
+    name: /Draft continuity smoke note\./,
+  });
+  await narrowHistoryItem.waitFor();
+  const narrowControls = [
+    ["entry", narrowHistoryEntry],
+    ["search-input", narrowHistoryRegion.getByLabel("搜索输入历史")],
+    ["search-submit", narrowHistoryRegion.getByRole("button", { name: "搜索" })],
+    ["recording-toggle", narrowHistoryRegion.getByRole("checkbox", { name: "记录新输入历史" })],
+    ["history-item", narrowHistoryItem],
+    ["clear-all", narrowHistoryRegion.getByRole("button", { name: "清除全部" })],
+  ];
+  for (const [label, locator] of narrowControls) {
+    await locator.scrollIntoViewIfNeeded();
+    const box = await locator.boundingBox();
+    assert.ok(
+      box && box.height >= 44 && box.width >= 44,
+      `narrow history control ${label} must stay >= 44px`,
+    );
+  }
+  await axe(page, "narrow input history panel");
+  await narrowHistoryRegion.getByLabel("搜索输入历史").focus();
+  await page.keyboard.press("Escape");
+  await narrowHistoryRegion.waitFor({ state: "detached" });
+  assert.equal(
+    await draftEditor.evaluate((node) => node.isConnected),
+    true,
+    "Escape inside the history region must not close the enclosing dialog",
+  );
+  assert.equal(
+    await narrowHistoryEntry.evaluate((node) => document.activeElement === node),
+    true,
+  );
+  await page.keyboard.press("Escape");
+  await draftEditor.waitFor({ state: "detached" });
+  pass("input-history-narrow-44px-axe-layered-escape");
+
+  await page.setViewportSize({ height: 1050, width: 1500 });
+  await page.goto(`${baseUrl}${firstHref}`, { waitUntil: "networkidle" });
+  await page.getByRole("button", { name: "输入历史" }).click();
+  const clearRegion = page.getByRole("region", { name: "输入历史" });
+  await clearRegion.getByRole("button", { name: /Draft continuity smoke note\./ })
+    .waitFor();
+  await clearRegion.getByRole("button", { name: "清除全部" }).click();
+  await clearRegion.getByText(/确认清除全部输入历史/).waitFor();
+  await clearRegion.getByRole("button", { name: "取消" }).click();
+  await clearRegion.getByRole("button", { name: /Draft continuity smoke note\./ })
+    .waitFor();
+  await clearRegion.getByRole("button", { name: "清除全部" }).click();
+  const clearResponse = page.waitForResponse((response) =>
+    response.request().method() === "DELETE"
+    && response.url().includes("/input-history")
+  );
+  await clearRegion.getByRole("button", { name: "确认清除" }).click();
+  assert.equal((await clearResponse).status(), 200);
+  await clearRegion.getByText("没有匹配的输入历史。", { exact: true }).waitFor();
+  const clearedHistory = await api(
+    page,
+    "/api/projects/legacy-project/input-history",
+  );
+  assert.deepEqual(clearedHistory.body.entries, []);
+  assert.equal(typeof clearedHistory.body.lastClearedAt, "string");
+  await page.keyboard.press("Escape");
+  await clearRegion.waitFor({ state: "detached" });
+  pass("input-history-clear-two-step-confirm-api-empty");
+
   const dom = await page.evaluate(() => document.documentElement.outerHTML);
   const databaseText = JSON.stringify(inspectDatabase());
   const existingEvidence = readdirSync(evidenceDirectory)
@@ -1025,6 +1292,39 @@ try {
     `THREAD SMOKE PASS: assertions=${results.assertions.length} axeStates=${results.axe.length} threads=${afterRestart.threads.length}`,
   );
   for (const path of Object.values(evidence)) console.log(`EVIDENCE: ${path}`);
+} catch (error) {
+  try {
+    const failurePath = join(evidenceDirectory, "persistent-threads-failure.txt");
+    const page = globalThis.__threadSmokePage;
+    const bodyText = page
+      ? await page.locator("body").innerText().catch(() => "<unavailable>")
+      : "<no page>";
+    const pageUrl = page ? page.url() : "<no page>";
+    if (page) {
+      await page
+        .screenshot({
+          fullPage: true,
+          path: join(evidenceDirectory, "persistent-threads-failure.png"),
+        })
+        .catch(() => {});
+    }
+    writeFileSync(
+      failurePath,
+      [
+        `url: ${pageUrl}`,
+        `error: ${error?.stack ?? error}`,
+        "--- body text (first 4000 chars) ---",
+        bodyText.slice(0, 4000),
+        "--- server output (last 4000 chars) ---",
+        serverOutput.slice(-4000),
+      ].join("\n"),
+      "utf8",
+    );
+    console.log(`FAILURE EVIDENCE: ${failurePath}`);
+  } catch {
+    // Diagnostics must never mask the original failure.
+  }
+  throw error;
 } finally {
   await browser?.close();
   stopApp();

@@ -348,6 +348,51 @@ export type ThreadFactDto =
 export type MessagePageResponse = CursorPage<ThreadMessageDto>;
 export type FactPageResponse = CursorPage<ThreadFactDto>;
 
+export type ThreadDraftAttachmentDto = {
+  name: string;
+  size: number;
+};
+
+export type ThreadDraftDto = {
+  projectId: string;
+  threadId: string;
+  content: string;
+  attachments: ThreadDraftAttachmentDto[];
+  replyToMessageId: string | null;
+  version: number;
+  updatedAt: string;
+};
+
+export type ThreadDraftReadResponse = {
+  draft: ThreadDraftDto | null;
+};
+
+export type ThreadDraftSaveResponse = {
+  contentSaved: boolean;
+  draft: ThreadDraftDto;
+};
+
+export type ThreadDraftClearResponse = {
+  cleared: true;
+};
+
+export type InputHistoryEntryDto = {
+  id: string;
+  threadId: string;
+  content: string;
+  createdAt: string;
+};
+
+export type InputHistorySearchResponse = {
+  entries: InputHistoryEntryDto[];
+  lastClearedAt: string | null;
+};
+
+export type InputHistoryClearResponse = {
+  cleared: true;
+  clearedAt: string;
+};
+
 export type ThreadRunDto = CollaborationRun & {
   threadId: string;
 };

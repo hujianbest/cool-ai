@@ -47,7 +47,7 @@ Capability ID 是稳定治理标识；owner 是唯一逻辑子系统，不等于
 - `CAP-COL-01` Public Collaboration Core — owner: Public Collaboration — 状态: 已交付核心 — 证据/建立切片: S-4、S-12；`src/adapters/outbound/sqlite/public-collaboration/thread-service.ts`、`tests/modules/public-collaboration/thread-message-api.test.ts`
 - `CAP-COL-02` Thread Catalog & Lifecycle — owner: Public Collaboration — 状态: 部分可用（Thread 创建、列表、切换、成员策略、回复引用与精确跳转已交付；标签、收藏和回收站未交付）— 证据/建立切片: S-12 [`progress.md`](../features/014-persistent-project-threads/progress.md)、S-14 [`progress.md`](../features/022-reply-references/progress.md)；扩展 S-18～S-20
 - `CAP-COL-03` Structured Content & Inline Decision — owner: Public Collaboration — 状态: 已交付核心（S-13 于 2026-08-10 ship；File Reference 冻结、reopen 穷尽验证与 stale 对账由 017/018 子片加固）— 证据/建立切片: S-13 [`tickets.md`](../features/015-structured-messages-inline-decisions/tickets.md)、[`progress.md`](../features/015-structured-messages-inline-decisions/progress.md)
-- `CAP-COL-04` Composer & Queue Continuity — owner: Public Collaboration — 状态: 规划中 — 建立切片: S-15、S-21
+- `CAP-COL-04` Composer & Queue Continuity — owner: Public Collaboration — 状态: 部分可用（按线程草稿、附件占位、输入历史与清除策略已交付；消息队列/Steer 未交付）— 证据/建立切片: S-15 [`progress.md`](../features/023-thread-drafts/progress.md)；扩展 S-21
 - `CAP-COL-05` Message Media — owner: Public Collaboration — 状态: 规划中 — 建立切片: S-16
 - `CAP-COL-07` Public Collaboration Events — owner: Public Collaboration — 状态: 规划中 — 建立路径: S-23 的 Public Collaboration 审计纵切；该片复用已交付 `CAP-OPS-01/02`，以 owner 可查询脱敏 Thread/Run 事件并精确导航为独立结果
 
@@ -97,12 +97,13 @@ S-9～S-12 的 `依赖: S-*` 是原历史文字，只说明当时切片记录；
 - [x] S-10 Cool 自有亮暗主题（CI-1.4） — 主子系统: 不适用；主领域 Capability: 不适用（只改变设计 token/UI Adapter 与本机非领域偏好，不新增领域事实）；主要架构单元: 入站 UI Adapter；消费 Capability: `CAP-PWS-01`、`CAP-MWK-01`、`CAP-COL-01`、`CAP-EXE-01`、`CAP-REV-01`（仅呈现其产品面）；票据: 未建立（[feature 状态](../features/012-light-dark-theme/progress.md)，目录无 `tickets.md`）；依赖: S-8；目标架构映射: 入站 UI Adapter（非当时实现状态）；演示判据: owner 能切换亮/暗主题，刷新后偏好保持，关键页面的语义状态、焦点和 loading/empty/error 在两种主题下均清晰可见；约束: 工作区=不适用，verified-handle=不适用，sandbox=不适用，凭据=不适用，审批=不适用，独立复核=交付必需，审计=仅记录非敏感偏好；不复制 Clowder 品牌、源码、调色盘或资产
 - [x] S-11 渐进式首次使用引导（CI-1.5） — 主子系统: 不适用；主领域 Capability: 不适用（只建立跨域引导 Workflow 与入站 UI Adapter，不新增第二套完成事实）；主要架构单元: Application Workflow + 入站 UI Adapter；消费 Capability: `CAP-IDC-01`、`CAP-PWS-01`、`CAP-MWK-01`、`CAP-COL-01`、`CAP-RUN-01`；票据: 未建立（[feature 状态](../features/013-progressive-onboarding/progress.md)，目录无 `tickets.md`）；依赖: S-9、S-10；目标架构映射: Application Workflow + 真实 Capability Interface（非当时实现状态）；演示判据: 新 owner 能在真实任务中完成 Provider、Agent、项目与首个目标配置，可跳过、失败重试并在刷新后恢复进度；约束: 工作区=仅引导绑定范围，verified-handle=绑定时必需，sandbox=首次执行仍隔离，凭据=只经现有密钥边界，审批=高风险步骤暂停，独立复核=交付必需，审计=引导动作可追溯；不复制 Clowder 品牌、源码、角色、文案或资产
 - [x] S-12 项目内持久线程与上下文续接（CI-2.1） — 主子系统: Public Collaboration；主 Capability: `CAP-COL-02`；票据: [`features/014.../tickets.md`](../features/014-persistent-project-threads/tickets.md)；依赖: S-9；目标架构映射: `CAP-COL-01`、`CAP-COL-02`（非当时实现状态）；演示判据: owner 能在一个项目创建、切换并续接多个持久线程，重启后线程归属、成员策略和公开上下文保持一致；约束: 工作区=项目隔离，verified-handle=不适用，sandbox=不适用，凭据=不得进入消息，审批=不适用，独立复核=交付必需，审计=公开线程事件可追溯；不复制 Clowder 品牌、源码或资产
+- [x] S-15 线程草稿恢复与输入历史（CI-2.12） — 主子系统: Public Collaboration；主 Capability: `CAP-COL-04`；票据: [`features/023.../tickets.md`](../features/023-thread-drafts/tickets.md)；Ship: 2026-08-10（schema identity 10→12：thread_drafts + input_history_entries/clear_events；敏感输入 fail-closed 不落盘；smoke:threads 20 断言 / 11 axe 状态 0 违规）；演示判据: owner 能按线程恢复文字、附件占位和回复引用草稿，搜索自己的输入历史并显式清除，重启后行为符合所选保留范围；约束: 工作区=项目隔离，verified-handle=不适用，sandbox=不适用，凭据=敏感输入不得保存，审批=不适用，独立复核=交付必需，审计=只记录清除/保留策略而不记录秘密；不复制 Clowder 品牌、源码或资产
 - [x] S-14 回复引用与来源跳转（CI-2.11） — 主子系统: Public Collaboration；主 Capability: `CAP-COL-02`；票据: [`features/022.../tickets.md`](../features/022-reply-references/tickets.md)；Ship: 2026-08-10（schema identity 9→10，写时冻结回复快照，reopen 回复边全集校验，UI 引用片与精确跳转；smoke:threads 14 断言 / 7 axe 状态 0 违规）；演示判据: owner 能回复一条公开消息并从引用跳回精确来源，被删或不可用来源显示稳定占位而不伪造内容；约束: 工作区=项目隔离，verified-handle=不适用，sandbox=不适用，凭据=引用内容脱敏，审批=不适用，独立复核=交付必需，审计=来源 tuple 不可伪造；不复制 Clowder 品牌、源码或资产
 - [x] S-13 结构化消息与就地决策（CI-2.3） — 主子系统: Public Collaboration；主 Capability: `CAP-COL-03`；票据: [`features/015.../tickets.md`](../features/015-structured-messages-inline-decisions/tickets.md)；Ship: 2026-08-10（017/018 review-remediation 子片先 done，按项目级 review 豁免收口）；演示判据: owner 能在消息流中查看带来源和版本的提案、diff、清单与交棒卡，并在原位完成允许的决定且重复提交不产生重复动作；约束: 工作区=文件卡仅限项目，verified-handle=文件来源必需，sandbox=变更预览来自隔离结果，凭据=内容脱敏，审批=高风险动作走正式审批，独立复核=交付必需，审计=operation/version/lease 可追溯；不复制 Clowder 品牌、源码或资产
 
 ## 当前在途
 
-（无；S-14 已于 2026-08-10 ship，见已交付记录）
+（无；S-15 已于 2026-08-10 ship，见已交付记录）
 
 ## 主题簇一：公开协作
 
@@ -223,3 +224,4 @@ S-9～S-12 的 `依赖: S-*` 是原历史文字，只说明当时切片记录；
   - 准入: 已交付前置: `CAP-EXE-01`（已交付）；阻塞: `CAP-GOV-02` 的安装/更新/扩权 Approval（S-24）、`CAP-RUN-03`（S-47）与 `CAP-RUN-04` 生命周期（S-48）规划中；本片建立: `CAP-RUN-04` 的市场搜索、签名/兼容性检查、安装计划和回滚（规划中）。
 
 - 2026-08-10 [发现] tests/browser 下 review-browser-full-chain 存在既有不稳定选择器（记忆标题同现于复核与上下文两面板，strict-mode 冲突，复跑即过）；建议按面板 scope 收敛选择器。来源：017 T-05 全量验证。
+- 2026-08-10 [发现] run-start 路径（POST /runs）不接受 replyToMessageId，启动新一轮时无法携带回复链接（composer 已给中性字段错误兜底）。来源：023 T-03。
