@@ -4,8 +4,8 @@ import { memoryApiError, readMemoryJson } from "@/src/server/memory-api";
 import {
   createMemory,
   listMemories,
-  type CreateMemoryInput,
-} from "@/src/server/memory-service";
+} from "@/src/adapters/outbound/sqlite/knowledge-provenance/memory-service";
+import type { CreateMemoryInput } from "@/src/modules/knowledge-provenance";
 import {
   memoryCreateResponseSchema,
   memoryListResponseSchema,

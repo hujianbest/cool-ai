@@ -43,16 +43,28 @@ const OWNER_WRITER_DIRS: Record<string, RegExp[]> = {
 };
 
 /** Owners whose migration wave has landed; writer rule blocks for these. */
-const MIGRATED_OWNERS: string[] = ["identity-capability", "project-workspace", "mission-work"];
+const MIGRATED_OWNERS: string[] = [
+  "identity-capability",
+  "project-workspace",
+  "mission-work",
+  "knowledge-provenance",
+];
 
 /**
  * Known transitional non-owner writers, frozen 2026-08-09 (see the ratchet below):
  * review-delivery completion projections write mission-work's work_items until the
  * T-11 review-delivery wave and the T-13 workflow extraction land. This set may only shrink.
+ * T-07: review-finalizer still persists review_memory_candidates inline inside the
+ * finalization transaction; the candidate write path is formalized in T-11/T-13.
  */
 const TRANSITIONAL_NON_OWNER_WRITERS: Array<{ file: string; owner: string; table: string }> = [
   { file: "src/server/review/completion-gate.ts", owner: "mission-work", table: "work_items" },
   { file: "src/server/review/review-finalizer.ts", owner: "mission-work", table: "work_items" },
+  {
+    file: "src/server/review/review-finalizer.ts",
+    owner: "knowledge-provenance",
+    table: "review_memory_candidates",
+  },
 ];
 
 const WRITE_RE =

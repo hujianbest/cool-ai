@@ -1,9 +1,12 @@
 import type { DatabaseSync } from "node:sqlite";
 import { z } from "zod";
 
+import { MemorySourceResolutionError } from "@/src/modules/knowledge-provenance";
 import {
   type MemorySource,
 } from "@/src/shared/memory-contracts";
+
+export { MemorySourceResolutionError } from "@/src/modules/knowledge-provenance";
 
 const candidateSourceTypes = [
   "task",
@@ -37,16 +40,6 @@ const frozenMaterialSchema = z.object({
 }).passthrough();
 
 type ResolverInput = z.input<typeof resolverInputSchema>;
-
-export class MemorySourceResolutionError extends Error {
-  readonly code = "INVALID_SOURCE";
-  readonly httpStatus = 400;
-
-  constructor() {
-    super("Memory source is invalid.");
-    this.name = "MemorySourceResolutionError";
-  }
-}
 
 function invalidSource(): never {
   throw new MemorySourceResolutionError();

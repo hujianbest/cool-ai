@@ -41,14 +41,14 @@ type MemoryServiceModule = {
 };
 
 const serviceModules =
-  import.meta.glob<MemoryServiceModule>("../src/server/memory-service.ts");
+  import.meta.glob<MemoryServiceModule>("../../../src/adapters/outbound/sqlite/knowledge-provenance/memory-service.ts");
 
 let directory: string;
 let databasePath: string;
 let missionOperationSequence: number;
 
 async function service(): Promise<MemoryServiceModule> {
-  const load = serviceModules["../src/server/memory-service.ts"];
+  const load = serviceModules["../../../src/adapters/outbound/sqlite/knowledge-provenance/memory-service.ts"];
   expect(load, "the sourced memory service must exist").toBeTypeOf("function");
   return load();
 }

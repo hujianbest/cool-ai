@@ -5,7 +5,7 @@ import type { DatabaseSync } from "node:sqlite";
 import { afterEach, beforeEach, describe, expect, it } from "vitest";
 
 import { openDatabase } from "@/src/adapters/outbound/sqlite/connection";
-import { listMemoriesInDatabase } from "@/src/server/memory-service";
+import { listMemoriesInDatabase } from "@/src/adapters/outbound/sqlite/knowledge-provenance/memory-service";
 import { createMission, createWorkItem } from "@/src/adapters/outbound/sqlite/mission-work/mission-service";
 import { createProject } from "@/src/adapters/outbound/sqlite/project-workspace/projects";
 
@@ -22,7 +22,7 @@ type SourceResolverModule = {
   ): { href: string; id: string; type: string; version: string };
 };
 const resolverModules = import.meta.glob<SourceResolverModule>(
-  "../src/server/memory-source-resolver.ts",
+  "../../../src/adapters/outbound/sqlite/knowledge-provenance/memory-source-resolver.ts",
 );
 
 const NOW = "2026-08-01T09:00:00.000Z";
@@ -44,7 +44,7 @@ function expectInvalid(operation: () => unknown): void {
 }
 
 async function resolver(): Promise<SourceResolverModule["resolveMemorySource"]> {
-  const load = resolverModules["../src/server/memory-source-resolver.ts"];
+  const load = resolverModules["../../../src/adapters/outbound/sqlite/knowledge-provenance/memory-source-resolver.ts"];
   expect(load, "the memory source resolver module must exist").toBeTypeOf("function");
   return (await load()).resolveMemorySource;
 }

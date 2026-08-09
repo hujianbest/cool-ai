@@ -3,7 +3,7 @@ import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { afterEach, beforeEach, describe, expect, it } from "vitest";
 
-import { createMemory, listMemories } from "@/src/server/memory-service";
+import { createMemory, listMemories } from "@/src/adapters/outbound/sqlite/knowledge-provenance/memory-service";
 import { createProject } from "@/src/adapters/outbound/sqlite/project-workspace/projects";
 
 type MemoryContractsModule = {
@@ -13,7 +13,7 @@ type MemoryContractsModule = {
   };
 };
 const contractModules = import.meta.glob<MemoryContractsModule>(
-  "../src/shared/memory-contracts.ts",
+  "../../../src/shared/memory-contracts.ts",
 );
 
 let directory: string;
@@ -29,7 +29,7 @@ afterEach(() => {
 });
 
 async function contracts(): Promise<MemoryContractsModule> {
-  const load = contractModules["../src/shared/memory-contracts.ts"];
+  const load = contractModules["../../../src/shared/memory-contracts.ts"];
   expect(load, "the memory v6 strict contract module must exist").toBeTypeOf("function");
   return load();
 }

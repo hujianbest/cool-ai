@@ -6,7 +6,7 @@ import { DatabaseSync } from "node:sqlite";
 import { afterEach, beforeEach, describe, expect, it } from "vitest";
 
 import { openDatabase } from "@/src/adapters/outbound/sqlite/connection";
-import { listMemoriesInDatabase } from "@/src/server/memory-service";
+import { listMemoriesInDatabase } from "@/src/adapters/outbound/sqlite/knowledge-provenance/memory-service";
 import {
   finalizeCheckpointedReview,
   type ReviewFinalizeStep,

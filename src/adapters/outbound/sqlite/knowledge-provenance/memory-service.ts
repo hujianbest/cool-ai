@@ -2,25 +2,22 @@ import { createHash, randomUUID } from "node:crypto";
 import type { DatabaseSync } from "node:sqlite";
 
 import { openDatabase } from "@/src/adapters/outbound/sqlite/connection";
+import { resolveMemorySource } from "@/src/adapters/outbound/sqlite/knowledge-provenance/memory-source-resolver";
 import {
+  MemoryError,
   MemorySourceResolutionError,
-  resolveMemorySource,
-} from "@/src/server/memory-source-resolver";
+  type CreateMemoryInput,
+} from "@/src/modules/knowledge-provenance";
 import {
   memoryEntryV6Schema,
   type MemoryEntryV6,
   type MemoryType,
 } from "@/src/shared/memory-contracts";
 
+export { MemoryError } from "@/src/modules/knowledge-provenance";
+
 type SourceType = "owner_input" | "work_item" | "artifact_path";
 type FieldError = { field: string; code: string };
-export type CreateMemoryInput = {
-  type: MemoryType;
-  content: string;
-  sourceType: SourceType;
-  sourceRef: string;
-  supersedesId?: string;
-};
 type MemoryResult = MemoryEntryV6;
 type MemoryRow = {
   accentToken: string | null;
@@ -60,18 +57,6 @@ const sourceTypes: readonly SourceType[] = [
   "artifact_path",
 ];
 const segmenter = new Intl.Segmenter("zh-CN", { granularity: "grapheme" });
-
-export class MemoryError extends Error {
-  constructor(
-    public readonly code: string,
-    public readonly httpStatus: number,
-    message: string,
-    public readonly fields?: FieldError[],
-  ) {
-    super(message);
-    this.name = "MemoryError";
-  }
-}
 
 function graphemeLength(value: string): number {
   return Array.from(segmenter.segment(value)).length;

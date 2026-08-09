@@ -1,7 +1,7 @@
 import { createHash, randomUUID as nodeRandomUUID } from "node:crypto";
 import type { DatabaseSync } from "node:sqlite";
 
-import { commitReviewMemoryCandidateTx } from "@/src/server/review/memory-committer";
+import { commitReviewMemoryCandidateTx } from "@/src/adapters/outbound/sqlite/knowledge-provenance/memory-committer";
 import type { ValidatedReviewOutput } from "@/src/server/review/review-schema";
 import {
   reviewOperationResponseSchema,

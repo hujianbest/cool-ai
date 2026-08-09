@@ -1,21 +1,13 @@
 import { createHash } from "node:crypto";
 import type { DatabaseSync } from "node:sqlite";
 
-export type ReviewMemoryCandidate = {
-  content: string;
-  id: string;
-  sourceId: string;
-  sourceType: string;
-  sourceVersion: string;
-  supersedesMemoryId: string | null;
-  type: string;
-};
+import {
+  ReviewMemoryCommitError,
+  type ReviewMemoryAssociation,
+  type ReviewMemoryCandidate,
+} from "@/src/modules/knowledge-provenance";
 
-export type ReviewMemoryAssociation = {
-  memoryId: string;
-  memoryVersion: number;
-  outcome: "created" | "reused" | "superseded";
-};
+export { ReviewMemoryCommitError } from "@/src/modules/knowledge-provenance";
 
 type ActiveMemoryRow = {
   chainId: string;
@@ -27,17 +19,6 @@ type ActiveMemoryRow = {
   type: string;
   version: number;
 };
-
-export class ReviewMemoryCommitError extends Error {
-  constructor(
-    public readonly code: string,
-    public readonly status: number,
-    message: string,
-  ) {
-    super(message);
-    this.name = "ReviewMemoryCommitError";
-  }
-}
 
 function dedupeHash(candidate: ReviewMemoryCandidate): string {
   return createHash("sha256").update(JSON.stringify([

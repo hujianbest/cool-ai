@@ -3,7 +3,7 @@ import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { afterEach, beforeEach, describe, expect, it } from "vitest";
 
-import { createMemory } from "@/src/server/memory-service";
+import { createMemory } from "@/src/adapters/outbound/sqlite/knowledge-provenance/memory-service";
 import {
   createMission,
   createWorkItem,
