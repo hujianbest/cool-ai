@@ -5,7 +5,7 @@ import type { DatabaseSync } from "node:sqlite";
 import { afterEach, beforeEach, describe, expect, it } from "vitest";
 
 import { openDatabase } from "@/src/server/db";
-import { execV7Fixture } from "@/tests/v7-fixture-graph";
+import { execV7Fixture } from "@/tests/fixtures/execution/current-graph";
 
 const PROJECT_ID = "action-project";
 const EXECUTION_ID = "action-execution";

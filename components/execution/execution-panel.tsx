@@ -332,11 +332,11 @@ function newOperationId(): string {
 export function ExecutionPanel({
   embedded = false,
   projectId,
-  sourceTuple,
+  sourceTuple = null,
 }: {
   embedded?: boolean;
   projectId: string;
-  sourceTuple: { projectId: string; runId: string; threadId: string } | null;
+  sourceTuple?: { projectId: string; runId: string; threadId: string } | null;
 }) {
   const [executions, setExecutions] = useState<ExecutionDto[]>([]);
   const [loading, setLoading] = useState(true);

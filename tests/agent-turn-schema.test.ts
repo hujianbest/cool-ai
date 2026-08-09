@@ -190,4 +190,126 @@ describe("strict Agent turn schema", () => {
     await expect(parses(turn({ claim: { source: "proposed", workItemId: "work-1" } }))).resolves.toBe(false);
     await expect(parses(turn({ claim: { source: "other", workItemId: "work-1" } }))).resolves.toBe(false);
   });
+
+  it("accepts only strict Proposal and Checklist block shapes", async () => {
+    const proposal = {
+      actions: ["accept", "reject"],
+      blockRevision: 1,
+      blockSchemaVersion: 1,
+      blockType: "proposal",
+      body: "Adopt the design.",
+      logicalBlockId: "proposal-1",
+      title: "Design",
+    };
+    const checklist = {
+      actions: ["check_item", "uncheck_item"],
+      blockRevision: 1,
+      blockSchemaVersion: 1,
+      blockType: "checklist",
+      items: [{ id: "item-1", text: "Run focused tests" }],
+      logicalBlockId: "checklist-1",
+      title: "Verification",
+    };
+    await expect(parses(turn({ blocks: [proposal, checklist] }))).resolves.toBe(true);
+    await expect(parses(turn({ blocks: [] }))).resolves.toBe(true);
+    await expect(parses(turn({
+      blocks: [{ ...proposal, actions: ["accept", "execute"] }],
+    }))).resolves.toBe(false);
+    await expect(parses(turn({
+      blocks: [{ ...proposal, body: "Authorization: Bearer exposed-value" }],
+    }))).resolves.toBe(true);
+    await expect(parses(turn({
+      blocks: [{ ...proposal, unexpected: true }],
+    }))).resolves.toBe(false);
+  });
+
+  it("enforces grapheme totals and spec block/file-reference quantity limits", async () => {
+    const proposal = (index: number, body: string) => ({
+      actions: ["accept", "reject"],
+      blockRevision: 1,
+      blockSchemaVersion: 1,
+      blockType: "proposal",
+      body,
+      logicalBlockId: `proposal-${index}`,
+      title: "e\u0301",
+    });
+    const exact = Array.from(
+      { length: 4 },
+      (_, index) => proposal(index, "👨‍👩‍👧‍👦".repeat(4_999)),
+    );
+    await expect(parses(turn({ blocks: exact }))).resolves.toBe(true);
+    await expect(parses(turn({
+      blocks: exact.map((block, index) =>
+        index === 0 ? { ...block, body: `${block.body}界` } : block),
+    }))).resolves.toBe(false);
+    for (const count of [9, 10]) {
+      await expect(parses(turn({
+        blocks: Array.from({ length: count }, (_, index) => proposal(index, "ok")),
+      }))).resolves.toBe(true);
+    }
+    await expect(parses(turn({
+      blocks: Array.from({ length: 11 }, (_, index) => proposal(index, "ok")),
+    }))).resolves.toBe(false);
+
+    const diff = {
+      blockRevision: 1,
+      blockSchemaVersion: 1,
+      blockType: "diff_preview",
+      fileReferences: Array.from({ length: 99 }, (_, index) => `src/${index}.ts`),
+      logicalBlockId: "diff",
+      observationHash: "b".repeat(64),
+      observationId: "observation",
+      stagedResultId: "staged",
+      title: "Diff",
+    };
+    await expect(parses(turn({ blocks: [diff] }))).resolves.toBe(true);
+    await expect(parses(turn({
+      blocks: [{ ...diff, fileReferences: [...diff.fileReferences, "src/99.ts"] }],
+    }))).resolves.toBe(true);
+    await expect(parses(turn({
+      blocks: [{
+        ...diff,
+        fileReferences: [...diff.fileReferences, "src/99.ts", "src/overflow.ts"],
+      }],
+    }))).resolves.toBe(false);
+  });
+
+  it("accepts only identity-based Diff, File, and Handoff source references", async () => {
+    const hash = "a".repeat(64);
+    const readOnlyBlocks = [
+      {
+        blockRevision: 1,
+        blockSchemaVersion: 1,
+        blockType: "diff_preview",
+        logicalBlockId: "diff-1",
+        observationHash: hash,
+        observationId: "observation-1",
+        stagedResultId: "staged-1",
+        title: "Diff",
+      },
+      {
+        artifactHash: hash,
+        artifactId: "artifact-1",
+        blockRevision: 1,
+        blockSchemaVersion: 1,
+        blockType: "file_reference",
+        executionId: "execution-1",
+        logicalBlockId: "file-1",
+        title: "File",
+      },
+      {
+        blockRevision: 1,
+        blockSchemaVersion: 1,
+        blockType: "handoff_card",
+        factId: "fact-1",
+        logicalBlockId: "handoff-1",
+        title: "Handoff",
+        turnId: "turn-1",
+      },
+    ];
+    await expect(parses(turn({ blocks: readOnlyBlocks }))).resolves.toBe(true);
+    await expect(parses(turn({
+      blocks: [{ ...readOnlyBlocks[1], latest: true, path: "D:\\secret" }],
+    }))).resolves.toBe(false);
+  });
 });

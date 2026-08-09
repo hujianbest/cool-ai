@@ -1,4 +1,4 @@
-import { spawn, spawnSync, type ChildProcessWithoutNullStreams } from "node:child_process";
+import { spawn, spawnSync, type ChildProcessByStdio } from "node:child_process";
 import {
   existsSync,
   mkdtempSync,
@@ -8,6 +8,7 @@ import {
 } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
+import type { Readable } from "node:stream";
 import { chromium, type Browser } from "playwright";
 import { afterEach, describe, expect, it } from "vitest";
 
@@ -27,7 +28,7 @@ const browserExecutable = [
   "C:\\Program Files (x86)\\Microsoft\\Edge\\Application\\msedge.exe",
 ].find((candidate) => candidate && existsSync(candidate));
 
-let server: ChildProcessWithoutNullStreams | undefined;
+let server: ChildProcessByStdio<null, Readable, Readable> | undefined;
 let browser: Browser | undefined;
 let serverOutput = "";
 let releaseClientChunks: (() => void) | undefined;
@@ -89,7 +90,7 @@ describe("real browser theme hydration", () => {
           executable: "npm",
           args: ["run", "dev", "--", "--hostname", host, "--port", String(port)],
         };
-    server = spawn(command.executable, command.args, {
+    const startedServer = spawn(command.executable, command.args, {
       cwd: process.cwd(),
       env: {
         ...process.env,
@@ -100,10 +101,11 @@ describe("real browser theme hydration", () => {
       stdio: ["ignore", "pipe", "pipe"],
       windowsHide: true,
     });
-    server.stdout.on("data", (chunk) => {
+    server = startedServer;
+    startedServer.stdout.on("data", (chunk) => {
       serverOutput += chunk.toString();
     });
-    server.stderr.on("data", (chunk) => {
+    startedServer.stderr.on("data", (chunk) => {
       serverOutput += chunk.toString();
     });
     await waitForServer();

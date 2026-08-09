@@ -183,7 +183,12 @@ describe("review persistence restart integration", () => {
   it("creates a fresh mission head/event atomically and reopens with 100% identical refs", () => {
     const path = pathFor("fresh-mission");
     const project = createProject("Fresh review", path);
-    const mission = createMission(path, project.id, { goal: "Goal", title: "Mission" });
+    const mission = createMission(path, project.id, {
+      expectedVersion: 0,
+      goal: "Goal",
+      operationId: "16000000-0000-4000-8000-000000000123",
+      title: "Mission",
+    });
     let database = track(openDatabase(path));
     const before = {
       head: database.prepare(`

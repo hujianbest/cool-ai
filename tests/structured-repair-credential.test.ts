@@ -7,7 +7,7 @@ import { callOpenAiChat } from "@/src/server/collaboration/openai-chat-client";
 import { createCredentialVault } from "@/src/server/credential-vault";
 import { openDatabase } from "@/src/server/db";
 import type { ModelCallResult } from "@/src/shared/collaboration-contracts";
-import { seedV7AdvanceFixture } from "@/tests/v7-advance-fixture";
+import { seedCurrentAdvanceFixture as seedV7AdvanceFixture } from "@/tests/fixtures/collaboration/current-advance";
 
 vi.mock("@/src/server/collaboration/openai-chat-client", () => ({
   callOpenAiChat: vi.fn(),
@@ -373,7 +373,18 @@ describe("structured repair credential durability", () => {
     try {
       const source = database.prepare("SELECT * FROM providers WHERE id=?").get(
         PROVIDER_ID,
-      ) as Record<string, unknown>;
+      ) as {
+        api_key_cipher: string;
+        api_key_iv: string;
+        api_key_mask: string;
+        api_key_tag: string;
+        base_url: string;
+        credential_version: number;
+        created_at: string;
+        default_model: string;
+        updated_at: string;
+        verified_at: string;
+      };
       database.prepare(
         `INSERT INTO providers(
            id,name,base_url,default_model,api_key_cipher,api_key_iv,api_key_tag,

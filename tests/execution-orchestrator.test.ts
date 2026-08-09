@@ -13,7 +13,7 @@ import {
   controlExecution,
   type ExecutionControlDependencies,
 } from "@/src/server/execution/execution-control-service";
-import { execV7Fixture } from "@/tests/v7-fixture-graph";
+import { execV7Fixture } from "@/tests/fixtures/execution/current-graph";
 
 type Identity = {
   finalPath: string;

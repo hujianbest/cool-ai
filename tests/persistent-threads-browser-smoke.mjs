@@ -388,13 +388,13 @@ const fixture = spawnSync(
         "/d",
         "/s",
         "/c",
-        "npx vite-node --config vitest.config.ts tests/persistent-threads-v6-fixture.ts",
+        "npx vite-node --config vitest.config.ts tests/fixtures/collaboration/persistent-threads-browser.ts",
       ]
     : [
         "vite-node",
         "--config",
         "vitest.config.ts",
-        "tests/persistent-threads-v6-fixture.ts",
+        "tests/fixtures/collaboration/persistent-threads-browser.ts",
       ],
   {
     cwd: process.cwd(),
@@ -447,14 +447,14 @@ try {
   await page
     .getByRole("heading", { name: "Persistent Threads Mission" })
     .waitFor();
-  const migrated = await api(page, "/api/projects/legacy-project/threads?limit=100");
-  assert.equal(migrated.status, 200);
-  assert.equal(migrated.body.threads.length, 1);
-  assert.equal(migrated.body.threads[0].title, "历史协作");
-  const legacyThreadId = migrated.body.threads[0].id;
-  assert.equal(inspectDatabase().version, 7);
-  pass("migrated-legacy-default-thread", { legacyThreadId });
-  await axe(page, "migrated legacy project");
+  const persisted = await api(page, "/api/projects/legacy-project/threads?limit=100");
+  assert.equal(persisted.status, 200);
+  assert.equal(persisted.body.threads.length, 1);
+  assert.equal(persisted.body.threads[0].title, "历史协作");
+  const legacyThreadId = persisted.body.threads[0].id;
+  assert.equal(inspectDatabase().version, 9);
+  pass("current-persistent-default-thread", { legacyThreadId });
+  await axe(page, "current persistent project");
 
   const membership = await api(page, "/api/projects/legacy-project/members");
   const allMemberIds = [

@@ -332,7 +332,9 @@ export function MissionBoard({
     try {
       const response = await fetch(`/api/projects/${projectId}/mission`, {
         body: JSON.stringify({
+          expectedVersion: 0,
           goal: missionDraft.goal,
+          operationId: crypto.randomUUID(),
           title: missionDraft.title,
         }),
         headers: JSON_HEADERS,

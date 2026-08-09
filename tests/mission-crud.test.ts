@@ -39,7 +39,12 @@ type MissionServiceModule = {
   createMission(
     databasePath: string,
     projectId: string,
-    input: { title: string; goal: string },
+    input: {
+      title: string;
+      goal: string;
+      operationId: string;
+      expectedVersion: number;
+    },
   ): Mission;
   updateMission(
     databasePath: string,
@@ -196,6 +201,8 @@ describe("mission and basic work-item service", () => {
     const mission = domain.createMission(databasePath, project.id, {
       title: `  ${exactMissionTitle}  `,
       goal: `  ${exactGoal}  `,
+      operationId: "16000000-0000-4000-8000-000000000010",
+      expectedVersion: 0,
     });
     expect(mission).toMatchObject({
       projectId: project.id,
@@ -208,6 +215,8 @@ describe("mission and basic work-item service", () => {
         domain.createMission(databasePath, project.id, {
           title: "Second",
           goal: "Not allowed",
+          operationId: "16000000-0000-4000-8000-000000000011",
+          expectedVersion: 0,
         }),
       "MISSION_EXISTS",
     );
@@ -297,9 +306,36 @@ describe("mission and basic work-item service", () => {
     seedMembers(project.id);
 
     for (const [input, field, code] of [
-      [{ title: " ", goal: "Goal" }, "title", "required"],
-      [{ title: "题".repeat(81), goal: "Goal" }, "title", "too_long"],
-      [{ title: "Title", goal: "目".repeat(5001) }, "goal", "too_long"],
+      [
+        {
+          title: " ",
+          goal: "Goal",
+          operationId: "16000000-0000-4000-8000-000000000020",
+          expectedVersion: 0,
+        },
+        "title",
+        "required",
+      ],
+      [
+        {
+          title: "题".repeat(81),
+          goal: "Goal",
+          operationId: "16000000-0000-4000-8000-000000000021",
+          expectedVersion: 0,
+        },
+        "title",
+        "too_long",
+      ],
+      [
+        {
+          title: "Title",
+          goal: "目".repeat(5001),
+          operationId: "16000000-0000-4000-8000-000000000022",
+          expectedVersion: 0,
+        },
+        "goal",
+        "too_long",
+      ],
     ] as const) {
       expect(() => domain.createMission(databasePath, project.id, input)).toThrowError(
         expect.objectContaining({
@@ -312,6 +348,8 @@ describe("mission and basic work-item service", () => {
     const mission = domain.createMission(databasePath, project.id, {
       title: "Valid",
       goal: "Valid",
+      operationId: "16000000-0000-4000-8000-000000000023",
+      expectedVersion: 0,
     });
     expect(() =>
       domain.createWorkItem(databasePath, mission.id, {
@@ -333,6 +371,63 @@ describe("mission and basic work-item service", () => {
 });
 
 describe("mission and basic work-item API", () => {
+  it("requires client create identity/version and deterministically replays the HTTP command", async () => {
+    const api = await routes();
+    const project = createProject("Mission command API", databasePath);
+    const context = { params: Promise.resolve({ projectId: project.id }) };
+    const url = `http://localhost/api/projects/${project.id}/mission`;
+
+    for (const body of [
+      { title: "Mission", goal: "Goal", expectedVersion: 0 },
+      { title: "Mission", goal: "Goal", operationId: "not-a-uuid", expectedVersion: 0 },
+      {
+        title: "Mission",
+        goal: "Goal",
+        operationId: "16000000-0000-4000-8000-000000000001",
+      },
+      {
+        title: "Mission",
+        goal: "Goal",
+        operationId: "16000000-0000-4000-8000-000000000001",
+        expectedVersion: 1,
+      },
+    ]) {
+      const response = await api.project.POST(request(url, body, "POST"), context);
+      expect(response.status).toBe(400);
+      await expect(response.json()).resolves.toEqual({
+        error: {
+          code: "INVALID_INPUT",
+          message: "Mission input is invalid.",
+          fields: expect.any(Array),
+        },
+      });
+    }
+
+    const command = {
+      title: " Mission ",
+      goal: " Goal ",
+      operationId: "16000000-0000-4000-8000-000000000001",
+      expectedVersion: 0,
+    };
+    const first = await api.project.POST(request(url, command, "POST"), context);
+    const replay = await api.project.POST(request(url, command, "POST"), context);
+    expect(first.status).toBe(201);
+    expect(replay.status).toBe(201);
+    expect(await replay.json()).toEqual(await first.json());
+
+    const conflict = await api.project.POST(
+      request(url, { ...command, goal: "Different" }, "POST"),
+      context,
+    );
+    expect(conflict.status).toBe(409);
+    await expect(conflict.json()).resolves.toEqual({
+      error: {
+        code: "OPERATION_CONFLICT",
+        message: "Operation input changed.",
+      },
+    });
+  });
+
   it("exposes deterministic CRUD responses and stable HTTP errors", async () => {
     const api = await routes();
     const project = createProject("Mission API", databasePath);
@@ -344,7 +439,16 @@ describe("mission and basic work-item API", () => {
     await expect(empty.json()).resolves.toEqual({ mission: null, workItems: [] });
 
     const createdResponse = await api.project.POST(
-      request(projectUrl, { title: " API mission ", goal: " API goal " }, "POST"),
+      request(
+        projectUrl,
+        {
+          title: " API mission ",
+          goal: " API goal ",
+          operationId: "16000000-0000-4000-8000-000000000030",
+          expectedVersion: 0,
+        },
+        "POST",
+      ),
       projectContext,
     );
     expect(createdResponse.status).toBe(201);
@@ -352,7 +456,16 @@ describe("mission and basic work-item API", () => {
     expect(mission).toMatchObject({ title: "API mission", goal: "API goal", version: 1 });
 
     const duplicate = await api.project.POST(
-      request(projectUrl, { title: "Second", goal: "Second" }, "POST"),
+      request(
+        projectUrl,
+        {
+          title: "Second",
+          goal: "Second",
+          operationId: "16000000-0000-4000-8000-000000000031",
+          expectedVersion: 0,
+        },
+        "POST",
+      ),
       projectContext,
     );
     expect(duplicate.status).toBe(409);

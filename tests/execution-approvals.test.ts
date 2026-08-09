@@ -8,8 +8,8 @@ import { canonicalRequestHash } from "@/src/server/collaboration/operation-recei
 import { createCredentialVault } from "@/src/server/credential-vault";
 import { openDatabase } from "@/src/server/db";
 import { controlExecution } from "@/src/server/execution/execution-control-service";
-import { execV7Fixture } from "@/tests/v7-fixture-graph";
-import { refreshExecutionFrozenFixture } from "./execution-frozen-fixture";
+import { execV7Fixture } from "@/tests/fixtures/execution/current-graph";
+import { refreshExecutionFrozenFixture } from "@/tests/fixtures/execution/frozen-input";
 
 type ApprovalModule = {
   createStagedMergeApproval(input: {

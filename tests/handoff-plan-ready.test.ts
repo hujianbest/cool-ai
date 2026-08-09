@@ -12,7 +12,7 @@ import {
   finalizeAdvance,
 } from "@/src/server/collaboration/turn-orchestrator";
 import { openDatabase } from "@/src/server/db";
-import { seedV7AdvanceFixture } from "@/tests/v7-advance-fixture";
+import { seedCurrentAdvanceFixture as seedV7AdvanceFixture } from "@/tests/fixtures/collaboration/current-advance";
 
 const NOW = "2026-07-30T04:00:00.000Z";
 const PROJECT_ID = "project-handoff";
@@ -115,8 +115,8 @@ function advance(turn: AgentTurn) {
   );
 }
 
-function withCommit(turn: AgentTurn): void {
-  const database = openDatabase(databasePath);
+function withCommit(turn: AgentTurn, existingDatabase?: DatabaseSync): void {
+  const database = existingDatabase ?? openDatabase(databasePath);
   database
     .prepare(
       `INSERT OR IGNORE INTO collaboration_operations (
@@ -156,7 +156,7 @@ function withCommit(turn: AgentTurn): void {
     database.exec("ROLLBACK");
     throw error;
   } finally {
-    database.close();
+    if (!existingDatabase) database.close();
   }
 }
 
@@ -496,11 +496,14 @@ describe("plan-ready action commit", () => {
         SELECT RAISE(ABORT, 'injected handoff event failure');
       END;
     `);
-    database.close();
-
-    expect(() => withCommit(handoff(AGENT_A, AGENT_B))).toThrow(
-      "injected handoff event failure",
-    );
+    try {
+      expect(() => withCommit(handoff(AGENT_A, AGENT_B), database)).toThrow(
+        "injected handoff event failure",
+      );
+      database.exec("DROP TRIGGER reject_handoff_event");
+    } finally {
+      database.close();
+    }
     expect(snapshot()).toMatchObject({
       currentAgentId: AGENT_A,
       events: [],

@@ -126,6 +126,12 @@ const bundle: DeliveryBundle = {
         id: "decision-1",
         publicSummary: "公开复核已通过。",
       },
+      execution: {
+        id: "execution-1",
+        sourceCollaborationRunId: "run-1",
+        sourceCollaborationThreadId: "thread-1",
+        sourceHref: "/projects/project-1?thread=thread-1&run=run-1",
+      },
       executor: { agentId: "executor-1", name: "执行 Agent" },
       limitations: ["可选产物来源缺失"],
       memories: [{

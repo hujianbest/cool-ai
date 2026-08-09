@@ -1,10 +1,18 @@
 import { z } from "zod";
 
-const segmenter = new Intl.Segmenter("zh-CN", { granularity: "grapheme" });
+import {
+  agentStructuredBlockSchema,
+  type AgentStructuredBlock,
+} from "@/src/server/structured-messages/structured-message-store";
+import {
+  ingestStructuredJson,
+  type StructuredMessageSchema,
+} from "@/src/server/structured-messages/structured-message-codec";
 
-function graphemeLength(value: string): number {
-  return Array.from(segmenter.segment(value)).length;
-}
+import {
+  agentBlockVisibleTexts,
+  graphemeLength,
+} from "@/src/server/structured-messages/structured-message-schema";
 
 function boundedText(maximum: number, allowEmpty = false) {
   return z
@@ -75,6 +83,7 @@ const planReadyDispositionSchema = z
 export const agentTurnSchema = z
   .object({
     message: boundedText(20_000),
+    blocks: z.array(agentStructuredBlockSchema).max(10).default([]),
     tasks: z.array(proposedTaskSchema).max(20),
     claim: z
       .discriminatedUnion("source", [existingClaimSchema, proposedClaimSchema])
@@ -87,6 +96,16 @@ export const agentTurnSchema = z
   })
   .strict()
   .superRefine((turn, context) => {
+    const blockTextTotal = turn.blocks
+      .flatMap(agentBlockVisibleTexts)
+      .reduce((total, text) => total + graphemeLength(text), 0);
+    if (blockTextTotal > 20_000) {
+      context.addIssue({
+        code: "custom",
+        message: "Visible block text exceeds total limit.",
+        path: ["blocks"],
+      });
+    }
     if (
       turn.disposition.type === "decision_request" &&
       (turn.tasks.length !== 0 || turn.claim !== null)
@@ -100,7 +119,11 @@ export const agentTurnSchema = z
   });
 
 export type ProposedTask = z.infer<typeof proposedTaskSchema>;
-export type AgentTurn = z.infer<typeof agentTurnSchema>;
+type ParsedAgentTurn = z.infer<typeof agentTurnSchema>;
+export type AgentTurn = Omit<ParsedAgentTurn, "blocks"> & {
+  blocks?: AgentStructuredBlock[];
+};
+export type { AgentStructuredBlock };
 
 export type AgentTurnParseResult =
   | { success: true; turn: AgentTurn }
@@ -108,7 +131,7 @@ export type AgentTurnParseResult =
 
 export const AGENT_TURN_SCHEMA_INSTRUCTIONS = [
   "Return one strict JSON object and no surrounding prose.",
-  'Top level: {"message":string(1..20000 graphemes),"tasks":ProposedTask[0..20],"claim":null|ExistingClaim|ProposedClaim,"disposition":Disposition}.',
+  'Top level: {"message":string(1..20000 graphemes),"blocks":StructuredBlock[0..10] (optional; defaults []),"tasks":ProposedTask[0..20],"claim":null|ExistingClaim|ProposedClaim,"disposition":Disposition}.',
   'ProposedTask: {"clientKey":string(1..64, /^[A-Za-z0-9_-]+$/),"title":string(1..160 graphemes),"description":string(0..5000 graphemes),"dependsOnKeys":clientKey[0..20]}.',
   'ExistingClaim: {"source":"existing","workItemId":non-empty string}.',
   'ProposedClaim: {"source":"proposed","clientKey":clientKey}.',
@@ -118,14 +141,21 @@ export const AGENT_TURN_SCHEMA_INSTRUCTIONS = [
 ].join("\n");
 
 export function parseAgentTurnContent(content: string): AgentTurnParseResult {
-  let value: unknown;
   try {
-    value = JSON.parse(content);
+    const schema: StructuredMessageSchema<AgentTurn> = {
+      classify: () => "known",
+      parse(value) {
+        return agentTurnSchema.parse(value);
+      },
+      visibleText: () => [],
+    };
+    const result = ingestStructuredJson(content, {
+      maxCanonicalBytes: 1024 * 1024,
+      maxWireBytes: 1024 * 1024,
+      schema,
+    });
+    return { success: true, turn: result.value };
   } catch {
     return { success: false, turn: null };
   }
-  const parsed = agentTurnSchema.safeParse(value);
-  return parsed.success
-    ? { success: true, turn: parsed.data }
-    : { success: false, turn: null };
 }

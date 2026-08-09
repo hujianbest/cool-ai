@@ -12,7 +12,8 @@ import { afterEach, describe, expect, it, vi } from "vitest";
 import { ReviewSlice } from "@/components/review/review-slice";
 import { createCredentialVault } from "@/src/server/credential-vault";
 import { openDatabase } from "@/src/server/db";
-import { V7_DATA_INVARIANTS, validateV7 } from "@/src/server/migrations-v7";
+import { CURRENT_DATA_INVARIANTS } from "@/src/server/storage/current-data-invariants";
+import { validateFixtureDatabase } from "@/tests/fixtures/execution/current-graph";
 import {
   executeMergeCommit,
   executeMergePrepare,
@@ -23,7 +24,7 @@ import {
 } from "@/src/server/review/review-slice-service";
 import { createThread } from "@/src/server/collaboration/thread-service";
 import type { ReviewWorkspaceDto } from "@/src/shared/review-contracts";
-import { refreshExecutionFrozenFixture } from "./execution-frozen-fixture";
+import { refreshExecutionFrozenFixture } from "@/tests/fixtures/execution/frozen-input";
 
 const directories: string[] = [];
 const servers: Server[] = [];
@@ -263,9 +264,9 @@ async function createMergedFixture() {
   const merged = await executeMergeCommit({ database, journalId: prepared.journalId });
   expect({
     foreignKeys: database.prepare("PRAGMA foreign_key_check").all(),
-    invariants: V7_DATA_INVARIANTS.flatMap((sql, index) =>
+    invariants: CURRENT_DATA_INVARIANTS.flatMap((sql, index) =>
       database.prepare(sql).get() === undefined ? [] : [index]),
-    validation: validateV7(database),
+    validation: validateFixtureDatabase(database),
   }).toEqual({ foreignKeys: [], invariants: [], validation: null });
   database.close();
   return {
@@ -418,6 +419,16 @@ const workspace: ReviewWorkspaceDto = {
   currentAttempt: null,
   effectiveStatus: "pending_review",
   headVersion: 1,
-  result: { executorAgentId: "executor", id: "result", version: 1 },
+  result: {
+    executorAgentId: "executor",
+    id: "result",
+    source: {
+      contextHash: "a".repeat(64),
+      projectId: "project",
+      runId: "run",
+      threadId: "thread",
+    },
+    version: 1,
+  },
   workItem: { id: "work", title: "Fresh work item" },
 };

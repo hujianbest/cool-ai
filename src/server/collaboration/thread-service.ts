@@ -12,11 +12,17 @@ import {
   readOperationReceipt,
 } from "@/src/server/collaboration/operation-receipts";
 import {
+  appendBatchTx,
+  nextThreadActivitySequenceTx,
+  type ThreadFactIntent,
+} from "@/src/server/collaboration/thread-fact-store";
+import {
   createCredentialVault,
   CredentialVaultError,
   type CredentialEnvelope,
 } from "@/src/server/credential-vault";
 import { openDatabase } from "@/src/server/db";
+import { readPublicStructuredBlocksTx } from "@/src/server/structured-messages/structured-message-store";
 import { timelinePayloadSchemas } from "@/src/shared/collaboration-contracts";
 import type {
   CursorPage,
@@ -540,99 +546,11 @@ function currentMembers(
   });
 }
 
-function allocateActivities(database: DatabaseSync, projectId: string, count: number): number {
-  database
-    .prepare(
-      `INSERT OR IGNORE INTO collaboration_project_thread_sequences(
-         project_id,next_activity_sequence
-       ) VALUES (?,1)`,
-    )
-    .run(projectId);
-  const start = (
-    database
-      .prepare(
-        `SELECT next_activity_sequence AS value
-         FROM collaboration_project_thread_sequences WHERE project_id=?`,
-      )
-      .get(projectId) as { value: number }
-  ).value;
-  database
-    .prepare(
-      `UPDATE collaboration_project_thread_sequences
-       SET next_activity_sequence=next_activity_sequence+?
-       WHERE project_id=?`,
-    )
-    .run(count, projectId);
-  return start;
-}
-
 function appendThreadFactTx(
   database: DatabaseSync,
-  input: {
-    actorId: string | null;
-    actorType: "owner" | "agent" | "system";
-    factId: string;
-    messageId: string | null;
-    payload: Record<string, unknown>;
-    projectId: string;
-    runEventId: string | null;
-    runId: string;
-    threadId: string;
-    timestamp: string;
-    type: "agent_message" | "run_event";
-  },
+  input: ThreadFactIntent,
 ): void {
-  const thread = database
-    .prepare(
-      `SELECT next_fact_sequence AS sequence
-       FROM collaboration_threads WHERE project_id=? AND id=?`,
-    )
-    .get(input.projectId, input.threadId) as { sequence: number } | undefined;
-  if (!thread) resourceNotFound();
-  const activitySequence = allocateActivities(database, input.projectId, 1);
-  database
-    .prepare(
-      `INSERT INTO collaboration_thread_facts(
-         id,project_id,thread_id,sequence,activity_sequence,type,actor_type,actor_id,
-         run_id,message_id,run_event_id,policy_revision_id,payload_json,created_at
-       ) VALUES (?,?,?,?,?,?,?,?,?,?,?,NULL,?,?)`,
-    )
-    .run(
-      input.factId,
-      input.projectId,
-      input.threadId,
-      thread.sequence,
-      activitySequence,
-      input.type,
-      input.actorType,
-      input.actorId,
-      input.runId,
-      input.messageId,
-      input.runEventId,
-      JSON.stringify(input.payload),
-      input.timestamp,
-    );
-  const updated = database
-    .prepare(
-      `UPDATE collaboration_threads
-       SET next_fact_sequence=next_fact_sequence+1,last_activity_sequence=?,
-           version=version+1,updated_at=?
-       WHERE project_id=? AND id=? AND next_fact_sequence=?`,
-    )
-    .run(
-      activitySequence,
-      input.timestamp,
-      input.projectId,
-      input.threadId,
-      thread.sequence,
-    );
-  if (updated.changes !== 1) {
-    throw new CollaborationError(
-      "STORAGE_UNAVAILABLE",
-      503,
-      "Thread fact storage is unavailable.",
-    );
-  }
+  appendBatchTx(database, [input]);
 }
 
 export function appendRunEventFactTx(
@@ -654,7 +572,6 @@ export function appendRunEventFactTx(
     actorId: input.actorId,
     actorType: input.actorType,
     factId: input.factId,
-    messageId: null,
     payload: { eventType: input.eventType },
     projectId: input.projectId,
     runEventId: input.eventId,
@@ -684,7 +601,6 @@ export function appendAgentMessageFactTx(
     messageId: input.messageId,
     payload: { messageId: input.messageId },
     projectId: input.projectId,
-    runEventId: null,
     runId: input.runId,
     threadId: input.threadId,
     timestamp: input.timestamp,
@@ -1112,14 +1028,14 @@ export function createThread(
       const revisionId = randomUUID();
       const threadCreatedFactId = randomUUID();
       const policyChangedFactId = randomUUID();
-      const firstActivity = allocateActivities(database, projectId, 2);
+      const firstActivity = nextThreadActivitySequenceTx(database, projectId);
 
       database
         .prepare(
           `INSERT INTO collaboration_threads(
              id,project_id,title,active_policy_revision_id,policy_version,
              next_fact_sequence,last_activity_sequence,version,created_at,updated_at
-           ) VALUES (?,?,?, ?,1,3,?,1,?,?)`,
+           ) VALUES (?,?,?, ?,1,1,?,1,?,?)`,
         )
         .run(
           threadId,
@@ -1152,34 +1068,29 @@ export function createThread(
           member.displayName,
         );
       });
-      const insertFact = database.prepare(
-        `INSERT INTO collaboration_thread_facts(
-           id,project_id,thread_id,sequence,activity_sequence,type,actor_type,actor_id,
-           run_id,message_id,run_event_id,policy_revision_id,payload_json,created_at
-         ) VALUES (?,?,?,?,?,?,'owner',NULL,NULL,NULL,NULL,?,?,?)`,
-      );
-      insertFact.run(
-        threadCreatedFactId,
-        projectId,
-        threadId,
-        1,
-        firstActivity,
-        "thread_created",
-        null,
-        JSON.stringify({ title: input.title }),
-        timestamp,
-      );
-      insertFact.run(
-        policyChangedFactId,
-        projectId,
-        threadId,
-        2,
-        firstActivity + 1,
-        "policy_changed",
-        revisionId,
-        JSON.stringify({ policyVersion: 1 }),
-        timestamp,
-      );
+      appendBatchTx(database, [
+        {
+          actorId: null,
+          actorType: "owner",
+          factId: threadCreatedFactId,
+          payload: { title: input.title },
+          projectId,
+          threadId,
+          timestamp,
+          type: "thread_created",
+        },
+        {
+          actorId: null,
+          actorType: "owner",
+          factId: policyChangedFactId,
+          payload: { policyVersion: 1 },
+          policyRevisionId: revisionId,
+          projectId,
+          threadId,
+          timestamp,
+          type: "policy_changed",
+        },
+      ], { preserveThreadVersion: true });
 
       const policy: ThreadMemberPolicy = {
         availability: "ready",
@@ -1323,20 +1234,16 @@ export function updateThreadPolicy(
       const factId = randomUUID();
       const policyVersion = current.policyVersion + 1;
       const threadVersion = current.version + 1;
-      const activitySequence = allocateActivities(database, projectId, 1);
 
       const update = database
         .prepare(
           `UPDATE collaboration_threads
-           SET active_policy_revision_id=?,policy_version=?,
-               next_fact_sequence=next_fact_sequence+1,
-               last_activity_sequence=?,version=version+1,updated_at=?
+           SET active_policy_revision_id=?,policy_version=?,updated_at=?
            WHERE project_id=? AND id=? AND version=?`,
         )
         .run(
           revisionId,
           policyVersion,
-          activitySequence,
           timestamp,
           projectId,
           threadId,
@@ -1385,23 +1292,18 @@ export function updateThreadPolicy(
           member.displayName,
         );
       });
-      database
-        .prepare(
-          `INSERT INTO collaboration_thread_facts(
-             id,project_id,thread_id,sequence,activity_sequence,type,actor_type,actor_id,
-             run_id,message_id,run_event_id,policy_revision_id,payload_json,created_at
-           ) VALUES (?,?,?,?,?,'policy_changed','owner',NULL,NULL,NULL,NULL,?,?,?)`,
-        )
-        .run(
-          factId,
-          projectId,
-          threadId,
-          current.nextFactSequence,
-          activitySequence,
-          revisionId,
-          JSON.stringify({ policyVersion }),
-          timestamp,
-        );
+      const [storedFact] = appendBatchTx(database, [{
+        actorId: null,
+        actorType: "owner",
+        factId,
+        payload: { policyVersion },
+        policyRevisionId: revisionId,
+        projectId,
+        threadId,
+        timestamp,
+        type: "policy_changed",
+      }]);
+      const activitySequence = storedFact.activitySequence;
 
       const policy: ThreadMemberPolicy = {
         availability: "ready",
@@ -1515,7 +1417,7 @@ export function writeOwnerThreadMessage(
         input.mentionAgentId,
       );
       const messageSequence = currentMessageSequence(database, projectId, threadId);
-      const activitySequence = allocateActivities(database, projectId, 1);
+      const activitySequence = nextThreadActivitySequenceTx(database, projectId);
       const timestamp = new Date().toISOString();
       const messageId = randomUUID();
       const factId = randomUUID();
@@ -1587,46 +1489,19 @@ export function writeOwnerThreadMessage(
         );
       hooks.fault?.("after_message");
 
-      database
-        .prepare(
-          `INSERT INTO collaboration_thread_facts(
-             id,project_id,thread_id,sequence,activity_sequence,type,actor_type,actor_id,
-             run_id,message_id,run_event_id,policy_revision_id,payload_json,created_at
-           ) VALUES (?,?,?,?,?,'owner_message','owner',NULL,NULL,?,NULL,NULL,?,?)`,
-        )
-        .run(
-          factId,
-          projectId,
-          threadId,
-          fact.sequence,
-          activitySequence,
-          messageId,
-          JSON.stringify(fact.payload),
-          timestamp,
-        );
+      appendBatchTx(database, [{
+        actorId: null,
+        actorType: "owner",
+        factId,
+        messageId,
+        payload: fact.payload,
+        projectId,
+        runId: null,
+        threadId,
+        timestamp,
+        type: "owner_message",
+      }]);
       hooks.fault?.("after_fact");
-
-      const update = database
-        .prepare(
-          `UPDATE collaboration_threads
-           SET next_fact_sequence=next_fact_sequence+1,last_activity_sequence=?,
-               version=version+1,updated_at=?
-           WHERE project_id=? AND id=? AND next_fact_sequence=?`,
-        )
-        .run(
-          activitySequence,
-          timestamp,
-          projectId,
-          threadId,
-          thread.nextFactSequence,
-        );
-      if (update.changes !== 1) {
-        throw new CollaborationError(
-          "STORAGE_UNAVAILABLE",
-          503,
-          "Message storage is unavailable.",
-        );
-      }
       database
         .prepare(
           `UPDATE collaboration_project_sequences
@@ -1756,7 +1631,7 @@ export function startThreadRun(
         input.mentionAgentId,
       );
       const messageSequence = currentMessageSequence(database, projectId, threadId);
-      const firstActivity = allocateActivities(database, projectId, 3);
+      const firstActivity = nextThreadActivitySequenceTx(database, projectId);
       const timestamp = new Date().toISOString();
       const runId = randomUUID();
       const messageId = randomUUID();
@@ -1908,75 +1783,44 @@ export function startThreadRun(
           timestamp,
         );
       hooks.fault?.("after_event");
-      const insertFact = database.prepare(
-        `INSERT INTO collaboration_thread_facts(
-           id,project_id,thread_id,sequence,activity_sequence,type,actor_type,actor_id,
-           run_id,message_id,run_event_id,policy_revision_id,payload_json,created_at
-         ) VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?)`,
-      );
-      insertFact.run(
-        runLinkedFactId,
-        projectId,
-        threadId,
-        runLinkedFact.sequence,
-        runLinkedFact.activitySequence,
-        "run_linked",
-        "system",
-        null,
-        runId,
-        null,
-        null,
-        null,
-        JSON.stringify(runLinkedFact.payload),
-        timestamp,
-      );
-      insertFact.run(
-        ownerMessageFactId,
-        projectId,
-        threadId,
-        ownerMessageFact.sequence,
-        ownerMessageFact.activitySequence,
-        "owner_message",
-        "owner",
-        null,
-        runId,
-        messageId,
-        null,
-        null,
-        JSON.stringify(ownerMessageFact.payload),
-        timestamp,
-      );
-      insertFact.run(
-        runEventFactId,
-        projectId,
-        threadId,
-        runEventFact.sequence,
-        runEventFact.activitySequence,
-        "run_event",
-        "owner",
-        null,
-        runId,
-        null,
-        eventId,
-        null,
-        JSON.stringify(runEventFact.payload),
-        timestamp,
-      );
-      hooks.fault?.("after_facts");
-      const threadUpdate = database
-        .prepare(
-          `UPDATE collaboration_threads
-           SET next_fact_sequence=next_fact_sequence+3,last_activity_sequence=?,
-               version=version+1,updated_at=?
-           WHERE project_id=? AND id=? AND next_fact_sequence=?`,
-        )
-        .run(
-          firstActivity + 2,
-          timestamp,
+      appendBatchTx(database, [
+        {
+          actorId: null,
+          actorType: "system",
+          factId: runLinkedFactId,
+          payload: runLinkedFact.payload,
           projectId,
+          runId,
           threadId,
-          thread.nextFactSequence,
-        );
+          timestamp,
+          type: "run_linked",
+        },
+        {
+          actorId: null,
+          actorType: "owner",
+          factId: ownerMessageFactId,
+          messageId,
+          payload: ownerMessageFact.payload,
+          projectId,
+          runId,
+          threadId,
+          timestamp,
+          type: "owner_message",
+        },
+        {
+          actorId: null,
+          actorType: "owner",
+          factId: runEventFactId,
+          payload: runEventFact.payload,
+          projectId,
+          runEventId: eventId,
+          runId,
+          threadId,
+          timestamp,
+          type: "run_event",
+        },
+      ]);
+      hooks.fault?.("after_facts");
       const messageUpdate = database
         .prepare(
           `UPDATE collaboration_project_sequences
@@ -1984,7 +1828,7 @@ export function startThreadRun(
            WHERE project_id=? AND thread_id=? AND next_message_sequence=?`,
         )
         .run(projectId, threadId, messageSequence);
-      if (threadUpdate.changes !== 1 || messageUpdate.changes !== 1) {
+      if (messageUpdate.changes !== 1) {
         throw new CollaborationError(
           "STORAGE_UNAVAILABLE",
           503,
@@ -2229,7 +2073,7 @@ export function readThreadDetail(
   }
 }
 
-type MessageRow = Omit<ThreadMessageDto, "mentionMemberStatus"> & {
+type MessageRow = Omit<ThreadMessageDto, "blocks" | "mentionMemberStatus"> & {
   mentionIsCurrent: number | null;
 };
 
@@ -2246,6 +2090,8 @@ type FactRow = {
   messageId: string | null;
   runEventId: string | null;
   policyRevisionId: string | null;
+  inlineDecisionId: string | null;
+  businessReceiptId: string | null;
   payloadJson: string;
   createdAt: string;
   referencedRunId: string | null;
@@ -2339,7 +2185,36 @@ function strictPayload(
   return payload as Record<string, unknown>;
 }
 
-function mapNestedMessage(row: FactRow): ThreadMessageDto {
+function strictMessagePayload(payloadJson: string): {
+  authorDisplayName?: string;
+  authorType?: "owner" | "agent";
+  messageId: string;
+} {
+  let payload: unknown;
+  try {
+    payload = JSON.parse(payloadJson);
+  } catch {
+    resourceNotFound();
+  }
+  if (!payload || typeof payload !== "object" || Array.isArray(payload)) {
+    resourceNotFound();
+  }
+  const value = payload as Record<string, unknown>;
+  const keys = Object.keys(value);
+  const basic = keys.length === 1 && keys[0] === "messageId";
+  const attributed = keys.length === 3
+    && ["authorDisplayName", "authorType", "messageId"].every((key) => keys.includes(key))
+    && typeof value.authorDisplayName === "string"
+    && (value.authorType === "owner" || value.authorType === "agent");
+  if (typeof value.messageId !== "string" || (!basic && !attributed)) resourceNotFound();
+  return value as {
+    authorDisplayName?: string;
+    authorType?: "owner" | "agent";
+    messageId: string;
+  };
+}
+
+function mapNestedMessage(database: DatabaseSync, row: FactRow): ThreadMessageDto {
   if (
     row.messageId === null
     || row.messageProjectId !== row.projectId
@@ -2354,7 +2229,7 @@ function mapNestedMessage(row: FactRow): ThreadMessageDto {
   ) {
     resourceNotFound();
   }
-  return mapMessageRow({
+  const message = mapMessageRow({
     authorAgentId: row.messageAuthorAgentId,
     authorDisplayName: row.messageAuthorDisplayName,
     authorType: row.messageAuthorType,
@@ -2369,6 +2244,13 @@ function mapNestedMessage(row: FactRow): ThreadMessageDto {
     sequence: row.messageSequence,
     threadId: row.messageThreadId,
   });
+  const blocks = readPublicStructuredBlocksTx(database, {
+    messageId: message.id,
+    projectId: message.projectId,
+    runId: message.runId,
+    threadId: message.threadId,
+  });
+  return blocks.length > 0 ? { ...message, blocks } : message;
 }
 
 function factBase(row: FactRow) {
@@ -2396,7 +2278,7 @@ function factBase(row: FactRow) {
   };
 }
 
-function mapFactRow(row: FactRow): ThreadFactDto {
+function mapFactRow(database: DatabaseSync, row: FactRow): ThreadFactDto {
   const base = factBase(row);
   if (row.type === "thread_created") {
     const payload = strictPayload(row.payloadJson, "title");
@@ -2447,7 +2329,7 @@ function mapFactRow(row: FactRow): ThreadFactDto {
     };
   }
   if (row.type === "owner_message" || row.type === "agent_message") {
-    const payload = strictPayload(row.payloadJson, "messageId");
+    const payload = strictMessagePayload(row.payloadJson);
     if (
       row.messageId === null
       || !RESOURCE_ID.test(row.messageId)
@@ -2456,12 +2338,17 @@ function mapFactRow(row: FactRow): ThreadFactDto {
       || row.policyRevisionId !== null
       || (row.runId !== null && !RESOURCE_ID.test(row.runId))
       || (row.runId !== null && row.referencedRunId !== row.runId)
+      || (payload.authorType !== undefined && payload.authorType !== row.messageAuthorType)
+      || (
+        payload.authorDisplayName !== undefined
+        && payload.authorDisplayName !== row.messageAuthorDisplayName
+      )
     ) {
       resourceNotFound();
     }
     return {
       ...base,
-      message: mapNestedMessage(row),
+      message: mapNestedMessage(database, row),
       messageId: row.messageId,
       payload: { messageId: row.messageId },
       policyRevisionId: null,
@@ -2492,6 +2379,65 @@ function mapFactRow(row: FactRow): ThreadFactDto {
       runEventId: null,
       runId: row.runId,
       type: "run_linked",
+    };
+  }
+  if (row.type === "inline_decision") {
+    let payload: unknown;
+    try {
+      payload = JSON.parse(row.payloadJson);
+    } catch {
+      resourceNotFound();
+    }
+    if (
+      !payload
+      || typeof payload !== "object"
+      || Array.isArray(payload)
+      || Object.keys(payload).length !== 9
+    ) resourceNotFound();
+    const value = payload as Record<string, unknown>;
+    if (
+      row.runId === null
+      || row.messageId !== null
+      || row.runEventId !== null
+      || row.policyRevisionId !== null
+      || row.inlineDecisionId === null
+      || row.businessReceiptId === null
+      || !["accept", "reject", "check_item", "uncheck_item"].includes(String(value.action))
+      || !RESOURCE_ID.test(String(value.blockId ?? ""))
+      || !Number.isSafeInteger(value.blockRevision)
+      || Number(value.blockRevision) < 1
+      || value.decisionId !== row.inlineDecisionId
+      || !Number.isSafeInteger(value.fromStateVersion)
+      || Number(value.fromStateVersion) < 1
+      || !(
+        (["accept", "reject"].includes(String(value.action)) && value.itemId === null)
+        || (
+          ["check_item", "uncheck_item"].includes(String(value.action))
+          && RESOURCE_ID.test(String(value.itemId ?? ""))
+        )
+      )
+      || !RESOURCE_ID.test(String(value.operationId ?? ""))
+      || value.receiptId !== row.businessReceiptId
+      || value.toStateVersion !== Number(value.fromStateVersion) + 1
+    ) resourceNotFound();
+    return {
+      ...base,
+      message: null,
+      messageId: null,
+      payload: {
+        action: value.action as "accept" | "reject" | "check_item" | "uncheck_item",
+        blockId: String(value.blockId),
+        blockRevision: Number(value.blockRevision),
+        decisionId: row.inlineDecisionId,
+        fromStateVersion: Number(value.fromStateVersion),
+        operationId: String(value.operationId),
+        receiptId: row.businessReceiptId,
+        toStateVersion: Number(value.toStateVersion),
+      },
+      policyRevisionId: null,
+      runEventId: null,
+      runId: row.runId,
+      type: "inline_decision",
     };
   }
   if (row.type === "run_event") {
@@ -2571,7 +2517,16 @@ export function readThreadMessages(
       )
       .all(projectId, threadId, input.after, input.limit + 1) as MessageRow[];
     return {
-      body: sequencePage(rows, input.limit, mapMessageRow),
+      body: sequencePage(rows, input.limit, (row) => {
+        const message = mapMessageRow(row);
+        const blocks = readPublicStructuredBlocksTx(database, {
+          messageId: message.id,
+          projectId: message.projectId,
+          runId: message.runId,
+          threadId: message.threadId,
+        });
+        return blocks.length > 0 ? { ...message, blocks } : message;
+      }),
       status: 200,
     };
   } finally {
@@ -2597,6 +2552,8 @@ export function readThreadFacts(
                 facts.run_id AS runId,facts.message_id AS messageId,
                 facts.run_event_id AS runEventId,
                 facts.policy_revision_id AS policyRevisionId,
+                facts.inline_decision_id AS inlineDecisionId,
+                facts.business_receipt_id AS businessReceiptId,
                 facts.payload_json AS payloadJson,facts.created_at AS createdAt,
                 runs.id AS referencedRunId,events.id AS referencedEventId,
                 events.type AS referencedEventType,
@@ -2640,7 +2597,7 @@ export function readThreadFacts(
       )
       .all(projectId, threadId, input.after, input.limit + 1) as FactRow[];
     return {
-      body: sequencePage(rows, input.limit, mapFactRow),
+      body: sequencePage(rows, input.limit, (row) => mapFactRow(database, row)),
       status: 200,
     };
   } finally {

@@ -11,7 +11,7 @@ import {
   finalizeAdvance,
 } from "@/src/server/collaboration/turn-orchestrator";
 import { openDatabase } from "@/src/server/db";
-import { seedV7AdvanceFixture } from "@/tests/v7-advance-fixture";
+import { seedCurrentAdvanceFixture as seedV7AdvanceFixture } from "@/tests/fixtures/collaboration/current-advance";
 
 const NOW = "2026-07-30T05:00:00.000Z";
 const PROJECT_ID = "project-owner-races";

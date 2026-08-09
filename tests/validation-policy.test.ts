@@ -4,13 +4,8 @@ import { join } from "node:path";
 import type { DatabaseSync } from "node:sqlite";
 import { afterEach, beforeEach, describe, expect, it } from "vitest";
 
-import { createV6FixtureDatabaseOpener } from "@/tests/v6-fixture-db";
-import { execV7Fixture } from "@/tests/v7-fixture-graph";
-
-const openDatabase = createV6FixtureDatabaseOpener({
-  missingDeliveryHeadMissionIds: ["mission"],
-  missingReviewHeadResultIds: [],
-});
+import { openDatabase } from "@/src/server/db";
+import { execV7Fixture } from "@/tests/fixtures/execution/current-graph";
 import { createProject } from "@/src/server/projects";
 
 type PolicyEntryInput = {

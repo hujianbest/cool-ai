@@ -14,7 +14,7 @@ import {
 import {
   assertV7Fixture,
   execV7Fixture,
-} from "@/tests/v7-fixture-graph";
+} from "@/tests/fixtures/execution/current-graph";
 
 type CommandRequest = {
   args: string[];

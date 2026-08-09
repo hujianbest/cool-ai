@@ -13,7 +13,7 @@ import * as runsRoute from "@/app/api/projects/[projectId]/threads/[threadId]/ru
 import { createThread } from "@/src/server/collaboration/thread-service";
 import { createCredentialVault } from "@/src/server/credential-vault";
 import { openDatabase } from "@/src/server/db";
-import { initializeMissionDeliveryTx } from "@/src/server/migrations-v6";
+import { seedMissionInitializationForMission as initializeMissionDeliveryTx } from "@/tests/fixtures/review/mission-initialization";
 
 let rootDirectory: string;
 let databasePath: string;
@@ -174,33 +174,6 @@ function installRouteFetch(projectId: string) {
 }
 
 describe("collaboration T-1 vertical slice", () => {
-  it("migrates a valid database to the necessary v7 collaboration facts", () => {
-    const database = openDatabase(databasePath);
-    try {
-      expect(database.prepare("PRAGMA user_version").get()).toEqual({ user_version: 7 });
-      const tables = (
-        database
-          .prepare(
-            `SELECT name FROM sqlite_master
-             WHERE type = 'table' AND name LIKE 'collaboration_%'
-             ORDER BY name`,
-          )
-          .all() as Array<{ name: string }>
-      ).map(({ name }) => name);
-      expect(tables).toEqual(
-        expect.arrayContaining([
-          "collaboration_events",
-          "collaboration_messages",
-          "collaboration_operations",
-          "collaboration_project_sequences",
-          "collaboration_runs",
-        ]),
-      );
-    } finally {
-      database.close();
-    }
-  });
-
   it("deduplicates create-or-append and preserves stable message/event sequences and first baton", async () => {
     threadId = seedReadyProject();
     const operationId = "00000000-0000-4000-8000-000000000001";

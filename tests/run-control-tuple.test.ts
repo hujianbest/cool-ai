@@ -440,7 +440,7 @@ describe("tuple-scoped run control API", () => {
     [{ action: "invalid", expectedVersion: 1, operationId: "00000000-0000-4000-8000-000000001599" }, "invalid action"],
     [{ action: "pause", expectedVersion: 0, operationId: "00000000-0000-4000-8000-000000001598" }, "invalid expectedVersion"],
     [{ action: "pause", expectedVersion: 1, operationId: "00000000-0000-4000-8000-000000001597", extra: true }, "extra key"],
-  ])("strictly rejects %s (%s)", async (body) => {
+  ])("strictly rejects %s (%s)", async (body, _description) => {
     const before = snapshot();
     const response = await post("project-a", threadA, "run-a", body);
     expect(response.status).toBe(400);

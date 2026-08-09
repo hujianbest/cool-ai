@@ -1,7 +1,7 @@
 import { randomUUID } from "node:crypto";
 
 import { MembershipError } from "@/src/server/membership-service";
-import { SchemaMigrationError } from "@/src/server/migrations";
+import { SchemaError } from "@/src/server/storage/schema-error";
 
 export async function readMembershipJson(
   request: Request,
@@ -36,7 +36,7 @@ export function membershipApiError(error: unknown, route: string): Response {
       { status: error.httpStatus },
     );
   }
-  if (error instanceof SchemaMigrationError) {
+  if (error instanceof SchemaError) {
     return Response.json(
       { error: { code: error.code, message: error.message } },
       { status: 503 },

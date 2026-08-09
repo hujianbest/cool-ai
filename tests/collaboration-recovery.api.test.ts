@@ -9,7 +9,7 @@ import {
   startThreadRun,
 } from "@/src/server/collaboration/thread-service";
 import { createCredentialVault } from "@/src/server/credential-vault";
-import { initializeMissionDeliveryTx } from "@/src/server/migrations-v6";
+import { seedMissionInitializationForMission as initializeMissionDeliveryTx } from "@/tests/fixtures/review/mission-initialization";
 import { openDatabase } from "@/src/server/db";
 
 type GetRoute = {

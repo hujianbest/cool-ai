@@ -16,12 +16,17 @@ type WorkItem = ReturnType<typeof createWorkItem>;
 
 let directory: string;
 let databasePath: string;
+let missionOperationSequence: number;
 
 function createProjectMission(name: string) {
   const project = createProject(name, databasePath);
   const mission = createMission(databasePath, project.id, {
+    expectedVersion: 0,
     title: `${name} mission`,
     goal: `${name} goal`,
+    operationId: `16000000-0000-4000-8000-${(++missionOperationSequence)
+      .toString(16)
+      .padStart(12, "0")}`,
   });
   return { project, mission };
 }
@@ -92,6 +97,7 @@ function expectCode(operation: () => unknown, code: string): void {
 }
 
 beforeEach(() => {
+  missionOperationSequence = 0;
   directory = mkdtempSync(join(tmpdir(), "cockpit-work-item-dependencies-"));
   databasePath = join(directory, "cockpit.sqlite");
   process.env.COCKPIT_DB_PATH = databasePath;

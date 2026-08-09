@@ -11,6 +11,10 @@ import {
   readOperationReceipt,
 } from "@/src/server/collaboration/operation-receipts";
 import {
+  appendBatchTx,
+  nextThreadActivitySequenceTx,
+} from "@/src/server/collaboration/thread-fact-store";
+import {
   reconcileExpiredAttempt,
   reconcileProjectExpiredAttempt,
 } from "@/src/server/collaboration/turn-orchestrator";
@@ -982,23 +986,6 @@ function threadRunFromDatabase(
   return row;
 }
 
-function allocateThreadActivity(database: DatabaseSync, projectId: string): number {
-  const row = database
-    .prepare(
-      `SELECT next_activity_sequence AS sequence
-       FROM collaboration_project_thread_sequences WHERE project_id=?`,
-    )
-    .get(projectId) as { sequence: number } | undefined;
-  if (!row) {
-    throw new CollaborationError(
-      "STORAGE_UNAVAILABLE",
-      503,
-      "Run control storage is unavailable.",
-    );
-  }
-  return row.sequence;
-}
-
 export function controlThreadRun(
   databasePath: string,
   projectId: string,
@@ -1158,7 +1145,7 @@ export function controlThreadRun(
       const timestamp = new Date().toISOString();
       const eventId = randomUUID();
       const factId = randomUUID();
-      const activitySequence = allocateThreadActivity(database, projectId);
+      const activitySequence = nextThreadActivitySequenceTx(database, projectId);
       const run: ThreadRunDto = {
         createdAt: row.createdAt,
         currentAgentId: row.currentAgentId,
@@ -1252,54 +1239,19 @@ export function controlThreadRun(
         );
       hooks.fault?.("after_event");
 
-      database
-        .prepare(
-          `INSERT INTO collaboration_thread_facts(
-             id,project_id,thread_id,sequence,activity_sequence,type,actor_type,actor_id,
-             run_id,message_id,run_event_id,policy_revision_id,payload_json,created_at
-           ) VALUES (?,?,?,?,?,'run_event','owner',NULL,?,NULL,?,NULL,?,?)`,
-        )
-        .run(
-          factId,
-          projectId,
-          threadId,
-          row.nextFactSequence,
-          activitySequence,
-          runId,
-          eventId,
-          JSON.stringify(fact.payload),
-          timestamp,
-        );
+      appendBatchTx(database, [{
+        actorId: null,
+        actorType: "owner",
+        factId,
+        payload: fact.payload,
+        projectId,
+        runEventId: eventId,
+        runId,
+        threadId,
+        timestamp,
+        type: "run_event",
+      }]);
       hooks.fault?.("after_fact");
-
-      const threadUpdate = database
-        .prepare(
-          `UPDATE collaboration_threads
-           SET next_fact_sequence=next_fact_sequence+1,last_activity_sequence=?,
-               version=version+1,updated_at=?
-           WHERE project_id=? AND id=? AND next_fact_sequence=?`,
-        )
-        .run(
-          activitySequence,
-          timestamp,
-          projectId,
-          threadId,
-          row.nextFactSequence,
-        );
-      const activityUpdate = database
-        .prepare(
-          `UPDATE collaboration_project_thread_sequences
-           SET next_activity_sequence=next_activity_sequence+1
-           WHERE project_id=? AND next_activity_sequence=?`,
-        )
-        .run(projectId, activitySequence);
-      if (threadUpdate.changes !== 1 || activityUpdate.changes !== 1) {
-        throw new CollaborationError(
-          "STORAGE_UNAVAILABLE",
-          503,
-          "Run control storage is unavailable.",
-        );
-      }
       hooks.fault?.("after_sequences");
       return { body, status: 200 as const };
     });
@@ -1721,71 +1673,40 @@ export function answerThreadDecision(
         timestamp,
       );
       hooks.fault?.("after_event");
-      const insertFact = database.prepare(
-        `INSERT INTO collaboration_thread_facts(
-           id,project_id,thread_id,sequence,activity_sequence,type,actor_type,actor_id,
-           run_id,message_id,run_event_id,policy_revision_id,payload_json,created_at
-         ) VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?)`,
-      );
-      insertFact.run(
-        messageFactId,
-        projectId,
-        threadId,
-        row.nextFactSequence,
-        row.nextActivitySequence,
-        "owner_message",
-        "owner",
-        null,
-        runId,
-        messageId,
-        null,
-        null,
-        JSON.stringify(messageFact.payload),
-        timestamp,
-      );
-      insertFact.run(
-        eventFactId,
-        projectId,
-        threadId,
-        row.nextFactSequence + 1,
-        row.nextActivitySequence + 1,
-        "run_event",
-        "owner",
-        null,
-        runId,
-        null,
-        eventId,
-        null,
-        JSON.stringify(eventFact.payload),
-        timestamp,
-      );
+      appendBatchTx(database, [
+        {
+          actorId: null,
+          actorType: "owner",
+          factId: messageFactId,
+          messageId,
+          payload: messageFact.payload,
+          projectId,
+          runId,
+          threadId,
+          timestamp,
+          type: "owner_message",
+        },
+        {
+          actorId: null,
+          actorType: "owner",
+          factId: eventFactId,
+          payload: eventFact.payload,
+          projectId,
+          runEventId: eventId,
+          runId,
+          threadId,
+          timestamp,
+          type: "run_event",
+        },
+      ]);
       hooks.fault?.("after_facts");
-      const threadUpdate = database.prepare(
-        `UPDATE collaboration_threads
-         SET next_fact_sequence=next_fact_sequence+2,last_activity_sequence=?,
-             version=version+1,updated_at=?
-         WHERE project_id=? AND id=? AND next_fact_sequence=?`,
-      ).run(
-        row.nextActivitySequence + 1,
-        timestamp,
-        projectId,
-        threadId,
-        row.nextFactSequence,
-      );
-      const activityUpdate = database.prepare(
-        `UPDATE collaboration_project_thread_sequences
-         SET next_activity_sequence=next_activity_sequence+2
-         WHERE project_id=? AND next_activity_sequence=?`,
-      ).run(projectId, row.nextActivitySequence);
       const messageSequenceUpdate = database.prepare(
         `UPDATE collaboration_project_sequences
          SET next_message_sequence=next_message_sequence+1
          WHERE project_id=? AND thread_id=? AND next_message_sequence=?`,
       ).run(projectId, threadId, row.nextMessageSequence);
       if (
-        threadUpdate.changes !== 1
-        || activityUpdate.changes !== 1
-        || messageSequenceUpdate.changes !== 1
+        messageSequenceUpdate.changes !== 1
       ) {
         throw new CollaborationError(
           "STORAGE_UNAVAILABLE",

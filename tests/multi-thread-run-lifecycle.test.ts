@@ -81,7 +81,9 @@ function seedProject(projectId: string, agentIds: [string, string]): void {
     database.close();
   }
   createMission(databasePath, projectId, {
+    expectedVersion: 0,
     goal: `Goal ${projectId}`,
+    operationId: operationId(),
     title: `Mission ${projectId}`,
   });
 }

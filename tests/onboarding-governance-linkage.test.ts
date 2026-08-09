@@ -29,6 +29,7 @@ const EXECUTOR_ID = "onboarding-executor";
 const REVIEWER_ID = "onboarding-reviewer";
 const NOW = "2026-08-08T04:00:00.000Z";
 const HASH = "a".repeat(64);
+const CREATE_MISSION_OPERATION = "13000000-0000-4000-8000-000000000006";
 const START_RUN_OPERATION = "13000000-0000-4000-8000-000000000001";
 const CREATE_THREAD_OPERATION = "13000000-0000-4000-8000-000000000005";
 const START_EXECUTION_OPERATION = "13000000-0000-4000-8000-000000000002";
@@ -125,7 +126,12 @@ async function establishFormalOnboardingGoal(): Promise<{
     jsonRequest(
       `http://localhost/api/projects/${PROJECT_ID}/mission`,
       "POST",
-      { goal: "Prove the governed delivery chain.", title: "Governed onboarding" },
+      {
+        expectedVersion: 0,
+        goal: "Prove the governed delivery chain.",
+        operationId: CREATE_MISSION_OPERATION,
+        title: "Governed onboarding",
+      },
     ),
     context(),
   );

@@ -5,9 +5,10 @@ import type { DatabaseSync } from "node:sqlite";
 import { afterEach, beforeEach, describe, expect, it } from "vitest";
 
 import type { StructuredTurnResult } from "@/src/server/collaboration/structured-repair";
+import type { AgentStructuredBlock } from "@/src/server/collaboration/agent-turn-schema";
 import { openDatabase } from "@/src/server/db";
 import { createWorkItem } from "@/src/server/mission-service";
-import { seedV7AdvanceFixture } from "@/tests/v7-advance-fixture";
+import { seedCurrentAdvanceFixture as seedV7AdvanceFixture } from "@/tests/fixtures/collaboration/current-advance";
 
 type ProposedTask = {
   clientKey: string;
@@ -16,6 +17,7 @@ type ProposedTask = {
   dependsOnKeys: string[];
 };
 type Turn = {
+  blocks?: AgentStructuredBlock[];
   message: string;
   tasks: ProposedTask[];
   claim:
@@ -467,6 +469,56 @@ describe("Agent task action committer", () => {
       nextMessageSequence: 2,
       tasks: 0,
     });
+  });
+
+  it("commits Proposal and Checklist blocks with the Agent message and one existing message fact", async () => {
+    const result = await commit({
+      turn: turn({
+        blocks: [
+          {
+            actions: ["accept", "reject"],
+            blockRevision: 1,
+            blockSchemaVersion: 1,
+            blockType: "proposal",
+            body: "Adopt this plan.",
+            logicalBlockId: "proposal-agent",
+            title: "Plan",
+          },
+          {
+            actions: ["check_item", "uncheck_item"],
+            blockRevision: 1,
+            blockSchemaVersion: 1,
+            blockType: "checklist",
+            items: [{ id: "tests", text: "Run focused tests" }],
+            logicalBlockId: "checklist-agent",
+            title: "Checks",
+          },
+        ],
+      }),
+    });
+
+    const database = openDatabase(databasePath);
+    try {
+      expect(database.prepare(
+        `SELECT block_type AS blockType,position
+         FROM structured_message_blocks WHERE message_id=? ORDER BY position`,
+      ).all(result.messageId)).toEqual([
+        { blockType: "proposal", position: 0 },
+        { blockType: "checklist", position: 1 },
+      ]);
+      expect(database.prepare(
+        "SELECT count(*) AS count FROM collaboration_thread_facts WHERE message_id=?",
+      ).get(result.messageId)).toEqual({ count: 1 });
+      expect(database.prepare(
+        `SELECT state_kind AS stateKind,state_json AS stateJson
+         FROM structured_message_state_revisions ORDER BY stateKind`,
+      ).all()).toEqual([
+        { stateJson: '{"items":[{"checked":false,"id":"tests"}]}', stateKind: "checklist" },
+        { stateJson: '{"status":"pending"}', stateKind: "proposal" },
+      ]);
+    } finally {
+      database.close();
+    }
   });
 
   it.each([

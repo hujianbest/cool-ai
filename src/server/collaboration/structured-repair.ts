@@ -93,6 +93,14 @@ function credentialRejected(
 function publicTurnTexts(turn: AgentTurn): string[] {
   const texts = [
     turn.message,
+    ...(turn.blocks ?? []).flatMap((block) =>
+      block.blockType === "proposal"
+        ? [block.title, block.body]
+        : block.blockType === "checklist"
+          ? [block.title, ...block.items.map(({ text }) => text)]
+          : block.blockType === "diff_preview"
+            ? [block.title, ...block.fileReferences]
+            : [block.title]),
     ...turn.tasks.flatMap((task) => [task.title, task.description]),
   ];
   if (turn.disposition.type === "handoff") {

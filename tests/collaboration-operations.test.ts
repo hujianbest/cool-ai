@@ -11,18 +11,8 @@ import {
 } from "@/src/server/collaboration/operation-receipts";
 import { createThread } from "@/src/server/collaboration/thread-service";
 import { createCredentialVault } from "@/src/server/credential-vault";
-import { initializeMissionDeliveryTx } from "@/src/server/migrations-v6";
-import { createV6FixtureDatabaseOpener } from "@/tests/v6-fixture-db";
-
-const openReadyDatabase = createV6FixtureDatabaseOpener({
-  missingDeliveryHeadMissionIds: ["mission-1"],
-  missingReviewHeadResultIds: [],
-});
-const openLateDatabase = createV6FixtureDatabaseOpener({
-  missingDeliveryHeadMissionIds: ["mission-late"],
-  missingReviewHeadResultIds: [],
-});
-let openDatabase = openReadyDatabase;
+import { openDatabase } from "@/src/server/db";
+import { createMission } from "@/src/server/mission-service";
 import { apiErrorCopy } from "@/src/shared/api-error-copy";
 
 type Route = {
@@ -49,7 +39,6 @@ async function route(): Promise<Route> {
 }
 
 function seedProject(ready = true): void {
-  openDatabase = ready ? openReadyDatabase : openLateDatabase;
   const database = openDatabase(databasePath);
   const timestamp = "2026-07-30T00:00:00.000Z";
   const credential = createCredentialVault().encrypt("provider-1", "fixture-key");
@@ -103,17 +92,16 @@ function seedProject(ready = true): void {
     );
     insertMember.run("agent-a", "a");
     insertMember.run("agent-b", "b");
-    if (ready) {
-      database
-        .prepare(
-          `INSERT INTO missions (
-             id, project_id, title, goal, version, created_at, updated_at
-           ) VALUES ('mission-1', 'project-1', 'Mission', 'Goal', 1, ?, ?)`,
-        )
-        .run(timestamp, timestamp);
-    }
   } finally {
     database.close();
+  }
+  if (ready) {
+    createMission(databasePath, "project-1", {
+      expectedVersion: 0,
+      goal: "Goal",
+      operationId: "16000000-0000-4000-8000-000000000102",
+      title: "Mission",
+    });
   }
   threadId = createThread(databasePath, "project-1", {
     memberAgentIds: ["agent-a", "agent-b"],
@@ -181,7 +169,7 @@ describe("generalized collaboration operation receipts", () => {
     });
   });
 
-  it("returns the stable in-progress envelope for a matching pending receipt", async () => {
+  it("preserves the stable in-progress envelope for a legacy pending advance", async () => {
     seedProject();
     const input = {
       message: "Pending body",
@@ -204,7 +192,7 @@ describe("generalized collaboration operation receipts", () => {
       database
         .prepare(
           `UPDATE collaboration_operations
-           SET status = 'pending', http_status = NULL, response_json = NULL,
+           SET kind = 'advance', status = 'pending', http_status = NULL, response_json = NULL,
                response_schema_version = NULL
            WHERE project_id = 'project-1' AND id = ?`,
         )
@@ -215,7 +203,7 @@ describe("generalized collaboration operation receipts", () => {
           database,
           "project-1",
           input.operationId,
-          "start",
+          "advance",
           canonicalRequestHash({ mentionAgentId: null, message: input.message }),
         );
       } catch (caught) {
@@ -264,24 +252,15 @@ describe("generalized collaboration operation receipts", () => {
            WHERE id = 'project-1'`,
         )
         .run();
-      database
-        .prepare(
-          `INSERT INTO missions (
-             id, project_id, title, goal, version, created_at, updated_at
-           ) VALUES (
-             'mission-late', 'project-1', 'Mission', 'Goal', 1,
-             '2026-07-30T00:00:00.000Z', '2026-07-30T00:00:00.000Z'
-           )`,
-        )
-        .run();
-      initializeMissionDeliveryTx(database, {
-        id: "mission-late",
-        projectId: "project-1",
-        updatedAt: "2026-07-30T00:00:00.000Z",
-      });
     } finally {
       database.close();
     }
+    createMission(databasePath, "project-1", {
+      expectedVersion: 0,
+      goal: "Goal",
+      operationId: "16000000-0000-4000-8000-000000000103",
+      title: "Mission",
+    });
 
     const replay = await post(input);
     expect(first.status).toBe(409);

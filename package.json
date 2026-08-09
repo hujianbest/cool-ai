@@ -14,10 +14,13 @@
     "smoke:execution": "node tests/execution-browser-smoke.mjs",
     "smoke:review": "node tests/review-browser-smoke.mjs",
     "smoke:settings": "node tests/settings-navigation-browser-smoke.mjs",
+    "smoke:structured": "node tests/structured-messages-browser-smoke.mjs",
     "smoke:onboarding": "node tests/onboarding-browser-smoke.mjs",
     "smoke:threads": "node tests/persistent-threads-browser-smoke.mjs"
   },
   "dependencies": {
+    "canonicalize": "^3.0.0",
+    "jsonc-parser": "^3.3.1",
     "koffi": "^3.1.2",
     "next": "^16.2.12",
     "react": "^19.2.8",

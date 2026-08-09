@@ -47,9 +47,9 @@ describe("strict onboarding guide URL parser", () => {
     ]);
   });
 
-  it.each([[], ["only-project"], ["one", "two", "three"]])(
+  it.each([[[]], [["only-project"]], [["one", "two", "three"]]])(
     "keeps project selection explicit for %s available projects",
-    (availableProjectIds) => {
+    (availableProjectIds: string[]) => {
       expect(
         parseGuideUrl("/?guide=project-select", availableProjectIds),
       ).toEqual({

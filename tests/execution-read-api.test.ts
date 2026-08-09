@@ -17,7 +17,7 @@ import {
 import {
   assertV7Fixture,
   execV7Fixture,
-} from "@/tests/v7-fixture-graph";
+} from "@/tests/fixtures/execution/current-graph";
 
 type ReadModule = typeof import("@/src/server/execution/execution-read-service");
 type GetRoute = {

@@ -10,7 +10,7 @@ import {
 } from "@/src/server/collaboration/thread-service";
 import { createCredentialVault } from "@/src/server/credential-vault";
 import { openDatabase } from "@/src/server/db";
-import { initializeMissionDeliveryTx } from "@/src/server/migrations-v6";
+import { seedMissionInitializationForMission as initializeMissionDeliveryTx } from "@/tests/fixtures/review/mission-initialization";
 
 type PromptMessage = {
   role: "system" | "user" | "assistant";

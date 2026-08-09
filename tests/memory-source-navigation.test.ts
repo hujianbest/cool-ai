@@ -53,7 +53,12 @@ beforeEach(() => {
   directory = mkdtempSync(join(tmpdir(), "memory-source-navigation-"));
   databasePath = join(directory, "cockpit.sqlite");
   const project = createProject("Sources", databasePath);
-  const mission = createMission(databasePath, project.id, { goal: "Goal", title: "Mission" });
+  const mission = createMission(databasePath, project.id, {
+    expectedVersion: 0,
+    goal: "Goal",
+    operationId: "16000000-0000-4000-8000-000000000113",
+    title: "Mission",
+  });
   const workItem = createWorkItem(databasePath, mission.id, {
     assigneeAgentId: null,
     dependencyIds: [],

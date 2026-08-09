@@ -8,7 +8,7 @@ import { CollaborationError } from "@/src/server/collaboration/collaboration-err
 import { canonicalRequestHash } from "@/src/server/collaboration/operation-receipts";
 import type { StructuredTurnResult } from "@/src/server/collaboration/structured-repair";
 import { openDatabase } from "@/src/server/db";
-import { seedV7AdvanceFixture } from "@/tests/v7-advance-fixture";
+import { seedCurrentAdvanceFixture as seedV7AdvanceFixture } from "@/tests/fixtures/collaboration/current-advance";
 
 type Dependencies = {
   clock: () => Date;

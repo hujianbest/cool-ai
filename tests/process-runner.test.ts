@@ -12,7 +12,7 @@ import {
   discardExecutionAction,
   reconcileExecutionAction,
 } from "@/src/server/execution/execution-actions";
-import { execV7Fixture } from "@/tests/v7-fixture-graph";
+import { execV7Fixture } from "@/tests/fixtures/execution/current-graph";
 
 type Clock = {
   clearInterval(handle: unknown): void;

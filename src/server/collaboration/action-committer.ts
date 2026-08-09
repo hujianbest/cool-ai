@@ -5,7 +5,6 @@ import { CollaborationError } from "@/src/server/collaboration/collaboration-err
 import type { AgentTurn } from "@/src/server/collaboration/agent-turn-schema";
 import { collaborationPublicMessageWindow } from "@/src/server/collaboration/prompt-builder";
 import {
-  appendAgentMessageFactTx,
   appendRunEventFactTx,
 } from "@/src/server/collaboration/thread-service";
 import {
@@ -14,6 +13,11 @@ import {
   MissionError,
 } from "@/src/server/mission-service";
 import type { TimelineEventType } from "@/src/shared/collaboration-contracts";
+import {
+  commitStructuredMessageTx,
+  ingestStructuredBlocks,
+  materializeStructuredBlocks,
+} from "@/src/server/structured-messages/structured-message-store";
 
 export type CommitAgentTaskActionsInput = {
   agentId: string;
@@ -350,35 +354,6 @@ function validateDecision(input: CommitAgentTaskActionsInput): void {
   }
 }
 
-function nextMessageSequence(
-  database: DatabaseSync,
-  projectId: string,
-  threadId: string,
-): number {
-  database
-    .prepare(
-      `INSERT OR IGNORE INTO collaboration_project_sequences (
-         project_id,thread_id,next_message_sequence
-       ) VALUES (?,?,1)`,
-    )
-    .run(projectId, threadId);
-  const row = database
-    .prepare(
-      `SELECT next_message_sequence AS sequence
-       FROM collaboration_project_sequences WHERE project_id=? AND thread_id=?`,
-    )
-    .get(projectId, threadId) as { sequence: number };
-  const updated = database
-    .prepare(
-      `UPDATE collaboration_project_sequences
-       SET next_message_sequence = next_message_sequence + 1
-       WHERE project_id=? AND thread_id=? AND next_message_sequence=?`,
-    )
-    .run(projectId, threadId, row.sequence);
-  if (updated.changes !== 1) throw actionConflict();
-  return row.sequence;
-}
-
 function existingClaimVersion(
   database: DatabaseSync,
   projectId: string,
@@ -431,6 +406,18 @@ export function commitAgentTaskActionsTx(
           input.turn.claim.workItemId,
         )
       : null;
+  const structuredBlocks = ingestStructuredBlocks(JSON.stringify({
+    blocks: input.turn.blocks ?? [],
+  }));
+  const persistedBlocks = materializeStructuredBlocks(database, {
+    projectId: context.projectId,
+    runId: input.runId,
+    threadId: context.threadId,
+  }, {
+    displayName: context.agentDisplayName,
+    id: input.agentId,
+    type: "agent",
+  }, structuredBlocks);
 
   try {
     const taskIdsByClientKey = createWorkItemBatchTx(
@@ -442,32 +429,14 @@ export function commitAgentTaskActionsTx(
     );
     const messageId = randomUUID();
     const turnId = randomUUID();
-    const messageSequence = nextMessageSequence(
-      database,
-      context.projectId,
-      context.threadId,
-    );
-    database
-      .prepare(
-        `INSERT INTO collaboration_messages (
-           id,project_id,thread_id,run_id,author_type,author_agent_id,
-           author_display_name, content, mention_agent_id, mention_display_name,
-           sequence, consumed_at, created_at
-         ) VALUES (?,?,?,?,'agent',?,?,?,NULL,NULL,?,NULL,?)`,
-      )
-      .run(
-        messageId,
-        context.projectId,
-        context.threadId,
-        input.runId,
-        input.agentId,
-        context.agentDisplayName,
-        input.turn.message,
-        messageSequence,
-        input.timestamp,
-      );
-    appendAgentMessageFactTx(database, {
-      agentId: input.agentId,
+    const messageSequence = commitStructuredMessageTx(database, {
+      actor: {
+        displayName: context.agentDisplayName,
+        id: input.agentId,
+        type: "agent",
+      },
+      blocks: persistedBlocks,
+      content: input.turn.message,
       factId: randomUUID(),
       messageId,
       projectId: context.projectId,

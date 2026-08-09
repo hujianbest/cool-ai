@@ -7,7 +7,7 @@ import { CollaborationError } from "@/src/server/collaboration/collaboration-err
 import { canonicalRequestHash } from "@/src/server/collaboration/operation-receipts";
 import { appendAgentMessageFactTx } from "@/src/server/collaboration/thread-service";
 import { openDatabase } from "@/src/server/db";
-import { seedV7AdvanceFixture } from "@/tests/v7-advance-fixture";
+import { seedCurrentAdvanceFixture as seedV7AdvanceFixture } from "@/tests/fixtures/collaboration/current-advance";
 
 type AcquireDependencies = {
   clock: () => Date;

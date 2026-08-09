@@ -1,45 +1,468 @@
-# Cool AI 架构地图
+# Cool AI 目标架构与迁移地图
 
-- 日期: 2026-08-08
-- 来源: 由当前代码、产品定义与已交付切片反推
-- 用户确认: auto-approved 2026-08-06
+- 日期: 2026-08-09
+- 状态: 产品级目标架构；目标架构收敛是后续功能开发的阻塞前置
+- 用户确认: 2026-08-09 采用领域模块化单体 + Ports/Adapters + 跨域 Application Workflow；2026-08-09 确认先把当前工程实现完整迁入目标架构，再恢复后续功能开发
+- 决策依据: `docs/adr/0002-domain-modular-monolith.md`、`docs/adr/0003-pre-release-canonical-database-schema.md`、`docs/adr/0004-architecture-first-convergence.md`
 
-## 系统形态
+## 1. 架构目标
 
-- 本地优先的 Next.js/React/TypeScript 单仓 Web 应用；App Router 同时承载页面与 JSON API，SQLite 保存业务状态，Windows verified-handle 适配器守护真实工作区操作。
+Cool AI 保持一个本地优先、单进程、单 SQLite 的**领域模块化单体**。模块边界按事实所有权划分，不按页面、HTTP 路由、数据库表类别或技术层划分。
 
-## 模块边界
+- 每类命令事实只有一个逻辑子系统 owner。
+- 每张可写表必须在写表 owner 清单中登记恰好一个 owner；未登记、重复登记或跨 owner 直接写入都失败。
+- 跨子系统只能调用公开 Interface；不得导入对方私有服务、直接读写对方表或把 React/HTTP 状态当成领域契约。
+- 涉及多个 owner 的用户结果由 Application Workflow 协调。需要强一致时，Workflow 在同一 SQLite 事务中调用各子系统事务内 Interface，维持共同不变量。
+- 读投影可由同库 outbox 中的选择性公开事件构建；读投影不是命令事实源，也不能反向推导或修补业务事实。
+- UI、HTTP、SQLite、Windows verified-handle、Provider、CLI、MCP 都是 Adapter；领域能力不以某个 Adapter 的形态定义。
 
-- Web 外壳与设计系统（`app/layout.tsx`、`app/tokens.css`、`app/cockpit.css`）：三栏协作驾驶舱、响应式布局、共享 light/dark token 与首绘前主题恢复。
-- 用户界面（`components/`）：项目、团队配置、渐进式首次引导、协作、使命看板、安全执行、同伴复核与交付视图。
-- HTTP 边界（`app/api/`）：把用户操作映射为严格校验、可重试的项目/Agent/运行/执行/复核 API。
-- 领域与编排（`src/`）：项目上下文、Agent 协作、任务 DAG、执行生命周期、复核与交付规则。
-- 持久化（`src/` 内数据库与迁移模块、`.data/` 运行数据）：SQLite schema、不可变版本链、事务与重放恢复。
-- 安全执行（`src/` 内 execution/sandbox/merge 模块）：隔离工作区、受控工具、审批、验证、冲突检测与可恢复合入。
-- 验证（`tests/`）：Vitest 单元/集成/组件测试与 Playwright 浏览器 smoke。
+这不是微服务规划。逻辑边界先在单体内变得清楚、可测试、可机械约束；没有独立部署、扩缩容、数据驻留或故障隔离证据时不拆进程。
 
-## 核心数据模型
+## 2. 逻辑子系统与事实所有权
 
-- Provider、Skill、AgentTemplate 与 Agent 组成可复用团队资源；Agent 身份与模型绑定分离。
-- Project 绑定一个规范工作区并拥有 Members、Mission、WorkItems、Memories 与 ValidationPolicy。
-- Project 内包含稳定持久 Thread；消息与版本化成员策略属于线程，Mission、看板和 active memory 仍是项目共享事实。
-- v7 协作数据以 project/thread/run 复合 ownership 约束读写与迁移，跨 tuple 访问失败关闭。
-- `collaboration_thread_facts` 是消息与公开 run 事件的唯一渲染流。
-- CollaborationRun 明确归属一个 Thread，并由公开 TimelineEvents、Turns、Decisions、Usage 和显式 handoff 串成可恢复接力。
-- Execution/Attempt/Action 在隔离 sandbox 产出 Validation、StagedChange、Approval、Artifact 与 MergeJournal。
-- 冻结 `SourceTuple={projectId,threadId,runId}` 驱动 Execution、Review 与 Delivery 的来源恢复，禁止以项目最新 run 替代。
-- Result 经非执行者 ReviewAttempt 裁决后形成版本链，并把带精确来源的记忆与 Delivery 留在项目中。
+下列“拥有”指有权验证并提交该事实的唯一逻辑 owner；“不拥有”用于明确常见越界。具体表名可以随迁移改变，所有权不得随调用方便而漂移。
 
-## 关键流程
+### Identity & Capability
 
-- 配置团队：页面 → providers/skills/agents API → 校验与密钥边界 → SQLite → 团队资源视图。
-- 首次引导：URL 状态机 → 既有 Provider/Agent/Project/Workspace/Members 事实检测与原表面配置 → Mission+CollaborationRun 目标受理；本地偏好只保存非敏感控制事件，未知写入只 GET 对账。
-- 协作交付：owner 目标 → 项目上下文与使命看板 → 多 Agent 接力/并行执行 → 审批与验证 → 独立复核 → 记忆和最终交付。
-- 安全合入：任务快照 → 隔离 sandbox 工具动作 → stale/冲突检查 → staged preview/审批 → merge journal → canonical workspace。
+拥有：
 
-## 横切约定
+- Provider 配置身份、加密凭据引用与连接验证结果。
+- Skill、Agent Template、Agent 稳定身份、角色职责、模型绑定、能力声明、工具权限和预算配置。
+- Adapter 注册所需的受控能力描述、版本与启停状态。
 
-- 所有外部输入在 API 边界严格校验；凭据、隐藏思维链和原始 provider 响应不得进入 UI、日志或持久化。
-- 写操作使用 operation/version/lease 等确定性约束；失败关闭，重试不得补写旧动作或伪造成功。
-- UI 复用 `tokens.css`，保持 Cool 自有暖色 light/dark 层级、Agent 身份色、44px 控件、可见焦点与 loading/empty/error 三态；主题偏好仅保存非敏感枚举/修订并在首次绘制前恢复。
-- 新行为按 `tests/` 中对应领域测试先红后绿；全量 `npm test`、`npm run build` 与浏览器 smoke 作为交付证据。
+不拥有：
+
+- Project 成员关系、Thread 成员策略、Mission 分工或运行中的持棒者。
+- 某次执行获得的实际授权、Approval 裁决或工作区路径。
+- 用量投影和“哪个 Agent 更适合”的派生结论。
+
+### Project & Workspace
+
+拥有：
+
+- Project 身份、生命周期与隔离边界。
+- Project Member 关系，以及绑定工作区的规范身份、已验证根、文件系统支持状态和 Validation Policy。
+- 项目级非敏感偏好中确属 Project 配置的事实。
+
+不拥有：
+
+- Agent 本身的角色/能力配置。
+- Mission、Work Item、Thread Message、Execution、Review、Memory 或 Delivery 的业务状态。
+- 任意宿主文件内容；绑定只建立能力边界，不把文件系统变成 Project 数据库。
+
+### Mission & Work
+
+拥有：
+
+- Mission 目标、状态与完成门槛。
+- Work Item、负责人、依赖 DAG、阻塞原因、状态、版本和唯一有效任务事实。
+- 任务领取资格和与任务生命周期直接相关的派发意图。
+
+不拥有：
+
+- 公开聊天、Thread/Run 生命周期、执行产物、Approval、Review 裁决或知识条目。
+- 页面看板排序、依赖图布局或 SOP 读投影。
+- Agent 身份与工具权限。
+
+### Public Collaboration
+
+拥有：
+
+- Thread 身份、标题、成员策略版本和公开活动顺序。
+- Collaboration Run 的协作生命周期、Turn/Attempt、公开 Message、Thread Fact、handoff、owner 决策请求与回答。
+- Structured Message Block、Inline Decision 与其 Action Receipt（在相应能力 ship 后）。
+- 公开协作中的 actor 快照、来源关联和可见用量事实。
+
+不拥有：
+
+- Mission/Work Item 状态、Execution 工具动作、Approval 裁决、Review 结论、Memory 内容或 Delivery。
+- Provider 原始响应、隐藏推理、凭据和私密 diff。
+- 搜索索引、通知发送状态或跨域时间轴投影。
+
+### Safe Execution
+
+拥有：
+
+- Execution、Attempt、Action、sandbox 身份与基线快照。
+- 工具调用、Validation、Artifact、Staged Change、冲突/陈旧状态、Merge Journal 和工作区合入结果。
+- 执行阶段的 acquire/checkpoint/finalize 租约状态、资源边界和确定终态。
+
+不拥有：
+
+- Mission 完成、公开协作交棒、Approval 裁决、Review 结论或最终 Delivery。
+- Project 绑定根和 Agent 能力配置；只消费其冻结授权快照。
+- canonical workspace 之外的宿主能力，或 owner 未明确授权的网络/进程能力。
+
+### Governance
+
+拥有：
+
+- Approval Request、裁决、失效、作用域和不可变授权证据。
+- 跨域安全政策中确属治理的版本、例外、审计保留与风险分类。
+- operation 注册/对账协议的共享治理规则；具体业务 operation 的结果仍归产生它的子系统。
+
+不拥有：
+
+- 被批准动作的业务成功、Execution 结果、Mission 状态或 Review 结论。
+- 通过审批自动扩大 Adapter 权限，或替代 verified-handle、sandbox、版本和冲突检查。
+- 运维审计页面的查询投影。
+
+### Review & Delivery
+
+拥有：
+
+- Result 版本、Review Attempt、复核者资格快照、退回/升级/通过裁决和复核证据。
+- Delivery、交付包身份、最终摘要、证据清单与交付完成版本。
+- “全部任务独立通过且最终交付已持久化”的交付侧完成证据。
+
+不拥有：
+
+- Execution 的工具结果、Mission 的最终状态写入、Memory 内容或公开 Thread Fact。
+- 复核 Agent 的身份配置和 Provider 凭据。
+- 用“最新运行”替代冻结 Source Tuple。
+
+### Knowledge & Provenance
+
+拥有：
+
+- Project Memory、类型、actor、来源、版本、active/supersedes 链和集合关系。
+- 可引用证据身份、知识来源边及提炼发布状态。
+- 知识索引任务的领域状态；检索结果本身是可重建投影。
+
+不拥有：
+
+- 原始 Message、Execution Artifact、Review 或 Delivery。
+- 无来源模型推断、Provider 原始响应或把聊天自动升级为知识。
+- 跨项目聚合事实。
+
+### Runtime
+
+拥有：
+
+- 受控 Runtime/Adapter 实例、会话、能力协商、版本、健康握手和生命周期。
+- Provider 调用、CLI/ACP 会话、MCP transport/tool 调用等外部交互的脱敏请求元数据与确定结果引用。
+- 基于冻结配置权限、项目范围、风险政策与 Approval 来源版本计算或缓存的 effective grant 运行时投影及其撤销/失效状态；该投影不是授权事实源。
+
+不拥有：
+
+- Agent 身份、Project/Workspace 事实、Mission 状态、公开消息、执行合入、Approval 或知识。
+- 任意进程内插件对数据库、凭据、宿主文件、进程或网络的直接访问。
+- 把外部 runtime 的“成功”直接提交为业务完成。
+
+### Operations Projection
+
+拥有：
+
+- 从公开事件重建的服务健康、用量、审计浏览、运行时间轴、通知、搜索和只读回放投影。
+- 投影 checkpoint、消费者版本、重建进度、失败和 freshness。
+
+不拥有：
+
+- 任何命令事实、Approval、Mission/Work 状态、Thread Fact、Execution、Review、Memory 或 Delivery。
+- 对源子系统回写“修正值”或以投影缺失证明业务事实不存在。
+- 隐藏推理、凭据、原始 Provider 响应和未脱敏私密内容。
+
+### 权限事实四分与转换
+
+权限不是一个可被多个模块覆写的通用 `grant`。四类事实具有不同身份、版本和唯一 owner：
+
+1. **配置权限与能力声明** — owner: Identity & Capability。描述 Agent/Adapter 被配置为可以请求哪些工具、预算和能力；只有 Identity & Capability 的命令 Interface 能写。它不证明某次 Project 或 Runtime 调用已获授权。
+2. **项目授权范围** — owner: Project & Workspace。描述 Project Member、绑定 workspace root、Validation Policy 及该项目允许使用的能力范围；只有 Project & Workspace 能写。它不能扩大 Identity 配置，也不构成高风险 Approval。
+3. **Approval 请求、裁决证据与风险政策** — owner: Governance。Approval 绑定精确 actor、Project、目标、风险、operation、Frozen Source Tuple、期限和版本；只有 Governance 能创建请求、记录 owner 裁决或使其失效。裁决只是授权证据，不写入执行成功。
+4. **effective grant 运行时投影** — owner: Runtime。它是从上述三类冻结输入求交集后计算、或按来源版本与短 TTL 缓存的可撤销投影；Runtime 只能写缓存 identity、source versions、expiresAt/revokedAt 和计算结果，不能写配置权限、项目范围、Approval 或风险政策，也不能把缓存当成第二授权源。
+
+授权转换由 `Resolve Effective Runtime Grant` Application Workflow 发起：
+
+1. 冻结 actor/Agent、Project/Workspace、requested capability、operation、目标资源和全部来源版本。
+2. 分别查询 Identity & Capability 的配置声明、Project & Workspace 的项目范围，以及 Governance 的风险政策与适用 Approval；查询不产生授权事实。
+3. Workflow 将冻结输入交给 Runtime 的纯求交/校验 Interface。任一来源缺失、过期、撤销、版本变化或目标不匹配即拒绝；grant 不能比任一输入更宽。
+4. Runtime 可缓存带完整 source versions 的 effective grant；每次 acquire/checkpoint/finalize 都重新校验撤销、期限和目标。缓存失配只能失效，不能回写或自动续期来源授权。
+5. Safe Execution 或其他调用方只消费本次 Workflow 返回的冻结 grant；业务结果仍由动作所属子系统写入。
+
+## 3. Interface、Workflow 与事务
+
+### 公开 Interface
+
+每个子系统公开少量以业务能力命名的 Interface，统一使用领域 DTO 和稳定错误，不泄漏表行、SQLite connection、React state 或 Adapter SDK 类型。适用性矩阵如下：
+
+- **查询 Interface**：校验适用的 Project/ownership scope、调用者能力、输入上限和稳定错误；不要求 operation/hash、expected version 或 lease。跨域批量报表优先进入 Operations Projection，而不是开放任意表查询。
+- **写命令 Interface**：必须携带 operation ID 与覆盖完整意图的 request hash，并在命令/父聚合层携带一个可机械判定的并发前置。update/transition 使用 expected aggregate/state version；create 使用 `not-exists/0`，或由 owner 明确定义的 expected stream/head version。同 operation + hash 重放同一结果，同 ID 不同 hash 冲突。只有命令跨时间占有资源时才要求 lease。
+- **事务内写命令 Interface**：只允许 Application Workflow 在既有 SQLite transaction boundary 内调用；它继承父命令的 operation/hash 与并发前置，并使用由外层 operation 派生、可稳定重放的 step identity。若该步骤独立修改另一个既有聚合，必须额外提供那个聚合的 expected aggregate/state version；若只追加不可变 child fact、operation outcome、receipt、audit/outbox envelope 等同事务派生记录，则这些记录不拥有也不伪造独立 expected version。事务内命令不得自行提交、开启外部调用或制造 lease；若工作跨时，必须退出事务并进入 acquire/checkpoint/finalize。
+- **Port**：描述领域需要的持久化或外部能力，不是跨域命令入口；Adapter 实现 Port。Port 调用是否需要 operation/version/lease，取决于其所属命令而非“一律要求”。
+
+只有两种情况建立 Interface：存在两个以上真实替换实现，或跨越明确的信任/所有权接缝。单一内部实现、无替换证据的 helper 不为“未来插件”提前端口化。
+
+### 可执行依赖方向
+
+命令路径固定为：
+
+`入站 Adapter → Application Workflow → 领域 Capability Interface → 领域 Port ← 持久化/外部 Adapter`
+
+查询路径可以是 `入站 Adapter → 领域 Query Interface`，或 `入站 Adapter → Operations Projection Query`；查询不得在返回前隐式发起命令。
+
+允许/禁止矩阵：
+
+- **入站 Adapter**：允许依赖 Workflow entry contract、领域 Query Interface 和稳定 DTO；禁止依赖领域 private、repository、SQLite connection 或外部 Adapter concrete。
+- **Application Workflow**：允许依赖多个领域 Capability Interface、事务协调 Port 和稳定 DTO；禁止依赖 React/HTTP、具体 SQLite/Windows/Provider Adapter、领域 private 或 Operations Projection 来决定命令真相。
+- **领域模块**：只允许依赖自身 private、共享的无业务 owner 基础类型和自身声明的 Port；禁止依赖 Workflow、任何 Adapter、Operations Projection 或其他领域模块。跨域所需事实由 Workflow 冻结后作为 DTO 传入。
+- **持久化/外部 Adapter**：允许实现一个明确领域 Port，并依赖对应 Port contract 与外部 SDK；禁止调用领域命令、编排 Workflow、直接写其他 owner 的表或互相形成业务调用链。
+- **Operations Projection**：允许消费公开事件并写自己的投影存储；禁止被领域模块依赖、发起业务命令、写 owner 表或参与强不变量裁决。
+- **composition root**：只负责构造与注入 Workflow、Capability Interface 和 Adapter；禁止包含业务分支。
+
+跨域命令只能由 Application Workflow 发起。领域 A 不直接命令领域 B，即使 B 暴露 public Interface；因此命令依赖图以 Workflow 为中心，不允许领域间环或 Workflow 回调 Adapter 后再进入另一领域的隐式环。
+
+### Application Workflow
+
+Application Workflow 表达一个跨 owner 的用户结果，例如：
+
+- 接受 owner 目标：Project/成员资格检查 → Mission 建立 → Thread/Run 公开受理。
+- 执行完成推进：Safe Execution finalize → Mission & Work 状态转换 → Public Collaboration 公开事实。
+- 复核通过交付：Review 裁决 → Knowledge 候选/来源 → Delivery → Mission 完成。
+- 审批后续接：Governance 裁决 → 原 owner Interface 重新检查版本与租约 → 执行动作。
+
+Workflow 只拥有流程 operation、步骤/checkpoint 和补偿状态，不拥有被协调的领域事实。强不变量在一个 SQLite transaction boundary 内提交；外部调用不得长时间占用数据库事务，而应使用 acquire → 外部动作/安全点 checkpoint → finalize：
+
+1. **acquire**：在短事务内验证 tuple、operation/version/lease、能力与预算，冻结输入并取得租约。
+2. **checkpoint**：外部动作期间只记录有界、脱敏且可恢复的进度；每次继续前重新验证租约与取消状态。
+3. **finalize**：在短事务内重新检查冻结来源、版本、租约和冲突，再原子写入终态、公开事实与 outbox。
+
+## 4. 必须保留的强不变量
+
+- **Project/Thread/Run tuple**：Thread、Run、Message、Block、Decision、Execution 来源及下游事实必须按完整 ownership tuple 查询和约束；跨 tuple 访问失败关闭。
+- **Frozen Source Tuple**：Project、Thread、Run、Message 及适用来源实体/版本在动作开始时冻结；恢复、复核、投影和交付不得替换成 latest。
+- **operation/version/lease**：每个写命令必须有幂等 operation/hash，并在命令/父聚合层声明并发前置：update/transition 使用 expected aggregate/state version，create 使用 `not-exists/0` 或 owner 定义的 expected stream/head version。不可变 child fact、operation、receipt、audit/outbox 等同事务派生记录继承父命令前置，不拥有虚构的独立 expected version。只有跨时间占有才使用 lease，单事务动作不得制造虚假长租约。
+- **acquire/checkpoint/finalize**：所有跨进程、Provider、CLI、MCP 或长时工作都服从三阶段协议；崩溃恢复不得补造业务成功。
+- **单一写 owner**：每张写表恰有一个 owner，只有 owner repository/transaction Interface 可写；首次发布前 canonical schema bootstrap 是受控生命周期入口，不成为第二个运行时业务 writer。
+- **来源与历史不可变**：公开事实、复核裁决、交付、已完成 receipt 与来源版本不就地改写；变化通过新版本或新事实表达。
+- **安全组合不降级**：verified-handle、sandbox、Approval、冲突检测、脱敏、审计和独立复核按动作风险组合适用；任何 Interface 或 Adapter 都不能旁路。
+
+## 5. 事件、outbox 与投影
+
+采用**选择性同库 outbox**，不采用全面事件溯源。
+
+- owner 子系统在提交命令事实的同一 SQLite 事务中追加稳定的公开事件 envelope。
+- 只有明确消费者的跨域通知、搜索、运维、用量、审计、时间轴和回放事件进入 outbox；内部实现步骤不因“可能有用”而公开。
+- 事件包含 event identity、schema version、occurredAt、actor、完整适用 tuple、source version 和脱敏 payload；不含凭据、隐藏推理、原始 Provider 响应或私密原文。
+- 消费者按 event identity 幂等处理并保存 checkpoint；投影可丢弃重建，重建不得调用命令 Interface 或产生业务动作。
+- 命令查询以 owner 的当前事实/版本链为准。投影陈旧、失败或缺失只能显示 freshness/error，不能回写或伪造成业务失败。
+- 需要监管级历史、任意时点重建或分叉的事实出现前，不把现有状态表改造成事件流。
+
+## 6. Ports/Adapters 边界
+
+目标 Adapter 分类：
+
+- **入站 Adapter**：HTTP route、React server/client action、CLI 管理入口；负责传输限制、身份/项目上下文组装和错误映射，不包含领域决定。
+- **持久化 Adapter**：SQLite repository、transaction、canonical schema bootstrap/validation、outbox；SQLite schema 是实现细节，但复合约束和原子性必须兑现领域不变量。首次发布前不保留版本间 migration。
+- **工作区 Adapter**：Windows verified-handle、文件系统、Git、进程与本地预览；只实现 Safe Execution/Project & Workspace 所授予的窄能力。
+- **模型与外部运行时 Adapter**：OpenAI-compatible Provider、原生 CLI/ACP、MCP；外部返回始终不可信，经严格 schema、大小、凭据和来源校验后才能成为业务事实。
+- **通知与媒体 Adapter**：浏览器通知/PWA、未来受控语音；默认最小内容、显式同意、可撤销，不代替 Approval。
+
+受控扩展端口只暴露领域允许的窄能力，不暴露数据库连接、任意文件路径、通用 shell、主密钥或进程内对象图。新增 Adapter 必须独立切片、声明权限、来源、版本、失败模式、撤销/卸载和审计方案；开闭原则不是安全协议的免审通行证。
+
+## 7. 目标状态目录结构
+
+目标目录把逻辑所有权落实为可机械检查的物理接缝。当前工程必须先完成这次架构收敛，后续产品功能才可恢复实现。收敛不是一次不可验证的大搬家：它按 owner 与调用接缝拆成连续波次，每一波同时迁移 Interface、Implementation、Adapter、调用方与测试，并始终保持仓库可构建、公共行为不回退；全部波次完成前不在旧结构上继续叠加功能。
+
+```text
+cool-ai/
+├─ app/                                  # Next.js 入站 HTTP / 页面 Adapter
+│  ├─ api/                              # route.ts：传输校验、上下文组装、错误映射
+│  └─ ...                               # page/layout：只装配产品表面
+├─ components/                           # React 入站 UI Adapter
+│  ├─ shell/
+│  ├─ collaboration/
+│  ├─ mission/
+│  ├─ execution/
+│  ├─ review/
+│  └─ shared/                           # 仅无领域所有权的 UI primitive
+├─ src/
+│  ├─ modules/                          # 长期稳定的逻辑子系统 Module
+│  │  ├─ identity-capability/
+│  │  ├─ project-workspace/
+│  │  ├─ mission-work/
+│  │  ├─ public-collaboration/
+│  │  ├─ safe-execution/
+│  │  ├─ governance/
+│  │  ├─ review-delivery/
+│  │  ├─ knowledge-provenance/
+│  │  ├─ runtime/
+│  │  └─ operations-projection/
+│  ├─ application/
+│  │  └─ workflows/                     # 跨 owner 用户结果与事务/补偿编排
+│  ├─ adapters/
+│  │  ├─ inbound/                       # 非 Next 入站：CLI、未来受控本机入口
+│  │  └─ outbound/
+│  │     ├─ sqlite/                     # repository、transaction、canonical schema、outbox
+│  │     ├─ workspace/                  # Windows verified-handle、文件、Git、进程
+│  │     ├─ model-runtime/              # OpenAI-compatible、CLI/ACP、MCP
+│  │     └─ notification-media/         # 浏览器通知与未来受控媒体能力
+│  ├─ composition/                      # composition root；只构造和注入
+│  └─ shared/                           # 无业务 owner 的最小基础类型与工具
+├─ tests/
+│  ├─ modules/                          # 按逻辑 owner 分治的 Interface 行为测试
+│  ├─ workflows/                        # 按命名用户结果分治的跨域测试
+│  ├─ adapters/                         # 按技术接缝再按 owner/capability 分治
+│  ├─ browser/                          # 按可演示垂直切片分治
+│  ├─ architecture/                     # 全局 import、owner、writer、依赖图约束
+│  └─ fixtures/                         # 按 owner 分治的确定性 fixture builder
+├─ product/                             # 产品定义、目标架构、决策与待办
+├─ features/                            # 垂直切片规格、架构、票据、评审与进度
+└─ docs/adr/                            # 跨切片长期架构决定
+```
+
+### 子系统 Module 内部形态
+
+每个 `src/modules/<module>/` 都采用同一最小骨架；目录名称表达角色，不要求每个可选目录都预先创建：
+
+```text
+src/modules/<module>/
+├─ index.ts                             # 唯一对外导入入口，导出完整公开 Interface
+├─ public/                              # 调用方必须知道的命令、查询、DTO、稳定错误
+│  ├─ commands.ts
+│  ├─ queries.ts
+│  ├─ dto.ts
+│  └─ errors.ts
+├─ internal/                            # 聚合、政策、命令实现、查询实现与内部接缝
+│  ├─ model/
+│  ├─ commands/
+│  ├─ queries/
+│  └─ policies/
+└─ ports/                               # 本 Module 声明的持久化/外部能力 Port
+```
+
+- `index.ts` 与 `public/` 共同构成一个小而完整的 Module Interface；其他 Module、Workflow 和入站 Adapter 不得深导入 `internal/` 或 `ports/`。
+- `ports/` 只供本 Module 的 Implementation 和被授权的 outbound Adapter 使用，不是第二套跨域 Interface。不存在真实替换或信任接缝时不创建 Port。
+- Module 私有类型不得进入 HTTP、React、SQLite、Windows 或 Provider SDK 类型；公开 DTO 只能引用本 Module 类型或 `src/shared/` 中无业务 owner 的基础类型。
+- `operations-projection` 使用相同骨架，但其公开面只有投影查询、freshness 和重建管理 Interface；不得导出业务写命令。
+- 禁止建立通用 `services/`、`repositories/`、`models/` 或 `utils/` 横切目录。无法确定 owner 的代码先视为架构发现项，不能以“shared”规避所有权。
+
+### Workflow、Adapter 与装配形态
+
+一个跨 owner 用户结果对应一个命名目录，而不是一个万能 Workflow：
+
+```text
+src/application/workflows/<user-result>/
+├─ index.ts                             # 唯一 Workflow entry contract
+├─ workflow.ts                          # 步骤、事务、checkpoint 与补偿
+└─ dto.ts                               # 该用户结果的输入和输出
+```
+
+- Workflow 只依赖各 Module 的 `index.ts`、事务协调 Port 和无 owner 基础类型；不得导入 Module `internal/`、具体 Adapter、React/HTTP 或投影来裁决命令真相。
+- `app/`、`components/` 和 `src/adapters/inbound/` 是入站 Adapter。HTTP route 不得成为业务目录：同一用户结果即使有多个 route，也必须汇入同一个 Workflow 或 Module Query Interface。
+- `src/adapters/outbound/<technology>/<module-or-capability>/` 实现明确 Port。SQLite Adapter 必须按 owner 分目录；共享 connection、transaction、canonical bootstrap 和 validator 只能提供技术能力，不能包含领域分支。
+- `src/composition/` 是唯一可同时看到 concrete Adapter 与 Interface 的生产代码位置。它可以按 Web、worker、CLI 入口拆文件，但不得包含业务条件、校验或状态转换。
+
+### 测试与导入规则
+
+测试目录采用“被测对象优先、owner 或用户结果次级分区”，不建立全仓 `unit/`、`integration/`、`e2e/` 三个彼此失去所有权的大桶：
+
+```text
+tests/
+├─ modules/
+│  ├─ identity-capability/
+│  ├─ project-workspace/
+│  ├─ mission-work/
+│  ├─ public-collaboration/
+│  ├─ safe-execution/
+│  ├─ governance/
+│  ├─ review-delivery/
+│  ├─ knowledge-provenance/
+│  ├─ runtime/
+│  └─ operations-projection/
+│     ├─ behavior/                      # 公开命令、查询、不变量与稳定错误
+│     └─ contracts/                     # 可复用于 Adapter 的 Port contract suite
+├─ workflows/
+│  └─ <user-result>/                    # 原子性、重放、补偿、跨 owner 失败关闭
+├─ adapters/
+│  ├─ sqlite/
+│  │  └─ <module>/                      # repository、bootstrap、重开与精确 schema
+│  ├─ workspace/
+│  │  └─ <capability>/                  # verified-handle、文件、Git、进程
+│  ├─ model-runtime/
+│  │  └─ <adapter>/                     # Provider、CLI/ACP、MCP
+│  └─ notification-media/
+├─ browser/
+│  └─ <vertical-slice>/                 # 真实渲染、可访问性与用户结果验收
+├─ architecture/
+│  ├─ imports/
+│  ├─ ownership/
+│  ├─ writers/
+│  └─ dependency-graph/
+└─ fixtures/
+   ├─ <module>/                         # 该 owner 的聚合和持久化 fixture builder
+   └─ shared/                           # 仅 ID、时钟等无 owner 确定性基础设施
+```
+
+- 测试归属由主要被测 Interface 决定，而不是由使用了数据库、HTTP 或 React 决定。同一 Module 的纯行为与 SQLite 集成分别位于 `modules/<module>/` 和 `adapters/sqlite/<module>/`。
+- 只有命名 Workflow 测试可以在一个场景中驱动多个 Module；Module 测试不得通过直接组装其他 Module 来模拟跨域业务。
+- 每个垂直切片的浏览器目录只保留用户可观察验收和 axe 证据，不重复 Module/Workflow 已覆盖的状态组合。
+- fixture builder 归事实 owner 所有；跨域测试组合多个 owner builder，但不得建立可任意写所有表的“万能数据库 fixture”。
+- 测试文件名表达行为与接缝，例如 `answer-inline-decision.behavior.test.ts`、`sqlite-inline-decision.contract.test.ts`；不得继续使用无法判断 owner 的 `service.test.ts` 或按历史票号无限增长的聚合文件。
+- Module 行为测试的被测入口与生产调用方相同，统一从 `src/modules/<module>/index.ts` 导入；只有 Module 自身的少量白盒测试可位于该 Module 内并访问内部接缝。
+- Adapter 契约测试复用 Module 提供的 Port contract suite；不得 mock 被测 Module 来证明 Adapter 正确。
+- 浏览器测试按可演示纵切组织，不镜像页面文件树；架构测试单独验证跨域 deep import、循环依赖、未知 writer 和未登记表。
+- TypeScript path alias 只为公开入口和稳定顶层角色服务；不得为 `internal/`、`ports/` 或具体 Adapter 建立绕过规则的捷径。
+- `src/server/`、按技术类别聚集的根级 `*-service.ts`，以及 route 内的跨域编排不属于目标状态。只有当调用方、测试、writer 清单和依赖检查全部迁走后，旧路径才能删除。
+
+### 目录迁移完成判据
+
+一个子系统只有同时满足以下条件，才可标记为已迁入目标目录：
+
+1. 命令事实和写表清单登记唯一 owner，运行时写入只来自该 owner 的 Adapter。
+2. 公开调用方只通过 Module `index.ts` 或命名 Workflow 进入，不存在跨域 deep import。
+3. Interface 不泄漏技术类型，Module 内部不反向依赖 Workflow、Adapter 或其他 Module。
+4. 公共行为、fresh bootstrap/exact reopen、operation/version/lease、tuple 与安全组合测试仍通过。
+5. 架构测试能阻止旧写入口或禁止依赖重新出现；仅移动文件或增加 barrel export 不算完成。
+
+## 8. 当前已实现
+
+当前现实仍是一个按技术层和历史切片逐步形成的 Next.js 16 / React 19 / strict TypeScript / SQLite 单仓应用：
+
+- **App Router 与 React 产品面已存在**：页面/API 同仓，协作驾驶舱、Mission、执行、复核和交付仍按产品表面组织。证据索引：`app/api/projects/[projectId]/threads/route.ts`、`app/api/projects/[projectId]/mission/route.ts`、`app/api/projects/[projectId]/executions/route.ts`、`components/collaboration/collaboration-panel.tsx`、`components/project-context/mission-board.tsx`、`components/execution/execution-panel.tsx`、`components/review/review-product-surface.tsx`。
+- **服务端已有主要领域服务，但尚未按目标十子系统完成边界迁移**：可确认项目、Mission、协作、执行、复核/交付、记忆和 Provider 服务并存；“是否全部收敛到目标 owner”待写表/导入全量扫描后核验。证据索引：`src/server/projects.ts`、`src/server/mission-service.ts`、`src/server/collaboration/thread-service.ts`、`src/server/execution/execution-service.ts`、`src/server/review/review-application-service.ts`、`src/server/review/delivery-service.ts`、`src/server/memory-service.ts`、`src/server/provider-service.ts`。
+- **SQLite 已承载 tuple、版本、operation/lease 和恢复约束**：唯一 `CURRENT_SCHEMA`、fresh bootstrap 与 exact reopen tests 是当前证据；“仍有多少运行时 direct writer”尚未完整扫描，标记待核验，不视为既成多写事实。证据索引：`src/server/storage/current-schema.ts`、`src/server/storage/bootstrap-current-schema.ts`、`src/server/storage/validate-current-schema.ts`、`tests/current-schema.test.ts`、`tests/collaboration-operations.test.ts`。
+- **Safe Execution 核心已交付**：Windows verified-handle、sandbox orchestration、Validation、Staged Change、Approval、冲突检查与 Merge 路径已有源文件和公共行为测试。证据索引：`src/server/execution/windows-verified-execution-adapter.ts`、`src/server/execution/execution-service.ts`、`src/server/execution/execution-approval-service.ts`、`tests/execution-security-integration.test.ts`、`tests/execution-write-stage-integration.test.ts`、`tests/execution-merge-route.test.ts`。
+- **公开 Thread Fact 流与 S-12 tuple 已交付**：`collaboration_thread_facts` 由 current canonical schema 和唯一 writer seam 支撑，线程读取按 fact 分页；S-12 已 ship。证据索引：`src/server/storage/current-schema.ts`、`src/server/collaboration/thread-fact-store.ts`、`tests/thread-fact-store.test.ts`、`tests/thread-history-api.test.ts`、`features/014-persistent-project-threads/progress.md`。
+- **S-13 已实现大量结构化消息代码但尚未 ship**：不能视为已交付 Capability；当前阶段和票据状态以 feature 记录为准。证据索引：`src/server/storage/current-schema.ts`、`src/server/structured-messages/structured-message-store.ts`、`src/server/structured-messages/inline-decision-service.ts`、`tests/current-schema.test.ts`、`features/015-structured-messages-inline-decisions/tickets.md`、`features/015-structured-messages-inline-decisions/progress.md`。
+- **通用 outbox/Operations Projection 骨架：待核验后仍按未交付治理**。本轮对 `src/**/*.ts` 的限定搜索未命中 `outbox`，但未完成所有生成物/运行路径扫描；因此 backlog 将 `CAP-OPS-01` 标为规划中，而不是断言仓库绝对不存在任何局部事件表。
+- **第三方通用插件宿主：待核验后仍按未交付治理**。当前产品/ADR 禁止任意进程内插件，尚未对所有依赖和动态加载路径完成供应链级扫描；`CAP-RUN-04` 保持规划中，不能作为现有能力。
+
+因此，“目标子系统已定义”不等于当前工程已经符合目标架构。接下来的工程主线是先完成全量架构收敛；除恢复既有行为、安全边界或构建基线所必需且单独记录验证的阻塞缺陷外，暂停新增产品行为、Capability 和 Adapter，非阻塞缺陷与体验扩展继续冻结。收敛期间以运行行为、事实 owner 和不变量为准，不以文件名宣称完成。
+
+## 9. 迁移顺序
+
+### 执行政策
+
+- **架构优先冻结**：目标架构收敛建立独立基础特性/计划；它通过全部机械门禁、测试、构建、浏览器验收与用户确认前，后续产品特性不得进入 implement。已经实现但尚未 ship 的代码属于当前基线并纳入迁移；仍停留在规格、架构或票据阶段的后续行为暂停，不借迁移偷渡实现。Review 是否执行服从 `AGENTS.md` 当前项目级政策，不以本节静默恢复已豁免的 review。
+- **完整目标、分波执行**：必须把全部现有生产代码和测试迁入第 7 节目标目录并删除旧入口，但实现按 2～5 张同模块、同接缝票据的波次推进。每个波次可独立验证、保持构建通过；不建立长期双写、双 Interface 或新旧实现并行。
+- **行为保持**：本次只改变模块位置、依赖方向、Interface/Adapter 所有权和装配方式，不新增产品能力。公共行为、安全组合、错误 envelope、事务原子性与不可变历史保持不变；只允许修复恢复既有行为、安全或构建基线所必需的阻塞缺陷，并要求独立票据、失败证据与聚焦验证；其他发现只记录，不在纯搬迁中静默修正。
+- **首次发布前数据政策**：项目尚未发布，不迁移或兼容任何历史 SQLite schema、本地开发数据或 legacy fixture。只保留 `CURRENT_SCHEMA` 的 fresh bootstrap、exact reopen 和非法非空数据库失败关闭；开发数据库由开发者显式删除重建，应用不得静默清库。
+- **完成前不宣布收敛**：仅创建目录、barrel export、alias 或包装旧 `src/server` 不算迁移。旧实现、旧导入、跨 owner writer 和 route 编排全部消失，机械约束通过后才解除冻结。
+
+### 收敛波次
+
+1. **冻结基线与建立清单**：固定当前源代码和公共行为测试基线；建立机器可读的 Module、依赖、写表 owner 和运行时 writer 清单，列出全部 `src/server/`、route 编排、跨域 deep import 与技术类型泄漏。
+2. **建立目标骨架与机械护栏**：创建 `src/modules/`、`src/application/workflows/`、`src/adapters/`、`src/composition/` 及目标测试分区；先让 import、owner、writer 和依赖图检查可报告，再在各迁移波次完成后逐项转为阻断。
+3. **收敛 current storage**：把 connection、transaction、`CURRENT_SCHEMA` bootstrap/validator 放入 SQLite Adapter；按 owner 切分 repository 和 fixture。删除历史 migration、legacy schema 和旧数据兼容残留，不改变 current schema 业务不变量。
+4. **迁移领域 Module**：按事实 owner 逐个迁移现有 Identity & Capability、Project & Workspace、Mission & Work、Public Collaboration、Safe Execution、Governance、Review & Delivery、Knowledge & Provenance、Runtime 和已有 Operations Projection 代码。每波同时迁移公开 Interface、Implementation、Port、SQLite/外部 Adapter 与对应测试；未实现的计划能力不创建空壳。
+5. **显式化 Application Workflow**：把现有跨 owner 用户结果从 route、页面和跨域调用中提取为命名 Workflow，保留同 SQLite 事务、operation/version/lease 与 acquire/checkpoint/finalize 语义。
+6. **迁移入站与装配**：让 `app/`、`components/` 和其他 inbound Adapter 只依赖 Workflow entry contract 或 Module Query Interface；把 concrete Adapter 构造集中到 `src/composition/`，删除 route 内业务分支和隐式 service locator。
+7. **迁移并分治测试**：按第 7 节测试树移动且深化现有测试，使用 owner fixture builder 和公共 Interface；删除只证明旧目录、旧 schema migration 或私有实现的测试，保留并增强行为、current reopen、恢复与安全证据。
+8. **收缩旧结构并验收**：删除 `src/server/`、根级 `*-service.ts`、兼容 re-export、临时 alias 和重复 fixture；运行架构检查、聚焦测试、全量测试、生产构建及现有浏览器 smoke。全部强制验证与用户确认完成后才恢复后续功能开发；Review 按届时 `AGENTS.md` 生效政策执行。
+
+每个波次推进前都必须满足同一退出门禁：适用的第 407～415 行目录迁移完成判据已满足，聚焦测试与生产构建通过，该波旧入口已删除，且不存在双写、双事实 owner、双 Interface 或只转发旧实现的长期兼容层。未通过时不得开始下一波。
+
+## 10. 建议的机械约束
+
+- 维护 `write-ownership` manifest：每张非只读表恰有一个 owner；CI 检查未登记、重复 owner 和 canonical bootstrap 之外的非 owner SQL。
+- 维护可执行 dependency manifest，逐类编码允许边：入站 Adapter → Workflow/Query Interface；Workflow → 领域 Capability Interface/事务协调 Port；Adapter → 被实现的领域 Port；composition root → 全部装配目标。未列出的边默认禁止。
+- import-boundary/lint 必须禁止：领域 → Workflow/Adapter/Operations Projection/其他领域，Workflow → 具体 Adapter/领域 private，入站 Adapter → repository/SQLite，Adapter → 其他 owner 表或领域命令。
+- 构建依赖图必须无领域间命令边、无跨域命令环；跨域 command handler 只能位于 Application Workflow，领域 public Interface 不能被另一领域直接调用。
+- 对 SQL 做静态清单检查：除 owner repository 和 canonical schema bootstrap 外，禁止 `INSERT/UPDATE/DELETE` 目标表；bootstrap 只能建立 current schema，不能写业务事实，新表必须先登记 owner。
+- 为 Interface 适用性矩阵建立契约测试：Query 不要求 operation/version/lease；每个写命令要求 operation/hash，并验证 update/transition 的 expected aggregate/state version 与 create 的 `not-exists/0` 或 expected stream/head version；事务内派生 child fact、operation、receipt、audit/outbox 必须证明继承父命令前置且拒绝独立伪造 expected version；独立修改第二聚合时必须验证第二聚合 expected version；只有跨时占有路径要求 lease，并验证 tuple 与回滚原子性。
+- 对公开事件做 schema/version、脱敏、outbox 原子提交、重复消费和从零重建测试。
+- 对 acquire/checkpoint/finalize 建立崩溃点与重启对账测试，证明不会重复外部动作或伪造成功。
+- 对 Project/Thread/Run 与 Frozen Source Tuple 建立数据库复合约束和 tuple-scoped 查询测试。
+- 对 Adapter 建立能力/权限清单和架构测试，禁止数据库连接、主密钥、任意 host path 或通用 shell 穿过 Port。
+- 对 Operations Projection 建立只读约束：投影代码不能链接命令 repository，重建过程不能写业务 owner 表。
+- 首次发布前 storage lifecycle 只允许 atomic/idempotent fresh bootstrap、current exact-schema validation 和 drift fail-closed；禁止版本间 migration、legacy adoption 与 backfill。

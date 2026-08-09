@@ -6,7 +6,7 @@ import type { DatabaseSync } from "node:sqlite";
 import { afterEach, describe, expect, it } from "vitest";
 
 import { openDatabase } from "@/src/server/db";
-import { execV7Fixture } from "@/tests/v7-fixture-graph";
+import { execV7Fixture } from "@/tests/fixtures/execution/current-graph";
 
 const databaseDirectories: string[] = [];
 

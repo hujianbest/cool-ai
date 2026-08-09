@@ -952,6 +952,67 @@ ol {
   font: var(--text-xs) var(--font-sans);
 }
 
+.structured-block {
+  display: grid;
+  gap: var(--space-3);
+  width: var(--full-width);
+  border: var(--border-width) solid var(--border-subtle);
+  border-radius: var(--radius-sm);
+  padding: var(--space-4);
+  background: var(--surface-panel);
+}
+
+.structured-block h5,
+.structured-block p {
+  margin: 0;
+}
+
+.structured-block-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--space-2);
+}
+
+.structured-block-actions a,
+.structured-source-projection > a {
+  display: inline-flex;
+  min-height: var(--control-min);
+  align-items: center;
+  padding: var(--space-2) var(--space-3);
+}
+
+.structured-source-projection {
+  display: grid;
+  gap: var(--space-2);
+  min-width: 0;
+}
+
+.structured-source-projection pre {
+  max-width: var(--full-width);
+  overflow: auto;
+  white-space: pre-wrap;
+  overflow-wrap: anywhere;
+}
+
+.structured-checklist {
+  display: grid;
+  gap: var(--space-2);
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.structured-checklist li {
+  display: flex;
+  align-items: center;
+  gap: var(--space-3);
+  min-width: 0;
+}
+
+.structured-checklist span {
+  overflow-wrap: anywhere;
+}
+
 .status-label {
   border: var(--border-width) solid currentColor;
   border-radius: var(--radius-sm);

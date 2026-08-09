@@ -13,6 +13,7 @@ import {
 import { createPortal } from "react-dom";
 
 import { useModalSurface } from "@/components/mobile-dialog";
+import { StructuredMessageBlock } from "@/components/collaboration/structured-message-block";
 import { useTargetRequestGuard } from "@/components/collaboration/use-target-request-guard";
 import type {
   AnswerDecisionResponse,
@@ -36,6 +37,7 @@ import type {
   MembershipState,
   ProjectMember,
 } from "@/src/shared/project-context-contracts";
+import { reduceTranscript } from "@/src/shared/transcript-model";
 
 type CollaborationPanelProps = {
   projectId: string;
@@ -529,107 +531,6 @@ function eventActor(event: TimelineEvent, members: ProjectMember[]): string {
   if (event.actorType === "system") return "系统";
   return members.find((member) => member.agentId === event.actorId)?.name
     ?? (event.type === "agent_message" ? event.payload.agentDisplayName : event.actorId)
-    ?? "Agent";
-}
-
-function eventPresentation(
-  event: TimelineEvent,
-  messages: Map<string, ProjectMessage>,
-): { detail: string | null; heading: string } {
-  switch (event.type) {
-    case "run_started":
-      return { detail: null, heading: "协作已启动" };
-    case "owner_message":
-      return {
-        detail: messages.get(event.payload.messageId)?.content ?? "所有者消息已记录",
-        heading: "所有者发来消息",
-      };
-    case "agent_message":
-      return {
-        detail: messages.get(event.payload.messageId)?.content ?? "Agent 消息已记录",
-        heading: "Agent 发来消息",
-      };
-    case "model_call_started":
-      return { detail: null, heading: "正在调用模型" };
-    case "model_call_succeeded":
-      return { detail: null, heading: "模型调用已完成" };
-    case "model_call_failed":
-      return { detail: "可重试的调用状态已记录", heading: "模型调用失败" };
-    case "usage_recorded":
-      return { detail: null, heading: "模型用量已记录" };
-    case "tasks_created":
-      return { detail: null, heading: "任务已创建" };
-    case "task_claimed":
-      return { detail: null, heading: "任务已领取" };
-    case "handoff":
-      return { detail: event.payload.summary, heading: "协作棒已交接" };
-    case "decision_requested":
-      return { detail: null, heading: "等待所有者决策" };
-    case "decision_answered":
-      return { detail: null, heading: "所有者已回答决策" };
-    case "boundary_paused":
-      return { detail: null, heading: "协作已在边界暂停" };
-    case "run_paused":
-      return { detail: null, heading: "协作已暂停" };
-    case "run_resumed":
-      return { detail: null, heading: "协作已继续" };
-    case "run_retried":
-      return { detail: null, heading: "协作已重试" };
-    case "run_planned":
-      return { detail: null, heading: "协作计划已就绪" };
-    case "run_stopped":
-      return { detail: null, heading: "协作已停止" };
-    case "attempt_interrupted":
-      return { detail: null, heading: "本轮推进已中断" };
-    case "action_rejected":
-      return { detail: null, heading: "本轮动作未提交" };
-    case "context_changed":
-      return { detail: null, heading: "项目上下文已变化" };
-  }
-}
-
-function factPresentation(
-  fact: ThreadFactDto,
-): { detail: string | null; heading: string } {
-  if (fact.type === "thread_created") {
-    return { detail: fact.payload.title, heading: "线程已创建" };
-  }
-  if (fact.type === "policy_changed") {
-    return { detail: null, heading: "协作成员策略已更新" };
-  }
-  if (fact.type === "run_linked") {
-    return { detail: null, heading: "运行已关联" };
-  }
-  if (fact.type === "owner_message") {
-    return { detail: fact.message.content, heading: "所有者发来消息" };
-  }
-  if (fact.type === "agent_message") {
-    return { detail: fact.message.content, heading: "Agent 发来消息" };
-  }
-  if (fact.type !== "run_event") {
-    return { detail: null, heading: "线程事实已记录" };
-  }
-  const event = {
-    actorId: fact.actorId,
-    actorType: fact.actorType,
-    createdAt: fact.createdAt,
-    id: fact.runEventId,
-    payload: {},
-    runId: fact.runId,
-    sequence: fact.sequence,
-    type: fact.payload.eventType,
-  } as TimelineEvent;
-  return eventPresentation(event, new Map());
-}
-
-function factActor(fact: ThreadFactDto, members: ProjectMember[]): string {
-  if (fact.type === "owner_message" || fact.type === "agent_message") {
-    return fact.message.authorDisplayName;
-  }
-  if (fact.actorType === "owner") return "项目所有者";
-  if (fact.actorType === "system") return "系统";
-  return members.find((member) => member.agentId === fact.actorId)?.name
-    ?? fact.actorId
     ?? "Agent";
 }
 
@@ -2001,6 +1902,11 @@ export function CollaborationPanel({
       || (fact.payload.eventType !== "owner_message"
         && fact.payload.eventType !== "agent_message"),
   );
+  const transcript = reduceTranscript({
+    currentTargetKey: targetKey,
+    pages: [{ items: renderedFacts }],
+    targetKey,
+  });
   const currentMember = members?.find(
     (member) => member.agentId === state?.run?.currentAgentId,
   );
@@ -2272,7 +2178,11 @@ export function CollaborationPanel({
               </p>
             </section>
           ) : null}
-          {showChat && state && renderedFacts.length ? (
+          {showChat && state && transcript.kind === "invalid" ? (
+            <p className="error-text state-message" role="alert">
+              {transcript.message}
+            </p>
+          ) : showChat && state && transcript.kind === "ready" && transcript.entries.length ? (
             <>
             <div
               aria-busy={factsPending}
@@ -2291,37 +2201,39 @@ export function CollaborationPanel({
               <ol
                 className="timeline"
               >
-              {renderedFacts.map((fact) => {
-                const presentation = factPresentation(fact);
-                const message =
-                  fact.type === "owner_message" || fact.type === "agent_message"
-                    ? fact.message
-                    : null;
+              {transcript.entries.map((entry) => {
                 return (
                   <li
                     className="timeline-item timeline-event"
-                    key={fact.id}
+                    key={entry.factId}
                     ref={(node) => {
-                      if (!message) return;
-                      if (node) messageRefs.current.set(message.id, node);
-                      else messageRefs.current.delete(message.id);
+                      if (!entry.messageId) return;
+                      if (node) messageRefs.current.set(entry.messageId, node);
+                      else messageRefs.current.delete(entry.messageId);
                     }}
-                    tabIndex={message ? -1 : undefined}
+                    tabIndex={entry.messageId ? -1 : undefined}
                   >
                     <div className="timeline-event-heading">
-                      <h4>{presentation.heading}</h4>
-                      <time dateTime={fact.createdAt}>{readableTime(fact.createdAt)}</time>
+                      <h4>{entry.heading}</h4>
+                      <time dateTime={entry.createdAt}>{readableTime(entry.createdAt)}</time>
                     </div>
-                    <p className="muted">{factActor(fact, members ?? [])}</p>
-                    {message?.mentionAgentId && message.mentionDisplayName ? (
+                    <p className="muted">{entry.actorLabel}</p>
+                    {entry.mention ? (
                       <span className="mention-chip">
-                        @{message.mentionDisplayName}
-                        {message.mentionMemberStatus === "left" ? (
+                        @{entry.mention.displayName}
+                        {entry.mention.memberStatus === "left" ? (
                           <span className="status-label">已离组</span>
                         ) : null}
                       </span>
                     ) : null}
-                    {presentation.detail ? <p>{presentation.detail}</p> : null}
+                    {entry.text ? <p>{entry.text}</p> : null}
+                    {entry.blocks.map((block) => (
+                      <StructuredMessageBlock
+                        block={block}
+                        key={block.id}
+                        targetKey={targetKey}
+                      />
+                    ))}
                   </li>
                 );
               })}

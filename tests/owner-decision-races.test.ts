@@ -248,7 +248,9 @@ beforeEach(() => {
     runDatabase.close();
   }
   createMission(databasePath, PROJECT_ID, {
+    expectedVersion: 0,
     goal: "Keep owner decision races durable and explicit",
+    operationId: "16000000-0000-4000-8000-000000000122",
     title: "Decision race mission",
   });
 });

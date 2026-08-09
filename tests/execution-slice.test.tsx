@@ -7,7 +7,7 @@ import { createElement, type ComponentType } from "react";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
 import { openDatabase } from "@/src/server/db";
-import { execV7Fixture } from "@/tests/v7-fixture-graph";
+import { execV7Fixture } from "@/tests/fixtures/execution/current-graph";
 
 type RouteContext = { params: Promise<{ projectId: string }> };
 type ExecutionRoute = {

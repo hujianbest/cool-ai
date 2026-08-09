@@ -146,7 +146,12 @@ describe("delivery invalidation and restart recovery", () => {
     directories.push(directory);
     const path = join(directory, "cockpit.sqlite");
     const project = createProject("Delivery context", path);
-    const mission = createMission(path, project.id, { title: "Before", goal: "Old" });
+    const mission = createMission(path, project.id, {
+      expectedVersion: 0,
+      goal: "Old",
+      operationId: "16000000-0000-4000-8000-000000000115",
+      title: "Before",
+    });
 
     updateMission(path, mission.id, {
       expectedVersion: mission.version,

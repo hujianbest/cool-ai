@@ -116,8 +116,10 @@ beforeEach(() => {
   projectId = project.id;
   seed();
   missionId = createMission(databasePath, projectId, {
+    expectedVersion: 0,
     title: "Transaction mission",
     goal: "Compose atomic actions",
+    operationId: "16000000-0000-4000-8000-000000000119",
   }).id;
 });
 

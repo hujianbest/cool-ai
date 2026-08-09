@@ -1,8 +1,8 @@
 import { randomUUID } from "node:crypto";
 
 import { MissionError } from "@/src/server/mission-service";
-import { SchemaMigrationError } from "@/src/server/migrations";
 import { CompletionGateError } from "@/src/server/review/completion-gate";
+import { SchemaError } from "@/src/server/storage/schema-error";
 
 export async function readMissionJson(
   request: Request,
@@ -41,7 +41,7 @@ export function missionApiError(error: unknown, route: string): Response {
       { status: error.httpStatus },
     );
   }
-  if (error instanceof SchemaMigrationError) {
+  if (error instanceof SchemaError) {
     return Response.json(
       { error: { code: error.code, message: error.message } },
       { status: 503 },

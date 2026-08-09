@@ -5,12 +5,8 @@ import { afterEach, beforeEach, describe, expect, it } from "vitest";
 
 import { createThread } from "@/src/server/collaboration/thread-service";
 import { createCredentialVault } from "@/src/server/credential-vault";
-import { createV6FixtureDatabaseOpener } from "@/tests/v6-fixture-db";
-
-const openDatabase = createV6FixtureDatabaseOpener({
-  missingDeliveryHeadMissionIds: ["mission-1"],
-  missingReviewHeadResultIds: [],
-});
+import { openDatabase } from "@/src/server/db";
+import { createMission } from "@/src/server/mission-service";
 
 type Route = {
   POST(
@@ -77,16 +73,16 @@ function seedReadyProject(): void {
         );
       INSERT INTO project_memberships (project_id, agent_id, joined_at)
       VALUES ('project-1', 'agent-a', 'a'), ('project-1', 'agent-b', 'b');
-      INSERT INTO missions (
-        id, project_id, title, goal, version, created_at, updated_at
-      ) VALUES (
-        'mission-1', 'project-1', 'Mission', 'Goal', 1,
-        '2026-07-30T00:00:00.000Z', '2026-07-30T00:00:00.000Z'
-      );
     `);
   } finally {
     database.close();
   }
+  createMission(databasePath, "project-1", {
+    expectedVersion: 0,
+    goal: "Goal",
+    operationId: "16000000-0000-4000-8000-000000000110",
+    title: "Mission",
+  });
   threadId = createThread(databasePath, "project-1", {
     memberAgentIds: ["agent-a", "agent-b"],
     operationId: "00000000-0000-4000-8000-000000000309",

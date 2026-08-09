@@ -358,7 +358,7 @@ describe("tuple-scoped owner message API", () => {
     [{ content: "a".repeat(10_001), operationId: OPERATION }, "long content"],
     [{ content: "x", mentionAgentId: null, operationId: OPERATION }, "null mention"],
     [{ content: "x", operationId: OPERATION, extra: true }, "extra key"],
-  ])("rejects strict body envelope: %s (%s)", async (body) => {
+  ])("rejects strict body envelope: %s (%s)", async (body, _description) => {
     const response = await post("project-a", threadA, JSON.stringify(body));
     expect(response.status).toBe(400);
     expect(await response.json()).toMatchObject({ error: { code: "INVALID_INPUT" } });

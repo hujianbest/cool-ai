@@ -13,13 +13,15 @@ import type { DatabaseSync } from "node:sqlite";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
 import { openDatabase } from "@/src/server/db";
-import { validateV7 } from "@/src/server/migrations-v7";
 import {
   createWindowsVerifiedMergeAdapter,
   type MergeVerifiedAdapter,
 } from "@/src/server/execution/merge-verified-adapter";
-import { execV7Fixture } from "@/tests/v7-fixture-graph";
-import { refreshExecutionFrozenFixture } from "./execution-frozen-fixture";
+import {
+  execV7Fixture,
+  validateFixtureDatabase,
+} from "@/tests/fixtures/execution/current-graph";
+import { refreshExecutionFrozenFixture } from "@/tests/fixtures/execution/frozen-input";
 
 vi.mock("server-only", () => ({}));
 
@@ -244,13 +246,13 @@ describe("merge journal prepare and conditional apply", () => {
       expect(fixture.database.prepare(
         "SELECT status,consumed_at IS NOT NULL AS consumed FROM execution_approvals",
       ).get()).toEqual({ consumed: 1, status: "consumed" });
-      expect(validateV7(fixture.database)).toBeNull();
+      expect(validateFixtureDatabase(fixture.database)).toBeNull();
       fixture.database.prepare(`
         UPDATE execution_merge_files
         SET durable_new_ref_json=json_set(durable_new_ref_json,'$.ownerId','wrong-owner')
         WHERE journal_id=? AND position=0
       `).run(result.journalId);
-      expect(validateV7(fixture.database)).toBe("SCHEMA_DATA_INVALID");
+      expect(validateFixtureDatabase(fixture.database)).toBe("SCHEMA_DATA_INVALID");
     } finally {
       fixture.database.close();
     }

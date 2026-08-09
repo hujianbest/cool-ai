@@ -6,7 +6,7 @@ import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { createThread } from "@/src/server/collaboration/thread-service";
 import { createCredentialVault } from "@/src/server/credential-vault";
 import { openDatabase } from "@/src/server/db";
-import { initializeMissionDeliveryTx } from "@/src/server/migrations-v6";
+import { seedMissionInitializationForMission as initializeMissionDeliveryTx } from "@/tests/fixtures/review/mission-initialization";
 
 type RunRoute = {
   POST(
@@ -542,7 +542,7 @@ describe("tuple-scoped new CollaborationRun API", () => {
     [{ message: "a".repeat(10_001), operationId: OPERATION }, "long message"],
     [{ message: "x", mentionAgentId: null, operationId: OPERATION }, "null mention"],
     [{ message: "x", operationId: OPERATION, extra: true }, "extra key"],
-  ])("rejects the strict request envelope and bounds: %s (%s)", async (body) => {
+  ])("rejects the strict request envelope and bounds: %s (%s)", async (body, _description) => {
     const before = state("project-a", threadA);
     const response = await post("project-a", threadA, JSON.stringify(body));
     expect(response.status).toBe(400);

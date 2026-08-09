@@ -2,11 +2,11 @@ import {
   collaborationErrorBody,
   CollaborationError,
 } from "@/src/server/collaboration/collaboration-errors";
-import { SchemaMigrationError } from "@/src/server/migrations";
 import {
   internalErrorResponse,
   storageErrorResponse,
 } from "@/src/server/api-errors";
+import { SchemaError } from "@/src/server/storage/schema-error";
 
 export async function readCollaborationJson(
   request: Request,
@@ -28,9 +28,9 @@ export function collaborationErrorResponse(error: unknown, route: string): Respo
   if (error instanceof CollaborationError) {
     return Response.json(collaborationErrorBody(error), { status: error.httpStatus });
   }
-  if (error instanceof SchemaMigrationError) {
+  if (error instanceof SchemaError) {
     return Response.json(
-      { error: { code: "STORAGE_UNAVAILABLE", message: "Storage is unavailable." } },
+      { error: { code: error.code, message: error.message } },
       { status: 503 },
     );
   }

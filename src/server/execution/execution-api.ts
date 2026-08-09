@@ -1,6 +1,6 @@
 import { internalErrorResponse, storageErrorResponse } from "@/src/server/api-errors";
 import { ExecutionError } from "@/src/server/execution/execution-service";
-import { SchemaMigrationError } from "@/src/server/migrations";
+import { SchemaError } from "@/src/server/storage/schema-error";
 
 export async function readBoundedExecutionJson(
   request: Request,
@@ -77,9 +77,9 @@ export function executionErrorResponse(error: unknown, route: string): Response 
       { status: error.httpStatus },
     );
   }
-  if (error instanceof SchemaMigrationError) {
+  if (error instanceof SchemaError) {
     return Response.json(
-      { error: { code: "STORAGE_UNAVAILABLE", message: "Storage is unavailable." } },
+      { error: { code: error.code, message: error.message } },
       { status: 503 },
     );
   }

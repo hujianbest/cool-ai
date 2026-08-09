@@ -18,7 +18,12 @@ type MissionDomain = {
   createMission(
     databasePath: string,
     projectId: string,
-    input: { goal: string; title: string },
+    input: {
+      expectedVersion: number;
+      goal: string;
+      operationId: string;
+      title: string;
+    },
   ): { id: string };
   createWorkItem(
     databasePath: string,
@@ -125,7 +130,9 @@ beforeEach(async () => {
     title: "Legacy completion",
   });
   missionId = domain.createMission(databasePath, projectId, {
+    expectedVersion: 0,
     goal: "Close every completion bypass",
+    operationId: randomUUID(),
     title: "Legacy mission",
   }).id;
   database = openDatabase(databasePath);

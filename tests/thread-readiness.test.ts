@@ -7,7 +7,7 @@ import { CollaborationError } from "@/src/server/collaboration/collaboration-err
 import { createThread } from "@/src/server/collaboration/thread-service";
 import { createCredentialVault } from "@/src/server/credential-vault";
 import { openDatabase } from "@/src/server/db";
-import { initializeMissingMissionHeads } from "@/tests/v7-fixture-graph";
+import { initializeMissingMissionHeads } from "@/tests/fixtures/execution/current-graph";
 
 const NOW = "2026-08-08T08:00:00.000Z";
 const OPERATION = "00000000-0000-4000-8000-000000000901";

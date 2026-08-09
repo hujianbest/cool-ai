@@ -11,7 +11,7 @@ import {
 import type { ProjectThreadRunTuple } from "@/src/server/collaboration/turn-orchestrator";
 import { createCredentialVault } from "@/src/server/credential-vault";
 import { openDatabase } from "@/src/server/db";
-import { initializeMissionDeliveryTx } from "@/src/server/migrations-v6";
+import { seedMissionInitializationForMission as initializeMissionDeliveryTx } from "@/tests/fixtures/review/mission-initialization";
 
 type RecoveryModule = {
   acquireAdvance: (

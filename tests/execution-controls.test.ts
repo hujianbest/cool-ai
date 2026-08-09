@@ -5,7 +5,7 @@ import type { DatabaseSync } from "node:sqlite";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
 import { openDatabase } from "@/src/server/db";
-import { initializeMissingMissionHeads } from "@/tests/v7-fixture-graph";
+import { initializeMissingMissionHeads } from "@/tests/fixtures/execution/current-graph";
 import {
   controlExecution,
   type ExecutionControlDependencies,

@@ -8,7 +8,7 @@ import { CollaborationError } from "@/src/server/collaboration/collaboration-err
 import { createThread } from "@/src/server/collaboration/thread-service";
 import { createCredentialVault } from "@/src/server/credential-vault";
 import { openDatabase } from "@/src/server/db";
-import { initializeMissionDeliveryTx } from "@/src/server/migrations-v6";
+import { seedMissionInitializationForMission as initializeMissionDeliveryTx } from "@/tests/fixtures/review/mission-initialization";
 
 type ControlAction = "pause" | "continue" | "retry" | "stop";
 type ControlInput = {

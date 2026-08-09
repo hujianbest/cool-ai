@@ -138,7 +138,7 @@ const thread = {
 };
 
 function messageFact(
-  message: typeof ownerMessage,
+  message: Omit<typeof ownerMessage, "runId"> & { runId: string | null },
   sequence: number,
 ) {
   return {

@@ -1,15 +1,16 @@
 import { randomUUID } from "node:crypto";
 import type { DatabaseSync } from "node:sqlite";
 
-import { canonicalRequestHash } from "@/src/server/collaboration/operation-receipts";
-import { openDatabase } from "@/src/server/db";
-import { initializeMissionDeliveryTx } from "@/src/server/migrations-v6";
 import {
   CompletionGateError,
   invalidateCompletionTx,
+  invalidateMissionContextTx,
   writeWorkItemStatusTx,
-} from "@/src/server/review/completion-gate";
-import { invalidateMissionContextTx } from "@/src/server/review/delivery-service";
+} from "@/src/server/application/mission-review-effects";
+import { canonicalRequestHash } from "@/src/server/collaboration/operation-receipts";
+import { createServerComposition } from "@/src/server/composition/server-composition";
+import { openDatabase } from "@/src/server/db";
+import { MissionError } from "@/src/server/mission/public";
 import type {
   Mission,
   MissionState,
@@ -17,14 +18,25 @@ import type {
   WorkItemStatus,
 } from "@/src/shared/project-context-contracts";
 
+export { MissionError } from "@/src/server/mission/public";
+
 type MissionRow = Omit<Mission, "projectId"> & { projectId: string };
 type WorkItemRow = Omit<WorkItem, "dependencyIds" | "status"> & {
   status: WorkItemStatus;
 };
 type FieldError = { field: string; code: string };
 
-type CreateMissionInput = { title: string; goal: string };
-type UpdateMissionInput = CreateMissionInput & { expectedVersion: number };
+type CreateMissionInput = {
+  title: string;
+  goal: string;
+  expectedVersion: number;
+  operationId: string;
+};
+type UpdateMissionInput = {
+  title: string;
+  goal: string;
+  expectedVersion: number;
+};
 type CreateWorkItemInput = {
   title: string;
   description: string;
@@ -61,19 +73,6 @@ const allowedTransitions: Record<WorkItemStatus, readonly WorkItemStatus[]> = {
   done: ["in_progress"],
 };
 
-export class MissionError extends Error {
-  constructor(
-    public readonly code: string,
-    public readonly httpStatus: number,
-    message: string,
-    public readonly fields?: FieldError[],
-    public readonly currentVersion?: number,
-  ) {
-    super(message);
-    this.name = "MissionError";
-  }
-}
-
 function graphemeLength(value: string): number {
   return Array.from(segmenter.segment(value)).length;
 }
@@ -105,12 +104,43 @@ function invalid(fields: FieldError[]): never {
   );
 }
 
-function missionInput(input: CreateMissionInput): CreateMissionInput {
+function missionTextInput(input: { title: string; goal: string }): {
+  title: string;
+  goal: string;
+} {
   const fields: FieldError[] = [];
   const title = textField(input?.title, "title", 80, false, fields);
   const goal = textField(input?.goal, "goal", 5000, false, fields);
   if (fields.length > 0) invalid(fields);
-  return { title, goal };
+  return { goal, title };
+}
+
+function missionInput(input: CreateMissionInput): CreateMissionInput {
+  const fields: FieldError[] = [];
+  const { goal, title } = missionTextInput(input);
+  const operationId = input?.operationId;
+  if (operationId === undefined) {
+    fields.push({ field: "operationId", code: "required" });
+  } else if (
+    typeof operationId !== "string"
+    || !/^[0-9a-f]{8}-[0-9a-f]{4}-[1-8][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/iu
+      .test(operationId)
+  ) {
+    fields.push({ field: "operationId", code: "invalid_format" });
+  }
+  const createVersion = input?.expectedVersion;
+  if (createVersion === undefined) {
+    fields.push({ field: "expectedVersion", code: "required" });
+  } else if (createVersion !== 0) {
+    fields.push({ field: "expectedVersion", code: "invalid_value" });
+  }
+  if (fields.length > 0) invalid(fields);
+  return {
+    expectedVersion: createVersion,
+    goal,
+    operationId,
+    title,
+  };
 }
 
 function workItemInput(input: CreateWorkItemInput): CreateWorkItemInput {
@@ -647,33 +677,18 @@ export function createMission(
   input: CreateMissionInput,
 ): Mission {
   const parsed = missionInput(input);
-  const database = openDatabase(databasePath);
-  try {
-    return transaction(database, () => {
-      ensureProject(database, projectId);
-      if (missionForProject(database, projectId)) {
-        throw new MissionError(
-          "MISSION_EXISTS",
-          409,
-          "Project already has a mission.",
-        );
-      }
-      const id = randomUUID();
-      const timestamp = new Date().toISOString();
-      database
-        .prepare(
-          `INSERT INTO missions (
-             id, project_id, title, goal, version, created_at, updated_at
-           ) VALUES (?, ?, ?, ?, 1, ?, ?)`,
-        )
-        .run(id, projectId, parsed.title, parsed.goal, timestamp, timestamp);
-      const mission = missionById(database, id)!;
-      initializeMissionDeliveryTx(database, mission);
-      return mission;
-    });
-  } finally {
-    database.close();
-  }
+  const command = {
+    expectedVersion: parsed.expectedVersion,
+    goal: parsed.goal,
+    operationId: parsed.operationId,
+    projectId,
+    title: parsed.title,
+  };
+  const { createMissionWorkflow } = createServerComposition(databasePath);
+  return createMissionWorkflow.execute({
+    ...command,
+    requestHash: canonicalRequestHash(command),
+  });
 }
 
 export function updateMission(
@@ -681,7 +696,7 @@ export function updateMission(
   missionId: string,
   input: UpdateMissionInput,
 ): Mission {
-  const parsed = missionInput(input);
+  const parsed = missionTextInput(input);
   const version = expectedVersion(input?.expectedVersion);
   const database = openDatabase(databasePath);
   try {

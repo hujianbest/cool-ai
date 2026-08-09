@@ -344,7 +344,9 @@ beforeEach(() => {
     runDatabase.close();
   }
   createMission(databasePath, PROJECT_ID, {
+    expectedVersion: 0,
     goal: "Resolve a collaboration decision",
+    operationId: "16000000-0000-4000-8000-000000000101",
     title: "Decision mission",
   });
 });

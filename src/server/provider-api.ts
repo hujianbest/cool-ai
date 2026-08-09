@@ -2,7 +2,7 @@ import { randomUUID } from "node:crypto";
 
 import { ProviderVerificationError } from "@/src/server/provider-verifier";
 import { ProviderServiceError } from "@/src/server/provider-service";
-import { SchemaMigrationError } from "@/src/server/migrations";
+import { SchemaError } from "@/src/server/storage/schema-error";
 
 export async function readJsonBody(
   request: Request,
@@ -36,7 +36,7 @@ export function providerApiError(error: unknown, route: string): Response {
       { status: error.httpStatus },
     );
   }
-  if (error instanceof SchemaMigrationError) {
+  if (error instanceof SchemaError) {
     return Response.json(
       { error: { code: error.code, message: error.message } },
       { status: 503 },

@@ -65,7 +65,7 @@ function collaborationState(started = false) {
     policyRevisionId: null,
     projectId: project.id,
     runEventId: null,
-    runId: run.id,
+    runId: message.runId,
     sequence: 3,
     threadId,
     type: "owner_message",
@@ -375,7 +375,7 @@ describe("progressive onboarding T-1", () => {
   it("rejects duplicate guide parameters instead of choosing one", async () => {
     vi.stubGlobal(
       "fetch",
-      vi.fn(async (input: RequestInfo | URL) => {
+      vi.fn(async (input: RequestInfo | URL, init?: RequestInit) => {
         if (String(input) === "/api/projects") {
           return Response.json({ projects: [project] });
         }
@@ -501,7 +501,7 @@ describe("progressive onboarding T-1", () => {
     ).toEqual({ kind: "success", started: false });
     vi.stubGlobal(
       "fetch",
-      vi.fn(async (input: RequestInfo | URL) => {
+      vi.fn(async (input: RequestInfo | URL, init?: RequestInit) => {
         const url = String(input);
         if (url === "/api/projects") return Response.json({ projects: [project] });
         if (url === "/api/providers") return Response.json({ providers: [] });
@@ -1086,7 +1086,7 @@ describe("progressive onboarding T-6 explicit project selection", () => {
     await user.type(screen.getByLabelText("项目名称"), project.name);
     const projectForm = screen.getByLabelText("项目名称").closest("form");
     await user.click(
-      within(projectForm!).getByRole("button", { name: "创建项目", exact: true }),
+      within(projectForm!).getByRole("button", { name: "创建项目" }),
     );
 
     await waitFor(() =>
@@ -1129,7 +1129,7 @@ describe("progressive onboarding T-6 explicit project selection", () => {
     await user.type(screen.getByLabelText("项目名称"), project.name);
     const projectForm = screen.getByLabelText("项目名称").closest("form");
     await user.click(
-      within(projectForm!).getByRole("button", { name: "创建项目", exact: true }),
+      within(projectForm!).getByRole("button", { name: "创建项目" }),
     );
 
     await waitFor(() =>
@@ -1174,7 +1174,7 @@ describe("progressive onboarding T-6 explicit project selection", () => {
     await user.type(screen.getByLabelText("项目名称"), project.name);
     const projectForm = screen.getByLabelText("项目名称").closest("form");
     await user.click(
-      within(projectForm!).getByRole("button", { name: "创建项目", exact: true }),
+      within(projectForm!).getByRole("button", { name: "创建项目" }),
     );
 
     expect(
@@ -1937,7 +1937,7 @@ describe("progressive onboarding T-9 formal goal intake", () => {
     await screen.findByText("尚未创建使命。");
     await user.type(screen.getByLabelText("使命标题"), mission.title);
     await user.type(screen.getByLabelText("使命目标"), mission.goal);
-    await user.click(screen.getByRole("button", { name: "创建使命", exact: true }));
+    await user.click(screen.getByRole("button", { name: "创建使命" }));
 
     expect(
       await screen.findByText(/目标已受理；尚未执行、复核或交付。/),
@@ -1978,7 +1978,7 @@ describe("progressive onboarding T-9 formal goal intake", () => {
     await screen.findByText("尚未创建使命。");
     await user.type(screen.getByLabelText("使命标题"), mission.title);
     await user.type(screen.getByLabelText("使命目标"), mission.goal);
-    await user.click(screen.getByRole("button", { name: "创建使命", exact: true }));
+    await user.click(screen.getByRole("button", { name: "创建使命" }));
 
     const receipt = await screen.findByRole("alert");
     expect(receipt).toHaveTextContent("无法唯一确认使命是否已创建");

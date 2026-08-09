@@ -125,7 +125,12 @@ beforeEach(() => {
   directory = mkdtempSync(join(tmpdir(), "delivery-service-"));
   path = join(directory, "cockpit.sqlite");
   projectId = createProject("Delivery", path).id;
-  missionId = createMission(path, projectId, { title: "Mission", goal: "Goal" }).id;
+  missionId = createMission(path, projectId, {
+    expectedVersion: 0,
+    goal: "Goal",
+    operationId: "16000000-0000-4000-8000-000000000112",
+    title: "Mission",
+  }).id;
   workItemId = createWorkItem(path, missionId, {
     assigneeAgentId: null,
     dependencyIds: [],

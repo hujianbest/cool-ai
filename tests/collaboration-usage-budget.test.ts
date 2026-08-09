@@ -14,7 +14,7 @@ import { openDatabase } from "@/src/server/db";
 import {
   execV7Fixture,
   execV7TupleStatements,
-} from "@/tests/v7-fixture-graph";
+} from "@/tests/fixtures/execution/current-graph";
 
 const NOW = "2026-07-30T06:00:00.000Z";
 const PROJECT_ID = "project-usage";

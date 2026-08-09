@@ -13,7 +13,7 @@ import { createThread } from "@/src/server/collaboration/thread-service";
 import { createCredentialVault } from "@/src/server/credential-vault";
 import { openDatabase } from "@/src/server/db";
 import type { ModelCallResult } from "@/src/shared/collaboration-contracts";
-import { refreshExecutionFrozenFixture } from "./execution-frozen-fixture";
+import { refreshExecutionFrozenFixture } from "@/tests/fixtures/execution/frozen-input";
 
 type AnswerRoute = {
   POST(request: Request, context: {

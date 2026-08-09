@@ -95,7 +95,9 @@ beforeEach(() => {
   databasePath = join(directory, "cockpit.sqlite");
   projectId = createProject("Completion gate", databasePath).id;
   missionId = createMission(databasePath, projectId, {
+    expectedVersion: 0,
     goal: "Only reviewed work can complete",
+    operationId: "16000000-0000-4000-8000-000000000104",
     title: "Completion mission",
   }).id;
   database = openDatabase(databasePath);

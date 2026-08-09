@@ -129,3 +129,37 @@ export function classifyPublicTextFromDatabase(
 ): PublicTextCredentialCategory | null {
   return classifyPublicText(text, configuredProviderKeys(databasePath));
 }
+
+export function classifyPublicTextFromDatabaseConnection(
+  database: DatabaseSync,
+  text: string,
+): PublicTextCredentialCategory | null {
+  let rows: ProviderCredentialRow[];
+  try {
+    rows = providerRows(database);
+  } catch {
+    return classifyPublicText(text, []);
+  }
+  if (rows.length === 0) return classifyPublicText(text, []);
+  let vault: ReturnType<typeof createCredentialVault>;
+  try {
+    vault = createCredentialVault();
+  } catch {
+    return unavailable();
+  }
+  const keys = rows.map((row) => {
+    try {
+      return vault.decrypt(row.id, {
+        apiKeyCipher: row.apiKeyCipher,
+        apiKeyIv: row.apiKeyIv,
+        apiKeyMask: row.apiKeyMask,
+        apiKeyTag: row.apiKeyTag,
+        credentialVersion: row.credentialVersion as 1,
+        keyId: row.keyId,
+      });
+    } catch {
+      return unavailable();
+    }
+  });
+  return classifyPublicText(text, keys);
+}

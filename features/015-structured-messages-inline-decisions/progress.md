@@ -1,0 +1,55 @@
+# 进度
+
+- 特性: 015-structured-messages-inline-decisions（对应切片: S-13）
+- 当前阶段: to-spec
+- 执行模式: auto
+- 已加载扩展: ext-ui-design
+- 下一步: 停止在 015 内继续补丁；先分别推进 017 结构化消息完整性与 018 stale decision 对账 UI，二者均 done 后才请求第 4 轮独立 Standards/Spec code review
+- 门禁输出: 第 3 轮 code review「需修改」；按连续评审失控保护返回 to-spec 并拆片（未重新宣称 implement/ship PASS）
+- Ship 协调: 原 016 阻塞已解除；新增 017 与 018 review-remediation vertical sub-slices 同时阻塞 015。两片任一未 done 时不得进行第 4 轮复审或 ship
+- 共享理解: auto-approved 2026-08-09
+- 默认记录: `product/assumptions.md` A-74～A-93（A-92～A-93 记录 16 票粒度、阻塞图与两个 expand-contract 波次）
+- 016 Contract 当前证据: schema/rejection/architecture 与 Structured Message reopen 聚焦 44/44 通过；生产无 `migrations*.ts`、migration runtime import 或第二 DDL manifest，`CURRENT_SCHEMA` identity 9 为唯一 DDL source
+- 规格评审: 第 3 轮独立评审通过，`reviews/spec-review.md` 已记录 auto-approved 2026-08-09
+- 架构评审: 第 2 轮独立评审通过，`reviews/architecture-review.md` 已记录 auto-approved 2026-08-09
+- 任务票: T-01～T-16 已完成
+- code-review 第 3 轮: 结论「需修改」；File Reference 冻结/泄漏、current outcome/DAG/source 双向穷尽、Checklist 单项方向、stale 最新状态、正式类型 accessible name、source busy/status，以及固定全量失败清单尚未关闭
+- 拆片决定: 同类评审连续两轮仍有严重/一般问题，按根 `AGENTS.md` 返回规格/架构并拆为 017（后端完整性，5 票）与 018（UI 对账，4 票）；默认记录于 A-94～A-97
+- 第 4 轮准入: 017 与 018 必须各自完成规格/架构评审、实现、真实验收、独立 code review 与 ship，状态均为 done；015 不复用子片评审冒充自身复审
+- code-review 第 2 轮: 结论「需修改」；已返回 implement，仅修 completed inline decision 全链逐字段一致性与按已批准 spec 恢复 `blocks<=10` / `fileReferences<=100`
+- code-review 第 2 轮 outcome RED/GREEN: reopen 新增 actor、source identity、decision fact action、fact blockRevision、itemId/null 五个 canonical mismatch 家族，首跑 5 项未失败关闭；新增 completed operation→Decision→block/message→from/to state→Business Receipt→decision fact 联表逐字段 validator 后全部失败关闭，Checklist item transition 逐 item 验证，VERSION_CONFLICT 继续由既有 invariant 保持零 state/Decision/Receipt/fact 业务结果
+- code-review 第 2 轮 limits RED/GREEN: 9 blocks 与 99/100 fileReferences 在错误 `8/8` 上限下首跑 RED；schema/store/Agent instruction 恢复 approved spec 的 `blocks<=10`、`fileReferences<=100`，9/10/11 与 99/100/101 边界 GREEN，未改 spec
+- code-review 第 2 轮 focused: 全部 migration + structured/Agent/transcript 29 files / 216 tests 通过；补充 outcome/limits 核心 5 files / 36 tests 与 UI/API 3 files / 13 tests 通过
+- code-review 第 2 轮最终验证: `npx tsc --noEmit`、`npm run build`、`npm run smoke:structured`（12 assertions / 3 axe states / 2 Provider calls）、`git diff --check` 与 ReadLints 全部通过
+- code-review 第 2 轮全量 blocker: `npm test` 为 234/235 files、1817/1818 tests；唯一失败 `tests/agent-review-capability-ui.test.tsx:101` 的范围外 Agent 资源错误态 focus 断言，隔离复跑仍同样失败（期望 alert 获焦，实际 body 获焦）；本轮按“只修两项”未修改该无关表面
+- code-review 第 1 轮: 结论「需修改」；已返回 implement，仅修 Diff 冻结公开快照、v8 persisted strict decode、grapheme/数量上限、完整 256 KiB domain envelope 与 Handoff actor 绑定
+- code-review 第 1 轮修复: Diff 在 Agent commit 前由 exact tuple observation 物化为 immutable public snapshot，拒绝 credential/private/超限文本，payload 冻结 `previewHash`、`stagedHash`、observation/execution identity；source API 只读冻结 payload 并复核 snapshot hash，后续 raw diff 变化不影响公开内容
+- code-review 第 1 轮 reopen: v8 open 逐行 canonical/JCS/hash 后执行 persisted decode；Known block/state/receipt/decision fact/operation outcome 使用 strict schema 并交叉核对 metadata/source/DAG/outcome，UnknownSchema 仅保留满足最小 identity/JCS/size/tuple 的不可执行历史；新增 canonical 但缺字段 fixture 失败关闭
+- code-review 第 1 轮 limits: 所有 block 可见文本统一 `Intl.Segmenter("zh-CN",{granularity:"grapheme"})`，单字段与 20000 total、`fileReferences<=8`、`blocks<=8` 均覆盖 emoji/combining `±1`；完整 actor/message/source/block metadata/payload/initial state domain envelope 先 JCS 编码，再以同 bytes 执行 256 KiB `±1` size/hash
+- code-review 第 1 轮 handoff: resolver 从既有 handoff fact/event/turn/message 读取并冻结原 actor snapshot；block actor 的 type/id/displayName 必须全等，cross-actor、rename 与损坏 event actor 均拒绝
+- code-review 第 1 轮 RED/GREEN: 第 1 轮评审复现 raw mutable Diff、canonical malformed reopen、UTF-16/总量缺口、payload-only envelope 与未绑定 handoff actor；新增公共 seam 回归中 total grapheme 首跑 RED（20001 被接受）后补齐 Agent turn 聚合校验，最终 focused 20 files / 157 tests 与补充核心 6 files / 34 tests 全绿
+- code-review 第 1 轮最终验证: `npm test` 235 files / 1813 tests、`npx tsc --noEmit`、`npm run build`、`npm run smoke:structured`（12 assertions / 3 axe states / 2 Provider calls）、`git diff --check` 全部 exit 0；ReadLints 0，browser evidence 由 smoke 自动更新
+- T-16 真实浏览器证据: `smoke:structured` 12 项断言、3 个 axe 状态、2 次 Provider 调用全绿；desktop light/dark、narrow、Invalid 与结构化 JSON 证据由 smoke 自动生成，critical/serious/contrast 均为 0
+- T-16 恢复/安全: Proposal/Checklist inline 决策、same-operation replay、unknown-write GET-only 对账、双页面 VERSION_CONFLICT、冻结 Diff/File/Handoff 与正式 Approval 导航、refresh/process reopen、legacy/UnknownSchema/Invalid、键盘/focus/44px 与 API/DOM/log/evidence 零敏感标记均通过
+- T-16 类型清零: 原 47 项 TypeScript diagnostics 已通过严格 fixture/contract caller 修复清零；未排除 tests、未弱化断言，`npx tsc --noEmit` exit 0
+- T-16 最终串行门禁: `npm test` 235 files / 1808 tests、`npx tsc --noEmit`、`npm run build`、`smoke:structured`、`smoke:threads`、`smoke:collaboration`、`smoke:execution`、`smoke:review`、`smoke:settings`、`smoke:onboarding`、`git diff --check` 全部 exit 0
+- T-15 RED/GREEN: reopen public seam 初始 5 tests 中 non-canonical JCS 未失败关闭；`execution-operations.test.ts` 5 tests 因 v8 open 后共享 fixture 仍调用 `validateV7` 全红。补齐 persisted canonical/hash、v7 retained-data v8 reopen 校验与 version-aware fixture validator 后，reopen 6/6、原 execution operations 5/5 通过
+- T-15 恢复矩阵: v6/v7 旧纯文本升级 v8 零 block/decision/receipt 回填且 message/fact identity/order 经两次 reopen 不变；新 block/state/Decision/BusinessReceipt/decision fact 跨分页与两次 process reopen 一致；completed 与 terminal VERSION_CONFLICT 同 hash 保留原 response bytes/status，not-found 稳定为 OPERATION_NOT_FOUND，inline pending 为零
+- T-15 失败关闭: 每次 open 均拒绝 invalid source tuple、state head version、state DAG、operation outcome matrix、非 canonical JCS/错误 hash；v7 retained execution/validation/merge invariants 继续在 v8 reopen 执行；v8 migration fault 后 transaction、foreign_keys 与 legacy_alter_table 均恢复
+- T-15 fixture 清零: 扫描 24 个受 v8 open 影响的共享 DB fixture suites，最终 24 files / 232 tests 全绿；修复 `v7-fixture-graph`、command/read/usage/sandbox、merge/review、mission 与 collaboration-slice 的 current-version validator/expectation，未弱化旧 execution pending/CAS/replay 行为
+- T-15 批次验证: focused recovery/collaboration operation 6 files / 46 tests、全部 migration 13 files / 95 tests、collaboration tuple/routes 7 files / 114 tests 通过；`git diff --check` 通过。本批文件 typecheck 仅命中既有 `tests/review-slice.test.tsx:422` source fixture 错误，新增错误 0
+- 补充全量探测: `npm test` 235 files / 1808 tests 中发现 3 项；T-15 相关 collaboration-slice 与 UnknownSchema hash fixture 已修复并各自复跑通过；剩余 1 项为范围外既有 `tests/collaboration-chat.test.tsx:477` mention snapshot UI 失败，隔离复跑仍失败，留 T-16/UI 收尾
+- T-12 验证: Transcript Model public seam 1 file / 4 tests、persisted fact→message→block 集成与 thread history 2 files / 22 tests 通过；五类顺序、跨页 stable ID 去重/碰撞损坏、UnknownSchema 最小不可执行占位、Invalid 安全错误及 target abort/epoch 已覆盖
+- T-13 验证: Proposal/Checklist fact-only UI 1 file / 4 tests、既有 transcript/stale 2 files / 10 tests 通过；loading/error/disabled/completed Receipt success/focus、unknown-write GET-only 对账、VERSION_CONFLICT 读 head 后显式新 operation、终态禁用、Checklist 键盘与 target switch 清理已覆盖
+- T-14 验证: Diff/File/Handoff read-only UI 1 file / 4 tests、strict source route 1 file / 3 tests 通过；脱敏 persisted projection/source version、受控 execution/File/Handoff/Approval 导航、无编辑/合入/approve、host path 不入 DOM、unavailable/unknown 无 latest fallback 已覆盖
+- T-12～T-14 批次验证: affected transcript/UI/route/component 10 files / 61 tests 通过；ReadLints 0；`npx tsc --noEmit` 仍为既有 47 项且本批文件过滤为 0；`git diff --check` 通过
+- T-09 验证: Proposal Inline Decision domain/strict tuple HTTP 2 files / 4 tests 通过；6 个事务 fault 点均全量回滚
+- T-10 验证: Checklist 多轮 transition 与 strict block schema 4 files / 16 tests 通过；连续版本、单 item、payload/revision 不变及零写拒绝已覆盖
+- T-11 验证: completed replay/hash conflict、terminal VERSION_CONFLICT replay、无 inline pending、strict tuple unknown-write GET 2 files / 9 tests 通过
+- T-09～T-11 批次验证: Inline Decision/HTTP/Structured Message/Thread Fact/legacy advance operation 6 files / 21 tests、migration 12 files / 91 tests 通过；`git diff --check` 通过
+- T-09～T-11 类型检查: `npx tsc --noEmit` 仍为既有 47 项（18 个范围外 test/UI fixture 文件）；本批文件过滤结果为 0，ReadLints 为 0
+- 已清零的 v8 fixture 回归: `tests/execution-operations.test.ts` 原 5 项 `V7 fixture graph is invalid: SCHEMA_DRIFT` 已在 T-15 修复并纳入 24-file fixture 回归
+- T-05～T-08 验证: block/Agent/route 11 files / 122 tests、migration 4 files / 35 tests 通过；未开始 T-09
+- 批次验证: migration 13 files / 94 tests、collaboration+codec 11 files / 111 tests 均通过；`git diff --check` 通过
+- 类型检查: `npx tsc --noEmit` 仍被本批次范围外的既有 UI/test fixture 类型错误阻塞；本批次 focused suites 未发现新增类型/行为回归
+- ADR: 创建 proposed [`ADR-0001`](../../docs/adr/0001-normalized-immutable-structured-messages.md)；v8 规范化不可变状态模型同时满足难逆转、脱离上下文意外与真实权衡

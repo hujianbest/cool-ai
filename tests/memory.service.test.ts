@@ -45,6 +45,7 @@ const serviceModules =
 
 let directory: string;
 let databasePath: string;
+let missionOperationSequence: number;
 
 async function service(): Promise<MemoryServiceModule> {
   const load = serviceModules["../src/server/memory-service.ts"];
@@ -55,8 +56,12 @@ async function service(): Promise<MemoryServiceModule> {
 function projectWithWorkItem(name: string) {
   const project = createProject(name, databasePath);
   const mission = createMission(databasePath, project.id, {
+    expectedVersion: 0,
     title: `${name} mission`,
     goal: `${name} goal`,
+    operationId: `16000000-0000-4000-8000-${(++missionOperationSequence)
+      .toString(16)
+      .padStart(12, "0")}`,
   });
   const workItem = createWorkItem(databasePath, mission.id, {
     title: `${name} work`,
@@ -74,6 +79,7 @@ function expectCode(operation: () => unknown, code: string): void {
 beforeEach(() => {
   directory = mkdtempSync(join(tmpdir(), "cockpit-memory-service-"));
   databasePath = join(directory, "cockpit.sqlite");
+  missionOperationSequence = 0;
 });
 
 afterEach(() => {

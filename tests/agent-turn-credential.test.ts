@@ -8,7 +8,7 @@ import { finalizeAdvance } from "@/src/server/collaboration/turn-orchestrator";
 import { createCredentialVault } from "@/src/server/credential-vault";
 import { openDatabase } from "@/src/server/db";
 import type { ModelCallResult } from "@/src/shared/collaboration-contracts";
-import { seedV7AdvanceFixture } from "@/tests/v7-advance-fixture";
+import { seedCurrentAdvanceFixture as seedV7AdvanceFixture } from "@/tests/fixtures/collaboration/current-advance";
 
 vi.mock("@/src/server/collaboration/openai-chat-client", () => ({
   callOpenAiChat: vi.fn(),
@@ -55,7 +55,8 @@ type TextField =
   | "handoff_summary"
   | "handoff_reason"
   | "decision_question"
-  | "decision_option";
+  | "decision_option"
+  | "proposal_body";
 
 function turnWith(field: TextField, value: string): string {
   const handoff = {
@@ -77,6 +78,17 @@ function turnWith(field: TextField, value: string): string {
     });
   }
   return JSON.stringify({
+    blocks: field === "proposal_body"
+      ? [{
+          actions: ["accept", "reject"],
+          blockRevision: 1,
+          blockSchemaVersion: 1,
+          blockType: "proposal",
+          body: value,
+          logicalBlockId: "proposal-credential",
+          title: "Safe title",
+        }]
+      : [],
     claim: null,
     disposition: handoff,
     message: field === "message" ? value : "Clean Agent message.",
@@ -230,6 +242,7 @@ describe("AgentTurn public-text credential rejection", () => {
     "message",
     "task_title",
     "task_description",
+    "proposal_body",
     "handoff_summary",
     "handoff_reason",
     "decision_question",

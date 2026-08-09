@@ -17,7 +17,7 @@ import { createWindowsNativeReadAdapter } from "@/src/server/execution/windows-n
 import {
   execV7Fixture,
   execV7TupleStatements,
-} from "@/tests/v7-fixture-graph";
+} from "@/tests/fixtures/execution/current-graph";
 
 const PROJECT_ID = "sandbox-orchestrator-project";
 const RUN_ID = "sandbox-orchestrator-run";

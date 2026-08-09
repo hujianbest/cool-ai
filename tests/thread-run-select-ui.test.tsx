@@ -91,7 +91,7 @@ function installFetch(
   readDetail: (url: string) => Response | Promise<Response> = (url) =>
     Response.json(detail({ selectedRun: selectedRunFromUrl(url) })),
 ) {
-  const fetchMock = vi.fn(async (input: RequestInfo | URL) => {
+  const fetchMock = vi.fn(async (input: RequestInfo | URL, _init?: RequestInit) => {
     const url = String(input);
     if (url.includes(`/threads/${threadId}/runs/`) && url.endsWith("/timeline")) {
       return Response.json({ items: [], nextAfter: null });

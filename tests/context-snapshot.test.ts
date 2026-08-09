@@ -205,7 +205,12 @@ describe("deterministic project context snapshot", () => {
       expect.objectContaining({ code: "CONTEXT_NOT_READY", missing: ["mission"] }),
     );
 
-    createMission(databasePath, project.id, { title: "Ready", goal: "Ready" });
+    createMission(databasePath, project.id, {
+      expectedVersion: 0,
+      goal: "Ready",
+      operationId: "16000000-0000-4000-8000-000000000105",
+      title: "Ready",
+    });
     expect(() =>
       contexts.createContextSnapshot(databasePath, project.id, "agent-outsider"),
     ).toThrowError(expect.objectContaining({ code: "AGENT_NOT_MEMBER" }));
@@ -222,8 +227,10 @@ describe("deterministic project context snapshot", () => {
     addMember(project.id, "agent-beta", "2026-07-29T00:00:01.000Z");
     addMember(project.id, "agent-alpha", "2026-07-29T00:00:00.000Z");
     const mission = createMission(databasePath, project.id, {
+      expectedVersion: 0,
       title: "Ship context",
       goal: "Produce stable context",
+      operationId: "16000000-0000-4000-8000-000000000106",
     });
     const firstTask = createWorkItem(databasePath, mission.id, {
       title: "First",
@@ -343,7 +350,12 @@ describe("deterministic project context snapshot", () => {
     bindWorkspace(project.id);
     addMember(project.id, "agent-alpha", "a");
     addMember(project.id, "agent-beta", "b");
-    createMission(databasePath, project.id, { title: "Secure", goal: "Secure" });
+    createMission(databasePath, project.id, {
+      expectedVersion: 0,
+      goal: "Secure",
+      operationId: "16000000-0000-4000-8000-000000000107",
+      title: "Secure",
+    });
     process.env.COCKPIT_MASTER_KEY = "known-master-key";
 
     const snapshot = contexts.createContextSnapshot(

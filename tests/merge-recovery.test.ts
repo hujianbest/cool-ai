@@ -12,8 +12,8 @@ import {
   createWindowsVerifiedMergeAdapter,
   type MergeVerifiedAdapter,
 } from "@/src/server/execution/merge-verified-adapter";
-import { execV7Fixture } from "@/tests/v7-fixture-graph";
-import { refreshExecutionFrozenFixture } from "./execution-frozen-fixture";
+import { execV7Fixture } from "@/tests/fixtures/execution/current-graph";
+import { refreshExecutionFrozenFixture } from "@/tests/fixtures/execution/frozen-input";
 
 vi.mock("server-only", () => ({}));
 

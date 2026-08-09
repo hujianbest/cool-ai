@@ -37,7 +37,12 @@ export async function POST(
         mission: createMission(
           databasePath(),
           projectId,
-          body.value as { title: string; goal: string },
+          body.value as {
+            title: string;
+            goal: string;
+            expectedVersion: number;
+            operationId: string;
+          },
         ),
       },
       { status: 201 },

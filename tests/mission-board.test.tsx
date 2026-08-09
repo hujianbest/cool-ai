@@ -202,6 +202,20 @@ describe("Mission Board", () => {
     await user.type(screen.getByLabelText("使命目标"), mission.goal);
     await user.click(screen.getByRole("button", { name: "创建使命" }));
 
+    const createCall = fetchMock.mock.calls.find(
+      ([input, init]) =>
+        String(input).endsWith("/mission") && init?.method === "POST",
+    );
+    expect(createCall).toBeDefined();
+    expect(JSON.parse(String(createCall?.[1]?.body))).toEqual({
+      expectedVersion: 0,
+      goal: mission.goal,
+      operationId: expect.stringMatching(
+        /^[0-9a-f]{8}-[0-9a-f]{4}-4[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/iu,
+      ),
+      title: mission.title,
+    });
+
     const title = await screen.findByRole("heading", {
       name: mission.title,
     });

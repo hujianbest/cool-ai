@@ -1,0 +1,43 @@
+# 进度
+
+- 特性: 016-pre-release-canonical-schema
+- 当前阶段: done
+- 执行模式: auto
+- 已加载扩展: 无
+- 下一步: 已完成；015/S-13 可基于 identity 9 canonical schema 重新执行独立 code review 与 ship 门禁
+- 门禁输出: RESULT: PASS — 可进入 ship（2026-08-09）
+- 最近通过门禁: RESULT: PASS — 可进入 implement（2026-08-09）
+- 共享理解: 用户确认 2026-08-09
+- 用户可感知: 否
+- 阻塞关系: 对 015/S-13 的 canonical schema 前置阻塞已解除；015 仍须独立 code review 与 ship 门禁，不改写既有历史评审结论
+- 规格状态: 独立 spec-review 第 1 轮通过，auto-approved 2026-08-09
+- 架构评审: 第 3 轮独立评审通过，auto-approved 2026-08-09
+- 任务票状态: T-01～T-05 全部完成
+- to-tickets 复核: 5 张票均明确受控 expand-contract 波次、阻塞边、主要归属/目标路径、公共测试缝、RED/GREEN、验证判据与命令
+- T-01 RED: `tests/current-schema.test.ts` 首个公共缝测试观察到 fresh `openDatabase` 返回 `user_version=8`，未建立独立 current identity 9
+- T-01 GREEN: 新增完整显式 `CURRENT_SCHEMA`（identity 9、144 个最终 table/index/trigger DDL）、manifest 自检、单事务 bootstrap、query-only 一致快照 exact reopen 与 current data validation；`openDatabase` fresh/reopen 不再执行 migration runner
+- T-01 验证: `npm test -- tests/current-schema.test.ts` 11/11 通过；fresh/empty/reopen/partial/drift/FK/data invariant/bootstrap rollback/WAL 并发快照均由公共行为观察；`npx tsc --noEmit` 与 `git diff --check` 通过
+- T-02 RED: `tests/schema-error-adapters.test.ts` 首个 public adapter 测试证明 `SchemaError` 可接受并向 API 原样泄漏绝对路径、SQL 与 credential 内容
+- T-02 GREEN: `SchemaError` 固定按 code 产生稳定脱敏 message；10 个生产 inbound adapter/service 已从 `migrations.ts` 的 `SchemaMigrationError` 切到 current storage boundary；目的受限 fixture 仅用统一 marker、current bootstrap 后单变异或最小非法事实表达 rejection 输入
+- T-02 验证: `npm test -- tests/current-schema-rejection.test.ts tests/schema-error-adapters.test.ts` 54/54 通过，覆盖 v1～v8 identity、非空 v0、partial、extra/missing/changed、unsupported identity、FK/data invalid、文件与事实零改写、连接关闭和 adapter 稳定映射；`npx tsc --noEmit` 与 `git diff --check` 通过
+- T-02 遗留风险: 额外运行 `tests/collaboration-operations.test.ts` 与 `tests/execution-read-api.test.ts` 共 21 项因仍依赖 legacy/v7 fixture 图而失败；属于 T-04 明确规划的 fixture 迁移范围，本票未迁移、弱化或修补这些旧 fixture
+- T-03 RED: 三个票据测试先从真实源码观察到 Mission 创建仍直接导入 `migrations-v6` helper，且 TransactionContext、UnitOfWork、两个 owner Capability、SQLite Adapter 与 composition root 均不存在；补充 import-boundary 后再次证明 `mission-service` 仍 deep-import Review 私有 helper
+- T-03 GREEN: 建立不透明 `TransactionContext`、`UnitOfWork` Port、Mission/Review 两个公开 Capability、SQLite UnitOfWork Adapter、Create Mission Workflow 与 server composition；既有 `createMission(databasePath, projectId, input)` 保持契约并切入 workflow。Review owner 实现接管 delivery head/event 写入，使用稳定 step identity，支持同内容幂等并以 `MISSION_INITIALIZATION_CONFLICT` 关闭异内容复用；Mission runtime 不再 import migration/Review 私有模块。为保持既有 Mission update/transition API 行为，原 Review side-effect imports 仅通过 Application 层最小兼容 adapter 转发，未扩张本票 Capability。共享 `openEmptyCurrentDatabase()` fixture 只负责打开空 canonical schema
+- T-03 验证: 三个票据 suites 9/9 通过，覆盖同 context、严格顺序、command 映射、双 owner 全有或全无、外层 rollback、step 幂等/冲突与真实 import 边界；Mission service/API/transaction suites 16/16 通过（锁竞争用例按既有 5 秒 `busy_timeout` 以 10 秒测试预算运行）；`npx tsc --noEmit`、IDE lint 与 `git diff --check` 通过
+- T-04 RED: 可审计清单确认 6 个 migration asset、62 条 caller 关系、54 个唯一直接 caller；T-02 记录的 21 项失败完整复现为 4 个 v6 operation receipt `SCHEMA_UNSUPPORTED` 与 17 个 current identity 误走 v8 schema validator 的 `SCHEMA_DRIFT`。Structured Message reopen 另以 12 项 identity 8 断言暴露 current setup 缺失
+- T-04 GREEN: 48 个唯一 current-business tests 已切到 `tests/fixtures/{collaboration,execution,review}` owner 入口或 Mission/public services；新增 current Mission initialization suite，保留 operation replay/conflict、lease/recovery、tuple ownership、frozen source/provenance、Mission delivery 与 Structured Message state/Decision/Receipt/fact。删除无 caller 的 `v7-advance-fixture.ts`、`execution-frozen-fixture.ts`；persistent thread fixture 已用 current bootstrap/public thread service 验证。完整分类与 T-05 Contract 见 `migration-assets.md`
+- T-04 验证: 票据指定 5 suites 35/35，通过；原 21 项失败所在 suites 23/23，通过；collaboration owner callers 149/149，通过；execution owner callers 261/261，通过；其余 frozen callers 17/17，通过；`smoke:structured` 12 assertions/3 axe states 与 `smoke:threads` 11 assertions/4 axe states 通过；strict typecheck、IDE lint 与 diff-check 通过。全量 `npm test` 为 1882/1894，通过项之外 11 项均是 `migration-assets.md` 已列 T-05 upgrade-only Contract，另 1 项是既有 5 秒测试预算与 5 秒 SQLite busy timeout 相撞（10 秒预算单独通过）
+- T-05 RED: `architecture-boundaries.test.ts` 新增 Contract 约束后，先稳定列出 17 个历史 migration/fixture/upgrade-only 文件，并发现 5 个生产 migration imports；唯一 DDL source 约束同时观察到 historical manifests
+- T-05 GREEN: current validator 已改用 `storage/current-data-invariants.ts`；删除 5 个生产 `migrations*.ts`、全部 runner/shadow-copy/adoption/backfill/upgrade hooks、12 个 migration-named suites、`context-migrations`、`v6-fixture-db`/test 与旧 Mission v6 suite。保留业务 fixture 实现移入 execution/collaboration/structured-messages owner 路径；测试 corruption DDL 从 `CURRENT_SCHEMA` 获取。仓库约束证明无生产 migration import/module、旧 fixture 路径或第二 DDL manifest
+- T-05 S-13: 015 活跃 spec/architecture/tickets 已用 identity 9 fresh bootstrap、exact reopen 与 fail-closed matrix 取代 v7→v8 当前要求；历史 reviews 仅追加 superseded note；015 progress 前置阻塞已解除但未宣称 ship 通过
+- T-05 验证: Contract/schema/rejection/Structured Message reopen 44/44；T-04 与迁移 caller 业务 suites 171/171；恢复的 merge descriptor/validation policy invariants 12/12；全量 1791/1792，唯一失败为已记录的 5 秒 SQLite busy-timeout，10 秒单文件 5/5。`npx tsc --noEmit`、`npm run build`、IDE lint 与 `git diff --check` 通过
+- code-review 第 1 轮: Standards/Spec 均为「需修改」；仅处理落盘的 7 项 finding，不改评审文件
+- code-review remediation RED: VIEW 非空库被误 bootstrap；Decision 成功终态删除 Receipt/Fact 后可在修复 sequence counter 后通过 reopen；Mission 相同 operation 无法重放；产品架构仍引用已删除 migration/tests 与旧数据可迁移政策；table dependencies 全空；validation-policy 将四类 SchemaError 降格；schema identity 存在重复常量
+- code-review remediation GREEN: opener/validator 枚举全部非 `sqlite_` objects；Decision 反向存在性/唯一性约束终态图；Mission command 携带 operationId/requestHash/create expectedVersion=0 并以 operationId 作为 Mission identity 稳定重放；product architecture 以 D-43 canonical evidence 标记旧迁移政策 superseded；manifest 从 table DDL 提取完整 FK dependencies，以完整 table stage 处理自引用/互相 FK，随后无环创建 index/trigger；validation-policy adapter 保留 SchemaError code/message；identity 仅来自 `CURRENT_SCHEMA.identity`
+- code-review remediation 验证: 7 项 finding 聚焦 suites 9 files / 106 tests 通过；Mission 外部 CRUD/legacy/API compatibility 3 files / 13 tests 通过；补充 dependency literal/self-reference 与 create expected-version conflict 单测通过；`npx tsc --noEmit`、IDE lint、`git diff --check` 通过，`reviews/code-review.md` diff 为空
+- code-review 第 2 轮 Standards remediation RED: Mission create HTTP 省略 `operationId`/`expectedVersion` 仍返回 201，证明 service 的随机 operation identity 与 create-version 默认值使外部写命令无法由客户端稳定标识
+- code-review 第 2 轮 Standards remediation GREEN: Mission create HTTP/service 现要求严格 UUID `operationId` 与显式 `expectedVersion=0`，从规范化 command 服务端派生 `requestHash`；相同 operation/payload 稳定重放，payload 改变返回稳定 `OPERATION_CONFLICT`，当前前端与测试 callers 均显式提供命令身份/版本；下一步为独立复审
+- code-review 第 2 轮 Standards remediation 验证: Mission HTTP/service/workflow/composition/UI 8 files / 76 tests 通过；更新的 Mission callers 18 files / 94 tests 中仅既知 5 秒 SQLite busy-timeout，10 秒单文件复跑 5/5 通过；`npx tsc --noEmit`、IDE lint 与 `git diff --check` 通过
+- 代码评审: Standards 第 3 轮与 Spec 第 2 轮均由独立 subagent 通过，auto-approved 2026-08-09；所有严重/一般发现项已闭合
+- 交付摘要: v1～v8 顺序 migration、legacy upgrade fixtures/tests 与运行时 migration imports 已删除；空库 bootstrap、current exact reopen、稳定 SchemaError、Mission 跨 owner 原子 Workflow 和 current owner fixtures 已落地
+- 回写: `AGENTS.md`、ADR-0003、D-43、`product/architecture.md`、`CONTEXT.md` 与 015/S-13 当前 canonical schema 要求

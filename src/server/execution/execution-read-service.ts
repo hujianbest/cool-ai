@@ -17,7 +17,7 @@ import {
   recoveryMergeFileStatusSchema,
   type RecoveryFileDto,
 } from "@/src/shared/execution-contracts";
-import { SchemaMigrationError } from "@/src/server/migrations";
+import { SchemaError } from "@/src/server/storage/schema-error";
 
 type ReadQuery = {
   after?: string;
@@ -1222,7 +1222,7 @@ export async function listRecoveryFiles(
   try {
     opened = await openForExecution(databasePath, executionId, true);
   } catch (error) {
-    if (error instanceof SchemaMigrationError) {
+    if (error instanceof SchemaError) {
       throw new ExecutionError(
         "INTERNAL_ERROR",
         500,

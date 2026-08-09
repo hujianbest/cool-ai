@@ -2,12 +2,13 @@ import { join } from "node:path";
 import { z } from "zod";
 
 import { readBoundedExecutionJson } from "@/src/server/execution/execution-api";
+import { validationPolicySchemaErrorResponse } from "@/src/server/execution/validation-policy-http";
 import {
   getValidationPolicy,
   saveValidationPolicy,
   ValidationPolicyError,
 } from "@/src/server/execution/validation-policy-service";
-import { SchemaMigrationError } from "@/src/server/migrations";
+import { SchemaError } from "@/src/server/storage/schema-error";
 
 type RouteContext = { params: Promise<{ projectId: string }> };
 
@@ -49,11 +50,8 @@ function errorResponse(error: unknown): Response {
       { status },
     );
   }
-  if (error instanceof SchemaMigrationError) {
-    return Response.json(
-      { error: { code: "STORAGE_UNAVAILABLE", message: "Storage is unavailable." } },
-      { status: 503 },
-    );
+  if (error instanceof SchemaError) {
+    return validationPolicySchemaErrorResponse(error);
   }
   return Response.json(
     { error: { code: "INTERNAL_ERROR", message: "Validation policy service failed." } },

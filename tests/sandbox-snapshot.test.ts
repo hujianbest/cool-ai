@@ -10,7 +10,7 @@ vi.mock("server-only", () => ({}));
 import { openDatabase } from "@/src/server/db";
 import { preflightSandbox, type SandboxPreflightResult } from "@/src/server/execution/sandbox-preflight";
 import { createWindowsNativeReadAdapter } from "@/src/server/execution/windows-native-read-adapter";
-import { execV7Fixture } from "@/tests/v7-fixture-graph";
+import { execV7Fixture } from "@/tests/fixtures/execution/current-graph";
 
 type SnapshotModule = typeof import("@/src/server/execution/sandbox-snapshot") & {
   cleanupOwnedSandbox(input: {

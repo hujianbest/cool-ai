@@ -3,14 +3,9 @@ import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
-import { createV6FixtureDatabaseOpener } from "@/tests/v6-fixture-db";
-
-const openDatabase = createV6FixtureDatabaseOpener({
-  missingDeliveryHeadMissionIds: ["mission-1"],
-  missingReviewHeadResultIds: [],
-});
+import { openDatabase } from "@/src/server/db";
+import { createMission, createWorkItem } from "@/src/server/mission-service";
 import { createProject } from "@/src/server/projects";
-import { initializeMissionDeliveryTx } from "@/src/server/migrations-v6";
 
 type ProjectMember = {
   agentId: string;
@@ -223,27 +218,18 @@ describe("project membership service", () => {
       expectedProjectVersion: 1,
     });
 
-    const database = openDatabase(databasePath);
-    database.exec(`
-      INSERT INTO missions (
-        id, project_id, title, goal, version, created_at, updated_at
-      ) VALUES (
-        'mission-1', '${project.id}', 'Mission', 'Goal', 1, 'now', 'now'
-      );
-      INSERT INTO work_items (
-        id, mission_id, title, description, status, assignee_agent_id,
-        version, created_at, updated_at
-      ) VALUES (
-        'work-1', 'mission-1', 'Assigned', '', 'todo', 'agent-beta',
-        1, 'now', 'now'
-      );
-    `);
-    initializeMissionDeliveryTx(database, {
-      id: "mission-1",
-      projectId: project.id,
-      updatedAt: "now",
+    const mission = createMission(databasePath, project.id, {
+      expectedVersion: 0,
+      goal: "Goal",
+      operationId: "16000000-0000-4000-8000-000000000116",
+      title: "Mission",
     });
-    database.close();
+    createWorkItem(databasePath, mission.id, {
+      assigneeAgentId: "agent-beta",
+      dependencyIds: [],
+      description: "",
+      title: "Assigned",
+    });
 
     expect(() =>
       service.replaceMembers(databasePath, project.id, {

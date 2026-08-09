@@ -16,7 +16,7 @@ import { ExecutionError } from "@/src/server/execution/execution-service";
 import { createWindowsVerifiedMergeAdapter } from "@/src/server/execution/merge-verified-adapter";
 import { saveValidationPolicy } from "@/src/server/execution/validation-policy-service";
 import { recoveryMergeFileStatuses } from "@/src/shared/execution-contracts";
-import { execV7Fixture } from "@/tests/v7-fixture-graph";
+import { execV7Fixture } from "@/tests/fixtures/execution/current-graph";
 
 const PROJECT_ID = "merge-route-project";
 const RUN_ID = "merge-route-run";

@@ -100,7 +100,12 @@ describe("project context API", () => {
     const project = createProject("Context API", databasePath);
     seedAgents(project.id);
     bindWorkspace(project.id);
-    createMission(databasePath, project.id, { title: "Mission", goal: "Goal" });
+    createMission(databasePath, project.id, {
+      expectedVersion: 0,
+      goal: "Goal",
+      operationId: "16000000-0000-4000-8000-000000000108",
+      title: "Mission",
+    });
     const context = { params: Promise.resolve({ projectId: project.id }) };
     const url = `http://localhost/api/projects/${project.id}/context?agentId=agent-one`;
 

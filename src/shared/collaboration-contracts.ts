@@ -217,6 +217,33 @@ export type CursorPage<T> = {
   nextAfter: number | null;
 };
 
+export type PublicStructuredBlockEnvelope = {
+  actor: {
+    displayName: string;
+    id: string | null;
+    type: "owner" | "agent";
+  };
+  blockRevision: number;
+  blockSchemaVersion: number;
+  blockType: string;
+  id: string;
+  kind: "known" | "unknown-schema";
+  logicalBlockId: string;
+  position: number;
+  source: {
+    entityVersion: string | null;
+    id: string;
+    kind: string;
+    messageId: string;
+    projectId: string;
+    runId: string | null;
+    threadId: string;
+  };
+  stateVersion?: number;
+  payload?: Record<string, unknown>;
+  state?: Record<string, unknown> & { stateVersion: number };
+};
+
 export type ThreadMessageDto = {
   id: string;
   projectId: string;
@@ -231,6 +258,7 @@ export type ThreadMessageDto = {
   mentionDisplayName: string | null;
   mentionMemberStatus: "current" | "left" | null;
   createdAt: string;
+  blocks?: PublicStructuredBlockEnvelope[];
 };
 
 export type ThreadFactBase = {
@@ -288,6 +316,24 @@ export type ThreadFactDto =
       runEventId: string;
       policyRevisionId: null;
       payload: { eventType: TimelineEventType };
+      message: null;
+    })
+  | (ThreadFactBase & {
+      type: "inline_decision";
+      runId: string;
+      messageId: null;
+      runEventId: null;
+      policyRevisionId: null;
+      payload: {
+        action: "accept" | "reject" | "check_item" | "uncheck_item";
+        blockId: string;
+        blockRevision: number;
+        decisionId: string;
+        fromStateVersion: number;
+        operationId: string;
+        receiptId: string;
+        toStateVersion: number;
+      };
       message: null;
     });
 
@@ -392,6 +438,7 @@ export type CollaborationErrorCode =
   | "DECISION_ALREADY_ANSWERED"
   | "OPERATION_CONFLICT"
   | "OPERATION_IN_PROGRESS"
+  | "OPERATION_NOT_FOUND"
   | "VERSION_CONFLICT"
   | "PROJECT_RUN_ACTIVE"
   | "THREAD_POLICY_REPAIR_REQUIRED"

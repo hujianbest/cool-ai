@@ -27,7 +27,7 @@ import {
   createWindowsVerifiedExecutionAdapters,
   refreshSandboxManifest,
 } from "@/src/server/execution/windows-verified-execution-adapter";
-import { execV7Fixture } from "@/tests/v7-fixture-graph";
+import { execV7Fixture } from "@/tests/fixtures/execution/current-graph";
 
 const PROJECT_ID = "manifest-project";
 const EXECUTION_ID = "manifest-execution";
@@ -643,6 +643,9 @@ describe("verified sandbox manifest lifecycle", () => {
           httpStatus: scenario === "transaction" ? 500 : 409,
           receiptStatus: "completed",
         });
+        if (scenario === "transaction") {
+          database.exec("DROP TRIGGER inject_stage_transaction");
+        }
         database.close();
         const reopened = openDatabase(databasePath);
         expectNoStageOrphans(reopened, operation);

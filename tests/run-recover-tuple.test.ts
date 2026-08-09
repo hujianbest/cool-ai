@@ -111,7 +111,12 @@ function seed(): void {
   } finally {
     database.close();
   }
-  createMission(databasePath, PROJECT_ID, { goal: "Recover safely", title: "Recovery" });
+  createMission(databasePath, PROJECT_ID, {
+    expectedVersion: 0,
+    goal: "Recover safely",
+    operationId: "16000000-0000-4000-8000-000000000111",
+    title: "Recovery",
+  });
   threadId = createThread(databasePath, PROJECT_ID, {
     memberAgentIds: [AGENT_ID, OTHER_AGENT_ID],
     operationId: operationId(),
@@ -452,7 +457,7 @@ describe("tuple-scoped run recovery", () => {
       bodies.push(await response.json());
       expect(state()).toEqual(before);
     }
-    expect(new Set(bodies.map(JSON.stringify))).toEqual(new Set([
+    expect(new Set(bodies.map((body) => JSON.stringify(body)))).toEqual(new Set([
       JSON.stringify({
         error: { code: "RESOURCE_NOT_FOUND", message: "Resource was not found." },
       }),

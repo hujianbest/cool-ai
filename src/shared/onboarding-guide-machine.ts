@@ -173,6 +173,7 @@ const MESSAGE_KEYS = new Set([
   "sequence",
   "threadId",
 ]);
+const MESSAGE_WITH_BLOCKS_KEYS = new Set([...MESSAGE_KEYS, "blocks"]);
 const THREAD_KEYS = new Set([
   "availability",
   "createdAt",
@@ -230,6 +231,7 @@ const FACT_TYPES = new Set([
   "agent_message",
   "run_linked",
   "run_event",
+  "inline_decision",
 ]);
 const DISPATCH_READINESS = new Set([
   "ready",
@@ -571,7 +573,11 @@ function parseProjectMessage(
   expectedProjectId: string,
   expectedThreadId: string,
 ): ParsedProjectMessage | null {
-  if (!isRecord(value) || !hasExactKeys(value, MESSAGE_KEYS)) return null;
+  if (
+    !isRecord(value)
+    || (!hasExactKeys(value, MESSAGE_KEYS) && !hasExactKeys(value, MESSAGE_WITH_BLOCKS_KEYS))
+    || ("blocks" in value && !Array.isArray(value.blocks))
+  ) return null;
   if (
     !isNonEmptyString(value.id) ||
     value.projectId !== expectedProjectId ||
@@ -745,6 +751,34 @@ function parseThreadFact(
       value.message !== null ||
       !hasExactKeys(value.payload, new Set(["runId"])) ||
       value.payload.runId !== value.runId
+    ) return null;
+  } else if (type === "inline_decision") {
+    if (
+      !isNonEmptyString(value.runId) ||
+      value.messageId !== null ||
+      value.runEventId !== null ||
+      value.policyRevisionId !== null ||
+      value.message !== null ||
+      !hasExactKeys(value.payload, new Set([
+        "action",
+        "blockId",
+        "blockRevision",
+        "decisionId",
+        "fromStateVersion",
+        "operationId",
+        "receiptId",
+        "toStateVersion",
+      ])) ||
+      !["accept", "reject", "check_item", "uncheck_item"].includes(
+        String(value.payload.action),
+      ) ||
+      !isNonEmptyString(value.payload.blockId) ||
+      !isSafeInteger(value.payload.blockRevision, 1) ||
+      !isNonEmptyString(value.payload.decisionId) ||
+      !isSafeInteger(value.payload.fromStateVersion, 1) ||
+      !isNonEmptyString(value.payload.operationId) ||
+      !isNonEmptyString(value.payload.receiptId) ||
+      value.payload.toStateVersion !== Number(value.payload.fromStateVersion) + 1
     ) return null;
   } else {
     if (

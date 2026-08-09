@@ -14,13 +14,13 @@ import {
 import { createThread } from "@/src/server/collaboration/thread-service";
 import { createCredentialVault } from "@/src/server/credential-vault";
 import { openDatabase } from "@/src/server/db";
-import { validateV6 } from "@/src/server/migrations-v6";
+import { validateCurrentDataInvariants } from "@/src/server/storage/current-data-invariants";
 import {
   buildDeliveryInput,
   generatePublicDelivery,
 } from "@/src/server/review/delivery-application-service";
 import type { ModelCallResult } from "@/src/shared/collaboration-contracts";
-import { refreshExecutionFrozenFixture } from "./execution-frozen-fixture";
+import { refreshExecutionFrozenFixture } from "@/tests/fixtures/execution/frozen-input";
 
 type ApplicationModule = typeof import("../src/server/review/review-application-service");
 const applicationModules = import.meta.glob<ApplicationModule>(
@@ -516,7 +516,7 @@ describe("public production review application", () => {
         version: 3,
       });
       expect(database.prepare("SELECT count(*) AS n FROM review_decisions").get()).toEqual({ n: 0 });
-      expect(validateV6(database)).not.toBe("SCHEMA_DATA_INVALID");
+      expect(validateCurrentDataInvariants(database)).not.toBe("SCHEMA_DATA_INVALID");
     } finally {
       database.close();
     }
