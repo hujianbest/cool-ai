@@ -43,6 +43,7 @@ const evidence = {
   dark: join(evidenceDirectory, "structured-messages-dark.png"),
   narrow: join(evidenceDirectory, "structured-messages-narrow.png"),
   invalid: join(evidenceDirectory, "structured-messages-invalid.png"),
+  reconciliation: join(evidenceDirectory, "structured-messages-reconciliation.png"),
   results: join(evidenceDirectory, "structured-messages-results.json"),
 };
 const stableConfig = ["next-env.d.ts", "tsconfig.json"]
@@ -571,13 +572,99 @@ try {
   await checklist.focus();
   await page.keyboard.press("Enter");
   await page.getByLabel("Checklist 决定结果").waitFor();
+
+  const staleRequests = [];
+  stalePage.on("request", (request) => {
+    if (request.url().includes("/api/")) {
+      staleRequests.push({
+        method: request.method(),
+        postData: request.postData(),
+        url: request.url(),
+      });
+    }
+  });
+  let releaseHead;
+  const headGate = new Promise((done) => {
+    releaseHead = done;
+  });
+  await stalePage.route(
+    `**/api/projects/${projectId}/threads/${threadId}/runs/${run.id}`
+      + `/messages/${checklistBlock.source.messageId}/blocks/${checklistBlock.id}`,
+    async (route) => {
+      await headGate;
+      await route.continue();
+    },
+    { times: 1 },
+  );
+  const beforeStale = inspectDatabase();
   await stalePage.getByRole("button", { name: "勾选 Verify safe navigation" }).click();
-  const staleCard = stalePage.locator('section[aria-label="Verification Checklist"]');
+  const staleCard = stalePage.getByRole("region", {
+    exact: true,
+    name: "Checklist：Verification Checklist",
+  });
   const staleAlert = staleCard.getByRole("alert");
   await staleAlert.waitFor();
-  assert.match(await staleAlert.innerText(), /状态版本已变为 2/);
-  await staleCard.getByRole("button", { name: /按状态版本 2 重新提交勾选/ }).waitFor();
-  pass("two-page-version-conflict-rereads-head");
+  assert.match(await staleAlert.innerText(), /正在读取最新状态/);
+  assert.equal(
+    await staleAlert.evaluate((node) => document.activeElement === node),
+    true,
+  );
+  assert.equal(
+    await staleCard.getByRole("button", { name: "勾选 Verify safe navigation" }).isDisabled(),
+    true,
+  );
+  assert.equal(
+    await staleCard.getByRole("button", { name: "勾选 Verify frozen source" }).isDisabled(),
+    true,
+  );
+  assert.equal(staleRequests.filter(({ method }) => method === "POST").length, 1);
+  releaseHead();
+  await staleCard.getByText(/state 2/).waitFor();
+  assert.match(await staleAlert.innerText(), /最新完整 Checklist/);
+  assert.match(await staleAlert.innerText(), /状态版本 2/);
+  assert.equal(
+    await staleAlert.evaluate((node) => document.activeElement === node),
+    true,
+  );
+  await staleCard.getByRole("button", { name: "取消勾选 Verify frozen source" }).waitFor();
+  const retryAction = staleCard.getByRole("button", { name: "勾选 Verify safe navigation" });
+  assert.equal(await retryAction.isDisabled(), false);
+  assert.equal(staleRequests.filter(({ method }) => method === "POST").length, 1);
+  await axe(stalePage, "desktop light stale reconciliation latest-ready");
+  await stalePage.screenshot({ fullPage: true, path: evidence.reconciliation });
+  pass("two-page-conflict-latest-ready-zero-auto-post-focus");
+
+  await retryAction.click();
+  await stalePage.getByLabel("Checklist 决定结果").waitFor();
+  assert.match(
+    await stalePage.getByLabel("Checklist 决定结果").innerText(),
+    /2 → 3/,
+  );
+  assert.equal(await retryAction.isDisabled(), true);
+  const stalePosts = staleRequests.filter(({ method }) => method === "POST");
+  assert.equal(stalePosts.length, 2);
+  const [conflictPost, retryPost] = stalePosts.map(({ postData }) => JSON.parse(postData));
+  assert.equal(conflictPost.expectedStateVersion, 1);
+  assert.equal(retryPost.expectedStateVersion, 2);
+  assert.equal(retryPost.action, "check_item");
+  assert.equal(retryPost.itemId, "verify-navigation");
+  assert.notEqual(retryPost.operationId, conflictPost.operationId);
+  assert.equal(
+    staleRequests.filter(({ method, url }) =>
+      method === "GET" && url.endsWith(`/blocks/${checklistBlock.id}`)
+    ).length,
+    1,
+  );
+  const afterStale = inspectDatabase();
+  assert.equal(
+    afterStale.counts.inline_decisions,
+    beforeStale.counts.inline_decisions + 1,
+  );
+  assert.equal(
+    afterStale.counts.business_action_receipts,
+    beforeStale.counts.business_action_receipts + 1,
+  );
+  pass("explicit-retry-single-new-operation-latest-version");
   await stalePage.close();
   await page.reload({ waitUntil: "networkidle" });
   const decidedProposals = page.getByText(/Proposal 已决定为/);
@@ -605,16 +692,50 @@ try {
   await page.getByRole("heading", { name: "Frozen Handoff Card" }).waitFor();
   await page.getByText("不支持的结构化消息", { exact: true }).waitFor();
   assert.equal(await page.getByText("此版本不可执行；其他协作事实仍可继续阅读。").count(), 1);
-  const fileCard = page.locator('section[aria-label="Frozen File Reference"]');
+  const fileCard = page.locator('section[aria-label="File Reference：Frozen File Reference"]');
   await fileCard.getByText("safe-report.txt", { exact: true }).waitFor();
   pass("file-reference-card-shows-frozen-name-before-source-fetch");
 
+  for (const name of [
+    "Proposal：Accept Proposal",
+    "Proposal：Reject Proposal",
+    "Checklist：Verification Checklist",
+    "Diff Preview：Frozen Diff Preview",
+    "File Reference：Frozen File Reference",
+    "Handoff Card：Frozen Handoff Card",
+  ]) {
+    await page.getByRole("region", { exact: true, name }).waitFor();
+  }
+  pass("five-formal-type-region-names");
+
+  let releaseSource;
+  const sourceGate = new Promise((done) => {
+    releaseSource = done;
+  });
+  await page.route(
+    `**/api/projects/${projectId}/threads/${threadId}/runs/${run.id}/messages/*/blocks/*/source`,
+    async (route) => {
+      await sourceGate;
+      await route.continue();
+    },
+    { times: 1 },
+  );
+  const diffRegion = page.getByRole("region", {
+    exact: true,
+    name: "Diff Preview：Frozen Diff Preview",
+  });
   await page.getByRole("button", { name: "加载 Diff Preview 安全来源" }).click();
+  await page.getByText("正在核对来源，请稍候…", { exact: true }).waitFor();
+  assert.equal(await diffRegion.getAttribute("aria-busy"), "true");
+  releaseSource();
   await page.getByLabel("脱敏 Diff Preview").waitFor();
+  assert.equal(await diffRegion.getAttribute("aria-busy"), "false");
+  await page.getByText("来源已核对，以下显示安全投影。", { exact: true }).waitFor();
+  pass("source-pending-busy-live-status-cleared-on-success");
   await page.getByRole("button", { name: "打开 File Reference 安全来源" }).click();
   await page.getByText("safe-report.txt", { exact: true }).waitFor();
   await page.getByRole("button", { name: "加载 Handoff Card 安全来源" }).click();
-  const handoffCard = page.locator('section[aria-label="Frozen Handoff Card"]');
+  const handoffCard = page.locator('section[aria-label="Handoff Card：Frozen Handoff Card"]');
   await handoffCard.getByText(/Hand off the structured smoke verification/).waitFor();
   const approvalLink = page.getByRole("link", { name: "前往正式 Approval surface" }).first();
   assert.match(await approvalLink.getAttribute("href"), /#execution-structured-smoke-execution-title$/);
@@ -627,9 +748,9 @@ try {
   assert.match(await fileLink.getAttribute("href"), /execution-structured-smoke-execution-title$/);
   assert.equal((await page.locator("body").innerText()).includes(privateHostPath), false);
   const readonlyCards = page.locator(
-    'section[aria-label="Frozen Diff Preview"],'
-      + 'section[aria-label="Frozen File Reference"],'
-      + 'section[aria-label="Frozen Handoff Card"]',
+    'section[aria-label="Diff Preview：Frozen Diff Preview"],'
+      + 'section[aria-label="File Reference：Frozen File Reference"],'
+      + 'section[aria-label="Handoff Card：Frozen Handoff Card"]',
   );
   assert.equal(
     await readonlyCards.getByRole("button", { name: /编辑|merge|approve/i }).count(),
@@ -724,6 +845,22 @@ try {
   await editor.waitFor({ state: "detached" });
   assert.equal(await editorOpener.evaluate((node) => document.activeElement === node), true);
   pass("narrow-keyboard-escape-focus-44px");
+
+  let focusRing = null;
+  for (let attempt = 0; attempt < 8 && !focusRing; attempt += 1) {
+    await page.keyboard.press("Tab");
+    focusRing = await page.evaluate(() => {
+      const element = document.activeElement;
+      if (!element || element === document.body || element === document.documentElement) {
+        return null;
+      }
+      return getComputedStyle(element).boxShadow !== "none"
+        ? { tag: element.tagName }
+        : null;
+    });
+  }
+  assert.ok(focusRing, "narrow: keyboard focus must show a visible focus ring");
+  pass("narrow-focus-visible-ring");
 
   stopApp();
   await new Promise((done) => setTimeout(done, 800));

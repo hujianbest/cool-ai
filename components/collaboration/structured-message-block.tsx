@@ -40,6 +40,14 @@ export type StructuredMessageBlockProps = {
   targetKey: string;
 };
 
+const formalTypeLabels: Record<TranscriptKnownBlock["kind"], string> = {
+  checklist: "Checklist",
+  diff_preview: "Diff Preview",
+  file_reference: "File Reference",
+  handoff_card: "Handoff Card",
+  proposal: "Proposal",
+};
+
 function record(value: unknown): value is Record<string, unknown> {
   return Boolean(value && typeof value === "object" && !Array.isArray(value));
 }
@@ -81,6 +89,78 @@ function conflictVersion(value: unknown): number | null {
     || value.error.code !== "VERSION_CONFLICT"
   ) return null;
   return Number(value.currentStateVersion);
+}
+
+function latestBlock(
+  value: unknown,
+  current: TranscriptKnownBlock,
+  minStateVersion: number,
+): TranscriptKnownBlock | null {
+  if (!record(value) || !record(value.block) || value.block.kind !== "known") return null;
+  const raw = value.block;
+  const payload = raw.payload;
+  const state = raw.state;
+  if (
+    !record(payload)
+    || !record(state)
+    || !record(raw.actor)
+    || typeof raw.actor.displayName !== "string"
+    || raw.blockRevision !== current.blockRevision
+    || raw.blockSchemaVersion !== current.blockSchemaVersion
+    || raw.blockType !== current.kind
+    || payload.blockType !== current.kind
+    || !Number.isSafeInteger(raw.stateVersion)
+    || Number(raw.stateVersion) < minStateVersion
+    || state.stateVersion !== raw.stateVersion
+    || !record(raw.source)
+    || raw.source.id !== current.source.id
+    || raw.source.kind !== current.source.kind
+    || raw.source.version !== current.source.entityVersion
+    || typeof payload.title !== "string"
+  ) return null;
+  const common = {
+    ...current,
+    actorLabel: raw.actor.displayName,
+    payload,
+    state,
+    stateVersion: Number(raw.stateVersion),
+    title: payload.title,
+  };
+  if (
+    current.kind === "proposal"
+    && typeof payload.body === "string"
+    && Array.isArray(payload.actions)
+    && JSON.stringify(payload.actions) === JSON.stringify(["accept", "reject"])
+    && ["pending", "accepted", "rejected"].includes(String(state.status))
+  ) {
+    return { ...common, body: payload.body, kind: "proposal" };
+  }
+  if (
+    current.kind === "checklist"
+    && Array.isArray(payload.actions)
+    && JSON.stringify(payload.actions) === JSON.stringify(["check_item", "uncheck_item"])
+    && Array.isArray(payload.items)
+    && Array.isArray(state.items)
+  ) {
+    const checked = new Map<string, boolean>();
+    for (const item of state.items) {
+      if (!record(item) || typeof item.id !== "string" || typeof item.checked !== "boolean") {
+        return null;
+      }
+      checked.set(item.id, item.checked);
+    }
+    const items: Array<{ checked: boolean; id: string; text: string }> = [];
+    for (const item of payload.items) {
+      if (!record(item) || typeof item.id !== "string" || typeof item.text !== "string"
+        || !checked.has(item.id)) {
+        return null;
+      }
+      items.push({ checked: checked.get(item.id) ?? false, id: item.id, text: item.text });
+    }
+    if (items.length !== checked.size) return null;
+    return { ...common, items, kind: "checklist" };
+  }
+  return null;
 }
 
 function endpoint(block: TranscriptKnownBlock): string {
@@ -177,22 +257,28 @@ export function StructuredMessageBlock({
   const [pending, setPending] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [receipt, setReceipt] = useState<Receipt | null>(null);
-  const [staleVersion, setStaleVersion] = useState<number | null>(null);
-  const [staleAction, setStaleAction] = useState<{
+  const [conflict, setConflict] = useState<{
     action: DecisionAction;
     itemId?: string;
+    minStateVersion: number;
   } | null>(null);
+  const [latest, setLatest] = useState<TranscriptKnownBlock | null>(null);
+  const [latestLoading, setLatestLoading] = useState(false);
+  const [latestError, setLatestError] = useState<string | null>(null);
   const [projection, setProjection] = useState<SourceProjection | null>(null);
   const [sourcePending, setSourcePending] = useState(false);
   const [sourceError, setSourceError] = useState<string | null>(null);
   const resultRef = useRef<HTMLParagraphElement>(null);
+  const conflictRef = useRef<HTMLParagraphElement>(null);
 
   useEffect(() => {
     setPending(false);
     setError(null);
     setReceipt(null);
-    setStaleVersion(null);
-    setStaleAction(null);
+    setConflict(null);
+    setLatest(null);
+    setLatestLoading(false);
+    setLatestError(null);
     setProjection(null);
     setSourcePending(false);
     setSourceError(null);
@@ -201,6 +287,10 @@ export function StructuredMessageBlock({
   useEffect(() => {
     if (receipt) resultRef.current?.focus();
   }, [receipt]);
+
+  useEffect(() => {
+    if (conflict) conflictRef.current?.focus();
+  }, [conflict]);
 
   if (block.kind === "unknown") {
     return (
@@ -218,30 +308,49 @@ export function StructuredMessageBlock({
     );
   }
   const knownBlock = block;
+  const displayBlock = latest ?? knownBlock;
 
-  const terminalProposal = knownBlock.kind === "proposal"
-    && knownBlock.state.status !== "pending";
-  const disabled = pending || receipt !== null || staleVersion !== null || terminalProposal;
+  const terminalProposal = displayBlock.kind === "proposal"
+    && displayBlock.state.status !== "pending";
+  const reconciling = conflict !== null
+    && (latest === null || latestLoading || latestError !== null);
+  const disabled = pending || receipt !== null || reconciling || terminalProposal;
 
-  async function readHead(version: number, request: ReturnType<typeof guard.capture>) {
+  async function loadLatest(
+    request: ReturnType<typeof guard.capture>,
+    minStateVersion: number,
+  ) {
+    if (!request.isCurrent()) return;
+    setLatestLoading(true);
+    setLatestError(null);
     try {
       const response = await fetch(endpoint(knownBlock), { signal: request.signal });
-      const payload = await response.json() as unknown;
-      if (
-        !response.ok
-        || !record(payload)
-        || !record(payload.block)
-        || payload.block.kind !== "known"
-        || payload.block.blockRevision !== knownBlock.blockRevision
-        || !record(payload.block.state)
-        || payload.block.stateVersion !== version
-      ) throw new Error("invalid head");
+      const payload = await response.json().catch(() => null);
+      const next = response.ok ? latestBlock(payload, knownBlock, minStateVersion) : null;
+      if (!next) throw new Error("invalid latest");
       if (request.isCurrent()) {
-        setStaleVersion(version);
-        setError(`状态版本已变为 ${version}。请核对后显式重新提交。`);
+        setLatest(next);
+        setLatestError(null);
       }
     } catch {
-      if (request.isCurrent()) setError("状态已变化，但无法安全读取当前版本。");
+      if (request.isCurrent()) {
+        setLatestError("无法读取服务端最新状态；旧动作保持禁用，不会自动重新提交。");
+      }
+    } finally {
+      if (request.isCurrent()) setLatestLoading(false);
+    }
+  }
+
+  function enterConflict(
+    action: DecisionAction,
+    itemId: string | undefined,
+    version: number,
+    request: ReturnType<typeof guard.capture>,
+  ) {
+    if (request.isCurrent()) {
+      setConflict({ action, ...(itemId ? { itemId } : {}), minStateVersion: version });
+      setLatestError(null);
+      setError(null);
     }
   }
 
@@ -274,9 +383,9 @@ export function StructuredMessageBlock({
         return;
       }
       const version = conflictVersion(payload);
-      if (version !== null && request.isCurrent()) {
-        setStaleAction({ action, ...(itemId ? { itemId } : {}) });
-        await readHead(version, request);
+      if (version !== null) {
+        enterConflict(action, itemId, version, request);
+        await loadLatest(request, version);
         return;
       }
       if (request.isCurrent()) {
@@ -292,15 +401,13 @@ export function StructuredMessageBlock({
   async function decide(
     action: DecisionAction,
     itemId?: string,
-    expectedStateVersion = block.stateVersion,
   ) {
-    if (pending || receipt || terminalProposal) return;
+    const expectedStateVersion = displayBlock.stateVersion;
+    if (pending || receipt || terminalProposal || reconciling) return;
     const operationId = crypto.randomUUID();
     const request = guard.capture();
     setPending(true);
     setError(null);
-    setStaleVersion(null);
-    setStaleAction(null);
     let responseReceived = false;
     try {
       const response = await fetch(`${endpoint(knownBlock)}/decision`, {
@@ -319,7 +426,7 @@ export function StructuredMessageBlock({
       const completed = response.ok
         ? completedReceipt(
             payload,
-            knownBlock,
+            displayBlock,
             operationId,
             action,
             itemId,
@@ -327,13 +434,16 @@ export function StructuredMessageBlock({
           )
         : null;
       if (completed) {
-        if (request.isCurrent()) setReceipt(completed);
+        if (request.isCurrent()) {
+          setReceipt(completed);
+          setConflict(null);
+        }
         return;
       }
       const version = conflictVersion(payload);
       if (version !== null) {
-        if (request.isCurrent()) setStaleAction({ action, ...(itemId ? { itemId } : {}) });
-        await readHead(version, request);
+        enterConflict(action, itemId, version, request);
+        await loadLatest(request, version);
         return;
       }
       if (request.isCurrent()) setError("决定响应无效，未显示成功。");
@@ -382,19 +492,24 @@ export function StructuredMessageBlock({
     }
   }
 
+  const typeLabel = formalTypeLabels[displayBlock.kind];
+  const regionLabel = displayBlock.title === typeLabel
+    ? typeLabel
+    : `${typeLabel}：${displayBlock.title}`;
+
   return (
     <section
-      aria-busy={pending}
-      aria-label={block.title}
+      aria-busy={pending || sourcePending}
+      aria-label={regionLabel}
       className="structured-block"
     >
-      <h5>{block.title}</h5>
+      <h5>{displayBlock.title}</h5>
       <p className="muted">
-        {block.actorLabel} · schema {block.blockSchemaVersion} · revision{" "}
-        {block.blockRevision} · state {staleVersion ?? block.stateVersion} ·{" "}
-        {block.sourceLabel}
+        {displayBlock.actorLabel} · schema {displayBlock.blockSchemaVersion} · revision{" "}
+        {displayBlock.blockRevision} · state {displayBlock.stateVersion} ·{" "}
+        {displayBlock.sourceLabel}
       </p>
-      {block.body ? <p>{block.body}</p> : null}
+      {displayBlock.body ? <p>{displayBlock.body}</p> : null}
       {block.kind === "file_reference" && block.fileName ? <p>{block.fileName}</p> : null}
       {block.kind === "diff_preview"
         || block.kind === "file_reference"
@@ -412,6 +527,12 @@ export function StructuredMessageBlock({
             >
               {sourcePending ? "正在核对来源…" : "核对并查看安全来源"}
             </button>
+            {sourcePending ? (
+              <p className="muted" role="status">正在核对来源，请稍候…</p>
+            ) : null}
+            {!sourcePending && projection ? (
+              <p className="muted" role="status">来源已核对，以下显示安全投影。</p>
+            ) : null}
             {sourceError ? <p className="error-text" role="alert">{sourceError}</p> : null}
             {projection ? (
               <div className="structured-source-projection">
@@ -462,7 +583,29 @@ export function StructuredMessageBlock({
             ) : null}
           </>
         ) : null}
-      {block.kind === "proposal" ? (
+      {conflict ? (
+        <p className="error-text" ref={conflictRef} role="alert" tabIndex={-1}>
+          {latest && !latestLoading && !latestError
+            ? `决定未提交：服务端状态已变化。上方为最新完整 ${
+              displayBlock.kind === "proposal" ? "Proposal" : "Checklist"
+            }（状态版本 ${latest.stateVersion}），请核对最新事实后显式决定。`
+            : latestError && !latestLoading
+              ? latestError
+              : "决定未提交：服务端状态已变化，正在读取最新状态…"}
+        </p>
+      ) : null}
+      {conflict && latestError && !latestLoading ? (
+        <button
+          onClick={() => {
+            const request = guard.capture();
+            void loadLatest(request, conflict.minStateVersion);
+          }}
+          type="button"
+        >
+          重新读取最新状态
+        </button>
+      ) : null}
+      {displayBlock.kind === "proposal" ? (
         <div className="structured-block-actions">
           <button
             aria-label="接受 Proposal"
@@ -482,9 +625,9 @@ export function StructuredMessageBlock({
           </button>
         </div>
       ) : null}
-      {block.kind === "checklist" && block.items ? (
+      {displayBlock.kind === "checklist" && displayBlock.items ? (
         <ul className="structured-checklist">
-          {block.items.map((item) => (
+          {displayBlock.items.map((item) => (
             <li key={item.id}>
               <button
                 aria-label={`${item.checked ? "取消勾选" : "勾选"} ${item.text}`}
@@ -504,29 +647,12 @@ export function StructuredMessageBlock({
       ) : null}
       {pending ? <p aria-live="polite">正在提交并等待事实回执…</p> : null}
       {terminalProposal ? (
-        <p>Proposal 已决定为 {String(block.state.status)}，终态不可改写。</p>
+        <p>Proposal 已决定为 {String(displayBlock.state.status)}，终态不可改写。</p>
       ) : null}
       {error ? <p className="error-text" role="alert">{error}</p> : null}
-      {staleVersion !== null && staleAction ? (
-        <button
-          onClick={() =>
-            void decide(staleAction.action, staleAction.itemId, staleVersion)
-          }
-          type="button"
-        >
-          按状态版本 {staleVersion} 重新提交
-          {staleAction.action === "accept"
-            ? "接受"
-            : staleAction.action === "reject"
-              ? "拒绝"
-              : staleAction.action === "check_item"
-                ? "勾选"
-                : "取消勾选"}
-        </button>
-      ) : null}
       {receipt ? (
         <p
-          aria-label={`${block.kind === "proposal" ? "Proposal" : "Checklist"} 决定结果`}
+          aria-label={`${displayBlock.kind === "proposal" ? "Proposal" : "Checklist"} 决定结果`}
           ref={resultRef}
           role="status"
           tabIndex={-1}

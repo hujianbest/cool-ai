@@ -68,6 +68,10 @@ function invalid(fields?: Record<string, string>): never {
   );
 }
 
+function record(value: unknown): value is Record<string, unknown> {
+  return Boolean(value && typeof value === "object" && !Array.isArray(value));
+}
+
 function parseTuple(params: Record<string, string>): Tuple {
   const fields: Record<string, string> = {};
   const result = {} as Record<keyof Tuple, string>;
@@ -163,12 +167,20 @@ function publicBlock(row: BlockRow): { block: Record<string, unknown>; payload?:
       "Structured message storage is invalid.",
     );
   }
+  const state: unknown = JSON.parse(row.stateJson);
+  if (!record(state)) {
+    throw new CollaborationError(
+      "STORAGE_UNAVAILABLE",
+      503,
+      "Structured message storage is invalid.",
+    );
+  }
   return {
     block: {
       ...common,
       kind: "known",
       payload: decoded.value,
-      state: JSON.parse(row.stateJson),
+      state: { ...state, stateVersion: row.currentStateVersion },
     },
     payload: decoded.value,
   };

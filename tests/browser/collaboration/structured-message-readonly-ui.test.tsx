@@ -1,5 +1,5 @@
 // @vitest-environment jsdom
-import { render, screen } from "@testing-library/react";
+import { act, render, screen, waitFor } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { afterEach, describe, expect, it, vi } from "vitest";
 
@@ -168,6 +168,91 @@ describe("Diff/File/Handoff read-only public UI surface", () => {
       "/projects/project-1?thread=thread-1&run=run-1",
     );
     expect(fetcher).toHaveBeenCalledTimes(1);
+  });
+
+  it("names each read-only region with its formal localized type and existing title", () => {
+    vi.stubGlobal("fetch", vi.fn());
+    const view = render(
+      <StructuredMessageBlock
+        block={readonlyBlock("diff_preview")}
+        targetKey="project-1|thread-1|run-1"
+      />,
+    );
+    expect(screen.getByRole("region", { name: "Diff Preview：diff_preview title" }))
+      .toBeVisible();
+
+    view.rerender(
+      <StructuredMessageBlock
+        block={readonlyBlock("file_reference")}
+        targetKey="project-1|thread-1|run-1"
+      />,
+    );
+    expect(screen.getByRole("region", { name: "File Reference：file_reference title" }))
+      .toBeVisible();
+
+    view.rerender(
+      <StructuredMessageBlock
+        block={readonlyBlock("handoff_card")}
+        targetKey="project-1|thread-1|run-1"
+      />,
+    );
+    expect(screen.getByRole("region", { name: "Handoff Card：handoff_card title" }))
+      .toBeVisible();
+  });
+
+  it("marks the region busy with a live status while the source is pending and clears both on success", async () => {
+    let resolveSource!: (response: Response) => void;
+    const sourcePending = new Promise<Response>((resolve) => {
+      resolveSource = resolve;
+    });
+    vi.stubGlobal("fetch", vi.fn(() => sourcePending));
+    const user = userEvent.setup();
+    render(
+      <StructuredMessageBlock
+        block={readonlyBlock("diff_preview")}
+        targetKey="project-1|thread-1|run-1"
+      />,
+    );
+    const region = screen.getByRole("region", { name: /Diff Preview/ });
+    expect(region).toHaveAttribute("aria-busy", "false");
+
+    const loadButton = screen.getByRole("button", { name: "加载 Diff Preview 安全来源" });
+    loadButton.focus();
+    await user.keyboard("{Enter}");
+    expect(region).toHaveAttribute("aria-busy", "true");
+    expect(screen.getByRole("status")).toHaveTextContent("正在核对来源");
+    expect(loadButton).toBeDisabled();
+
+    resolveSource(Response.json({
+      display: { preview: "@@ safe\n-old\n+new" },
+      navigation: { executionId: "execution-1", sourceId: "diff_preview-source" },
+      source: { id: "diff_preview-source", kind: "execution", version: "diff_preview-version" },
+    }));
+    await waitFor(() => expect(region).toHaveAttribute("aria-busy", "false"));
+    expect(screen.getByRole("status")).toHaveTextContent("来源已核对");
+    expect(screen.getByText(/@@ safe/)).toBeVisible();
+  });
+
+  it("clears busy and announces the stable error when the source read fails", async () => {
+    vi.stubGlobal("fetch", vi.fn(() => Promise.resolve(Response.json({
+      error: { code: "RESOURCE_NOT_FOUND", message: "gone" },
+    }, { status: 404 }))));
+    const user = userEvent.setup();
+    render(
+      <StructuredMessageBlock
+        block={readonlyBlock("handoff_card")}
+        targetKey="project-1|thread-1|run-1"
+      />,
+    );
+    const region = screen.getByRole("region", { name: /Handoff Card/ });
+
+    await user.click(screen.getByRole("button", { name: "加载 Handoff Card 安全来源" }));
+
+    expect(await screen.findByRole("alert")).toHaveTextContent("来源不可用");
+    expect(region).toHaveAttribute("aria-busy", "false");
+    expect(screen.queryByRole("status")).toBeNull();
+    expect(screen.getByRole("button", { name: "加载 Handoff Card 安全来源" }))
+      .toBeEnabled();
   });
 
   it("fails closed for unavailable sources and keeps unknown schemas non-executable", async () => {

@@ -112,7 +112,8 @@ describe("strict tuple Structured Message HTTP adapter", () => {
       context(setup),
     );
     expect(response.status).toBe(200);
-    await expect(response.json()).resolves.toMatchObject({
+    const body = await response.json();
+    expect(body).toMatchObject({
       block: {
         blockRevision: 1,
         blockSchemaVersion: 1,
@@ -120,6 +121,8 @@ describe("strict tuple Structured Message HTTP adapter", () => {
         source: { id: setup.messageId, kind: "message" },
       },
     });
+    expect(body.block.stateVersion).toBe(1);
+    expect(body.block.state.stateVersion).toBe(1);
 
     for (const [field, value] of [
       ["projectId", "other-project"],
