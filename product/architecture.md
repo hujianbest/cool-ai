@@ -2,11 +2,16 @@
 
 - 日期: 2026-08-09
 - 状态: 产品级架构基线；目标架构收敛已完成（特性 019，D-45），后续功能开发按本文件准入
-- 用户确认: 2026-08-09 采用领域模块化单体 + Ports/Adapters + 跨域 Application Workflow；2026-08-09 确认先把当前工程实现完整迁入目标架构，再恢复后续功能开发；2026-08-09 确认解除架构优先冻结（D-45）
+- 用户确认: 2026-08-09 采用领域模块化单体 + Ports/Adapters + 跨域 Application Workflow；2026-08-09 确认先把当前工程实现完整迁入目标架构，再恢复后续功能开发；2026-08-09 确认解除架构优先冻结（D-45）；2026-08-10 确认第 13 节架构特征（驱动力）、第 14 节演进与适应度及 4+1 视图标注
 - 更新: 2026-08-09 收敛完成后按 hf-to-product-architecture 刷新——第 8 节现状证据、第 9 节收敛完成记录，新增第 11 节关键场景与第 12 节横切约定
+- 更新: 2026-08-10 按 hf-to-product-architecture 补全——第 2 节各子系统补易变性声明、第 11 节场景标注验证特征，新增第 13 节架构特征（驱动力）与第 14 节演进与适应度；延续 A-105 追加不重排，既有节号与实质决策不变（A-106）；同日标注 4+1 视图裁剪映射（A-107）
 - 决策依据: `docs/adr/0002-domain-modular-monolith.md`、`docs/adr/0003-pre-release-canonical-database-schema.md`、`docs/adr/0004-architecture-first-convergence.md`
 
 ## 1. 架构目标
+
+本节风格取舍的驱动性架构特征与可检验质量属性场景见第 13 节，演进路径与适应度函数见第 14 节；下文每条结构决策都可回溯到这两节。
+
+视图组织按 hf-to-product-architecture 的 4+1 裁剪：默认合并为逻辑、开发、场景三块——逻辑视图见第 2～3 节，开发视图见第 7 节，场景视图见第 11 节。过程视图不单独成节：并发硬约束（单项目唯一非终态 Run、并行执行上限、turn/execution 租约、单写 SQLite）已以协议与不变量形式落在第 3 节 acquire/checkpoint/finalize、operation/version/lease 与第 4 节。物理视图省略：本地优先、单进程、单 SQLite 的部署拓扑不构成硬约束；若桌面打包、多进程 Runtime 宿主等使部署或并发模型成为硬约束，按技能规则补相应视图并记 ADR。
 
 Cool AI 保持一个本地优先、单进程、单 SQLite 的**领域模块化单体**。模块边界按事实所有权划分，不按页面、HTTP 路由、数据库表类别或技术层划分。
 
@@ -19,11 +24,13 @@ Cool AI 保持一个本地优先、单进程、单 SQLite 的**领域模块化�
 
 这不是微服务规划。逻辑边界先在单体内变得清楚、可测试、可机械约束；没有独立部署、扩缩容、数据驻留或故障隔离证据时不拆进程。
 
-## 2. 逻辑子系统与事实所有权
+## 2. 逻辑子系统与事实所有权（4+1 逻辑视图）
 
 下列“拥有”指有权验证并提交该事实的唯一逻辑 owner；“不拥有”用于明确常见越界。具体表名可以随迁移改变，所有权不得随调用方便而漂移。
 
 ### Identity & Capability
+
+封住的易变性：Provider 种类、模型绑定方式与能力/工具权限声明的表达会变（新 Provider 类型、新能力元数据）；变化只改本 Module 与 model-runtime Adapter，协作、执行与治理子系统不必改。
 
 拥有：
 
@@ -39,6 +46,8 @@ Cool AI 保持一个本地优先、单进程、单 SQLite 的**领域模块化�
 
 ### Project & Workspace
 
+封住的易变性：项目隔离粒度与工作区绑定/校验政策会变（多绑定根、新 Validation Policy、POSIX 支持）；变化只改本 Module 与 workspace Adapter，Mission、协作与执行事实不必改。
+
 拥有：
 
 - Project 身份、生命周期与隔离边界。
@@ -53,6 +62,8 @@ Cool AI 保持一个本地优先、单进程、单 SQLite 的**领域模块化�
 
 ### Mission & Work
 
+封住的易变性：任务状态机、依赖规则与派发/租约政策会变（SOP 状态、租约控制面、依赖洞察）；变化只改本 Module，协作与执行子系统不必理解任务规则。
+
 拥有：
 
 - Mission 目标、状态与完成门槛。
@@ -66,6 +77,8 @@ Cool AI 保持一个本地优先、单进程、单 SQLite 的**领域模块化�
 - Agent 身份与工具权限。
 
 ### Public Collaboration
+
+封住的易变性：公开表达的类型与交互会变（新 Structured Block 类型、队列/steer、附件、引用）；变化只改本 Module 的 allowlist 与 schema 版本及其 UI 投影，执行与治理协议不必改。
 
 拥有：
 
@@ -82,6 +95,8 @@ Cool AI 保持一个本地优先、单进程、单 SQLite 的**领域模块化�
 
 ### Safe Execution
 
+封住的易变性：隔离与合入技术会变（新 sandbox 形态、新工具能力、救援动作、Git 合入策略）；变化只改本 Module 与 workspace Adapter，授权来源协议与业务终态写法不必改。
+
 拥有：
 
 - Execution、Attempt、Action、sandbox 身份与基线快照。
@@ -95,6 +110,8 @@ Cool AI 保持一个本地优先、单进程、单 SQLite 的**领域模块化�
 - canonical workspace 之外的宿主能力，或 owner 未明确授权的网络/进程能力。
 
 ### Governance
+
+封住的易变性：风险分类与审批政策会变（统一审批中心、新政策类型、例外与保留规则）；变化只改本 Module，被治理动作的业务语义与其 owner 不必改。
 
 拥有：
 
@@ -110,6 +127,8 @@ Cool AI 保持一个本地优先、单进程、单 SQLite 的**领域模块化�
 
 ### Review & Delivery
 
+封住的易变性：复核资格判定、裁决形式与交付包构成会变（新证据类型、交付回放）；变化只改本 Module，执行产物与知识沉淀的接入 Interface 不必改。
+
 拥有：
 
 - Result 版本、Review Attempt、复核者资格快照、退回/升级/通过裁决和复核证据。
@@ -123,6 +142,8 @@ Cool AI 保持一个本地优先、单进程、单 SQLite 的**领域模块化�
 - 用“最新运行”替代冻结 Source Tuple。
 
 ### Knowledge & Provenance
+
+封住的易变性：知识组织与检索方式会变（索引、集合、图谱、Agent 提炼）；检索投影可重建，变化不改写来源事实，其他 owner 不必改。
 
 拥有：
 
@@ -138,6 +159,8 @@ Cool AI 保持一个本地优先、单进程、单 SQLite 的**领域模块化�
 
 ### Runtime
 
+封住的易变性：外部运行时协议与传输会变（CLI/ACP、MCP、通知、语音）；变化只改本 Module 与对应 outbound Adapter，业务子系统不感知传输细节、不必改。
+
 拥有：
 
 - 受控 Runtime/Adapter 实例、会话、能力协商、版本、健康握手和生命周期。
@@ -151,6 +174,8 @@ Cool AI 保持一个本地优先、单进程、单 SQLite 的**领域模块化�
 - 把外部 runtime 的“成功”直接提交为业务完成。
 
 ### Operations Projection
+
+封住的易变性：读侧视图与消费者组合会变（审计、健康、用量、时间轴、导出、回放）；投影可丢弃重建，变化不触碰命令事实，source owner 不必改。
 
 拥有：
 
@@ -180,7 +205,7 @@ Cool AI 保持一个本地优先、单进程、单 SQLite 的**领域模块化�
 4. Runtime 可缓存带完整 source versions 的 effective grant；每次 acquire/checkpoint/finalize 都重新校验撤销、期限和目标。缓存失配只能失效，不能回写或自动续期来源授权。
 5. Safe Execution 或其他调用方只消费本次 Workflow 返回的冻结 grant；业务结果仍由动作所属子系统写入。
 
-## 3. Interface、Workflow 与事务
+## 3. Interface、Workflow 与事务（4+1 逻辑/过程视图）
 
 ### 公开 Interface
 
@@ -260,7 +285,7 @@ Workflow 只拥有流程 operation、步骤/checkpoint 和补偿状态，不拥�
 
 受控扩展端口只暴露领域允许的窄能力，不暴露数据库连接、任意文件路径、通用 shell、主密钥或进程内对象图。新增 Adapter 必须独立切片、声明权限、来源、版本、失败模式、撤销/卸载和审计方案；开闭原则不是安全协议的免审通行证。
 
-## 7. 目标状态目录结构
+## 7. 目标状态目录结构（4+1 开发视图）
 
 目标目录把逻辑所有权落实为可机械检查的物理接缝。当前工程已完成架构收敛（第 9 节），本节结构即当前现实；后续产品功能必须直接落在目标结构上，不得在旧结构或目录外重建入口。`runtime` 与 `operations-projection` 尚无自有命令事实，按 A-101 不建空壳 Module，待对应 Capability 切片建立时再补目录。
 
@@ -458,15 +483,15 @@ tests/
 - 对 Operations Projection 建立只读约束：投影代码不能链接命令 repository，重建过程不能写业务 owner 表。
 - 首次发布前 storage lifecycle 只允许 atomic/idempotent fresh bootstrap、current exact-schema validation 和 drift fail-closed；禁止版本间 migration、legacy adoption 与 backfill。
 
-## 11. 关键场景（垂直切片判据）
+## 11. 关键场景（垂直切片判据，4+1 场景视图）
 
 以下端到端路径是切片准入与验收的共同判据。每个进入 implement 的切片必须声明自己推进哪条路径的哪一段，沿路径上的 owner 顺序走公开 Interface 或命名 Workflow，不得旁路。
 
-1. **组队与立项**（已交付 S-1～S-3）：owner 配置并验证 Provider、创建 Agent/Skill（Identity & Capability）→ 创建 Project、绑定工作区、组成项目组（Project & Workspace）→ 建立 Mission 与 Work Item（Mission & Work）。对应 Workflow：`create-mission`。
-2. **公开协作接力**（已交付 S-4、S-12）：owner 在 Thread 公开发言/@Agent → Collaboration Run 受理、Turn/Attempt、结构化交棒与 owner 决策请求/回答（Public Collaboration）→ 暂停/恢复与可恢复时间线。治理点：凭据拒绝、Project/Thread/Run tuple、预算与轮次上限。
-3. **受控执行与合入**（已交付 S-5）：Resolve Effective Runtime Grant（配置权限 ∩ 项目范围 ∩ Approval → Runtime 投影，第 2 节）→ Safe Execution acquire/checkpoint/finalize → sandbox 内工具动作与验证 → Staged Change 冲突/陈旧检查 → Merge Journal 原子合入或失败关闭。
-4. **独立复核与交付**（已交付 S-6）：owner 显式发起、合格非执行者 Agent 复核裁决（Review & Delivery）→ 署名记忆候选沉淀（Knowledge & Provenance）→ Delivery 持久化 → Mission 完成门槛判定（Mission & Work）。
-5. **脱敏运维读侧**（规划中，S-23 拆分片建立）：source owner 在命令事务内提交公开事件 envelope → Operations Projection 幂等消费、checkpoint/rebuild 与 freshness → owner 只读查询并跳回精确来源；投影永不回写命令事实（第 5 节）。
+1. **组队与立项**（已交付 S-1～S-3）：owner 配置并验证 Provider、创建 Agent/Skill（Identity & Capability）→ 创建 Project、绑定工作区、组成项目组（Project & Workspace）→ 建立 Mission 与 Work Item（Mission & Work）。对应 Workflow：`create-mission`。验证特征：AC-1（ownership tuple 与事实起点唯一）、AC-3（新用户结果只经命名 Workflow 落地）。
+2. **公开协作接力**（已交付 S-4、S-12）：owner 在 Thread 公开发言/@Agent → Collaboration Run 受理、Turn/Attempt、结构化交棒与 owner 决策请求/回答（Public Collaboration）→ 暂停/恢复与可恢复时间线。治理点：凭据拒绝、Project/Thread/Run tuple、预算与轮次上限。验证特征：AC-1（公开事实流与冻结来源）、AC-2（凭据拒绝失败关闭）、AC-5（lease 暂停/恢复、重启不自动重放）。
+3. **受控执行与合入**（已交付 S-5）：Resolve Effective Runtime Grant（配置权限 ∩ 项目范围 ∩ Approval → Runtime 投影，第 2 节）→ Safe Execution acquire/checkpoint/finalize → sandbox 内工具动作与验证 → Staged Change 冲突/陈旧检查 → Merge Journal 原子合入或失败关闭。验证特征：AC-2（grant 求交、sandbox、Approval 组合）、AC-5（三阶段崩溃恢复）、AC-1（基线冻结与合入事实唯一）。
+4. **独立复核与交付**（已交付 S-6）：owner 显式发起、合格非执行者 Agent 复核裁决（Review & Delivery）→ 署名记忆候选沉淀（Knowledge & Provenance）→ Delivery 持久化 → Mission 完成门槛判定（Mission & Work）。验证特征：AC-1（冻结材料复核、署名来源、完成门槛单一口径）。
+5. **脱敏运维读侧**（规划中，S-23 拆分片建立）：source owner 在命令事务内提交公开事件 envelope → Operations Projection 幂等消费、checkpoint/rebuild 与 freshness → owner 只读查询并跳回精确来源；投影永不回写命令事实（第 5 节）。验证特征：AC-3（读侧扩展不改命令侧）、AC-1（精确来源导航）、AC-2（强制脱敏）。
 
 ## 12. 横切约定
 
@@ -478,3 +503,54 @@ tests/
 - **观测**：服务健康、用量、审计、时间轴与回放只经 Operations Projection 只读投影（第 5 节）；投影缺失或陈旧显示 freshness/error，不伪造成业务状态。
 - **安全**：verified-handle、sandbox、Approval、脱敏、审计与独立复核按动作风险组合适用（第 4 节；`product/product.md` 设计原则 6）；任何 Interface 或 Adapter 不得旁路。
 - **可访问性**：关键交互覆盖 loading/empty/error/disabled/success/focus，语义化 HTML、键盘操作、≥44×44px 控件、WCAG AA 并以 axe 验证受影响界面（`AGENTS.md` UI 标准）。
+
+## 13. 架构特征（驱动力）
+
+本节是第 1～7 节全部风格与结构取舍的驱动力来源；每条结构决策必须能回溯到下列特征之一或第 2 节已识别的易变性。特征来自 `CONTEXT.md`、`product/product.md` 核心价值与 ADR-0002 驱动因素；可用性、可访问性与单进程部署简单性是普遍底线，不列为驱动力。
+
+- **AC-1 事实唯一与来源可追溯**（显式）：每类命令事实恰有一个逻辑 owner，公开事实、裁决、交付与知识不可变且可导航到冻结 Source Tuple。
+  质量属性场景：owner 在应用重启后打开任一历史公开事实（消息、复核裁决、交付、记忆条目），系统应呈现其精确来源身份与版本，度量：100% 公开事实可导航到冻结 Source Tuple；0 处以 latest 实体替换冻结来源（tuple 复合约束测试与来源导航测试阻断）。
+  回应它的结构决策：第 2 节事实所有权与权限四分、第 4 节强不变量、第 5 节选择性 outbox。
+- **AC-2 安全组合与失败关闭**（显式）：能力声明、项目授权、Approval 与运行时 grant 求交分层；verified-handle、sandbox、脱敏、审计与独立复核按风险组合，任何接缝不得旁路。
+  质量属性场景：Agent 在自治执行中发起越出授权边界的动作（越界路径、未声明命令、凭据进入公开消息），系统应在业务事实提交前拒绝或转入 Approval，度量：无有效 Approval 的高风险动作 0 次产生业务事实；凭据、隐藏推理与原始 Provider 响应在公开事实与审计中 0 泄漏（安全集成测试与凭据拒绝测试阻断）。
+  回应它的结构决策：第 2 节权限事实四分与 grant 转换 Workflow、第 4 节安全组合不降级、第 6 节受控扩展端口。
+- **AC-3 可演进性（变更局部性）**（显式）：一次典型变更只波及一个 owner；新代码归属有唯一显然答案；边界由机械检查长期保持。
+  质量属性场景：新增一个跨 owner 用户结果切片，实现应只落在命名 Workflow、相关 owner Module 与其 Adapter 上，度量：切片准入保持单一主架构单元（backlog 四级治理）；import/owner/writer/依赖图/测试分区架构检查 0 违规；评审中无“代码该放哪”争议。
+  回应它的结构决策：第 1 节模块化单体风格、第 3 节依赖方向矩阵、第 7 节开发视图、第 10 节机械约束。
+- **AC-4 可测试性（公共缝快速反馈）**（显式）：行为经公共缝可测，RED/GREEN 与最终全量确认保持廉价。
+  质量属性场景：开发者在 RED/GREEN 循环中运行聚焦测试文件，系统应快速返回且无需 DOM 环境，度量：全量 Vitest 套件墙钟 ≤ 150 s（特性 020 优化后实测 135.4 s 为预算基线，超出即触发排查）；聚焦服务端测试默认 node 环境、不付 jsdom 创建费；0 个测试 mock 被测主体。
+  回应它的结构决策：第 3 节 Interface 适用性矩阵（公共缝即测试表面）、第 7 节测试分治与 fixture 归属。
+- **AC-5 崩溃可恢复与幂等**（显式）：本地单进程必须能从崩溃恢复且不重复业务动作、不伪造成功。
+  质量属性场景：Next 进程在外部动作期间或 finalize 前崩溃，重启后系统应只对账持久事实并等待显式重试，度量：0 重复业务动作、0 伪造成功、0 自动重放外部调用；同 operation ID + hash 重放 100% 返回同一结果（重放与崩溃点对账测试阻断）。
+  回应它的结构决策：第 3 节 acquire/checkpoint/finalize 与 operation/version/lease、第 4 节强不变量、ADR-0003 存储生命周期。
+
+## 14. 演进与适应度
+
+### 演进路径（变化真发生时改哪里、不改哪里）
+
+- 新 Provider / 外部运行时协议（CLI/ACP、MCP、语音）：改 `src/adapters/outbound/model-runtime/` 或 `notification-media/` 与 Runtime Module（随对应 Capability 切片建立）；不改协作、执行、治理领域事实与公开事件协议。
+- 读侧需求增长（搜索、审计、健康、用量、时间轴、导出、回放）：改 Operations Projection 消费者、投影存储与查询 Interface；不改命令事实 owner 与写路径（第 5 节）。
+- 新 Structured Block 类型：改 Public Collaboration 的 allowlist、新 block schema version 与 fact-only UI 投影；不改 Thread Fact 协议与既有 block 历史。
+- 工作区隔离技术演进（POSIX 支持、新 sandbox 形态）：改 workspace Adapter 与 Safe Execution 内部政策；不改 verified-handle/Approval/冲突检测的组合协议及其调用方。
+- 存储引擎或 schema 兼容政策变化（单向门）：仅在首次正式发布后按 ADR-0003 触发条件重开；改 sqlite Adapter 与 canonical manifest；不改 Module 公开 Interface。
+- 部署形态演进（如桌面打包）：改入站 Adapter 与 composition 入口文件；不改领域 Module 与 Workflow。
+
+### 适应度函数（保护的特征 → 校验方式 → 频率）
+
+- AC-1/AC-3 事实唯一 owner 与依赖方向 → `tests/architecture/`（imports、ownership、writers、dependency-graph、test-partition）与 write-ownership 静态 SQL 清单 → 每次 CI，阻断。
+- AC-1 tuple 与 Frozen Source → 数据库复合约束与 tuple-scoped 查询测试 → 每次 CI。
+- AC-5 operation/version/lease 适用性矩阵 → Module/Workflow 契约测试（第 10 节）→ 每次 CI。
+- AC-5 崩溃恢复与幂等 → acquire/checkpoint/finalize 崩溃点与重放对账测试 → 每次 CI。
+- AC-2 安全组合 → verified-handle/sandbox/Approval/凭据拒绝安全集成测试；Adapter 能力清单架构检查 → 每次 CI。
+- AC-1/AC-2 事件脱敏与投影只读（S-23 拆分片建立后生效）→ 事件 schema/脱敏契约测试与投影只读架构检查 → 每次 CI。
+- AC-4 测试速度预算 → 全量套件墙钟抽测对比 150 s 预算基线 → 定期（感知退化或测试基建变更时）。
+- AC-3 “新代码归属唯一显然”与切片规模护栏 → 切片准入自查与 hf-review 检查项（项目级 review 豁免期间由 to-spec/to-tickets 准入执行）→ 每次切片准入。
+
+### 复核触发（量化信号，触发即重开产品架构阶段）
+
+- 继承 ADR-0002 全部触发：子系统出现独立部署/扩缩容/故障隔离/数据驻留真实需求；SQLite 单机写入、备份或恢复经测量成为单体内无法优化的瓶颈；事实需监管级事件账本或任意时点重建；可信第三方扩展生态成熟且具备进程外隔离基础；Workflow 数量或耦合度持续上升；真实替换实现达两个以上。
+- 继承 ADR-0003 触发：首次正式发布后出现保留用户数据跨版本升级的产品承诺。
+- 子系统数量超过 12 个，或单一 Module 公开 Interface 增长到切片评审无法一次性核对 → 重评上下文合并或拆分。
+- 跨 3 个及以上 owner 的命名 Workflow 占在途切片比例持续超过一半 → 重评事实所有权划分（D-42 的切片拆分规则是前置防线，本条为架构级信号）。
+- 全量测试墙钟持续超过预算 2 倍（约 300 s）→ 重评测试分治与夹具策略。
+- 首次正式发布 → 重开 schema 兼容政策（ADR-0003）与项目级 review 豁免（`AGENTS.md`），均由用户明确决定。
