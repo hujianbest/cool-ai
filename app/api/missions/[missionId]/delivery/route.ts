@@ -1,11 +1,11 @@
 import { join } from "node:path";
 
-import { generatePublicDelivery } from "@/src/server/review/delivery-application-service";
-import { readMissionDelivery } from "@/src/server/review/delivery-read-service";
+import { generatePublicDelivery } from "@/src/adapters/outbound/sqlite/review-delivery/delivery-application-service";
+import { readMissionDelivery } from "@/src/adapters/outbound/sqlite/review-delivery/delivery-read-service";
 import {
   ReviewApiError,
   reviewErrorResponse,
-} from "@/src/server/review/review-errors";
+} from "@/src/modules/review-delivery";
 import { generateDeliveryInputSchema } from "@/src/shared/review-contracts";
 
 type RouteContext = { params: Promise<{ missionId: string }> };

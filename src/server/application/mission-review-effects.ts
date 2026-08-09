@@ -1,6 +1,6 @@
+export { CompletionGateError } from "@/src/modules/review-delivery";
 export {
-  CompletionGateError,
   invalidateCompletionTx,
   writeWorkItemStatusTx,
-} from "@/src/server/review/completion-gate";
-export { invalidateMissionContextTx } from "@/src/server/review/delivery-service";
+} from "@/src/adapters/outbound/sqlite/review-delivery/completion-gate";
+export { invalidateMissionContextTx } from "@/src/adapters/outbound/sqlite/review-delivery/delivery-service";

@@ -17,6 +17,9 @@ import { importEdges, readSource, resolveSpecifier, sourceFiles } from "./helper
  * registered cross-owner read of identity-capability's credential-vault (T-13 收编);
  * the sqlite lifecycle invariants validator keeps its registered read of the pure
  * codec/schema to check structured_message_* data invariants (T-16 收编).
+ * T-11 transition exemption: review-delivery's sqlite adapters keep the registered
+ * cross-owner read of identity-capability's credential-vault (reviewer 凭据解密);
+ * T-13 收编.
  */
 const ALLOWED_MODULE_INTERNAL_EDGES: Record<string, RegExp[]> = {
   "src/adapters/outbound/sqlite/identity-capability": [
@@ -35,6 +38,11 @@ const ALLOWED_MODULE_INTERNAL_EDGES: Record<string, RegExp[]> = {
     /^src\/modules\/public-collaboration\/internal\//u,
     // T-10 transition: 与 T-09 相同的 credential-vault 跨 owner internal 读
     //（run/thread/advance/classifier 解密 provider 凭据做公开文本凭据分类）；T-13 收编。
+    /^src\/modules\/identity-capability\/internal\/credential-vault$/u,
+  ],
+  "src/adapters/outbound/sqlite/review-delivery": [
+    // T-11 transition: 与 T-09/T-10 相同的 credential-vault 跨 owner internal 读
+    //（review-slice/review-application 解密 reviewer 的 provider 凭据）；T-13 收编。
     /^src\/modules\/identity-capability\/internal\/credential-vault$/u,
   ],
   "src/adapters/outbound/sqlite": [
@@ -60,11 +68,22 @@ function isSafeExecutionSameOwnerEdge(file: string, resolved: string): boolean {
  * T-09 transition: sandbox-executor 直开 sqlite connection 写 execution 表
  *（writers.test.ts 已登记 workspace/ 为 safe-execution 合法 writer 目录）；
  * T-13/T-14 收编为事务协调 Port 形态后移除。
+ * T-11 transition: review-delivery 的 review-material/review-schema 复用
+ * safe-execution workspace adapter 的 redactProcessOutput 做公开文本脱敏判定
+ *（sqlite→workspace 跨技术读）；T-13 收编为显式能力后移除。
  */
 const TRANSITIONAL_ADAPTER_EDGES: Array<{ file: string; specifier: string }> = [
   {
     file: "src/adapters/outbound/workspace/sandbox-executor.ts",
     specifier: "@/src/adapters/outbound/sqlite/connection",
+  },
+  {
+    file: "src/adapters/outbound/sqlite/review-delivery/review-material.ts",
+    specifier: "@/src/adapters/outbound/workspace/process-runner",
+  },
+  {
+    file: "src/adapters/outbound/sqlite/review-delivery/review-schema.ts",
+    specifier: "@/src/adapters/outbound/workspace/process-runner",
   },
 ];
 

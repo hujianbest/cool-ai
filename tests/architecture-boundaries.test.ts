@@ -39,7 +39,7 @@ describe("mission workflow architecture boundaries", () => {
     const workflow = source("src/server/application/create-mission-workflow.ts");
     expect(workflow).toContain("@/src/application/unit-of-work");
     expect(workflow).toContain("@/src/modules/mission-work");
-    expect(workflow).toContain("@/src/server/review/public");
+    expect(workflow).toContain("@/src/modules/review-delivery");
     expect(workflow).not.toMatch(/storage\/sqlite|node:sqlite|DatabaseSync|\.prepare\(/u);
 
     for (const publicBoundary of [
@@ -49,7 +49,10 @@ describe("mission workflow architecture boundaries", () => {
       source("src/modules/mission-work/public/dto.ts"),
       source("src/modules/mission-work/public/errors.ts"),
       source("src/modules/mission-work/public/queries.ts"),
-      source("src/server/review/public.ts"),
+      source("src/modules/review-delivery/public/commands.ts"),
+      source("src/modules/review-delivery/public/dto.ts"),
+      source("src/modules/review-delivery/public/errors.ts"),
+      source("src/modules/review-delivery/public/queries.ts"),
     ]) {
       expect(publicBoundary).not.toMatch(/node:sqlite|DatabaseSync|\.prepare\(|\b(?:SELECT|INSERT|UPDATE|DELETE)\b/u);
     }

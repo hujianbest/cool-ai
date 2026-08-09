@@ -19,8 +19,8 @@ import {
   preflightSandbox,
   type SandboxFsAdapter,
 } from "@/src/adapters/outbound/workspace/sandbox-preflight";
-import { generatePublicDelivery } from "@/src/server/review/delivery-application-service";
-import { startPublicReview } from "@/src/server/review/review-application-service";
+import { generatePublicDelivery } from "@/src/adapters/outbound/sqlite/review-delivery/delivery-application-service";
+import { startPublicReview } from "@/src/adapters/outbound/sqlite/review-delivery/review-application-service";
 import { parseWorkspaceGuideEnvelope } from "@/src/shared/onboarding-guide-machine";
 import type { ModelCallResult } from "@/src/shared/collaboration-contracts";
 

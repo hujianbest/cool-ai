@@ -1,7 +1,7 @@
 import { join } from "node:path";
 
-import { reviewErrorResponse } from "@/src/server/review/review-errors";
-import { readReviewAttemptDetail } from "@/src/server/review/review-read-service";
+import { reviewErrorResponse } from "@/src/modules/review-delivery";
+import { readReviewAttemptDetail } from "@/src/adapters/outbound/sqlite/review-delivery/review-read-service";
 
 type RouteContext = { params: Promise<{ attemptId: string }> };
 

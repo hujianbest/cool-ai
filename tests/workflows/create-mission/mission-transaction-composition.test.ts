@@ -6,7 +6,7 @@ import { canonicalRequestHash } from "@/src/adapters/outbound/sqlite/public-coll
 import { openDatabase } from "@/src/adapters/outbound/sqlite/connection";
 import { createMission } from "@/src/adapters/outbound/sqlite/mission-work/mission-service";
 import { createProject } from "@/src/adapters/outbound/sqlite/project-workspace/projects";
-import type { ReviewDeliveryCommandCapability } from "@/src/server/review/public";
+import type { ReviewDeliveryCommandCapability } from "@/src/modules/review-delivery";
 import { openEmptyCurrentDatabase } from "@/tests/fixtures/sqlite/current-database";
 
 const directories: string[] = [];

@@ -3,6 +3,9 @@ import type {
   CreateMissionCommand,
   CreateMissionInput,
   CreateWorkItemInput,
+  MarkReviewedWorkItemDoneInput,
+  MarkWorkItemDoneInput,
+  MarkWorkItemInProgressInput,
   Mission,
   MissionCreated,
   TaskExecutor,
@@ -11,6 +14,7 @@ import type {
   UpdateMissionInput,
   UpdateWorkItemInput,
   WorkItem,
+  WorkItemStatusWriteResult,
 } from "./dto";
 
 export interface MissionCommandCapability {
@@ -18,6 +22,28 @@ export interface MissionCommandCapability {
     transaction: TransactionContext,
     command: CreateMissionCommand,
   ): MissionCreated;
+}
+
+/**
+ * work_items 看板状态写能力（T-11 登记的 DTO 级 seam）：
+ * review-delivery 的完成门禁/复核定稿在各自事务内投影 work_items.status，
+ * SQL 唯一 owner 为 mission-work。当前具体实现为
+ * src/adapters/outbound/sqlite/mission-work/work-item-status-effects.ts 的
+ * 连接级自由函数（adapter→adapter 过渡边，T-13 收编为事务协调 Port 形态）。
+ */
+export interface WorkItemStatusEffectCommands {
+  markWorkItemDone(
+    transaction: TransactionContext,
+    input: MarkWorkItemDoneInput,
+  ): WorkItemStatusWriteResult;
+  markReviewedWorkItemDone(
+    transaction: TransactionContext,
+    input: MarkReviewedWorkItemDoneInput,
+  ): WorkItemStatusWriteResult;
+  markWorkItemInProgress(
+    transaction: TransactionContext,
+    input: MarkWorkItemInProgressInput,
+  ): WorkItemStatusWriteResult;
 }
 
 export interface MissionWorkCommands {

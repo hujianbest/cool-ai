@@ -3,7 +3,7 @@ import userEvent from "@testing-library/user-event";
 import { describe, expect, it, vi } from "vitest";
 
 import * as reviewComponents from "@/components/review/review-slice";
-import type { DeliveryBundle } from "@/src/server/review/delivery-service";
+import type { DeliveryBundle } from "@/src/modules/review-delivery";
 
 type CompletionDto = {
   blockers: Array<{ code: string; refId: string | null; workItemId: string | null }>;

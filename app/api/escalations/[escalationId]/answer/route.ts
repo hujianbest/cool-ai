@@ -2,12 +2,12 @@ import { join } from "node:path";
 import { z } from "zod";
 
 import { openDatabase } from "@/src/adapters/outbound/sqlite/connection";
-import { answerEscalation } from "@/src/server/review/review-escalation-service";
+import { answerEscalation } from "@/src/adapters/outbound/sqlite/review-delivery/review-escalation-service";
 import {
   ReviewApiError,
   reviewErrorResponse,
-} from "@/src/server/review/review-errors";
-import { readReviewWorkspace } from "@/src/server/review/review-read-service";
+} from "@/src/modules/review-delivery";
+import { readReviewWorkspace } from "@/src/adapters/outbound/sqlite/review-delivery/review-read-service";
 import { reviewWorkspaceDtoSchema } from "@/src/shared/review-contracts";
 
 type RouteContext = { params: Promise<{ escalationId: string }> };

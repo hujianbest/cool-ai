@@ -3,7 +3,7 @@ import type {
   CreateMissionCommand,
   MissionCommandCapability,
 } from "@/src/modules/mission-work";
-import type { ReviewDeliveryCommandCapability } from "@/src/server/review/public";
+import type { ReviewDeliveryCommandCapability } from "@/src/modules/review-delivery";
 import type { Mission } from "@/src/shared/project-context-contracts";
 
 export type CreateMissionWorkflow = {

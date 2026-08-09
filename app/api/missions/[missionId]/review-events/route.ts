@@ -3,8 +3,8 @@ import { join } from "node:path";
 import {
   ReviewApiError,
   reviewErrorResponse,
-} from "@/src/server/review/review-errors";
-import { listReviewEvents } from "@/src/server/review/review-read-service";
+} from "@/src/modules/review-delivery";
+import { listReviewEvents } from "@/src/adapters/outbound/sqlite/review-delivery/review-read-service";
 
 type RouteContext = { params: Promise<{ missionId: string }> };
 

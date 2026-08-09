@@ -21,7 +21,7 @@ import {
 import {
   readReviewWorkspace,
   startReview,
-} from "@/src/server/review/review-slice-service";
+} from "@/src/adapters/outbound/sqlite/review-delivery/review-slice-service";
 import { createThread } from "@/src/adapters/outbound/sqlite/public-collaboration/thread-service";
 import type { ReviewWorkspaceDto } from "@/src/shared/review-contracts";
 import { refreshExecutionFrozenFixture } from "@/tests/fixtures/execution/frozen-input";

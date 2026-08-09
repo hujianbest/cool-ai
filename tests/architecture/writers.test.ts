@@ -51,25 +51,34 @@ const MIGRATED_OWNERS: string[] = [
   "governance",
   "safe-execution",
   "public-collaboration",
+  "review-delivery",
 ];
 
 /**
- * Known transitional non-owner writers, frozen 2026-08-09 (see the ratchet below):
- * review-delivery completion projections write mission-work's work_items until the
- * T-11 review-delivery wave and the T-13 workflow extraction land. This set may only shrink.
+ * Known transitional non-owner writers, frozen 2026-08-09 (see the ratchet below).
+ * This set may only shrink.
+ * T-11: review-delivery no longer writes mission-work's work_items directly — the
+ * completion/finalizer board projections were extracted verbatim into
+ * src/adapters/outbound/sqlite/mission-work/work-item-status-effects.ts.
  * T-07: review-finalizer still persists review_memory_candidates inline inside the
- * finalization transaction; the candidate write path is formalized in T-11/T-13.
+ * finalization transaction; the candidate write path is formalized in T-13.
  * T-09: validation-policy-service persists its idempotent operation receipt in
  * safe-execution's execution_operations (the T-05 registered cross-domain seam);
  * the receipt write path is formalized in T-13/T-14.
+ * T-11: merge-journal-service's merge rollback deletes review-delivery's
+ * work_item_review_heads projections (frozen ratchet edge
+ * "merge-journal-service->work_item_review_heads"); formalized in T-13.
  */
 const TRANSITIONAL_NON_OWNER_WRITERS: Array<{ file: string; owner: string; table: string }> = [
-  { file: "src/server/review/completion-gate.ts", owner: "mission-work", table: "work_items" },
-  { file: "src/server/review/review-finalizer.ts", owner: "mission-work", table: "work_items" },
   {
-    file: "src/server/review/review-finalizer.ts",
+    file: "src/adapters/outbound/sqlite/review-delivery/review-finalizer.ts",
     owner: "knowledge-provenance",
     table: "review_memory_candidates",
+  },
+  {
+    file: "src/adapters/outbound/sqlite/safe-execution/merge-journal-service.ts",
+    owner: "review-delivery",
+    table: "work_item_review_heads",
   },
   {
     file: "src/adapters/outbound/sqlite/project-workspace/validation-policy-service.ts",
@@ -138,6 +147,10 @@ describe("writer location by owner", () => {
     // Frozen 2026-08-09 (8 edges): mission-service->collaboration_operations;
     // merge-journal-service->work_item_review_heads; validation-policy-service->
     // project_validation_policy_* (x4); completion-gate/review-finalizer->work_items.
+    // T-11: the review->work_items edges are gone (extracted into mission-work's
+    // work-item-status-effects capability); src/server/review/ is deleted, so the
+    // fileOwner map below no longer attributes review files — the migrated-owner
+    // writer block above is now the guard for review-delivery's eleven tables.
     // Each migration wave resolves its edges; the count may only shrink.
     const ownerOf = new Map<string, string>();
     for (const [owner, tables] of Object.entries(MANIFEST.owners)) {

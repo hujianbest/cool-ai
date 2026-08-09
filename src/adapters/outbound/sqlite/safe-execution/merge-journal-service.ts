@@ -32,7 +32,7 @@ import {
 import {
   advanceResultHeadTx,
   initializeFirstResultHeadTx,
-} from "@/src/server/review/review-slice-service";
+} from "@/src/adapters/outbound/sqlite/review-delivery/review-slice-service";
 
 export type MergeFaultPoint =
   | "before_prepare"

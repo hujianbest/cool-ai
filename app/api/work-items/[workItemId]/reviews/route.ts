@@ -1,11 +1,11 @@
 import { join } from "node:path";
 
-import { startPublicReview } from "@/src/server/review/review-application-service";
+import { startPublicReview } from "@/src/adapters/outbound/sqlite/review-delivery/review-application-service";
 import {
   ReviewApiError,
   reviewErrorResponse,
-} from "@/src/server/review/review-errors";
-import { listReviewAttempts } from "@/src/server/review/review-read-service";
+} from "@/src/modules/review-delivery";
+import { listReviewAttempts } from "@/src/adapters/outbound/sqlite/review-delivery/review-read-service";
 
 type RouteContext = { params: Promise<{ workItemId: string }> };
 

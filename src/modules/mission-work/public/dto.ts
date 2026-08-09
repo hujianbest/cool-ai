@@ -67,3 +67,29 @@ export type MissionWriteActor =
   | { type: "agent"; agentId: string };
 
 export type TaskExecutor = (goal: string) => string;
+
+/**
+ * work_items 看板状态写能力的输入（T-11：review-delivery 完成/重开投影的
+ * 跨 owner 写提取自 src/server/review/，SQL 与并发语义逐字保持）。
+ */
+export type MarkWorkItemDoneInput = {
+  expectedVersion: number;
+  occurredAt: string;
+  workItemId: string;
+};
+
+export type MarkReviewedWorkItemDoneInput = {
+  missionId: string;
+  occurredAt: string;
+  workItemId: string;
+};
+
+export type MarkWorkItemInProgressInput = {
+  occurredAt: string;
+  workItemId: string;
+};
+
+/** 写能力的变更计数结果（调用方据 changes===1 判定并发冲突）。 */
+export type WorkItemStatusWriteResult = {
+  changes: number | bigint;
+};

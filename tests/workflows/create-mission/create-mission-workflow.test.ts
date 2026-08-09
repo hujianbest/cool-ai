@@ -7,7 +7,7 @@ import type {
   MissionCommandCapability,
   MissionCreated,
 } from "@/src/modules/mission-work";
-import type { ReviewDeliveryCommandCapability } from "@/src/server/review/public";
+import type { ReviewDeliveryCommandCapability } from "@/src/modules/review-delivery";
 
 describe("create mission application workflow", () => {
   it("passes one opaque transaction through both capabilities in strict order", () => {
