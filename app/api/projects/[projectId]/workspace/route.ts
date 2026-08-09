@@ -3,12 +3,9 @@ import { join } from "node:path";
 import {
   internalErrorResponse,
   storageErrorResponse,
-} from "@/src/server/api-errors";
-import {
-  bindWorkspace,
-  getWorkspace,
-  WorkspaceError,
-} from "@/src/server/workspace-service";
+} from "@/app/api/_shared/api-errors";
+import { workspaceService } from "@/src/composition";
+import { WorkspaceError } from "@/src/modules/project-workspace";
 
 type RouteContext = {
   params: Promise<{ projectId: string }>;
@@ -80,7 +77,7 @@ export async function GET(
 ): Promise<Response> {
   const { projectId } = await context.params;
   try {
-    return Response.json(getWorkspace(databasePath(), projectId));
+    return Response.json(workspaceService.getWorkspace(databasePath(), projectId));
   } catch (error) {
     if (error instanceof WorkspaceError) return workspaceErrorResponse(error);
     return (
@@ -127,7 +124,7 @@ export async function PUT(
 
   try {
     return Response.json(
-      await bindWorkspace(databasePath(), projectId, {
+      await workspaceService.bindWorkspace(databasePath(), projectId, {
         path: candidate.path as string,
         expectedVersion: candidate.expectedVersion as number,
         confirmRebind: candidate.confirmRebind as boolean,

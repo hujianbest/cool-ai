@@ -1,11 +1,8 @@
 import { join } from "node:path";
 
-import { memoryApiError, readMemoryJson } from "@/src/server/memory-api";
-import {
-  createMemory,
-  listMemories,
-  type CreateMemoryInput,
-} from "@/src/server/memory-service";
+import { memoryApiError, readMemoryJson } from "@/app/api/_shared/memory-api";
+import { memoryService } from "@/src/composition";
+import type { CreateMemoryInput } from "@/src/modules/knowledge-provenance";
 import {
   memoryCreateResponseSchema,
   memoryListResponseSchema,
@@ -26,7 +23,7 @@ export async function GET(
     const includeInactive =
       new URL(request.url).searchParams.get("includeInactive") === "1";
     return Response.json(memoryListResponseSchema.parse({
-      memories: listMemories(databasePath(), projectId, includeInactive),
+      memories: memoryService.listMemories(databasePath(), projectId, includeInactive),
     }));
   } catch (error) {
     return memoryApiError(error, "GET /api/projects/:projectId/memories");
@@ -43,7 +40,7 @@ export async function POST(
   try {
     return Response.json(
       memoryCreateResponseSchema.parse({
-        memory: createMemory(
+        memory: memoryService.createMemory(
           databasePath(),
           projectId,
           body.value as CreateMemoryInput,

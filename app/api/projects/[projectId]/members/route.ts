@@ -3,11 +3,8 @@ import { join } from "node:path";
 import {
   membershipApiError,
   readMembershipJson,
-} from "@/src/server/membership-api";
-import {
-  getMembers,
-  replaceMembers,
-} from "@/src/server/membership-service";
+} from "@/app/api/_shared/membership-api";
+import { membershipService } from "@/src/composition";
 
 type RouteContext = {
   params: Promise<{ projectId: string }>;
@@ -28,7 +25,7 @@ export async function GET(
 ): Promise<Response> {
   const { projectId } = await context.params;
   try {
-    return Response.json(getMembers(databasePath(), projectId));
+    return Response.json(membershipService.getMembers(databasePath(), projectId));
   } catch (error) {
     return membershipApiError(error, "GET /api/projects/:projectId/members");
   }
@@ -43,7 +40,7 @@ export async function PUT(
   if (!body.ok) return body.response;
   try {
     return Response.json(
-      replaceMembers(
+      membershipService.replaceMembers(
         databasePath(),
         projectId,
         body.value as ReplaceMembersInput,

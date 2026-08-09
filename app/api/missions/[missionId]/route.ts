@@ -1,7 +1,7 @@
 import { join } from "node:path";
 
-import { missionApiError, readMissionJson } from "@/src/server/mission-api";
-import { updateMission } from "@/src/server/mission-service";
+import { missionApiError, readMissionJson } from "@/app/api/_shared/mission-api";
+import { missionWork } from "@/src/composition";
 
 type RouteContext = { params: Promise<{ missionId: string }> };
 
@@ -18,7 +18,7 @@ export async function PATCH(
   if (!body.ok) return body.response;
   try {
     return Response.json({
-      mission: updateMission(
+      mission: missionWork.updateMission(
         databasePath(),
         missionId,
         body.value as { title: string; goal: string; expectedVersion: number },

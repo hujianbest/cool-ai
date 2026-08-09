@@ -1,9 +1,9 @@
 import { join } from "node:path";
 import { TextDecoder } from "node:util";
 
-import { collaborationErrorResponse } from "@/src/server/collaboration/collaboration-api";
-import { CollaborationError } from "@/src/server/collaboration/collaboration-errors";
-import { updateThreadPolicy } from "@/src/server/collaboration/thread-service";
+import { collaborationErrorResponse } from "@/app/api/_shared/collaboration/collaboration-api";
+import { threadService } from "@/src/composition";
+import { CollaborationError } from "@/src/modules/public-collaboration";
 
 type RouteContext = {
   params: Promise<{ projectId: string; threadId: string }>;
@@ -123,7 +123,7 @@ export async function PATCH(
     const projectId = parsePathId(params.projectId, "projectId");
     const threadId = parsePathId(params.threadId, "threadId");
     requireNoUrlSuffix(request);
-    const result = updateThreadPolicy(
+    const result = threadService.updateThreadPolicy(
       databasePath(),
       projectId,
       threadId,

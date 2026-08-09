@@ -1,4 +1,4 @@
-import { executeTaskResponse, type RouteContext } from "@/src/server/task-api";
+import { executeTaskResponse, type RouteContext } from "@/app/api/_shared/task-api";
 
 export function POST(
   _request: Request,

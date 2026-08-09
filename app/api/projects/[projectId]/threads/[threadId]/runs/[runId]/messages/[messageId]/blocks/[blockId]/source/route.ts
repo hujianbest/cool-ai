@@ -1,4 +1,4 @@
-import { structuredMessageSourcePost } from "@/src/server/structured-messages/structured-message-http";
+import { structuredMessageSourcePost } from "@/app/api/_shared/structured-messages/structured-message-http";
 
 export const runtime = "nodejs";
 

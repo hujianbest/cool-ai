@@ -1,7 +1,7 @@
 import { join } from "node:path";
 
-import { missionApiError, readMissionJson } from "@/src/server/mission-api";
-import { createWorkItem } from "@/src/server/mission-service";
+import { missionApiError, readMissionJson } from "@/app/api/_shared/mission-api";
+import { missionWork } from "@/src/composition";
 
 type RouteContext = { params: Promise<{ missionId: string }> };
 type CreateWorkItemInput = {
@@ -25,7 +25,7 @@ export async function POST(
   try {
     return Response.json(
       {
-        workItem: createWorkItem(
+        workItem: missionWork.createWorkItem(
           databasePath(),
           missionId,
           body.value as CreateWorkItemInput,

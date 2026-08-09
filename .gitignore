@@ -1,5 +1,6 @@
 .data/
 .next/
+.next-*/
 node_modules/
 .idea/
 *.tsbuildinfo

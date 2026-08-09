@@ -5,7 +5,7 @@ import {
   parseProjectSelection,
   reconcileReturnTo,
 } from "@/components/settings-navigation";
-import { readThreadDetail } from "@/src/server/collaboration/thread-service";
+import { threadService } from "@/src/composition";
 
 type SourceReferencePageProps = {
   params: Promise<{
@@ -39,7 +39,7 @@ async function projectReturnTo(
     ? `${project.projectHref}?${searchParams.toString()}`
     : project.projectHref;
   return reconcileReturnTo(candidate, (selectedProjectId, threadId, runId) => {
-    readThreadDetail(
+    threadService.readThreadDetail(
       databasePath(),
       selectedProjectId,
       threadId,

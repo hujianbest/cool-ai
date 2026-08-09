@@ -1,10 +1,8 @@
 import { join } from "node:path";
 
-import { missionApiError, readMissionJson } from "@/src/server/mission-api";
-import {
-  createMission,
-  getMissionState,
-} from "@/src/server/mission-service";
+import { missionApiError, readMissionJson } from "@/app/api/_shared/mission-api";
+import { missionWork } from "@/src/composition";
+import { createMission } from "@/src/composition/mission-commands";
 
 type RouteContext = { params: Promise<{ projectId: string }> };
 
@@ -18,7 +16,7 @@ export async function GET(
 ): Promise<Response> {
   const { projectId } = await context.params;
   try {
-    return Response.json(getMissionState(databasePath(), projectId));
+    return Response.json(missionWork.getMissionState(databasePath(), projectId));
   } catch (error) {
     return missionApiError(error, "GET /api/projects/:projectId/mission");
   }

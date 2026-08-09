@@ -1,9 +1,8 @@
 import { join } from "node:path";
 
-import { collaborationErrorResponse } from "@/src/server/collaboration/collaboration-api";
-import { CollaborationError } from "@/src/server/collaboration/collaboration-errors";
-import { readThreadDetail } from "@/src/server/collaboration/thread-service";
-import { reconcileExpiredAttempt } from "@/src/server/collaboration/turn-orchestrator";
+import { collaborationErrorResponse } from "@/app/api/_shared/collaboration/collaboration-api";
+import { threadService, turnOrchestrator } from "@/src/composition";
+import { CollaborationError } from "@/src/modules/public-collaboration";
 
 type RouteContext = {
   params: Promise<{ projectId: string; threadId: string }>;
@@ -69,13 +68,13 @@ export async function GET(
     const threadId = parsePathId(params.threadId, "threadId");
     const selectedRunId = parseQuery(new URL(request.url));
     if (selectedRunId !== null) {
-      reconcileExpiredAttempt(databasePath(), {
+      turnOrchestrator.reconcileExpiredAttempt(databasePath(), {
         projectId,
         runId: selectedRunId,
         threadId,
       });
     }
-    const result = readThreadDetail(
+    const result = threadService.readThreadDetail(
       databasePath(),
       projectId,
       threadId,

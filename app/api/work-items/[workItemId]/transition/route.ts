@@ -1,7 +1,7 @@
 import { join } from "node:path";
 
-import { missionApiError, readMissionJson } from "@/src/server/mission-api";
-import { transitionWorkItem } from "@/src/server/mission-service";
+import { missionApiError, readMissionJson } from "@/app/api/_shared/mission-api";
+import { missionWork } from "@/src/composition";
 import type { WorkItemStatus } from "@/src/shared/project-context-contracts";
 
 type RouteContext = { params: Promise<{ workItemId: string }> };
@@ -23,7 +23,7 @@ export async function POST(
   if (!body.ok) return body.response;
   try {
     return Response.json({
-      workItem: transitionWorkItem(
+      workItem: missionWork.transitionWorkItem(
         databasePath(),
         workItemId,
         body.value as TransitionInput,

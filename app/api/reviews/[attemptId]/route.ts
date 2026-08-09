@@ -1,7 +1,7 @@
 import { join } from "node:path";
 
-import { reviewErrorResponse } from "@/src/server/review/review-errors";
-import { readReviewAttemptDetail } from "@/src/server/review/review-read-service";
+import { reviewReadService } from "@/src/composition";
+import { reviewErrorResponse } from "@/src/modules/review-delivery";
 
 type RouteContext = { params: Promise<{ attemptId: string }> };
 
@@ -12,7 +12,7 @@ function databasePath(): string {
 export async function GET(_request: Request, context: RouteContext): Promise<Response> {
   const { attemptId } = await context.params;
   try {
-    return Response.json(readReviewAttemptDetail(databasePath(), attemptId));
+    return Response.json(reviewReadService.readReviewAttemptDetail(databasePath(), attemptId));
   } catch (error) {
     return reviewErrorResponse(error, "GET /api/reviews/:attemptId");
   }

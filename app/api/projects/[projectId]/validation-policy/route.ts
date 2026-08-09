@@ -1,14 +1,10 @@
 import { join } from "node:path";
 import { z } from "zod";
 
-import { readBoundedExecutionJson } from "@/src/server/execution/execution-api";
-import { validationPolicySchemaErrorResponse } from "@/src/server/execution/validation-policy-http";
-import {
-  getValidationPolicy,
-  saveValidationPolicy,
-  ValidationPolicyError,
-} from "@/src/server/execution/validation-policy-service";
-import { SchemaError } from "@/src/server/storage/schema-error";
+import { readBoundedExecutionJson } from "@/app/api/_shared/execution/execution-api";
+import { validationPolicySchemaErrorResponse } from "@/app/api/_shared/execution/validation-policy-http";
+import { SchemaError, validationPolicyService } from "@/src/composition";
+import { ValidationPolicyError } from "@/src/modules/project-workspace";
 
 type RouteContext = { params: Promise<{ projectId: string }> };
 
@@ -65,7 +61,7 @@ export async function GET(
 ): Promise<Response> {
   const { projectId } = await context.params;
   try {
-    return Response.json({ policy: getValidationPolicy(databasePath(), projectId) });
+    return Response.json({ policy: validationPolicyService.getValidationPolicy(databasePath(), projectId) });
   } catch (error) {
     return errorResponse(error);
   }
@@ -86,7 +82,7 @@ export async function PUT(
     );
   }
   try {
-    return Response.json(saveValidationPolicy(databasePath(), projectId, input.data));
+    return Response.json(validationPolicyService.saveValidationPolicy(databasePath(), projectId, input.data));
   } catch (error) {
     return errorResponse(error);
   }

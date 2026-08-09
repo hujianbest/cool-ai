@@ -1,15 +1,12 @@
 import { join } from "node:path";
 import { z } from "zod";
 
-import { openDatabase } from "@/src/server/db";
 import {
   executionErrorResponse,
   readBoundedExecutionJson,
-} from "@/src/server/execution/execution-api";
-import {
-  executionDtoFromDatabase,
-} from "@/src/server/execution/execution-service";
-import { resolveManualRecovery } from "@/src/server/execution/merge-journal-service";
+} from "@/app/api/_shared/execution/execution-api";
+import { executionService, sqliteConnection } from "@/src/composition";
+import { mergeJournalService } from "@/src/composition/execution-host";
 
 type RouteContext = { params: Promise<{ executionId: string }> };
 
@@ -39,10 +36,10 @@ export async function POST(
     );
   }
 
-  const database = openDatabase(databasePath());
+  const database = sqliteConnection.openDatabase(databasePath());
   try {
-    const current = executionDtoFromDatabase(database, executionId);
-    const result = await resolveManualRecovery({
+    const current = executionService.executionDtoFromDatabase(database, executionId);
+    const result = await mergeJournalService.resolveManualRecovery({
       ...input.data,
       database,
       executionId,
@@ -54,7 +51,7 @@ export async function POST(
     const body = result.body as Record<string, unknown>;
     return Response.json({
       ...body,
-      execution: executionDtoFromDatabase(database, executionId),
+      execution: executionService.executionDtoFromDatabase(database, executionId),
     });
   } catch (error) {
     return executionErrorResponse(

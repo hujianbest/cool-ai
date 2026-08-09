@@ -1,10 +1,10 @@
 import { join } from "node:path";
 
-import { decideExecutionApproval } from "@/src/server/execution/execution-approval-service";
 import {
   executionErrorResponse,
   readBoundedExecutionJson,
-} from "@/src/server/execution/execution-api";
+} from "@/app/api/_shared/execution/execution-api";
+import { executionApprovalService } from "@/src/composition";
 import { executionApprovalInputSchema } from "@/src/shared/execution-contracts";
 
 type RouteContext = {
@@ -30,7 +30,7 @@ export async function POST(
     );
   }
   try {
-    const result = await decideExecutionApproval(
+    const result = await executionApprovalService.decideExecutionApproval(
       databasePath(),
       executionId,
       approvalId,

@@ -1,7 +1,7 @@
 import { join } from "node:path";
 
-import { readSkillJson, skillApiError } from "@/src/server/skill-api";
-import { updateSkill } from "@/src/server/skill-service";
+import { readSkillJson, skillApiError } from "@/app/api/_shared/skill-api";
+import { skillService } from "@/src/composition";
 import { updateSkillInputSchema } from "@/src/shared/team-schemas";
 
 function databasePath(): string {
@@ -40,7 +40,7 @@ export async function PATCH(
   const { skillId } = await context.params;
   try {
     return Response.json({
-      skill: updateSkill(skillId, parsed.data, databasePath()),
+      skill: skillService.updateSkill(skillId, parsed.data, databasePath()),
     });
   } catch (error) {
     return skillApiError(error, "PATCH /api/skills/:skillId");

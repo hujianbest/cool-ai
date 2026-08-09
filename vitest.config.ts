@@ -11,7 +11,7 @@ export default defineConfig({
   },
   test: {
     environment: "jsdom",
-    exclude: ["tests/baseline.test.mjs", "node_modules/**"],
+    exclude: ["tests/browser/baseline.test.mjs", "node_modules/**"],
     maxWorkers: 2,
     setupFiles: ["./tests/setup.ts"],
   },

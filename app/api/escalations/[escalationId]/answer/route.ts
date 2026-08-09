@@ -1,13 +1,11 @@
 import { join } from "node:path";
 import { z } from "zod";
 
-import { openDatabase } from "@/src/server/db";
-import { answerEscalation } from "@/src/server/review/review-escalation-service";
+import { reviewEscalationService, reviewReadService, sqliteConnection } from "@/src/composition";
 import {
   ReviewApiError,
   reviewErrorResponse,
-} from "@/src/server/review/review-errors";
-import { readReviewWorkspace } from "@/src/server/review/review-read-service";
+} from "@/src/modules/review-delivery";
 import { reviewWorkspaceDtoSchema } from "@/src/shared/review-contracts";
 
 type RouteContext = { params: Promise<{ escalationId: string }> };
@@ -74,16 +72,16 @@ export async function POST(request: Request, context: RouteContext): Promise<Res
   if (!input.success) return invalidInput();
 
   const path = databasePath();
-  const database = openDatabase(path);
+  const database = sqliteConnection.openDatabase(path);
   try {
-    const answer = answerEscalation(
+    const answer = reviewEscalationService.answerEscalation(
       database,
       escalationId,
       input.data,
       { actorType: "owner" },
     );
     database.close();
-    const workspace = readReviewWorkspace(path, answer.workItemId);
+    const workspace = reviewReadService.readReviewWorkspace(path, answer.workItemId);
     const response = responseSchema.safeParse({ answer, workspace });
     if (!response.success) throw new ReviewApiError("REVIEW_INVARIANT_FAILED");
     return Response.json(response.data);

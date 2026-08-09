@@ -1,0 +1,34 @@
+import type {
+  BindWorkspaceInput,
+  MembershipState,
+  Project,
+  ReplaceMembersInput,
+  ResolvedExecutable,
+  SaveValidationPolicyInput,
+  SaveValidationPolicyResult,
+  WorkspaceFs,
+  WorkspaceOperation,
+  WorkspaceState,
+} from "./dto";
+
+export interface ProjectWorkspaceCommands {
+  bindWorkspace: (
+    databasePath: string,
+    projectId: string,
+    input: BindWorkspaceInput,
+    workspaceFs?: WorkspaceFs,
+  ) => Promise<WorkspaceState>;
+  createNodeWorkspaceFs: (record?: (operation: WorkspaceOperation) => void) => WorkspaceFs;
+  createProject: (name: string, databasePath: string) => Project;
+  replaceMembers: (
+    databasePath: string,
+    projectId: string,
+    input: ReplaceMembersInput,
+  ) => MembershipState;
+  saveValidationPolicy: (
+    databasePath: string,
+    projectId: string,
+    input: SaveValidationPolicyInput,
+    options?: { resolveExecutable?: (executable: string) => ResolvedExecutable },
+  ) => SaveValidationPolicyResult;
+}

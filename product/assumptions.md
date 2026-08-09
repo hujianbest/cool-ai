@@ -102,3 +102,10 @@ agent 替用户做的默认选择。遇到欠定点的标准动作: 提出带默
 - A-95 2026-08-09 [生效] 017 使用 `openDatabase(databasePath)` 与 Structured Message Source Public Read 两条公共 seam、拆为 5 张票；File Reference 在提交时冻结脱敏且按 grapheme 限长的公开名称和明确 source version，读取不得查询 mutable name/latest；SQLite busy-timeout 诊断限 15 分钟、最多 10 次量化复现 — 默认理由: 两条 seam 共同证明同一个“reopen 后仍冻结、完整、无泄漏”结果，并给已知不稳定失败明确停止条件
 - A-96 2026-08-09 [生效] 018 使用 fact-only Structured Block Public UI 单一 seam、拆为 4 张票；VERSION_CONFLICT 后先禁用旧动作并读取完整最新 Proposal/Checklist state，只有 owner 基于最新事实显式选择时才用新 operation 与最新 expected version 重试，任何读取或渲染都不自动重放 — 默认理由: stale 决策必须服从服务端事实且保留 owner 意图，客户端自动重放会把旧决定施加到新状态
 - A-97 2026-08-09 [生效] 018 只从 `D:\clowder-ai` 转译稳定消息壳、服务端事实收敛、文本型类型/状态标签与窄屏既有模型四项信息架构/交互原则；继续复用 Cool tokens/components，不复制品牌、资产、文案、源码、DOM/CSS 结构或调色盘 — 默认理由: 强参考交互原则可以提高信息清晰度，同时保持 Cool AI 的产品身份与实现独立性
+- A-98 2026-08-09 [生效] 019 架构收敛特性用户可感知=否（纯结构调整、行为保持）；浏览器 smoke 不作为 demo-acceptance 门禁，但作为 ADR-0004 完成判据在 T-16 照常执行 — 默认理由: 门禁的 demo-acceptance 针对用户可感知切片，机械迁移没有可演示新结果，而 ADR-0004 的验收要求不变
+- A-99 2026-08-09 [生效] 事务协调 Port（unit-of-work/transaction-context）归 `src/application/` 应用层接缝，其 SQLite 实现归 `src/adapters/outbound/sqlite/`；不放入 src/shared（其类型包裹 DatabaseSync 技术类型） — 默认理由: 事务协调是 Workflow 的应用层依赖而非无 owner 基础类型，目标树第 7 节未为其单列目录
+- A-100 2026-08-09 [生效] 入站 HTTP 共享助手（JSON 读取、错误 envelope 映射）归 `app/api/_shared/`（Next 下划线目录不参与路由）；不新建业务目录、不进 src/adapters/inbound（该目录留给非 Next 入站） — 默认理由: HTTP 传输细节属于 app/ 入站 Adapter 内部组织
+- A-101 2026-08-09 [生效] provider-verifier 与 openai-chat-client 归 `src/adapters/outbound/model-runtime/`；runtime 领域 Module 当前无自有事实表（CAP-RUN-02+ 规划中），不建空壳 Module — 默认理由: 目标架构禁止为未实现能力创建空壳
+- A-102 2026-08-09 [生效] 冻结基线中 127 个 Windows-only 测试失败为环境性（A-60 设计失败关闭 SANDBOX_UNVERIFIABLE），不计入收敛回归判据；收敛判据为"全量测试不比冻结基线差" — 默认理由: 本机 Linux 无法验证 Windows verified-handle 路径，环境性失败与迁移质量无关
+- A-103 2026-08-09 [生效] T-04～T-12 迁移期允许 route 暂直接引用 Adapter 构造的过渡口，T-14 统一收编 `src/composition/` 后删除；过渡口逐波登记在 progress.md — 默认理由: 分波迁移需要可构建中间态，过渡口有明确删除波次、不构成长期兼容层
+- A-104 2026-08-09 [生效] 领域→领域 import 边在 T-04～T-12 以"改经对方公开 Interface"为过渡形态，T-13 提取命名 Workflow 后消除并转架构阻断 — 默认理由: 跨域命令边的正确消除依赖 Workflow 层先就位

@@ -1,1 +1,1 @@
-export { inlineOperationGet as GET } from "@/src/server/structured-messages/structured-message-http";
+export { inlineOperationGet as GET } from "@/app/api/_shared/structured-messages/structured-message-http";

@@ -1,9 +1,7 @@
 import { join } from "node:path";
 
-import {
-  listValidationPolicyRevisions,
-  ValidationPolicyError,
-} from "@/src/server/execution/validation-policy-service";
+import { validationPolicyService } from "@/src/composition";
+import { ValidationPolicyError } from "@/src/modules/project-workspace";
 
 type RouteContext = { params: Promise<{ projectId: string }> };
 
@@ -22,7 +20,7 @@ export async function GET(request: Request, context: RouteContext): Promise<Resp
     );
   }
   try {
-    const revisions = listValidationPolicyRevisions(databasePath(), projectId);
+    const revisions = validationPolicyService.listValidationPolicyRevisions(databasePath(), projectId);
     const items = revisions.slice(-limit);
     return Response.json({
       items,

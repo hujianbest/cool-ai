@@ -1,10 +1,10 @@
 import { join } from "node:path";
 
-import { listMissionDeliveries } from "@/src/server/review/delivery-read-service";
+import { deliveryReadService } from "@/src/composition";
 import {
   ReviewApiError,
   reviewErrorResponse,
-} from "@/src/server/review/review-errors";
+} from "@/src/modules/review-delivery";
 
 type RouteContext = { params: Promise<{ missionId: string }> };
 
@@ -29,7 +29,7 @@ export async function GET(request: Request, context: RouteContext): Promise<Resp
   const { missionId } = await context.params;
   try {
     return Response.json(
-      listMissionDeliveries(databasePath(), missionId, query(request)),
+      deliveryReadService.listMissionDeliveries(databasePath(), missionId, query(request)),
     );
   } catch (error) {
     return reviewErrorResponse(error, "GET /api/missions/:missionId/deliveries");

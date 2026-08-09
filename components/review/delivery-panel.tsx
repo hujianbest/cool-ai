@@ -2,7 +2,7 @@
 
 import { useEffect, useRef, useState } from "react";
 
-import type { DeliveryBundle } from "@/src/server/review/delivery-service";
+import type { DeliveryBundle } from "@/src/modules/review-delivery";
 
 export type MissionCompletionDto = {
   blockers: Array<{ code: string; refId: string | null; workItemId: string | null }>;

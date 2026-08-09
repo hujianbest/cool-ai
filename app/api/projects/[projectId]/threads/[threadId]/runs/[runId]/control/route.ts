@@ -1,4 +1,4 @@
-import { threadRunControlPost } from "@/src/server/collaboration/thread-run-control-api";
+import { threadRunControlPost } from "@/app/api/_shared/collaboration/thread-run-control-api";
 
 type RouteContext = {
   params: Promise<{ projectId: string; threadId: string; runId: string }>;

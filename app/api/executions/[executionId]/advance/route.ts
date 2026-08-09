@@ -1,13 +1,11 @@
 import { join } from "node:path";
 
-import { advanceExecution } from "@/src/server/execution/action-orchestrator";
 import {
   executionErrorResponse,
   readBoundedExecutionJson,
-} from "@/src/server/execution/execution-api";
-import {
-  createWindowsVerifiedExecutionAdapters,
-} from "@/src/server/execution/windows-verified-execution-adapter";
+} from "@/app/api/_shared/execution/execution-api";
+import { actionOrchestrator } from "@/src/composition";
+import { windowsVerifiedExecution } from "@/src/composition/execution-host";
 import { advanceExecutionInputSchema } from "@/src/shared/execution-contracts";
 
 type RouteContext = { params: Promise<{ executionId: string }> };
@@ -31,8 +29,8 @@ export async function POST(
     );
   }
   try {
-    const adapters = createWindowsVerifiedExecutionAdapters();
-    const result = await advanceExecution(
+    const adapters = windowsVerifiedExecution.createWindowsVerifiedExecutionAdapters();
+    const result = await actionOrchestrator.advanceExecution(
       databasePath(),
       executionId,
       input.data,
