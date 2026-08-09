@@ -16,11 +16,11 @@ import {
   nextThreadActivitySequenceTx,
   type ThreadFactIntent,
 } from "@/src/server/collaboration/thread-fact-store";
+import { createCredentialVault } from "@/src/modules/identity-capability/internal/credential-vault";
 import {
-  createCredentialVault,
   CredentialVaultError,
   type CredentialEnvelope,
-} from "@/src/server/credential-vault";
+} from "@/src/modules/identity-capability";
 import { openDatabase } from "@/src/adapters/outbound/sqlite/connection";
 import { readPublicStructuredBlocksTx } from "@/src/server/structured-messages/structured-message-store";
 import { timelinePayloadSchemas } from "@/src/shared/collaboration-contracts";

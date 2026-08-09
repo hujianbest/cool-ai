@@ -15,7 +15,7 @@ import {
   acquireAdvance,
   finalizeAdvance,
 } from "@/src/server/collaboration/turn-orchestrator";
-import { createCredentialVault } from "@/src/server/credential-vault";
+import { createCredentialVault } from "@/src/modules/identity-capability/internal/credential-vault";
 import { openDatabase } from "@/src/adapters/outbound/sqlite/connection";
 import { createMission } from "@/src/server/mission-service";
 

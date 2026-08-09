@@ -1,7 +1,7 @@
 import { join } from "node:path";
 
 import { providerApiError, readJsonBody } from "@/src/server/provider-api";
-import { updateProvider } from "@/src/server/provider-service";
+import { updateProvider } from "@/src/adapters/outbound/sqlite/identity-capability/provider-service";
 
 function databasePath(): string {
   return process.env.COCKPIT_DB_PATH ?? join(process.cwd(), ".data", "cockpit.sqlite");

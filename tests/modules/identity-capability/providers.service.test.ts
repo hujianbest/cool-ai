@@ -61,7 +61,7 @@ type ProviderServiceModule = {
 };
 
 const serviceModules = import.meta.glob<ProviderServiceModule>(
-  "../src/server/provider-service.ts",
+  "../../../src/adapters/outbound/sqlite/identity-capability/provider-service.ts",
 );
 const MASTER_KEY = Buffer.alloc(32, 11).toString("base64url");
 const REPLACEMENT_MASTER_KEY = Buffer.alloc(32, 12).toString("base64url");
@@ -72,7 +72,7 @@ let directory: string;
 let databasePath: string;
 
 async function loadService(): Promise<ProviderServiceModule> {
-  const load = serviceModules["../src/server/provider-service.ts"];
+  const load = serviceModules["../../../src/adapters/outbound/sqlite/identity-capability/provider-service.ts"];
   expect(load, "the provider persistence service must exist").toBeTypeOf("function");
   return load();
 }

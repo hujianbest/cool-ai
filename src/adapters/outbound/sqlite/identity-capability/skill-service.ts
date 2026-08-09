@@ -2,6 +2,7 @@ import { randomUUID } from "node:crypto";
 import type { ZodIssue } from "zod";
 
 import { openDatabase } from "@/src/adapters/outbound/sqlite/connection";
+import { SkillServiceError } from "@/src/modules/identity-capability";
 import type { Skill, SkillInput, UpdateSkillInput } from "@/src/shared/team-contracts";
 import {
   skillInputSchema,
@@ -20,18 +21,6 @@ type SkillRow = {
 
 function toSkill(row: SkillRow): Skill {
   return { ...row };
-}
-
-export class SkillServiceError extends Error {
-  constructor(
-    public readonly code: string,
-    public readonly httpStatus: number,
-    message: string,
-    public readonly fields?: Array<{ field: string; code: string }>,
-  ) {
-    super(message);
-    this.name = "SkillServiceError";
-  }
 }
 
 function fieldCode(issue: ZodIssue): string {

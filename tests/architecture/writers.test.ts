@@ -43,7 +43,7 @@ const OWNER_WRITER_DIRS: Record<string, RegExp[]> = {
 };
 
 /** Owners whose migration wave has landed; writer rule blocks for these. */
-const MIGRATED_OWNERS: string[] = [];
+const MIGRATED_OWNERS: string[] = ["identity-capability"];
 
 const WRITE_RE =
   /\b(?:INSERT\s+(?:OR\s+\w+\s+)?INTO|UPDATE(?:\s+OR\s+\w+)?|DELETE\s+FROM|REPLACE\s+INTO)\s+([A-Za-z_]\w*)/giu;

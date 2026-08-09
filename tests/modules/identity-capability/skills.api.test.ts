@@ -12,11 +12,11 @@ type ItemRoute = {
   ) => Promise<Response>;
 };
 
-const itemRoutes = import.meta.glob<ItemRoute>("../app/api/skills/[skillId]/route.ts");
+const itemRoutes = import.meta.glob<ItemRoute>("../../../app/api/skills/[skillId]/route.ts");
 let directory: string;
 
 async function loadItemRoute(): Promise<ItemRoute> {
-  const load = itemRoutes["../app/api/skills/[skillId]/route.ts"];
+  const load = itemRoutes["../../../app/api/skills/[skillId]/route.ts"];
   expect(load, "the versioned skill PATCH route must exist").toBeTypeOf("function");
   return load();
 }

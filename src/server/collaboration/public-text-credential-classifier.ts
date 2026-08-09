@@ -1,10 +1,8 @@
 import type { DatabaseSync } from "node:sqlite";
 
 import { CollaborationError } from "@/src/server/collaboration/collaboration-errors";
-import {
-  createCredentialVault,
-  type CredentialEnvelope,
-} from "@/src/server/credential-vault";
+import { createCredentialVault } from "@/src/modules/identity-capability/internal/credential-vault";
+import { type CredentialEnvelope } from "@/src/modules/identity-capability";
 import { openDatabase } from "@/src/adapters/outbound/sqlite/connection";
 
 export type PublicTextCredentialCategory =

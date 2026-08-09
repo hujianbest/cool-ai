@@ -5,7 +5,7 @@ import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { afterEach, beforeEach, describe, expect, it } from "vitest";
 
-import { createCredentialVault } from "@/src/server/credential-vault";
+import { createCredentialVault } from "@/src/modules/identity-capability/internal/credential-vault";
 import { controlThreadRun } from "@/src/server/collaboration/run-service";
 import type { StructuredTurnResult } from "@/src/server/collaboration/structured-repair";
 import { createThread } from "@/src/server/collaboration/thread-service";

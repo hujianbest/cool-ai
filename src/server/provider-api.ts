@@ -1,7 +1,7 @@
 import { randomUUID } from "node:crypto";
 
 import { ProviderVerificationError } from "@/src/server/provider-verifier";
-import { ProviderServiceError } from "@/src/server/provider-service";
+import { ProviderServiceError } from "@/src/modules/identity-capability";
 import { SchemaError } from "@/src/adapters/outbound/sqlite/schema-error";
 
 export async function readJsonBody(

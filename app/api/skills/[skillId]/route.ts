@@ -1,7 +1,7 @@
 import { join } from "node:path";
 
 import { readSkillJson, skillApiError } from "@/src/server/skill-api";
-import { updateSkill } from "@/src/server/skill-service";
+import { updateSkill } from "@/src/adapters/outbound/sqlite/identity-capability/skill-service";
 import { updateSkillInputSchema } from "@/src/shared/team-schemas";
 
 function databasePath(): string {

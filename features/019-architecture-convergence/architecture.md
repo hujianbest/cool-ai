@@ -20,7 +20,7 @@ src/adapters/outbound/sqlite/<m>/   # 该 owner 的 SQL 实现（repository/capa
 ## 文件 → owner 归属清单（T-01 冻结，120 个 src/server 文件全量）
 
 - **identity-capability**: agent-service, agent-api, skill-service, skill-api, provider-service, provider-api, credential-vault
-- **project-workspace**: projects, membership-service, membership-api, workspace-service, context-api, context-snapshot-service
+- **project-workspace**: projects, membership-service, membership-api, workspace-service, execution/validation-policy-service（Validation Policy 事实归 Project & Workspace；分类逻辑留 safe-execution，T-05 建立跨域读过渡边）, execution/validation-policy-http（T-14）
 - **mission-work**: mission-service, mission-api, task-api, tasks, mission/public, mission/sqlite-mission-command-capability
 - **public-collaboration**: collaboration/（除 openai-chat-client）全部 20 个文件；structured-messages/ 全部 6 个文件
 - **safe-execution**: execution/（除 execution-approval-service）全部 36 个文件
@@ -29,7 +29,7 @@ src/adapters/outbound/sqlite/<m>/   # 该 owner 的 SQL 实现（repository/capa
 - **knowledge-provenance**: memory-service, memory-api, memory-source-resolver
 - **runtime（model-runtime outbound Adapter）**: provider-verifier, collaboration/openai-chat-client
 - **SQLite Adapter 技术核心（无领域分支）**: db, storage/ 全部 6 个文件, storage/sqlite/sqlite-unit-of-work
-- **Application Workflow 层**: application/create-mission-workflow, application/mission-review-effects, application/unit-of-work（事务协调 Port）, application/transaction-context
+- **Application Workflow 层**: application/create-mission-workflow, application/mission-review-effects, application/unit-of-work（事务协调 Port）, application/transaction-context, context-snapshot-service（跨 5 owner 的只读事实组合，T-13 归应用层读组合）, context-api（T-14）
 - **composition root**: composition/server-composition
 - **入站 HTTP 共享助手（T-14 归 app/api/_shared/）**: api-errors 及各 *-api.ts 的传输校验/错误映射部分
 - **operations-projection**: 当前无已实现代码（CAP-OPS-01 规划中）——不创建空壳

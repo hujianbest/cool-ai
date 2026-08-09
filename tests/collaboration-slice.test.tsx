@@ -11,7 +11,7 @@ import * as messagesRoute from "@/app/api/projects/[projectId]/threads/[threadId
 import * as threadRoute from "@/app/api/projects/[projectId]/threads/[threadId]/route";
 import * as runsRoute from "@/app/api/projects/[projectId]/threads/[threadId]/runs/route";
 import { createThread } from "@/src/server/collaboration/thread-service";
-import { createCredentialVault } from "@/src/server/credential-vault";
+import { createCredentialVault } from "@/src/modules/identity-capability/internal/credential-vault";
 import { openDatabase } from "@/src/adapters/outbound/sqlite/connection";
 import { seedMissionInitializationForMission as initializeMissionDeliveryTx } from "@/tests/fixtures/review/mission-initialization";
 

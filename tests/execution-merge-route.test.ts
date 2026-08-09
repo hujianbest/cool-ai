@@ -6,7 +6,7 @@ import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
 vi.mock("server-only", () => ({}));
 
-import { createCredentialVault } from "@/src/server/credential-vault";
+import { createCredentialVault } from "@/src/modules/identity-capability/internal/credential-vault";
 import { openDatabase } from "@/src/adapters/outbound/sqlite/connection";
 import {
   setMergeExecutionAdapterForTests,

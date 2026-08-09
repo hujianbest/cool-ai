@@ -13,11 +13,11 @@ import {
   type StructuredTurnResult,
 } from "@/src/server/collaboration/structured-repair";
 import { classifyPublicTextFromDatabase } from "@/src/server/collaboration/public-text-credential-classifier";
+import { createCredentialVault } from "@/src/modules/identity-capability/internal/credential-vault";
 import {
-  createCredentialVault,
   CredentialVaultError,
   type CredentialEnvelope,
-} from "@/src/server/credential-vault";
+} from "@/src/modules/identity-capability";
 import { openDatabase } from "@/src/adapters/outbound/sqlite/connection";
 
 type ProviderConnectionRow = {

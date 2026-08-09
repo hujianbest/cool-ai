@@ -3,7 +3,7 @@ import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { afterEach, describe, expect, it, vi } from "vitest";
 
-import * as skillServiceModule from "@/src/server/skill-service";
+import * as skillServiceModule from "@/src/adapters/outbound/sqlite/identity-capability/skill-service";
 
 type SkillInput = {
   description: string;

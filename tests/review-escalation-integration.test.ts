@@ -10,7 +10,7 @@ import {
 } from "@/app/api/work-items/[workItemId]/reviews/route";
 import { GET as getWorkspace } from "@/app/api/work-items/[workItemId]/review/route";
 import { createThread } from "@/src/server/collaboration/thread-service";
-import { createCredentialVault } from "@/src/server/credential-vault";
+import { createCredentialVault } from "@/src/modules/identity-capability/internal/credential-vault";
 import { openDatabase } from "@/src/adapters/outbound/sqlite/connection";
 import type { ModelCallResult } from "@/src/shared/collaboration-contracts";
 import { refreshExecutionFrozenFixture } from "@/tests/fixtures/execution/frozen-input";

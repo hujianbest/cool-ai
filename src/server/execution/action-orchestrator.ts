@@ -5,11 +5,11 @@ import type { DatabaseSync } from "node:sqlite";
 
 import { canonicalRequestHash } from "@/src/server/collaboration/operation-receipts";
 import type { OpenAiChatRequest } from "@/src/server/collaboration/openai-chat-client";
+import { createCredentialVault } from "@/src/modules/identity-capability/internal/credential-vault";
 import {
-  createCredentialVault,
   CredentialVaultError,
   type CredentialEnvelope,
-} from "@/src/server/credential-vault";
+} from "@/src/modules/identity-capability";
 import { openDatabase } from "@/src/adapters/outbound/sqlite/connection";
 import {
   acquireExecutionAction,

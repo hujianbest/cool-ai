@@ -1,5 +1,5 @@
 import { agentApiError } from "@/src/server/agent-api";
-import { getAgentTemplates } from "@/src/server/agent-service";
+import { getAgentTemplates } from "@/src/adapters/outbound/sqlite/identity-capability/agent-service";
 
 export async function GET(): Promise<Response> {
   try {

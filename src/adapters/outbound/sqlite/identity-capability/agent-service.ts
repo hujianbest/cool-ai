@@ -2,10 +2,9 @@ import { randomUUID } from "node:crypto";
 import type { DatabaseSync } from "node:sqlite";
 import type { ZodIssue } from "zod";
 
-import {
-  createCredentialVault,
-  type CredentialEnvelope,
-} from "@/src/server/credential-vault";
+import { createCredentialVault } from "@/src/modules/identity-capability/internal/credential-vault";
+import type { CredentialEnvelope } from "@/src/modules/identity-capability";
+import { AgentServiceError } from "@/src/modules/identity-capability";
 import { isAgentInActiveCollaboration } from "@/src/server/collaboration/active-run-guards";
 import { openDatabase } from "@/src/adapters/outbound/sqlite/connection";
 import type {
@@ -80,18 +79,6 @@ const TEMPLATE_DEFAULTS: readonly AgentTemplate[] = Object.freeze([
     systemPrompt: "独立检查实现、测试证据和未覆盖风险。",
   }),
 ]);
-
-export class AgentServiceError extends Error {
-  constructor(
-    public readonly code: string,
-    public readonly httpStatus: number,
-    message: string,
-    public readonly fields?: Array<{ field: string; code: string }>,
-  ) {
-    super(message);
-    this.name = "AgentServiceError";
-  }
-}
 
 function fieldCode(issue: ZodIssue): string {
   if (

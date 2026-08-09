@@ -2,11 +2,12 @@ import { randomUUID } from "node:crypto";
 import type { DatabaseSync } from "node:sqlite";
 import type { ZodIssue } from "zod";
 
+import { createCredentialVault } from "@/src/modules/identity-capability/internal/credential-vault";
 import {
-  createCredentialVault,
   CredentialVaultError,
-  type CredentialEnvelope,
-} from "@/src/server/credential-vault";
+  ProviderServiceError,
+} from "@/src/modules/identity-capability";
+import type { CredentialEnvelope } from "@/src/modules/identity-capability";
 import { isProviderInActiveCollaboration } from "@/src/server/collaboration/active-run-guards";
 import { openDatabase } from "@/src/adapters/outbound/sqlite/connection";
 import {
@@ -41,18 +42,6 @@ type ProviderRow = {
 };
 
 type Vault = ReturnType<typeof createCredentialVault>;
-
-export class ProviderServiceError extends Error {
-  constructor(
-    public readonly code: string,
-    public readonly httpStatus: number,
-    message: string,
-    public readonly fields?: Array<{ field: string; code: string }>,
-  ) {
-    super(message);
-    this.name = "ProviderServiceError";
-  }
-}
 
 function serviceError(code: string, httpStatus: number, message: string): ProviderServiceError {
   return new ProviderServiceError(code, httpStatus, message);

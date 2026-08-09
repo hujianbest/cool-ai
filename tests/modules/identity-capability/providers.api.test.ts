@@ -20,13 +20,13 @@ type ItemRoute = {
 };
 
 const collectionRoutes = import.meta.glob<CollectionRoute>(
-  "../app/api/providers/route.ts",
+  "../../../app/api/providers/route.ts",
 );
 const verifyRoutes = import.meta.glob<VerifyRoute>(
-  "../app/api/providers/verify/route.ts",
+  "../../../app/api/providers/verify/route.ts",
 );
 const itemRoutes = import.meta.glob<ItemRoute>(
-  "../app/api/providers/[providerId]/route.ts",
+  "../../../app/api/providers/[providerId]/route.ts",
 );
 
 const MASTER_KEY = Buffer.alloc(32, 13).toString("base64url");
@@ -35,9 +35,9 @@ let directory: string;
 let databasePath: string;
 
 async function loadRoutes() {
-  const loadCollection = collectionRoutes["../app/api/providers/route.ts"];
-  const loadVerify = verifyRoutes["../app/api/providers/verify/route.ts"];
-  const loadItem = itemRoutes["../app/api/providers/[providerId]/route.ts"];
+  const loadCollection = collectionRoutes["../../../app/api/providers/route.ts"];
+  const loadVerify = verifyRoutes["../../../app/api/providers/verify/route.ts"];
+  const loadItem = itemRoutes["../../../app/api/providers/[providerId]/route.ts"];
   expect(loadCollection, "provider collection routes must exist").toBeTypeOf("function");
   expect(loadVerify, "provider verification route must exist").toBeTypeOf("function");
   expect(loadItem, "provider item route must exist").toBeTypeOf("function");

@@ -5,7 +5,7 @@ import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
 import { CollaborationError } from "@/src/server/collaboration/collaboration-errors";
 import { createThread } from "@/src/server/collaboration/thread-service";
-import { createCredentialVault } from "@/src/server/credential-vault";
+import { createCredentialVault } from "@/src/modules/identity-capability/internal/credential-vault";
 import { openDatabase } from "@/src/adapters/outbound/sqlite/connection";
 import { initializeMissingMissionHeads } from "@/tests/fixtures/execution/current-graph";
 

@@ -1,6 +1,6 @@
 import { randomUUID } from "node:crypto";
 
-import { AgentServiceError } from "@/src/server/agent-service";
+import { AgentServiceError } from "@/src/modules/identity-capability";
 import { SchemaError } from "@/src/adapters/outbound/sqlite/schema-error";
 
 export async function readAgentJson(

@@ -46,7 +46,7 @@ type VaultModule = {
   createCredentialVault: () => CredentialVault;
 };
 
-const vaultModules = import.meta.glob<VaultModule>("../src/server/credential-vault.ts");
+const vaultModules = import.meta.glob<VaultModule>("../../../src/modules/identity-capability/internal/credential-vault.ts");
 const MASTER_KEY = Buffer.alloc(32, 7);
 const MASTER_KEY_TEXT = MASTER_KEY.toString("base64url");
 const SECRET = "vault-secret-DO-NOT-LEAK-9f31ABCD";
@@ -67,7 +67,7 @@ function flipLastCharacter(value: string): string {
 }
 
 async function loadVaultModule(): Promise<VaultModule> {
-  const loadVault = vaultModules["../src/server/credential-vault.ts"];
+  const loadVault = vaultModules["../../../src/modules/identity-capability/internal/credential-vault.ts"];
   expect(loadVault, "the versioned credential vault must exist").toBeTypeOf("function");
   return loadVault();
 }
@@ -366,9 +366,14 @@ describe("credential vault", () => {
     );
 
     expect(JSON.stringify({ envelope, token })).not.toContain(SECRET);
-    const serverSources = readdirSync(join(process.cwd(), "src", "server"))
-      .filter((name) => name.endsWith(".ts"))
-      .map((name) => readFileSync(join(process.cwd(), "src", "server", name), "utf8"))
+    // The vault implementation moved to the identity-capability module in T-04;
+    // scan its new location instead of the legacy src/server root.
+    const vaultDir = join(process.cwd(), "src", "modules", "identity-capability");
+    const serverSources = [
+      join(vaultDir, "internal", "credential-vault.ts"),
+      join(vaultDir, "public", "errors.ts"),
+    ]
+      .map((path) => readFileSync(path, "utf8"))
       .join("\n");
     expect(serverSources).not.toContain(SECRET);
     expect(serverSources).toContain("timingSafeEqual");

@@ -8,34 +8,24 @@ import {
   timingSafeEqual,
 } from "node:crypto";
 
-type VaultErrorCode =
-  | "MASTER_KEY_UNAVAILABLE"
-  | "PROVIDER_KEY_UNAVAILABLE"
-  | "PROVIDER_KEY_CORRUPT"
-  | "VALIDATION_EXPIRED"
-  | "VALIDATION_MISMATCH";
+import type {
+  CredentialEnvelope,
+  ExistingProviderTokenDraft,
+  ProviderTokenDraft,
+} from "@/src/modules/identity-capability/public/dto";
+import {
+  CredentialVaultError,
+  type CredentialVaultErrorCode,
+} from "@/src/modules/identity-capability/public/errors";
 
-export type CredentialEnvelope = {
-  apiKeyCipher: string;
-  apiKeyIv: string;
-  apiKeyMask: string;
-  apiKeyTag: string;
-  credentialVersion: 1;
-  keyId: string;
-};
+type VaultErrorCode = CredentialVaultErrorCode;
 
-export type ProviderTokenDraft = {
-  apiKey: string;
-  baseUrl: string;
-  model: string;
-};
-
-export type ExistingProviderTokenDraft = ProviderTokenDraft & {
-  credentialGeneration: number;
-  mode: "retain" | "replace";
-  providerId: string;
-  providerVersion: number;
-};
+export type {
+  CredentialEnvelope,
+  ExistingProviderTokenDraft,
+  ProviderTokenDraft,
+} from "@/src/modules/identity-capability/public/dto";
+export { CredentialVaultError } from "@/src/modules/identity-capability/public/errors";
 
 type CreateTokenPayload = {
   aud: "provider-save";
@@ -59,13 +49,6 @@ type ExistingTokenPayload = {
 };
 
 type TokenPayload = CreateTokenPayload | ExistingTokenPayload;
-
-export class CredentialVaultError extends Error {
-  constructor(public readonly code: VaultErrorCode, message: string) {
-    super(message);
-    this.name = "CredentialVaultError";
-  }
-}
 
 const TOKEN_AUDIENCE = "provider-save";
 const TOKEN_LIFETIME_SECONDS = 5 * 60;

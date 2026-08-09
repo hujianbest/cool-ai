@@ -6,7 +6,7 @@ import { join } from "node:path";
 import type { DatabaseSync } from "node:sqlite";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
-import { createCredentialVault } from "@/src/server/credential-vault";
+import { createCredentialVault } from "@/src/modules/identity-capability/internal/credential-vault";
 import { openDatabase } from "@/src/adapters/outbound/sqlite/connection";
 import { captureExecutionFrozenInput } from "@/src/server/execution/execution-frozen-input";
 import {

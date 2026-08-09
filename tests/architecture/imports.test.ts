@@ -5,7 +5,14 @@ import { importEdges, readSource, resolveSpecifier, sourceFiles } from "./helper
 /**
  * Import boundary rules for the target architecture (product/architecture.md section 7).
  * Hard rules block now (vacuous for not-yet-populated target dirs); ratchets only shrink.
+ * T-04 transition exemption: an owner's sqlite adapter may import that same owner's
+ * module internal/ until credential-vault gains a public entry and this exemption is removed.
  */
+const ALLOWED_MODULE_INTERNAL_EDGES: Record<string, RegExp[]> = {
+  "src/adapters/outbound/sqlite/identity-capability": [
+    /^src\/modules\/identity-capability\/internal\//u,
+  ],
+};
 
 const FORBIDDEN_IN_MODULES = [
   /^node:sqlite$/u,
@@ -95,7 +102,13 @@ describe("target-layer import boundaries", () => {
       for (const edge of importEdges(file)) {
         const resolved = resolveSpecifier(edge.specifier, file) ?? edge.specifier;
         if (/^src\/modules\/[^/]+\/internal\//u.test(resolved)) {
-          found.push(`${file} -> ${edge.specifier} (module internal)`);
+          const allowed = Object.entries(ALLOWED_MODULE_INTERNAL_EDGES).some(
+            ([dir, patterns]) =>
+              file.startsWith(`${dir}/`) && patterns.some((pattern) => pattern.test(resolved)),
+          );
+          if (!allowed) {
+            found.push(`${file} -> ${edge.specifier} (module internal)`);
+          }
         }
         if (/^(?:app|components)\//u.test(resolved)) {
           found.push(`${file} -> ${edge.specifier} (inbound)`);

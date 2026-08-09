@@ -18,10 +18,8 @@ import {
   reconcileExpiredAttempt,
   reconcileProjectExpiredAttempt,
 } from "@/src/server/collaboration/turn-orchestrator";
-import {
-  createCredentialVault,
-  type CredentialEnvelope,
-} from "@/src/server/credential-vault";
+import { createCredentialVault } from "@/src/modules/identity-capability/internal/credential-vault";
+import { type CredentialEnvelope } from "@/src/modules/identity-capability";
 import { openDatabase } from "@/src/adapters/outbound/sqlite/connection";
 import type {
   AnswerDecisionResponse,

@@ -1,7 +1,7 @@
 import { join } from "node:path";
 
 import { agentApiError, readAgentJson } from "@/src/server/agent-api";
-import { updateAgent } from "@/src/server/agent-service";
+import { updateAgent } from "@/src/adapters/outbound/sqlite/identity-capability/agent-service";
 import type { UpdateAgentInput } from "@/src/shared/team-contracts";
 
 function databasePath(): string {

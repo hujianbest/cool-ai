@@ -3,9 +3,9 @@ import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { afterEach, beforeEach, describe, expect, it } from "vitest";
 
-import { createCredentialVault } from "@/src/server/credential-vault";
+import { createCredentialVault } from "@/src/modules/identity-capability/internal/credential-vault";
 import { openDatabase } from "@/src/adapters/outbound/sqlite/connection";
-import { createSkill } from "@/src/server/skill-service";
+import { createSkill } from "@/src/adapters/outbound/sqlite/identity-capability/skill-service";
 
 type CollectionRoute = {
   GET(): Promise<Response>;
@@ -22,19 +22,19 @@ type ItemRoute = {
 type TemplateRoute = { GET(): Promise<Response> };
 
 const collectionRoutes =
-  import.meta.glob<CollectionRoute>("../app/api/agents/route.ts");
+  import.meta.glob<CollectionRoute>("../../../app/api/agents/route.ts");
 const itemRoutes =
-  import.meta.glob<ItemRoute>("../app/api/agents/[agentId]/route.ts");
+  import.meta.glob<ItemRoute>("../../../app/api/agents/[agentId]/route.ts");
 const templateRoutes =
-  import.meta.glob<TemplateRoute>("../app/api/agent-templates/route.ts");
+  import.meta.glob<TemplateRoute>("../../../app/api/agent-templates/route.ts");
 const MASTER_KEY = Buffer.alloc(32, 22).toString("base64url");
 let directory: string;
 let databasePath: string;
 
 async function routes() {
-  const loadCollection = collectionRoutes["../app/api/agents/route.ts"];
-  const loadItem = itemRoutes["../app/api/agents/[agentId]/route.ts"];
-  const loadTemplates = templateRoutes["../app/api/agent-templates/route.ts"];
+  const loadCollection = collectionRoutes["../../../app/api/agents/route.ts"];
+  const loadItem = itemRoutes["../../../app/api/agents/[agentId]/route.ts"];
+  const loadTemplates = templateRoutes["../../../app/api/agent-templates/route.ts"];
   expect(loadCollection, "the Agent collection route must exist").toBeTypeOf("function");
   expect(loadItem, "the Agent PATCH route must exist").toBeTypeOf("function");
   expect(loadTemplates, "the Agent template route must exist").toBeTypeOf("function");

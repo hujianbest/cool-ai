@@ -10,7 +10,7 @@ import userEvent from "@testing-library/user-event";
 import { afterEach, describe, expect, it, vi } from "vitest";
 
 import { ReviewSlice } from "@/components/review/review-slice";
-import { createCredentialVault } from "@/src/server/credential-vault";
+import { createCredentialVault } from "@/src/modules/identity-capability/internal/credential-vault";
 import { openDatabase } from "@/src/adapters/outbound/sqlite/connection";
 import { CURRENT_DATA_INVARIANTS } from "@/src/adapters/outbound/sqlite/current-data-invariants";
 import { validateFixtureDatabase } from "@/tests/fixtures/execution/current-graph";
