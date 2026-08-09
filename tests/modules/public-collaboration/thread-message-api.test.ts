@@ -1,5 +1,6 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
+import { appendStructuredMessage } from "@/src/adapters/outbound/sqlite/public-collaboration/structured-message-store";
 import {
   createThread,
   writeOwnerThreadMessage,
@@ -23,12 +24,21 @@ type OperationRoute = {
     },
   ): Promise<Response>;
 };
+type HistoryRoute = {
+  GET(
+    request: Request,
+    context: { params: Promise<{ projectId: string; threadId: string }> },
+  ): Promise<Response>;
+};
 
 const messageRoutes = import.meta.glob<MessageRoute>(
   "../../../app/api/projects/[projectId]/threads/[threadId]/messages/route.ts",
 );
 const operationRoutes = import.meta.glob<OperationRoute>(
   "../../../app/api/projects/[projectId]/threads/[threadId]/operations/[operationId]/route.ts",
+);
+const historyRoutes = import.meta.glob<HistoryRoute>(
+  "../../../app/api/projects/[projectId]/threads/[threadId]/{messages,facts}/route.ts",
 );
 
 const NOW = "2026-08-08T08:00:00.000Z";
@@ -199,6 +209,21 @@ async function post(
   );
 }
 
+async function get(
+  kind: "messages" | "facts",
+  projectId: string,
+  threadId: string,
+): Promise<Response> {
+  const load = historyRoutes[
+    `../../../app/api/projects/[projectId]/threads/[threadId]/${kind}/route.ts`
+  ];
+  expect(load).toBeTypeOf("function");
+  return (await load!()).GET(
+    new Request(`http://localhost/api/projects/${projectId}/threads/${threadId}/${kind}`),
+    { params: Promise.resolve({ projectId, threadId }) },
+  );
+}
+
 async function lookup(
   projectId: string,
   threadId: string,
@@ -271,6 +296,7 @@ describe("tuple-scoped owner message API", () => {
       mentionAgentId: "agent-b",
       mentionDisplayName: "Agent agent-b",
       mentionMemberStatus: "current",
+      replyTo: null,
       createdAt: NOW,
     });
     expect(body.fact).toEqual({
@@ -535,5 +561,275 @@ describe("tuple-scoped owner message API", () => {
       { credentialCheck: () => { throw new Error("credential hook failed"); } },
     )).toThrow("credential hook failed");
     expect(counts("project-a", threadA)).toEqual(before);
+  });
+});
+
+describe("reply references on the owner message command", () => {
+  const REPLY_REJECTED_BODY = {
+    error: {
+      code: "INVALID_INPUT",
+      fields: { replyToMessageId: "not_found" },
+      message: "Message input is invalid.",
+    },
+  };
+
+  function appendAgentMessage(
+    threadId: string,
+    input: { agentId: string; content: string; factId: string; messageId: string },
+  ): void {
+    appendStructuredMessage(databasePath, {
+      actor: { displayName: `Agent ${input.agentId}`, id: input.agentId, type: "agent" },
+      blocksRaw: JSON.stringify({
+        blocks: [{
+          actions: ["accept", "reject"],
+          blockRevision: 1,
+          blockSchemaVersion: 1,
+          blockType: "proposal",
+          body: "Proposal body",
+          logicalBlockId: `block-${input.messageId}`,
+          title: "Proposal",
+        }],
+      }),
+      content: input.content,
+      factId: input.factId,
+      messageId: input.messageId,
+      projectId: "project-a",
+      runId: null,
+      threadId,
+      timestamp: NOW,
+    });
+  }
+
+  it("freezes the owner target snapshot when replying to an owner message", async () => {
+    const target = await post("project-a", threadA, JSON.stringify({
+      content: "Owner target",
+      operationId: "00000000-0000-4000-8000-000000002201",
+    }));
+    expect(target.status).toBe(201);
+    const targetBody = await target.json();
+
+    const response = await post("project-a", threadA, JSON.stringify({
+      content: "Reply to owner",
+      operationId: "00000000-0000-4000-8000-000000002202",
+      replyToMessageId: targetBody.message.id,
+    }));
+
+    expect(response.status).toBe(201);
+    const body = await response.json();
+    expect(body.message.replyTo).toEqual({
+      authorDisplayName: "Owner",
+      excerpt: "Owner target",
+      messageId: targetBody.message.id,
+      sequence: targetBody.message.sequence,
+    });
+  });
+
+  it("freezes the agent author display name when replying to an agent message", async () => {
+    appendAgentMessage(threadA, {
+      agentId: "agent-a",
+      content: "Agent target",
+      factId: "00000000-0000-4000-8000-000000002203",
+      messageId: "00000000-0000-4000-8000-000000002204",
+    });
+
+    const response = await post("project-a", threadA, JSON.stringify({
+      content: "Reply to agent",
+      operationId: "00000000-0000-4000-8000-000000002205",
+      replyToMessageId: "00000000-0000-4000-8000-000000002204",
+    }));
+
+    expect(response.status).toBe(201);
+    const body = await response.json();
+    expect(body.message.replyTo).toEqual({
+      authorDisplayName: "Agent agent-a",
+      excerpt: "Agent target",
+      messageId: "00000000-0000-4000-8000-000000002204",
+      sequence: 1,
+    });
+  });
+
+  it("rejects missing, cross-tuple, and non-message targets with one stable envelope and zero writes", async () => {
+    const threadBMessage = await (await post("project-a", threadB, JSON.stringify({
+      content: "Thread B target",
+      operationId: "00000000-0000-4000-8000-000000002211",
+    }))).json();
+    const foreignMessage = await (await post("project-b", foreignThread, JSON.stringify({
+      content: "Foreign target",
+      operationId: "00000000-0000-4000-8000-000000002212",
+    }))).json();
+    addActiveRun("project-a", threadA, "agent-a");
+    const before = counts("project-a", threadA);
+
+    const attempts = [
+      ["missing target", "missing-message"],
+      ["cross-thread target", threadBMessage.message.id],
+      ["cross-project target", foreignMessage.message.id],
+      ["non-message target", "active-run"],
+    ] as const;
+    const bodies: unknown[] = [];
+    for (const [index, [_label, replyToMessageId]] of attempts.entries()) {
+      const response = await post("project-a", threadA, JSON.stringify({
+        content: `Reply ${index}`,
+        operationId: `00000000-0000-4000-8000-0000000022${20 + index}`,
+        replyToMessageId,
+      }));
+      expect(response.status).toBe(400);
+      bodies.push(await response.json());
+    }
+    for (const body of bodies) {
+      expect(body).toEqual(REPLY_REJECTED_BODY);
+    }
+    expect(counts("project-a", threadA)).toEqual(before);
+  });
+
+  it("rejects a reply whose frozen excerpt would contain credential-like text", async () => {
+    const target = writeOwnerThreadMessage(databasePath, "project-a", threadA, {
+      content: "token=sk-live-secret-123",
+      operationId: "00000000-0000-4000-8000-000000002231",
+    });
+    const before = counts("project-a", threadA);
+
+    const response = await post("project-a", threadA, JSON.stringify({
+      content: "Reply to secret",
+      operationId: "00000000-0000-4000-8000-000000002232",
+      replyToMessageId: target.body.message.id,
+    }));
+
+    expect(response.status).toBe(422);
+    expect(await response.json()).toEqual({
+      error: {
+        category: "credential_field",
+        code: "CREDENTIAL_CONTENT_REJECTED",
+        message: "Public source content is not allowed.",
+      },
+    });
+    expect(counts("project-a", threadA)).toEqual(before);
+  });
+
+  it("accepts a 160-grapheme excerpt and rejects 161 graphemes fail-closed", async () => {
+    const withinTarget = writeOwnerThreadMessage(databasePath, "project-a", threadA, {
+      content: `${"a".repeat(159)}👩🏽‍💻`,
+      operationId: "00000000-0000-4000-8000-000000002241",
+    });
+    const accepted = await post("project-a", threadA, JSON.stringify({
+      content: "Reply within limit",
+      operationId: "00000000-0000-4000-8000-000000002242",
+      replyToMessageId: withinTarget.body.message.id,
+    }));
+    expect(accepted.status).toBe(201);
+    const acceptedBody = await accepted.json();
+    expect(acceptedBody.message.replyTo.excerpt).toBe(`${"a".repeat(159)}👩🏽‍💻`);
+
+    const overTarget = writeOwnerThreadMessage(databasePath, "project-a", threadA, {
+      content: `${"a".repeat(160)}👩🏽‍💻`,
+      operationId: "00000000-0000-4000-8000-000000002243",
+    });
+    const before = counts("project-a", threadA);
+    const rejected = await post("project-a", threadA, JSON.stringify({
+      content: "Reply over limit",
+      operationId: "00000000-0000-4000-8000-000000002244",
+      replyToMessageId: overTarget.body.message.id,
+    }));
+    expect(rejected.status).toBe(422);
+    expect(await rejected.json()).toEqual({
+      error: {
+        code: "CREDENTIAL_CONTENT_REJECTED",
+        message: "Public source content is not allowed.",
+      },
+    });
+    expect(counts("project-a", threadA)).toEqual(before);
+  });
+
+  it("replays the same reply operation and conflicts on a changed reply target", async () => {
+    const target = await (await post("project-a", threadA, JSON.stringify({
+      content: "Replay target",
+      operationId: "00000000-0000-4000-8000-000000002251",
+    }))).json();
+    const other = await (await post("project-a", threadA, JSON.stringify({
+      content: "Other target",
+      operationId: "00000000-0000-4000-8000-000000002252",
+    }))).json();
+
+    const input = JSON.stringify({
+      content: "Replayable reply",
+      operationId: "00000000-0000-4000-8000-000000002253",
+      replyToMessageId: target.message.id,
+    });
+    const first = await post("project-a", threadA, input);
+    expect(first.status).toBe(201);
+    const firstText = await first.text();
+    const replay = await post("project-a", threadA, input);
+    expect(replay.status).toBe(201);
+    expect(await replay.text()).toBe(firstText);
+
+    const conflict = await post("project-a", threadA, JSON.stringify({
+      content: "Replayable reply",
+      operationId: "00000000-0000-4000-8000-000000002253",
+      replyToMessageId: other.message.id,
+    }));
+    expect(conflict.status).toBe(409);
+    expect(await conflict.json()).toEqual({
+      error: {
+        code: "OPERATION_CONFLICT",
+        message: "Operation id was already used for different input.",
+      },
+    });
+    expect(counts("project-a", threadA)).toMatchObject({
+      facts: 3,
+      messages: 3,
+      operations: 3,
+    });
+  });
+});
+
+describe("reply reference read projection", () => {
+  it("projects frozen reply snapshots through the paginated message read", async () => {
+    const target = await (await post("project-a", threadA, JSON.stringify({
+      content: "Target content",
+      operationId: "00000000-0000-4000-8000-000000002301",
+    }))).json();
+    const reply = await post("project-a", threadA, JSON.stringify({
+      content: "Reply content",
+      operationId: "00000000-0000-4000-8000-000000002302",
+      replyToMessageId: target.message.id,
+    }));
+    expect(reply.status).toBe(201);
+
+    const response = await get("messages", "project-a", threadA);
+    expect(response.status).toBe(200);
+    const body = await response.json();
+    expect(body.items).toHaveLength(2);
+    expect(body.items[0].replyTo).toBeNull();
+    expect(body.items[1].replyTo).toEqual({
+      authorDisplayName: "Owner",
+      excerpt: "Target content",
+      messageId: target.message.id,
+      sequence: target.message.sequence,
+    });
+  });
+
+  it("nests the frozen reply snapshot in message facts", async () => {
+    const target = await (await post("project-a", threadA, JSON.stringify({
+      content: "Fact target",
+      operationId: "00000000-0000-4000-8000-000000002311",
+    }))).json();
+    const reply = await (await post("project-a", threadA, JSON.stringify({
+      content: "Fact reply",
+      operationId: "00000000-0000-4000-8000-000000002312",
+      replyToMessageId: target.message.id,
+    }))).json();
+
+    const response = await get("facts", "project-a", threadA);
+    expect(response.status).toBe(200);
+    const body = await response.json();
+    const replyFact = body.items.find(
+      (fact: { messageId: string | null }) => fact.messageId === reply.message.id,
+    );
+    expect(replyFact.message.replyTo).toEqual({
+      authorDisplayName: "Owner",
+      excerpt: "Fact target",
+      messageId: target.message.id,
+      sequence: target.message.sequence,
+    });
   });
 });

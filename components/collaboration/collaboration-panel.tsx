@@ -37,7 +37,7 @@ import type {
   MembershipState,
   ProjectMember,
 } from "@/src/shared/project-context-contracts";
-import { reduceTranscript } from "@/src/shared/transcript-model";
+import { reduceTranscript, type TranscriptReplyReference } from "@/src/shared/transcript-model";
 
 type CollaborationPanelProps = {
   projectId: string;
@@ -127,6 +127,7 @@ function mutationIds(
     "mentionDisplayName",
     "mentionMemberStatus",
     "projectId",
+    "replyTo",
     "runId",
     "sequence",
     "threadId",
@@ -982,6 +983,9 @@ export function CollaborationPanel({
   const [activeMemberIndex, setActiveMemberIndex] = useState(0);
   const [selectedMember, setSelectedMember] = useState<ProjectMember | null>(null);
   const [focusMessageId, setFocusMessageId] = useState<string | null>(null);
+  const [replyJumpMessageId, setReplyJumpMessageId] = useState<string | null>(null);
+  const [locateMessageId, setLocateMessageId] = useState<string | null>(null);
+  const [highlightMessageId, setHighlightMessageId] = useState<string | null>(null);
   const [newEventCount, setNewEventCount] = useState(0);
   const [advanceError, setAdvanceError] = useState<string | null>(null);
   const [advanceCycle, setAdvanceCycle] = useState(0);
@@ -1197,6 +1201,9 @@ export function CollaborationPanel({
     advanceInFlightRef.current = false;
     advanceOperationIdRef.current = null;
     setFocusMessageId(null);
+    setReplyJumpMessageId(null);
+    setLocateMessageId(null);
+    setHighlightMessageId(null);
     messageRefs.current.clear();
     void loadCollaboration(true, epoch);
   }, [loadCollaboration, reloadKey, targetKey]);
@@ -1278,6 +1285,101 @@ export function CollaborationPanel({
       }
     }
   }, [factsPage, factsTargetKey, projectId, targetGuard, targetKey, threadId]);
+
+  const jumpToReplyTarget = useCallback(async (target: TranscriptReplyReference) => {
+    if (!threadId) return;
+    if (messageRefs.current.has(target.messageId)) {
+      setLocateMessageId(target.messageId);
+      return;
+    }
+    if (factRequestInFlightRef.current) return;
+    const visiblePage = factsTargetKey === targetKey ? factsPage : null;
+    let cursor = visiblePage?.nextAfter ?? null;
+    if (cursor === null) return;
+    const epoch = targetEpochRef.current;
+    const request = targetGuard.capture();
+    const requestId = factRequestRef.current + 1;
+    factRequestRef.current = requestId;
+    factRequestInFlightRef.current = true;
+    setFactsPending(true);
+    setFactsError(null);
+    setReplyJumpMessageId(target.messageId);
+    let merged = visiblePage?.items ?? [];
+    let found = false;
+    try {
+      while (cursor !== null) {
+        const response = await fetch(
+          `/api/projects/${encodeURIComponent(projectId)}/threads/${encodeURIComponent(
+            threadId,
+          )}/facts?after=${cursor}`,
+          { signal: request.signal },
+        );
+        const payload = await readApiResponse<unknown>(
+          response,
+          "无法加载协作事实，请稍后重试。",
+        );
+        const nextPage = parseFactPage(payload, projectId, threadId);
+        if (
+          !mountedRef.current
+          || epoch !== targetEpochRef.current
+          || requestId !== factRequestRef.current
+          || !request.isCurrent()
+        ) return;
+        const result = mergeThreadFacts(merged, nextPage.items);
+        merged = result.items;
+        cursor = nextPage.nextAfter;
+        if (result.added > 0) setFactsStatus(`已加载 ${result.added} 条事实`);
+        setFactsPage({ items: merged, nextAfter: cursor });
+        if (
+          merged.some(
+            (fact) => fact.messageId === target.messageId && fact.message !== null,
+          )
+        ) {
+          found = true;
+          break;
+        }
+      }
+      setReplyJumpMessageId(null);
+      if (found) setLocateMessageId(target.messageId);
+    } catch (cause) {
+      if (
+        mountedRef.current
+        && epoch === targetEpochRef.current
+        && requestId === factRequestRef.current
+        && request.isCurrent()
+      ) {
+        setReplyJumpMessageId(null);
+        setFactsError(caughtApiErrorCopy(cause, "无法加载协作事实，请稍后重试。"));
+      }
+    } finally {
+      if (requestId === factRequestRef.current) {
+        factRequestInFlightRef.current = false;
+        if (
+          mountedRef.current
+          && epoch === targetEpochRef.current
+          && request.isCurrent()
+        ) {
+          setFactsPending(false);
+        }
+      }
+    }
+  }, [factsPage, factsTargetKey, projectId, targetGuard, targetKey, threadId]);
+
+  useEffect(() => {
+    if (!locateMessageId) return;
+    const node = messageRefs.current.get(locateMessageId);
+    if (!node) return;
+    node.scrollIntoView({ block: "nearest" });
+    node.focus();
+    setHighlightMessageId(locateMessageId);
+    setLocateMessageId(null);
+  }, [locateMessageId, factsPage]);
+
+  useEffect(() => {
+    if (!highlightMessageId) return;
+    const timer = window.setTimeout(() => setHighlightMessageId(null), 1_600);
+    return () => window.clearTimeout(timer);
+  }, [highlightMessageId]);
 
   useEffect(() => {
     if (loading || loadError) return;
@@ -1907,6 +2009,12 @@ export function CollaborationPanel({
     pages: [{ items: renderedFacts }],
     targetKey,
   });
+  const loadedMessageIds = new Set(
+    transcript.kind === "ready"
+      ? transcript.entries.flatMap((entry) => entry.messageId ? [entry.messageId] : [])
+      : [],
+  );
+  const factsExhausted = factsTargetKey === targetKey && factsPage?.nextAfter === null;
   const currentMember = members?.find(
     (member) => member.agentId === state?.run?.currentAgentId,
   );
@@ -2202,9 +2310,14 @@ export function CollaborationPanel({
                 className="timeline"
               >
               {transcript.entries.map((entry) => {
+                const replyTo = entry.replyTo;
                 return (
                   <li
-                    className="timeline-item timeline-event"
+                    className={
+                      entry.messageId && entry.messageId === highlightMessageId
+                        ? "timeline-item timeline-event reply-target-highlight"
+                        : "timeline-item timeline-event"
+                    }
                     key={entry.factId}
                     ref={(node) => {
                       if (!entry.messageId) return;
@@ -2225,6 +2338,35 @@ export function CollaborationPanel({
                           <span className="status-label">已离组</span>
                         ) : null}
                       </span>
+                    ) : null}
+                    {replyTo ? (
+                      !loadedMessageIds.has(replyTo.messageId) && factsExhausted ? (
+                        <button
+                          aria-disabled="true"
+                          aria-label="来源消息不可用，无法跳转：目标消息不在当前可读取的协作历史中。"
+                          className="reply-chip reply-chip-unavailable"
+                          onClick={(event) => event.preventDefault()}
+                          type="button"
+                        >
+                          来源消息不可用
+                        </button>
+                      ) : (
+                        <button
+                          aria-disabled={replyJumpMessageId !== null || undefined}
+                          aria-label={
+                            replyJumpMessageId === replyTo.messageId
+                              ? "正在定位来源消息…"
+                              : `跳转到来源消息：#${replyTo.sequence} · ${replyTo.authorDisplayName} · ${replyTo.excerpt}`
+                          }
+                          className="reply-chip"
+                          onClick={() => void jumpToReplyTarget(replyTo)}
+                          type="button"
+                        >
+                          {replyJumpMessageId === replyTo.messageId
+                            ? "正在定位来源消息…"
+                            : `#${replyTo.sequence} · ${replyTo.authorDisplayName} · ${replyTo.excerpt}`}
+                        </button>
+                      )
                     ) : null}
                     {entry.text ? <p>{entry.text}</p> : null}
                     {entry.blocks.map((block) => (

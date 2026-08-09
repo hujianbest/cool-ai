@@ -313,6 +313,56 @@ function chunkFactsAreValid(database: DatabaseSync): boolean {
   return true;
 }
 
+function replyEdgesAreValid(database: DatabaseSync): boolean {
+  const messages = database.prepare(`
+    SELECT id,project_id AS projectId,thread_id AS threadId,sequence,
+           reply_to_message_id AS replyToMessageId,
+           reply_to_sequence AS replyToSequence,
+           reply_to_author_display_name AS replyToAuthorDisplayName,
+           reply_to_excerpt AS replyToExcerpt
+    FROM collaboration_messages
+  `).all() as Array<{
+    id: string;
+    projectId: string;
+    replyToAuthorDisplayName: string | null;
+    replyToExcerpt: string | null;
+    replyToMessageId: string | null;
+    replyToSequence: number | null;
+    sequence: number;
+    threadId: string;
+  }>;
+  const readTarget = database.prepare(`
+    SELECT sequence,author_display_name AS authorDisplayName,content
+    FROM collaboration_messages
+    WHERE project_id=? AND thread_id=? AND id=?
+  `);
+  for (const message of messages) {
+    const columns = [
+      message.replyToMessageId,
+      message.replyToSequence,
+      message.replyToAuthorDisplayName,
+      message.replyToExcerpt,
+    ];
+    const nullCount = columns.filter((value) => value === null).length;
+    if (nullCount === columns.length) continue;
+    if (nullCount !== 0) return false;
+    if (message.replyToMessageId === message.id) return false;
+    const target = readTarget.get(
+      message.projectId,
+      message.threadId,
+      message.replyToMessageId,
+    ) as { authorDisplayName: string; content: string; sequence: number } | undefined;
+    if (
+      target === undefined
+      || target.sequence >= message.sequence
+      || message.replyToSequence !== target.sequence
+      || message.replyToAuthorDisplayName !== target.authorDisplayName
+      || message.replyToExcerpt !== target.content.trim()
+    ) return false;
+  }
+  return true;
+}
+
 function structuredFactsAreValid(database: DatabaseSync): boolean {
   try {
     const handoffEventByKey = new Map<string, string>();
@@ -910,6 +960,7 @@ export function validateCurrentDataInvariants(
       if (database.prepare(query).get()) return "SCHEMA_DATA_INVALID";
     }
     if (!chunkFactsAreValid(database)) return "SCHEMA_DATA_INVALID";
+    if (!replyEdgesAreValid(database)) return "SCHEMA_DATA_INVALID";
     if (!structuredFactsAreValid(database)) return "SCHEMA_DATA_INVALID";
     if (!structuredStateGraphsAreValid(database)) return "SCHEMA_DATA_INVALID";
     if (!structuredOutcomesAreValid(database)) return "SCHEMA_DATA_INVALID";

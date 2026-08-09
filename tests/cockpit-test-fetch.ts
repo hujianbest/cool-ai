@@ -100,6 +100,7 @@ export function threadMessage(projectId: string): ThreadMessageDto {
     mentionDisplayName: null,
     mentionMemberStatus: null,
     projectId,
+    replyTo: null,
     runId: TEST_RUN_ID,
     sequence: 1,
     threadId: TEST_THREAD_ID,

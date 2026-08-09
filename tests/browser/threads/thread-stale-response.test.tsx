@@ -97,6 +97,7 @@ function message(project: string, thread: string, content: string, runId: string
     mentionDisplayName: null,
     mentionMemberStatus: null,
     projectId: project,
+    replyTo: null,
     runId,
     sequence: 1,
     threadId: thread,

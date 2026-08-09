@@ -1508,6 +1508,7 @@ export function answerThreadDecision(
         mentionDisplayName: mentionAgentId ? selected.displayName : null,
         mentionMemberStatus: mentionAgentId ? "current" : null,
         projectId,
+        replyTo: null,
         runId,
         sequence: row.nextMessageSequence,
         threadId,

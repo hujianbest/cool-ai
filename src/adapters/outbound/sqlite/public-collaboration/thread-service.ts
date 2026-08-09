@@ -23,6 +23,7 @@ import {
 } from "@/src/modules/identity-capability";
 import { openDatabase } from "@/src/adapters/outbound/sqlite/connection";
 import { readPublicStructuredBlocksTx } from "@/src/adapters/outbound/sqlite/public-collaboration/structured-message-store";
+import { assertPublicProjectionText } from "@/src/adapters/outbound/sqlite/public-collaboration/verified-source-projection";
 import { timelinePayloadSchemas } from "@/src/shared/collaboration-contracts";
 import type {
   CursorPage,
@@ -34,6 +35,7 @@ import type {
   ThreadDispatchReadiness,
   ThreadFactDto,
   ThreadMessageDto,
+  ThreadMessageReplySnapshot,
 } from "@/src/shared/collaboration-contracts";
 
 const RESOURCE_ID = /^[A-Za-z0-9][A-Za-z0-9:_-]{0,199}$/;
@@ -204,6 +206,7 @@ type MessageInput = {
   operationId: string;
   content: string;
   mentionAgentId: string | null;
+  replyToMessageId: string | null;
 };
 
 type RunStartInput = {
@@ -365,7 +368,7 @@ function parseMessageInput(rawInput: unknown): MessageInput {
     invalidInput("Message input is invalid.", { input: "invalid_format" });
   }
   const input = rawInput as Record<string, unknown>;
-  const allowedKeys = new Set(["operationId", "content", "mentionAgentId"]);
+  const allowedKeys = new Set(["operationId", "content", "mentionAgentId", "replyToMessageId"]);
   const fields: Record<string, string> = {};
   for (const key of Object.keys(input)) {
     if (!allowedKeys.has(key)) fields[key] = "unknown";
@@ -394,10 +397,22 @@ function parseMessageInput(rawInput: unknown): MessageInput {
     }
   }
 
+  let replyToMessageId: string | null = null;
+  if (Object.hasOwn(input, "replyToMessageId")) {
+    if (
+      typeof input.replyToMessageId !== "string"
+      || !RESOURCE_ID.test(input.replyToMessageId)
+    ) {
+      fields.replyToMessageId = "invalid_format";
+    } else {
+      replyToMessageId = input.replyToMessageId;
+    }
+  }
+
   if (Object.keys(fields).length > 0) {
     invalidInput("Message input is invalid.", fields);
   }
-  return { content, mentionAgentId, operationId };
+  return { content, mentionAgentId, operationId, replyToMessageId };
 }
 
 function parseRunStartInput(rawInput: unknown): RunStartInput {
@@ -640,6 +655,49 @@ function resolveMessageMention(
     );
   }
   return mention.displayName;
+}
+
+const REPLY_EXCERPT_MAX_GRAPHEMES = 160;
+
+function resolveReplyToSnapshot(
+  database: DatabaseSync,
+  projectId: string,
+  threadId: string,
+  replyToMessageId: string | null,
+): ThreadMessageReplySnapshot | null {
+  if (replyToMessageId === null) return null;
+  const target = database
+    .prepare(
+      `SELECT id,sequence,author_display_name AS authorDisplayName,content
+       FROM collaboration_messages
+       WHERE project_id=? AND thread_id=? AND id=?`,
+    )
+    .get(projectId, threadId, replyToMessageId) as
+    | {
+        authorDisplayName: string;
+        content: string;
+        id: string;
+        sequence: number;
+      }
+    | undefined;
+  if (!target) {
+    invalidInput("Message input is invalid.", { replyToMessageId: "not_found" });
+  }
+  const excerpt = target.content.trim();
+  if (graphemeLength(excerpt) > REPLY_EXCERPT_MAX_GRAPHEMES) {
+    throw new CollaborationError(
+      "CREDENTIAL_CONTENT_REJECTED",
+      422,
+      "Public source content is not allowed.",
+    );
+  }
+  assertPublicProjectionText(database, excerpt);
+  return {
+    authorDisplayName: target.authorDisplayName,
+    excerpt,
+    messageId: target.id,
+    sequence: target.sequence,
+  };
 }
 
 function currentMessageSequence(
@@ -1378,6 +1436,7 @@ export function writeOwnerThreadMessage(
   const requestHash = canonicalRequestHash({
     content: input.content,
     mentionAgentId: input.mentionAgentId,
+    replyToMessageId: input.replyToMessageId,
   });
   const database = openDatabase(databasePath);
   database.exec("PRAGMA busy_timeout=5000");
@@ -1416,6 +1475,12 @@ export function writeOwnerThreadMessage(
         threadId,
         input.mentionAgentId,
       );
+      const replyTo = resolveReplyToSnapshot(
+        database,
+        projectId,
+        threadId,
+        input.replyToMessageId,
+      );
       const messageSequence = currentMessageSequence(database, projectId, threadId);
       const activitySequence = nextThreadActivitySequenceTx(database, projectId);
       const timestamp = new Date().toISOString();
@@ -1432,6 +1497,7 @@ export function writeOwnerThreadMessage(
         mentionDisplayName,
         mentionMemberStatus: input.mentionAgentId === null ? null : "current",
         projectId,
+        replyTo,
         runId: null,
         sequence: messageSequence,
         threadId,
@@ -1473,8 +1539,9 @@ export function writeOwnerThreadMessage(
           `INSERT INTO collaboration_messages(
              id,project_id,thread_id,run_id,author_type,author_agent_id,
              author_display_name,content,mention_agent_id,mention_display_name,
-             sequence,consumed_at,created_at
-           ) VALUES (?,?,?,NULL,'owner',NULL,?,?,?,?,?,NULL,?)`,
+             sequence,reply_to_message_id,reply_to_sequence,
+             reply_to_author_display_name,reply_to_excerpt,consumed_at,created_at
+           ) VALUES (?,?,?,NULL,'owner',NULL,?,?,?,?,?,?,?,?,?,NULL,?)`,
         )
         .run(
           messageId,
@@ -1485,6 +1552,10 @@ export function writeOwnerThreadMessage(
           message.mentionAgentId,
           message.mentionDisplayName,
           message.sequence,
+          replyTo?.messageId ?? null,
+          replyTo?.sequence ?? null,
+          replyTo?.authorDisplayName ?? null,
+          replyTo?.excerpt ?? null,
           timestamp,
         );
       hooks.fault?.("after_message");
@@ -1662,6 +1733,7 @@ export function startThreadRun(
         mentionDisplayName,
         mentionMemberStatus: input.mentionAgentId === null ? null : "current",
         projectId,
+        replyTo: null,
         runId,
         sequence: messageSequence,
         threadId,
@@ -2073,8 +2145,12 @@ export function readThreadDetail(
   }
 }
 
-type MessageRow = Omit<ThreadMessageDto, "blocks" | "mentionMemberStatus"> & {
+type MessageRow = Omit<ThreadMessageDto, "blocks" | "mentionMemberStatus" | "replyTo"> & {
   mentionIsCurrent: number | null;
+  replyToMessageId: string | null;
+  replyToSequence: number | null;
+  replyToAuthorDisplayName: string | null;
+  replyToExcerpt: string | null;
 };
 
 type FactRow = {
@@ -2110,6 +2186,10 @@ type FactRow = {
   messageMentionDisplayName: string | null;
   messageMentionIsCurrent: number | null;
   messageCreatedAt: string | null;
+  messageReplyToMessageId: string | null;
+  messageReplyToSequence: number | null;
+  messageReplyToAuthorDisplayName: string | null;
+  messageReplyToExcerpt: string | null;
 };
 
 function requireThreadTuple(
@@ -2126,6 +2206,40 @@ function requireThreadTuple(
   ) {
     resourceNotFound();
   }
+}
+
+function decodeReplySnapshot(row: MessageRow): ThreadMessageReplySnapshot | null {
+  const {
+    replyToAuthorDisplayName,
+    replyToExcerpt,
+    replyToMessageId,
+    replyToSequence,
+  } = row;
+  if (
+    replyToMessageId === null
+    && replyToSequence === null
+    && replyToAuthorDisplayName === null
+    && replyToExcerpt === null
+  ) {
+    return null;
+  }
+  if (
+    replyToMessageId === null
+    || replyToSequence === null
+    || replyToAuthorDisplayName === null
+    || replyToExcerpt === null
+    || !RESOURCE_ID.test(replyToMessageId)
+    || !Number.isSafeInteger(replyToSequence)
+    || replyToSequence < 1
+  ) {
+    resourceNotFound();
+  }
+  return {
+    authorDisplayName: replyToAuthorDisplayName,
+    excerpt: replyToExcerpt,
+    messageId: replyToMessageId,
+    sequence: replyToSequence,
+  };
 }
 
 function mapMessageRow(row: MessageRow): ThreadMessageDto {
@@ -2157,6 +2271,7 @@ function mapMessageRow(row: MessageRow): ThreadMessageDto {
           ? "current"
           : "left",
     projectId: row.projectId,
+    replyTo: decodeReplySnapshot(row),
     runId: row.runId,
     sequence: row.sequence,
     threadId: row.threadId,
@@ -2240,6 +2355,10 @@ function mapNestedMessage(database: DatabaseSync, row: FactRow): ThreadMessageDt
     mentionDisplayName: row.messageMentionDisplayName,
     mentionIsCurrent: row.messageMentionIsCurrent,
     projectId: row.messageProjectId,
+    replyToAuthorDisplayName: row.messageReplyToAuthorDisplayName,
+    replyToExcerpt: row.messageReplyToExcerpt,
+    replyToMessageId: row.messageReplyToMessageId,
+    replyToSequence: row.messageReplyToSequence,
     runId: row.messageRunId,
     sequence: row.messageSequence,
     threadId: row.messageThreadId,
@@ -2506,6 +2625,10 @@ export function readThreadMessages(
                 messages.content,messages.mention_agent_id AS mentionAgentId,
                 messages.mention_display_name AS mentionDisplayName,
                 CASE WHEN membership.agent_id IS NULL THEN 0 ELSE 1 END AS mentionIsCurrent,
+                messages.reply_to_message_id AS replyToMessageId,
+                messages.reply_to_sequence AS replyToSequence,
+                messages.reply_to_author_display_name AS replyToAuthorDisplayName,
+                messages.reply_to_excerpt AS replyToExcerpt,
                 messages.created_at AS createdAt
          FROM collaboration_messages AS messages
          LEFT JOIN project_memberships AS membership
@@ -2569,7 +2692,11 @@ export function readThreadFacts(
                 messages.mention_display_name AS messageMentionDisplayName,
                 CASE WHEN membership.agent_id IS NULL THEN 0 ELSE 1 END
                   AS messageMentionIsCurrent,
-                messages.created_at AS messageCreatedAt
+                messages.created_at AS messageCreatedAt,
+                messages.reply_to_message_id AS messageReplyToMessageId,
+                messages.reply_to_sequence AS messageReplyToSequence,
+                messages.reply_to_author_display_name AS messageReplyToAuthorDisplayName,
+                messages.reply_to_excerpt AS messageReplyToExcerpt
          FROM collaboration_thread_facts AS facts
          LEFT JOIN collaboration_runs AS runs
            ON runs.project_id=facts.project_id

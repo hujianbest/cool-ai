@@ -44,6 +44,13 @@ export type TranscriptUnknownBlock = TranscriptBlockBase & {
 
 export type TranscriptBlock = TranscriptKnownBlock | TranscriptUnknownBlock;
 
+export type TranscriptReplyReference = {
+  authorDisplayName: string;
+  excerpt: string;
+  messageId: string;
+  sequence: number;
+};
+
 export type TranscriptEntry = {
   actorLabel: string;
   blocks: TranscriptBlock[];
@@ -56,6 +63,7 @@ export type TranscriptEntry = {
     memberStatus: "current" | "left";
   } | null;
   messageId: string | null;
+  replyTo: TranscriptReplyReference | null;
   runId: string | null;
   text: string | null;
 };
@@ -261,6 +269,23 @@ function heading(type: string, payload?: Record<string, unknown>): string {
   return "线程事实已记录";
 }
 
+function replyReference(value: unknown): TranscriptReplyReference | null {
+  if (
+    !record(value)
+    || Object.keys(value).length !== 4
+    || !string(value.messageId)
+    || !integer(value.sequence, 1)
+    || !string(value.authorDisplayName)
+    || !string(value.excerpt)
+  ) return null;
+  return {
+    authorDisplayName: value.authorDisplayName,
+    excerpt: value.excerpt,
+    messageId: value.messageId,
+    sequence: value.sequence,
+  };
+}
+
 function entry(value: unknown): TranscriptEntry | null {
   if (
     !record(value)
@@ -286,6 +311,7 @@ function entry(value: unknown): TranscriptEntry | null {
       heading: heading(value.type, record(value.payload) ? value.payload : undefined),
       mention: null,
       messageId: null,
+      replyTo: null,
       runId: value.runId,
       text: value.type === "thread_created" && record(value.payload) && string(value.payload.title)
         ? value.payload.title
@@ -319,6 +345,10 @@ function entry(value: unknown): TranscriptEntry | null {
         }
       : undefined;
   if (mention === undefined) return null;
+  const replyTo = message.replyTo === null
+    ? null
+    : replyReference(message.replyTo);
+  if (replyTo === null && message.replyTo !== null) return null;
   const blocks: TranscriptBlock[] = [];
   for (const rawBlock of rawBlocks) {
     if (!record(rawBlock)) return null;
@@ -343,6 +373,7 @@ function entry(value: unknown): TranscriptEntry | null {
     heading: heading(value.type),
     mention,
     messageId: message.id,
+    replyTo,
     runId: value.runId,
     text: message.content,
   };

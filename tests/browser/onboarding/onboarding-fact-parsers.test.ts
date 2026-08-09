@@ -83,6 +83,7 @@ const ownerMessage = {
   mentionDisplayName: null,
   mentionMemberStatus: null,
   projectId,
+  replyTo: null,
   runId: run.id,
   sequence: 1,
   threadId,

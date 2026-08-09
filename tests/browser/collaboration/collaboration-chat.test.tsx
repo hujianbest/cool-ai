@@ -89,6 +89,7 @@ function installFetch(
     const messages = read.projectMessagesPage.items.map((item) => ({
       ...item,
       projectId: "project-1",
+      replyTo: null,
       threadId: TEST_THREAD_ID,
     }));
     const facts = [
@@ -407,6 +408,7 @@ describe("collaboration chat composer", () => {
             message: {
               ...message,
               projectId: "project-1",
+              replyTo: null,
               threadId: TEST_THREAD_ID,
             },
             messageId: message.id,
@@ -422,6 +424,7 @@ describe("collaboration chat composer", () => {
           message: {
             ...message,
             projectId: "project-1",
+            replyTo: null,
             threadId: TEST_THREAD_ID,
           },
           run: {

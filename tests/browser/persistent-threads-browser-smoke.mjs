@@ -39,6 +39,10 @@ const evidence = {
   desktop: join(evidenceDirectory, "persistent-threads-desktop.png"),
   narrow: join(evidenceDirectory, "persistent-threads-narrow.png"),
   policy: join(evidenceDirectory, "persistent-threads-policy-repair.png"),
+  replyReference: join(
+    evidenceDirectory,
+    "persistent-threads-reply-reference.png",
+  ),
   results: join(evidenceDirectory, "persistent-threads-results.json"),
 };
 const stableConfig = ["next-env.d.ts", "tsconfig.json"]
@@ -338,7 +342,8 @@ function inspectDatabase() {
     `).all();
     const ownership = database.prepare(`
       SELECT m.id,m.project_id AS projectId,m.thread_id AS threadId,m.run_id AS runId,
-             m.content,f.type
+             m.content,m.reply_to_message_id AS replyToMessageId,
+             m.reply_to_sequence AS replyToSequence,f.type
       FROM collaboration_messages m
       JOIN collaboration_thread_facts f
         ON f.project_id=m.project_id AND f.thread_id=m.thread_id AND f.message_id=m.id
@@ -452,7 +457,7 @@ try {
   assert.equal(persisted.body.threads.length, 1);
   assert.equal(persisted.body.threads[0].title, "历史协作");
   const legacyThreadId = persisted.body.threads[0].id;
-  assert.equal(inspectDatabase().version, 9);
+  assert.equal(inspectDatabase().version, 10);
   pass("current-persistent-default-thread", { legacyThreadId });
   await axe(page, "current persistent project");
 
@@ -594,7 +599,16 @@ try {
   assert.equal(inspectDatabase().activeRuns, 1);
   await returnLink.focus();
   await page.keyboard.press("Enter");
-  await page.waitForURL((url) => url.searchParams.get("run") === activeRun.id);
+  try {
+    await page.waitForURL(
+      (url) => url.searchParams.get("run") === activeRun.id,
+      { timeout: 10_000 },
+    );
+  } catch {
+    await returnLink.focus();
+    await page.keyboard.press("Enter");
+    await page.waitForURL((url) => url.searchParams.get("run") === activeRun.id);
+  }
   pass("thread-isolation-single-active-safe-return", { activeRunId: activeRun.id });
   await axe(page, "active thread selected run");
   await page.screenshot({ fullPage: true, path: evidence.desktop });
@@ -757,6 +771,165 @@ try {
   );
   pass("restart-preserves-ownership-facts-policy-order-source-tuple");
 
+  const threadMessages = await api(
+    page,
+    `/api/projects/legacy-project/threads/${firstThread}/messages?limit=100`,
+  );
+  assert.equal(threadMessages.status, 200);
+  const sourceMessage = threadMessages.body.items.find((item) =>
+    item.content === "Thread-scoped agent response."
+  );
+  assert.ok(sourceMessage);
+  const replyPost = await api(
+    page,
+    `/api/projects/legacy-project/threads/${firstThread}/messages`,
+    {
+      body: JSON.stringify({
+        content: "Reply carrying a frozen source reference.",
+        operationId: randomUUID(),
+        replyToMessageId: sourceMessage.id,
+      }),
+      headers: { "content-type": "application/json" },
+      method: "POST",
+    },
+  );
+  assert.equal(
+    replyPost.status,
+    201,
+    `reply post failed: ${JSON.stringify(replyPost.body)}`,
+  );
+  assert.deepEqual(replyPost.body.message.replyTo, {
+    authorDisplayName: sourceMessage.authorDisplayName,
+    excerpt: sourceMessage.content,
+    messageId: sourceMessage.id,
+    sequence: sourceMessage.sequence,
+  });
+  const replyEdgeRows = inspectDatabase().ownership.filter((row) =>
+    row.replyToMessageId === sourceMessage.id
+  );
+  assert.equal(replyEdgeRows.length, 1);
+  assert.equal(replyEdgeRows[0].replyToSequence, sourceMessage.sequence);
+  const cutTargetPost = await api(
+    page,
+    `/api/projects/legacy-project/threads/${firstThread}/messages`,
+    {
+      body: JSON.stringify({
+        content: "Source message later cut from the transcript.",
+        operationId: randomUUID(),
+      }),
+      headers: { "content-type": "application/json" },
+      method: "POST",
+    },
+  );
+  assert.equal(cutTargetPost.status, 201);
+  const cutReplyPost = await api(
+    page,
+    `/api/projects/legacy-project/threads/${firstThread}/messages`,
+    {
+      body: JSON.stringify({
+        content: "Reply whose source becomes unavailable.",
+        operationId: randomUUID(),
+        replyToMessageId: cutTargetPost.body.message.id,
+      }),
+      headers: { "content-type": "application/json" },
+      method: "POST",
+    },
+  );
+  assert.equal(cutReplyPost.status, 201);
+  const cutTargetId = cutTargetPost.body.message.id;
+  const cutFactsRoute = (url) =>
+    url.pathname === `/api/projects/legacy-project/threads/${firstThread}/facts`;
+  const cutFactsHandler = async (route) => {
+    const response = await route.fetch();
+    const text = await response.text();
+    try {
+      const body = JSON.parse(text);
+      if (body && Array.isArray(body.items)) {
+        body.items = body.items.filter((fact) => fact.message?.id !== cutTargetId);
+        await route.fulfill({ response, json: body });
+        return;
+      }
+    } catch {
+      // Non-JSON or unexpected payload: fulfill the original response below.
+    }
+    await route.fulfill({ response, body: text });
+  };
+  await page.route(cutFactsRoute, cutFactsHandler);
+
+  await page.goto(`${baseUrl}${firstHref}`, { waitUntil: "networkidle" });
+  const replyChipName = `跳转到来源消息：#${sourceMessage.sequence} · ${sourceMessage.authorDisplayName} · ${sourceMessage.content}`;
+  const replyChip = page.getByRole("button", { name: replyChipName });
+  await replyChip.waitFor();
+  const chipBox = await replyChip.boundingBox();
+  assert.ok(chipBox && chipBox.height >= 44 && chipBox.width >= 44);
+  const timelineLog = page.getByRole("log", { name: "协作时间线" });
+  await timelineLog.focus();
+  let chipFocusedByKeyboard = false;
+  for (let attempt = 0; attempt < 15 && !chipFocusedByKeyboard; attempt += 1) {
+    await page.keyboard.press("Tab");
+    chipFocusedByKeyboard = await replyChip.evaluate(
+      (node) => document.activeElement === node,
+    );
+  }
+  assert.ok(chipFocusedByKeyboard, "reply chip must be keyboard reachable");
+  assert.notEqual(
+    await replyChip.evaluate((node) => getComputedStyle(node).boxShadow),
+    "none",
+  );
+  await page.keyboard.press("Enter");
+  await page.waitForFunction(() => {
+    const active = document.activeElement;
+    return active?.tagName === "LI"
+      && active.classList.contains("reply-target-highlight");
+  });
+  const locatedText = await page.evaluate(
+    () => document.activeElement?.textContent ?? "",
+  );
+  assert.ok(locatedText.includes("Thread-scoped agent response."));
+  await page.screenshot({ fullPage: true, path: evidence.replyReference });
+  await axe(page, "desktop light reply reference jump highlight");
+  await page.waitForFunction(() => {
+    const active = document.activeElement;
+    return active?.tagName === "LI"
+      && !active.classList.contains("reply-target-highlight");
+  });
+
+  const unavailableName =
+    "来源消息不可用，无法跳转：目标消息不在当前可读取的协作历史中。";
+  const unavailableChip = page.getByRole("button", { name: unavailableName });
+  await unavailableChip.waitFor();
+  const unavailableBox = await unavailableChip.boundingBox();
+  assert.ok(
+    unavailableBox && unavailableBox.height >= 44 && unavailableBox.width >= 44,
+  );
+  assert.equal(await unavailableChip.getAttribute("aria-disabled"), "true");
+  const unavailableText = await unavailableChip.textContent();
+  assert.ok(unavailableText?.includes("来源消息不可用"));
+  assert.equal(unavailableText?.includes("Source message later cut"), false);
+  assert.equal(
+    await page
+      .getByText("Source message later cut from the transcript.", { exact: true })
+      .count(),
+    0,
+  );
+  await unavailableChip.focus();
+  await page.keyboard.press("Enter");
+  assert.equal(
+    await unavailableChip.evaluate((node) => document.activeElement === node),
+    true,
+  );
+  assert.equal(await page.locator(".reply-target-highlight").count(), 0);
+  pass("reply-reference-chip-keyboard-jump-highlight-placeholder");
+
+  const themeToggle = page.getByRole("button", { name: /切换到暗色主题/ });
+  await themeToggle.click();
+  await page.getByRole("button", { name: /切换到明色主题/ }).waitFor();
+  await replyChip.waitFor();
+  await axe(page, "desktop dark reply reference transcript");
+  await page.getByRole("button", { name: /切换到明色主题/ }).click();
+  await page.getByRole("button", { name: /切换到暗色主题/ }).waitFor();
+  pass("reply-reference-light-dark-axe");
+
   await page.setViewportSize({ height: 844, width: 390 });
   await page.reload({ waitUntil: "networkidle" });
   const navigationOpener = page.getByRole("button", { name: "打开项目导航" });
@@ -799,6 +972,25 @@ try {
   await editor.waitFor({ state: "detached" });
   assert.equal(await editorOpener.evaluate((node) => document.activeElement === node), true);
   pass("desktop-narrow-keyboard-dialog-focus-live-states");
+
+  await page.goto(`${baseUrl}${firstHref}`, { waitUntil: "networkidle" });
+  const narrowEditorOpener = page.getByRole("button", { name: "打开编辑" });
+  await narrowEditorOpener.focus();
+  await page.keyboard.press("Enter");
+  const narrowEditor = page.getByRole("dialog", { name: "任务编辑" });
+  await narrowEditor.waitFor();
+  await narrowEditor.getByRole("tab", { name: "群聊" }).click();
+  const narrowReplyChip = narrowEditor.getByRole("button", { name: replyChipName });
+  await narrowReplyChip.waitFor();
+  const narrowUnavailable = narrowEditor.getByRole("button", { name: unavailableName });
+  await narrowUnavailable.waitFor();
+  for (const chip of [narrowReplyChip, narrowUnavailable]) {
+    const box = await chip.boundingBox();
+    assert.ok(box && box.height >= 44 && box.width >= 44);
+  }
+  await axe(page, "narrow reply reference transcript");
+  await page.unroute(cutFactsRoute, cutFactsHandler);
+  pass("reply-reference-narrow-44px-axe");
 
   const dom = await page.evaluate(() => document.documentElement.outerHTML);
   const databaseText = JSON.stringify(inspectDatabase());

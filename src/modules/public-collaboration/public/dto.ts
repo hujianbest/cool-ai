@@ -37,6 +37,7 @@ export type {
   ThreadFactBase,
   ThreadFactDto,
   ThreadMessageDto,
+  ThreadMessageReplySnapshot,
   ThreadRunDto,
   TimelineEvent,
   TimelineEventType,

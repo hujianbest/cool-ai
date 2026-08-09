@@ -284,6 +284,7 @@ describe("tuple-scoped new CollaborationRun API", () => {
       mentionAgentId: null,
       mentionDisplayName: null,
       mentionMemberStatus: null,
+      replyTo: null,
       createdAt: NOW,
     });
     expect(body.facts.map(({ type }: { type: string }) => type)).toEqual([

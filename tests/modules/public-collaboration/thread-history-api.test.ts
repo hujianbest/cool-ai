@@ -302,6 +302,7 @@ describe("tuple-scoped thread history API", () => {
       mentionAgentId: null,
       mentionDisplayName: null,
       mentionMemberStatus: null,
+      replyTo: null,
       createdAt: "2026-08-08T08:00:01.000Z",
     });
 

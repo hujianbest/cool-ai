@@ -52,6 +52,7 @@ function messageFact(blocks: unknown[]) {
       mentionDisplayName: null,
       mentionMemberStatus: null,
       projectId: "project-1",
+      replyTo: null,
       runId: "run-1",
       sequence: 1,
       threadId: "thread-1",

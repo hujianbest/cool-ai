@@ -1,9 +1,10 @@
 import { DatabaseSync } from "node:sqlite";
 
 import { openDatabase } from "@/src/adapters/outbound/sqlite/connection";
+import { CURRENT_SCHEMA } from "@/src/adapters/outbound/sqlite/current-schema";
 
 export type UnsupportedSchemaInput =
-  | { readonly kind: "legacy-identity"; readonly userVersion: 1 | 2 | 3 | 4 | 5 | 6 | 7 | 8 }
+  | { readonly kind: "legacy-identity"; readonly userVersion: 1 | 2 | 3 | 4 | 5 | 6 | 7 | 8 | 9 }
   | { readonly kind: "non-empty-v0" }
   | { readonly kind: "partial-current" }
   | { readonly kind: "unsupported-identity"; readonly userVersion: number }
@@ -97,7 +98,7 @@ export function createUnsupportedSchemaInput(
       createMinimalMarker(path, 0);
       return;
     case "partial-current":
-      createMinimalMarker(path, 9);
+      createMinimalMarker(path, CURRENT_SCHEMA.identity.userVersion);
       return;
     default:
       mutateCurrent(path, input);

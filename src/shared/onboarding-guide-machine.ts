@@ -169,11 +169,18 @@ const MESSAGE_KEYS = new Set([
   "mentionDisplayName",
   "mentionMemberStatus",
   "projectId",
+  "replyTo",
   "runId",
   "sequence",
   "threadId",
 ]);
 const MESSAGE_WITH_BLOCKS_KEYS = new Set([...MESSAGE_KEYS, "blocks"]);
+const REPLY_SNAPSHOT_KEYS = new Set([
+  "authorDisplayName",
+  "excerpt",
+  "messageId",
+  "sequence",
+]);
 const THREAD_KEYS = new Set([
   "availability",
   "createdAt",
@@ -568,6 +575,17 @@ function parseCollaborationRun(
   };
 }
 
+function isReplySnapshot(value: unknown): boolean {
+  return (
+    isRecord(value) &&
+    hasExactKeys(value, REPLY_SNAPSHOT_KEYS) &&
+    isNonEmptyString(value.messageId) &&
+    isSafeInteger(value.sequence, 1) &&
+    isNonEmptyString(value.authorDisplayName) &&
+    isNonEmptyString(value.excerpt)
+  );
+}
+
 function parseProjectMessage(
   value: unknown,
   expectedProjectId: string,
@@ -595,6 +613,7 @@ function parseProjectMessage(
       value.mentionMemberStatus === "current" ||
       value.mentionMemberStatus === "left"
     ) ||
+    !(value.replyTo === null || isReplySnapshot(value.replyTo)) ||
     !isTimestamp(value.createdAt)
   ) {
     return null;

@@ -114,6 +114,7 @@ function strictThreadResponse(
   const messages = payload.projectMessagesPage.items.map((item) => ({
     ...item,
     projectId,
+    replyTo: null,
     threadId: TEST_THREAD_ID,
   }));
   const linkedMessageIds = new Set(

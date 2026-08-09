@@ -244,6 +244,13 @@ export type PublicStructuredBlockEnvelope = {
   state?: Record<string, unknown> & { stateVersion: number };
 };
 
+export type ThreadMessageReplySnapshot = {
+  messageId: string;
+  sequence: number;
+  authorDisplayName: string;
+  excerpt: string;
+};
+
 export type ThreadMessageDto = {
   id: string;
   projectId: string;
@@ -257,6 +264,7 @@ export type ThreadMessageDto = {
   mentionAgentId: string | null;
   mentionDisplayName: string | null;
   mentionMemberStatus: "current" | "left" | null;
+  replyTo: ThreadMessageReplySnapshot | null;
   createdAt: string;
   blocks?: PublicStructuredBlockEnvelope[];
 };

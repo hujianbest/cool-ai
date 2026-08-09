@@ -176,6 +176,7 @@ describe("selected thread run selection", () => {
       mentionDisplayName: null,
       mentionMemberStatus: null,
       projectId,
+      replyTo: null,
       runId: null,
       sequence: 1,
       threadId,

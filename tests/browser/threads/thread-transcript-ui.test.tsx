@@ -1,7 +1,7 @@
 // @vitest-environment jsdom
 import { act, fireEvent, render, screen, waitFor } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
-import { afterEach, describe, expect, it, vi } from "vitest";
+import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
 import { CollaborationPanel } from "@/components/collaboration/collaboration-panel";
 import type {
@@ -23,6 +23,7 @@ function message(
   authorType: "owner" | "agent",
   content: string,
   threadId = TEST_THREAD_ID,
+  replyTo: ThreadMessageDto["replyTo"] = null,
 ): ThreadMessageDto {
   return {
     authorAgentId: authorType === "agent" ? "agent-a" : null,
@@ -35,6 +36,7 @@ function message(
     mentionDisplayName: null,
     mentionMemberStatus: null,
     projectId,
+    replyTo,
     runId: "run-1",
     sequence,
     threadId,
@@ -438,5 +440,471 @@ describe("strict thread fact transcript", () => {
     await waitFor(() =>
       expect(screen.queryByText("Late old response")).toBeNull()
     );
+  });
+});
+
+describe("reply reference chip and source jump", () => {
+  const scrollIntoView = vi.fn();
+  const originalScrollIntoView = Object.getOwnPropertyDescriptor(
+    Element.prototype,
+    "scrollIntoView",
+  );
+
+  beforeEach(() => {
+    scrollIntoView.mockClear();
+    Object.defineProperty(Element.prototype, "scrollIntoView", {
+      configurable: true,
+      value: scrollIntoView,
+      writable: true,
+    });
+  });
+
+  afterEach(() => {
+    if (originalScrollIntoView) {
+      Object.defineProperty(Element.prototype, "scrollIntoView", originalScrollIntoView);
+    } else {
+      Reflect.deleteProperty(Element.prototype, "scrollIntoView");
+    }
+  });
+
+  function replyToTarget(target: ThreadMessageDto): ThreadMessageDto["replyTo"] {
+    return {
+      authorDisplayName: target.authorDisplayName,
+      excerpt: target.content,
+      messageId: target.id,
+      sequence: target.sequence,
+    };
+  }
+
+  it("renders the frozen reply chip and jumps to the loaded source with highlight and focus", async () => {
+    const target = message("message-target", 1, "owner", "Origin message");
+    const reply: ThreadMessageDto = {
+      ...message("message-reply", 2, "agent", "Reply content"),
+      replyTo: replyToTarget(target),
+    };
+    vi.stubGlobal(
+      "fetch",
+      vi.fn((input: RequestInfo | URL) => {
+        const url = String(input);
+        if (url.endsWith(`/threads/${TEST_THREAD_ID}`)) {
+          return Promise.resolve(Response.json(detail()));
+        }
+        if (url.endsWith(`/threads/${TEST_THREAD_ID}/messages`)) {
+          return Promise.resolve(Response.json({ items: [target, reply], nextAfter: null }));
+        }
+        if (url.endsWith(`/threads/${TEST_THREAD_ID}/facts`)) {
+          return Promise.resolve(
+            Response.json({
+              items: [
+                messageFact("fact-target", 1, target),
+                messageFact("fact-reply", 2, reply),
+              ],
+              nextAfter: null,
+            }),
+          );
+        }
+        if (url.endsWith(`/threads/${TEST_THREAD_ID}/facts?after=2`)) {
+          return Promise.resolve(Response.json({ items: [], nextAfter: null }));
+        }
+        throw new Error(`Unexpected request: ${url}`);
+      }),
+    );
+    const user = userEvent.setup();
+
+    render(<CollaborationPanel projectId={projectId} threadId={TEST_THREAD_ID} />);
+
+    const chip = await screen.findByRole("button", {
+      name: "跳转到来源消息：#1 · 项目所有者 · Origin message",
+    });
+    expect(chip).toHaveTextContent("#1 · 项目所有者 · Origin message");
+    chip.focus();
+    expect(chip).toHaveFocus();
+    await user.keyboard("{Enter}");
+
+    const list = screen.getByRole("log", { name: "协作时间线" });
+    const targetItem = Array.from(list.querySelectorAll("li")).find(
+      (item) => Array.from(item.querySelectorAll("p")).some(
+        (paragraph) => paragraph.textContent === "Origin message",
+      ),
+    );
+    expect(targetItem).toBeDefined();
+    await waitFor(() => expect(scrollIntoView).toHaveBeenCalledTimes(1));
+    expect(scrollIntoView.mock.instances[0]).toBe(targetItem);
+    expect(targetItem).toHaveClass("reply-target-highlight");
+    await waitFor(() => expect(targetItem).toHaveFocus());
+    await waitFor(
+      () => expect(targetItem).not.toHaveClass("reply-target-highlight"),
+      { timeout: 3_000 },
+    );
+  });
+
+  it("jumps to the loaded source even while another facts request is in flight", async () => {
+    const target = message("message-target", 1, "owner", "Origin message");
+    const reply: ThreadMessageDto = {
+      ...message("message-reply", 2, "agent", "Reply content"),
+      replyTo: replyToTarget(target),
+    };
+    vi.stubGlobal(
+      "fetch",
+      vi.fn((input: RequestInfo | URL) => {
+        const url = String(input);
+        if (url.endsWith(`/threads/${TEST_THREAD_ID}`)) {
+          return Promise.resolve(Response.json(detail()));
+        }
+        if (url.endsWith(`/threads/${TEST_THREAD_ID}/messages`)) {
+          return Promise.resolve(Response.json({ items: [target, reply], nextAfter: null }));
+        }
+        if (url.endsWith(`/threads/${TEST_THREAD_ID}/facts`)) {
+          return Promise.resolve(
+            Response.json({
+              items: [
+                messageFact("fact-target", 1, target),
+                messageFact("fact-reply", 2, reply),
+              ],
+              nextAfter: 2,
+            }),
+          );
+        }
+        if (url.endsWith(`/threads/${TEST_THREAD_ID}/facts?after=2`)) {
+          return new Promise<Response>(() => {});
+        }
+        throw new Error(`Unexpected request: ${url}`);
+      }),
+    );
+    const user = userEvent.setup();
+
+    render(<CollaborationPanel projectId={projectId} threadId={TEST_THREAD_ID} />);
+
+    const chip = await screen.findByRole("button", {
+      name: "跳转到来源消息：#1 · 项目所有者 · Origin message",
+    });
+    const loadMore = await screen.findByRole("button", { name: "加载更多事实" });
+    await user.click(loadMore);
+    await user.click(chip);
+
+    const list = screen.getByRole("log", { name: "协作时间线" });
+    const targetItem = Array.from(list.querySelectorAll("li")).find(
+      (item) => Array.from(item.querySelectorAll("p")).some(
+        (paragraph) => paragraph.textContent === "Origin message",
+      ),
+    );
+    expect(targetItem).toBeDefined();
+    await waitFor(() => expect(scrollIntoView).toHaveBeenCalled());
+    expect(scrollIntoView.mock.instances[0]).toBe(targetItem);
+    expect(targetItem).toHaveClass("reply-target-highlight");
+    await waitFor(() => expect(targetItem).toHaveFocus());
+  });
+
+  it("loads the source page on demand and locates the target after it arrives", async () => {
+    const target = message("message-target", 1, "owner", "Late origin");
+    const reply: ThreadMessageDto = {
+      ...message("message-reply", 2, "agent", "Reply to late origin"),
+      replyTo: replyToTarget(target),
+    };
+    let resolvePage!: (response: Response) => void;
+    const pendingPage = new Promise<Response>((resolve) => {
+      resolvePage = resolve;
+    });
+    let pageRequested = false;
+    vi.stubGlobal(
+      "fetch",
+      vi.fn((input: RequestInfo | URL) => {
+        const url = String(input);
+        if (url.endsWith(`/threads/${TEST_THREAD_ID}`)) {
+          return Promise.resolve(Response.json(detail()));
+        }
+        if (url.endsWith(`/threads/${TEST_THREAD_ID}/messages`)) {
+          return Promise.resolve(Response.json({ items: [target, reply], nextAfter: null }));
+        }
+        if (url.endsWith(`/threads/${TEST_THREAD_ID}/facts`)) {
+          return Promise.resolve(
+            Response.json({
+              items: [messageFact("fact-reply", 5, reply)],
+              nextAfter: 5,
+            }),
+          );
+        }
+        if (url.endsWith(`/threads/${TEST_THREAD_ID}/facts?after=5`)) {
+          pageRequested = true;
+          return pendingPage;
+        }
+        throw new Error(`Unexpected request: ${url}`);
+      }),
+    );
+    const user = userEvent.setup();
+
+    render(<CollaborationPanel projectId={projectId} threadId={TEST_THREAD_ID} />);
+
+    const chip = await screen.findByRole("button", {
+      name: "跳转到来源消息：#1 · 项目所有者 · Late origin",
+    });
+    await user.click(chip);
+    await waitFor(() => expect(pageRequested).toBe(true));
+    expect(chip).toHaveTextContent("正在定位来源消息…");
+    expect(chip).toHaveAttribute("aria-disabled", "true");
+    expect(screen.getByRole("log", { name: "协作时间线" })).toHaveAttribute(
+      "aria-busy",
+      "true",
+    );
+
+    resolvePage(
+      Response.json({
+        items: [messageFact("fact-target", 6, target)],
+        nextAfter: null,
+      }),
+    );
+    await waitFor(() => expect(scrollIntoView).toHaveBeenCalledTimes(1));
+    const list = screen.getByRole("log", { name: "协作时间线" });
+    const targetItem = Array.from(list.querySelectorAll("li")).find(
+      (item) => Array.from(item.querySelectorAll("p")).some(
+        (paragraph) => paragraph.textContent === "Late origin",
+      ),
+    );
+    expect(targetItem).toBeDefined();
+    expect(scrollIntoView.mock.instances[0]).toBe(targetItem);
+    expect(targetItem).toHaveClass("reply-target-highlight");
+  });
+
+  it("shows a neutral disabled placeholder when the source is absent from the readable history", async () => {
+    const reply: ThreadMessageDto = {
+      ...message("message-reply", 2, "agent", "Reply to missing"),
+      replyTo: {
+        authorDisplayName: "项目所有者",
+        excerpt: "Missing origin",
+        messageId: "message-missing",
+        sequence: 1,
+      },
+    };
+    vi.stubGlobal(
+      "fetch",
+      vi.fn((input: RequestInfo | URL) => {
+        const url = String(input);
+        if (url.endsWith(`/threads/${TEST_THREAD_ID}`)) {
+          return Promise.resolve(Response.json(detail()));
+        }
+        if (url.endsWith(`/threads/${TEST_THREAD_ID}/messages`)) {
+          return Promise.resolve(Response.json({ items: [reply], nextAfter: null }));
+        }
+        if (url.endsWith(`/threads/${TEST_THREAD_ID}/facts`)) {
+          return Promise.resolve(
+            Response.json({
+              items: [messageFact("fact-reply", 1, reply)],
+              nextAfter: null,
+            }),
+          );
+        }
+        if (url.endsWith(`/threads/${TEST_THREAD_ID}/facts?after=1`)) {
+          return Promise.resolve(Response.json({ items: [], nextAfter: null }));
+        }
+        throw new Error(`Unexpected request: ${url}`);
+      }),
+    );
+    const user = userEvent.setup();
+
+    render(<CollaborationPanel projectId={projectId} threadId={TEST_THREAD_ID} />);
+
+    const placeholder = await screen.findByRole("button", {
+      name: "来源消息不可用，无法跳转：目标消息不在当前可读取的协作历史中。",
+    });
+    expect(placeholder).toHaveAttribute("aria-disabled", "true");
+    expect(placeholder).toHaveTextContent("来源消息不可用");
+    expect(placeholder).not.toHaveTextContent("项目所有者");
+    expect(placeholder).not.toHaveTextContent("Missing origin");
+    await user.click(placeholder);
+    expect(scrollIntoView).not.toHaveBeenCalled();
+  });
+
+  it("keeps loading pages until exhaustion before showing the unavailable placeholder", async () => {
+    const reply: ThreadMessageDto = {
+      ...message("message-reply", 2, "agent", "Reply to exhausted"),
+      replyTo: {
+        authorDisplayName: "项目所有者",
+        excerpt: "Exhausted origin",
+        messageId: "message-missing",
+        sequence: 1,
+      },
+    };
+    vi.stubGlobal(
+      "fetch",
+      vi.fn((input: RequestInfo | URL) => {
+        const url = String(input);
+        if (url.endsWith(`/threads/${TEST_THREAD_ID}`)) {
+          return Promise.resolve(Response.json(detail()));
+        }
+        if (url.endsWith(`/threads/${TEST_THREAD_ID}/messages`)) {
+          return Promise.resolve(Response.json({ items: [reply], nextAfter: null }));
+        }
+        if (url.endsWith(`/threads/${TEST_THREAD_ID}/facts`)) {
+          return Promise.resolve(
+            Response.json({
+              items: [messageFact("fact-reply", 5, reply)],
+              nextAfter: 5,
+            }),
+          );
+        }
+        if (url.endsWith(`/threads/${TEST_THREAD_ID}/facts?after=5`)) {
+          return Promise.resolve(
+            Response.json({
+              items: [runEventFact("fact-call", 6, "model_call_started")],
+              nextAfter: null,
+            }),
+          );
+        }
+        throw new Error(`Unexpected request: ${url}`);
+      }),
+    );
+    const user = userEvent.setup();
+
+    render(<CollaborationPanel projectId={projectId} threadId={TEST_THREAD_ID} />);
+
+    const chip = await screen.findByRole("button", {
+      name: "跳转到来源消息：#1 · 项目所有者 · Exhausted origin",
+    });
+    await user.click(chip);
+    expect(
+      await screen.findByRole("button", {
+        name: "来源消息不可用，无法跳转：目标消息不在当前可读取的协作历史中。",
+      }),
+    ).toHaveAttribute("aria-disabled", "true");
+    expect(scrollIntoView).not.toHaveBeenCalled();
+  });
+
+  it("drops an in-flight source jump when the thread target switches", async () => {
+    const oldThread = TEST_THREAD_ID;
+    const newThread = "thread-2";
+    const oldTarget = message("message-old-target", 1, "owner", "Late old target", oldThread);
+    const oldReply: ThreadMessageDto = {
+      ...message("message-old-reply", 2, "agent", "Old reply", oldThread),
+      replyTo: replyToTarget(oldTarget),
+    };
+    const newMessage = message("message-new", 1, "agent", "New transcript", newThread);
+    let resolvePage!: (response: Response) => void;
+    const pendingPage = new Promise<Response>((resolve) => {
+      resolvePage = resolve;
+    });
+    let pageRequested = false;
+    vi.stubGlobal(
+      "fetch",
+      vi.fn((input: RequestInfo | URL) => {
+        const url = String(input);
+        const threadId = url.includes(`/threads/${newThread}`) ? newThread : oldThread;
+        if (url.endsWith(`/threads/${threadId}`)) {
+          return Promise.resolve(Response.json(detail(threadId)));
+        }
+        if (url.endsWith(`/threads/${threadId}/messages`)) {
+          return Promise.resolve(
+            Response.json({
+              items: threadId === oldThread ? [oldTarget, oldReply] : [newMessage],
+              nextAfter: null,
+            }),
+          );
+        }
+        if (url.endsWith(`/threads/${oldThread}/facts`)) {
+          return Promise.resolve(
+            Response.json({
+              items: [messageFact("fact-old-reply", 5, oldReply)],
+              nextAfter: 5,
+            }),
+          );
+        }
+        if (url.endsWith(`/threads/${oldThread}/facts?after=5`)) {
+          pageRequested = true;
+          return pendingPage;
+        }
+        if (url.endsWith(`/threads/${newThread}/facts`)) {
+          return Promise.resolve(
+            Response.json({
+              items: [messageFact("fact-new", 1, newMessage)],
+              nextAfter: null,
+            }),
+          );
+        }
+        if (url.endsWith(`/threads/${newThread}/facts?after=1`)) {
+          return Promise.resolve(Response.json({ items: [], nextAfter: null }));
+        }
+        throw new Error(`Unexpected request: ${url}`);
+      }),
+    );
+    const user = userEvent.setup();
+    const view = render(
+      <CollaborationPanel projectId={projectId} threadId={oldThread} />,
+    );
+    const chip = await screen.findByRole("button", {
+      name: "跳转到来源消息：#1 · 项目所有者 · Late old target",
+    });
+    await user.click(chip);
+    await waitFor(() => expect(pageRequested).toBe(true));
+
+    view.rerender(<CollaborationPanel projectId={projectId} threadId={newThread} />);
+    expect(await screen.findByText("New transcript")).toBeInTheDocument();
+
+    resolvePage(
+      Response.json({
+        items: [messageFact("fact-late-target", 6, oldTarget)],
+        nextAfter: null,
+      }),
+    );
+    await waitFor(() =>
+      expect(screen.queryByText("Late old target")).toBeNull()
+    );
+    expect(scrollIntoView).not.toHaveBeenCalled();
+    expect(document.querySelectorAll(".reply-target-highlight")).toHaveLength(0);
+  });
+
+  it("surfaces a perceivable error and re-enables the chip when the source page load fails", async () => {
+    const reply: ThreadMessageDto = {
+      ...message("message-reply", 2, "agent", "Reply to failing"),
+      replyTo: {
+        authorDisplayName: "项目所有者",
+        excerpt: "Failing origin",
+        messageId: "message-missing",
+        sequence: 1,
+      },
+    };
+    vi.stubGlobal(
+      "fetch",
+      vi.fn((input: RequestInfo | URL) => {
+        const url = String(input);
+        if (url.endsWith(`/threads/${TEST_THREAD_ID}`)) {
+          return Promise.resolve(Response.json(detail()));
+        }
+        if (url.endsWith(`/threads/${TEST_THREAD_ID}/messages`)) {
+          return Promise.resolve(Response.json({ items: [reply], nextAfter: null }));
+        }
+        if (url.endsWith(`/threads/${TEST_THREAD_ID}/facts`)) {
+          return Promise.resolve(
+            Response.json({
+              items: [messageFact("fact-reply", 5, reply)],
+              nextAfter: 5,
+            }),
+          );
+        }
+        if (url.endsWith(`/threads/${TEST_THREAD_ID}/facts?after=5`)) {
+          return Promise.resolve(
+            Response.json(
+              { error: { code: "STORAGE_UNAVAILABLE", message: "private detail" } },
+              { status: 503 },
+            ),
+          );
+        }
+        throw new Error(`Unexpected request: ${url}`);
+      }),
+    );
+    const user = userEvent.setup();
+
+    render(<CollaborationPanel projectId={projectId} threadId={TEST_THREAD_ID} />);
+
+    const chip = await screen.findByRole("button", {
+      name: "跳转到来源消息：#1 · 项目所有者 · Failing origin",
+    });
+    await user.click(chip);
+    expect(await screen.findByRole("alert")).toHaveTextContent("服务暂时不可用");
+    expect(screen.queryByText("private detail")).toBeNull();
+    const retryable = screen.getByRole("button", {
+      name: "跳转到来源消息：#1 · 项目所有者 · Failing origin",
+    });
+    expect(retryable).not.toHaveAttribute("aria-disabled");
+    expect(retryable).toHaveTextContent("#1 · 项目所有者 · Failing origin");
+    expect(scrollIntoView).not.toHaveBeenCalled();
   });
 });
