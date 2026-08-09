@@ -15,11 +15,11 @@ type ProjectContextModule = {
 };
 
 const modules =
-  import.meta.glob<ProjectContextModule>("../components/project-context/project-context-panel.tsx");
+  import.meta.glob<ProjectContextModule>("../../../components/project-context/project-context-panel.tsx");
 
 async function projectContextPanel() {
   const load =
-    modules["../components/project-context/project-context-panel.tsx"];
+    modules["../../../components/project-context/project-context-panel.tsx"];
   expect(load, "the right-panel tab system must exist").toBeTypeOf("function");
   return (await load()).ProjectContextPanel;
 }

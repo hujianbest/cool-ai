@@ -16,7 +16,7 @@ type MissionBoardModule = {
 };
 
 const boardModules =
-  import.meta.glob<MissionBoardModule>("../components/project-context/mission-board.tsx");
+  import.meta.glob<MissionBoardModule>("../../../components/project-context/mission-board.tsx");
 
 const mission: Mission = {
   id: "mission-1",
@@ -98,7 +98,7 @@ function deferred<T>() {
 
 async function board() {
   const load =
-    boardModules["../components/project-context/mission-board.tsx"];
+    boardModules["../../../components/project-context/mission-board.tsx"];
   expect(load, "the semantic mission board must exist").toBeTypeOf("function");
   return (await load()).MissionBoard;
 }

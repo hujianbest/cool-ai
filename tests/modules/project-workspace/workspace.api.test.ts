@@ -13,7 +13,7 @@ type WorkspaceRoute = {
 };
 
 const routeModules = import.meta.glob<WorkspaceRoute>(
-  "../app/api/projects/[projectId]/workspace/route.ts",
+  "../../../app/api/projects/[projectId]/workspace/route.ts",
 );
 
 let directory: string;
@@ -21,7 +21,7 @@ let databasePath: string;
 
 async function route(): Promise<WorkspaceRoute> {
   const load =
-    routeModules["../app/api/projects/[projectId]/workspace/route.ts"];
+    routeModules["../../../app/api/projects/[projectId]/workspace/route.ts"];
   expect(load, "the workspace route must exist").toBeTypeOf("function");
   return load();
 }

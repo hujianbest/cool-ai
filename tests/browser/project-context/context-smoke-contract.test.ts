@@ -9,12 +9,12 @@ const packageJson = JSON.parse(
 ) as { scripts?: Record<string, string> };
 const readme = readFileSync(join(root, "README.md"), "utf8");
 const testingGuide = readFileSync(join(root, "docs", "testing.md"), "utf8");
-const harnessPath = join(root, "tests", "context-browser-smoke.mjs");
+const harnessPath = join(root, "tests", "browser", "context-browser-smoke.mjs");
 
 describe("project-context developer loop contract", () => {
   it("documents and exposes the isolated context smoke command", () => {
     expect(packageJson.scripts?.["smoke:context"]).toBe(
-      "node tests/context-browser-smoke.mjs",
+      "node tests/browser/context-browser-smoke.mjs",
     );
     expect(readme).toContain("npm run smoke:context");
     expect(testingGuide).toContain("临时工作区");

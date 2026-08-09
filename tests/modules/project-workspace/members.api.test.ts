@@ -18,13 +18,13 @@ type MembersRoute = {
 };
 
 const routeModules =
-  import.meta.glob<MembersRoute>("../app/api/projects/[projectId]/members/route.ts");
+  import.meta.glob<MembersRoute>("../../../app/api/projects/[projectId]/members/route.ts");
 
 let directory: string;
 let databasePath: string;
 
 async function loadRoute(): Promise<MembersRoute> {
-  const load = routeModules["../app/api/projects/[projectId]/members/route.ts"];
+  const load = routeModules["../../../app/api/projects/[projectId]/members/route.ts"];
   expect(load, "the project members route must exist").toBeTypeOf("function");
   return load();
 }

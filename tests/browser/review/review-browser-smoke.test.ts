@@ -12,9 +12,9 @@ describe("review browser smoke harness contract", () => {
     expect(
       packageJson.scripts?.["smoke:review"],
       "package.json must expose the T-29 review smoke command",
-    ).toBe("node tests/review-browser-smoke.mjs");
+    ).toBe("node tests/browser/review-browser-smoke.mjs");
 
-    const harnessPath = resolve("tests/review-browser-smoke.mjs");
+    const harnessPath = resolve("tests/browser/review-browser-smoke.mjs");
     expect(
       existsSync(harnessPath),
       "the T-29 real provider/browser harness must exist",

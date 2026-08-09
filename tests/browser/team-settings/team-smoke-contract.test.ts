@@ -7,13 +7,13 @@ const packageJson = JSON.parse(
   readFileSync(join(root, "package.json"), "utf8"),
 ) as { scripts?: Record<string, string> };
 const readme = readFileSync(join(root, "README.md"), "utf8");
-const smokePath = join(root, "tests", "team-browser-smoke.mjs");
+const smokePath = join(root, "tests", "browser", "team-browser-smoke.mjs");
 const smoke = existsSync(smokePath) ? readFileSync(smokePath, "utf8") : "";
 
 describe("Team browser developer loop and security contract", () => {
   it("exposes a separate documented smoke:team command", () => {
     expect(packageJson.scripts?.["smoke:team"]).toBe(
-      "node tests/team-browser-smoke.mjs",
+      "node tests/browser/team-browser-smoke.mjs",
     );
     expect(readme).toContain("npm run smoke:team");
     expect(readme).toContain("COCKPIT_MASTER_KEY");

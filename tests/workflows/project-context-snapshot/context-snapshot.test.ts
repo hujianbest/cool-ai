@@ -43,7 +43,7 @@ type ContextServiceModule = {
 };
 
 const serviceModules =
-  import.meta.glob<ContextServiceModule>("../src/application/workflows/project-context-snapshot/workflow.ts");
+  import.meta.glob<ContextServiceModule>("../../../src/application/workflows/project-context-snapshot/workflow.ts");
 
 const FORBIDDEN_KEYS = new Set([
   "apikey",
@@ -74,7 +74,7 @@ let directory: string;
 let databasePath: string;
 
 async function service(): Promise<ContextServiceModule> {
-  const load = serviceModules["../src/application/workflows/project-context-snapshot/workflow.ts"];
+  const load = serviceModules["../../../src/application/workflows/project-context-snapshot/workflow.ts"];
   expect(load, "the deterministic context snapshot service must exist").toBeTypeOf(
     "function",
   );

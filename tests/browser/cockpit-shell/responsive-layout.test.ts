@@ -5,9 +5,9 @@ import { describe, expect, it } from "vitest";
 const root = process.cwd();
 const tokens = readFileSync(join(root, "app", "tokens.css"), "utf8");
 const cockpit = readFileSync(join(root, "app", "cockpit.css"), "utf8");
-const browserSmoke = readFileSync(join(root, "tests", "browser-smoke.mjs"), "utf8");
+const browserSmoke = readFileSync(join(root, "tests", "browser", "browser-smoke.mjs"), "utf8");
 const teamBrowserSmoke = readFileSync(
-  join(root, "tests", "team-browser-smoke.mjs"),
+  join(root, "tests", "browser", "team-browser-smoke.mjs"),
   "utf8",
 );
 

@@ -8,7 +8,7 @@ type SetupModule = {
 };
 
 const setupModules =
-  import.meta.glob<SetupModule>("../components/project-context/project-setup-panel.tsx");
+  import.meta.glob<SetupModule>("../../../components/project-context/project-setup-panel.tsx");
 
 const agents = [
   {
@@ -74,7 +74,7 @@ function deferred<T>() {
 
 async function setupPanel() {
   const load =
-    setupModules["../components/project-context/project-setup-panel.tsx"];
+    setupModules["../../../components/project-context/project-setup-panel.tsx"];
   expect(load, "the complete project setup panel must exist").toBeTypeOf("function");
   return (await load()).ProjectSetupPanel;
 }

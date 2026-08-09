@@ -21,8 +21,8 @@ type PageModule = {
   }) => Promise<ReactElement>;
 };
 
-const routeModules = import.meta.glob<RouteModule>("../app/api/skills/route.ts");
-const pageModules = import.meta.glob<PageModule>("../app/team/page.tsx");
+const routeModules = import.meta.glob<RouteModule>("../../../app/api/skills/route.ts");
+const pageModules = import.meta.glob<PageModule>("../../../app/team/page.tsx");
 
 let directory: string;
 
@@ -39,8 +39,8 @@ afterEach(() => {
 
 describe("/team skill vertical slice", () => {
   it("creates a text skill through the real API and renders it after reload", async () => {
-    const loadRoute = routeModules["../app/api/skills/route.ts"];
-    const loadPage = pageModules["../app/team/page.tsx"];
+    const loadRoute = routeModules["../../../app/api/skills/route.ts"];
+    const loadPage = pageModules["../../../app/team/page.tsx"];
 
     expect(loadRoute, "the real /api/skills endpoint must exist").toBeTypeOf("function");
     expect(loadPage, "the real /team page must exist").toBeTypeOf("function");

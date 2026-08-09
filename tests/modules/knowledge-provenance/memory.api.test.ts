@@ -17,14 +17,14 @@ type MemoryRoute = {
 };
 
 const routeModules =
-  import.meta.glob<MemoryRoute>("../app/api/projects/[projectId]/memories/route.ts");
+  import.meta.glob<MemoryRoute>("../../../app/api/projects/[projectId]/memories/route.ts");
 
 let directory: string;
 let databasePath: string;
 
 async function route(): Promise<MemoryRoute> {
   const load =
-    routeModules["../app/api/projects/[projectId]/memories/route.ts"];
+    routeModules["../../../app/api/projects/[projectId]/memories/route.ts"];
   expect(load, "the sourced memory route must exist").toBeTypeOf("function");
   return load();
 }

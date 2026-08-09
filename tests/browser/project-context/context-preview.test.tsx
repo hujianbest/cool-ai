@@ -13,7 +13,7 @@ type ContextPreviewModule = {
 };
 
 const modules =
-  import.meta.glob<ContextPreviewModule>("../components/project-context/context-preview.tsx");
+  import.meta.glob<ContextPreviewModule>("../../../components/project-context/context-preview.tsx");
 
 const members: ProjectMember[] = [
   {
@@ -119,7 +119,7 @@ function snapshot(agentId: string): ProjectContextSnapshot {
 }
 
 async function contextPreview() {
-  const load = modules["../components/project-context/context-preview.tsx"];
+  const load = modules["../../../components/project-context/context-preview.tsx"];
   expect(load, "the readable context preview must exist").toBeTypeOf("function");
   return (await load()).ContextPreview;
 }

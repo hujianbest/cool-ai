@@ -10,7 +10,7 @@ type MemoryPanelModule = {
 };
 
 const modules =
-  import.meta.glob<MemoryPanelModule>("../components/project-context/memory-panel.tsx");
+  import.meta.glob<MemoryPanelModule>("../../../components/project-context/memory-panel.tsx");
 
 const activeGoal: MemoryEntry = {
   id: "memory-active",
@@ -42,7 +42,7 @@ function deferred<T>() {
 }
 
 async function memoryPanel() {
-  const load = modules["../components/project-context/memory-panel.tsx"];
+  const load = modules["../../../components/project-context/memory-panel.tsx"];
   expect(load, "the shared memory panel must exist").toBeTypeOf("function");
   return (await load()).MemoryPanel;
 }

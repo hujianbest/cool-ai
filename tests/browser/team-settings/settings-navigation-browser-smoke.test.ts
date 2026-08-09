@@ -4,7 +4,7 @@ import { resolve } from "node:path";
 
 import { describe, expect, it } from "vitest";
 
-const harnessPath = resolve("tests/settings-navigation-browser-smoke.mjs");
+const harnessPath = resolve("tests/browser/settings-navigation-browser-smoke.mjs");
 
 describe("settings navigation browser smoke contract", () => {
   it("exposes an isolated S-9 browser command", () => {
@@ -13,7 +13,7 @@ describe("settings navigation browser smoke contract", () => {
     ) as { scripts?: Record<string, string> };
 
     expect(packageJson.scripts?.["smoke:settings"]).toBe(
-      "node tests/settings-navigation-browser-smoke.mjs",
+      "node tests/browser/settings-navigation-browser-smoke.mjs",
     );
     expect(existsSync(harnessPath)).toBe(true);
   });

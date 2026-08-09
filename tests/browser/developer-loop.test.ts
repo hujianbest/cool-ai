@@ -30,9 +30,9 @@ describe("one-command developer loop", () => {
       scripts?: Record<string, string>;
       devDependencies?: Record<string, string>;
     };
-    const smokePath = join(root, "tests", "browser-smoke.mjs");
+    const smokePath = join(root, "tests", "browser", "browser-smoke.mjs");
 
-    expect(packageJson.scripts?.smoke).toBe("node tests/browser-smoke.mjs");
+    expect(packageJson.scripts?.smoke).toBe("node tests/browser/browser-smoke.mjs");
     expect(packageJson.devDependencies?.playwright).toEqual(expect.any(String));
     expect(existsSync(smokePath)).toBe(true);
 

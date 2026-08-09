@@ -16,7 +16,7 @@ type Route = {
 };
 
 const routeModules = import.meta.glob<Route>([
-  "../app/api/projects/[projectId]/threads/[threadId]/messages/route.ts",
+  "../../../app/api/projects/[projectId]/threads/[threadId]/messages/route.ts",
   "../app/api/projects/[projectId]/threads/[threadId]/runs/route.ts",
 ]);
 

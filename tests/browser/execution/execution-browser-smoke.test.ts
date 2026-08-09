@@ -3,7 +3,7 @@ import { resolve } from "node:path";
 
 import { describe, expect, it } from "vitest";
 
-const harness = readFileSync(resolve("tests", "execution-browser-smoke.mjs"), "utf8");
+const harness = readFileSync(resolve("tests", "browser", "execution-browser-smoke.mjs"), "utf8");
 
 describe("execution browser smoke harness contract", () => {
   it("uses product execution routes without intercepting their responses", () => {

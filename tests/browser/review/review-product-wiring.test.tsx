@@ -21,7 +21,7 @@ type ProductSurfaceModule = {
 };
 
 const productSurfaceModules = import.meta.glob<ProductSurfaceModule>(
-  "../components/review/review-product-surface.tsx",
+  "../../../components/review/review-product-surface.tsx",
 );
 
 const NOW = "2026-08-01T10:00:00.000Z";
@@ -115,7 +115,7 @@ function workspace(
 
 async function productSurfaces(): Promise<ProductSurfaceModule> {
   const load = productSurfaceModules[
-    "../components/review/review-product-surface.tsx"
+    "../../../components/review/review-product-surface.tsx"
   ];
   expect(load, "T-28 product review surface must exist").toBeTypeOf("function");
   return load!();

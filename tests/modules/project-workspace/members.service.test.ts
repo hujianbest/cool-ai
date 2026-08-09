@@ -39,13 +39,13 @@ type MembershipServiceModule = {
 };
 
 const serviceModules =
-  import.meta.glob<MembershipServiceModule>("../src/adapters/outbound/sqlite/project-workspace/membership-service.ts");
+  import.meta.glob<MembershipServiceModule>("../../../src/adapters/outbound/sqlite/project-workspace/membership-service.ts");
 
 let directory: string;
 let databasePath: string;
 
 async function loadService(): Promise<MembershipServiceModule> {
-  const load = serviceModules["../src/adapters/outbound/sqlite/project-workspace/membership-service.ts"];
+  const load = serviceModules["../../../src/adapters/outbound/sqlite/project-workspace/membership-service.ts"];
   expect(load, "the membership domain service must exist").toBeTypeOf("function");
   return load();
 }

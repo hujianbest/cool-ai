@@ -9,12 +9,12 @@ const packageJson = JSON.parse(
 ) as { scripts?: Record<string, string> };
 const readme = readFileSync(join(root, "README.md"), "utf8");
 const testingGuide = readFileSync(join(root, "docs", "testing.md"), "utf8");
-const harnessPath = join(root, "tests", "collaboration-browser-smoke.mjs");
+const harnessPath = join(root, "tests", "browser", "collaboration-browser-smoke.mjs");
 
 describe("collaboration browser verification contract", () => {
   it("documents and exposes the isolated collaboration smoke command", () => {
     expect(packageJson.scripts?.["smoke:collaboration"]).toBe(
-      "node tests/collaboration-browser-smoke.mjs",
+      "node tests/browser/collaboration-browser-smoke.mjs",
     );
     expect(readme).toContain("npm run smoke:collaboration");
     expect(readme).toContain("at least two distinct Agents");

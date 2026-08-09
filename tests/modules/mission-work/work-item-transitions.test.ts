@@ -52,12 +52,12 @@ type TransitionRoute = {
 };
 
 const serviceModules =
-  import.meta.glob<MissionServiceModule>("../src/adapters/outbound/sqlite/mission-work/mission-service.ts");
+  import.meta.glob<MissionServiceModule>("../../../src/adapters/outbound/sqlite/mission-work/mission-service.ts");
 const missionCommandModules =
-  import.meta.glob<MissionServiceModule>("../src/composition/mission-commands.ts");
+  import.meta.glob<MissionServiceModule>("../../../src/composition/mission-commands.ts");
 const routeModules =
   import.meta.glob<TransitionRoute>(
-    "../app/api/work-items/[workItemId]/transition/route.ts",
+    "../../../app/api/work-items/[workItemId]/transition/route.ts",
   );
 
 let directory: string;
@@ -68,10 +68,10 @@ async function service(): Promise<
     transitionWorkItem: NonNullable<MissionServiceModule["transitionWorkItem"]>;
   }
 > {
-  const load = serviceModules["../src/adapters/outbound/sqlite/mission-work/mission-service.ts"];
+  const load = serviceModules["../../../src/adapters/outbound/sqlite/mission-work/mission-service.ts"];
   expect(load).toBeTypeOf("function");
   const domain = await load();
-  const loadCommands = missionCommandModules["../src/composition/mission-commands.ts"];
+  const loadCommands = missionCommandModules["../../../src/composition/mission-commands.ts"];
   expect(loadCommands).toBeTypeOf("function");
   const commands = await loadCommands();
   expect(
@@ -85,7 +85,7 @@ async function service(): Promise<
 
 async function route(): Promise<TransitionRoute> {
   const load =
-    routeModules["../app/api/work-items/[workItemId]/transition/route.ts"];
+    routeModules["../../../app/api/work-items/[workItemId]/transition/route.ts"];
   expect(load, "the dedicated transition route must exist").toBeTypeOf("function");
   return load();
 }

@@ -15,14 +15,14 @@ type ContextRoute = {
 };
 
 const routeModules =
-  import.meta.glob<ContextRoute>("../app/api/projects/[projectId]/context/route.ts");
+  import.meta.glob<ContextRoute>("../../../app/api/projects/[projectId]/context/route.ts");
 
 let directory: string;
 let databasePath: string;
 
 async function route(): Promise<ContextRoute> {
   const load =
-    routeModules["../app/api/projects/[projectId]/context/route.ts"];
+    routeModules["../../../app/api/projects/[projectId]/context/route.ts"];
   expect(load, "the deterministic context route must exist").toBeTypeOf("function");
   return load();
 }
