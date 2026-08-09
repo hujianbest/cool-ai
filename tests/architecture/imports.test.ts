@@ -165,6 +165,14 @@ const FORBIDDEN_IN_SHARED = [
   /^components\//u,
 ];
 
+// T-14: app/ 是入站 Adapter。route 与 app/api/_shared 传输助手只依赖
+// src/composition 装配面、src/modules 公开面、src/shared 与 app/api/_shared 自身。
+const FORBIDDEN_IN_APP = [
+  /^node:sqlite$/u,
+  /^src\/server\//u,
+  /^src\/adapters\//u,
+];
+
 function violations(
   files: string[],
   forbidden: RegExp[],
@@ -292,17 +300,9 @@ describe("target-layer import boundaries", () => {
 });
 
 describe("transition ratchets (may only shrink)", () => {
-  it("ratchets app/ -> src/server imports at the frozen count", () => {
-    const files = sourceFiles("app").filter((file) =>
-      importEdges(file).some((edge) => {
-        const resolved = resolveSpecifier(edge.specifier, file) ?? edge.specifier;
-        return /^src\/server\//u.test(resolved);
-      }),
-    );
-    expect(
-      files.length,
-      `app/ files importing src/server grew to ${files.length} (frozen at 68); migrate callers, don't add new ones`,
-    ).toBeLessThanOrEqual(68);
+  it("keeps app/ free of sqlite, adapter, and legacy server imports", () => {
+    const files = sourceFiles("app");
+    expect(violations(files, FORBIDDEN_IN_APP)).toEqual([]);
   });
 
   it("ratchets component type-imports of src/server at the frozen count", () => {

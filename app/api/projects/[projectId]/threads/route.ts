@@ -1,12 +1,9 @@
 import { join } from "node:path";
 import { TextDecoder } from "node:util";
 
-import { collaborationErrorResponse } from "@/src/server/collaboration/collaboration-api";
+import { collaborationErrorResponse } from "@/app/api/_shared/collaboration/collaboration-api";
+import { threadService } from "@/src/composition";
 import { CollaborationError } from "@/src/modules/public-collaboration";
-import {
-  createThread,
-  listThreads,
-} from "@/src/adapters/outbound/sqlite/public-collaboration/thread-service";
 
 type RouteContext = {
   params: Promise<{ projectId: string }>;
@@ -156,7 +153,7 @@ export async function GET(
 ): Promise<Response> {
   try {
     const projectId = parseProjectId((await context.params).projectId);
-    const result = listThreads(databasePath(), projectId, parseListQuery(request));
+    const result = threadService.listThreads(databasePath(), projectId, parseListQuery(request));
     return Response.json(result.body, { status: result.status });
   } catch (error) {
     return collaborationErrorResponse(
@@ -173,7 +170,7 @@ export async function POST(
   try {
     const projectId = parseProjectId((await context.params).projectId);
     requireNoUrlSuffix(request);
-    const result = createThread(databasePath(), projectId, await readStrictJson(request));
+    const result = threadService.createThread(databasePath(), projectId, await readStrictJson(request));
     return Response.json(result.body, { status: result.status });
   } catch (error) {
     return collaborationErrorResponse(

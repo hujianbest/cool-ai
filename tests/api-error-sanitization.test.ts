@@ -40,7 +40,7 @@ import {
   executeTaskResponse,
   getProjectTasksResponse,
   startTaskResponse,
-} from "@/src/server/task-api";
+} from "@/app/api/_shared/task-api";
 
 afterEach(() => {
   vi.restoreAllMocks();

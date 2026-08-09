@@ -3,17 +3,13 @@ import { join } from "node:path";
 import {
   executionErrorResponse,
   readBoundedExecutionJson,
-} from "@/src/server/execution/execution-api";
+} from "@/app/api/_shared/execution/execution-api";
 import {
   executionDatabasePath,
   executionReadResponse,
   readQuery,
-} from "@/src/server/execution/execution-read-api";
-import { listProjectExecutions } from "@/src/adapters/outbound/sqlite/safe-execution/execution-read-service";
-import {
-  startExecution,
-} from "@/src/adapters/outbound/sqlite/safe-execution/execution-service";
-import { sandboxExecutor } from "@/src/adapters/outbound/workspace/sandbox-executor";
+} from "@/app/api/_shared/execution/execution-read-api";
+import { executionReadService, executionService, sandboxExecution } from "@/src/composition";
 import { startExecutionInputSchema } from "@/src/shared/execution-contracts";
 
 type RouteContext = { params: Promise<{ projectId: string }> };
@@ -33,7 +29,7 @@ export async function GET(
 ): Promise<Response> {
   const { projectId } = await context.params;
   return executionReadResponse("GET /api/projects/:projectId/executions", async () => {
-    const page = await listProjectExecutions(executionDatabasePath(), projectId, readQuery(request));
+    const page = await executionReadService.listProjectExecutions(executionDatabasePath(), projectId, readQuery(request));
     return new URL(request.url).search === ""
       ? { executions: page.items }
       : { executions: page.items, nextCursor: page.nextCursor };
@@ -55,11 +51,11 @@ export async function POST(
     );
   }
   try {
-    const result = await startExecution(
+    const result = await executionService.startExecution(
       databasePath(),
       projectId,
       input.data,
-      sandboxExecutor(),
+      sandboxExecution.sandboxExecutor(),
       executionRoot(),
     );
     return Response.json(result.body, { status: result.status });

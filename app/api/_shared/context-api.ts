@@ -1,7 +1,7 @@
 import { randomUUID } from "node:crypto";
 
 import { ContextSnapshotError } from "@/src/application/workflows/project-context-snapshot";
-import { SchemaError } from "@/src/adapters/outbound/sqlite/schema-error";
+import { SchemaError } from "@/src/composition";
 
 export function contextApiError(error: unknown, route: string): Response {
   if (error instanceof ContextSnapshotError) {

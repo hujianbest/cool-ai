@@ -1,9 +1,9 @@
 import { randomUUID } from "node:crypto";
 
-import { MemoryError } from "@/src/modules/knowledge-provenance";
-import { SchemaError } from "@/src/adapters/outbound/sqlite/schema-error";
+import { SchemaError } from "@/src/composition";
+import { MembershipError } from "@/src/modules/project-workspace";
 
-export async function readMemoryJson(
+export async function readMembershipJson(
   request: Request,
 ): Promise<{ ok: true; value: unknown } | { ok: false; response: Response }> {
   try {
@@ -19,14 +19,18 @@ export async function readMemoryJson(
   }
 }
 
-export function memoryApiError(error: unknown, route: string): Response {
-  if (error instanceof MemoryError) {
+export function membershipApiError(error: unknown, route: string): Response {
+  if (error instanceof MembershipError) {
     return Response.json(
       {
         error: {
           code: error.code,
           message: error.message,
           ...(error.fields ? { fields: error.fields } : {}),
+          ...(error.currentVersion !== undefined
+            ? { currentVersion: error.currentVersion }
+            : {}),
+          ...(error.agentIds ? { agentIds: error.agentIds } : {}),
         },
       },
       { status: error.httpStatus },

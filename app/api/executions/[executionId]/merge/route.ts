@@ -3,8 +3,8 @@ import { join } from "node:path";
 import {
   executionErrorResponse,
   readBoundedExecutionJson,
-} from "@/src/server/execution/execution-api";
-import { mergeExecution } from "@/src/adapters/outbound/sqlite/safe-execution/merge-service";
+} from "@/app/api/_shared/execution/execution-api";
+import { mergeService } from "@/src/composition/execution-host";
 import { mergeExecutionInputSchema } from "@/src/shared/execution-contracts";
 
 type RouteContext = { params: Promise<{ executionId: string }> };
@@ -28,7 +28,7 @@ export async function POST(
     );
   }
   try {
-    const result = await mergeExecution(databasePath(), executionId, input.data);
+    const result = await mergeService.mergeExecution(databasePath(), executionId, input.data);
     return Response.json(result.body, { status: result.status });
   } catch (error) {
     return executionErrorResponse(

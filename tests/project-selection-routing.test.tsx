@@ -4,8 +4,8 @@ const { readThreadDetail } = vi.hoisted(() => ({
   readThreadDetail: vi.fn(),
 }));
 
-vi.mock("@/src/server/collaboration/thread-service", () => ({
-  readThreadDetail,
+vi.mock("@/src/composition", () => ({
+  threadService: { readThreadDetail },
 }));
 
 import ProjectRoute from "@/app/projects/[projectId]/[[...resource]]/page";

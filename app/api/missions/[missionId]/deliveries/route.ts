@@ -1,6 +1,6 @@
 import { join } from "node:path";
 
-import { listMissionDeliveries } from "@/src/adapters/outbound/sqlite/review-delivery/delivery-read-service";
+import { deliveryReadService } from "@/src/composition";
 import {
   ReviewApiError,
   reviewErrorResponse,
@@ -29,7 +29,7 @@ export async function GET(request: Request, context: RouteContext): Promise<Resp
   const { missionId } = await context.params;
   try {
     return Response.json(
-      listMissionDeliveries(databasePath(), missionId, query(request)),
+      deliveryReadService.listMissionDeliveries(databasePath(), missionId, query(request)),
     );
   } catch (error) {
     return reviewErrorResponse(error, "GET /api/missions/:missionId/deliveries");

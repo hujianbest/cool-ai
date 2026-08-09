@@ -98,7 +98,10 @@ function seedHead(workItemId: string, state: "pending_review" | "passed"): void 
 beforeEach(async () => {
   directory = mkdtempSync(join(tmpdir(), "mission-legacy-completion-"));
   databasePath = join(directory, "cockpit.sqlite");
-  domain = await import("@/src/adapters/outbound/sqlite/mission-work/mission-service") as MissionDomain;
+  domain = {
+    ...(await import("@/src/adapters/outbound/sqlite/mission-work/mission-service")),
+    ...(await import("@/src/composition/mission-commands")),
+  } as MissionDomain;
   projectId = createProject("Legacy completion", databasePath).id;
   const fixture = openDatabase(databasePath);
   fixture.exec(`

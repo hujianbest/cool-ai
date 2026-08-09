@@ -3,8 +3,8 @@ import { join } from "node:path";
 import {
   collaborationErrorResponse,
   readCollaborationJson,
-} from "@/src/server/collaboration/collaboration-api";
-import { createOrAppendRun } from "@/src/adapters/outbound/sqlite/public-collaboration/run-service";
+} from "@/app/api/_shared/collaboration/collaboration-api";
+import { runService } from "@/src/composition";
 
 type RouteContext = { params: Promise<{ projectId: string }> };
 
@@ -20,7 +20,7 @@ export async function POST(
   const parsed = await readCollaborationJson(request);
   if (!parsed.ok) return parsed.response;
   try {
-    const result = createOrAppendRun(databasePath(), projectId, parsed.value);
+    const result = runService.createOrAppendRun(databasePath(), projectId, parsed.value);
     return Response.json(result.body, { status: result.status });
   } catch (error) {
     return collaborationErrorResponse(

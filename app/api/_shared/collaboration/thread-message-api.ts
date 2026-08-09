@@ -1,13 +1,9 @@
 import { join } from "node:path";
 import { TextDecoder } from "node:util";
 
-import { collaborationErrorResponse } from "@/src/server/collaboration/collaboration-api";
+import { collaborationErrorResponse } from "@/app/api/_shared/collaboration/collaboration-api";
+import { publicTextCredentialClassifier, threadService } from "@/src/composition";
 import { CollaborationError } from "@/src/modules/public-collaboration";
-import { assertPublicTextHasNoCredentials } from "@/src/adapters/outbound/sqlite/public-collaboration/public-text-credential-classifier";
-import {
-  readThreadOperation,
-  writeOwnerThreadMessage,
-} from "@/src/adapters/outbound/sqlite/public-collaboration/thread-service";
 
 type MessageRouteContext = {
   params: Promise<{ projectId: string; threadId: string }>;
@@ -124,8 +120,8 @@ export async function threadMessagePost(
     requireNoUrlSuffix(request);
     const input = await readStrictJson(request);
     const path = databasePath();
-    const result = writeOwnerThreadMessage(path, projectId, threadId, input, {
-      credentialCheck: (content) => assertPublicTextHasNoCredentials(path, content),
+    const result = threadService.writeOwnerThreadMessage(path, projectId, threadId, input, {
+      credentialCheck: (content) => publicTextCredentialClassifier.assertPublicTextHasNoCredentials(path, content),
     });
     return Response.json(result.body, { status: result.status });
   } catch (error) {
@@ -146,7 +142,7 @@ export async function threadOperationGet(
     const threadId = parsePathId(params.threadId, "threadId");
     const operationId = parsePathId(params.operationId, "operationId", OPERATION_ID);
     requireNoUrlSuffix(request);
-    const result = readThreadOperation(databasePath(), projectId, threadId, operationId);
+    const result = threadService.readThreadOperation(databasePath(), projectId, threadId, operationId);
     return Response.json(result.body, { status: result.status });
   } catch (error) {
     return collaborationErrorResponse(

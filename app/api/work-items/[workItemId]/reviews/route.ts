@@ -1,11 +1,10 @@
 import { join } from "node:path";
 
-import { startPublicReview } from "@/src/adapters/outbound/sqlite/review-delivery/review-application-service";
+import { reviewApplicationService, reviewReadService } from "@/src/composition";
 import {
   ReviewApiError,
   reviewErrorResponse,
 } from "@/src/modules/review-delivery";
-import { listReviewAttempts } from "@/src/adapters/outbound/sqlite/review-delivery/review-read-service";
 
 type RouteContext = { params: Promise<{ workItemId: string }> };
 
@@ -68,7 +67,7 @@ function query(request: Request): { after?: string; limit?: string } {
 export async function GET(request: Request, context: RouteContext): Promise<Response> {
   const { workItemId } = await context.params;
   try {
-    return Response.json(listReviewAttempts(databasePath(), workItemId, query(request)));
+    return Response.json(reviewReadService.listReviewAttempts(databasePath(), workItemId, query(request)));
   } catch (error) {
     return reviewErrorResponse(error, "GET /api/work-items/:workItemId/reviews");
   }
@@ -88,7 +87,7 @@ export async function POST(request: Request, context: RouteContext): Promise<Res
     );
   }
   try {
-    return Response.json(await startPublicReview(databasePath(), workItemId, input));
+    return Response.json(await reviewApplicationService.startPublicReview(databasePath(), workItemId, input));
   } catch (error) {
     return reviewErrorResponse(error, "POST /api/work-items/:workItemId/reviews");
   }

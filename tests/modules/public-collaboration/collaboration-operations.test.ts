@@ -3,7 +3,7 @@ import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { afterEach, beforeEach, describe, expect, it } from "vitest";
 
-import { collaborationErrorResponse } from "@/src/server/collaboration/collaboration-api";
+import { collaborationErrorResponse } from "@/app/api/_shared/collaboration/collaboration-api";
 import { CollaborationError } from "@/src/modules/public-collaboration";
 import {
   canonicalRequestHash,
@@ -12,7 +12,7 @@ import {
 import { createThread } from "@/src/adapters/outbound/sqlite/public-collaboration/thread-service";
 import { createCredentialVault } from "@/src/modules/identity-capability/internal/credential-vault";
 import { openDatabase } from "@/src/adapters/outbound/sqlite/connection";
-import { createMission } from "@/src/adapters/outbound/sqlite/mission-work/mission-service";
+import { createMission } from "@/src/composition/mission-commands";
 import { apiErrorCopy } from "@/src/shared/api-error-copy";
 
 type Route = {

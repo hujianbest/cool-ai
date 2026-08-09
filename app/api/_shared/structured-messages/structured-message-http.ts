@@ -3,22 +3,21 @@ import { createHash } from "node:crypto";
 
 import { z } from "zod";
 
-import { collaborationErrorResponse } from "@/src/server/collaboration/collaboration-api";
-import { CollaborationError } from "@/src/modules/public-collaboration";
-import { openDatabase } from "@/src/adapters/outbound/sqlite/connection";
+import { collaborationErrorResponse } from "@/app/api/_shared/collaboration/collaboration-api";
 import {
-  decodeStructuredBlockPayload,
+  inlineDecisionService,
+  sqliteConnection,
+  structuredMessageStore,
+  verifiedSourceProjection,
+} from "@/src/composition";
+import {
+  CollaborationError,
   type StructuredBlock,
-} from "@/src/adapters/outbound/sqlite/public-collaboration/structured-message-store";
+} from "@/src/modules/public-collaboration";
 import {
   ingestStructuredJson,
   type StructuredMessageSchema,
 } from "@/src/modules/public-collaboration/internal/structured-message-codec";
-import { resolveVerifiedSource } from "@/src/adapters/outbound/sqlite/public-collaboration/verified-source-projection";
-import {
-  decideInline,
-  readInlineOperation,
-} from "@/src/adapters/outbound/sqlite/public-collaboration/inline-decision-service";
 
 type RouteContext = {
   params: Promise<Record<string, string>>;
@@ -100,7 +99,7 @@ function rejectQuery(request: Request): void {
   if (url.search || url.hash) invalid({ query: "unknown" });
 }
 
-function blockRow(database: ReturnType<typeof openDatabase>, tuple: Tuple): BlockRow {
+function blockRow(database: ReturnType<typeof sqliteConnection.openDatabase>, tuple: Tuple): BlockRow {
   const row = database.prepare(
     `SELECT b.block_type AS blockType,b.block_schema_version AS blockSchemaVersion,
             b.block_revision AS blockRevision,b.payload_json AS payloadJson,
@@ -137,7 +136,7 @@ function blockRow(database: ReturnType<typeof openDatabase>, tuple: Tuple): Bloc
 }
 
 function publicBlock(row: BlockRow): { block: Record<string, unknown>; payload?: StructuredBlock } {
-  const decoded = decodeStructuredBlockPayload(row.payloadJson);
+  const decoded = structuredMessageStore.decodeStructuredBlockPayload(row.payloadJson);
   const common = {
     actor: {
       displayName: row.actorDisplayName,
@@ -183,7 +182,7 @@ export async function structuredMessageBlockGet(
     rejectQuery(request);
     if (request.headers.has("content-type") || request.headers.has("content-length")) invalid();
     const tuple = parseTuple(await context.params);
-    const database = openDatabase(databasePath());
+    const database = sqliteConnection.openDatabase(databasePath());
     try {
       return Response.json({ block: publicBlock(blockRow(database, tuple)).block });
     } finally {
@@ -224,7 +223,7 @@ export async function structuredMessageSourcePost(
     rejectQuery(request);
     const tuple = parseTuple(await context.params);
     const input = await parseSourceRequest(request);
-    const database = openDatabase(databasePath());
+    const database = sqliteConnection.openDatabase(databasePath());
     try {
       const row = blockRow(database, tuple);
       if (
@@ -288,7 +287,7 @@ export async function structuredMessageSourcePost(
       if (!sourceRef) {
         throw new CollaborationError("ACTION_CONFLICT", 409, "Source navigation is unavailable.");
       }
-      const projection = resolveVerifiedSource(database, tuple, sourceRef);
+      const projection = verifiedSourceProjection.resolveVerifiedSource(database, tuple, sourceRef);
       return Response.json({
         display: projection.display,
         navigation: projection.navigation,
@@ -321,7 +320,7 @@ export async function inlineDecisionPost(
     if (bytes.byteLength > 32 * 1024) {
       throw new CollaborationError("BODY_TOO_LARGE", 413, "Request body is too large.");
     }
-    const result = decideInline(databasePath(), tuple, bytes);
+    const result = inlineDecisionService.decideInline(databasePath(), tuple, bytes);
     return Response.json(result.body, { status: result.status });
   } catch (error) {
     return collaborationErrorResponse(error, "POST inline decision");
@@ -341,7 +340,7 @@ export async function inlineOperationGet(
       blockId: params.operationId,
       messageId: params.operationId,
     });
-    const result = readInlineOperation(databasePath(), fields, params.operationId);
+    const result = inlineDecisionService.readInlineOperation(databasePath(), fields, params.operationId);
     return Response.json(result.body, { status: result.status });
   } catch (error) {
     return collaborationErrorResponse(error, "GET inline decision operation");

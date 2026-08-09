@@ -1,4 +1,4 @@
-import { threadRunRecoverPost } from "@/src/server/collaboration/thread-run-recover-api";
+import { threadRunRecoverPost } from "@/app/api/_shared/collaboration/thread-run-recover-api";
 
 type RouteContext = {
   params: Promise<{ projectId: string; threadId: string; runId: string }>;

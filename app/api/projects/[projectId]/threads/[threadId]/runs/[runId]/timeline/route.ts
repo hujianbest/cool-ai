@@ -1,8 +1,8 @@
 import { join } from "node:path";
 
-import { collaborationErrorResponse } from "@/src/server/collaboration/collaboration-api";
+import { collaborationErrorResponse } from "@/app/api/_shared/collaboration/collaboration-api";
+import { runTimelineService } from "@/src/composition";
 import { CollaborationError } from "@/src/modules/public-collaboration";
-import { readRunTimeline } from "@/src/adapters/outbound/sqlite/public-collaboration/run-timeline-service";
 
 type RouteContext = {
   params: Promise<{ projectId: string; threadId: string; runId: string }>;
@@ -106,7 +106,7 @@ export async function GET(
     const threadId = parsePathId(params.threadId, "threadId");
     const runId = parsePathId(params.runId, "runId");
     const cursor = parseQuery(new URL(request.url));
-    const result = readRunTimeline(
+    const result = runTimelineService.readRunTimeline(
       databasePath(),
       projectId,
       threadId,

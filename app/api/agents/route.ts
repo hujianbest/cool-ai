@@ -1,7 +1,7 @@
 import { join } from "node:path";
 
-import { agentApiError, readAgentJson } from "@/src/server/agent-api";
-import { createAgent, listAgents } from "@/src/adapters/outbound/sqlite/identity-capability/agent-service";
+import { agentApiError, readAgentJson } from "@/app/api/_shared/agent-api";
+import { agentService } from "@/src/composition";
 import type { AgentInput } from "@/src/shared/team-contracts";
 
 function databasePath(): string {
@@ -10,7 +10,7 @@ function databasePath(): string {
 
 export async function GET(): Promise<Response> {
   try {
-    return Response.json({ agents: listAgents(databasePath()) });
+    return Response.json({ agents: agentService.listAgents(databasePath()) });
   } catch (error) {
     return agentApiError(error, "GET /api/agents");
   }
@@ -22,7 +22,7 @@ export async function POST(request: Request): Promise<Response> {
 
   try {
     return Response.json(
-      { agent: createAgent(body.value as AgentInput, databasePath()) },
+      { agent: agentService.createAgent(body.value as AgentInput, databasePath()) },
       { status: 201 },
     );
   } catch (error) {

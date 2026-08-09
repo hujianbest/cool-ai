@@ -1,8 +1,8 @@
 import { join } from "node:path";
 import { TextDecoder } from "node:util";
 
-import { executeAdvance } from "@/src/adapters/outbound/sqlite/public-collaboration/advance-executor";
-import { collaborationErrorResponse } from "@/src/server/collaboration/collaboration-api";
+import { collaborationErrorResponse } from "@/app/api/_shared/collaboration/collaboration-api";
+import { advanceExecutor } from "@/src/composition";
 import { CollaborationError } from "@/src/modules/public-collaboration";
 
 type RouteContext = {
@@ -107,7 +107,7 @@ export async function threadRunAdvancePost(
     const runId = parsePathId(params.runId, "runId");
     requireNoUrlSuffix(request);
     const input = await readStrictJson(request);
-    const result = await executeAdvance(
+    const result = await advanceExecutor.executeAdvance(
       databasePath(),
       { projectId, runId, threadId },
       input,

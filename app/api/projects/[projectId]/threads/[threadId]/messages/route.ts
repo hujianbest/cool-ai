@@ -1,5 +1,5 @@
-import { threadHistoryGet } from "@/src/server/collaboration/thread-history-api";
-import { threadMessagePost } from "@/src/server/collaboration/thread-message-api";
+import { threadHistoryGet } from "@/app/api/_shared/collaboration/thread-history-api";
+import { threadMessagePost } from "@/app/api/_shared/collaboration/thread-message-api";
 
 type RouteContext = {
   params: Promise<{ projectId: string; threadId: string }>;

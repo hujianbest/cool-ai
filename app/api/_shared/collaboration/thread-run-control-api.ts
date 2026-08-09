@@ -1,9 +1,9 @@
 import { join } from "node:path";
 import { TextDecoder } from "node:util";
 
-import { collaborationErrorResponse } from "@/src/server/collaboration/collaboration-api";
+import { collaborationErrorResponse } from "@/app/api/_shared/collaboration/collaboration-api";
+import { runService } from "@/src/composition";
 import { CollaborationError } from "@/src/modules/public-collaboration";
-import { recoverRun } from "@/src/adapters/outbound/sqlite/public-collaboration/turn-orchestrator";
 
 type RouteContext = {
   params: Promise<{ projectId: string; threadId: string; runId: string }>;
@@ -17,7 +17,12 @@ function databasePath(): string {
 }
 
 function invalidInput(fields: Record<string, string>): never {
-  throw new CollaborationError("INVALID_INPUT", 400, "Recover input is invalid.", { fields });
+  throw new CollaborationError(
+    "INVALID_INPUT",
+    400,
+    "Run control input is invalid.",
+    { fields },
+  );
 }
 
 function parsePathId(value: string, field: string): string {
@@ -96,7 +101,7 @@ async function readStrictJson(request: Request): Promise<unknown> {
   }
 }
 
-export async function threadRunRecoverPost(
+export async function threadRunControlPost(
   request: Request,
   context: RouteContext,
 ): Promise<Response> {
@@ -107,16 +112,18 @@ export async function threadRunRecoverPost(
     const runId = parsePathId(params.runId, "runId");
     requireNoUrlSuffix(request);
     const input = await readStrictJson(request);
-    const result = recoverRun(
+    const result = runService.controlThreadRun(
       databasePath(),
-      { projectId, runId, threadId },
+      projectId,
+      threadId,
+      runId,
       input,
     );
     return Response.json(result.body, { status: result.status });
   } catch (error) {
     return collaborationErrorResponse(
       error,
-      "POST /api/projects/:projectId/threads/:threadId/runs/:runId/recover",
+      "POST /api/projects/:projectId/threads/:threadId/runs/:runId/control",
     );
   }
 }

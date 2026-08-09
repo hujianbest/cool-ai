@@ -1,7 +1,6 @@
 import { join } from "node:path";
 
-import { generatePublicDelivery } from "@/src/adapters/outbound/sqlite/review-delivery/delivery-application-service";
-import { readMissionDelivery } from "@/src/adapters/outbound/sqlite/review-delivery/delivery-read-service";
+import { deliveryApplicationService, deliveryReadService } from "@/src/composition";
 import {
   ReviewApiError,
   reviewErrorResponse,
@@ -27,7 +26,7 @@ export async function GET(request: Request, context: RouteContext): Promise<Resp
     if ([...new URL(request.url).searchParams.keys()].length > 0) {
       throw new ReviewApiError("INVALID_INPUT");
     }
-    return Response.json(readMissionDelivery(databasePath(), missionId));
+    return Response.json(deliveryReadService.readMissionDelivery(databasePath(), missionId));
   } catch (error) {
     return reviewErrorResponse(error, "GET /api/missions/:missionId/delivery");
   }
@@ -63,7 +62,7 @@ export async function POST(request: Request, context: RouteContext): Promise<Res
   if (!parsed.success) return invalidInput();
   try {
     return Response.json(
-      await generatePublicDelivery(databasePath(), missionId, parsed.data),
+      await deliveryApplicationService.generatePublicDelivery(databasePath(), missionId, parsed.data),
     );
   } catch (error) {
     return reviewErrorResponse(error, "POST /api/missions/:missionId/delivery");

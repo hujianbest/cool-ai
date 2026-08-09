@@ -21,14 +21,14 @@ type HttpModule = {
 };
 
 const modules = import.meta.glob<HttpModule>(
-  "../../../src/server/structured-messages/structured-message-http.ts",
+  "../../../app/api/_shared/structured-messages/structured-message-http.ts",
 );
 const NOW = "2026-08-09T02:00:00.000Z";
 let directory: string;
 let tuple: Record<string, string>;
 
 async function http(): Promise<HttpModule> {
-  const load = modules["../../../src/server/structured-messages/structured-message-http.ts"];
+  const load = modules["../../../app/api/_shared/structured-messages/structured-message-http.ts"];
   if (!load) throw new Error("Structured Message HTTP module is missing.");
   return load();
 }

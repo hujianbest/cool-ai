@@ -1,7 +1,7 @@
 import { join } from "node:path";
 
-import { providerApiError, readJsonBody } from "@/src/server/provider-api";
-import { updateProvider } from "@/src/adapters/outbound/sqlite/identity-capability/provider-service";
+import { providerApiError, readJsonBody } from "@/app/api/_shared/provider-api";
+import { providerService } from "@/src/composition";
 
 function databasePath(): string {
   return process.env.COCKPIT_DB_PATH ?? join(process.cwd(), ".data", "cockpit.sqlite");
@@ -20,7 +20,7 @@ export async function PATCH(
   const { providerId } = await context.params;
 
   try {
-    const provider = updateProvider(
+    const provider = providerService.updateProvider(
       providerId,
       payload.draft,
       typeof payload.validationToken === "string" ? payload.validationToken : undefined,

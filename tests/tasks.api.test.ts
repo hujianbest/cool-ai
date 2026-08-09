@@ -10,7 +10,7 @@ import {
 import { POST as executeProjectTask } from "@/app/api/tasks/[taskId]/execute/route";
 import { POST as startProjectTask } from "@/app/api/tasks/[taskId]/start/route";
 import { createProject } from "@/src/adapters/outbound/sqlite/project-workspace/projects";
-import { executeTaskResponse } from "@/src/server/task-api";
+import { executeTaskResponse } from "@/app/api/_shared/task-api";
 import { createTask, startTask } from "@/src/adapters/outbound/sqlite/mission-work/tasks";
 
 let directory: string;

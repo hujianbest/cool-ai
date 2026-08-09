@@ -1,7 +1,7 @@
 import { join } from "node:path";
 
-import { readSkillJson, skillApiError } from "@/src/server/skill-api";
-import { createSkill, listSkills } from "@/src/adapters/outbound/sqlite/identity-capability/skill-service";
+import { readSkillJson, skillApiError } from "@/app/api/_shared/skill-api";
+import { skillService } from "@/src/composition";
 import { skillInputSchema } from "@/src/shared/team-schemas";
 
 function databasePath(): string {
@@ -10,7 +10,7 @@ function databasePath(): string {
 
 export async function GET(): Promise<Response> {
   try {
-    return Response.json({ skills: listSkills(databasePath()) });
+    return Response.json({ skills: skillService.listSkills(databasePath()) });
   } catch (error) {
     return skillApiError(error, "GET /api/skills");
   }
@@ -39,7 +39,7 @@ export async function POST(request: Request): Promise<Response> {
 
   try {
     return Response.json(
-      { skill: createSkill(parsed.data, databasePath()) },
+      { skill: skillService.createSkill(parsed.data, databasePath()) },
       { status: 201 },
     );
   } catch (error) {

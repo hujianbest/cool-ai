@@ -1,11 +1,8 @@
 import { join } from "node:path";
 
-import { collaborationErrorResponse } from "@/src/server/collaboration/collaboration-api";
+import { collaborationErrorResponse } from "@/app/api/_shared/collaboration/collaboration-api";
+import { threadService } from "@/src/composition";
 import { CollaborationError } from "@/src/modules/public-collaboration";
-import {
-  readThreadFacts,
-  readThreadMessages,
-} from "@/src/adapters/outbound/sqlite/public-collaboration/thread-service";
 
 type RouteContext = {
   params: Promise<{ projectId: string; threadId: string }>;
@@ -112,8 +109,8 @@ export async function threadHistoryGet(
     const threadId = parsePathId(params.threadId, "threadId");
     const query = parseQuery(new URL(request.url));
     const result = kind === "messages"
-      ? readThreadMessages(databasePath(), projectId, threadId, query)
-      : readThreadFacts(databasePath(), projectId, threadId, query);
+      ? threadService.readThreadMessages(databasePath(), projectId, threadId, query)
+      : threadService.readThreadFacts(databasePath(), projectId, threadId, query);
     return Response.json(result.body, { status: result.status });
   } catch (error) {
     return collaborationErrorResponse(

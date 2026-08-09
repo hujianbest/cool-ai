@@ -1,12 +1,10 @@
 import { join } from "node:path";
 
-import { controlExecution } from "@/src/adapters/outbound/sqlite/safe-execution/execution-control-service";
 import {
   executionErrorResponse,
   readBoundedExecutionJson,
-} from "@/src/server/execution/execution-api";
-import { requestExecutionProcessTermination } from "@/src/adapters/outbound/workspace/process-runner";
-import { sandboxExecutor } from "@/src/adapters/outbound/workspace/sandbox-executor";
+} from "@/app/api/_shared/execution/execution-api";
+import { executionControlService, processRunner, sandboxExecution } from "@/src/composition";
 import { executionControlInputSchema } from "@/src/shared/execution-contracts";
 
 type RouteContext = { params: Promise<{ executionId: string }> };
@@ -35,14 +33,14 @@ export async function POST(
     );
   }
   try {
-    const result = await controlExecution(
+    const result = await executionControlService.controlExecution(
       databasePath(),
       executionId,
       input.data,
       {
         executionRoot: executionRoot(),
-        requestProcessTermination: requestExecutionProcessTermination,
-        sandboxExecutor: sandboxExecutor(),
+        requestProcessTermination: processRunner.requestExecutionProcessTermination,
+        sandboxExecutor: sandboxExecution.sandboxExecutor(),
       },
     );
     return Response.json(result.body, { status: result.status });

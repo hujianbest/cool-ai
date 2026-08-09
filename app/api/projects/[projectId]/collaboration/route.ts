@@ -1,10 +1,7 @@
 import { join } from "node:path";
 
-import { collaborationErrorResponse } from "@/src/server/collaboration/collaboration-api";
-import {
-  getCollaboration,
-  parseReadCursor,
-} from "@/src/adapters/outbound/sqlite/public-collaboration/run-service";
+import { collaborationErrorResponse } from "@/app/api/_shared/collaboration/collaboration-api";
+import { runService } from "@/src/composition";
 
 type RouteContext = { params: Promise<{ projectId: string }> };
 
@@ -20,9 +17,9 @@ export async function GET(
   try {
     const searchParams = new URL(request.url).searchParams;
     return Response.json(
-      getCollaboration(databasePath(), projectId, {
-        events: parseReadCursor(searchParams, "eventAfter", "eventLimit"),
-        messages: parseReadCursor(searchParams, "messageAfter", "messageLimit"),
+      runService.getCollaboration(databasePath(), projectId, {
+        events: runService.parseReadCursor(searchParams, "eventAfter", "eventLimit"),
+        messages: runService.parseReadCursor(searchParams, "messageAfter", "messageLimit"),
       }),
     );
   } catch (error) {

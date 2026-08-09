@@ -2,8 +2,8 @@ import {
   executionDatabasePath,
   executionReadResponse,
   readQuery,
-} from "@/src/server/execution/execution-read-api";
-import { listValidationChunks } from "@/src/adapters/outbound/sqlite/safe-execution/execution-read-service";
+} from "@/app/api/_shared/execution/execution-read-api";
+import { executionReadService } from "@/src/composition";
 
 type RouteContext = {
   params: Promise<{ executionId: string; stream: string; validationId: string }>;
@@ -17,7 +17,7 @@ export async function GET(request: Request, context: RouteContext): Promise<Resp
       if (stream !== "stdout" && stream !== "stderr") {
         throw new Error("INVALID_READ_QUERY");
       }
-      return listValidationChunks(
+      return executionReadService.listValidationChunks(
         executionDatabasePath(),
         executionId,
         validationId,

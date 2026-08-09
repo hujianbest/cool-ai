@@ -1,10 +1,9 @@
 import { randomUUID } from "node:crypto";
 
-import { MissionError } from "@/src/modules/mission-work";
-import { CompletionGateError } from "@/src/modules/review-delivery";
-import { SchemaError } from "@/src/adapters/outbound/sqlite/schema-error";
+import { SchemaError } from "@/src/composition";
+import { MemoryError } from "@/src/modules/knowledge-provenance";
 
-export async function readMissionJson(
+export async function readMemoryJson(
   request: Request,
 ): Promise<{ ok: true; value: unknown } | { ok: false; response: Response }> {
   try {
@@ -20,22 +19,14 @@ export async function readMissionJson(
   }
 }
 
-export function missionApiError(error: unknown, route: string): Response {
-  if (error instanceof MissionError || error instanceof CompletionGateError) {
+export function memoryApiError(error: unknown, route: string): Response {
+  if (error instanceof MemoryError) {
     return Response.json(
       {
         error: {
           code: error.code,
           message: error.message,
-          ...(error instanceof CompletionGateError && error.blockers
-            ? { blockers: error.blockers }
-            : {}),
-          ...(error instanceof MissionError && error.fields
-            ? { fields: error.fields }
-            : {}),
-          ...(error.currentVersion !== undefined
-            ? { currentVersion: error.currentVersion }
-            : {}),
+          ...(error.fields ? { fields: error.fields } : {}),
         },
       },
       { status: error.httpStatus },

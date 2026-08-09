@@ -1,4 +1,4 @@
-import { threadRunAdvancePost } from "@/src/server/collaboration/thread-run-advance-api";
+import { threadRunAdvancePost } from "@/app/api/_shared/collaboration/thread-run-advance-api";
 
 type RouteContext = {
   params: Promise<{ projectId: string; threadId: string; runId: string }>;

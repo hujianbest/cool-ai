@@ -14,9 +14,9 @@
 - [x] T-08 迁移 governance：execution-approval-service 从 execution/ 提取入 `src/modules/governance/` + sqlite Adapter；Approval 写表改登记 governance owner；调用方（execution 控制路径）改经公开 Interface；聚焦验证 execution-approvals 测试通过。
 - [x] T-09 迁移 safe-execution：execution/ 其余 36 文件迁入 `src/modules/safe-execution/` + `src/adapters/outbound/sqlite/safe-execution/` + 工作区 Adapter 候选（windows-*/node-file-tool-adapter/process-runner/path-guard/sandbox-* 归 `src/adapters/outbound/workspace/`）；manifest 登记；聚焦验证 command-policy/execution 非 Windows 测试通过（Windows 环境性失败保持原样）。
 - [x] T-10 迁移 public-collaboration：collaboration/（除 openai-chat-client）+ structured-messages/ 迁入；thread-fact-store 唯一 writer seam 保持；manifest 登记；聚焦验证 thread-fact-store/thread-history-api/collaboration-operations/structured-message 测试通过。
-- [ ] T-11 迁移 review-delivery：review/ 20 文件迁入；sqlite-review-delivery-command-capability 归 Adapter；manifest 登记；聚焦验证 review 测试通过。
-- [ ] T-12 迁移 runtime/model-runtime Adapter：provider-verifier、openai-chat-client 归 `src/adapters/outbound/model-runtime/`；不建 runtime 空壳 Module；聚焦验证 provider-verifier/agent-turn 测试通过。
-- [ ] T-13 显式化 Application Workflow：create-mission-workflow 归 `src/application/workflows/`；mission-review-effects 等跨域编排提取为命名 Workflow；消除领域→领域 import 边（架构检查转阻断）；聚焦验证 create-mission-workflow/completion-gate 测试通过。
+- [x] T-11 迁移 review-delivery：review/ 20 文件迁入；sqlite-review-delivery-command-capability 归 Adapter；manifest 登记；聚焦验证 review 测试通过。
+- [x] T-12 迁移 runtime/model-runtime Adapter：provider-verifier、openai-chat-client 归 `src/adapters/outbound/model-runtime/`；不建 runtime 空壳 Module；聚焦验证 provider-verifier/agent-turn 测试通过。
+- [x] T-13 显式化 Application Workflow：create-mission-workflow 归 `src/application/workflows/`；mission-review-effects 等跨域编排提取为命名 Workflow；消除领域→领域 import 边（架构检查转阻断）；聚焦验证 create-mission-workflow/completion-gate 测试通过。
 - [ ] T-14 迁移入站与装配：`*-api.ts` 传输校验/错误映射归 `app/api/_shared/`；route 只依赖 Workflow entry contract 或 Module 公开 Interface；`src/composition/` 收编全部 concrete 构造（删除过渡口）；聚焦验证 API 测试 + 生产构建通过。
 - [ ] T-15 迁移并分治测试：tests/ 按目标树归位（modules/workflows/adapters/browser/architecture/fixtures）；删除只证明旧目录的测试；聚焦验证测试发现数不减少（除明示删除项）且通过。
 - [ ] T-16 收缩与验收：删除 `src/server/` 与全部兼容 re-export/临时 alias；架构检查全阻断通过；全量测试不比冻结基线差；生产构建通过；现有浏览器 smoke（smoke:team/context/collaboration/execution/review/settings/onboarding/threads）通过；更新 product/backlog.md 证据索引与 CONTEXT/假设台账。

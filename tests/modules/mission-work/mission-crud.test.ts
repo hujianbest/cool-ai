@@ -93,6 +93,8 @@ type WorkItemContext = { params: Promise<{ workItemId: string }> };
 
 const serviceModules =
   import.meta.glob<MissionServiceModule>("../../../src/adapters/outbound/sqlite/mission-work/mission-service.ts");
+const missionCommandModules =
+  import.meta.glob<MissionServiceModule>("../../../src/composition/mission-commands.ts");
 const projectRouteModules =
   import.meta.glob<ProjectMissionRoute>("../../../app/api/projects/[projectId]/mission/route.ts");
 const missionRouteModules =
@@ -108,7 +110,9 @@ let databasePath: string;
 async function service(): Promise<MissionServiceModule> {
   const load = serviceModules["../../../src/adapters/outbound/sqlite/mission-work/mission-service.ts"];
   expect(load, "the mission service must exist").toBeTypeOf("function");
-  return load();
+  const loadCommands = missionCommandModules["../../../src/composition/mission-commands.ts"];
+  expect(loadCommands, "the mission commands must exist").toBeTypeOf("function");
+  return { ...(await load()), ...(await loadCommands()) };
 }
 
 async function routes() {

@@ -1,6 +1,5 @@
 import { join } from "node:path";
-
-import { listValidationPolicyAudits } from "@/src/adapters/outbound/sqlite/project-workspace/validation-policy-service";
+import { validationPolicyService } from "@/src/composition";
 
 type RouteContext = { params: Promise<{ projectId: string }> };
 
@@ -19,7 +18,7 @@ export async function GET(request: Request, context: RouteContext): Promise<Resp
     );
   }
   try {
-    const audits = listValidationPolicyAudits(databasePath(), projectId);
+    const audits = validationPolicyService.listValidationPolicyAudits(databasePath(), projectId);
     const items = audits.slice(-limit);
     return Response.json({
       items,

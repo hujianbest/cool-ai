@@ -1,4 +1,4 @@
-import { threadOperationGet } from "@/src/server/collaboration/thread-message-api";
+import { threadOperationGet } from "@/app/api/_shared/collaboration/thread-message-api";
 
 type RouteContext = {
   params: Promise<{ projectId: string; threadId: string; operationId: string }>;

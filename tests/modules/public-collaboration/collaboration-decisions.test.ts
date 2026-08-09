@@ -17,7 +17,7 @@ import {
 } from "@/src/adapters/outbound/sqlite/public-collaboration/turn-orchestrator";
 import { createCredentialVault } from "@/src/modules/identity-capability/internal/credential-vault";
 import { openDatabase } from "@/src/adapters/outbound/sqlite/connection";
-import { createMission } from "@/src/adapters/outbound/sqlite/mission-work/mission-service";
+import { createMission } from "@/src/composition/mission-commands";
 
 const PROJECT_ID = "project-decisions";
 const RUN_ID = "run-decisions";

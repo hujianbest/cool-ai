@@ -14,7 +14,7 @@ import {
   finalizeAdvance,
 } from "@/src/adapters/outbound/sqlite/public-collaboration/turn-orchestrator";
 import { openDatabase } from "@/src/adapters/outbound/sqlite/connection";
-import { createMission } from "@/src/adapters/outbound/sqlite/mission-work/mission-service";
+import { createMission } from "@/src/composition/mission-commands";
 
 type TupleRoute = {
   POST(

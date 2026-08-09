@@ -3,7 +3,8 @@ import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
-import { createMission, createWorkItem } from "@/src/adapters/outbound/sqlite/mission-work/mission-service";
+import { createWorkItem } from "@/src/adapters/outbound/sqlite/mission-work/mission-service";
+import { createMission } from "@/src/composition/mission-commands";
 import { createProject } from "@/src/adapters/outbound/sqlite/project-workspace/projects";
 
 type MemoryType = "goal" | "decision" | "fact" | "artifact";

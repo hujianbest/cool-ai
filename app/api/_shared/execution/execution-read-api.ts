@@ -1,6 +1,6 @@
 import { join } from "node:path";
 
-import { executionErrorResponse } from "@/src/server/execution/execution-api";
+import { executionErrorResponse } from "@/app/api/_shared/execution/execution-api";
 
 export function executionDatabasePath(): string {
   return process.env.COCKPIT_DB_PATH ?? join(process.cwd(), ".data", "cockpit.sqlite");

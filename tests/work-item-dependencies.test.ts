@@ -6,11 +6,11 @@ import { afterEach, beforeEach, describe, expect, it } from "vitest";
 import { openDatabase } from "@/src/adapters/outbound/sqlite/connection";
 import { createProject } from "@/src/adapters/outbound/sqlite/project-workspace/projects";
 import {
-  createMission,
   createWorkItem,
   getMissionState,
   updateWorkItem,
 } from "@/src/adapters/outbound/sqlite/mission-work/mission-service";
+import { createMission } from "@/src/composition/mission-commands";
 
 type WorkItem = ReturnType<typeof createWorkItem>;
 

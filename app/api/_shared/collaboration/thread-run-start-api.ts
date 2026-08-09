@@ -1,18 +1,12 @@
 import { join } from "node:path";
 import { TextDecoder } from "node:util";
 
-import { collaborationErrorResponse } from "@/src/server/collaboration/collaboration-api";
+import { collaborationErrorResponse } from "@/app/api/_shared/collaboration/collaboration-api";
+import { publicTextCredentialClassifier, threadService } from "@/src/composition";
 import { CollaborationError } from "@/src/modules/public-collaboration";
-import { assertPublicTextHasNoCredentials } from "@/src/adapters/outbound/sqlite/public-collaboration/public-text-credential-classifier";
-import { answerThreadDecision } from "@/src/adapters/outbound/sqlite/public-collaboration/run-service";
 
 type RouteContext = {
-  params: Promise<{
-    decisionId: string;
-    projectId: string;
-    runId: string;
-    threadId: string;
-  }>;
+  params: Promise<{ projectId: string; threadId: string }>;
 };
 
 const RESOURCE_ID = /^[A-Za-z0-9][A-Za-z0-9:_-]{0,199}$/;
@@ -26,7 +20,7 @@ function invalidInput(fields: Record<string, string>): never {
   throw new CollaborationError(
     "INVALID_INPUT",
     400,
-    "Decision answer input is invalid.",
+    "Run start input is invalid.",
     { fields },
   );
 }
@@ -107,7 +101,7 @@ async function readStrictJson(request: Request): Promise<unknown> {
   }
 }
 
-export async function threadDecisionAnswerPost(
+export async function threadRunStartPost(
   request: Request,
   context: RouteContext,
 ): Promise<Response> {
@@ -115,25 +109,17 @@ export async function threadDecisionAnswerPost(
     const params = await context.params;
     const projectId = parsePathId(params.projectId, "projectId");
     const threadId = parsePathId(params.threadId, "threadId");
-    const runId = parsePathId(params.runId, "runId");
-    const decisionId = parsePathId(params.decisionId, "decisionId");
     requireNoUrlSuffix(request);
     const input = await readStrictJson(request);
     const path = databasePath();
-    const result = answerThreadDecision(
-      path,
-      projectId,
-      threadId,
-      runId,
-      decisionId,
-      input,
-      { credentialCheck: (content) => assertPublicTextHasNoCredentials(path, content) },
-    );
+    const result = threadService.startThreadRun(path, projectId, threadId, input, {
+      credentialCheck: (content) => publicTextCredentialClassifier.assertPublicTextHasNoCredentials(path, content),
+    });
     return Response.json(result.body, { status: result.status });
   } catch (error) {
     return collaborationErrorResponse(
       error,
-      "POST /api/projects/:projectId/threads/:threadId/runs/:runId/decisions/:decisionId/answer",
+      "POST /api/projects/:projectId/threads/:threadId/runs",
     );
   }
 }

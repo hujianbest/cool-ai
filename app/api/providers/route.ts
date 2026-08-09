@@ -1,7 +1,7 @@
 import { join } from "node:path";
 
-import { providerApiError, readJsonBody } from "@/src/server/provider-api";
-import { createProvider, listProviders } from "@/src/adapters/outbound/sqlite/identity-capability/provider-service";
+import { providerApiError, readJsonBody } from "@/app/api/_shared/provider-api";
+import { providerService } from "@/src/composition";
 
 function databasePath(): string {
   return process.env.COCKPIT_DB_PATH ?? join(process.cwd(), ".data", "cockpit.sqlite");
@@ -9,7 +9,7 @@ function databasePath(): string {
 
 export async function GET(): Promise<Response> {
   try {
-    return Response.json({ providers: listProviders(databasePath()) });
+    return Response.json({ providers: providerService.listProviders(databasePath()) });
   } catch (error) {
     return providerApiError(error, "GET /api/providers");
   }
@@ -24,7 +24,7 @@ export async function POST(request: Request): Promise<Response> {
       : {};
 
   try {
-    const provider = createProvider(
+    const provider = providerService.createProvider(
       payload.draft,
       typeof payload.validationToken === "string" ? payload.validationToken : undefined,
       databasePath(),

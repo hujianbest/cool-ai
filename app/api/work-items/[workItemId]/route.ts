@@ -1,7 +1,7 @@
 import { join } from "node:path";
 
-import { missionApiError, readMissionJson } from "@/src/server/mission-api";
-import { updateWorkItem } from "@/src/adapters/outbound/sqlite/mission-work/mission-service";
+import { missionApiError, readMissionJson } from "@/app/api/_shared/mission-api";
+import { missionWork } from "@/src/composition";
 
 type RouteContext = { params: Promise<{ workItemId: string }> };
 type UpdateWorkItemInput = {
@@ -25,7 +25,7 @@ export async function PATCH(
   if (!body.ok) return body.response;
   try {
     return Response.json({
-      workItem: updateWorkItem(
+      workItem: missionWork.updateWorkItem(
         databasePath(),
         workItemId,
         body.value as UpdateWorkItemInput,

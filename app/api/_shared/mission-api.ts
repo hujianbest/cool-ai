@@ -1,9 +1,10 @@
 import { randomUUID } from "node:crypto";
 
-import { MembershipError } from "@/src/modules/project-workspace";
-import { SchemaError } from "@/src/adapters/outbound/sqlite/schema-error";
+import { SchemaError } from "@/src/composition";
+import { MissionError } from "@/src/modules/mission-work";
+import { CompletionGateError } from "@/src/modules/review-delivery";
 
-export async function readMembershipJson(
+export async function readMissionJson(
   request: Request,
 ): Promise<{ ok: true; value: unknown } | { ok: false; response: Response }> {
   try {
@@ -19,18 +20,22 @@ export async function readMembershipJson(
   }
 }
 
-export function membershipApiError(error: unknown, route: string): Response {
-  if (error instanceof MembershipError) {
+export function missionApiError(error: unknown, route: string): Response {
+  if (error instanceof MissionError || error instanceof CompletionGateError) {
     return Response.json(
       {
         error: {
           code: error.code,
           message: error.message,
-          ...(error.fields ? { fields: error.fields } : {}),
+          ...(error instanceof CompletionGateError && error.blockers
+            ? { blockers: error.blockers }
+            : {}),
+          ...(error instanceof MissionError && error.fields
+            ? { fields: error.fields }
+            : {}),
           ...(error.currentVersion !== undefined
             ? { currentVersion: error.currentVersion }
             : {}),
-          ...(error.agentIds ? { agentIds: error.agentIds } : {}),
         },
       },
       { status: error.httpStatus },

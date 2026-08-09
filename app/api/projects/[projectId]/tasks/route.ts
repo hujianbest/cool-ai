@@ -2,7 +2,7 @@ import {
   createTaskResponse,
   getProjectTasksResponse,
   type RouteContext,
-} from "@/src/server/task-api";
+} from "@/app/api/_shared/task-api";
 
 export function GET(
   _request: Request,

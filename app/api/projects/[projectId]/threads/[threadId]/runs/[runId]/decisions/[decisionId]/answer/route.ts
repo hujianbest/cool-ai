@@ -1,4 +1,4 @@
-import { threadDecisionAnswerPost } from "@/src/server/collaboration/thread-decision-answer-api";
+import { threadDecisionAnswerPost } from "@/app/api/_shared/collaboration/thread-decision-answer-api";
 
 type RouteContext = {
   params: Promise<{

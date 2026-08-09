@@ -8,13 +8,13 @@ import {
 } from "@/src/adapters/outbound/sqlite/review-delivery/completion-gate";
 import { invalidateMissionContextTx } from "@/src/adapters/outbound/sqlite/review-delivery/delivery-service";
 import { canonicalRequestHash } from "@/src/adapters/outbound/sqlite/public-collaboration/operation-receipts";
-import { createServerComposition } from "@/src/server/composition/server-composition";
 import { openDatabase } from "@/src/adapters/outbound/sqlite/connection";
 import {
   insertTransitionReceipt,
   readControlOperationPrior,
 } from "@/src/adapters/outbound/sqlite/public-collaboration/mission-control-receipts";
 import { MissionError } from "@/src/modules/mission-work";
+import type { CreateMissionInput } from "@/src/modules/mission-work";
 import type { TransitionReceipt } from "@/src/modules/public-collaboration";
 import type {
   Mission,
@@ -31,12 +31,6 @@ type WorkItemRow = Omit<WorkItem, "dependencyIds" | "status"> & {
 };
 type FieldError = { field: string; code: string };
 
-type CreateMissionInput = {
-  title: string;
-  goal: string;
-  expectedVersion: number;
-  operationId: string;
-};
 type UpdateMissionInput = {
   title: string;
   goal: string;
@@ -120,7 +114,7 @@ function missionTextInput(input: { title: string; goal: string }): {
   return { goal, title };
 }
 
-function missionInput(input: CreateMissionInput): CreateMissionInput {
+export function missionInput(input: CreateMissionInput): CreateMissionInput {
   const fields: FieldError[] = [];
   const { goal, title } = missionTextInput(input);
   const operationId = input?.operationId;
@@ -674,26 +668,6 @@ export function getMissionState(
   } finally {
     database.close();
   }
-}
-
-export function createMission(
-  databasePath: string,
-  projectId: string,
-  input: CreateMissionInput,
-): Mission {
-  const parsed = missionInput(input);
-  const command = {
-    expectedVersion: parsed.expectedVersion,
-    goal: parsed.goal,
-    operationId: parsed.operationId,
-    projectId,
-    title: parsed.title,
-  };
-  const { createMissionWorkflow } = createServerComposition(databasePath);
-  return createMissionWorkflow.execute({
-    ...command,
-    requestHash: canonicalRequestHash(command),
-  });
 }
 
 export function updateMission(

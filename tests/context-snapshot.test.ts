@@ -5,9 +5,9 @@ import { afterEach, beforeEach, describe, expect, it } from "vitest";
 
 import { createMemory } from "@/src/adapters/outbound/sqlite/knowledge-provenance/memory-service";
 import {
-  createMission,
   createWorkItem,
 } from "@/src/adapters/outbound/sqlite/mission-work/mission-service";
+import { createMission } from "@/src/composition/mission-commands";
 import { createProject } from "@/src/adapters/outbound/sqlite/project-workspace/projects";
 import { openDatabase } from "@/src/adapters/outbound/sqlite/connection";
 

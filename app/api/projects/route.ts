@@ -3,8 +3,8 @@ import { join } from "node:path";
 import {
   internalErrorResponse,
   storageErrorResponse,
-} from "@/src/server/api-errors";
-import { createProject, listProjects } from "@/src/adapters/outbound/sqlite/project-workspace/projects";
+} from "@/app/api/_shared/api-errors";
+import { projects } from "@/src/composition";
 
 function databasePath(): string {
   return process.env.COCKPIT_DB_PATH ?? join(process.cwd(), ".data", "cockpit.sqlite");
@@ -12,7 +12,7 @@ function databasePath(): string {
 
 export async function GET(): Promise<Response> {
   try {
-    return Response.json({ projects: listProjects(databasePath()) });
+    return Response.json({ projects: projects.listProjects(databasePath()) });
   } catch (error) {
     return (
       storageErrorResponse(error) ??
@@ -40,7 +40,7 @@ export async function POST(request: Request): Promise<Response> {
   }
 
   try {
-    const project = createProject((body as { name: string }).name, databasePath());
+    const project = projects.createProject((body as { name: string }).name, databasePath());
     return Response.json({ project }, { status: 201 });
   } catch (error) {
     if (error instanceof Error && error.message === "Project name is required.") {

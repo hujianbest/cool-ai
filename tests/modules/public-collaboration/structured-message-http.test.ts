@@ -20,12 +20,12 @@ type AdapterModule = {
 };
 
 const modules = import.meta.glob<AdapterModule>(
-  "../../../src/server/structured-messages/structured-message-http.ts",
+  "../../../app/api/_shared/structured-messages/structured-message-http.ts",
 );
 const directories: string[] = [];
 
 async function adapter(): Promise<AdapterModule> {
-  const load = modules["../../../src/server/structured-messages/structured-message-http.ts"];
+  const load = modules["../../../app/api/_shared/structured-messages/structured-message-http.ts"];
   expect(load, "strict tuple Structured Message HTTP adapter must exist").toBeTypeOf("function");
   return load();
 }

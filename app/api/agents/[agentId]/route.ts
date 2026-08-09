@@ -1,7 +1,7 @@
 import { join } from "node:path";
 
-import { agentApiError, readAgentJson } from "@/src/server/agent-api";
-import { updateAgent } from "@/src/adapters/outbound/sqlite/identity-capability/agent-service";
+import { agentApiError, readAgentJson } from "@/app/api/_shared/agent-api";
+import { agentService } from "@/src/composition";
 import type { UpdateAgentInput } from "@/src/shared/team-contracts";
 
 function databasePath(): string {
@@ -18,7 +18,7 @@ export async function PATCH(
 
   try {
     return Response.json({
-      agent: updateAgent(
+      agent: agentService.updateAgent(
         agentId,
         body.value as UpdateAgentInput,
         databasePath(),

@@ -3,18 +3,13 @@ import { join } from "node:path";
 import {
   internalErrorResponse,
   storageErrorResponse,
-} from "@/src/server/api-errors";
+} from "@/app/api/_shared/api-errors";
+import { missionWorkTasks } from "@/src/composition";
 import type { TaskExecutor } from "@/src/modules/mission-work";
 import {
   TaskDomainError,
   TaskExecutionError,
 } from "@/src/modules/mission-work";
-import {
-  createTask,
-  executeTask,
-  listProjectTasks,
-  startTask,
-} from "@/src/adapters/outbound/sqlite/mission-work/tasks";
 
 export type RouteContext<Key extends string> = {
   params: Promise<Record<Key, string>>;
@@ -50,7 +45,7 @@ export async function getProjectTasksResponse(
 ): Promise<Response> {
   try {
     const { projectId } = await context.params;
-    return Response.json(listProjectTasks(projectId, databasePath()));
+    return Response.json(missionWorkTasks.listProjectTasks(projectId, databasePath()));
   } catch (error) {
     return taskErrorResponse(error, "GET /api/projects/:projectId/tasks");
   }
@@ -79,7 +74,7 @@ export async function createTaskResponse(
 
   try {
     const { projectId } = await context.params;
-    const response = createTask(projectId, (body as { goal: string }).goal, databasePath());
+    const response = missionWorkTasks.createTask(projectId, (body as { goal: string }).goal, databasePath());
     return Response.json(response, { status: 201 });
   } catch (error) {
     return taskErrorResponse(error, "POST /api/projects/:projectId/tasks");
@@ -91,7 +86,7 @@ export async function startTaskResponse(
 ): Promise<Response> {
   try {
     const { taskId } = await context.params;
-    return Response.json(startTask(taskId, databasePath()));
+    return Response.json(missionWorkTasks.startTask(taskId, databasePath()));
   } catch (error) {
     return taskErrorResponse(error, "POST /api/tasks/:taskId/start");
   }
@@ -103,7 +98,7 @@ export async function executeTaskResponse(
 ): Promise<Response> {
   try {
     const { taskId } = await context.params;
-    return Response.json(executeTask(taskId, databasePath(), executor));
+    return Response.json(missionWorkTasks.executeTask(taskId, databasePath(), executor));
   } catch (error) {
     return taskErrorResponse(error, "POST /api/tasks/:taskId/execute");
   }
