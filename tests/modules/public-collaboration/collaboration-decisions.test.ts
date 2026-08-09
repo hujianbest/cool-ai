@@ -1,6 +1,3 @@
-import { mkdtempSync, rmSync } from "node:fs";
-import { tmpdir } from "node:os";
-import { join } from "node:path";
 import { afterEach, beforeEach, describe, expect, it } from "vitest";
 
 import type { AgentTurn } from "@/src/modules/public-collaboration";
@@ -18,6 +15,7 @@ import {
 import { createCredentialVault } from "@/src/modules/identity-capability/internal/credential-vault";
 import { openDatabase } from "@/src/adapters/outbound/sqlite/connection";
 import { createMission } from "@/src/composition/mission-commands";
+import { memoryDatabasePath } from "@/tests/fixtures/sqlite/memory-database";
 
 const PROJECT_ID = "project-decisions";
 const RUN_ID = "run-decisions";
@@ -77,7 +75,6 @@ const routeModules = import.meta.glob<DecisionRoute>(
 );
 
 let databasePath: string;
-let directory: string;
 let operationSequence: number;
 let uuidSequence: number;
 
@@ -241,8 +238,7 @@ function snapshot() {
 }
 
 beforeEach(() => {
-  directory = mkdtempSync(join(tmpdir(), "collaboration-decisions-"));
-  databasePath = join(directory, "cockpit.sqlite");
+  databasePath = memoryDatabasePath();
   process.env.COCKPIT_DB_PATH = databasePath;
   process.env.COCKPIT_MASTER_KEY = MASTER_KEY;
   operationSequence = 0;
@@ -354,7 +350,6 @@ beforeEach(() => {
 afterEach(() => {
   delete process.env.COCKPIT_DB_PATH;
   delete process.env.COCKPIT_MASTER_KEY;
-  rmSync(directory, { force: true, recursive: true });
 });
 
 describe("decision request commit", () => {

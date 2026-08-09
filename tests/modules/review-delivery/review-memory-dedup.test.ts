@@ -1,15 +1,13 @@
 import { createHash } from "node:crypto";
-import { mkdtempSync, rmSync } from "node:fs";
-import { tmpdir } from "node:os";
-import { join } from "node:path";
+
 import { DatabaseSync } from "node:sqlite";
 import { afterEach, beforeEach, describe, expect, it } from "vitest";
 
 import { openDatabase } from "@/src/adapters/outbound/sqlite/connection";
 import { finalizeCheckpointedReview } from "@/src/adapters/outbound/sqlite/review-delivery/review-finalizer";
+import { memoryDatabasePath } from "@/tests/fixtures/sqlite/memory-database";
 
 const NOW = "2026-08-01T10:00:00.000Z";
-let directory: string;
 let path: string;
 let database: DatabaseSync;
 
@@ -182,15 +180,13 @@ function activeDuplicateGroups(): number {
 }
 
 beforeEach(() => {
-  directory = mkdtempSync(join(tmpdir(), "review-memory-dedup-"));
-  path = join(directory, "cockpit.sqlite");
+  path = memoryDatabasePath();
   database = openDatabase(path);
   seedBase();
 });
 
 afterEach(() => {
   database.close();
-  rmSync(directory, { force: true, recursive: true });
 });
 
 describe("review memory deterministic dedupe", () => {

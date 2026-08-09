@@ -1,6 +1,3 @@
-import { mkdtempSync, rmSync } from "node:fs";
-import { tmpdir } from "node:os";
-import { join } from "node:path";
 import { DatabaseSync } from "node:sqlite";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
@@ -21,6 +18,7 @@ import {
 } from "@/src/adapters/outbound/sqlite/review-delivery/delivery-application-service";
 import type { ModelCallResult } from "@/src/shared/collaboration-contracts";
 import { refreshExecutionFrozenFixture } from "@/tests/fixtures/execution/frozen-input";
+import { memoryDatabasePath } from "@/tests/fixtures/sqlite/memory-database";
 
 type ApplicationModule = typeof import("../../../src/adapters/outbound/sqlite/review-delivery/review-application-service");
 const applicationModules = import.meta.glob<ApplicationModule>(
@@ -48,7 +46,6 @@ vi.mock("@/src/adapters/outbound/sqlite/connection", async (load) => {
 });
 
 const NOW = "2026-08-01T08:30:00.000Z";
-const roots: string[] = [];
 const operationId = "24000000-0000-4000-8000-000000000001";
 let databasePath: string;
 
@@ -336,9 +333,7 @@ async function application(): Promise<ApplicationModule> {
 
 beforeEach(() => {
   process.env.COCKPIT_MASTER_KEY = Buffer.alloc(32, 24).toString("base64url");
-  const root = mkdtempSync(join(tmpdir(), "review-production-"));
-  roots.push(root);
-  databasePath = join(root, "cockpit.sqlite");
+  databasePath = memoryDatabasePath();
   process.env.COCKPIT_DB_PATH = databasePath;
   callOpenAiChat.mockReset();
   seed(databasePath);
@@ -347,9 +342,6 @@ beforeEach(() => {
 afterEach(() => {
   delete process.env.COCKPIT_DB_PATH;
   delete process.env.COCKPIT_MASTER_KEY;
-  for (const root of roots.splice(0)) {
-    rmSync(root, { force: true, recursive: true });
-  }
 });
 
 describe("public production review application", () => {

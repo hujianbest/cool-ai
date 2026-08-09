@@ -1,6 +1,3 @@
-import { mkdtempSync, rmSync } from "node:fs";
-import { tmpdir } from "node:os";
-import { join } from "node:path";
 import { afterEach, beforeEach, describe, expect, it } from "vitest";
 
 import { openDatabase } from "@/src/adapters/outbound/sqlite/connection";
@@ -11,10 +8,10 @@ import {
   updateWorkItem,
 } from "@/src/adapters/outbound/sqlite/mission-work/mission-service";
 import { createMission } from "@/src/composition/mission-commands";
+import { memoryDatabasePath } from "@/tests/fixtures/sqlite/memory-database";
 
 type WorkItem = ReturnType<typeof createWorkItem>;
 
-let directory: string;
 let databasePath: string;
 let missionOperationSequence: number;
 
@@ -98,14 +95,12 @@ function expectCode(operation: () => unknown, code: string): void {
 
 beforeEach(() => {
   missionOperationSequence = 0;
-  directory = mkdtempSync(join(tmpdir(), "cockpit-work-item-dependencies-"));
-  databasePath = join(directory, "cockpit.sqlite");
+  databasePath = memoryDatabasePath();
   process.env.COCKPIT_DB_PATH = databasePath;
 });
 
 afterEach(() => {
   delete process.env.COCKPIT_DB_PATH;
-  rmSync(directory, { force: true, recursive: true });
 });
 
 describe("work-item dependency full replacement", () => {

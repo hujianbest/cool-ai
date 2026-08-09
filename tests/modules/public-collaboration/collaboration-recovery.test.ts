@@ -1,6 +1,5 @@
-import { mkdtempSync, rmSync } from "node:fs";
-import { tmpdir } from "node:os";
-import { join } from "node:path";
+
+
 import { afterEach, beforeEach, describe, expect, it } from "vitest";
 
 import type { StructuredTurnResult } from "@/src/modules/public-collaboration";
@@ -12,6 +11,7 @@ import type { ProjectThreadRunTuple } from "@/src/adapters/outbound/sqlite/publi
 import { createCredentialVault } from "@/src/modules/identity-capability/internal/credential-vault";
 import { openDatabase } from "@/src/adapters/outbound/sqlite/connection";
 import { seedMissionInitializationForMission as initializeMissionDeliveryTx } from "@/tests/fixtures/review/mission-initialization";
+import { memoryDatabasePath } from "@/tests/fixtures/sqlite/memory-database";
 
 type RecoveryModule = {
   acquireAdvance: (
@@ -48,7 +48,6 @@ const EXPIRED_AT = "2026-07-30T01:02:00.001Z";
 const ADVANCE_ID = "00000000-0000-4000-8000-000000001100";
 const RECOVER_ID = "00000000-0000-4000-8000-000000001101";
 
-let directory: string;
 let databasePath: string;
 let uuid = 0;
 
@@ -241,8 +240,7 @@ function validResult(): StructuredTurnResult {
 }
 
 beforeEach(() => {
-  directory = mkdtempSync(join(tmpdir(), "collaboration-recovery-"));
-  databasePath = join(directory, "cockpit.sqlite");
+  databasePath = memoryDatabasePath();
   process.env.COCKPIT_MASTER_KEY = Buffer.alloc(32, 30).toString("base64url");
   uuid = 0;
   seed();
@@ -250,7 +248,6 @@ beforeEach(() => {
 
 afterEach(() => {
   delete process.env.COCKPIT_MASTER_KEY;
-  rmSync(directory, { force: true, recursive: true });
 });
 
 describe("expired collaboration attempt reconciliation", () => {
@@ -393,8 +390,7 @@ describe("expired collaboration attempt reconciliation", () => {
   });
 });
 /*
-import { tmpdir } from "node:os";
-import { join } from "node:path";
+
 import { afterEach, beforeEach, describe, expect, it } from "vitest";
 
 import { canonicalRequestHash } from "@/src/adapters/outbound/sqlite/public-collaboration/operation-receipts";
@@ -436,7 +432,6 @@ const STARTED_AT = "2026-07-30T03:00:00.000Z";
 const EXPIRES_AT = "2026-07-30T03:02:00.000Z";
 const AFTER_EXPIRY = "2026-07-30T03:02:00.001Z";
 
-let directory: string;
 let databasePath: string;
 let uuidSequence: number;
 
@@ -579,14 +574,12 @@ function state() {
 }
 
 beforeEach(() => {
-  directory = mkdtempSync(join(tmpdir(), "collaboration-recovery-"));
-  databasePath = join(directory, "cockpit.sqlite");
+  databasePath = memoryDatabasePath();
   uuidSequence = 0;
   seedCallingAttempt();
 });
 
 afterEach(() => {
-  rmSync(directory, { force: true, recursive: true });
 });
 
 describe("expired calling attempt reconciliation", () => {

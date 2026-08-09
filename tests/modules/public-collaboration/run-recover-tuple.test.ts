@@ -1,6 +1,3 @@
-import { mkdtempSync, rmSync } from "node:fs";
-import { tmpdir } from "node:os";
-import { join } from "node:path";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
 import {
@@ -16,6 +13,7 @@ import { createCredentialVault } from "@/src/modules/identity-capability/interna
 import { openDatabase } from "@/src/adapters/outbound/sqlite/connection";
 import { createMission } from "@/src/composition/mission-commands";
 import type { StructuredTurnResult } from "@/src/modules/public-collaboration";
+import { memoryDatabasePath } from "@/tests/fixtures/sqlite/memory-database";
 
 type TupleRoute = {
   POST(
@@ -51,7 +49,6 @@ const ATTEMPT_ID = "attempt-recover-tuple";
 const LEASE_TOKEN = "lease-recover-tuple";
 
 let databasePath: string;
-let directory: string;
 let threadId: string;
 let otherThreadId: string;
 let runId: string;
@@ -308,8 +305,7 @@ function validResult(): StructuredTurnResult {
 }
 
 beforeEach(() => {
-  directory = mkdtempSync(join(tmpdir(), "run-recover-tuple-"));
-  databasePath = join(directory, "cockpit.sqlite");
+  databasePath = memoryDatabasePath();
   process.env.COCKPIT_DB_PATH = databasePath;
   process.env.COCKPIT_MASTER_KEY = Buffer.alloc(32, 18).toString("base64url");
   operationSequence = 1800;
@@ -321,7 +317,6 @@ afterEach(() => {
   fetchSpy.mockRestore();
   delete process.env.COCKPIT_DB_PATH;
   delete process.env.COCKPIT_MASTER_KEY;
-  rmSync(directory, { force: true, recursive: true });
 });
 
 describe("tuple-scoped run recovery", () => {

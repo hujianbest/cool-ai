@@ -1,6 +1,5 @@
-import { mkdtempSync, rmSync } from "node:fs";
-import { tmpdir } from "node:os";
-import { join } from "node:path";
+
+
 import type { DatabaseSync } from "node:sqlite";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
@@ -8,6 +7,7 @@ import { createCredentialVault } from "@/src/modules/identity-capability/interna
 import { openDatabase } from "@/src/adapters/outbound/sqlite/connection";
 import { execV7Fixture } from "@/tests/fixtures/execution/current-graph";
 import { refreshExecutionFrozenFixture } from "@/tests/fixtures/execution/frozen-input";
+import { memoryDatabasePath } from "@/tests/fixtures/sqlite/memory-database";
 
 type AdvanceModule = {
   advanceExecution(
@@ -26,7 +26,6 @@ const MASTER_KEY = Buffer.alloc(32, 37).toString("base64url");
 const operationId = (value: number) =>
   `00000000-0000-4000-8000-${String(value).padStart(12, "0")}`;
 
-let directory: string;
 let databasePath: string;
 let database: DatabaseSync;
 let advance: AdvanceModule;
@@ -160,8 +159,7 @@ async function run(executionId: string, version: number, operation: number) {
 
 beforeEach(async () => {
   process.env.COCKPIT_MASTER_KEY = MASTER_KEY;
-  directory = mkdtempSync(join(tmpdir(), "cool-ai-usage-budget-"));
-  databasePath = join(directory, "cockpit.sqlite");
+  databasePath = memoryDatabasePath();
   database = openDatabase(databasePath);
   seed();
   const modules = import.meta.glob<AdvanceModule>(
@@ -173,7 +171,6 @@ beforeEach(async () => {
 afterEach(() => {
   vi.unstubAllGlobals();
   database.close();
-  rmSync(directory, { force: true, recursive: true });
   delete process.env.COCKPIT_MASTER_KEY;
 });
 

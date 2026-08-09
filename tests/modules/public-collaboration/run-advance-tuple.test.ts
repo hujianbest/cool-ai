@@ -1,8 +1,5 @@
 import { createServer, type Server } from "node:http";
 import { randomUUID } from "node:crypto";
-import { mkdtempSync, rmSync } from "node:fs";
-import { tmpdir } from "node:os";
-import { join } from "node:path";
 import { afterEach, beforeEach, describe, expect, it } from "vitest";
 
 import { createCredentialVault } from "@/src/modules/identity-capability/internal/credential-vault";
@@ -15,6 +12,7 @@ import {
 } from "@/src/adapters/outbound/sqlite/public-collaboration/turn-orchestrator";
 import { openDatabase } from "@/src/adapters/outbound/sqlite/connection";
 import { createMission } from "@/src/composition/mission-commands";
+import { memoryDatabasePath } from "@/tests/fixtures/sqlite/memory-database";
 
 type TupleRoute = {
   POST(
@@ -47,7 +45,6 @@ const API_KEY = "provider-secret-tuple";
 const PRIVATE_PROMPT = "PRIVATE_ADVANCE_TUPLE_PROMPT";
 
 let databasePath: string;
-let directory: string;
 let provider: Server;
 let providerBaseUrl: string;
 let providerCalls: number;
@@ -318,8 +315,7 @@ function state(): {
 }
 
 beforeEach(async () => {
-  directory = mkdtempSync(join(tmpdir(), "run-advance-tuple-"));
-  databasePath = join(directory, "cockpit.sqlite");
+  databasePath = memoryDatabasePath();
   process.env.COCKPIT_DB_PATH = databasePath;
   process.env.COCKPIT_MASTER_KEY = Buffer.alloc(32, 17).toString("base64url");
   providerCalls = 0;
@@ -345,7 +341,6 @@ afterEach(async () => {
   );
   delete process.env.COCKPIT_DB_PATH;
   delete process.env.COCKPIT_MASTER_KEY;
-  rmSync(directory, { force: true, recursive: true });
 });
 
 describe("tuple-scoped run advance", () => {

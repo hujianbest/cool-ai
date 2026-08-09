@@ -1,11 +1,11 @@
-import { mkdtempSync, rmSync } from "node:fs";
-import { tmpdir } from "node:os";
-import { join } from "node:path";
+
+
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
 import { createWorkItem } from "@/src/adapters/outbound/sqlite/mission-work/mission-service";
 import { createMission } from "@/src/composition/mission-commands";
 import { createProject } from "@/src/adapters/outbound/sqlite/project-workspace/projects";
+import { memoryDatabasePath } from "@/tests/fixtures/sqlite/memory-database";
 
 type MemoryType = "goal" | "decision" | "fact" | "artifact";
 type SourceType = "owner_input" | "work_item" | "artifact_path";
@@ -44,7 +44,6 @@ type MemoryServiceModule = {
 const serviceModules =
   import.meta.glob<MemoryServiceModule>("../../../src/adapters/outbound/sqlite/knowledge-provenance/memory-service.ts");
 
-let directory: string;
 let databasePath: string;
 let missionOperationSequence: number;
 
@@ -78,14 +77,12 @@ function expectCode(operation: () => unknown, code: string): void {
 }
 
 beforeEach(() => {
-  directory = mkdtempSync(join(tmpdir(), "cockpit-memory-service-"));
-  databasePath = join(directory, "cockpit.sqlite");
+  databasePath = memoryDatabasePath();
   missionOperationSequence = 0;
 });
 
 afterEach(() => {
   vi.useRealTimers();
-  rmSync(directory, { force: true, recursive: true });
 });
 
 describe("append-only sourced memory service", () => {

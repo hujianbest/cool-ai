@@ -1,6 +1,5 @@
-import { mkdtempSync, rmSync } from "node:fs";
-import { tmpdir } from "node:os";
-import { join } from "node:path";
+
+
 import { afterEach, beforeEach, describe, expect, it } from "vitest";
 
 import type { AgentTurn } from "@/src/modules/public-collaboration";
@@ -15,6 +14,7 @@ import {
   execV7Fixture,
   execV7TupleStatements,
 } from "@/tests/fixtures/execution/current-graph";
+import { memoryDatabasePath } from "@/tests/fixtures/sqlite/memory-database";
 
 const NOW = "2026-07-30T06:00:00.000Z";
 const PROJECT_ID = "project-usage";
@@ -24,7 +24,6 @@ const AGENT_B = "agent-usage-b";
 
 let databasePath: string;
 let threadId: string;
-let directory: string;
 let operationSequence: number;
 let uuidSequence: number;
 
@@ -265,15 +264,13 @@ function acquire() {
 }
 
 beforeEach(() => {
-  directory = mkdtempSync(join(tmpdir(), "collaboration-usage-"));
-  databasePath = join(directory, "cockpit.sqlite");
+  databasePath = memoryDatabasePath();
   operationSequence = 1500;
   uuidSequence = 0;
   seedReadyRun();
 });
 
 afterEach(() => {
-  rmSync(directory, { force: true, recursive: true });
 });
 
 describe("persisted collaboration usage aggregate", () => {

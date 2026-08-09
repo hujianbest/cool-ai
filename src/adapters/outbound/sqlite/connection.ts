@@ -39,7 +39,11 @@ export function openDatabase(databasePath: string): DatabaseSync {
   let database: DatabaseSync | undefined;
 
   try {
-    mkdirSync(dirname(databasePath), { recursive: true });
+    // In-memory databases (":memory:" and "file:...?mode=memory" URIs) have no
+    // parent directory; mkdir on a URI would create garbage directories.
+    if (!databasePath.startsWith("file:") && databasePath !== ":memory:") {
+      mkdirSync(dirname(databasePath), { recursive: true });
+    }
     database = new DatabaseSync(databasePath);
     database.exec("PRAGMA foreign_keys = ON");
     database.exec("PRAGMA trusted_schema = OFF");

@@ -1,6 +1,3 @@
-import { mkdtempSync, rmSync } from "node:fs";
-import { tmpdir } from "node:os";
-import { join } from "node:path";
 import { DatabaseSync } from "node:sqlite";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
@@ -14,6 +11,7 @@ import { createCredentialVault } from "@/src/modules/identity-capability/interna
 import { openDatabase } from "@/src/adapters/outbound/sqlite/connection";
 import type { ModelCallResult } from "@/src/shared/collaboration-contracts";
 import { refreshExecutionFrozenFixture } from "@/tests/fixtures/execution/frozen-input";
+import { memoryDatabasePath } from "@/tests/fixtures/sqlite/memory-database";
 
 type AnswerRoute = {
   POST(request: Request, context: {
@@ -46,7 +44,6 @@ vi.mock("@/src/adapters/outbound/sqlite/connection", async (load) => {
 });
 
 const NOW = "2026-08-01T10:00:00.000Z";
-let root: string;
 let databasePath: string;
 
 function escalateOutput(round: number): ModelCallResult {
@@ -288,8 +285,7 @@ async function detail(attemptId: string) {
 }
 
 beforeEach(() => {
-  root = mkdtempSync(join(tmpdir(), "review-escalation-integration-"));
-  databasePath = join(root, "cockpit.sqlite");
+  databasePath = memoryDatabasePath();
   process.env.COCKPIT_DB_PATH = databasePath;
   process.env.COCKPIT_MASTER_KEY = Buffer.alloc(32, 26).toString("base64url");
   callOpenAiChat.mockReset();
@@ -299,7 +295,6 @@ beforeEach(() => {
 afterEach(() => {
   delete process.env.COCKPIT_DB_PATH;
   delete process.env.COCKPIT_MASTER_KEY;
-  rmSync(root, { force: true, recursive: true });
 });
 
 describe("escalation answer production chain", () => {

@@ -1,3 +1,4 @@
+// @vitest-environment jsdom
 import { afterEach, describe, expect, it, vi } from "vitest";
 import { join } from "node:path";
 import { pathToFileURL } from "node:url";

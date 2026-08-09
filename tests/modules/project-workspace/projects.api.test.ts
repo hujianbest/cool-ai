@@ -1,20 +1,15 @@
-import { mkdtempSync, rmSync } from "node:fs";
-import { tmpdir } from "node:os";
-import { join } from "node:path";
 import { afterEach, beforeEach, describe, expect, it } from "vitest";
 
 import { GET, POST } from "@/app/api/projects/route";
+import { memoryDatabasePath } from "@/tests/fixtures/sqlite/memory-database";
 
-let directory: string;
 
 beforeEach(() => {
-  directory = mkdtempSync(join(tmpdir(), "cockpit-api-"));
-  process.env.COCKPIT_DB_PATH = join(directory, "cockpit.sqlite");
+  process.env.COCKPIT_DB_PATH = memoryDatabasePath();
 });
 
 afterEach(() => {
   delete process.env.COCKPIT_DB_PATH;
-  rmSync(directory, { force: true, recursive: true });
 });
 
 describe("/api/projects", () => {

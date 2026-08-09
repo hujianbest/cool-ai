@@ -14,6 +14,7 @@ import {
   type ExecutionControlDependencies,
 } from "@/src/adapters/outbound/sqlite/safe-execution/execution-control-service";
 import { execV7Fixture } from "@/tests/fixtures/execution/current-graph";
+import { memoryDatabasePath } from "@/tests/fixtures/sqlite/memory-database";
 
 type Identity = {
   finalPath: string;
@@ -245,7 +246,7 @@ function providerResponse(action: Record<string, unknown>): Response {
 beforeEach(async () => {
   process.env.COCKPIT_MASTER_KEY = MASTER_KEY;
   directory = mkdtempSync(join(tmpdir(), "cool-ai-execution-orchestrator-"));
-  databasePath = join(directory, "cockpit.sqlite");
+  databasePath = memoryDatabasePath();
   database = openDatabase(databasePath);
   servers = [];
   seed();

@@ -1,6 +1,5 @@
-import { mkdtempSync, rmSync } from "node:fs";
-import { tmpdir } from "node:os";
-import { join } from "node:path";
+
+
 import type { DatabaseSync } from "node:sqlite";
 import { afterEach, beforeEach, describe, expect, it } from "vitest";
 
@@ -13,6 +12,7 @@ import {
 } from "@/src/adapters/outbound/sqlite/public-collaboration/turn-orchestrator";
 import { openDatabase } from "@/src/adapters/outbound/sqlite/connection";
 import { seedCurrentAdvanceFixture as seedV7AdvanceFixture } from "@/tests/fixtures/collaboration/current-advance";
+import { memoryDatabasePath } from "@/tests/fixtures/sqlite/memory-database";
 
 const NOW = "2026-07-30T04:00:00.000Z";
 const PROJECT_ID = "project-handoff";
@@ -21,7 +21,6 @@ const AGENT_A = "agent-handoff-a";
 const AGENT_B = "agent-handoff-b";
 const MISSION_ID = "mission-handoff";
 
-let directory: string;
 let databasePath: string;
 let threadId: string;
 let operationSequence: number;
@@ -246,8 +245,7 @@ function snapshot(): {
 }
 
 beforeEach(() => {
-  directory = mkdtempSync(join(tmpdir(), "handoff-plan-ready-"));
-  databasePath = join(directory, "cockpit.sqlite");
+  databasePath = memoryDatabasePath();
   operationSequence = 0;
   uuidSequence = 0;
   threadId = seedV7AdvanceFixture(databasePath, {
@@ -267,7 +265,6 @@ beforeEach(() => {
 });
 
 afterEach(() => {
-  rmSync(directory, { force: true, recursive: true });
 });
 
 describe("handoff action commit", () => {

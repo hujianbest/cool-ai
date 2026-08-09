@@ -1,10 +1,8 @@
-import { mkdtempSync, rmSync } from "node:fs";
-import { tmpdir } from "node:os";
-import { join } from "node:path";
 import { afterEach, beforeEach, describe, expect, it } from "vitest";
 
 import { openDatabase } from "@/src/adapters/outbound/sqlite/connection";
 import { createProject } from "@/src/adapters/outbound/sqlite/project-workspace/projects";
+import { memoryDatabasePath } from "@/tests/fixtures/sqlite/memory-database";
 
 type MembersRoute = {
   GET(
@@ -20,7 +18,6 @@ type MembersRoute = {
 const routeModules =
   import.meta.glob<MembersRoute>("../../../app/api/projects/[projectId]/members/route.ts");
 
-let directory: string;
 let databasePath: string;
 
 async function loadRoute(): Promise<MembersRoute> {
@@ -65,14 +62,12 @@ function jsonRequest(url: string, body: unknown): Request {
 }
 
 beforeEach(() => {
-  directory = mkdtempSync(join(tmpdir(), "cockpit-members-api-"));
-  databasePath = join(directory, "cockpit.sqlite");
+  databasePath = memoryDatabasePath();
   process.env.COCKPIT_DB_PATH = databasePath;
 });
 
 afterEach(() => {
   delete process.env.COCKPIT_DB_PATH;
-  rmSync(directory, { force: true, recursive: true });
 });
 
 describe("project members API", () => {

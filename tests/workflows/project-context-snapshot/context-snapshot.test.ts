@@ -10,6 +10,7 @@ import {
 import { createMission } from "@/src/composition/mission-commands";
 import { createProject } from "@/src/adapters/outbound/sqlite/project-workspace/projects";
 import { openDatabase } from "@/src/adapters/outbound/sqlite/connection";
+import { memoryDatabasePath } from "@/tests/fixtures/sqlite/memory-database";
 
 type ContextSnapshot = {
   schemaVersion: 1;
@@ -164,7 +165,7 @@ function collectKeysAndStrings(
 
 beforeEach(() => {
   directory = mkdtempSync(join(tmpdir(), "cockpit-context-snapshot-"));
-  databasePath = join(directory, "cockpit.sqlite");
+  databasePath = memoryDatabasePath();
 });
 
 afterEach(() => {

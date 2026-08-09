@@ -1,12 +1,10 @@
 import { createServer, type Server } from "node:http";
-import { mkdtempSync, rmSync } from "node:fs";
-import { tmpdir } from "node:os";
-import { join } from "node:path";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
 import { createCredentialVault } from "@/src/modules/identity-capability/internal/credential-vault";
 import { openDatabase } from "@/src/adapters/outbound/sqlite/connection";
 import { seedCurrentAdvanceFixture as seedV7AdvanceFixture } from "@/tests/fixtures/collaboration/current-advance";
+import { memoryDatabasePath } from "@/tests/fixtures/sqlite/memory-database";
 
 type AdvanceRoute = {
   POST(
@@ -29,7 +27,6 @@ const OPERATION_ID = "00000000-0000-4000-8000-000000002100";
 const API_KEY = "provider-secret-route";
 const PRIVATE_PROMPT = "PRIVATE_AGENT_PROMPT_ROUTE";
 
-let directory: string;
 let databasePath: string;
 let provider: Server;
 let providerBaseUrl: string;
@@ -159,8 +156,7 @@ function collaborationPersistence(): string {
 }
 
 beforeEach(async () => {
-  directory = mkdtempSync(join(tmpdir(), "cockpit-advance-api-"));
-  databasePath = join(directory, "cockpit.sqlite");
+  databasePath = memoryDatabasePath();
   process.env.COCKPIT_DB_PATH = databasePath;
   process.env.COCKPIT_MASTER_KEY = Buffer.alloc(32, 21).toString("base64url");
   providerRequests = [];
@@ -190,7 +186,6 @@ afterEach(async () => {
   );
   delete process.env.COCKPIT_DB_PATH;
   delete process.env.COCKPIT_MASTER_KEY;
-  rmSync(directory, { force: true, recursive: true });
 });
 
 describe("collaboration advance route", () => {

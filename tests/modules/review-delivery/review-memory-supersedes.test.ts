@@ -1,7 +1,5 @@
 import { createHash } from "node:crypto";
-import { mkdtempSync, rmSync } from "node:fs";
-import { tmpdir } from "node:os";
-import { join } from "node:path";
+
 import { DatabaseSync } from "node:sqlite";
 import { afterEach, beforeEach, describe, expect, it } from "vitest";
 
@@ -11,9 +9,9 @@ import {
   finalizeCheckpointedReview,
   type ReviewFinalizeStep,
 } from "@/src/adapters/outbound/sqlite/review-delivery/review-finalizer";
+import { memoryDatabasePath } from "@/tests/fixtures/sqlite/memory-database";
 
 const NOW = "2026-08-01T10:00:00.000Z";
-let directory: string;
 let databasePath: string;
 let database: DatabaseSync;
 
@@ -249,15 +247,13 @@ function expectCode(action: () => void, code: string): void {
 }
 
 beforeEach(() => {
-  directory = mkdtempSync(join(tmpdir(), "review-memory-supersedes-"));
-  databasePath = join(directory, "cockpit.sqlite");
+  databasePath = memoryDatabasePath();
   database = openDatabase(databasePath);
   seedBase();
 });
 
 afterEach(() => {
   if (database.isOpen) database.close();
-  rmSync(directory, { force: true, recursive: true });
 });
 
 describe("review memory immutable supersedes chains", () => {

@@ -22,6 +22,7 @@ import {
   validateFixtureDatabase,
 } from "@/tests/fixtures/execution/current-graph";
 import { refreshExecutionFrozenFixture } from "@/tests/fixtures/execution/frozen-input";
+import { memoryDatabasePath } from "@/tests/fixtures/sqlite/memory-database";
 
 vi.mock("server-only", () => ({}));
 
@@ -362,7 +363,7 @@ async function createFixture(label = "happy") {
   writeFileSync(join(sandboxRoot, "src/a.txt"), "new-a");
   writeFileSync(join(sandboxRoot, "src/z.txt"), "new-z");
 
-  const databasePath = join(root, "cockpit.sqlite");
+  const databasePath = memoryDatabasePath();
   const database = openDatabase(databasePath);
   try {
     seedDatabase(databasePath, database, { sandboxRoot, workspaceRoot });

@@ -1,5 +1,3 @@
-import { mkdtempSync, rmSync } from "node:fs";
-import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
@@ -9,6 +7,7 @@ import { createCredentialVault } from "@/src/modules/identity-capability/interna
 import { openDatabase } from "@/src/adapters/outbound/sqlite/connection";
 import type { ModelCallResult } from "@/src/shared/collaboration-contracts";
 import { seedCurrentAdvanceFixture as seedV7AdvanceFixture } from "@/tests/fixtures/collaboration/current-advance";
+import { memoryDatabasePath } from "@/tests/fixtures/sqlite/memory-database";
 
 vi.mock("@/src/adapters/outbound/model-runtime/openai-chat-client", () => ({
   callOpenAiChat: vi.fn(),
@@ -104,7 +103,6 @@ function turnWith(field: TextField, value: string): string {
 }
 
 describe("AgentTurn public-text credential rejection", () => {
-  let directory: string;
   let databasePath: string;
   let threadId: string;
   let consoleError: ReturnType<typeof vi.spyOn>;
@@ -190,8 +188,7 @@ describe("AgentTurn public-text credential rejection", () => {
 
   beforeEach(() => {
     mockedCall.mockReset();
-    directory = mkdtempSync(join(tmpdir(), "agent-turn-credential-"));
-    databasePath = join(directory, "cockpit.sqlite");
+    databasePath = memoryDatabasePath();
     process.env.COCKPIT_DB_PATH = databasePath;
     process.env.COCKPIT_MASTER_KEY = Buffer.alloc(32, 21).toString("base64url");
     consoleError = vi.spyOn(console, "error").mockImplementation(() => undefined);
@@ -235,7 +232,6 @@ describe("AgentTurn public-text credential rejection", () => {
     consoleError.mockRestore();
     delete process.env.COCKPIT_DB_PATH;
     delete process.env.COCKPIT_MASTER_KEY;
-    rmSync(directory, { force: true, recursive: true });
   });
 
   const fields: TextField[] = [

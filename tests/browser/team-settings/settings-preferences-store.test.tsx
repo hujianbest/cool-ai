@@ -1,3 +1,4 @@
+// @vitest-environment jsdom
 import { render, screen, waitFor } from "@testing-library/react";
 import { pathToFileURL } from "node:url";
 import { join } from "node:path";

@@ -1,6 +1,5 @@
 import { randomUUID } from "node:crypto";
-import { mkdtempSync, rmSync } from "node:fs";
-import { tmpdir } from "node:os";
+
 import { join } from "node:path";
 
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
@@ -19,11 +18,11 @@ import {
 import { createCredentialVault } from "@/src/modules/identity-capability/internal/credential-vault";
 import { openDatabase } from "@/src/adapters/outbound/sqlite/connection";
 import { createMission } from "@/src/composition/mission-commands";
+import { memoryDatabasePath } from "@/tests/fixtures/sqlite/memory-database";
 
 const NOW = "2026-08-08T08:00:00.000Z";
 const MASTER_KEY = Buffer.alloc(32, 23).toString("base64url");
 
-let directory: string;
 let databasePath: string;
 let operationSequence: number;
 
@@ -138,15 +137,13 @@ beforeEach(() => {
   vi.useFakeTimers();
   vi.setSystemTime(new Date(NOW));
   process.env.COCKPIT_MASTER_KEY = MASTER_KEY;
-  directory = mkdtempSync(join(tmpdir(), "multi-thread-run-lifecycle-"));
-  databasePath = join(directory, "cockpit.sqlite");
+  databasePath = memoryDatabasePath();
   operationSequence = 2300;
 });
 
 afterEach(() => {
   vi.useRealTimers();
   delete process.env.COCKPIT_MASTER_KEY;
-  rmSync(directory, { force: true, recursive: true });
 });
 
 describe("approved multi-thread CollaborationRun lifecycle", () => {

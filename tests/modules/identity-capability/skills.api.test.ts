@@ -1,9 +1,7 @@
-import { mkdtempSync, rmSync } from "node:fs";
-import { tmpdir } from "node:os";
-import { join } from "node:path";
 import { afterEach, beforeEach, describe, expect, it } from "vitest";
 
 import * as collectionRoute from "@/app/api/skills/route";
+import { memoryDatabasePath } from "@/tests/fixtures/sqlite/memory-database";
 
 type ItemRoute = {
   PATCH: (
@@ -13,7 +11,6 @@ type ItemRoute = {
 };
 
 const itemRoutes = import.meta.glob<ItemRoute>("../../../app/api/skills/[skillId]/route.ts");
-let directory: string;
 
 async function loadItemRoute(): Promise<ItemRoute> {
   const load = itemRoutes["../../../app/api/skills/[skillId]/route.ts"];
@@ -30,13 +27,11 @@ function request(url: string, body: unknown, method = "POST"): Request {
 }
 
 beforeEach(() => {
-  directory = mkdtempSync(join(tmpdir(), "cockpit-skills-api-"));
-  process.env.COCKPIT_DB_PATH = join(directory, "cockpit.sqlite");
+  process.env.COCKPIT_DB_PATH = memoryDatabasePath();
 });
 
 afterEach(() => {
   delete process.env.COCKPIT_DB_PATH;
-  rmSync(directory, { force: true, recursive: true });
 });
 
 describe("skill API", () => {

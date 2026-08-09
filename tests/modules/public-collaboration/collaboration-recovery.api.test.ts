@@ -1,6 +1,3 @@
-import { mkdtempSync, rmSync } from "node:fs";
-import { tmpdir } from "node:os";
-import { join } from "node:path";
 import { afterEach, beforeEach, describe, expect, it } from "vitest";
 
 import { acquireAdvance } from "@/src/adapters/outbound/sqlite/public-collaboration/turn-orchestrator";
@@ -11,6 +8,7 @@ import {
 import { createCredentialVault } from "@/src/modules/identity-capability/internal/credential-vault";
 import { seedMissionInitializationForMission as initializeMissionDeliveryTx } from "@/tests/fixtures/review/mission-initialization";
 import { openDatabase } from "@/src/adapters/outbound/sqlite/connection";
+import { memoryDatabasePath } from "@/tests/fixtures/sqlite/memory-database";
 
 type GetRoute = {
   GET(
@@ -38,7 +36,6 @@ const AGENT_ID = "agent-recovery-api";
 const NOW = "2026-07-30T01:00:00.000Z";
 const ADVANCE_ID = "00000000-0000-4000-8000-000000001200";
 
-let directory: string;
 let databasePath: string;
 let uuid = 0;
 
@@ -215,8 +212,7 @@ function state() {
 }
 
 beforeEach(() => {
-  directory = mkdtempSync(join(tmpdir(), "collaboration-recovery-api-"));
-  databasePath = join(directory, "cockpit.sqlite");
+  databasePath = memoryDatabasePath();
   process.env.COCKPIT_DB_PATH = databasePath;
   process.env.COCKPIT_MASTER_KEY = Buffer.alloc(32, 31).toString("base64url");
   uuid = 0;
@@ -226,7 +222,6 @@ beforeEach(() => {
 afterEach(() => {
   delete process.env.COCKPIT_DB_PATH;
   delete process.env.COCKPIT_MASTER_KEY;
-  rmSync(directory, { force: true, recursive: true });
 });
 
 describe("collaboration recovery API triggers", () => {

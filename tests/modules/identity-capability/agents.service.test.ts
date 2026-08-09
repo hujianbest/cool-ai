@@ -1,11 +1,11 @@
-import { mkdtempSync, rmSync } from "node:fs";
-import { tmpdir } from "node:os";
-import { join } from "node:path";
+
+
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
 import { createCredentialVault } from "@/src/modules/identity-capability/internal/credential-vault";
 import { openDatabase } from "@/src/adapters/outbound/sqlite/connection";
 import { createSkill } from "@/src/adapters/outbound/sqlite/identity-capability/skill-service";
+import { memoryDatabasePath } from "@/tests/fixtures/sqlite/memory-database";
 
 type AgentInput = {
   accentToken: "sage" | "terracotta" | "gold" | "slate" | "rose" | "olive";
@@ -51,7 +51,6 @@ type AgentServiceModule = {
 const serviceModules =
   import.meta.glob<AgentServiceModule>("../../../src/adapters/outbound/sqlite/identity-capability/agent-service.ts");
 const MASTER_KEY = Buffer.alloc(32, 21).toString("base64url");
-let directory: string;
 let databasePath: string;
 
 async function loadService(): Promise<AgentServiceModule> {
@@ -131,15 +130,13 @@ function expectCode(operation: () => unknown, code: string): void {
 }
 
 beforeEach(() => {
-  directory = mkdtempSync(join(tmpdir(), "cockpit-agents-service-"));
-  databasePath = join(directory, "cockpit.sqlite");
+  databasePath = memoryDatabasePath();
   process.env.COCKPIT_MASTER_KEY = MASTER_KEY;
 });
 
 afterEach(() => {
   delete process.env.COCKPIT_MASTER_KEY;
   vi.useRealTimers();
-  rmSync(directory, { force: true, recursive: true });
 });
 
 describe("Agent templates", () => {

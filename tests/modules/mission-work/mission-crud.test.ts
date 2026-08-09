@@ -1,10 +1,8 @@
-import { mkdtempSync, rmSync } from "node:fs";
-import { tmpdir } from "node:os";
-import { join } from "node:path";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
 import { openDatabase } from "@/src/adapters/outbound/sqlite/connection";
 import { createProject } from "@/src/adapters/outbound/sqlite/project-workspace/projects";
+import { memoryDatabasePath } from "@/tests/fixtures/sqlite/memory-database";
 
 type Mission = {
   id: string;
@@ -104,7 +102,6 @@ const workItemsRouteModules =
 const workItemRouteModules =
   import.meta.glob<WorkItemRoute>("../../../app/api/work-items/[workItemId]/route.ts");
 
-let directory: string;
 let databasePath: string;
 
 async function service(): Promise<MissionServiceModule> {
@@ -183,15 +180,13 @@ function request(url: string, body: unknown, method: "POST" | "PATCH"): Request 
 }
 
 beforeEach(() => {
-  directory = mkdtempSync(join(tmpdir(), "cockpit-mission-crud-"));
-  databasePath = join(directory, "cockpit.sqlite");
+  databasePath = memoryDatabasePath();
   process.env.COCKPIT_DB_PATH = databasePath;
 });
 
 afterEach(() => {
   delete process.env.COCKPIT_DB_PATH;
   vi.useRealTimers();
-  rmSync(directory, { force: true, recursive: true });
 });
 
 describe("mission and basic work-item service", () => {

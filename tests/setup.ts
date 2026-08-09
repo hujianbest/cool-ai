@@ -27,6 +27,9 @@ vi.mock("next/navigation", () => ({
 }));
 
 afterEach(() => {
+  if (typeof window === "undefined") {
+    return;
+  }
   cleanup();
   window.history.replaceState(null, "", "/");
 });

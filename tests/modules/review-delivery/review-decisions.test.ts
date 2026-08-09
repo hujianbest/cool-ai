@@ -1,11 +1,10 @@
 import { createHash } from "node:crypto";
-import { mkdtempSync, rmSync } from "node:fs";
-import { tmpdir } from "node:os";
-import { join } from "node:path";
+
 import type { DatabaseSync } from "node:sqlite";
 import { afterEach, beforeEach, describe, expect, it } from "vitest";
 
 import { openDatabase } from "@/src/adapters/outbound/sqlite/connection";
+import { memoryDatabasePath } from "@/tests/fixtures/sqlite/memory-database";
 
 type FinalizerModule = {
   finalizeCheckpointedReview?: (
@@ -28,7 +27,6 @@ const modules = import.meta.glob<FinalizerModule>(
   "../../../src/adapters/outbound/sqlite/review-delivery/review-finalizer.ts",
 );
 const NOW = "2026-08-01T07:00:00.000Z";
-let directory: string;
 let database: DatabaseSync;
 
 function canonicalize(value: unknown): unknown {
@@ -133,14 +131,12 @@ async function finalizer() {
 }
 
 beforeEach(() => {
-  directory = mkdtempSync(join(tmpdir(), "review-decisions-"));
-  database = openDatabase(join(directory, "cockpit.sqlite"));
+  database = openDatabase(memoryDatabasePath());
   seed();
 });
 
 afterEach(() => {
   database.close();
-  rmSync(directory, { force: true, recursive: true });
 });
 
 describe("checkpointed reject/pass decisions", () => {

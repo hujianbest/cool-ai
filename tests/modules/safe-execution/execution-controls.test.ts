@@ -10,6 +10,7 @@ import {
   controlExecution,
   type ExecutionControlDependencies,
 } from "@/src/adapters/outbound/sqlite/safe-execution/execution-control-service";
+import { memoryDatabasePath } from "@/tests/fixtures/sqlite/memory-database";
 
 const PROJECT_ID = "control-project";
 const OTHER_PROJECT_ID = "control-project-other";
@@ -178,7 +179,7 @@ function row(
 
 beforeEach(() => {
   directory = mkdtempSync(join(tmpdir(), "cool-ai-execution-controls-"));
-  databasePath = join(directory, "cockpit.sqlite");
+  databasePath = memoryDatabasePath();
   database = openDatabase(databasePath);
   seed();
   terminate = vi.fn<(actionId: string) => boolean>(() => true);

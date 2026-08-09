@@ -1,10 +1,10 @@
-import { mkdtempSync, rmSync } from "node:fs";
-import { tmpdir } from "node:os";
-import { join } from "node:path";
+
+
 import { afterEach, beforeEach, describe, expect, it } from "vitest";
 
 import { createMemory, listMemories } from "@/src/adapters/outbound/sqlite/knowledge-provenance/memory-service";
 import { createProject } from "@/src/adapters/outbound/sqlite/project-workspace/projects";
+import { memoryDatabasePath } from "@/tests/fixtures/sqlite/memory-database";
 
 type MemoryContractsModule = {
   memoryEntryV6Schema: {
@@ -16,16 +16,13 @@ const contractModules = import.meta.glob<MemoryContractsModule>(
   "../../../src/shared/memory-contracts.ts",
 );
 
-let directory: string;
 let databasePath: string;
 
 beforeEach(() => {
-  directory = mkdtempSync(join(tmpdir(), "memory-v6-contracts-"));
-  databasePath = join(directory, "cockpit.sqlite");
+  databasePath = memoryDatabasePath();
 });
 
 afterEach(() => {
-  rmSync(directory, { force: true, recursive: true });
 });
 
 async function contracts(): Promise<MemoryContractsModule> {

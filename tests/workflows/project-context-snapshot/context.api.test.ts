@@ -5,6 +5,7 @@ import { afterEach, beforeEach, describe, expect, it } from "vitest";
 
 import { createMission } from "@/src/composition/mission-commands";
 import { createProject } from "@/src/adapters/outbound/sqlite/project-workspace/projects";
+import { memoryDatabasePath } from "@/tests/fixtures/sqlite/memory-database";
 import { openDatabase } from "@/src/adapters/outbound/sqlite/connection";
 
 type ContextRoute = {
@@ -85,7 +86,7 @@ function bindWorkspace(projectId: string): void {
 
 beforeEach(() => {
   directory = mkdtempSync(join(tmpdir(), "cockpit-context-api-"));
-  databasePath = join(directory, "cockpit.sqlite");
+  databasePath = memoryDatabasePath();
   process.env.COCKPIT_DB_PATH = databasePath;
 });
 

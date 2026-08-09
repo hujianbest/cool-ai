@@ -1,6 +1,5 @@
-import { mkdtempSync, rmSync } from "node:fs";
-import { tmpdir } from "node:os";
-import { join } from "node:path";
+
+
 import type { DatabaseSync } from "node:sqlite";
 import { afterEach, beforeEach, describe, expect, it } from "vitest";
 
@@ -9,6 +8,7 @@ import { listMemoriesInDatabase } from "@/src/adapters/outbound/sqlite/knowledge
 import { createWorkItem } from "@/src/adapters/outbound/sqlite/mission-work/mission-service";
 import { createMission } from "@/src/composition/mission-commands";
 import { createProject } from "@/src/adapters/outbound/sqlite/project-workspace/projects";
+import { memoryDatabasePath } from "@/tests/fixtures/sqlite/memory-database";
 
 type SourceResolverModule = {
   resolveMemorySource(
@@ -30,7 +30,6 @@ const NOW = "2026-08-01T09:00:00.000Z";
 const HASH_A = "a".repeat(64);
 const HASH_B = "b".repeat(64);
 
-let directory: string;
 let databasePath: string;
 let database: DatabaseSync;
 
@@ -51,8 +50,7 @@ async function resolver(): Promise<SourceResolverModule["resolveMemorySource"]> 
 }
 
 beforeEach(() => {
-  directory = mkdtempSync(join(tmpdir(), "memory-source-navigation-"));
-  databasePath = join(directory, "cockpit.sqlite");
+  databasePath = memoryDatabasePath();
   const project = createProject("Sources", databasePath);
   const mission = createMission(databasePath, project.id, {
     expectedVersion: 0,
@@ -137,7 +135,6 @@ beforeEach(() => {
 
 afterEach(() => {
   database.close();
-  rmSync(directory, { force: true, recursive: true });
 });
 
 describe("memory source resolver", () => {

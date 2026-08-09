@@ -1,12 +1,11 @@
 import { createHash } from "node:crypto";
-import { mkdtempSync, rmSync } from "node:fs";
-import { tmpdir } from "node:os";
-import { join } from "node:path";
+
 import type { DatabaseSync } from "node:sqlite";
 import { afterEach, beforeEach, describe, expect, it } from "vitest";
 
 import { openDatabase } from "@/src/adapters/outbound/sqlite/connection";
 import { finalizeCheckpointedReview } from "@/src/adapters/outbound/sqlite/review-delivery/review-finalizer";
+import { memoryDatabasePath } from "@/tests/fixtures/sqlite/memory-database";
 
 type EscalationService = {
   answerEscalation?: (
@@ -31,7 +30,6 @@ const serviceModules = import.meta.glob<EscalationService>(
 );
 
 const NOW = "2026-08-01T08:00:00.000Z";
-let directory: string;
 let database: DatabaseSync;
 
 function canonicalize(value: unknown): unknown {
@@ -150,13 +148,11 @@ async function escalationService(): Promise<EscalationService> {
 }
 
 beforeEach(() => {
-  directory = mkdtempSync(join(tmpdir(), "review-escalation-"));
-  database = openDatabase(join(directory, "cockpit.sqlite"));
+  database = openDatabase(memoryDatabasePath());
 });
 
 afterEach(() => {
   database.close();
-  rmSync(directory, { recursive: true, force: true });
 });
 
 describe("review escalation issue and owner answer", () => {

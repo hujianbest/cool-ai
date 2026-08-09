@@ -1,7 +1,5 @@
 import { createHash } from "node:crypto";
-import { mkdtempSync, rmSync } from "node:fs";
-import { tmpdir } from "node:os";
-import { join } from "node:path";
+
 import { DatabaseSync } from "node:sqlite";
 import canonicalize from "canonicalize";
 
@@ -20,12 +18,12 @@ import {
 import { appendStructuredMessage } from "@/src/adapters/outbound/sqlite/public-collaboration/structured-message-store";
 import { seedCurrentAdvanceFixture as seedV7AdvanceFixture } from "@/tests/fixtures/collaboration/current-advance";
 import { currentSchemaObjectSql } from "@/tests/fixtures/current-schema-object";
+import { memoryDatabasePath } from "@/tests/fixtures/sqlite/memory-database";
 
 const NOW = "2026-08-09T05:15:00.000Z";
 const COMPLETED_OPERATION = "00000000-0000-4000-8000-000000001501";
 const CONFLICT_OPERATION = "00000000-0000-4000-8000-000000001502";
 
-let directory: string;
 let databasePath: string;
 let tuple: {
   blockId: string;
@@ -219,8 +217,7 @@ function corrupt(kind: CorruptionKind): void {
 }
 
 beforeEach(() => {
-  directory = mkdtempSync(join(tmpdir(), "structured-reopen-"));
-  databasePath = join(directory, "cockpit.sqlite");
+  databasePath = memoryDatabasePath();
   const projectId = "project-reopen";
   const runId = "run-reopen";
   const threadId = seedV7AdvanceFixture(databasePath, {
@@ -276,8 +273,6 @@ beforeEach(() => {
     operationId: CONFLICT_OPERATION,
   }));
 });
-
-afterEach(() => rmSync(directory, { force: true, recursive: true }));
 
 describe("Structured Message migration/reopen persistence seam", () => {
   it("preserves paginated facts, messages, and durable operation outcomes across repeated process reopen", () => {

@@ -1,6 +1,4 @@
-import { mkdtempSync, rmSync } from "node:fs";
-import { tmpdir } from "node:os";
-import { join } from "node:path";
+
 
 import { afterEach, beforeEach, describe, expect, it } from "vitest";
 
@@ -12,6 +10,7 @@ import {
 import { openDatabase } from "@/src/adapters/outbound/sqlite/connection";
 import { validateCurrentSchema } from "@/src/adapters/outbound/sqlite/validate-current-schema";
 import { seedCurrentAdvanceFixture as seedV7AdvanceFixture } from "@/tests/fixtures/collaboration/current-advance";
+import { memoryDatabasePath } from "@/tests/fixtures/sqlite/memory-database";
 
 type DecisionModule = {
   INLINE_DECISION_STEPS: readonly string[];
@@ -39,7 +38,6 @@ const modules = import.meta.glob<DecisionModule>(
 
 const NOW = "2026-08-09T01:00:00.000Z";
 const OPERATION = "00000000-0000-4000-8000-000000000901";
-let directory: string;
 let databasePath: string;
 let generatedId: number;
 let tuple: {
@@ -133,8 +131,7 @@ function createChecklist() {
 
 beforeEach(() => {
   generatedId = 0;
-  directory = mkdtempSync(join(tmpdir(), "inline-decision-"));
-  databasePath = join(directory, "cockpit.sqlite");
+  databasePath = memoryDatabasePath();
   const projectId = "project-inline";
   const runId = "run-inline";
   const threadId = seedV7AdvanceFixture(databasePath, {
@@ -180,8 +177,6 @@ beforeEach(() => {
   database.close();
   tuple = { blockId: block.id, messageId, projectId, runId, threadId };
 });
-
-afterEach(() => rmSync(directory, { force: true, recursive: true }));
 
 describe("Proposal Inline Decision public domain seam", () => {
   it("atomically accepts an exact pending Proposal and returns its unique business receipt", async () => {

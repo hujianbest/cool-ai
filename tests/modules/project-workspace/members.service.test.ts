@@ -1,12 +1,12 @@
-import { mkdtempSync, rmSync } from "node:fs";
-import { tmpdir } from "node:os";
-import { join } from "node:path";
+
+
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
 import { openDatabase } from "@/src/adapters/outbound/sqlite/connection";
 import { createWorkItem } from "@/src/adapters/outbound/sqlite/mission-work/mission-service";
 import { createMission } from "@/src/composition/mission-commands";
 import { createProject } from "@/src/adapters/outbound/sqlite/project-workspace/projects";
+import { memoryDatabasePath } from "@/tests/fixtures/sqlite/memory-database";
 
 type ProjectMember = {
   agentId: string;
@@ -41,7 +41,6 @@ type MembershipServiceModule = {
 const serviceModules =
   import.meta.glob<MembershipServiceModule>("../../../src/adapters/outbound/sqlite/project-workspace/membership-service.ts");
 
-let directory: string;
 let databasePath: string;
 
 async function loadService(): Promise<MembershipServiceModule> {
@@ -95,13 +94,11 @@ function expectServiceError(operation: () => unknown, code: string): void {
 }
 
 beforeEach(() => {
-  directory = mkdtempSync(join(tmpdir(), "cockpit-members-service-"));
-  databasePath = join(directory, "cockpit.sqlite");
+  databasePath = memoryDatabasePath();
 });
 
 afterEach(() => {
   vi.useRealTimers();
-  rmSync(directory, { force: true, recursive: true });
 });
 
 describe("project membership service", () => {

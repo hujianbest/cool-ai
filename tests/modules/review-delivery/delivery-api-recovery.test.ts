@@ -1,8 +1,7 @@
-import { mkdtempSync, rmSync } from "node:fs";
-import { tmpdir } from "node:os";
-import { join } from "node:path";
 import { DatabaseSync } from "node:sqlite";
-import { afterEach, describe, expect, it, vi } from "vitest";
+import { describe, expect, it, vi } from "vitest";
+
+import { rawMemoryDatabasePath } from "@/tests/fixtures/sqlite/memory-database";
 
 vi.mock("@/src/adapters/outbound/sqlite/connection", () => ({
   openDatabase(path: string) {
@@ -16,7 +15,6 @@ type ReadModule = typeof import("../../../src/adapters/outbound/sqlite/review-de
 const readModules = import.meta.glob<ReadModule>(
   "../../../src/adapters/outbound/sqlite/review-delivery/delivery-read-service.ts",
 );
-const roots: string[] = [];
 const NOW = "2026-08-01T10:00:00.000Z";
 const HASH = "a".repeat(64);
 
@@ -27,9 +25,7 @@ async function reads(): Promise<ReadModule> {
 }
 
 function database(): { database: DatabaseSync; path: string } {
-  const root = mkdtempSync(join(tmpdir(), "delivery-api-recovery-"));
-  roots.push(root);
-  const path = join(root, "delivery.sqlite");
+  const path = rawMemoryDatabasePath();
   const database = new DatabaseSync(path);
   database.exec(`
     CREATE TABLE missions(id TEXT PRIMARY KEY,project_id TEXT NOT NULL);
@@ -79,10 +75,6 @@ function database(): { database: DatabaseSync; path: string } {
   `);
   return { database, path };
 }
-
-afterEach(() => {
-  for (const root of roots.splice(0)) rmSync(root, { force: true, recursive: true });
-});
 
 describe("delivery API recovery reads", () => {
   it("restores explicit retry progress and immutable invalidated history after restart", async () => {

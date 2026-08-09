@@ -1,11 +1,9 @@
-import { mkdtempSync, rmSync } from "node:fs";
-import { tmpdir } from "node:os";
-import { join } from "node:path";
 import { afterEach, beforeEach, describe, expect, it } from "vitest";
 
 import { createCredentialVault } from "@/src/modules/identity-capability/internal/credential-vault";
 import { openDatabase } from "@/src/adapters/outbound/sqlite/connection";
 import { createSkill } from "@/src/adapters/outbound/sqlite/identity-capability/skill-service";
+import { memoryDatabasePath } from "@/tests/fixtures/sqlite/memory-database";
 
 type CollectionRoute = {
   GET(): Promise<Response>;
@@ -28,7 +26,6 @@ const itemRoutes =
 const templateRoutes =
   import.meta.glob<TemplateRoute>("../../../app/api/agent-templates/route.ts");
 const MASTER_KEY = Buffer.alloc(32, 22).toString("base64url");
-let directory: string;
 let databasePath: string;
 
 async function routes() {
@@ -117,8 +114,7 @@ function validInput(providerId: string, skillIds: string[]) {
 }
 
 beforeEach(() => {
-  directory = mkdtempSync(join(tmpdir(), "cockpit-agents-api-"));
-  databasePath = join(directory, "cockpit.sqlite");
+  databasePath = memoryDatabasePath();
   process.env.COCKPIT_DB_PATH = databasePath;
   process.env.COCKPIT_MASTER_KEY = MASTER_KEY;
 });
@@ -126,7 +122,6 @@ beforeEach(() => {
 afterEach(() => {
   delete process.env.COCKPIT_DB_PATH;
   delete process.env.COCKPIT_MASTER_KEY;
-  rmSync(directory, { force: true, recursive: true });
 });
 
 describe("Agent API", () => {

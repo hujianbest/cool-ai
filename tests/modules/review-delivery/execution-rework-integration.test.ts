@@ -1,11 +1,11 @@
-import { mkdtempSync, rmSync } from "node:fs";
-import { tmpdir } from "node:os";
-import { join } from "node:path";
+
+
 import type { DatabaseSync } from "node:sqlite";
 import { afterEach, describe, expect, it } from "vitest";
 
 import { openDatabase } from "@/src/adapters/outbound/sqlite/connection";
 import * as reviewSlice from "@/src/adapters/outbound/sqlite/review-delivery/review-slice-service";
+import { memoryDatabasePath } from "@/tests/fixtures/sqlite/memory-database";
 
 type ResultInput = {
   executionId: string;
@@ -123,21 +123,15 @@ function seed(database: DatabaseSync): void {
 }
 
 describe("execution rework result integration", () => {
-  const directories: string[] = [];
 
   afterEach(() => {
-    for (const directory of directories.splice(0)) {
-      rmSync(directory, { force: true, recursive: true });
-    }
   });
 
   it("keeps merged executions terminal while moving only the result head", () => {
     expect(rework.initializeFirstResultHeadTx).toBeTypeOf("function");
     expect(rework.requestResultReworkTx).toBeTypeOf("function");
     expect(rework.advanceResultHeadTx).toBeTypeOf("function");
-    const directory = mkdtempSync(join(tmpdir(), "execution-rework-"));
-    directories.push(directory);
-    const database = openDatabase(join(directory, "cockpit.sqlite"));
+    const database = openDatabase(memoryDatabasePath());
     seed(database);
 
     database.exec("BEGIN IMMEDIATE");
@@ -184,9 +178,7 @@ describe("execution rework result integration", () => {
     expect(rework.initializeFirstResultHeadTx).toBeTypeOf("function");
     expect(rework.requestResultReworkTx).toBeTypeOf("function");
     expect(rework.advanceResultHeadTx).toBeTypeOf("function");
-    const directory = mkdtempSync(join(tmpdir(), "execution-late-review-"));
-    directories.push(directory);
-    const database = openDatabase(join(directory, "cockpit.sqlite"));
+    const database = openDatabase(memoryDatabasePath());
     seed(database);
 
     database.exec("BEGIN IMMEDIATE");

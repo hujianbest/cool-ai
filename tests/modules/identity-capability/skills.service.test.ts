@@ -1,9 +1,9 @@
-import { mkdtempSync, rmSync } from "node:fs";
-import { tmpdir } from "node:os";
-import { join } from "node:path";
+
+
 import { afterEach, describe, expect, it, vi } from "vitest";
 
 import * as skillServiceModule from "@/src/adapters/outbound/sqlite/identity-capability/skill-service";
+import { memoryDatabasePath } from "@/tests/fixtures/sqlite/memory-database";
 
 type SkillInput = {
   description: string;
@@ -19,12 +19,8 @@ type SkillService = typeof skillServiceModule & {
   ) => ReturnType<typeof skillServiceModule.createSkill>;
 };
 
-const temporaryDirectories: string[] = [];
-
 function databasePath(): string {
-  const directory = mkdtempSync(join(tmpdir(), "cockpit-skills-service-"));
-  temporaryDirectories.push(directory);
-  return join(directory, "cockpit.sqlite");
+  return memoryDatabasePath();
 }
 
 function service(): SkillService {
@@ -50,9 +46,6 @@ function expectCode(operation: () => unknown, code: string): void {
 
 afterEach(() => {
   vi.useRealTimers();
-  for (const directory of temporaryDirectories.splice(0)) {
-    rmSync(directory, { force: true, recursive: true });
-  }
 });
 
 describe("skill service", () => {

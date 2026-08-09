@@ -1,6 +1,3 @@
-import { mkdtempSync, rmSync } from "node:fs";
-import { tmpdir } from "node:os";
-import { join } from "node:path";
 import { afterEach, beforeEach, describe, expect, it } from "vitest";
 
 import * as runService from "@/src/adapters/outbound/sqlite/public-collaboration/run-service";
@@ -9,6 +6,7 @@ import { createThread } from "@/src/adapters/outbound/sqlite/public-collaboratio
 import { createCredentialVault } from "@/src/modules/identity-capability/internal/credential-vault";
 import { openDatabase } from "@/src/adapters/outbound/sqlite/connection";
 import { seedMissionInitializationForMission as initializeMissionDeliveryTx } from "@/tests/fixtures/review/mission-initialization";
+import { memoryDatabasePath } from "@/tests/fixtures/sqlite/memory-database";
 
 type ControlAction = "pause" | "continue" | "retry" | "stop";
 type ControlInput = {
@@ -40,7 +38,6 @@ const routeModules = import.meta.glob<ControlRoute>(
   "../../../app/api/projects/[projectId]/threads/[threadId]/runs/[runId]/control/route.ts",
 );
 
-let directory: string;
 let databasePath: string;
 let threadId: string;
 let runId: string;
@@ -280,8 +277,7 @@ async function post(input: ControlInput): Promise<Response> {
 }
 
 beforeEach(() => {
-  directory = mkdtempSync(join(tmpdir(), "collaboration-controls-"));
-  databasePath = join(directory, "cockpit.sqlite");
+  databasePath = memoryDatabasePath();
   process.env.COCKPIT_DB_PATH = databasePath;
   operationSequence = 400;
   seedReadyRun();
@@ -290,7 +286,6 @@ beforeEach(() => {
 afterEach(() => {
   delete process.env.COCKPIT_DB_PATH;
   delete process.env.COCKPIT_MASTER_KEY;
-  rmSync(directory, { force: true, recursive: true });
 });
 
 describe("collaboration run control service", () => {

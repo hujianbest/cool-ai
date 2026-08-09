@@ -1,6 +1,5 @@
-import { mkdtempSync, rmSync } from "node:fs";
-import { tmpdir } from "node:os";
-import { join } from "node:path";
+
+
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
 import { CollaborationError } from "@/src/modules/public-collaboration";
@@ -8,11 +7,11 @@ import { createThread } from "@/src/adapters/outbound/sqlite/public-collaboratio
 import { createCredentialVault } from "@/src/modules/identity-capability/internal/credential-vault";
 import { openDatabase } from "@/src/adapters/outbound/sqlite/connection";
 import { initializeMissingMissionHeads } from "@/tests/fixtures/execution/current-graph";
+import { memoryDatabasePath } from "@/tests/fixtures/sqlite/memory-database";
 
 const NOW = "2026-08-08T08:00:00.000Z";
 const OPERATION = "00000000-0000-4000-8000-000000000901";
 const MASTER_KEY = Buffer.alloc(32, 9).toString("base64url");
-let directory: string;
 let databasePath: string;
 
 type Selection =
@@ -214,15 +213,13 @@ beforeEach(() => {
   vi.useFakeTimers();
   vi.setSystemTime(new Date(NOW));
   process.env.COCKPIT_MASTER_KEY = MASTER_KEY;
-  directory = mkdtempSync(join(tmpdir(), "thread-readiness-"));
-  databasePath = join(directory, "cockpit.sqlite");
+  databasePath = memoryDatabasePath();
   seedProject();
 });
 
 afterEach(() => {
   vi.useRealTimers();
   delete process.env.COCKPIT_MASTER_KEY;
-  rmSync(directory, { force: true, recursive: true });
 });
 
 describe("thread policy availability and deterministic dispatch", () => {

@@ -1,7 +1,5 @@
 import { createHash } from "node:crypto";
-import { mkdtempSync, rmSync } from "node:fs";
-import { tmpdir } from "node:os";
-import { join } from "node:path";
+
 import { DatabaseSync } from "node:sqlite";
 import { afterEach, describe, expect, it } from "vitest";
 
@@ -9,6 +7,7 @@ import { openDatabase } from "@/src/adapters/outbound/sqlite/connection";
 import { createMission } from "@/src/composition/mission-commands";
 import { createProject } from "@/src/adapters/outbound/sqlite/project-workspace/projects";
 import { invalidateMissionContextTx } from "@/src/adapters/outbound/sqlite/review-delivery/delivery-service";
+import { memoryDatabasePath } from "@/tests/fixtures/sqlite/memory-database";
 
 type RecoveryModule = {
   assertReviewPersistenceInvariants?: (database: DatabaseSync) => void;
@@ -23,13 +22,10 @@ const recoveryModules = import.meta.glob<RecoveryModule>(
 );
 const NOW = "2026-08-01T11:00:00.000Z";
 const HASH = "b".repeat(64);
-const roots: string[] = [];
 const databases: DatabaseSync[] = [];
 
 function pathFor(label: string): string {
-  const root = mkdtempSync(join(tmpdir(), `review-restart-${label}-`));
-  roots.push(root);
-  return join(root, "cockpit.sqlite");
+  return memoryDatabasePath();
 }
 
 function track(database: DatabaseSync): DatabaseSync {
@@ -173,9 +169,6 @@ afterEach(() => {
     } catch {
       // A restart assertion may already have closed it.
     }
-  }
-  for (const root of roots.splice(0)) {
-    rmSync(root, { force: true, maxRetries: 3, recursive: true, retryDelay: 20 });
   }
 });
 

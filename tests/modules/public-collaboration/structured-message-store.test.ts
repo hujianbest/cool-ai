@@ -1,7 +1,4 @@
 import { createHash } from "node:crypto";
-import { mkdtempSync, rmSync } from "node:fs";
-import { tmpdir } from "node:os";
-import { join } from "node:path";
 
 import { afterEach, describe, expect, it } from "vitest";
 
@@ -9,6 +6,7 @@ import { readThreadFacts } from "@/src/adapters/outbound/sqlite/public-collabora
 import { openDatabase } from "@/src/adapters/outbound/sqlite/connection";
 import { reduceTranscript } from "@/src/shared/transcript-model";
 import { seedCurrentAdvanceFixture as seedV7AdvanceFixture } from "@/tests/fixtures/collaboration/current-advance";
+import { memoryDatabasePath } from "@/tests/fixtures/sqlite/memory-database";
 
 type StoreModule = {
   appendStructuredMessage: (databasePath: string, input: {
@@ -35,7 +33,6 @@ type StoreModule = {
 const modules = import.meta.glob<StoreModule>(
   "../../../src/adapters/outbound/sqlite/public-collaboration/structured-message-store.ts",
 );
-const directories: string[] = [];
 
 async function loadStore(): Promise<StoreModule> {
   const load = modules["../../../src/adapters/outbound/sqlite/public-collaboration/structured-message-store.ts"];
@@ -44,9 +41,7 @@ async function loadStore(): Promise<StoreModule> {
 }
 
 function fixture(): { path: string; projectId: string; runId: string; threadId: string } {
-  const directory = mkdtempSync(join(tmpdir(), "structured-message-store-"));
-  directories.push(directory);
-  const path = join(directory, "cockpit.sqlite");
+  const path = memoryDatabasePath();
   const projectId = "project-structured";
   const runId = "run-structured";
   const threadId = seedV7AdvanceFixture(path, {
@@ -67,9 +62,6 @@ function fixture(): { path: string; projectId: string; runId: string; threadId: 
 }
 
 afterEach(() => {
-  for (const directory of directories.splice(0)) {
-    rmSync(directory, { force: true, recursive: true });
-  }
 });
 
 describe("Structured Message Store public seam", () => {

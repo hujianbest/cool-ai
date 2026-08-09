@@ -1,6 +1,5 @@
-import { mkdtempSync, rmSync } from "node:fs";
-import { tmpdir } from "node:os";
-import { join } from "node:path";
+
+
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
 import type { AgentTurn } from "@/src/modules/public-collaboration";
@@ -19,6 +18,7 @@ import {
 } from "@/src/adapters/outbound/sqlite/public-collaboration/turn-orchestrator";
 import { openDatabase } from "@/src/adapters/outbound/sqlite/connection";
 import { createMission } from "@/src/composition/mission-commands";
+import { memoryDatabasePath } from "@/tests/fixtures/sqlite/memory-database";
 
 const NOW = "2026-07-30T06:30:00.000Z";
 const PROJECT_ID = "project-owner-decision-races";
@@ -28,7 +28,6 @@ const REVIEWER_ID = "agent-decision-reviewer";
 let threadId: string;
 
 let databasePath: string;
-let directory: string;
 let operationSequence: number;
 let uuidSequence: number;
 
@@ -159,8 +158,7 @@ function persistedState() {
 beforeEach(() => {
   vi.useFakeTimers();
   vi.setSystemTime(new Date(NOW));
-  directory = mkdtempSync(join(tmpdir(), "owner-decision-races-"));
-  databasePath = join(directory, "cockpit.sqlite");
+  databasePath = memoryDatabasePath();
   operationSequence = 1_800;
   uuidSequence = 0;
 
@@ -257,7 +255,6 @@ beforeEach(() => {
 
 afterEach(() => {
   vi.useRealTimers();
-  rmSync(directory, { force: true, recursive: true });
 });
 
 describe("calling owner messages and decision requests", () => {

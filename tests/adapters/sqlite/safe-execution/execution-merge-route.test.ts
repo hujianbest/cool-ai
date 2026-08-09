@@ -17,6 +17,7 @@ import { createWindowsVerifiedMergeAdapter } from "@/src/adapters/outbound/works
 import { saveValidationPolicy } from "@/src/adapters/outbound/sqlite/project-workspace/validation-policy-service";
 import { recoveryMergeFileStatuses } from "@/src/shared/execution-contracts";
 import { execV7Fixture } from "@/tests/fixtures/execution/current-graph";
+import { memoryDatabasePath } from "@/tests/fixtures/sqlite/memory-database";
 
 const PROJECT_ID = "merge-route-project";
 const RUN_ID = "merge-route-run";
@@ -334,7 +335,7 @@ beforeEach(() => {
   root = mkdtempSync(join(tmpdir(), "cool-ai-merge-route-"));
   workspace = join(root, "workspace");
   executionRoot = join(root, "executions");
-  databasePath = join(root, "cockpit.sqlite");
+  databasePath = memoryDatabasePath();
   mkdirSync(workspace);
   mkdirSync(join(workspace, "src"));
   mkdirSync(executionRoot);

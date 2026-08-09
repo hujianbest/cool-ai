@@ -1,10 +1,8 @@
-import { mkdtempSync, rmSync } from "node:fs";
-import { tmpdir } from "node:os";
-import { join } from "node:path";
 import { afterEach, beforeEach, describe, expect, it } from "vitest";
 
 import { openDatabase } from "@/src/adapters/outbound/sqlite/connection";
 import { createProject } from "@/src/adapters/outbound/sqlite/project-workspace/projects";
+import { memoryDatabasePath } from "@/tests/fixtures/sqlite/memory-database";
 
 type WorkItemStatus = "todo" | "in_progress" | "blocked" | "done";
 type WorkItem = {
@@ -60,7 +58,6 @@ const routeModules =
     "../../../app/api/work-items/[workItemId]/transition/route.ts",
   );
 
-let directory: string;
 let databasePath: string;
 
 async function service(): Promise<
@@ -140,14 +137,12 @@ function addDependency(workItemId: string, dependsOnId: string): void {
 }
 
 beforeEach(() => {
-  directory = mkdtempSync(join(tmpdir(), "cockpit-work-item-transition-"));
-  databasePath = join(directory, "cockpit.sqlite");
+  databasePath = memoryDatabasePath();
   process.env.COCKPIT_DB_PATH = databasePath;
 });
 
 afterEach(() => {
   delete process.env.COCKPIT_DB_PATH;
-  rmSync(directory, { force: true, recursive: true });
 });
 
 describe("work-item transition service", () => {

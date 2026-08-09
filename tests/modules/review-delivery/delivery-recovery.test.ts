@@ -1,6 +1,5 @@
-import { mkdtempSync, rmSync } from "node:fs";
-import { tmpdir } from "node:os";
-import { join } from "node:path";
+
+
 import { DatabaseSync } from "node:sqlite";
 import { afterEach, describe, expect, it } from "vitest";
 
@@ -14,10 +13,10 @@ import {
   reconcileDeliveryGeneration,
   type DeliveryBuildInput,
 } from "@/src/adapters/outbound/sqlite/review-delivery/delivery-service";
+import { memoryDatabasePath, rawMemoryDatabasePath } from "@/tests/fixtures/sqlite/memory-database";
 
 const NOW = new Date("2026-08-01T09:00:00.000Z");
 const HASH = "a".repeat(64);
-const directories: string[] = [];
 const databases: DatabaseSync[] = [];
 
 function buildInput(): DeliveryBuildInput {
@@ -136,16 +135,11 @@ function fixture(state: "ongoing" | "generating" = "ongoing"): DatabaseSync {
 
 afterEach(() => {
   for (const database of databases.splice(0)) database.close();
-  for (const directory of directories.splice(0)) {
-    rmSync(directory, { force: true, recursive: true });
-  }
 });
 
 describe("delivery invalidation and restart recovery", () => {
   it("atomically bumps context when mission title and goal change", () => {
-    const directory = mkdtempSync(join(tmpdir(), "delivery-context-"));
-    directories.push(directory);
-    const path = join(directory, "cockpit.sqlite");
+    const path = memoryDatabasePath();
     const project = createProject("Delivery context", path);
     const mission = createMission(path, project.id, {
       expectedVersion: 0,
@@ -229,9 +223,7 @@ describe("delivery invalidation and restart recovery", () => {
   });
 
   it("never generates on restart and requires explicit retry after lease expiry", () => {
-    const directory = mkdtempSync(join(tmpdir(), "delivery-restart-"));
-    directories.push(directory);
-    const path = join(directory, "delivery.sqlite");
+    const path = rawMemoryDatabasePath();
     let database = new DatabaseSync(path);
     createSchema(database);
     database.exec(`

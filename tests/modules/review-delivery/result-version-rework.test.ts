@@ -1,11 +1,11 @@
-import { mkdtempSync, rmSync } from "node:fs";
-import { tmpdir } from "node:os";
-import { join } from "node:path";
+
+
 import { DatabaseSync } from "node:sqlite";
 import { afterEach, beforeEach, describe, expect, it } from "vitest";
 
 import { openDatabase } from "@/src/adapters/outbound/sqlite/connection";
 import * as reviewSlice from "@/src/adapters/outbound/sqlite/review-delivery/review-slice-service";
+import { memoryDatabasePath } from "@/tests/fixtures/sqlite/memory-database";
 
 type ResultInput = {
   executionId: string;
@@ -53,7 +53,6 @@ type ResultVersionModule = {
 
 const resultVersions = reviewSlice as ResultVersionModule;
 const NOW = "2026-08-01T04:00:00.000Z";
-let directory: string;
 let database: DatabaseSync;
 let databasePath: string;
 
@@ -149,15 +148,13 @@ const input = (version: number): ResultInput => ({
 });
 
 beforeEach(() => {
-  directory = mkdtempSync(join(tmpdir(), "result-version-rework-"));
-  databasePath = join(directory, "cockpit.sqlite");
+  databasePath = memoryDatabasePath();
   database = openDatabase(databasePath);
   seed();
 });
 
 afterEach(() => {
   database.close();
-  rmSync(directory, { force: true, recursive: true });
 });
 
 describe("immutable result version chain", () => {
@@ -229,7 +226,7 @@ describe("immutable result version chain", () => {
 
   it("allows exactly one concurrent first-result winner", async () => {
     expect(resultVersions.initializeFirstResultHeadTx).toBeTypeOf("function");
-    const path = join(directory, "cockpit.sqlite");
+    const path = databasePath;
     const attempts = await Promise.allSettled([1, 2].map(async (version) => {
       const contender = new DatabaseSync(path);
       try {
@@ -333,7 +330,7 @@ describe("immutable result version chain", () => {
     });
     database.exec("COMMIT");
 
-    const path = join(directory, "cockpit.sqlite");
+    const path = databasePath;
     const attempts = await Promise.allSettled([2, 3].map(async (version) => {
       const contender = new DatabaseSync(path);
       try {

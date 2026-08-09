@@ -1,16 +1,15 @@
-import { mkdtempSync, rmSync } from "node:fs";
-import { tmpdir } from "node:os";
-import { join } from "node:path";
+
+
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
 import { CollaborationError } from "@/src/modules/public-collaboration";
 import { createThread, listThreads } from "@/src/adapters/outbound/sqlite/public-collaboration/thread-service";
 import { openDatabase } from "@/src/adapters/outbound/sqlite/connection";
+import { memoryDatabasePath } from "@/tests/fixtures/sqlite/memory-database";
 
 const NOW = "2026-08-08T08:00:00.000Z";
 const OPERATION_1 = "00000000-0000-4000-8000-000000000701";
 const OPERATION_2 = "00000000-0000-4000-8000-000000000702";
-let directory: string;
 let databasePath: string;
 
 function seedProject(projectId: string, agentIds: [string, string, ...string[]]): void {
@@ -65,13 +64,11 @@ function expectCode(operation: () => unknown, code: string): CollaborationError 
 }
 
 beforeEach(() => {
-  directory = mkdtempSync(join(tmpdir(), "thread-service-"));
-  databasePath = join(directory, "cockpit.sqlite");
+  databasePath = memoryDatabasePath();
 });
 
 afterEach(() => {
   vi.useRealTimers();
-  rmSync(directory, { force: true, recursive: true });
 });
 
 describe("project thread service", () => {

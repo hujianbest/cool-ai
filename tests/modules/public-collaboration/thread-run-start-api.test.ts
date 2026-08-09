@@ -1,12 +1,10 @@
-import { mkdtempSync, rmSync } from "node:fs";
-import { tmpdir } from "node:os";
-import { join } from "node:path";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
 import { createThread } from "@/src/adapters/outbound/sqlite/public-collaboration/thread-service";
 import { createCredentialVault } from "@/src/modules/identity-capability/internal/credential-vault";
 import { openDatabase } from "@/src/adapters/outbound/sqlite/connection";
 import { seedMissionInitializationForMission as initializeMissionDeliveryTx } from "@/tests/fixtures/review/mission-initialization";
+import { memoryDatabasePath } from "@/tests/fixtures/sqlite/memory-database";
 
 type RunRoute = {
   POST(
@@ -39,7 +37,6 @@ const routeModules = import.meta.glob<RunRoute>(
 const NOW = "2026-08-08T08:00:00.000Z";
 const MASTER_KEY = Buffer.alloc(32, 13).toString("base64url");
 const OPERATION = "00000000-0000-4000-8000-000000001301";
-let directory: string;
 let databasePath: string;
 let threadA: string;
 let threadB: string;
@@ -227,8 +224,7 @@ beforeEach(() => {
   vi.useFakeTimers();
   vi.setSystemTime(new Date(NOW));
   process.env.COCKPIT_MASTER_KEY = MASTER_KEY;
-  directory = mkdtempSync(join(tmpdir(), "thread-run-start-api-"));
-  databasePath = join(directory, "cockpit.sqlite");
+  databasePath = memoryDatabasePath();
   process.env.COCKPIT_DB_PATH = databasePath;
   threadA = seedProject(
     "project-a",
@@ -251,7 +247,6 @@ afterEach(() => {
   vi.useRealTimers();
   delete process.env.COCKPIT_DB_PATH;
   delete process.env.COCKPIT_MASTER_KEY;
-  rmSync(directory, { force: true, recursive: true });
 });
 
 describe("tuple-scoped new CollaborationRun API", () => {

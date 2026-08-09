@@ -1,6 +1,5 @@
-import { mkdtempSync, rmSync } from "node:fs";
-import { tmpdir } from "node:os";
-import { join } from "node:path";
+
+
 import { afterEach, describe, expect, it } from "vitest";
 
 import { createProject } from "@/src/adapters/outbound/sqlite/project-workspace/projects";
@@ -14,19 +13,13 @@ import {
   TaskDomainError,
   TaskExecutionError,
 } from "@/src/modules/mission-work";
-
-const temporaryDirectories: string[] = [];
+import { memoryDatabasePath } from "@/tests/fixtures/sqlite/memory-database";
 
 function databasePath() {
-  const directory = mkdtempSync(join(tmpdir(), "cockpit-tasks-"));
-  temporaryDirectories.push(directory);
-  return join(directory, "cockpit.sqlite");
+  return memoryDatabasePath();
 }
 
 afterEach(() => {
-  for (const directory of temporaryDirectories.splice(0)) {
-    rmSync(directory, { force: true, recursive: true });
-  }
 });
 
 describe("task service", () => {

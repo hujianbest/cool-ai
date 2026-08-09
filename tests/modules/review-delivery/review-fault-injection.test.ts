@@ -1,7 +1,5 @@
 import { createHash } from "node:crypto";
-import { mkdtempSync, rmSync } from "node:fs";
-import { tmpdir } from "node:os";
-import { join } from "node:path";
+
 import { DatabaseSync } from "node:sqlite";
 import { afterEach, describe, expect, it, vi } from "vitest";
 
@@ -9,16 +7,14 @@ import { openDatabase } from "@/src/adapters/outbound/sqlite/connection";
 import type { ReviewFaultPoint } from "@/src/adapters/outbound/sqlite/review-delivery/review-orchestrator";
 import { runReviewOperation } from "@/src/adapters/outbound/sqlite/review-delivery/review-orchestrator";
 import type { ModelCallResult } from "@/src/shared/collaboration-contracts";
+import { memoryDatabasePath } from "@/tests/fixtures/sqlite/memory-database";
 
 const NOW = new Date("2026-08-01T10:00:00.000Z");
 const HASH = "a".repeat(64);
-const roots: string[] = [];
 const databases: DatabaseSync[] = [];
 
 function fixturePath(label: string): string {
-  const root = mkdtempSync(join(tmpdir(), `review-fault-${label}-`));
-  roots.push(root);
-  return join(root, "cockpit.sqlite");
+  return memoryDatabasePath();
 }
 
 function seed(path: string): DatabaseSync {
@@ -165,9 +161,6 @@ afterEach(() => {
     } catch {
       // A crash simulation may already have closed the connection.
     }
-  }
-  for (const root of roots.splice(0)) {
-    rmSync(root, { force: true, maxRetries: 3, recursive: true, retryDelay: 20 });
   }
 });
 

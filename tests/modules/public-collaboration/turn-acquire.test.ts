@@ -1,6 +1,5 @@
-import { mkdtempSync, rmSync } from "node:fs";
-import { tmpdir } from "node:os";
-import { join } from "node:path";
+
+
 import { afterEach, beforeEach, describe, expect, it } from "vitest";
 
 import { CollaborationError } from "@/src/modules/public-collaboration";
@@ -8,6 +7,7 @@ import { canonicalRequestHash } from "@/src/adapters/outbound/sqlite/public-coll
 import { appendAgentMessageFactTx } from "@/src/adapters/outbound/sqlite/public-collaboration/thread-service";
 import { openDatabase } from "@/src/adapters/outbound/sqlite/connection";
 import { seedCurrentAdvanceFixture as seedV7AdvanceFixture } from "@/tests/fixtures/collaboration/current-advance";
+import { memoryDatabasePath } from "@/tests/fixtures/sqlite/memory-database";
 
 type AcquireDependencies = {
   clock: () => Date;
@@ -60,7 +60,6 @@ const RUN_ID = "run-acquire";
 const AGENT_ID = "agent-alpha";
 const FIXED_NOW = "2026-07-30T01:02:03.000Z";
 
-let directory: string;
 let databasePath: string;
 let operationSequence: number;
 let threadId: string;
@@ -205,15 +204,13 @@ function rawCounts(): {
 }
 
 beforeEach(() => {
-  directory = mkdtempSync(join(tmpdir(), "turn-acquire-"));
-  databasePath = join(directory, "cockpit.sqlite");
+  databasePath = memoryDatabasePath();
   operationSequence = 900;
   uuidSequence = 0;
   seedReadyRun();
 });
 
 afterEach(() => {
-  rmSync(directory, { force: true, recursive: true });
 });
 
 describe("advance operation acquisition", () => {

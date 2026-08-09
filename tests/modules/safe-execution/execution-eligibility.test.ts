@@ -21,6 +21,7 @@ function openDatabase(path: string): DatabaseSync {
   return database;
 }
 import { startExecution } from "@/src/adapters/outbound/sqlite/safe-execution/execution-service";
+import { memoryDatabasePath } from "@/tests/fixtures/sqlite/memory-database";
 
 const PROJECT_ID = "eligibility-project";
 const THREAD_ID = "eligibility-thread";
@@ -34,7 +35,7 @@ let databasePath: string;
 
 beforeEach(() => {
   directory = mkdtempSync(join(tmpdir(), "cockpit-execution-eligibility-"));
-  databasePath = join(directory, "cockpit.sqlite");
+  databasePath = memoryDatabasePath();
   process.env.COCKPIT_DB_PATH = databasePath;
   process.env.COCKPIT_EXECUTION_ROOT = join(directory, "executions");
   seeded = false;

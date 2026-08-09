@@ -1,9 +1,6 @@
 import { createHash } from "node:crypto";
-import { mkdtempSync, rmSync } from "node:fs";
-import { tmpdir } from "node:os";
-import { join } from "node:path";
 import { DatabaseSync } from "node:sqlite";
-import { afterEach, describe, expect, it } from "vitest";
+import { describe, expect, it } from "vitest";
 
 import {
   compareCanonicalPathStates,
@@ -11,6 +8,7 @@ import {
   reserveExecutionStagedPaths,
   staleExecutionForCanonicalPathChanges,
 } from "@/src/adapters/outbound/sqlite/safe-execution/execution-conflicts";
+import { rawMemoryDatabasePath } from "@/tests/fixtures/sqlite/memory-database";
 
 const hash = (value: string) => createHash("sha256").update(value).digest("hex");
 
@@ -35,18 +33,8 @@ const absent = (path: string): State => ({
   sha256: null,
 });
 
-const directories: string[] = [];
-
-afterEach(() => {
-  for (const directory of directories.splice(0)) {
-    rmSync(directory, { force: true, recursive: true });
-  }
-});
-
 function conflictDatabase(): { database: DatabaseSync; path: string } {
-  const directory = mkdtempSync(join(tmpdir(), "cool-ai-conflicts-"));
-  directories.push(directory);
-  const path = join(directory, "conflicts.sqlite");
+  const path = rawMemoryDatabasePath();
   const database = new DatabaseSync(path);
   database.exec(`
     PRAGMA journal_mode=WAL;

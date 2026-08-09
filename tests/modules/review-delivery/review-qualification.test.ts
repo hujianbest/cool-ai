@@ -1,12 +1,12 @@
-import { mkdtempSync, rmSync } from "node:fs";
-import { tmpdir } from "node:os";
-import { join } from "node:path";
+
+
 import type { DatabaseSync } from "node:sqlite";
 import { afterEach, beforeEach, describe, expect, it } from "vitest";
 
 import { openDatabase } from "@/src/adapters/outbound/sqlite/connection";
 import * as reviewService from "@/src/adapters/outbound/sqlite/review-delivery/review-slice-service";
 import { agentInputSchema } from "@/src/shared/team-schemas";
+import { memoryDatabasePath } from "@/tests/fixtures/sqlite/memory-database";
 
 type Candidate = {
   agent: { id: string };
@@ -29,7 +29,6 @@ type QualificationModule = {
 
 const qualification = reviewService as QualificationModule;
 const NOW = "2026-08-01T04:00:00.000Z";
-let directory: string;
 let databasePath: string;
 let database: DatabaseSync;
 
@@ -95,14 +94,12 @@ function list(resultId = "result-1"): QualificationResult {
 }
 
 beforeEach(() => {
-  directory = mkdtempSync(join(tmpdir(), "review-qualification-"));
-  databasePath = join(directory, "cockpit.sqlite");
+  databasePath = memoryDatabasePath();
   seed();
 });
 
 afterEach(() => {
   database.close();
-  rmSync(directory, { force: true, recursive: true });
 });
 
 describe("review candidate qualification", () => {

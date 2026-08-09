@@ -1,6 +1,3 @@
-import { mkdtempSync, rmSync } from "node:fs";
-import { tmpdir } from "node:os";
-import { join } from "node:path";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
 import {
@@ -9,6 +6,7 @@ import {
 } from "@/src/adapters/outbound/sqlite/public-collaboration/run-service";
 import { createThread } from "@/src/adapters/outbound/sqlite/public-collaboration/thread-service";
 import { openDatabase } from "@/src/adapters/outbound/sqlite/connection";
+import { memoryDatabasePath } from "@/tests/fixtures/sqlite/memory-database";
 
 type TupleRoute = {
   POST(
@@ -34,7 +32,6 @@ const legacyRoutes = import.meta.glob<LegacyRoute>(
 );
 
 const NOW = "2026-08-08T08:00:00.000Z";
-let directory: string;
 let databasePath: string;
 let threadA: string;
 let threadB: string;
@@ -229,8 +226,7 @@ async function post(
 beforeEach(() => {
   vi.useFakeTimers();
   vi.setSystemTime(new Date(NOW));
-  directory = mkdtempSync(join(tmpdir(), "run-control-tuple-"));
-  databasePath = join(directory, "cockpit.sqlite");
+  databasePath = memoryDatabasePath();
   process.env.COCKPIT_DB_PATH = databasePath;
   operationSequence = 1500;
   threadA = seedProject("project-a", ["agent-a", "agent-b"]);
@@ -248,7 +244,6 @@ beforeEach(() => {
 afterEach(() => {
   vi.useRealTimers();
   delete process.env.COCKPIT_DB_PATH;
-  rmSync(directory, { force: true, recursive: true });
 });
 
 describe("tuple-scoped run control API", () => {

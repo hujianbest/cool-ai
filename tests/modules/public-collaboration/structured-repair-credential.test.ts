@@ -1,6 +1,3 @@
-import { mkdtempSync, rmSync } from "node:fs";
-import { tmpdir } from "node:os";
-import { join } from "node:path";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
 import { callOpenAiChat } from "@/src/adapters/outbound/model-runtime/openai-chat-client";
@@ -8,6 +5,7 @@ import { createCredentialVault } from "@/src/modules/identity-capability/interna
 import { openDatabase } from "@/src/adapters/outbound/sqlite/connection";
 import type { ModelCallResult } from "@/src/shared/collaboration-contracts";
 import { seedCurrentAdvanceFixture as seedV7AdvanceFixture } from "@/tests/fixtures/collaboration/current-advance";
+import { memoryDatabasePath } from "@/tests/fixtures/sqlite/memory-database";
 
 vi.mock("@/src/adapters/outbound/model-runtime/openai-chat-client", () => ({
   callOpenAiChat: vi.fn(),
@@ -104,7 +102,6 @@ describe("structured repair credential scanning", () => {
 });
 
 describe("structured repair credential durability", () => {
-  let directory: string;
   let databasePath: string;
   let threadId: string;
   let consoleError: ReturnType<typeof vi.spyOn>;
@@ -195,8 +192,7 @@ describe("structured repair credential durability", () => {
   }
 
   beforeEach(() => {
-    directory = mkdtempSync(join(tmpdir(), "structured-repair-credential-"));
-    databasePath = join(directory, "cockpit.sqlite");
+    databasePath = memoryDatabasePath();
     process.env.COCKPIT_DB_PATH = databasePath;
     process.env.COCKPIT_MASTER_KEY = Buffer.alloc(32, 25).toString("base64url");
     consoleError = vi.spyOn(console, "error").mockImplementation(() => undefined);
@@ -240,7 +236,6 @@ describe("structured repair credential durability", () => {
   afterEach(() => {
     delete process.env.COCKPIT_DB_PATH;
     delete process.env.COCKPIT_MASTER_KEY;
-    rmSync(directory, { force: true, recursive: true });
   });
 
   const credentialCases = [

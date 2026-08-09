@@ -1,12 +1,11 @@
 import { createHash } from "node:crypto";
-import { mkdtempSync, rmSync } from "node:fs";
-import { tmpdir } from "node:os";
-import { join } from "node:path";
+
 import { DatabaseSync } from "node:sqlite";
 import { afterEach, describe, expect, it, vi } from "vitest";
 
 import { openDatabase } from "@/src/adapters/outbound/sqlite/connection";
 import type { ModelCallResult } from "@/src/shared/collaboration-contracts";
+import { memoryDatabasePath } from "@/tests/fixtures/sqlite/memory-database";
 
 type FinalizeStep =
   | "decision"
@@ -21,15 +20,12 @@ type OrchestratorModule = typeof import("../../../src/adapters/outbound/sqlite/r
 const modules = import.meta.glob<OrchestratorModule>(
   "../../../src/adapters/outbound/sqlite/review-delivery/review-orchestrator.ts",
 );
-const directories: string[] = [];
 const databases: DatabaseSync[] = [];
 const NOW = new Date("2026-08-01T08:00:00.000Z");
 const HASH = "d".repeat(64);
 
 function databasePath(): string {
-  const directory = mkdtempSync(join(tmpdir(), "review-finalize-replay-"));
-  directories.push(directory);
-  return join(directory, "cockpit.sqlite");
+  return memoryDatabasePath();
 }
 
 function seed(path: string): DatabaseSync {
@@ -173,9 +169,6 @@ afterEach(() => {
     } catch {
       // The test may already have closed this connection before a restart.
     }
-  }
-  for (const directory of directories.splice(0)) {
-    rmSync(directory, { force: true, maxRetries: 3, recursive: true, retryDelay: 20 });
   }
 });
 

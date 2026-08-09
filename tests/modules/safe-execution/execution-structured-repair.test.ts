@@ -1,5 +1,5 @@
-import { mkdtempSync, rmSync } from "node:fs";
-import { tmpdir } from "node:os";
+
+
 import { join } from "node:path";
 import type { DatabaseSync } from "node:sqlite";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
@@ -7,6 +7,7 @@ import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { openDatabase } from "@/src/adapters/outbound/sqlite/connection";
 import { heartbeatExecutionAction } from "@/src/adapters/outbound/sqlite/safe-execution/execution-actions";
 import { seedCurrentAdvanceFixture as seedV7AdvanceFixture } from "@/tests/fixtures/collaboration/current-advance";
+import { memoryDatabasePath } from "@/tests/fixtures/sqlite/memory-database";
 
 type Permissions = { read: boolean; write: boolean; execute: boolean };
 type ExecuteInput = {
@@ -63,7 +64,6 @@ const context = {
 };
 const permissions = { read: true, write: true, execute: true };
 
-let directory: string;
 let database: DatabaseSync;
 let structured: StructuredModule;
 
@@ -202,15 +202,13 @@ function modelCalls(): Array<Record<string, unknown>> {
 }
 
 beforeEach(async () => {
-  directory = mkdtempSync(join(tmpdir(), "cockpit-structured-execution-"));
-  database = seedDatabase(join(directory, "cockpit.sqlite"));
+  database = seedDatabase(memoryDatabasePath());
   structured = await loadModule();
 });
 
 afterEach(() => {
   vi.unstubAllGlobals();
   database.close();
-  rmSync(directory, { force: true, recursive: true });
 });
 
 describe("execution primary and one structured repair", () => {

@@ -1,16 +1,15 @@
-import { mkdtempSync, rmSync } from "node:fs";
-import { tmpdir } from "node:os";
-import { join } from "node:path";
+
+
 import { DatabaseSync } from "node:sqlite";
 import { afterEach, describe, expect, it, vi } from "vitest";
 
 import type { ModelCallResult } from "@/src/shared/collaboration-contracts";
+import { rawMemoryDatabasePath } from "@/tests/fixtures/sqlite/memory-database";
 
 type OrchestratorModule = typeof import("../../../src/adapters/outbound/sqlite/review-delivery/review-orchestrator");
 const modules = import.meta.glob<OrchestratorModule>(
   "../../../src/adapters/outbound/sqlite/review-delivery/review-orchestrator.ts",
 );
-const directories: string[] = [];
 const NOW = new Date("2026-08-01T06:00:00.000Z");
 const HASH = "b".repeat(64);
 
@@ -118,16 +117,11 @@ async function load(): Promise<OrchestratorModule> {
 }
 
 afterEach(() => {
-  for (const directory of directories.splice(0)) {
-    rmSync(directory, { force: true, recursive: true });
-  }
 });
 
 describe("durable review output recovery", () => {
   it("stores only canonical public output after strict parse/redaction", async () => {
-    const directory = mkdtempSync(join(tmpdir(), "review-recovery-"));
-    directories.push(directory);
-    const db = openFixture(join(directory, "review.db"));
+    const db = openFixture(rawMemoryDatabasePath());
     const raw = '{"raw":"RAW_COT_SENTINEL chain-of-thought top-secret"}';
     const callProvider = vi.fn()
       .mockResolvedValueOnce(result(raw))
@@ -164,9 +158,7 @@ describe("durable review output recovery", () => {
   });
 
   it("restarts after a post-checkpoint SQLite finalize fault and replays only local finalize", async () => {
-    const directory = mkdtempSync(join(tmpdir(), "review-restart-"));
-    directories.push(directory);
-    const path = join(directory, "review.db");
+    const path = rawMemoryDatabasePath();
     let db = openFixture(path);
     const callProvider = vi.fn().mockResolvedValue(result(publicOutput));
     const localFinalize = vi.fn()

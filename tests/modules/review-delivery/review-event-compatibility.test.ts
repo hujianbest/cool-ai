@@ -1,17 +1,16 @@
-import { mkdtempSync, rmSync } from "node:fs";
-import { tmpdir } from "node:os";
-import { join } from "node:path";
+
+
 import { DatabaseSync } from "node:sqlite";
 import { afterEach, describe, expect, it } from "vitest";
 
 import { openDatabase } from "@/src/adapters/outbound/sqlite/connection";
 import * as readService from "@/src/adapters/outbound/sqlite/review-delivery/review-read-service";
 import { reviewEventDtoSchema } from "@/src/shared/review-contracts";
+import { memoryDatabasePath } from "@/tests/fixtures/sqlite/memory-database";
 
 const NOW = "2026-08-01T09:00:00.000Z";
 const HASH_A = "a".repeat(64);
 const HASH_B = "b".repeat(64);
-const roots: string[] = [];
 const databases: DatabaseSync[] = [];
 
 type StoredEvent = {
@@ -52,9 +51,7 @@ function readEvents(
 }
 
 function databasePath(label: string): string {
-  const root = mkdtempSync(join(tmpdir(), `review-event-compat-${label}-`));
-  roots.push(root);
-  return join(root, "cockpit.sqlite");
+  return memoryDatabasePath();
 }
 
 function open(path: string): DatabaseSync {
@@ -250,7 +247,6 @@ const historicalEvents: StoredEvent[] = [
 
 afterEach(() => {
   for (const database of [...databases]) close(database);
-  for (const root of roots.splice(0)) rmSync(root, { force: true, recursive: true });
 });
 
 describe("review event historical compatibility", () => {

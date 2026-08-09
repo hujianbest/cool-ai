@@ -127,5 +127,6 @@ describe("unsupported current schema inputs", () => {
       renameSync(path, movedPath);
       renameSync(movedPath, path);
     },
+    20000,
   );
 });

@@ -23,6 +23,7 @@ import { generatePublicDelivery } from "@/src/adapters/outbound/sqlite/review-de
 import { startPublicReview } from "@/src/adapters/outbound/sqlite/review-delivery/review-application-service";
 import { parseWorkspaceGuideEnvelope } from "@/src/shared/onboarding-guide-machine";
 import type { ModelCallResult } from "@/src/shared/collaboration-contracts";
+import { memoryDatabasePath } from "@/tests/fixtures/sqlite/memory-database";
 
 const PROJECT_ID = "onboarding-governance-project";
 const EXECUTOR_ID = "onboarding-executor";
@@ -668,7 +669,7 @@ function passedReviewOutput(): ModelCallResult {
 beforeEach(() => {
   process.env.COCKPIT_MASTER_KEY = Buffer.alloc(32, 51).toString("base64url");
   root = mkdtempSync(join(tmpdir(), "onboarding-governance-"));
-  databasePath = join(root, "cockpit.sqlite");
+  databasePath = memoryDatabasePath();
   initialWorkspace = join(root, "workspace-initial");
   reboundWorkspace = join(root, "workspace-rebound");
   executionRoot = join(root, "managed-executions");

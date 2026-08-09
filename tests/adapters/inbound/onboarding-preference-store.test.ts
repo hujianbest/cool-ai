@@ -1,3 +1,4 @@
+// @vitest-environment jsdom
 import { join } from "node:path";
 import { pathToFileURL } from "node:url";
 

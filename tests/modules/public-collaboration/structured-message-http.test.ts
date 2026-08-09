@@ -1,7 +1,4 @@
 import { createHash } from "node:crypto";
-import { mkdtempSync, rmSync } from "node:fs";
-import { tmpdir } from "node:os";
-import { join } from "node:path";
 
 import { afterEach, describe, expect, it } from "vitest";
 
@@ -9,6 +6,7 @@ import { appendStructuredMessage } from "@/src/adapters/outbound/sqlite/public-c
 import { openDatabase } from "@/src/adapters/outbound/sqlite/connection";
 import { seedCurrentAdvanceFixture as seedV7AdvanceFixture } from "@/tests/fixtures/collaboration/current-advance";
 import { currentSchemaObjectSql } from "@/tests/fixtures/current-schema-object";
+import { memoryDatabasePath } from "@/tests/fixtures/sqlite/memory-database";
 
 type AdapterModule = {
   structuredMessageBlockGet: (request: Request, context: {
@@ -22,8 +20,6 @@ type AdapterModule = {
 const modules = import.meta.glob<AdapterModule>(
   "../../../app/api/_shared/structured-messages/structured-message-http.ts",
 );
-const directories: string[] = [];
-
 async function adapter(): Promise<AdapterModule> {
   const load = modules["../../../app/api/_shared/structured-messages/structured-message-http.ts"];
   expect(load, "strict tuple Structured Message HTTP adapter must exist").toBeTypeOf("function");
@@ -38,9 +34,7 @@ function fixture(): {
   runId: string;
   threadId: string;
 } {
-  const directory = mkdtempSync(join(tmpdir(), "structured-message-http-"));
-  directories.push(directory);
-  const path = join(directory, "cockpit.sqlite");
+  const path = memoryDatabasePath();
   const projectId = "project-http";
   const runId = "run-http";
   const threadId = seedV7AdvanceFixture(path, {
@@ -106,9 +100,6 @@ function restoreBlockImmutability(database: ReturnType<typeof openDatabase>): vo
 
 afterEach(() => {
   delete process.env.COCKPIT_DB_PATH;
-  for (const directory of directories.splice(0)) {
-    rmSync(directory, { force: true, recursive: true });
-  }
 });
 
 describe("strict tuple Structured Message HTTP adapter", () => {

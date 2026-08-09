@@ -4,6 +4,7 @@ import { join } from "node:path";
 import { afterEach, beforeEach, describe, expect, it } from "vitest";
 
 import { createProject } from "@/src/adapters/outbound/sqlite/project-workspace/projects";
+import { memoryDatabasePath } from "@/tests/fixtures/sqlite/memory-database";
 
 type WorkspaceRoute = {
   PUT(
@@ -40,7 +41,7 @@ function put(projectId: string, body: BodyInit) {
 
 beforeEach(() => {
   directory = mkdtempSync(join(tmpdir(), "cockpit-workspace-api-"));
-  databasePath = join(directory, "cockpit.sqlite");
+  databasePath = memoryDatabasePath();
   process.env.COCKPIT_DB_PATH = databasePath;
 });
 

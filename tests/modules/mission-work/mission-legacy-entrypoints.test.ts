@@ -1,13 +1,12 @@
 import { randomUUID } from "node:crypto";
-import { mkdtempSync, rmSync } from "node:fs";
-import { tmpdir } from "node:os";
-import { join } from "node:path";
+
 import type { DatabaseSync } from "node:sqlite";
 import { afterEach, beforeEach, describe, expect, it } from "vitest";
 
 import { createThread } from "@/src/adapters/outbound/sqlite/public-collaboration/thread-service";
 import { openDatabase } from "@/src/adapters/outbound/sqlite/connection";
 import { createProject } from "@/src/adapters/outbound/sqlite/project-workspace/projects";
+import { memoryDatabasePath } from "@/tests/fixtures/sqlite/memory-database";
 
 type WorkItem = {
   id: string;
@@ -55,7 +54,6 @@ type MissionDomain = {
   ) => WorkItem;
 };
 
-let directory: string;
 let databasePath: string;
 let database: DatabaseSync;
 let domain: MissionDomain;
@@ -96,8 +94,7 @@ function seedHead(workItemId: string, state: "pending_review" | "passed"): void 
 }
 
 beforeEach(async () => {
-  directory = mkdtempSync(join(tmpdir(), "mission-legacy-completion-"));
-  databasePath = join(directory, "cockpit.sqlite");
+  databasePath = memoryDatabasePath();
   domain = {
     ...(await import("@/src/adapters/outbound/sqlite/mission-work/mission-service")),
     ...(await import("@/src/composition/mission-commands")),
@@ -143,7 +140,6 @@ beforeEach(async () => {
 
 afterEach(() => {
   database.close();
-  rmSync(directory, { force: true, recursive: true });
 });
 
 describe("legacy mission completion entrypoints", () => {

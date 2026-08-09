@@ -1,6 +1,5 @@
-import { mkdtempSync, rmSync } from "node:fs";
-import { tmpdir } from "node:os";
-import { join } from "node:path";
+
+
 import type { DatabaseSync } from "node:sqlite";
 import { afterEach, beforeEach, describe, expect, it } from "vitest";
 
@@ -9,6 +8,7 @@ import { createWorkItem } from "@/src/adapters/outbound/sqlite/mission-work/miss
 import { createMission } from "@/src/composition/mission-commands";
 import { createProject } from "@/src/adapters/outbound/sqlite/project-workspace/projects";
 import type { DeliveryBuildInput } from "@/src/adapters/outbound/sqlite/review-delivery/delivery-service";
+import { memoryDatabasePath } from "@/tests/fixtures/sqlite/memory-database";
 
 type DeliveryModule = typeof import("../../../src/adapters/outbound/sqlite/review-delivery/delivery-service");
 const modules = import.meta.glob<DeliveryModule>("../../../src/adapters/outbound/sqlite/review-delivery/delivery-service.ts");
@@ -18,7 +18,6 @@ type DeliveryRuntime = DeliveryModule & {
 };
 const NOW = new Date("2026-08-01T08:00:00.000Z");
 const HASH = "a".repeat(64);
-let directory: string;
 let path: string;
 let database: DatabaseSync;
 let projectId: string;
@@ -123,8 +122,7 @@ function seedPassed(): void {
 }
 
 beforeEach(() => {
-  directory = mkdtempSync(join(tmpdir(), "delivery-service-"));
-  path = join(directory, "cockpit.sqlite");
+  path = memoryDatabasePath();
   projectId = createProject("Delivery", path).id;
   missionId = createMission(path, projectId, {
     expectedVersion: 0,
@@ -144,7 +142,6 @@ beforeEach(() => {
 
 afterEach(() => {
   database.close();
-  rmSync(directory, { force: true, recursive: true });
 });
 
 describe("two-phase delivery generation", () => {

@@ -23,6 +23,7 @@ import {
 } from "@/src/adapters/outbound/sqlite/safe-execution/merge-journal-service";
 import { execV7Fixture } from "@/tests/fixtures/execution/current-graph";
 import { refreshExecutionFrozenFixture } from "@/tests/fixtures/execution/frozen-input";
+import { memoryDatabasePath } from "@/tests/fixtures/sqlite/memory-database";
 
 vi.mock("server-only", () => ({}));
 
@@ -70,7 +71,7 @@ async function fixture(index: number): Promise<Fixture> {
   await mkdir(join(sandboxRoot, "src"), { recursive: true });
   writeFileSync(join(workspaceRoot, "src", "a.txt"), "old-a");
   writeFileSync(join(sandboxRoot, "src", "a.txt"), "new-a");
-  const databasePath = join(root, "cockpit.sqlite");
+  const databasePath = memoryDatabasePath();
   const database = openDatabase(databasePath);
   seed(databasePath, database, workspaceRoot, sandboxRoot);
   return {

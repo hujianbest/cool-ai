@@ -1,6 +1,3 @@
-import { mkdtempSync, rmSync } from "node:fs";
-import { tmpdir } from "node:os";
-import { join } from "node:path";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
 import {
@@ -10,6 +7,7 @@ import {
 import { createThread } from "@/src/adapters/outbound/sqlite/public-collaboration/thread-service";
 import { createCredentialVault } from "@/src/modules/identity-capability/internal/credential-vault";
 import { openDatabase } from "@/src/adapters/outbound/sqlite/connection";
+import { memoryDatabasePath } from "@/tests/fixtures/sqlite/memory-database";
 
 type TupleRoute = {
   POST(
@@ -35,7 +33,6 @@ const legacyRoutes = import.meta.glob<TupleRoute>(
 const NOW = "2026-08-08T08:00:00.000Z";
 const MASTER_KEY = Buffer.alloc(32, 37).toString("base64url");
 let databasePath: string;
-let directory: string;
 let threadA: string;
 
 function operationId(sequence: number): string {
@@ -280,8 +277,7 @@ function snapshot(): unknown {
 beforeEach(() => {
   vi.useFakeTimers();
   vi.setSystemTime(new Date(NOW));
-  directory = mkdtempSync(join(tmpdir(), "decision-answer-tuple-"));
-  databasePath = join(directory, "cockpit.sqlite");
+  databasePath = memoryDatabasePath();
   process.env.COCKPIT_MASTER_KEY = MASTER_KEY;
   process.env.COCKPIT_DB_PATH = databasePath;
   seedProject();
@@ -292,7 +288,6 @@ afterEach(() => {
   vi.useRealTimers();
   delete process.env.COCKPIT_DB_PATH;
   delete process.env.COCKPIT_MASTER_KEY;
-  rmSync(directory, { force: true, recursive: true });
 });
 
 describe("tuple-scoped decision answer", () => {

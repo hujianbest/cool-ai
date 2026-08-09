@@ -18,6 +18,7 @@ import {
   startThreadRun,
 } from "@/src/adapters/outbound/sqlite/public-collaboration/thread-service";
 import { seedMissionInitializationForMission as initializeMissionDeliveryTx } from "@/tests/fixtures/review/mission-initialization";
+import { memoryDatabasePath } from "@/tests/fixtures/sqlite/memory-database";
 
 type ContextFingerprint = {
   hash: string;
@@ -167,7 +168,7 @@ function setRunStatus(
 
 beforeEach(() => {
   directory = mkdtempSync(join(tmpdir(), "collaboration-context-guards-"));
-  databasePath = join(directory, "cockpit.sqlite");
+  databasePath = memoryDatabasePath();
   process.env.COCKPIT_MASTER_KEY = MASTER_KEY;
   seedReadyRun();
 });

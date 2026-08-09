@@ -1,6 +1,5 @@
-import { mkdtempSync, rmSync } from "node:fs";
-import { tmpdir } from "node:os";
-import { join } from "node:path";
+
+
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
 import { CollaborationError } from "@/src/modules/public-collaboration";
@@ -9,12 +8,12 @@ import {
   updateThreadPolicy,
 } from "@/src/adapters/outbound/sqlite/public-collaboration/thread-service";
 import { openDatabase } from "@/src/adapters/outbound/sqlite/connection";
+import { memoryDatabasePath } from "@/tests/fixtures/sqlite/memory-database";
 
 const NOW = "2026-08-08T08:00:00.000Z";
 const CREATE_OPERATION = "00000000-0000-4000-8000-000000000701";
 const UPDATE_OPERATION = "00000000-0000-4000-8000-000000000801";
 const OTHER_OPERATION = "00000000-0000-4000-8000-000000000802";
-let directory: string;
 let databasePath: string;
 
 function seedProject(projectId: string, agentIds: [string, string, ...string[]]): void {
@@ -101,13 +100,11 @@ function policyCounts(threadId: string): Record<string, number> {
 beforeEach(() => {
   vi.useFakeTimers();
   vi.setSystemTime(new Date(NOW));
-  directory = mkdtempSync(join(tmpdir(), "thread-policy-"));
-  databasePath = join(directory, "cockpit.sqlite");
+  databasePath = memoryDatabasePath();
 });
 
 afterEach(() => {
   vi.useRealTimers();
-  rmSync(directory, { force: true, recursive: true });
 });
 
 describe("thread member policy updates", () => {

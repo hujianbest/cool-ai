@@ -18,6 +18,7 @@ import {
   execV7Fixture,
   execV7TupleStatements,
 } from "@/tests/fixtures/execution/current-graph";
+import { memoryDatabasePath } from "@/tests/fixtures/sqlite/memory-database";
 
 const PROJECT_ID = "sandbox-orchestrator-project";
 const RUN_ID = "sandbox-orchestrator-run";
@@ -38,7 +39,7 @@ beforeEach(() => {
   root = mkdtempSync(join(tmpdir(), "cool-ai-sandbox-orchestrator-"));
   workspace = join(root, "workspace");
   executionRoot = join(root, "executions");
-  databasePath = join(root, "cockpit.sqlite");
+  databasePath = memoryDatabasePath();
   mkdirSync(workspace);
   mkdirSync(executionRoot);
   writeFileSync(join(workspace, "README.md"), "canonical stays unchanged\n");

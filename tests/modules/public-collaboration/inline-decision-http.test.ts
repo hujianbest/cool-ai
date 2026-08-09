@@ -1,13 +1,10 @@
-import { mkdtempSync, rmSync } from "node:fs";
-import { tmpdir } from "node:os";
-import { join } from "node:path";
-
 import { afterEach, beforeEach, describe, expect, it } from "vitest";
 
 import { readThreadFacts } from "@/src/adapters/outbound/sqlite/public-collaboration/thread-service";
 import { openDatabase } from "@/src/adapters/outbound/sqlite/connection";
 import { appendStructuredMessage } from "@/src/adapters/outbound/sqlite/public-collaboration/structured-message-store";
 import { seedCurrentAdvanceFixture as seedV7AdvanceFixture } from "@/tests/fixtures/collaboration/current-advance";
+import { memoryDatabasePath } from "@/tests/fixtures/sqlite/memory-database";
 
 type HttpModule = {
   inlineDecisionPost: (
@@ -24,7 +21,6 @@ const modules = import.meta.glob<HttpModule>(
   "../../../app/api/_shared/structured-messages/structured-message-http.ts",
 );
 const NOW = "2026-08-09T02:00:00.000Z";
-let directory: string;
 let tuple: Record<string, string>;
 
 async function http(): Promise<HttpModule> {
@@ -34,8 +30,7 @@ async function http(): Promise<HttpModule> {
 }
 
 beforeEach(() => {
-  directory = mkdtempSync(join(tmpdir(), "inline-decision-http-"));
-  process.env.COCKPIT_DB_PATH = join(directory, "cockpit.sqlite");
+  process.env.COCKPIT_DB_PATH = memoryDatabasePath();
   const projectId = "project-inline-http";
   const runId = "run-inline-http";
   const threadId = seedV7AdvanceFixture(process.env.COCKPIT_DB_PATH, {
@@ -84,7 +79,6 @@ beforeEach(() => {
 
 afterEach(() => {
   delete process.env.COCKPIT_DB_PATH;
-  rmSync(directory, { force: true, recursive: true });
 });
 
 describe("Inline Decision strict tuple HTTP", () => {

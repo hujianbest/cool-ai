@@ -1,3 +1,4 @@
+// @vitest-environment jsdom
 import { spawn, spawnSync, type ChildProcessByStdio } from "node:child_process";
 import {
   existsSync,

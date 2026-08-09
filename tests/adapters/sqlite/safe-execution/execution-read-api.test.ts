@@ -1,6 +1,4 @@
 import { createHash } from "node:crypto";
-import { mkdtempSync, rmSync } from "node:fs";
-import { tmpdir } from "node:os";
 import { join } from "node:path";
 import type { DatabaseSync } from "node:sqlite";
 import { afterEach, beforeEach, describe, expect, it } from "vitest";
@@ -18,6 +16,7 @@ import {
   assertV7Fixture,
   execV7Fixture,
 } from "@/tests/fixtures/execution/current-graph";
+import { memoryDatabasePath } from "@/tests/fixtures/sqlite/memory-database";
 
 type ReadModule = typeof import("@/src/adapters/outbound/sqlite/safe-execution/execution-read-service");
 type GetRoute = {
@@ -221,7 +220,6 @@ const persistedEventFixtures = [
   }],
 ] as const;
 
-let directory: string;
 let databasePath: string;
 let database: DatabaseSync;
 let reads: ReadModule;
@@ -378,8 +376,7 @@ function seed(): void {
 }
 
 beforeEach(async () => {
-  directory = mkdtempSync(join(tmpdir(), "execution-read-api-"));
-  databasePath = join(directory, "cockpit.sqlite");
+  databasePath = memoryDatabasePath();
   process.env.COCKPIT_DB_PATH = databasePath;
   database = openDatabase(databasePath);
   seed();
@@ -389,7 +386,6 @@ beforeEach(async () => {
 afterEach(() => {
   database.close();
   delete process.env.COCKPIT_DB_PATH;
-  rmSync(directory, { force: true, recursive: true });
 });
 
 describe("bounded execution read APIs", () => {

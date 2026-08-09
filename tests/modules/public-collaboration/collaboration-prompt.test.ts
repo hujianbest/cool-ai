@@ -1,6 +1,5 @@
-import { mkdtempSync, rmSync } from "node:fs";
-import { tmpdir } from "node:os";
-import { join } from "node:path";
+
+
 import { afterEach, beforeEach, describe, expect, it } from "vitest";
 
 import { CollaborationError } from "@/src/modules/public-collaboration";
@@ -11,6 +10,7 @@ import {
 import { createCredentialVault } from "@/src/modules/identity-capability/internal/credential-vault";
 import { openDatabase } from "@/src/adapters/outbound/sqlite/connection";
 import { seedMissionInitializationForMission as initializeMissionDeliveryTx } from "@/tests/fixtures/review/mission-initialization";
+import { memoryDatabasePath } from "@/tests/fixtures/sqlite/memory-database";
 
 type PromptMessage = {
   role: "system" | "user" | "assistant";
@@ -93,7 +93,6 @@ const SECRET_MARKERS = [
   MASTER_KEY,
 ];
 
-let directory: string;
 let databasePath: string;
 let primaryThreadId: string;
 let secondaryThreadId: string;
@@ -361,15 +360,13 @@ function isDeeplyFrozen(value: unknown): boolean {
 }
 
 beforeEach(() => {
-  directory = mkdtempSync(join(tmpdir(), "collaboration-prompt-"));
-  databasePath = join(directory, "cockpit.sqlite");
+  databasePath = memoryDatabasePath();
   process.env.COCKPIT_MASTER_KEY = MASTER_KEY;
   seedReadyProject();
 });
 
 afterEach(() => {
   delete process.env.COCKPIT_MASTER_KEY;
-  rmSync(directory, { force: true, recursive: true });
 });
 
 describe("collaboration prompt allowlist", () => {

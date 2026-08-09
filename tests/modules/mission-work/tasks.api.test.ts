@@ -12,6 +12,7 @@ import { POST as startProjectTask } from "@/app/api/tasks/[taskId]/start/route";
 import { createProject } from "@/src/adapters/outbound/sqlite/project-workspace/projects";
 import { executeTaskResponse } from "@/app/api/_shared/task-api";
 import { createTask, startTask } from "@/src/adapters/outbound/sqlite/mission-work/tasks";
+import { memoryDatabasePath } from "@/tests/fixtures/sqlite/memory-database";
 
 let directory: string;
 let path: string;
@@ -34,7 +35,7 @@ function jsonRequest(url: string, body: string) {
 
 beforeEach(() => {
   directory = mkdtempSync(join(tmpdir(), "cockpit-task-api-"));
-  path = join(directory, "cockpit.sqlite");
+  path = memoryDatabasePath();
   process.env.COCKPIT_DB_PATH = path;
 });
 

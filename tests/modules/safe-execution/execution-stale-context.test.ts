@@ -1,6 +1,5 @@
-import { mkdtempSync, rmSync } from "node:fs";
-import { tmpdir } from "node:os";
-import { join } from "node:path";
+
+
 import type { DatabaseSync } from "node:sqlite";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
@@ -12,6 +11,7 @@ import {
   captureExecutionFrozenInput,
   staleExecutionIfFrozenInputChanged,
 } from "@/src/adapters/outbound/sqlite/safe-execution/execution-frozen-input";
+import { memoryDatabasePath } from "@/tests/fixtures/sqlite/memory-database";
 
 type AdvanceModule = {
   advanceExecution(
@@ -31,7 +31,6 @@ const MASTER_KEY = Buffer.alloc(32, 53).toString("base64url");
 const operationId = (value: number) =>
   `00000000-0000-4000-8000-${String(value).padStart(12, "0")}`;
 
-let directory: string;
 let databasePath: string;
 let database: DatabaseSync;
 let advance: AdvanceModule;
@@ -206,8 +205,7 @@ function seed(): void {
 
 beforeEach(async () => {
   process.env.COCKPIT_MASTER_KEY = MASTER_KEY;
-  directory = mkdtempSync(join(tmpdir(), "cool-ai-stale-context-"));
-  databasePath = join(directory, "cockpit.sqlite");
+  databasePath = memoryDatabasePath();
   database = openDatabase(databasePath);
   seed();
   const modules = import.meta.glob<AdvanceModule>(
@@ -219,7 +217,6 @@ beforeEach(async () => {
 afterEach(() => {
   vi.unstubAllGlobals();
   database.close();
-  rmSync(directory, { force: true, recursive: true });
   delete process.env.COCKPIT_MASTER_KEY;
 });
 

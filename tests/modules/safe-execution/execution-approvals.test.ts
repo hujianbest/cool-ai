@@ -10,6 +10,7 @@ import { openDatabase } from "@/src/adapters/outbound/sqlite/connection";
 import { controlExecution } from "@/src/adapters/outbound/sqlite/safe-execution/execution-control-service";
 import { execV7Fixture } from "@/tests/fixtures/execution/current-graph";
 import { refreshExecutionFrozenFixture } from "@/tests/fixtures/execution/frozen-input";
+import { memoryDatabasePath } from "@/tests/fixtures/sqlite/memory-database";
 
 type ApprovalModule = {
   createStagedMergeApproval(input: {
@@ -243,7 +244,7 @@ async function decide(
 beforeEach(async () => {
   vi.stubEnv("COCKPIT_MASTER_KEY", MASTER_KEY);
   directory = mkdtempSync(join(tmpdir(), "cool-ai-execution-approvals-"));
-  databasePath = join(directory, "cockpit.sqlite");
+  databasePath = memoryDatabasePath();
   database = openDatabase(databasePath);
   sequence = 0;
   seed();

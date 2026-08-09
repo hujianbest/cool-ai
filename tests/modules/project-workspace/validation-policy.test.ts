@@ -1,12 +1,12 @@
-import { mkdtempSync, rmSync } from "node:fs";
-import { tmpdir } from "node:os";
-import { join } from "node:path";
+
+
 import type { DatabaseSync } from "node:sqlite";
 import { afterEach, beforeEach, describe, expect, it } from "vitest";
 
 import { openDatabase } from "@/src/adapters/outbound/sqlite/connection";
 import { execV7Fixture } from "@/tests/fixtures/execution/current-graph";
 import { createProject } from "@/src/adapters/outbound/sqlite/project-workspace/projects";
+import { memoryDatabasePath } from "@/tests/fixtures/sqlite/memory-database";
 
 type PolicyEntryInput = {
   args: string[];
@@ -60,7 +60,6 @@ type PolicyModule = {
 const IDENTITY = "a".repeat(64);
 const HASH = "b".repeat(64);
 const NOW = "2026-07-30T04:30:00.000Z";
-const temporaryDirectories: string[] = [];
 
 let databasePath: string;
 let policy: PolicyModule;
@@ -89,9 +88,7 @@ const resolver = {
 };
 
 beforeEach(async () => {
-  const directory = mkdtempSync(join(tmpdir(), "cool-ai-validation-policy-"));
-  temporaryDirectories.push(directory);
-  databasePath = join(directory, "cockpit.sqlite");
+  databasePath = memoryDatabasePath();
   try {
     policy = await import("@/src/adapters/outbound/sqlite/project-workspace/validation-policy-service") as PolicyModule;
   } catch {
@@ -100,9 +97,6 @@ beforeEach(async () => {
 });
 
 afterEach(() => {
-  for (const directory of temporaryDirectories.splice(0)) {
-    rmSync(directory, { force: true, recursive: true });
-  }
 });
 
 describe("append-only validation policy", () => {

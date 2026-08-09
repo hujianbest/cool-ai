@@ -1,6 +1,5 @@
-import { mkdtempSync, rmSync } from "node:fs";
-import { tmpdir } from "node:os";
-import { join } from "node:path";
+
+
 import type { DatabaseSync } from "node:sqlite";
 import { afterEach, beforeEach, describe, expect, it } from "vitest";
 
@@ -8,6 +7,7 @@ import { openDatabase } from "@/src/adapters/outbound/sqlite/connection";
 import { createWorkItem } from "@/src/adapters/outbound/sqlite/mission-work/mission-service";
 import { createMission } from "@/src/composition/mission-commands";
 import { createProject } from "@/src/adapters/outbound/sqlite/project-workspace/projects";
+import { memoryDatabasePath } from "@/tests/fixtures/sqlite/memory-database";
 
 type GateModule = {
   completionBlockersTx?: (
@@ -40,7 +40,6 @@ const gateModules = import.meta.glob<GateModule>(
   "../../../src/adapters/outbound/sqlite/review-delivery/completion-gate.ts",
 );
 
-let directory: string;
 let databasePath: string;
 let database: DatabaseSync;
 let projectId: string;
@@ -92,8 +91,7 @@ function state(workItemId: string) {
 }
 
 beforeEach(() => {
-  directory = mkdtempSync(join(tmpdir(), "completion-gate-"));
-  databasePath = join(directory, "cockpit.sqlite");
+  databasePath = memoryDatabasePath();
   projectId = createProject("Completion gate", databasePath).id;
   missionId = createMission(databasePath, projectId, {
     expectedVersion: 0,
@@ -106,7 +104,6 @@ beforeEach(() => {
 
 afterEach(() => {
   database.close();
-  rmSync(directory, { force: true, recursive: true });
 });
 
 async function gate(): Promise<Required<GateModule>> {

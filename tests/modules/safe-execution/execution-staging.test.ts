@@ -1,19 +1,14 @@
 import { createHash } from "node:crypto";
-import { mkdtempSync, rmSync } from "node:fs";
-import { tmpdir } from "node:os";
+
 import { join } from "node:path";
 import type { DatabaseSync } from "node:sqlite";
 import { afterEach, describe, expect, it } from "vitest";
 
 import { openDatabase } from "@/src/adapters/outbound/sqlite/connection";
 import { execV7Fixture } from "@/tests/fixtures/execution/current-graph";
-
-const databaseDirectories: string[] = [];
+import { memoryDatabasePath } from "@/tests/fixtures/sqlite/memory-database";
 
 afterEach(() => {
-  for (const directory of databaseDirectories.splice(0)) {
-    rmSync(directory, { force: true, recursive: true });
-  }
 });
 
 type Entry = {
@@ -182,9 +177,7 @@ function input(baseline: Iterable<Entry>, sandbox: Iterable<Entry>) {
 }
 
 function seedStageDatabase(): DatabaseSync {
-  const directory = mkdtempSync(join(tmpdir(), "cool-ai-staging-"));
-  databaseDirectories.push(directory);
-  const databasePath = join(directory, "cockpit.sqlite");
+  const databasePath = memoryDatabasePath();
   const database = openDatabase(databasePath);
   const now = "2026-07-30T10:00:00.000Z";
   const policyHash = EMPTY_POLICY_HASH;

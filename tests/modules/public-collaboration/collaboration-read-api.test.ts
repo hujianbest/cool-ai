@@ -1,11 +1,9 @@
-import { mkdtempSync, rmSync } from "node:fs";
-import { tmpdir } from "node:os";
-import { join } from "node:path";
 import { afterEach, beforeEach, describe, expect, it } from "vitest";
 
 import { createThread } from "@/src/adapters/outbound/sqlite/public-collaboration/thread-service";
 import { openDatabase } from "@/src/adapters/outbound/sqlite/connection";
 import { initializeMissingMissionHeads } from "@/tests/fixtures/execution/current-graph";
+import { memoryDatabasePath } from "@/tests/fixtures/sqlite/memory-database";
 
 type GetRoute = {
   GET(
@@ -25,7 +23,6 @@ const RUN_ID = "run-read-api";
 const AGENT_A = "agent-read-a";
 const AGENT_B = "agent-read-b";
 
-let directory: string;
 let databasePath: string;
 let threadId: string;
 
@@ -323,15 +320,13 @@ async function timeline(query = ""): Promise<Response> {
 }
 
 beforeEach(() => {
-  directory = mkdtempSync(join(tmpdir(), "collaboration-read-api-"));
-  databasePath = join(directory, "cockpit.sqlite");
+  databasePath = memoryDatabasePath();
   process.env.COCKPIT_DB_PATH = databasePath;
   seed();
 });
 
 afterEach(() => {
   delete process.env.COCKPIT_DB_PATH;
-  rmSync(directory, { force: true, recursive: true });
 });
 
 describe("typed collaboration read API", () => {

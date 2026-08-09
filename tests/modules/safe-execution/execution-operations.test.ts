@@ -1,12 +1,12 @@
-import { mkdtempSync, rmSync } from "node:fs";
-import { tmpdir } from "node:os";
-import { join } from "node:path";
+
+
 import type { DatabaseSync } from "node:sqlite";
 import { afterEach, beforeEach, describe, expect, it } from "vitest";
 import { z } from "zod";
 
 import { openDatabase } from "@/src/adapters/outbound/sqlite/connection";
 import { execV7Fixture } from "@/tests/fixtures/execution/current-graph";
+import { memoryDatabasePath } from "@/tests/fixtures/sqlite/memory-database";
 
 const PROJECT_ID = "operation-project";
 const EXECUTION_ID = "operation-execution";
@@ -106,13 +106,11 @@ type OperationModule = {
   }) => { body: T; status: number } | null;
 };
 
-let directory: string;
 let databasePath: string;
 let operations: OperationModule;
 
 beforeEach(async () => {
-  directory = mkdtempSync(join(tmpdir(), "cockpit-execution-operations-"));
-  databasePath = join(directory, "cockpit.sqlite");
+  databasePath = memoryDatabasePath();
   seedExecution();
   const moduleId = "@/src/adapters/outbound/sqlite/safe-execution/execution-operations";
   try {
@@ -123,7 +121,6 @@ beforeEach(async () => {
 });
 
 afterEach(() => {
-  rmSync(directory, { force: true, recursive: true });
 });
 
 function seedExecution(): void {

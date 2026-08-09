@@ -14,6 +14,7 @@ import {
 } from "@/src/adapters/outbound/workspace/merge-verified-adapter";
 import { execV7Fixture } from "@/tests/fixtures/execution/current-graph";
 import { refreshExecutionFrozenFixture } from "@/tests/fixtures/execution/frozen-input";
+import { memoryDatabasePath } from "@/tests/fixtures/sqlite/memory-database";
 
 vi.mock("server-only", () => ({}));
 
@@ -330,7 +331,7 @@ type Fixture = Awaited<ReturnType<typeof createFixture>>;
 async function createFixture(label: string) {
   const root = mkdtempSync(join(tmpdir(), `cool-ai-recovery-${label}-`));
   roots.push(root);
-  const databasePath = join(root, "cockpit.sqlite");
+  const databasePath = memoryDatabasePath();
   const workspaceRoot = join(root, "workspace");
   const sandboxRoot = join(root, "execution", "attempt", "sandbox");
   const journalBaseRoot = join(root, "execution", "attempt", "merge");

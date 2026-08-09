@@ -5,6 +5,7 @@ import { afterEach, describe, expect, it, vi } from "vitest";
 
 import { createProject } from "@/src/adapters/outbound/sqlite/project-workspace/projects";
 import * as workspaceService from "@/src/adapters/outbound/sqlite/project-workspace/workspace-service";
+import { memoryDatabasePath } from "@/tests/fixtures/sqlite/memory-database";
 
 type WorkspaceErrorCode =
   | "WORKSPACE_INVALID"
@@ -73,7 +74,7 @@ afterEach(() => {
 describe("workspace service security boundary", () => {
   it("returns typed, path-sanitized errors for relative, missing, file, and unreadable inputs", async () => {
     const root = temporaryRoot();
-    const databasePath = join(root, "cockpit.sqlite");
+    const databasePath = memoryDatabasePath();
     const project = createProject("Workspace errors", databasePath);
     const missingPath = join(root, "private-missing-directory");
     const filePath = join(root, "private-file.txt");
@@ -142,7 +143,7 @@ describe("workspace service security boundary", () => {
 
   it("audits only realpath, stat, and access while binding a real directory", async () => {
     const root = temporaryRoot();
-    const databasePath = join(root, "cockpit.sqlite");
+    const databasePath = memoryDatabasePath();
     const workspacePath = join(root, "workspace");
     mkdirSync(workspacePath);
     const project = createProject("Audited workspace", databasePath);
@@ -171,7 +172,7 @@ describe("workspace service security boundary", () => {
 
   it("rejects alias and Windows case variants already bound to another project", async () => {
     const root = temporaryRoot();
-    const databasePath = join(root, "cockpit.sqlite");
+    const databasePath = memoryDatabasePath();
     const workspacePath = join(root, "UniqueWorkspace");
     mkdirSync(workspacePath);
     const first = createProject("First", databasePath);
@@ -225,7 +226,7 @@ describe("workspace service security boundary", () => {
 
   it("requires explicit rebind confirmation and the current expectedVersion", async () => {
     const root = temporaryRoot();
-    const databasePath = join(root, "cockpit.sqlite");
+    const databasePath = memoryDatabasePath();
     const firstPath = join(root, "first");
     const secondPath = join(root, "second");
     mkdirSync(firstPath);

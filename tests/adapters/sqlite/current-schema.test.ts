@@ -119,7 +119,7 @@ describe("current canonical schema", () => {
     }
 
     expect(readFileSync(path)).toEqual(before);
-  });
+  }, 20000);
 
   it("rejects a non-empty user_version 0 database without adopting it", () => {
     const path = databasePath();
@@ -257,5 +257,5 @@ describe("current canonical schema", () => {
     snapshotReopen.close();
 
     expectSchemaError(path, "SCHEMA_DRIFT");
-  });
+  }, 20000);
 });

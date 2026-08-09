@@ -1,6 +1,5 @@
-import { mkdtempSync, rmSync } from "node:fs";
-import { tmpdir } from "node:os";
-import { join } from "node:path";
+
+
 import type { DatabaseSync } from "node:sqlite";
 import { afterEach, beforeEach, describe, expect, it } from "vitest";
 
@@ -9,6 +8,7 @@ import type { AgentStructuredBlock } from "@/src/modules/public-collaboration";
 import { openDatabase } from "@/src/adapters/outbound/sqlite/connection";
 import { createWorkItem } from "@/src/adapters/outbound/sqlite/mission-work/mission-service";
 import { seedCurrentAdvanceFixture as seedV7AdvanceFixture } from "@/tests/fixtures/collaboration/current-advance";
+import { memoryDatabasePath } from "@/tests/fixtures/sqlite/memory-database";
 
 type ProposedTask = {
   clientKey: string;
@@ -88,7 +88,6 @@ const AGENT_B = "agent-actions-b";
 const OPERATION_ID = "00000000-0000-4000-8000-000000001300";
 const MISSION_ID = "mission-actions";
 
-let directory: string;
 let databasePath: string;
 let missionId: string;
 let threadId: string;
@@ -297,8 +296,7 @@ function validResult(value: Turn): StructuredTurnResult {
 }
 
 beforeEach(() => {
-  directory = mkdtempSync(join(tmpdir(), "agent-task-actions-"));
-  databasePath = join(directory, "cockpit.sqlite");
+  databasePath = memoryDatabasePath();
   uuidSequence = 0;
   threadId = seedV7AdvanceFixture(databasePath, {
     agentId: AGENT_A,
@@ -318,7 +316,6 @@ beforeEach(() => {
 });
 
 afterEach(() => {
-  rmSync(directory, { force: true, recursive: true });
 });
 
 describe("Agent task action committer", () => {

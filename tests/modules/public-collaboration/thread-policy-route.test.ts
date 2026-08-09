@@ -1,10 +1,8 @@
-import { mkdtempSync, rmSync } from "node:fs";
-import { tmpdir } from "node:os";
-import { join } from "node:path";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
 import { createThread } from "@/src/adapters/outbound/sqlite/public-collaboration/thread-service";
 import { openDatabase } from "@/src/adapters/outbound/sqlite/connection";
+import { memoryDatabasePath } from "@/tests/fixtures/sqlite/memory-database";
 
 type PolicyRoute = {
   PATCH(
@@ -17,7 +15,6 @@ const routes = import.meta.glob<PolicyRoute>(
   "../../../app/api/projects/[projectId]/threads/[threadId]/policy/route.ts",
 );
 const NOW = "2026-08-08T08:00:00.000Z";
-let directory: string;
 let databasePath: string;
 let threadId: string;
 
@@ -68,8 +65,7 @@ function seed(): void {
 beforeEach(() => {
   vi.useFakeTimers();
   vi.setSystemTime(new Date(NOW));
-  directory = mkdtempSync(join(tmpdir(), "thread-policy-route-"));
-  databasePath = join(directory, "cockpit.sqlite");
+  databasePath = memoryDatabasePath();
   process.env.COCKPIT_DB_PATH = databasePath;
   seed();
 });
@@ -77,7 +73,6 @@ beforeEach(() => {
 afterEach(() => {
   delete process.env.COCKPIT_DB_PATH;
   vi.useRealTimers();
-  rmSync(directory, { force: true, recursive: true });
 });
 
 describe("strict tuple policy PATCH route", () => {

@@ -1,6 +1,5 @@
-import { mkdtempSync, rmSync } from "node:fs";
-import { tmpdir } from "node:os";
-import { join } from "node:path";
+
+
 import type { DatabaseSync } from "node:sqlite";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
@@ -12,6 +11,7 @@ import {
   updateWorkItem,
 } from "@/src/adapters/outbound/sqlite/mission-work/mission-service";
 import { createMission } from "@/src/composition/mission-commands";
+import { memoryDatabasePath } from "@/tests/fixtures/sqlite/memory-database";
 
 type Proposal = {
   clientKey: string;
@@ -37,7 +37,6 @@ type Primitives = {
   ) => ReturnType<typeof createWorkItem>;
 };
 
-let directory: string;
 let databasePath: string;
 let projectId: string;
 let missionId: string;
@@ -110,8 +109,7 @@ function row(database: DatabaseSync, workItemId: string) {
 }
 
 beforeEach(() => {
-  directory = mkdtempSync(join(tmpdir(), "mission-tx-primitives-"));
-  databasePath = join(directory, "cockpit.sqlite");
+  databasePath = memoryDatabasePath();
   const project = createProject("Transactions", databasePath);
   projectId = project.id;
   seed();
@@ -125,7 +123,6 @@ beforeEach(() => {
 
 afterEach(() => {
   vi.useRealTimers();
-  rmSync(directory, { force: true, recursive: true });
 });
 
 describe("transaction-aware mission primitives", () => {

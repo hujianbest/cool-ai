@@ -1,6 +1,5 @@
-import { mkdtempSync, rmSync } from "node:fs";
-import { tmpdir } from "node:os";
-import { join } from "node:path";
+
+
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
 import type { AgentTurn } from "@/src/modules/public-collaboration";
@@ -12,6 +11,7 @@ import {
 } from "@/src/adapters/outbound/sqlite/public-collaboration/turn-orchestrator";
 import { openDatabase } from "@/src/adapters/outbound/sqlite/connection";
 import { seedCurrentAdvanceFixture as seedV7AdvanceFixture } from "@/tests/fixtures/collaboration/current-advance";
+import { memoryDatabasePath } from "@/tests/fixtures/sqlite/memory-database";
 
 const NOW = "2026-07-30T05:00:00.000Z";
 const PROJECT_ID = "project-owner-races";
@@ -22,7 +22,6 @@ const AGENT_C = "agent-owner-c";
 const MISSION_ID = "mission-owner-races";
 
 let databasePath: string;
-let directory: string;
 let threadId: string;
 let operationSequence: number;
 let uuidSequence: number;
@@ -173,8 +172,7 @@ function preparePlanReadyFromAgentB(): void {
 beforeEach(() => {
   vi.useFakeTimers();
   vi.setSystemTime(new Date(NOW));
-  directory = mkdtempSync(join(tmpdir(), "owner-handoff-plan-races-"));
-  databasePath = join(directory, "cockpit.sqlite");
+  databasePath = memoryDatabasePath();
   operationSequence = 1_700;
   uuidSequence = 0;
   threadId = seedV7AdvanceFixture(databasePath, {
@@ -196,7 +194,6 @@ beforeEach(() => {
 
 afterEach(() => {
   vi.useRealTimers();
-  rmSync(directory, { force: true, recursive: true });
 });
 
 describe("calling owner messages and handoff", () => {
