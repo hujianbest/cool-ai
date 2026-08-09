@@ -1,6 +1,8 @@
 import { randomUUID } from "node:crypto";
 import type { DatabaseSync } from "node:sqlite";
 
+import { expireOpenApprovalsForProjectExecution } from "@/src/adapters/outbound/sqlite/governance/approval-store";
+
 export type CanonicalPathState = {
   exists: boolean;
   identity: string | null;
@@ -185,11 +187,7 @@ export function staleExecutionForCanonicalPathChanges(
         `).run(input.projectId, input.executionId);
       }
       if (tableExists(database, "execution_approvals")) {
-        database.prepare(`
-          UPDATE execution_approvals SET status='expired',
-            decided_at=coalesce(decided_at,strftime('%Y-%m-%dT%H:%M:%fZ','now'))
-          WHERE project_id=? AND execution_id=? AND status IN ('pending','approved')
-        `).run(input.projectId, input.executionId);
+        expireOpenApprovalsForProjectExecution(database, input.projectId, input.executionId);
       }
       if (tableExists(database, "execution_operations")) {
         const body = JSON.stringify({

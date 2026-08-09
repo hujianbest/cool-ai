@@ -1,6 +1,7 @@
 import { randomUUID } from "node:crypto";
 import type { DatabaseSync } from "node:sqlite";
 
+import { insertCommandApprovalRequest } from "@/src/adapters/outbound/sqlite/governance/approval-store";
 import { canonicalRequestHash } from "@/src/server/collaboration/operation-receipts";
 import {
   CLASSIFIER_VERSION,
@@ -478,23 +479,16 @@ export function requestExecutionCommand(input: CommandRequestInput): CommandRequ
       JSON.stringify(publicRequest),
       row.sandboxManifestHash,
     );
-    input.database.prepare(`
-      INSERT INTO execution_approvals (
-        id,project_id,execution_id,attempt_id,tool_call_id,kind,status,
-        request_hash,input_hash,staged_hash,public_request_json,
-        decided_at,consumed_at,created_at
-      ) VALUES (?, ?, ?, ?, ?, 'command', 'pending', ?, ?, NULL, ?, NULL, NULL,
-        strftime('%Y-%m-%dT%H:%M:%fZ','now'))
-    `).run(
+    insertCommandApprovalRequest(input.database, {
       approvalId,
-      input.projectId,
-      row.executionId,
-      row.attemptId,
-      toolCallId,
+      attemptId: row.attemptId,
+      executionId: row.executionId,
+      inputHash: row.sandboxManifestHash,
+      projectId: input.projectId,
+      publicRequestJson: JSON.stringify(approvalRequest),
       requestHash,
-      row.sandboxManifestHash,
-      JSON.stringify(approvalRequest),
-    );
+      toolCallId,
+    });
     const updated = input.database.prepare(`
       UPDATE executions
       SET status='waiting_approval',resume_target=NULL,

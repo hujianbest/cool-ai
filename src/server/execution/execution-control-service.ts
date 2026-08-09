@@ -4,6 +4,10 @@ import type { DatabaseSync } from "node:sqlite";
 
 import { canonicalRequestHash } from "@/src/server/collaboration/operation-receipts";
 import { openDatabase } from "@/src/adapters/outbound/sqlite/connection";
+import {
+  expireOpenApprovalsForExecution,
+  expireOpenApprovalsForExecutionAt,
+} from "@/src/adapters/outbound/sqlite/governance/approval-store";
 import { captureExecutionFrozenInput } from "@/src/server/execution/execution-frozen-input";
 import {
   ExecutionError,
@@ -459,11 +463,7 @@ export async function controlExecution(
         }
       } else if (input.action === "stop") {
         terminationRequests.push(...discardActiveWork(database, executionId, "OWNER_STOPPED"));
-        database.prepare(`
-          UPDATE execution_approvals
-          SET status='expired',decided_at=coalesce(decided_at,strftime('%Y-%m-%dT%H:%M:%fZ','now'))
-          WHERE execution_id=? AND status IN ('pending','approved')
-        `).run(executionId);
+        expireOpenApprovalsForExecution(database, executionId);
         const stopped = database.prepare(`
           UPDATE executions
           SET status='stopped',resume_target=NULL,reason_code='OWNER_STOPPED',
@@ -558,11 +558,7 @@ export async function controlExecution(
           currentPolicy.policyHash,
           clock.now,
         );
-        database.prepare(`
-          UPDATE execution_approvals
-          SET status='expired',decided_at=coalesce(decided_at,?)
-          WHERE execution_id=? AND status IN ('pending','approved')
-        `).run(clock.now, executionId);
+        expireOpenApprovalsForExecutionAt(database, executionId, clock.now);
         const retried = database.prepare(`
           UPDATE executions
           SET status='queued',resume_target=NULL,reason_code=NULL,current_attempt_no=?,

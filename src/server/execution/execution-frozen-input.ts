@@ -2,6 +2,7 @@ import { createHash, randomUUID } from "node:crypto";
 import type { DatabaseSync } from "node:sqlite";
 import { z } from "zod";
 
+import { expireOpenApprovalsForExecution } from "@/src/adapters/outbound/sqlite/governance/approval-store";
 import { ExecutionError } from "./execution-service";
 import {
   frozenExecutionPromptInputSchema,
@@ -522,11 +523,7 @@ export function staleExecutionIfFrozenInputChanged(
           finished_at=coalesce(finished_at,strftime('%Y-%m-%dT%H:%M:%fZ','now'))
       WHERE execution_id=? AND status IN ('requested','waiting_approval')
     `).run(executionId);
-    database.prepare(`
-      UPDATE execution_approvals
-      SET status='expired',decided_at=coalesce(decided_at,strftime('%Y-%m-%dT%H:%M:%fZ','now'))
-      WHERE execution_id=? AND status IN ('pending','approved')
-    `).run(executionId);
+    expireOpenApprovalsForExecution(database, executionId);
     database.prepare(`
       UPDATE execution_operations
       SET status='completed',final_action_index=action_count-1,http_status=409,

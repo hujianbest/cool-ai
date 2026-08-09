@@ -48,6 +48,7 @@ const MIGRATED_OWNERS: string[] = [
   "project-workspace",
   "mission-work",
   "knowledge-provenance",
+  "governance",
 ];
 
 /**
@@ -176,10 +177,9 @@ describe("writer location by owner", () => {
         const writerOwner = fileOwner(file);
         if (!writerOwner || writerOwner === "__infra__") continue;
         if (writerOwner !== tableOwner) {
-          // governance approvals are written by execution/ until T-08; memory facts by review/ until T-07/T-11
+          // memory facts are written by review/ until T-07/T-11
           const tolerated =
-            (tableOwner === "governance" && writerOwner === "safe-execution") ||
-            (tableOwner === "knowledge-provenance" && writerOwner === "review-delivery");
+            tableOwner === "knowledge-provenance" && writerOwner === "review-delivery";
           if (!tolerated) {
             crossEdges += 1;
             found.push(`${table} (${tableOwner}) written by ${file} (${writerOwner})`);

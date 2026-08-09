@@ -4,6 +4,13 @@ import type { DatabaseSync } from "node:sqlite";
 import { canonicalRequestHash } from "@/src/server/collaboration/operation-receipts";
 import { openDatabase } from "@/src/adapters/outbound/sqlite/connection";
 import {
+  consumeApprovedApprovalById,
+  expireApprovedApprovalById,
+  expireOpenApprovalById,
+  insertStagedMergeApprovalRequest,
+  recordApprovalVerdict,
+} from "@/src/adapters/outbound/sqlite/governance/approval-store";
+import {
   ExecutionError,
   executionDtoFromDatabase,
 } from "@/src/server/execution/execution-service";
@@ -395,12 +402,7 @@ export async function decideExecutionApproval(
       }
       const fail = (error: ExecutionError, expire = false): DecisionResult => {
         if (expire && ["pending", "approved"].includes(row.status)) {
-          database.prepare(`
-            UPDATE execution_approvals
-            SET status='expired',
-                decided_at=coalesce(decided_at,strftime('%Y-%m-%dT%H:%M:%fZ','now'))
-            WHERE id=? AND status IN ('pending','approved')
-          `).run(approvalId);
+          expireOpenApprovalById(database, approvalId);
         }
         persistReceipt(database, {
           body: errorBody(error),
@@ -471,11 +473,11 @@ export async function decideExecutionApproval(
           : input.action === "revoke"
             ? "revoked"
             : "rejected";
-      const updated = database.prepare(`
-        UPDATE execution_approvals SET status=?,
-          decided_at=strftime('%Y-%m-%dT%H:%M:%fZ','now')
-        WHERE id=? AND status=?
-      `).run(nextStatus, approvalId, expectedStatus);
+      const updated = recordApprovalVerdict(database, {
+        approvalId,
+        expectedStatus,
+        nextStatus,
+      });
       if (updated.changes !== 1) {
         return fail(new ExecutionError(
           "APPROVAL_STATE_CONFLICT",
@@ -547,23 +549,16 @@ export function createStagedMergeApproval(input: {
     stagedHash: input.stagedHash,
   };
   const requestHash = canonicalRequestHash(request);
-  input.database.prepare(`
-    INSERT INTO execution_approvals (
-      id,project_id,execution_id,attempt_id,tool_call_id,kind,status,
-      request_hash,input_hash,staged_hash,public_request_json,
-      decided_at,consumed_at,created_at
-    ) VALUES (?, ?, ?, ?, NULL, 'staged_merge', 'pending', ?, ?, ?, ?, NULL, NULL,
-      strftime('%Y-%m-%dT%H:%M:%fZ','now'))
-  `).run(
+  insertStagedMergeApprovalRequest(input.database, {
     approvalId,
-    input.projectId,
-    input.executionId,
-    input.attemptId,
+    attemptId: input.attemptId,
+    executionId: input.executionId,
+    inputHash: input.inputHash,
+    projectId: input.projectId,
+    publicRequestJson: JSON.stringify({ ...request, approvalId, requestHash }),
     requestHash,
-    input.inputHash,
-    input.stagedHash,
-    JSON.stringify({ ...request, approvalId, requestHash }),
-  );
+    stagedHash: input.stagedHash,
+  });
   return { approvalId };
 }
 
@@ -594,11 +589,7 @@ export function consumeApprovedCommand(input: {
     }
     const current = loadApproval(input.database, input.executionId, currentApproval.id);
     if (!approvalIsCurrent(input.database, current)) {
-      input.database.prepare(`
-        UPDATE execution_approvals SET status='expired',
-          decided_at=coalesce(decided_at,strftime('%Y-%m-%dT%H:%M:%fZ','now'))
-        WHERE id=? AND status='approved'
-      `).run(currentApproval.id);
+      expireApprovedApprovalById(input.database, currentApproval.id);
       return { stale: true as const };
     }
     const approval = input.database.prepare(`
@@ -680,11 +671,7 @@ export function consumeApprovedCommand(input: {
       approval.requestHash,
       approval.deadline ?? "9999-12-31T23:59:59.999Z",
     );
-    const consumed = input.database.prepare(`
-      UPDATE execution_approvals SET status='consumed',
-        consumed_at=strftime('%Y-%m-%dT%H:%M:%fZ','now')
-      WHERE id=? AND status='approved'
-    `).run(approval.approvalId);
+    const consumed = consumeApprovedApprovalById(input.database, approval.approvalId);
     const linked = input.database.prepare(`
       UPDATE execution_tool_calls SET action_id=?,status='requested'
       WHERE id=? AND action_id IS NULL AND status='waiting_approval'

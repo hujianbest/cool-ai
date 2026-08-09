@@ -15,3 +15,11 @@
 ## 波次登记
 
 - 2026-08-09 T-01 启动：冻结基线（spec.md 已落盘：227 文件/1803 测试，127 Windows 环境性失败 + 1 stale 架构断言）。
+- 2026-08-09 T-01 ✅ 提交：manifest + writer 清单 + stale 断言修复。
+- 2026-08-09 T-02 ✅ 提交：目标骨架 + tests/architecture 四组检查（含过渡棘轮）。
+- 2026-08-09 T-03 ✅ 提交：storage 收敛（9 文件 + ~200 引用更新）；聚焦 94+16 测试绿、构建绿。
+- 2026-08-09 T-04 ✅ 提交：identity-capability（4 文件）；聚焦 69+57 测试绿、构建绿。
+- 2026-08-09 T-05 ✅ 提交：project-workspace（4 文件，含 validation-policy 归属裁决）；聚焦测试绿（1 个 Windows 环境性失败与基线一致）、构建绿。
+- 2026-08-09 T-06 ✅ 提交：mission-work（3 文件 + collaboration_operations 跨 owner 写提取为 public-collaboration 能力）；聚焦测试绿（1 个 mission-transaction-primitives 超时经 master 对照为既有失败）、构建绿。
+- 2026-08-09 T-07 ✅ 提交：knowledge-provenance（3 文件，含 review/memory-committer 归属裁决）；聚焦测试绿（1 个 review-production-application 失败经 master 对照为既有失败）、构建绿。
+- 进行中：T-08 governance（execution_approvals 写提取）。

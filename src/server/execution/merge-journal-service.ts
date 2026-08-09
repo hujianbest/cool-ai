@@ -8,6 +8,7 @@ import {
 } from "node:path";
 import type { DatabaseSync } from "node:sqlite";
 
+import { consumeStagedMergeApproval } from "@/src/adapters/outbound/sqlite/governance/approval-store";
 import { normalizeCanonicalRelativePath } from "@/src/server/execution/execution-conflicts";
 import { staleExecutionIfFrozenInputChanged } from "@/src/server/execution/execution-frozen-input";
 import {
@@ -479,12 +480,12 @@ function validateAndBegin(
       throw new ExecutionError("VALIDATION_REQUIRED", 422, "Required validation is not current.");
     }
     if (staged.classification === "approval_required") {
-      const approval = input.database.prepare(`
-        UPDATE execution_approvals
-        SET status='consumed',consumed_at=strftime('%Y-%m-%dT%H:%M:%fZ','now')
-        WHERE project_id=? AND execution_id=? AND attempt_id=? AND kind='staged_merge'
-          AND status='approved' AND staged_hash=?
-      `).run(input.projectId, input.executionId, staged.attemptId, input.stagedHash);
+      const approval = consumeStagedMergeApproval(input.database, {
+        attemptId: staged.attemptId,
+        executionId: input.executionId,
+        projectId: input.projectId,
+        stagedHash: input.stagedHash,
+      });
       if (approval.changes !== 1) {
         throw new ExecutionError("APPROVAL_STATE_CONFLICT", 409, "Staged merge approval is missing.");
       }
