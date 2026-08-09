@@ -23,7 +23,12 @@ type MissionServiceModule = {
   createMission(
     databasePath: string,
     projectId: string,
-    input: { title: string; goal: string },
+    input: {
+      title: string;
+      goal: string;
+      operationId: string;
+      expectedVersion: number;
+    },
   ): Mission;
   createWorkItem(
     databasePath: string,
@@ -92,6 +97,8 @@ function setupMission(domain: MissionServiceModule): Mission {
   return domain.createMission(databasePath, project.id, {
     title: "Transition mission",
     goal: "Exercise every state edge",
+    operationId: "16000000-0000-4000-8000-000000000125",
+    expectedVersion: 0,
   });
 }
 

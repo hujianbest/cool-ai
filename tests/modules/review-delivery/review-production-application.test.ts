@@ -219,10 +219,26 @@ function seed(path: string): void {
     ) VALUES
       ('staged','project','execution','execution-attempt','action','${"1".repeat(64)}',
        '${"2".repeat(64)}','${contextHash}','${policyHash}','${"5".repeat(64)}',
-       1,0,0,0,0,'auto_eligible','[]','${NOW}'),
+       1,5,1,5,0,'auto_eligible','[]','${NOW}'),
       ('other-staged','project','other-execution','other-attempt','other-action',
        '${"6".repeat(64)}','${"7".repeat(64)}','${contextHash}','${policyHash}',
-       '${"a".repeat(64)}',1,0,0,0,0,'auto_eligible','[]','${NOW}');
+       '${"a".repeat(64)}',1,5,1,5,0,'auto_eligible','[]','${NOW}');
+    INSERT INTO execution_staged_observations(
+      id,staged_result_id,position,path,path_key,kind,baseline_hash,observed_hash,
+      final_size,diff_text,diff_bytes,diff_truncated
+    ) VALUES
+      ('observation','staged',0,'src/a.txt','src/a.txt','modified',
+       '${"b".repeat(64)}','${"c".repeat(64)}',5,'-old\n+new',9,0),
+      ('other-observation','other-staged',0,'src/b.txt','src/b.txt','modified',
+       '${"d".repeat(64)}','${"e".repeat(64)}',5,'-old\n+new',9,0);
+    INSERT INTO execution_staged_files(
+      id,staged_result_id,observation_id,position,path,path_key,kind,
+      baseline_hash,staged_hash,size
+    ) VALUES
+      ('file','staged','observation',0,'src/a.txt','src/a.txt','modified',
+       '${"b".repeat(64)}','${"c".repeat(64)}',5),
+      ('other-file','other-staged','other-observation',0,'src/b.txt','src/b.txt','modified',
+       '${"d".repeat(64)}','${"e".repeat(64)}',5);
     INSERT INTO work_item_result_versions(
       id,project_id,mission_id,work_item_id,version,execution_id,staged_result_id,
       merge_journal_id,supersedes_result_id,executor_agent_id,created_at

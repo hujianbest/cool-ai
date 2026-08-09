@@ -1,5 +1,5 @@
 import { readdirSync, readFileSync } from "node:fs";
-import { resolve, relative } from "node:path";
+import { resolve, relative, sep } from "node:path";
 
 export const ROOT = process.cwd();
 
@@ -15,8 +15,9 @@ export function sourceFiles(relativeDirectory: string): string[] {
   }
   return entries
     .filter((entry) => entry.isFile() && /\.(?:ts|tsx)$/u.test(entry.name))
-    .map((entry) => relative(ROOT, resolve(entry.parentPath, entry.name)))
-    .filter((path) => ![...path.split("/")].some((part) => SKIP_DIRS.has(part)))
+    .map((entry) =>
+      relative(ROOT, resolve(entry.parentPath, entry.name)).split(sep).join("/"))
+    .filter((path) => !path.split("/").some((part) => SKIP_DIRS.has(part)))
     .sort();
 }
 

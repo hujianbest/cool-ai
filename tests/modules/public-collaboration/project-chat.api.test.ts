@@ -15,7 +15,7 @@ type Route = {
 
 const routeModules = import.meta.glob<Route>([
   "../../../app/api/projects/[projectId]/threads/[threadId]/messages/route.ts",
-  "../app/api/projects/[projectId]/threads/[threadId]/runs/route.ts",
+  "../../../app/api/projects/[projectId]/threads/[threadId]/runs/route.ts",
 ]);
 
 let databasePath: string;
@@ -24,7 +24,7 @@ const MASTER_KEY = Buffer.alloc(32, 38).toString("base64url");
 
 async function route(path: "messages" | "runs"): Promise<Route> {
   const key =
-    `../app/api/projects/[projectId]/threads/[threadId]/${path}/route.ts`;
+    `../../../app/api/projects/[projectId]/threads/[threadId]/${path}/route.ts`;
   const load = routeModules[key];
   expect(load, `${path} route must exist`).toBeTypeOf("function");
   return load();
