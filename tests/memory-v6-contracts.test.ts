@@ -4,7 +4,7 @@ import { join } from "node:path";
 import { afterEach, beforeEach, describe, expect, it } from "vitest";
 
 import { createMemory, listMemories } from "@/src/server/memory-service";
-import { createProject } from "@/src/server/projects";
+import { createProject } from "@/src/adapters/outbound/sqlite/project-workspace/projects";
 
 type MemoryContractsModule = {
   memoryEntryV6Schema: {

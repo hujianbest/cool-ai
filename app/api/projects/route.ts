@@ -4,7 +4,7 @@ import {
   internalErrorResponse,
   storageErrorResponse,
 } from "@/src/server/api-errors";
-import { createProject, listProjects } from "@/src/server/projects";
+import { createProject, listProjects } from "@/src/adapters/outbound/sqlite/project-workspace/projects";
 
 function databasePath(): string {
   return process.env.COCKPIT_DB_PATH ?? join(process.cwd(), ".data", "cockpit.sqlite");

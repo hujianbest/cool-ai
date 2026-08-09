@@ -5,7 +5,7 @@ import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
 import { openDatabase } from "@/src/adapters/outbound/sqlite/connection";
 import { createMission, createWorkItem } from "@/src/server/mission-service";
-import { createProject } from "@/src/server/projects";
+import { createProject } from "@/src/adapters/outbound/sqlite/project-workspace/projects";
 
 type ProjectMember = {
   agentId: string;
@@ -38,13 +38,13 @@ type MembershipServiceModule = {
 };
 
 const serviceModules =
-  import.meta.glob<MembershipServiceModule>("../src/server/membership-service.ts");
+  import.meta.glob<MembershipServiceModule>("../src/adapters/outbound/sqlite/project-workspace/membership-service.ts");
 
 let directory: string;
 let databasePath: string;
 
 async function loadService(): Promise<MembershipServiceModule> {
-  const load = serviceModules["../src/server/membership-service.ts"];
+  const load = serviceModules["../src/adapters/outbound/sqlite/project-workspace/membership-service.ts"];
   expect(load, "the membership domain service must exist").toBeTypeOf("function");
   return load();
 }

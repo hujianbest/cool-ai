@@ -6,8 +6,8 @@ import { validationPolicySchemaErrorResponse } from "@/src/server/execution/vali
 import {
   getValidationPolicy,
   saveValidationPolicy,
-  ValidationPolicyError,
-} from "@/src/server/execution/validation-policy-service";
+} from "@/src/adapters/outbound/sqlite/project-workspace/validation-policy-service";
+import { ValidationPolicyError } from "@/src/modules/project-workspace";
 import { SchemaError } from "@/src/adapters/outbound/sqlite/schema-error";
 
 type RouteContext = { params: Promise<{ projectId: string }> };

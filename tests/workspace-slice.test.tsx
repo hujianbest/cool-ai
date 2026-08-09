@@ -8,7 +8,7 @@ import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
 import { GET as getProjects } from "@/app/api/projects/route";
 import { ProjectPanel } from "@/components/project-panel";
-import { createProject } from "@/src/server/projects";
+import { createProject } from "@/src/adapters/outbound/sqlite/project-workspace/projects";
 
 let rootDirectory: string;
 

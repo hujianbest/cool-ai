@@ -3,7 +3,7 @@ import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { afterEach, beforeEach, describe, expect, it } from "vitest";
 
-import { createProject } from "@/src/server/projects";
+import { createProject } from "@/src/adapters/outbound/sqlite/project-workspace/projects";
 
 type WorkspaceRoute = {
   PUT(

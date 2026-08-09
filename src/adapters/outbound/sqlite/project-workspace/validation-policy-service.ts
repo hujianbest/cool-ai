@@ -4,6 +4,12 @@ import type { DatabaseSync } from "node:sqlite";
 
 import { canonicalRequestHash } from "@/src/server/collaboration/operation-receipts";
 import { openDatabase } from "@/src/adapters/outbound/sqlite/connection";
+import { ValidationPolicyError } from "@/src/modules/project-workspace";
+import type {
+  ValidationPolicy,
+  ValidationPolicyEntry,
+  ValidationPolicyEntryInput,
+} from "@/src/modules/project-workspace";
 import {
   CLASSIFIER_VERSION,
   classifyPolicyEntry,
@@ -15,42 +21,6 @@ import {
 const EMPTY_POLICY_HASH = "4f53cda18c2baa0c0354bb5f9a3ecbe5ed12ab4d8e11ba873c2f11161202b945";
 const MAX_POLICY_BYTES = 65_536;
 const MAX_POLICY_ENTRIES = 50;
-
-export type ValidationPolicyEntryInput = {
-  args: string[];
-  executable: string;
-  required: boolean;
-  workdir: string;
-};
-
-export type ValidationPolicyEntry = ValidationPolicyEntryInput & {
-  executableIdentity: string;
-  id: string;
-  position: number;
-  tupleHash: string;
-};
-
-export type ValidationPolicy = {
-  classifierVersion: number;
-  entries: ValidationPolicyEntry[];
-  policyHash: string;
-  projectId: string;
-  revisionId: string;
-  revisionNo: number;
-  version: number;
-  warningAccepted: boolean;
-};
-
-export class ValidationPolicyError extends Error {
-  constructor(
-    public readonly code: string,
-    message: string,
-    public readonly currentVersion?: number,
-  ) {
-    super(message);
-    this.name = "ValidationPolicyError";
-  }
-}
 
 type ResolvedExecutable = {
   executable: string;

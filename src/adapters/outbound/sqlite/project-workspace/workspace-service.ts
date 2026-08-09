@@ -8,42 +8,16 @@ import { isAbsolute } from "node:path";
 import type { DatabaseSync } from "node:sqlite";
 
 import { openDatabase } from "@/src/adapters/outbound/sqlite/connection";
+import { WorkspaceError } from "@/src/modules/project-workspace";
+import type {
+  WorkspaceFs,
+  WorkspaceOperation,
+} from "@/src/modules/project-workspace";
 import type { WorkspaceState } from "@/src/shared/project-context-contracts";
 
 type ProjectWorkspaceRow = {
   workspacePath: string | null;
   version: number;
-};
-
-export type WorkspaceErrorCode =
-  | "INVALID_INPUT"
-  | "WORKSPACE_INVALID"
-  | "PROJECT_NOT_FOUND"
-  | "WORKSPACE_NOT_FOUND"
-  | "WORKSPACE_NOT_DIRECTORY"
-  | "WORKSPACE_NOT_READABLE"
-  | "WORKSPACE_ALREADY_BOUND"
-  | "REBIND_CONFIRMATION_REQUIRED"
-  | "RESOURCE_CONFLICT";
-
-export class WorkspaceError extends Error {
-  constructor(
-    public readonly code: WorkspaceErrorCode,
-    message: string,
-    public readonly fields?: Array<{ field: string; code: string }>,
-    public readonly currentVersion?: number,
-  ) {
-    super(message);
-    this.name = "WorkspaceError";
-  }
-}
-
-export type WorkspaceOperation = "realpath" | "stat" | "access";
-
-export type WorkspaceFs = {
-  realpath(path: string): Promise<string>;
-  statDirectory(path: string): Promise<boolean>;
-  checkReadable(path: string): Promise<void>;
 };
 
 export function createNodeWorkspaceFs(

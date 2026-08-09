@@ -5,7 +5,7 @@ import { createServerComposition } from "@/src/server/composition/server-composi
 import { canonicalRequestHash } from "@/src/server/collaboration/operation-receipts";
 import { openDatabase } from "@/src/adapters/outbound/sqlite/connection";
 import { createMission } from "@/src/server/mission-service";
-import { createProject } from "@/src/server/projects";
+import { createProject } from "@/src/adapters/outbound/sqlite/project-workspace/projects";
 import type { ReviewDeliveryCommandCapability } from "@/src/server/review/public";
 import { openEmptyCurrentDatabase } from "@/tests/fixtures/sqlite/current-database";
 

@@ -1,6 +1,6 @@
 import { join } from "node:path";
 
-import { listValidationPolicyAudits } from "@/src/server/execution/validation-policy-service";
+import { listValidationPolicyAudits } from "@/src/adapters/outbound/sqlite/project-workspace/validation-policy-service";
 
 type RouteContext = { params: Promise<{ projectId: string }> };
 

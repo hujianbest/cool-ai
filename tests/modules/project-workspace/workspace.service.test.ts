@@ -3,8 +3,8 @@ import { tmpdir } from "node:os";
 import { basename, join } from "node:path";
 import { afterEach, describe, expect, it, vi } from "vitest";
 
-import { createProject } from "@/src/server/projects";
-import * as workspaceService from "@/src/server/workspace-service";
+import { createProject } from "@/src/adapters/outbound/sqlite/project-workspace/projects";
+import * as workspaceService from "@/src/adapters/outbound/sqlite/project-workspace/workspace-service";
 
 type WorkspaceErrorCode =
   | "WORKSPACE_INVALID"

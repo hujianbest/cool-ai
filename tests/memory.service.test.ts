@@ -4,7 +4,7 @@ import { join } from "node:path";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
 import { createMission, createWorkItem } from "@/src/server/mission-service";
-import { createProject } from "@/src/server/projects";
+import { createProject } from "@/src/adapters/outbound/sqlite/project-workspace/projects";
 
 type MemoryType = "goal" | "decision" | "fact" | "artifact";
 type SourceType = "owner_input" | "work_item" | "artifact_path";

@@ -6,7 +6,7 @@ import { afterEach, beforeEach, describe, expect, it } from "vitest";
 
 import { openDatabase } from "@/src/adapters/outbound/sqlite/connection";
 import { createMission, createWorkItem } from "@/src/server/mission-service";
-import { createProject } from "@/src/server/projects";
+import { createProject } from "@/src/adapters/outbound/sqlite/project-workspace/projects";
 import type { DeliveryBuildInput } from "@/src/server/review/delivery-service";
 
 type DeliveryModule = typeof import("../src/server/review/delivery-service");

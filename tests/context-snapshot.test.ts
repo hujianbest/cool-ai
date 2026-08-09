@@ -8,7 +8,7 @@ import {
   createMission,
   createWorkItem,
 } from "@/src/server/mission-service";
-import { createProject } from "@/src/server/projects";
+import { createProject } from "@/src/adapters/outbound/sqlite/project-workspace/projects";
 import { openDatabase } from "@/src/adapters/outbound/sqlite/connection";
 
 type ContextSnapshot = {

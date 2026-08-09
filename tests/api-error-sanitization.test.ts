@@ -5,7 +5,7 @@ const { sentinel } = vi.hoisted(() => ({
     "SENSITIVE_SENTINEL api-key-token https://owner:secret@example.test/raw-body",
 }));
 
-vi.mock("@/src/server/projects", () => ({
+vi.mock("@/src/adapters/outbound/sqlite/project-workspace/projects", () => ({
   createProject: () => {
     throw new Error(sentinel);
   },

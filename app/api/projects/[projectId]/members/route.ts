@@ -7,7 +7,7 @@ import {
 import {
   getMembers,
   replaceMembers,
-} from "@/src/server/membership-service";
+} from "@/src/adapters/outbound/sqlite/project-workspace/membership-service";
 
 type RouteContext = {
   params: Promise<{ projectId: string }>;

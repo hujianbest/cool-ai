@@ -14,7 +14,7 @@ import {
 } from "@/src/server/execution/merge-service";
 import { ExecutionError } from "@/src/server/execution/execution-service";
 import { createWindowsVerifiedMergeAdapter } from "@/src/server/execution/merge-verified-adapter";
-import { saveValidationPolicy } from "@/src/server/execution/validation-policy-service";
+import { saveValidationPolicy } from "@/src/adapters/outbound/sqlite/project-workspace/validation-policy-service";
 import { recoveryMergeFileStatuses } from "@/src/shared/execution-contracts";
 import { execV7Fixture } from "@/tests/fixtures/execution/current-graph";
 

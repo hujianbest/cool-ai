@@ -6,7 +6,7 @@ import { afterEach, describe, expect, it } from "vitest";
 
 import { openDatabase } from "@/src/adapters/outbound/sqlite/connection";
 import { createMission, updateMission } from "@/src/server/mission-service";
-import { createProject } from "@/src/server/projects";
+import { createProject } from "@/src/adapters/outbound/sqlite/project-workspace/projects";
 import {
   acquireDeliveryGeneration,
   invalidateMissionContextTx,

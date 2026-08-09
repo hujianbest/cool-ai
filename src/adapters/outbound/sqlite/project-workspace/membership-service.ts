@@ -1,5 +1,6 @@
 import type { DatabaseSync } from "node:sqlite";
 
+import { MembershipError } from "@/src/modules/project-workspace";
 import { hasActiveCollaborationForProject } from "@/src/server/collaboration/active-run-guards";
 import { openDatabase } from "@/src/adapters/outbound/sqlite/connection";
 import type {
@@ -28,20 +29,6 @@ type ReplaceMembersInput = {
   agentIds: string[];
   expectedProjectVersion: number;
 };
-
-export class MembershipError extends Error {
-  constructor(
-    public readonly code: string,
-    public readonly httpStatus: number,
-    message: string,
-    public readonly fields?: Array<{ field: string; code: string }>,
-    public readonly currentVersion?: number,
-    public readonly agentIds?: string[],
-  ) {
-    super(message);
-    this.name = "MembershipError";
-  }
-}
 
 function invalidInput(code: string): MembershipError {
   return new MembershipError(

@@ -7,8 +7,8 @@ import {
 import {
   bindWorkspace,
   getWorkspace,
-  WorkspaceError,
-} from "@/src/server/workspace-service";
+} from "@/src/adapters/outbound/sqlite/project-workspace/workspace-service";
+import { WorkspaceError } from "@/src/modules/project-workspace";
 
 type RouteContext = {
   params: Promise<{ projectId: string }>;

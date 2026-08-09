@@ -8,7 +8,7 @@ import * as contextSnapshotService from "@/src/server/context-snapshot-service";
 import * as providerService from "@/src/adapters/outbound/sqlite/identity-capability/provider-service";
 import { createCredentialVault } from "@/src/modules/identity-capability/internal/credential-vault";
 import { openDatabase } from "@/src/adapters/outbound/sqlite/connection";
-import { replaceMembers } from "@/src/server/membership-service";
+import { replaceMembers } from "@/src/adapters/outbound/sqlite/project-workspace/membership-service";
 import {
   updateMission,
   updateWorkItem,

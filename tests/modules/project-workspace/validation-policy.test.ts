@@ -6,7 +6,7 @@ import { afterEach, beforeEach, describe, expect, it } from "vitest";
 
 import { openDatabase } from "@/src/adapters/outbound/sqlite/connection";
 import { execV7Fixture } from "@/tests/fixtures/execution/current-graph";
-import { createProject } from "@/src/server/projects";
+import { createProject } from "@/src/adapters/outbound/sqlite/project-workspace/projects";
 
 type PolicyEntryInput = {
   args: string[];
@@ -93,7 +93,7 @@ beforeEach(async () => {
   temporaryDirectories.push(directory);
   databasePath = join(directory, "cockpit.sqlite");
   try {
-    policy = await import("@/src/server/execution/validation-policy-service") as PolicyModule;
+    policy = await import("@/src/adapters/outbound/sqlite/project-workspace/validation-policy-service") as PolicyModule;
   } catch {
     expect.fail("The T-11 validation policy service is unavailable.");
   }
