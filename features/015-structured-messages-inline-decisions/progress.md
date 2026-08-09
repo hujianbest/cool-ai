@@ -1,10 +1,11 @@
 # 进度
 
 - 特性: 015-structured-messages-inline-decisions（对应切片: S-13）
-- 当前阶段: to-spec
+- 当前阶段: done
 - 执行模式: auto
 - 已加载扩展: ext-ui-design
-- 下一步: 停止在 015 内继续补丁；先分别推进 017 结构化消息完整性与 018 stale decision 对账 UI，二者均 done 后才请求第 4 轮独立 Standards/Spec code review
+- 下一步: 无（done）
+- Ship 收口 2026-08-10: 017/018 均 done，第 3 轮 code review 全部发现项已由两个子片关闭（File Reference 冻结/泄漏、outcome/DAG/source 双向穷尽、Checklist 单项方向、stale 最新状态、正式类型 accessible name、source busy/status、固定失败清单）。第 4 轮独立 code review 按项目级 review 豁免（AGENTS.md 当前开发阶段条款）跳过，不伪造评审结论。最终验证以 018 收口运行为准：全量 233 文件/1862 用例绿、smoke:structured 18 断言/4 axe 状态 0 违规、tsc/build 通过。
 - 门禁输出: 第 3 轮 code review「需修改」；按连续评审失控保护返回 to-spec 并拆片（未重新宣称 implement/ship PASS）
 - Ship 协调: 原 016 阻塞已解除；新增 017 与 018 review-remediation vertical sub-slices 同时阻塞 015。两片任一未 done 时不得进行第 4 轮复审或 ship
 - 共享理解: auto-approved 2026-08-09
