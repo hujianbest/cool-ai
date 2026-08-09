@@ -72,7 +72,7 @@ export const diffPreviewBlockSchema = diffPreviewInputSchema.extend({
   stagedHash: hash,
 }).strict();
 
-export const fileReferenceBlockSchema = z.object({
+export const fileReferenceInputSchema = z.object({
   artifactHash: hash,
   artifactId: identifier,
   blockRevision: z.literal(1),
@@ -81,6 +81,10 @@ export const fileReferenceBlockSchema = z.object({
   executionId: identifier,
   logicalBlockId: identifier,
   title: boundedGraphemeText(160),
+}).strict();
+
+export const fileReferenceBlockSchema = fileReferenceInputSchema.extend({
+  publicName: boundedGraphemeText(160),
 }).strict();
 
 export const handoffCardBlockSchema = z.object({
@@ -97,7 +101,7 @@ export const agentStructuredBlockSchema = z.discriminatedUnion("blockType", [
   proposalBlockSchema,
   checklistBlockSchema,
   diffPreviewInputSchema,
-  fileReferenceBlockSchema,
+  fileReferenceInputSchema,
   handoffCardBlockSchema,
 ]);
 
@@ -163,6 +167,7 @@ export const blockCodecSchema: StructuredMessageSchema<StructuredBlock> = {
     if (value.blockType === "diff_preview") {
       return [value.title, value.preview, ...value.fileReferences];
     }
+    if (value.blockType === "file_reference") return [value.title, value.publicName];
     return [value.title];
   },
 };

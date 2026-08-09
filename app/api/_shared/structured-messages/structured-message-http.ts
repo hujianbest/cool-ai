@@ -270,20 +270,37 @@ export async function structuredMessageSourcePost(
           },
         });
       }
-      const sourceRef = block.blockType === "file_reference"
-          ? {
-              artifactHash: block.artifactHash,
-              artifactId: block.artifactId,
-              executionId: block.executionId,
-              kind: "file" as const,
-            }
-          : block.blockType === "handoff_card"
-            ? {
-                factId: block.factId,
-                kind: "handoff" as const,
-                turnId: block.turnId,
-              }
-            : null;
+      if (block.blockType === "file_reference") {
+        if (
+          row.sourceId !== block.artifactId
+          || row.sourceEntityVersion !== block.artifactHash
+        ) {
+          throw new CollaborationError(
+            "STORAGE_UNAVAILABLE",
+            503,
+            "Structured message storage is invalid.",
+          );
+        }
+        return Response.json({
+          display: { name: block.publicName },
+          navigation: {
+            executionId: block.executionId,
+            sourceId: block.artifactId,
+          },
+          source: {
+            id: block.artifactId,
+            kind: "artifact",
+            version: block.artifactHash,
+          },
+        });
+      }
+      const sourceRef = block.blockType === "handoff_card"
+        ? {
+            factId: block.factId,
+            kind: "handoff" as const,
+            turnId: block.turnId,
+          }
+        : null;
       if (!sourceRef) {
         throw new CollaborationError("ACTION_CONFLICT", 409, "Source navigation is unavailable.");
       }

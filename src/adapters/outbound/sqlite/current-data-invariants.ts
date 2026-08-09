@@ -1,6 +1,8 @@
 import { createHash } from "node:crypto";
 import type { DatabaseSync } from "node:sqlite";
 
+import canonicalize from "canonicalize";
+
 import {
   canonicalizeStructuredJson,
   decodePersistedStructuredJson,
@@ -222,28 +224,6 @@ export const CURRENT_DATA_INVARIANTS = [
   `SELECT project_id FROM collaboration_runs
    WHERE status IN('running','waiting_owner','paused','failed')
    GROUP BY project_id HAVING count(*)>1`,
-  `SELECT b.id FROM structured_message_blocks b
-   WHERE (SELECT count(*) FROM structured_message_state_revisions s
-          WHERE (s.project_id,s.thread_id,s.block_id,s.state_version)=
-                (b.project_id,b.thread_id,b.id,1))<>1
-      OR (SELECT count(*) FROM structured_message_state_heads h
-          WHERE (h.project_id,h.thread_id,h.block_id)=(b.project_id,b.thread_id,b.id))<>1`,
-  `SELECT h.block_id FROM structured_message_state_heads h
-   WHERE h.current_state_version<>(SELECT max(s.state_version)
-                                   FROM structured_message_state_revisions s
-                                   WHERE (s.project_id,s.thread_id,s.block_id)=
-                                         (h.project_id,h.thread_id,h.block_id))`,
-  `SELECT d.id FROM inline_decisions d
-   JOIN collaboration_operations o
-     ON (o.project_id,o.thread_id,o.id)=(d.project_id,d.thread_id,d.operation_id)
-   WHERE o.kind<>'inline_decision' OR o.status<>'completed'
-      OR (SELECT count(*) FROM business_action_receipts r
-          WHERE (r.project_id,r.thread_id,r.decision_id)=
-                (d.project_id,d.thread_id,d.id))<>1
-      OR (SELECT count(*) FROM collaboration_thread_facts f
-          WHERE (f.project_id,f.thread_id,f.inline_decision_id)=
-                (d.project_id,d.thread_id,d.id)
-            AND f.type='inline_decision')<>1`,
 ] as const;
 
 function canonicalJson(value: string, maximum: number): unknown {
@@ -335,6 +315,25 @@ function chunkFactsAreValid(database: DatabaseSync): boolean {
 
 function structuredFactsAreValid(database: DatabaseSync): boolean {
   try {
+    const handoffEventByKey = new Map<string, string>();
+    const runEventFacts = database.prepare(`
+      SELECT project_id AS projectId,thread_id AS threadId,run_id AS runId,id,
+             run_event_id AS eventId
+      FROM collaboration_thread_facts
+      WHERE type='run_event'
+    `).all() as Array<{
+      eventId: string;
+      id: string;
+      projectId: string;
+      runId: string;
+      threadId: string;
+    }>;
+    for (const fact of runEventFacts) {
+      handoffEventByKey.set(
+        `${fact.projectId}\0${fact.threadId}\0${fact.runId}\0${fact.id}`,
+        fact.eventId,
+      );
+    }
     const blocks = database.prepare(`
       SELECT b.payload_json AS json,b.payload_hash AS hash,
              b.block_schema_version AS schemaVersion,b.block_revision AS blockRevision,
@@ -376,60 +375,531 @@ function structuredFactsAreValid(database: DatabaseSync): boolean {
         || (row.sourceKind === "message"
           && (row.sourceId !== row.messageId || row.sourceVersion !== null))
       ) return false;
-      if (decoded.kind === "known") persistedStructuredBlockSchema.parse(decoded.value);
+      if (decoded.kind === "known") {
+        const parsedBlock = persistedStructuredBlockSchema.parse(decoded.value);
+        if (parsedBlock.blockType === "diff_preview") {
+          if (
+            row.sourceKind !== "execution"
+            || row.sourceId !== parsedBlock.observationId
+            || row.sourceVersion !== parsedBlock.observationHash
+          ) return false;
+        } else if (parsedBlock.blockType === "file_reference") {
+          if (
+            row.sourceKind !== "artifact"
+            || row.sourceId !== parsedBlock.artifactId
+            || row.sourceVersion !== parsedBlock.artifactHash
+          ) return false;
+        } else if (parsedBlock.blockType === "handoff_card") {
+          if (
+            row.sourceKind !== "handoff"
+            || row.sourceId !== parsedBlock.factId
+            || row.sourceVersion === null
+            || handoffEventByKey.get(
+              `${String(row.projectId)}\0${String(row.threadId)}\0${String(row.runId)}\0${parsedBlock.factId}`,
+            ) !== row.sourceVersion
+          ) return false;
+        } else if (row.sourceKind !== "message") {
+          return false;
+        }
+      }
     }
 
-    const graphRows = database.prepare(`
-      SELECT d.id AS decisionId,d.action,d.item_id AS itemId,
-             d.block_id AS blockId,d.block_revision AS blockRevision,
-             d.from_state_version AS fromVersion,d.to_state_version AS toVersion,
-             r.id AS receiptId,r.result_json AS receiptJson,
-             f.payload_json AS factJson,o.response_json AS responseJson,
-             fs.state_json AS fromJson,ts.state_json AS toJson
-      FROM inline_decisions d
-      JOIN business_action_receipts r ON r.decision_id=d.id
-      JOIN collaboration_thread_facts f ON f.inline_decision_id=d.id
-      JOIN collaboration_operations o ON o.id=d.operation_id AND o.project_id=d.project_id
-      JOIN structured_message_state_revisions fs
-        ON (fs.project_id,fs.thread_id,fs.block_id,fs.state_version)=
-           (d.project_id,d.thread_id,d.block_id,d.from_state_version)
-      JOIN structured_message_state_revisions ts
-        ON (ts.project_id,ts.thread_id,ts.block_id,ts.state_version)=
-           (d.project_id,d.thread_id,d.block_id,d.to_state_version)
-    `).all() as Array<Record<string, unknown> & {
-      factJson: string; fromJson: string; receiptJson: string; responseJson: string; toJson: string;
-    }>;
-    for (const row of graphRows) {
-      const receipt = canonicalJson(row.receiptJson, 256 * 1024) as Record<string, unknown>;
-      const fact = canonicalJson(row.factJson, 64 * 1024) as Record<string, unknown>;
-      const response = canonicalJson(row.responseJson, 256 * 1024) as {
-        receipt: Record<string, unknown>;
-      };
-      const fromState = canonicalJson(row.fromJson, 64 * 1024) as Record<string, unknown>;
-      const toState = canonicalJson(row.toJson, 64 * 1024) as Record<string, unknown>;
-      for (const value of [receipt, fact, response.receipt]) {
-        if (
-          value.decisionId !== row.decisionId
-          || value.blockId !== row.blockId
-          || value.blockRevision !== row.blockRevision
-          || value.fromStateVersion !== row.fromVersion
-          || value.toStateVersion !== row.toVersion
-          || (value.itemId ?? null) !== row.itemId
-          || ("receiptId" in value && value.receiptId !== row.receiptId)
-          || ("action" in value && value.action !== row.action)
-        ) return false;
-      }
+    return true;
+  } catch {
+    return false;
+  }
+}
+
+// Enumerates the full block/state-revision/head sets from a consistent
+// snapshot and validates them bidirectionally: every state fact must map to
+// exactly one block, every block must own a continuous, exactly-once,
+// fork-free 1..N revision chain whose kind matches the block type, and the
+// head must point at the unique terminal version. This never relies on
+// single-direction foreign keys or reachable-path sampling.
+function structuredStateGraphsAreValid(database: DatabaseSync): boolean {
+  type BlockRow = {
+    blockType: string;
+    id: string;
+    logicalBlockId: string;
+    messageId: string;
+    projectId: string;
+    runId: string | null;
+    threadId: string;
+  };
+  type RevisionRow = {
+    blockId: string;
+    priorStateVersion: number | null;
+    projectId: string;
+    stateKind: string;
+    stateVersion: number;
+    threadId: string;
+  };
+  type HeadRow = {
+    blockId: string;
+    currentStateVersion: number;
+    projectId: string;
+    threadId: string;
+  };
+  const blocks = database.prepare(`
+    SELECT id,project_id AS projectId,thread_id AS threadId,run_id AS runId,
+           message_id AS messageId,logical_block_id AS logicalBlockId,
+           block_type AS blockType
+    FROM structured_message_blocks
+  `).all() as BlockRow[];
+  const revisions = database.prepare(`
+    SELECT project_id AS projectId,thread_id AS threadId,block_id AS blockId,
+           state_version AS stateVersion,prior_state_version AS priorStateVersion,
+           state_kind AS stateKind
+    FROM structured_message_state_revisions
+  `).all() as RevisionRow[];
+  const heads = database.prepare(`
+    SELECT project_id AS projectId,thread_id AS threadId,block_id AS blockId,
+           current_state_version AS currentStateVersion
+    FROM structured_message_state_heads
+  `).all() as HeadRow[];
+  const messages = database.prepare(`
+    SELECT project_id AS projectId,thread_id AS threadId,id,run_id AS runId
+    FROM collaboration_messages
+  `).all() as Array<{ id: string; projectId: string; runId: string | null; threadId: string }>;
+
+  const key = (projectId: string, threadId: string, id: string) =>
+    `${projectId}\0${threadId}\0${id}`;
+
+  const blockByKey = new Map<string, BlockRow>();
+  for (const block of blocks) {
+    const blockKey = key(block.projectId, block.threadId, block.id);
+    if (blockByKey.has(blockKey)) return false;
+    blockByKey.set(blockKey, block);
+  }
+
+  const messageRunByKey = new Map<string, string | null>();
+  for (const message of messages) {
+    messageRunByKey.set(key(message.projectId, message.threadId, message.id), message.runId);
+  }
+
+  const logicalIdentityByMessage = new Set<string>();
+  for (const block of blocks) {
+    const messageKey = key(block.projectId, block.threadId, block.messageId);
+    if (!messageRunByKey.has(messageKey) || messageRunByKey.get(messageKey) !== block.runId) {
+      return false;
+    }
+    const logicalKey = `${messageKey}\0${block.logicalBlockId}`;
+    if (logicalIdentityByMessage.has(logicalKey)) return false;
+    logicalIdentityByMessage.add(logicalKey);
+  }
+
+  const revisionsByBlock = new Map<string, RevisionRow[]>();
+  for (const revision of revisions) {
+    const blockKey = key(revision.projectId, revision.threadId, revision.blockId);
+    if (!blockByKey.has(blockKey)) return false;
+    const chain = revisionsByBlock.get(blockKey);
+    if (chain === undefined) revisionsByBlock.set(blockKey, [revision]);
+    else chain.push(revision);
+  }
+
+  const headVersionByBlock = new Map<string, number>();
+  for (const head of heads) {
+    const blockKey = key(head.projectId, head.threadId, head.blockId);
+    if (!blockByKey.has(blockKey) || headVersionByBlock.has(blockKey)) return false;
+    headVersionByBlock.set(blockKey, head.currentStateVersion);
+  }
+
+  for (const block of blocks) {
+    const blockKey = key(block.projectId, block.threadId, block.id);
+    const headVersion = headVersionByBlock.get(blockKey);
+    const chain = revisionsByBlock.get(blockKey);
+    if (headVersion === undefined || chain === undefined || chain.length !== headVersion) {
+      return false;
+    }
+    const expectedKind = block.blockType === "proposal" || block.blockType === "checklist"
+      ? block.blockType
+      : "read_only";
+    const versions = new Set<number>();
+    for (const revision of chain) {
       if (
-        row.toVersion !== Number(row.fromVersion) + 1
-        || (row.action === "accept" && toState.status !== "accepted")
-        || (row.action === "reject" && toState.status !== "rejected")
-        || (["accept", "reject"].includes(String(row.action)) && fromState.status !== "pending")
+        revision.stateVersion < 1
+        || revision.stateVersion > chain.length
+        || versions.has(revision.stateVersion)
+        || revision.priorStateVersion !== (revision.stateVersion === 1
+          ? null
+          : revision.stateVersion - 1)
+        || revision.stateKind !== expectedKind
       ) return false;
+      versions.add(revision.stateVersion);
+    }
+  }
+  return true;
+}
+
+// Enumerates the full inline_decision operation/Decision/Business
+// Receipt/decision Fact sets from a consistent snapshot and validates them
+// bidirectionally with exactly-once cardinality: every completed operation
+// owns exactly one decision triple, non-success terminals stay result-free,
+// every triple belongs to exactly one completed operation, and the stored
+// receipt/fact/response JSON must equal the field-by-field reconstruction
+// from the decision row. Each decision must justify exactly one state
+// transition and every revision beyond v1 must be produced by exactly one
+// decision; Checklist transitions may only flip the target item's checked
+// bit in the action's legal direction while every other item, order, and
+// non-state content stays untouched.
+function structuredOutcomesAreValid(database: DatabaseSync): boolean {
+  type DecisionRow = {
+    action: string;
+    actorId: string | null;
+    actorType: string;
+    blockId: string;
+    blockRevision: number;
+    fromStateVersion: number;
+    id: string;
+    itemId: string | null;
+    operationId: string;
+    projectId: string;
+    runId: string | null;
+    threadId: string;
+    toStateVersion: number;
+  };
+  type ReceiptRow = {
+    blockId: string;
+    blockRevision: number;
+    decisionId: string;
+    fromStateVersion: number;
+    id: string;
+    operationId: string;
+    projectId: string;
+    requestHash: string;
+    resultJson: string;
+    runId: string | null;
+    threadId: string;
+    toStateVersion: number;
+  };
+  type FactRow = {
+    decisionId: string | null;
+    id: string;
+    payloadJson: string;
+    projectId: string;
+    receiptId: string | null;
+    runId: string | null;
+    threadId: string;
+  };
+  type OperationRow = {
+    id: string;
+    projectId: string;
+    requestHash: string;
+    responseJson: string | null;
+    runId: string | null;
+    status: string;
+    threadId: string;
+  };
+  type BlockRow = {
+    blockRevision: number;
+    blockType: string;
+    id: string;
+    projectId: string;
+    runId: string | null;
+    threadId: string;
+  };
+  const key = (projectId: string, threadId: string, id: string) =>
+    JSON.stringify([projectId, threadId, id]);
+  try {
+    const decisions = database.prepare(`
+      SELECT id,project_id AS projectId,thread_id AS threadId,run_id AS runId,
+             operation_id AS operationId,block_id AS blockId,
+             block_revision AS blockRevision,from_state_version AS fromStateVersion,
+             to_state_version AS toStateVersion,action,item_id AS itemId,
+             actor_type AS actorType,actor_id AS actorId
+      FROM inline_decisions
+    `).all() as DecisionRow[];
+    const receipts = database.prepare(`
+      SELECT id,project_id AS projectId,thread_id AS threadId,run_id AS runId,
+             decision_id AS decisionId,operation_id AS operationId,
+             request_hash AS requestHash,block_id AS blockId,
+             block_revision AS blockRevision,
+             from_state_version AS fromStateVersion,
+             to_state_version AS toStateVersion,result_json AS resultJson
+      FROM business_action_receipts
+    `).all() as ReceiptRow[];
+    const facts = database.prepare(`
+      SELECT id,project_id AS projectId,thread_id AS threadId,run_id AS runId,
+             inline_decision_id AS decisionId,business_receipt_id AS receiptId,
+             payload_json AS payloadJson
+      FROM collaboration_thread_facts WHERE type='inline_decision'
+    `).all() as FactRow[];
+    const operations = database.prepare(`
+      SELECT id,project_id AS projectId,thread_id AS threadId,run_id AS runId,
+             request_hash AS requestHash,status,response_json AS responseJson
+      FROM collaboration_operations WHERE kind='inline_decision'
+    `).all() as OperationRow[];
+    const blocks = database.prepare(`
+      SELECT id,project_id AS projectId,thread_id AS threadId,run_id AS runId,
+             block_type AS blockType,block_revision AS blockRevision
+      FROM structured_message_blocks
+    `).all() as BlockRow[];
+    const revisionRows = database.prepare(`
+      SELECT project_id AS projectId,thread_id AS threadId,block_id AS blockId,
+             state_version AS stateVersion,state_json AS stateJson
+      FROM structured_message_state_revisions
+    `).all() as Array<{
+      blockId: string;
+      projectId: string;
+      stateJson: string;
+      stateVersion: number;
+      threadId: string;
+    }>;
+
+    const operationByKey = new Map<string, OperationRow>();
+    for (const operation of operations) {
+      const operationKey = key(operation.projectId, operation.threadId, operation.id);
+      if (operationByKey.has(operationKey)) return false;
+      operationByKey.set(operationKey, operation);
+    }
+    const blockByKey = new Map<string, BlockRow>();
+    for (const block of blocks) {
+      blockByKey.set(key(block.projectId, block.threadId, block.id), block);
+    }
+    const stateJsonByRevisionKey = new Map<string, string>();
+    const versionsByBlock = new Map<string, Set<number>>();
+    for (const revision of revisionRows) {
+      const blockKey = key(revision.projectId, revision.threadId, revision.blockId);
+      const revisionKey = `${blockKey}:${revision.stateVersion}`;
+      if (stateJsonByRevisionKey.has(revisionKey)) return false;
+      stateJsonByRevisionKey.set(revisionKey, revision.stateJson);
+      const versions = versionsByBlock.get(blockKey);
+      if (versions === undefined) versionsByBlock.set(blockKey, new Set([revision.stateVersion]));
+      else versions.add(revision.stateVersion);
+    }
+    const decisionByKey = new Map<string, DecisionRow>();
+    const decisionCountByOperation = new Map<string, number>();
+    const decisionsByBlock = new Map<string, DecisionRow[]>();
+    for (const decision of decisions) {
+      const decisionKey = key(decision.projectId, decision.threadId, decision.id);
+      if (decisionByKey.has(decisionKey)) return false;
+      decisionByKey.set(decisionKey, decision);
+      const operationKey = key(decision.projectId, decision.threadId, decision.operationId);
+      decisionCountByOperation.set(
+        operationKey,
+        (decisionCountByOperation.get(operationKey) ?? 0) + 1,
+      );
+      const blockKey = key(decision.projectId, decision.threadId, decision.blockId);
+      const siblings = decisionsByBlock.get(blockKey);
+      if (siblings === undefined) decisionsByBlock.set(blockKey, [decision]);
+      else siblings.push(decision);
+    }
+    const receiptByDecisionKey = new Map<string, ReceiptRow>();
+    for (const receipt of receipts) {
+      const decisionKey = key(receipt.projectId, receipt.threadId, receipt.decisionId);
+      if (receiptByDecisionKey.has(decisionKey)) return false;
+      receiptByDecisionKey.set(decisionKey, receipt);
+    }
+    const factByDecisionKey = new Map<string, FactRow>();
+    for (const fact of facts) {
+      if (fact.decisionId === null) return false;
+      const decisionKey = key(fact.projectId, fact.threadId, fact.decisionId);
+      if (factByDecisionKey.has(decisionKey)) return false;
+      factByDecisionKey.set(decisionKey, fact);
+    }
+
+    for (const operation of operations) {
+      const count = decisionCountByOperation.get(
+        key(operation.projectId, operation.threadId, operation.id),
+      ) ?? 0;
+      if (operation.status === "completed") {
+        if (count !== 1) return false;
+      } else if (operation.status === "version_conflict") {
+        if (count !== 0) return false;
+        if (operation.responseJson === null) return false;
+        const body = canonicalJson(operation.responseJson, 256 * 1024);
+        if (!versionConflictBodyIsValid(body)) return false;
+      } else {
+        return false;
+      }
+    }
+
+    for (const decision of decisions) {
+      const operation = operationByKey.get(
+        key(decision.projectId, decision.threadId, decision.operationId),
+      );
+      if (operation === undefined || operation.status !== "completed") return false;
+      if (decision.runId !== operation.runId) return false;
+      const block = blockByKey.get(
+        key(decision.projectId, decision.threadId, decision.blockId),
+      );
+      if (
+        block === undefined
+        || (block.blockType !== "proposal" && block.blockType !== "checklist")
+        || block.blockRevision !== decision.blockRevision
+        || block.runId !== decision.runId
+      ) return false;
+      if (
+        decision.actorType !== "owner"
+        || decision.fromStateVersion < 1
+        || decision.toStateVersion !== decision.fromStateVersion + 1
+        || ((decision.action === "accept" || decision.action === "reject")
+          !== (decision.itemId === null))
+      ) return false;
+      const decisionKey = key(decision.projectId, decision.threadId, decision.id);
+      const receipt = receiptByDecisionKey.get(decisionKey);
+      const fact = factByDecisionKey.get(decisionKey);
+      if (receipt === undefined || fact === undefined) return false;
+      if (
+        receipt.operationId !== decision.operationId
+        || receipt.blockId !== decision.blockId
+        || receipt.blockRevision !== decision.blockRevision
+        || receipt.fromStateVersion !== decision.fromStateVersion
+        || receipt.toStateVersion !== decision.toStateVersion
+        || receipt.runId !== decision.runId
+        || receipt.requestHash !== operation.requestHash
+        || fact.receiptId !== receipt.id
+        || fact.runId !== decision.runId
+      ) return false;
+      const expectedReceipt = {
+        action: decision.action,
+        blockId: decision.blockId,
+        blockRevision: decision.blockRevision,
+        decisionId: decision.id,
+        fromStateVersion: decision.fromStateVersion,
+        ...(decision.itemId === null ? {} : { itemId: decision.itemId }),
+        operationId: decision.operationId,
+        receiptId: receipt.id,
+        receiptSchemaVersion: 1,
+        requestHash: operation.requestHash,
+        toStateVersion: decision.toStateVersion,
+      };
+      const storedReceipt = canonicalJson(receipt.resultJson, 256 * 1024);
+      if (canonicalize(storedReceipt) !== canonicalize(expectedReceipt)) return false;
+      const storedFactPayload = canonicalJson(fact.payloadJson, 64 * 1024);
+      if (
+        canonicalize(storedFactPayload) !== canonicalize({
+          action: decision.action,
+          blockId: decision.blockId,
+          blockRevision: decision.blockRevision,
+          decisionId: decision.id,
+          fromStateVersion: decision.fromStateVersion,
+          itemId: decision.itemId,
+          operationId: decision.operationId,
+          receiptId: receipt.id,
+          toStateVersion: decision.toStateVersion,
+        })
+      ) return false;
+      if (operation.responseJson === null) return false;
+      const storedResponse = canonicalJson(operation.responseJson, 256 * 1024);
+      if (
+        canonicalize(storedResponse) !== canonicalize({
+          kind: "completed",
+          receipt: expectedReceipt,
+        })
+      ) return false;
+      const blockKey = key(decision.projectId, decision.threadId, decision.blockId);
+      const fromJson = stateJsonByRevisionKey.get(`${blockKey}:${decision.fromStateVersion}`);
+      const toJson = stateJsonByRevisionKey.get(`${blockKey}:${decision.toStateVersion}`);
+      if (fromJson === undefined || toJson === undefined) return false;
+      if (
+        !decisionTransitionIsValid(
+          decision,
+          block.blockType,
+          canonicalJson(fromJson, 64 * 1024),
+          canonicalJson(toJson, 64 * 1024),
+        )
+      ) return false;
+    }
+
+    for (const [blockKey, versions] of versionsByBlock) {
+      const siblings = decisionsByBlock.get(blockKey) ?? [];
+      const justifiedVersions = new Set<number>();
+      for (const decision of siblings) {
+        if (justifiedVersions.has(decision.toStateVersion)) return false;
+        justifiedVersions.add(decision.toStateVersion);
+      }
+      if (siblings.length !== versions.size - 1) return false;
+      for (const version of versions) {
+        if (version > 1 && !justifiedVersions.has(version)) return false;
+      }
     }
     return true;
   } catch {
     return false;
   }
+}
+
+function versionConflictBodyIsValid(value: unknown): boolean {
+  if (typeof value !== "object" || value === null || Array.isArray(value)) return false;
+  const body = value as Record<string, unknown>;
+  if (Object.keys(body).length !== 3 || body.kind !== "version_conflict") return false;
+  if (
+    typeof body.currentStateVersion !== "number"
+    || !Number.isInteger(body.currentStateVersion)
+    || body.currentStateVersion < 1
+  ) return false;
+  const error = body.error;
+  if (typeof error !== "object" || error === null || Array.isArray(error)) return false;
+  const detail = error as Record<string, unknown>;
+  return Object.keys(detail).length === 2
+    && detail.code === "VERSION_CONFLICT"
+    && typeof detail.message === "string";
+}
+
+function proposalStateIs(value: unknown, status: string): boolean {
+  return typeof value === "object"
+    && value !== null
+    && !Array.isArray(value)
+    && Object.keys(value).length === 1
+    && (value as Record<string, unknown>).status === status;
+}
+
+function checklistItems(value: unknown): Array<{ checked: boolean; id: string }> | null {
+  if (typeof value !== "object" || value === null || Array.isArray(value)) return null;
+  const record = value as Record<string, unknown>;
+  if (Object.keys(record).length !== 1 || !Array.isArray(record.items)) return null;
+  for (const item of record.items) {
+    if (typeof item !== "object" || item === null || Array.isArray(item)) return null;
+    const entry = item as Record<string, unknown>;
+    if (
+      Object.keys(entry).length !== 2
+      || typeof entry.checked !== "boolean"
+      || typeof entry.id !== "string"
+    ) return null;
+  }
+  return record.items as Array<{ checked: boolean; id: string }>;
+}
+
+function decisionTransitionIsValid(
+  decision: {
+    action: string;
+    itemId: string | null;
+  },
+  blockType: string,
+  fromState: unknown,
+  toState: unknown,
+): boolean {
+  if (blockType === "proposal") {
+    if (decision.itemId !== null) return false;
+    if (decision.action === "accept") {
+      return proposalStateIs(fromState, "pending") && proposalStateIs(toState, "accepted");
+    }
+    if (decision.action === "reject") {
+      return proposalStateIs(fromState, "pending") && proposalStateIs(toState, "rejected");
+    }
+    return false;
+  }
+  if (blockType !== "checklist") return false;
+  if (
+    decision.itemId === null
+    || (decision.action !== "check_item" && decision.action !== "uncheck_item")
+  ) return false;
+  const fromItems = checklistItems(fromState);
+  const toItems = checklistItems(toState);
+  if (fromItems === null || toItems === null || fromItems.length !== toItems.length) {
+    return false;
+  }
+  const target = decision.action === "check_item";
+  let changed = 0;
+  for (const [index, fromItem] of fromItems.entries()) {
+    const toItem = toItems[index];
+    if (toItem === undefined || fromItem.id !== toItem.id) return false;
+    if (fromItem.checked === toItem.checked) continue;
+    changed += 1;
+    if (fromItem.id !== decision.itemId || fromItem.checked === target) return false;
+  }
+  return changed === 1;
 }
 
 export function validateCurrentDataInvariants(
@@ -441,6 +911,8 @@ export function validateCurrentDataInvariants(
     }
     if (!chunkFactsAreValid(database)) return "SCHEMA_DATA_INVALID";
     if (!structuredFactsAreValid(database)) return "SCHEMA_DATA_INVALID";
+    if (!structuredStateGraphsAreValid(database)) return "SCHEMA_DATA_INVALID";
+    if (!structuredOutcomesAreValid(database)) return "SCHEMA_DATA_INVALID";
     const invalidHashes = database.prepare(`
       SELECT id FROM structured_message_blocks
       WHERE length(payload_hash)<>64

@@ -29,6 +29,7 @@ type TranscriptBlockBase = {
 
 export type TranscriptKnownBlock = TranscriptBlockBase & {
   body?: string;
+  fileName?: string;
   items?: Array<{ checked: boolean; id: string; text: string }>;
   kind: "proposal" | "checklist" | "diff_preview" | "file_reference" | "handoff_card";
   payload: Record<string, unknown>;
@@ -184,6 +185,10 @@ function knownBlock(
       || payload.blockType === "handoff_card")
     && state.status === "read_only"
   ) {
+    if (payload.blockType === "file_reference") {
+      if (!string(payload.publicName)) return null;
+      return { ...common, executable: false, fileName: payload.publicName, kind: "file_reference" };
+    }
     return { ...common, executable: false, kind: payload.blockType };
   }
   return null;

@@ -107,6 +107,7 @@ describe("fact-only Transcript Model public seam", () => {
         blockType: "file_reference",
         executionId: "execution-1",
         logicalBlockId: "logical-file",
+        publicName: "frozen-report.txt",
         title: "File title",
       }, { status: "read_only" }),
       block("handoff", 4, {
@@ -141,7 +142,7 @@ describe("fact-only Transcript Model public seam", () => {
         { id: "proposal", kind: "proposal", title: "Proposal title" },
         { id: "checklist", kind: "checklist", title: "Checklist title" },
         { id: "diff", kind: "diff_preview", title: "Diff title" },
-        { id: "file", kind: "file_reference", title: "File title" },
+        { id: "file", fileName: "frozen-report.txt", kind: "file_reference", title: "File title" },
         { id: "handoff", kind: "handoff_card", title: "Handoff title" },
       ],
     });

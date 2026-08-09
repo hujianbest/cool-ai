@@ -104,13 +104,13 @@ export function materializeStructuredBlocks(
       };
     }
     if (block.blockType === "file_reference") {
-      resolveVerifiedSource(database, tuple, {
+      const source = resolveVerifiedSource(database, tuple, {
         artifactHash: block.artifactHash,
         artifactId: block.artifactId,
         executionId: block.executionId,
         kind: "file",
       });
-      return block;
+      return { ...block, publicName: source.display.name };
     }
     if (block.blockType === "handoff_card") {
       const source = resolveVerifiedSource(database, tuple, {

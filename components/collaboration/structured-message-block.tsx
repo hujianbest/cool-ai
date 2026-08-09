@@ -395,6 +395,7 @@ export function StructuredMessageBlock({
         {block.sourceLabel}
       </p>
       {block.body ? <p>{block.body}</p> : null}
+      {block.kind === "file_reference" && block.fileName ? <p>{block.fileName}</p> : null}
       {block.kind === "diff_preview"
         || block.kind === "file_reference"
         || block.kind === "handoff_card" ? (

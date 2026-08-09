@@ -24,6 +24,21 @@ const triggerSql = (name: string): string => {
   return object.createSql;
 };
 
+if (mode === "rename-source") {
+  const database = openDatabase(databasePath);
+  try {
+    const updated = database.prepare(`
+      UPDATE execution_artifacts SET name='renamed-later.txt'
+      WHERE id='structured-smoke-artifact'
+    `).run();
+    if (updated.changes !== 1) throw new Error("Structured smoke artifact is unavailable.");
+  } finally {
+    database.close();
+  }
+  console.log(JSON.stringify({ renamed: "structured-smoke-artifact" }));
+  process.exit(0);
+}
+
 if (mode === "invalid") {
   const database = new DatabaseSync(databasePath);
   const trigger = triggerSql("structured_message_blocks_no_update");

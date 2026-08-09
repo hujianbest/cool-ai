@@ -605,6 +605,9 @@ try {
   await page.getByRole("heading", { name: "Frozen Handoff Card" }).waitFor();
   await page.getByText("不支持的结构化消息", { exact: true }).waitFor();
   assert.equal(await page.getByText("此版本不可执行；其他协作事实仍可继续阅读。").count(), 1);
+  const fileCard = page.locator('section[aria-label="Frozen File Reference"]');
+  await fileCard.getByText("safe-report.txt", { exact: true }).waitFor();
+  pass("file-reference-card-shows-frozen-name-before-source-fetch");
 
   await page.getByRole("button", { name: "加载 Diff Preview 安全来源" }).click();
   await page.getByLabel("脱敏 Diff Preview").waitFor();
@@ -640,11 +643,21 @@ try {
   );
   pass("readonly-frozen-sources-safe-navigation-no-approval");
 
+  runFixture("rename-source");
+  await page.reload({ waitUntil: "networkidle" });
+  await fileCard.getByText("safe-report.txt", { exact: true }).waitFor();
+  await fileCard.getByRole("button", { name: "打开 File Reference 安全来源" }).click();
+  await fileCard.getByText(/source version/).waitFor();
+  assert.equal(await page.getByText("renamed-later.txt").count(), 0);
+  assert.equal((await page.locator("body").innerText()).includes(privateHostPath), false);
+  pass("file-reference-frozen-name-survives-rename-reopen");
+
   await axe(page, "desktop light structured transcript");
   await page.screenshot({ fullPage: true, path: evidence.desktop });
   const themeButton = page.getByRole("button", { name: /切换到暗色主题/ });
   await themeButton.click();
   await page.getByRole("button", { name: /切换到明色主题/ }).waitFor();
+  await page.getByText("safe-report.txt", { exact: true }).first().waitFor();
   await axe(page, "desktop dark structured transcript");
   await page.screenshot({ fullPage: true, path: evidence.dark });
   pass("light-dark-axe");
@@ -665,6 +678,8 @@ try {
     }
     await recoveredDiff.waitFor();
   }
+  await page.getByText("safe-report.txt", { exact: true }).first().waitFor();
+  assert.equal(await page.getByText("renamed-later.txt").count(), 0);
   assert.deepEqual(inspectDatabase(), beforeRestart);
   const recoveredFacts = await allFacts(page, projectId, threadId);
   assert.deepEqual(
@@ -683,6 +698,7 @@ try {
   await editor.getByRole("tab", { name: "群聊" }).focus();
   await page.keyboard.press("Enter");
   await editor.getByRole("heading", { name: "Frozen Diff Preview" }).waitFor();
+  await editor.getByText("safe-report.txt", { exact: true }).first().waitFor();
   const layout = await editor.evaluate((surface) => ({
     controls: [...surface.querySelectorAll("button,a")].filter((element) => {
       const box = element.getBoundingClientRect();
@@ -752,6 +768,7 @@ try {
     privateHostPath,
     privatePromptMarker,
     rawProviderMarker,
+    "renamed-later.txt",
     `Bearer ${apiKey}`,
   ]) {
     for (const surface of surfaces) {

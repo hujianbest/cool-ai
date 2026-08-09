@@ -125,6 +125,7 @@ export function resolveVerifiedSource(
       input.artifactHash,
     ) as { executionId: string; name: string; sha256: string } | undefined;
     if (!row) unavailable();
+    assertPublicProjectionText(database, row.name);
     return {
       display: { name: row.name },
       identity: { id: input.artifactId, kind: "artifact", version: row.sha256 },

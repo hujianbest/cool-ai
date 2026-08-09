@@ -1,41 +1,41 @@
-# 任务票 — 结构化消息完整性
+﻿# 浠诲姟绁?鈥?缁撴瀯鍖栨秷鎭畬鏁存€?
 
-- 状态: 待 spec-review；草案不得进入 implement
-- 规模: 5 张纵向 RED/GREEN 票；单一“reopen 后冻结、完整、无泄漏”用户结果
-- 公共缝: `openDatabase(databasePath)`；Structured Message Source Public Read
-- TDD: 每票先产生一个公共行为 RED，再以最小 GREEN 闭合；不得测试私有实现或弱化断言
+- 鐘舵€? 寰?spec-review锛涜崏妗堜笉寰楄繘鍏?implement
+- 瑙勬ā: 5 寮犵旱鍚?RED/GREEN 绁紱鍗曚竴鈥渞eopen 鍚庡喕缁撱€佸畬鏁淬€佹棤娉勬紡鈥濈敤鎴风粨鏋?
+- 鍏叡缂? `openDatabase(databasePath)`锛汼tructured Message Source Public Read
+- TDD: 姣忕エ鍏堜骇鐢熶竴涓叕鍏辫涓?RED锛屽啀浠ユ渶灏?GREEN 闂悎锛涗笉寰楁祴璇曠鏈夊疄鐜版垨寮卞寲鏂█
 
-- [ ] T-01 冻结并公开读取安全 File Reference 名称 — Blocked by: None
-  - 公共缝: Structured Message Source Public Read。
-  - RED: 经正式提交创建 File Reference，随后改名来源并创建 latest 版本；首次读取、再次读取与 process reopen 目前返回可变名称或错误版本。
-  - GREEN: 提交事务内冻结脱敏、grapheme 限长 `publicName` 与明确 `sourceEntityVersion`；public read 只返回冻结 projection，不 join mutable name、不查 latest、不回退路径。
-  - 验证: 正常/敏感/边界 ±1、改名/latest/reopen；响应、日志与 DOM 无绝对路径/凭据/raw 内容。
-  - 命令: `npm test -- tests/structured-message-source-api.test.ts tests/structured-message-reopen.test.ts`；`git diff --check`
+- [x] T-01 鍐荤粨骞跺叕寮€璇诲彇瀹夊叏 File Reference 鍚嶇О 鈥?Blocked by: None
+  - 鍏叡缂? Structured Message Source Public Read銆?
+  - RED: 缁忔寮忔彁浜ゅ垱寤?File Reference锛岄殢鍚庢敼鍚嶆潵婧愬苟鍒涘缓 latest 鐗堟湰锛涢娆¤鍙栥€佸啀娆¤鍙栦笌 process reopen 鐩墠杩斿洖鍙彉鍚嶇О鎴栭敊璇増鏈€?
+  - GREEN: 鎻愪氦浜嬪姟鍐呭喕缁撹劚鏁忋€乬rapheme 闄愰暱 `publicName` 涓庢槑纭?`sourceEntityVersion`锛沺ublic read 鍙繑鍥炲喕缁?projection锛屼笉 join mutable name銆佷笉鏌?latest銆佷笉鍥為€€璺緞銆?
+  - 楠岃瘉: 姝ｅ父/鏁忔劅/杈圭晫 卤1銆佹敼鍚?latest/reopen锛涘搷搴斻€佹棩蹇椾笌 DOM 鏃犵粷瀵硅矾寰?鍑嵁/raw 鍐呭銆?
+  - 鍛戒护: `npm test -- tests/structured-message-source-api.test.ts tests/structured-message-reopen.test.ts`锛沗git diff --check`
 
-- [ ] T-02 让 current reopen 穷尽 source 与 state DAG — Blocked by: T-01
-  - 公共缝: `openDatabase(databasePath)`。
-  - RED: 从 owner fixture 建合法图后各做一个 orphan/duplicate/cross-tuple/source-version/head/branch/cycle corruption，证明至少一类非法 current 数据被 reopen 接受。
-  - GREEN: 直接更新 `CURRENT_SCHEMA` identity/final manifest/fresh tests，并在一致快照从 block/state/source 全集做双向、恰好一次与完整字段验证；不 migration、不 repair。
-  - 验证: fresh bootstrap、exact legal reopen、所有单一 corruption 稳定脱敏失败且数据库零写；fixture 不复制大型 SQL 图。
-  - 命令: `npm test -- tests/current-schema.test.ts tests/structured-message-reopen.test.ts`；`git diff --check`
+- [x] T-02 璁?current reopen 绌峰敖 source 涓?state DAG 鈥?Blocked by: T-01
+  - 鍏叡缂? `openDatabase(databasePath)`銆?
+  - RED: 浠?owner fixture 寤哄悎娉曞浘鍚庡悇鍋氫竴涓?orphan/duplicate/cross-tuple/source-version/head/branch/cycle corruption锛岃瘉鏄庤嚦灏戜竴绫婚潪娉?current 鏁版嵁琚?reopen 鎺ュ彈銆?
+  - GREEN: 鐩存帴鏇存柊 `CURRENT_SCHEMA` identity/final manifest/fresh tests锛屽苟鍦ㄤ竴鑷村揩鐓т粠 block/state/source 鍏ㄩ泦鍋氬弻鍚戙€佹伆濂戒竴娆′笌瀹屾暣瀛楁楠岃瘉锛涗笉 migration銆佷笉 repair銆?
+  - 楠岃瘉: fresh bootstrap銆乪xact legal reopen銆佹墍鏈夊崟涓€ corruption 绋冲畾鑴辨晱澶辫触涓旀暟鎹簱闆跺啓锛沠ixture 涓嶅鍒跺ぇ鍨?SQL 鍥俱€?
+  - 鍛戒护: `npm test -- tests/current-schema.test.ts tests/structured-message-reopen.test.ts`锛沗git diff --check`
 
-- [ ] T-03 穷尽 completed outcome 并限制 Checklist 单项方向 — Blocked by: T-02
-  - 公共缝: `openDatabase(databasePath)` 与既有 Inline Decision command。
-  - RED: 分别构造 completed 缺/多 Decision、Receipt、Fact、字段不一致，terminal conflict 带业务结果，以及 Checklist 缺目标/错方向/多项或内容漂移，证明当前 reopen 接受缺口。
-  - GREEN: operation ↔ Decision ↔ Receipt ↔ Fact 全集双向一对一并逐字段核对；相邻 Checklist state 只允许目标 item checked 位按 action 合法改变。
-  - 验证: completed 恰一组结果、same-hash replay 无第二动作、VERSION_CONFLICT 零结果；合法 check/uncheck 与全部非法 edge 矩阵。
-  - 命令: `npm test -- tests/structured-message-reopen.test.ts tests/structured-message-decisions.test.ts`；`git diff --check`
+- [x] T-03 绌峰敖 completed outcome 骞堕檺鍒?Checklist 鍗曢」鏂瑰悜 鈥?Blocked by: T-02
+  - 鍏叡缂? `openDatabase(databasePath)` 涓庢棦鏈?Inline Decision command銆?
+  - RED: 鍒嗗埆鏋勯€?completed 缂?澶?Decision銆丷eceipt銆丗act銆佸瓧娈典笉涓€鑷达紝terminal conflict 甯︿笟鍔＄粨鏋滐紝浠ュ強 Checklist 缂虹洰鏍?閿欐柟鍚?澶氶」鎴栧唴瀹规紓绉伙紝璇佹槑褰撳墠 reopen 鎺ュ彈缂哄彛銆?
+  - GREEN: operation 鈫?Decision 鈫?Receipt 鈫?Fact 鍏ㄩ泦鍙屽悜涓€瀵逛竴骞堕€愬瓧娈垫牳瀵癸紱鐩搁偦 Checklist state 鍙厑璁哥洰鏍?item checked 浣嶆寜 action 鍚堟硶鏀瑰彉銆?
+  - 楠岃瘉: completed 鎭颁竴缁勭粨鏋溿€乻ame-hash replay 鏃犵浜屽姩浣溿€乂ERSION_CONFLICT 闆剁粨鏋滐紱鍚堟硶 check/uncheck 涓庡叏閮ㄩ潪娉?edge 鐭╅樀銆?
+  - 鍛戒护: `npm test -- tests/structured-message-reopen.test.ts tests/structured-message-decisions.test.ts`锛沗git diff --check`
 
-- [ ] T-04 收口 rollback、Mission caller 与 SQLite 锁回归 — Blocked by: T-03
-  - 公共缝: Review 公共事务行为、Mission create public command、`openDatabase`。
-  - RED: 固定 review rollback 后非法 current 数据、5 个缺 `operationId/expectedVersion` 的旧 caller，以及已知 busy-timeout；每轮只选一个失败进入 RED/GREEN。
-  - GREEN: 保证 fault 全回滚；caller 显式严格 UUID operation 与 `expectedVersion=0`；在 15 分钟、最多 10 次复现内定位锁持有/连接生命周期并做确定性释放修复。
-  - 验证: 不恢复默认 operation/version，不增加无界 retry，不以扩大 timeout/skip 掩盖；若预算内无根因，记录复现率与停止证据并拆票，不继续循环。
-  - 命令: 运行固定失败清单的聚焦 suites；`git diff --check`
+- [x] T-04 鏀跺彛 rollback銆丮ission caller 涓?SQLite 閿佸洖褰?鈥?Blocked by: T-03
+  - 鍏叡缂? Review 鍏叡浜嬪姟琛屼负銆丮ission create public command銆乣openDatabase`銆?
+  - RED: 鍥哄畾 review rollback 鍚庨潪娉?current 鏁版嵁銆? 涓己 `operationId/expectedVersion` 鐨勬棫 caller锛屼互鍙婂凡鐭?busy-timeout锛涙瘡杞彧閫変竴涓け璐ヨ繘鍏?RED/GREEN銆?
+  - GREEN: 淇濊瘉 fault 鍏ㄥ洖婊氾紱caller 鏄惧紡涓ユ牸 UUID operation 涓?`expectedVersion=0`锛涘湪 15 鍒嗛挓銆佹渶澶?10 娆″鐜板唴瀹氫綅閿佹寔鏈?杩炴帴鐢熷懡鍛ㄦ湡骞跺仛纭畾鎬ч噴鏀句慨澶嶃€?
+  - 楠岃瘉: 涓嶆仮澶嶉粯璁?operation/version锛屼笉澧炲姞鏃犵晫 retry锛屼笉浠ユ墿澶?timeout/skip 鎺╃洊锛涜嫢棰勭畻鍐呮棤鏍瑰洜锛岃褰曞鐜扮巼涓庡仠姝㈣瘉鎹苟鎷嗙エ锛屼笉缁х画寰幆銆?
+  - 鍛戒护: 杩愯鍥哄畾澶辫触娓呭崟鐨勮仛鐒?suites锛沗git diff --check`
 
-- [ ] T-05 真实浏览器与集成验收并解除完整性阻塞 — Blocked by: T-04
-  - 公共缝: Structured Message Source Public Read 与真实浏览器 fact-only transcript。
-  - RED: browser fixture 创建 File Reference 后改名/reopen，先证明页面或证据未锁定冻结名称与零泄漏结果。
-  - GREEN: 仅让既有 File Reference 展示消费冻结 `publicName`；复用 Cool tokens/components，无新视觉系统。
-  - 验证: desktop/narrow、light/dark 中名称稳定；键盘与 axe 无 serious/critical；DOM/API/log/evidence 无宿主路径/credential。随后只运行一次受影响全量测试、typecheck、build 与 `smoke:structured`。
-  - 命令: `npm run smoke:structured`；`npm test`；`npx tsc --noEmit`；`npm run build`；`git diff --check`
+- [x] T-05 鐪熷疄娴忚鍣ㄤ笌闆嗘垚楠屾敹骞惰В闄ゅ畬鏁存€ч樆濉?鈥?Blocked by: T-04
+  - 鍏叡缂? Structured Message Source Public Read 涓庣湡瀹炴祻瑙堝櫒 fact-only transcript銆?
+  - RED: browser fixture 鍒涘缓 File Reference 鍚庢敼鍚?reopen锛屽厛璇佹槑椤甸潰鎴栬瘉鎹湭閿佸畾鍐荤粨鍚嶇О涓庨浂娉勬紡缁撴灉銆?
+  - GREEN: 浠呰鏃㈡湁 File Reference 灞曠ず娑堣垂鍐荤粨 `publicName`锛涘鐢?Cool tokens/components锛屾棤鏂拌瑙夌郴缁熴€?
+  - 楠岃瘉: desktop/narrow銆乴ight/dark 涓悕绉扮ǔ瀹氾紱閿洏涓?axe 鏃?serious/critical锛汥OM/API/log/evidence 鏃犲涓昏矾寰?credential銆傞殢鍚庡彧杩愯涓€娆″彈褰卞搷鍏ㄩ噺娴嬭瘯銆乼ypecheck銆乥uild 涓?`smoke:structured`銆?
+  - 鍛戒护: `npm run smoke:structured`锛沗npm test`锛沗npx tsc --noEmit`锛沗npm run build`锛沗git diff --check`

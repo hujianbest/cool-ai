@@ -4,6 +4,8 @@ import { DatabaseSync } from "node:sqlite";
 import { afterEach, describe, expect, it, vi } from "vitest";
 
 import { openDatabase } from "@/src/adapters/outbound/sqlite/connection";
+import { createThread } from "@/src/adapters/outbound/sqlite/public-collaboration/thread-service";
+import type { ReviewFinalizeStep } from "@/src/adapters/outbound/sqlite/review-delivery/review-finalizer";
 import type { ReviewFaultPoint } from "@/src/adapters/outbound/sqlite/review-delivery/review-orchestrator";
 import { runReviewOperation } from "@/src/adapters/outbound/sqlite/review-delivery/review-orchestrator";
 import type { ModelCallResult } from "@/src/shared/collaboration-contracts";
@@ -18,10 +20,9 @@ function fixturePath(label: string): string {
 }
 
 function seed(path: string): DatabaseSync {
-  const database = openDatabase(path);
-  databases.push(database);
-  database.exec("PRAGMA foreign_keys=OFF");
-  database.exec(`
+  const bootstrap = openDatabase(path);
+  bootstrap.exec("PRAGMA foreign_keys=OFF");
+  bootstrap.exec(`
     INSERT INTO projects(id,name,created_at,version)
     VALUES ('project','Fault matrix','${NOW.toISOString()}',1);
     INSERT INTO providers(
@@ -43,11 +44,54 @@ function seed(path: string): DatabaseSync {
     INSERT INTO project_memberships(project_id,agent_id,joined_at)
     VALUES ('project','executor','${NOW.toISOString()}'),
            ('project','reviewer','${NOW.toISOString()}');
+  `);
+  bootstrap.exec("PRAGMA foreign_keys=ON");
+  bootstrap.close();
+  const threadId = createThread(path, "project", {
+    memberAgentIds: ["executor", "reviewer"],
+    operationId: "18000000-0000-4000-8000-000000000000",
+    title: "Fault matrix source",
+  }).body.thread.id;
+  const database = openDatabase(path);
+  databases.push(database);
+  database.exec("PRAGMA foreign_keys=OFF");
+  database.exec(`
+    INSERT INTO collaboration_runs(
+      id,project_id,thread_id,status,current_agent_id,round_count,next_event_sequence,
+      version,execution_epoch,pause_reason,pause_category,created_at,updated_at
+    ) VALUES ('run','project','${threadId}','planned','executor',1,1,1,1,NULL,NULL,
+      '${NOW.toISOString()}','${NOW.toISOString()}');
+    INSERT INTO collaboration_thread_facts(
+      id,project_id,thread_id,sequence,activity_sequence,type,actor_type,actor_id,
+      run_id,message_id,run_event_id,policy_revision_id,payload_json,created_at
+    ) VALUES ('run-linked','project','${threadId}',3,3,'run_linked','system',NULL,
+      'run',NULL,NULL,NULL,'{"runId":"run"}','${NOW.toISOString()}');
+    UPDATE collaboration_threads
+    SET next_fact_sequence=4,last_activity_sequence=3,version=version+1,
+        updated_at='${NOW.toISOString()}'
+    WHERE project_id='project' AND id='${threadId}';
+    UPDATE collaboration_project_thread_sequences
+    SET next_activity_sequence=4 WHERE project_id='project';
+    INSERT INTO project_validation_policy_revisions(
+      id,project_id,created_operation_id,created_actor_type,revision_no,policy_hash,
+      classifier_version,warning_accepted,canonical_bytes,entry_count,created_at
+    ) VALUES ('policy','project',NULL,'system',1,'${HASH}',1,0,2,0,'${NOW.toISOString()}');
+    INSERT INTO project_validation_policies(project_id,active_revision_id,version,updated_at)
+    VALUES ('project','policy',1,'${NOW.toISOString()}');
     INSERT INTO missions(id,project_id,title,goal,version,created_at,updated_at)
     VALUES ('mission','project','Mission','Goal',1,'${NOW.toISOString()}','${NOW.toISOString()}');
     INSERT INTO work_items(
       id,mission_id,title,description,status,assignee_agent_id,version,created_at,updated_at
     ) VALUES ('work','mission','Work','','in_progress','executor',1,
+      '${NOW.toISOString()}','${NOW.toISOString()}');
+    INSERT INTO executions(
+      id,project_id,source_collaboration_thread_id,source_collaboration_run_id,
+      mission_id,work_item_id,agent_id,current_policy_revision_id,status,resume_target,
+      reason_code,manual_recovery_required,recovery_resolution,current_attempt_no,
+      business_round_count,tool_call_count,next_event_sequence,version,created_at,
+      business_deadline_at,first_running_at,updated_at,merged_at
+    ) VALUES ('execution','project','${threadId}','run','mission','work','executor',
+      'policy','merged',NULL,NULL,0,NULL,1,0,0,1,1,'${NOW.toISOString()}',NULL,NULL,
       '${NOW.toISOString()}','${NOW.toISOString()}');
     INSERT INTO work_item_result_versions(
       id,project_id,mission_id,work_item_id,version,execution_id,staged_result_id,
@@ -286,6 +330,70 @@ describe("review crash and transaction fault matrix", () => {
       expect(database.prepare(
         "SELECT COUNT(*) AS count FROM review_decisions WHERE attempt_id='attempt'",
       ).get()).toEqual({ count: 1 });
+    },
+  );
+
+  it.each<ReviewFinalizeStep>([
+    "decision",
+    "memory-candidates",
+    "head",
+    "board",
+    "events",
+    "attempt",
+    "receipt",
+  ])(
+    "rolls back every finalize write for a pass fault at %s and the result stays legal for openDatabase",
+    async (step) => {
+      const path = fixturePath(`rollback-${step}`);
+      let database = seed(path);
+      const callProvider = vi.fn().mockResolvedValue(providerResult("pass"));
+      const first = await runReviewOperation(database, input(), {
+        beforeFinalizeStep: (current) => {
+          if (current === step) throw new Error(`fault:${step}`);
+        },
+        callProvider,
+        clock: () => NOW,
+        randomUUID: (() => {
+          let value = 0;
+          return () => `rollback-${step}-${++value}`;
+        })(),
+      });
+      expect(first.state).toBe("finalizing");
+      expect(database.prepare(`
+        SELECT
+          (SELECT COUNT(*) FROM review_decisions) AS decisions,
+          (SELECT COUNT(*) FROM review_memory_candidates) AS candidates,
+          (SELECT COUNT(*) FROM review_escalations) AS escalations,
+          (SELECT COUNT(*) FROM review_events) AS events,
+          (SELECT COUNT(*) FROM memory_entries) AS memories,
+          (SELECT state FROM work_item_review_heads WHERE work_item_id='work') AS head,
+          (SELECT version FROM work_item_review_heads WHERE work_item_id='work') AS headVersion,
+          (SELECT status FROM work_items WHERE id='work') AS board,
+          (SELECT next_event_sequence FROM mission_delivery_heads
+           WHERE mission_id='mission') AS nextEvent,
+          (SELECT status FROM review_attempts WHERE id='attempt') AS attempt,
+          (SELECT finalize_error_code FROM review_attempts WHERE id='attempt') AS finalizeError
+      `).get()).toEqual({
+        attempt: "finalizing",
+        board: "in_progress",
+        candidates: 0,
+        decisions: 0,
+        escalations: 0,
+        events: 1,
+        finalizeError: "LOCAL_FINALIZE_FAILED",
+        head: "reviewing",
+        headVersion: 1,
+        memories: 0,
+        nextEvent: 2,
+      });
+      close(database);
+
+      database = openDatabase(path);
+      databases.push(database);
+      expect(database.prepare(
+        "SELECT COUNT(*) AS count FROM review_decisions",
+      ).get()).toEqual({ count: 0 });
+      close(database);
     },
   );
 

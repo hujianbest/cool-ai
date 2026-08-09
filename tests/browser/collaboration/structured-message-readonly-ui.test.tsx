@@ -18,6 +18,7 @@ function readonlyBlock(
     blockRevision: 1,
     blockSchemaVersion: 1,
     executable: false,
+    ...(kind === "file_reference" ? { fileName: "frozen-safe-name.txt" } : {}),
     id,
     kind,
     payload: {
@@ -25,6 +26,7 @@ function readonlyBlock(
       blockSchemaVersion: 1,
       blockType: kind,
       logicalBlockId: `logical-${id}`,
+      ...(kind === "file_reference" ? { publicName: "frozen-safe-name.txt" } : {}),
       title: `${kind} title`,
     },
     position: 0,
@@ -104,6 +106,36 @@ describe("Diff/File/Handoff read-only public UI surface", () => {
     expect(document.body.textContent).not.toContain("D:\\private");
     expect(screen.getByRole("link", { name: "在 execution 中查看 safe-artifact.txt" }))
       .toHaveAttribute("href", expect.stringContaining("execution-file"));
+  });
+
+  it("locks the frozen File Reference public name on the card without fetching the source", async () => {
+    const fetcher = vi.fn((_input: RequestInfo | URL, _init?: RequestInit) =>
+      Promise.resolve(Response.json({
+        display: { hostPath: "D:\\private\\secret.txt", name: "frozen-safe-name.txt" },
+        navigation: { executionId: "execution-file", sourceId: "file_reference-source" },
+        source: {
+          id: "file_reference-source",
+          kind: "artifact",
+          version: "file_reference-version",
+        },
+      }))
+    );
+    vi.stubGlobal("fetch", fetcher);
+    const user = userEvent.setup();
+    render(
+      <StructuredMessageBlock
+        block={readonlyBlock("file_reference")}
+        targetKey="project-1|thread-1|run-1"
+      />,
+    );
+
+    expect(screen.getByText("frozen-safe-name.txt")).toBeVisible();
+    expect(fetcher).not.toHaveBeenCalled();
+    expect(document.body.textContent).not.toContain("D:\\private");
+
+    await user.click(screen.getByRole("button", { name: "打开 File Reference 安全来源" }));
+    expect(fetcher).toHaveBeenCalledTimes(1);
+    expect(document.body.textContent).not.toContain("D:\\private");
   });
 
   it("navigates Handoff to its canonical existing thread/run without creating facts or runs", async () => {
