@@ -30,8 +30,13 @@ import type {
   MembershipState,
   ProjectMember,
 } from "@/src/shared/project-context-contracts";
+import {
+  projectThreadSearchPageSchema,
+  type ThreadSearchResultItemDto,
+} from "@/src/shared/thread-search-contracts";
 
 type ThreadListState = "loading" | "empty" | "ready" | "error";
+type ThreadSearchState = "error" | "idle" | "loading";
 type UrlThreadSelection =
   | { kind: "none"; threadId: null }
   | { kind: "invalid"; threadId: null }
@@ -155,8 +160,29 @@ type ThreadListItem = z.infer<typeof threadListItemSchema>;
 type ThreadListView = "all" | "favorites";
 type ThreadCreateResponse = z.infer<typeof threadCreateResponseSchema>;
 
+const SEARCH_DEBOUNCE_MS = 300;
+
 function canonicalThreadHref(projectId: string, threadId: string): string {
   return `/projects/${encodeURIComponent(projectId)}?thread=${encodeURIComponent(threadId)}`;
+}
+
+function canonicalMessageHref(
+  projectId: string,
+  threadId: string,
+  messageId: string | null,
+): string {
+  const base = canonicalThreadHref(projectId, threadId);
+  return messageId ? `${base}&message=${encodeURIComponent(messageId)}` : base;
+}
+
+function readableTime(timestamp: string): string {
+  return new Intl.DateTimeFormat("zh-CN", {
+    day: "2-digit",
+    hour: "2-digit",
+    minute: "2-digit",
+    month: "2-digit",
+    year: "numeric",
+  }).format(new Date(timestamp));
 }
 
 function threadSelectionFromUrl(projectId: string): UrlThreadSelection {
@@ -333,6 +359,22 @@ export function ProjectThreadNavigation({
   const [createNotice, setCreateNotice] = useState<string | null>(null);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [focusThreadId, setFocusThreadId] = useState<string | null>(null);
+  const [searchText, setSearchText] = useState("");
+  const [searchState, setSearchState] = useState<ThreadSearchState>("idle");
+  const [searchError, setSearchError] = useState<string | null>(null);
+  const [searchPage, setSearchPage] = useState<{
+    nextCursor: string | null;
+    query: string;
+    results: ThreadSearchResultItemDto[];
+  } | null>(null);
+  const [searchLoadingMore, setSearchLoadingMore] = useState(false);
+  const [searchLoadMoreError, setSearchLoadMoreError] = useState<string | null>(null);
+  const [searchReloadKey, setSearchReloadKey] = useState(0);
+  const searchEpochRef = useRef(0);
+  const searchAreaRef = useRef<HTMLElement>(null);
+  const searchActiveRef = useRef(false);
+  const searchInputRef = useRef<HTMLInputElement>(null);
+  const searchResultRefs = useRef(new Map<number, HTMLButtonElement>());
   const createButtonRef = useRef<HTMLButtonElement>(null);
   const dialogRef = useRef<HTMLElement>(null);
   const titleInputRef = useRef<HTMLInputElement>(null);
@@ -431,6 +473,14 @@ export function ProjectThreadNavigation({
     setFocusThreadId(null);
     setFavoriteError(null);
     setPendingFavoriteIds(new Set());
+    setSearchText("");
+    setSearchState("idle");
+    setSearchError(null);
+    setSearchPage(null);
+    setSearchLoadingMore(false);
+    setSearchLoadMoreError(null);
+    searchEpochRef.current += 1;
+    searchResultRefs.current.clear();
     threadButtonRefs.current.clear();
     void loadThreads(view, request.signal)
       .then((loaded) => {
@@ -466,6 +516,143 @@ export function ProjectThreadNavigation({
         );
       });
   }, [loadThreads, onNavigate, projectId, reloadKey, targetGuard, view]);
+
+  useEffect(() => {
+    const query = searchText.trim();
+    searchEpochRef.current += 1;
+    setSearchLoadingMore(false);
+    setSearchLoadMoreError(null);
+    if (!query) {
+      setSearchState("idle");
+      setSearchError(null);
+      setSearchPage(null);
+      return;
+    }
+    const epoch = searchEpochRef.current;
+    setSearchState("loading");
+    setSearchError(null);
+    const timer = window.setTimeout(() => {
+      const request = targetGuard.capture();
+      void fetch(
+        `/api/projects/${encodeURIComponent(projectId)}/thread-search?q=${encodeURIComponent(query)}`,
+        { signal: request.signal },
+      )
+        .then(async (response) => {
+          if (!response.ok) throw new ApiDisplayError(await readError(response));
+          return projectThreadSearchPageSchema.parse(await response.json());
+        })
+        .then((page) => {
+          if (!request.isCurrent() || epoch !== searchEpochRef.current) return;
+          setSearchPage({ nextCursor: page.nextCursor, query, results: page.results });
+          setSearchState("idle");
+        })
+        .catch((cause: unknown) => {
+          if (!request.isCurrent() || epoch !== searchEpochRef.current) return;
+          setSearchState("error");
+          setSearchError(caughtApiErrorCopy(cause, "无法搜索线程，请稍后重试。"));
+        });
+    }, SEARCH_DEBOUNCE_MS);
+    return () => window.clearTimeout(timer);
+  }, [projectId, searchReloadKey, searchText, targetGuard]);
+
+  useEffect(() => {
+    const area = searchAreaRef.current;
+    if (!area) return;
+    // Layered dismissal: an enclosing surface (the narrow navigation drawer)
+    // closes on Escape through a native keydown listener that runs before
+    // React synthetic handlers attached at the root, so the search area must
+    // consume Escape natively while a query is active (input-history-panel
+    // precedent) — the clear and focus return live here, not in onKeyDown.
+    const handleKeyDown = (event: globalThis.KeyboardEvent) => {
+      if (event.key !== "Escape" || !searchActiveRef.current) return;
+      event.stopPropagation();
+      setSearchText("");
+      searchInputRef.current?.focus();
+    };
+    area.addEventListener("keydown", handleKeyDown);
+    return () => area.removeEventListener("keydown", handleKeyDown);
+  }, []);
+
+  const trimmedSearch = searchText.trim();
+  const searchActive = trimmedSearch.length > 0;
+  searchActiveRef.current = searchActive;
+  const visibleSearchPage =
+    searchPage && searchPage.query === trimmedSearch ? searchPage : null;
+
+  function loadMoreSearchResults() {
+    if (!visibleSearchPage || visibleSearchPage.nextCursor === null) return;
+    if (searchLoadingMore) return;
+    const { nextCursor, query } = visibleSearchPage;
+    const epoch = searchEpochRef.current;
+    const request = targetGuard.capture();
+    setSearchLoadingMore(true);
+    setSearchLoadMoreError(null);
+    void fetch(
+      `/api/projects/${encodeURIComponent(projectId)}/thread-search?q=${encodeURIComponent(query)}&before=${encodeURIComponent(nextCursor)}`,
+      { signal: request.signal },
+    )
+      .then(async (response) => {
+        if (!response.ok) throw new ApiDisplayError(await readError(response));
+        return projectThreadSearchPageSchema.parse(await response.json());
+      })
+      .then((page) => {
+        if (!request.isCurrent() || epoch !== searchEpochRef.current) return;
+        setSearchPage((current) =>
+          current && current.query === query
+            ? {
+                nextCursor: page.nextCursor,
+                query,
+                results: [...current.results, ...page.results],
+              }
+            : current,
+        );
+      })
+      .catch((cause: unknown) => {
+        if (!request.isCurrent() || epoch !== searchEpochRef.current) return;
+        setSearchLoadMoreError(
+          caughtApiErrorCopy(cause, "无法加载更多搜索结果，请稍后重试。"),
+        );
+      })
+      .finally(() => {
+        if (request.isCurrent() && epoch === searchEpochRef.current) {
+          setSearchLoadingMore(false);
+        }
+      });
+  }
+
+  function activateSearchResult(item: ThreadSearchResultItemDto) {
+    const href = canonicalMessageHref(projectId, item.threadId, item.messageId);
+    onNavigate?.(href);
+    window.history.pushState(window.history.state, "", href);
+    window.dispatchEvent(new PopStateEvent("popstate"));
+  }
+
+  function handleSearchInputKeys(event: KeyboardEvent<HTMLInputElement>) {
+    if (
+      event.key === "ArrowDown"
+      && visibleSearchPage
+      && visibleSearchPage.results.length > 0
+    ) {
+      event.preventDefault();
+      searchResultRefs.current.get(0)?.focus();
+    }
+  }
+
+  function handleSearchResultKeys(
+    event: KeyboardEvent<HTMLButtonElement>,
+    index: number,
+  ) {
+    if (event.key === "ArrowDown") {
+      event.preventDefault();
+      searchResultRefs.current.get(index + 1)?.focus();
+      return;
+    }
+    if (event.key === "ArrowUp") {
+      event.preventDefault();
+      if (index === 0) searchInputRef.current?.focus();
+      else searchResultRefs.current.get(index - 1)?.focus();
+    }
+  }
 
   useEffect(() => {
     if (!focusThreadId) return;
@@ -796,7 +983,11 @@ export function ProjectThreadNavigation({
 
   return (
     <>
-      <section aria-labelledby="project-threads-title" className="stack">
+      <section
+        aria-labelledby="project-threads-title"
+        className="stack"
+        ref={searchAreaRef}
+      >
         <div className="section-heading-row">
           <h2 className="surface-heading" id="project-threads-title">
             线程
@@ -812,6 +1003,115 @@ export function ProjectThreadNavigation({
             </button>
           ) : null}
         </div>
+        <div className="thread-search">
+          <input
+            aria-label="搜索线程"
+            onChange={(event) => setSearchText(event.target.value)}
+            onKeyDown={handleSearchInputKeys}
+            placeholder="搜索线程标题与消息"
+            ref={searchInputRef}
+            type="search"
+            value={searchText}
+          />
+        </div>
+        {searchActive ? (
+          <>
+            {searchState === "loading" ? (
+              <p className="muted" role="status">
+                正在搜索…
+              </p>
+            ) : null}
+            {searchState === "error" ? (
+              <section
+                aria-label="线程搜索结果"
+                className="stack"
+                id="project-threads-search-results"
+              >
+                <div className="stack state-message">
+                  <p className="error-text" role="alert">
+                    {searchError}
+                  </p>
+                  <button
+                    className="button-secondary"
+                    onClick={() => setSearchReloadKey((current) => current + 1)}
+                    type="button"
+                  >
+                    重试搜索
+                  </button>
+                </div>
+              </section>
+            ) : null}
+            {searchState !== "error" && visibleSearchPage ? (
+              <section
+                aria-label="线程搜索结果"
+                className="stack"
+                id="project-threads-search-results"
+              >
+                {visibleSearchPage.results.length === 0 ? (
+                  <p className="muted" role="status">
+                    无匹配结果。
+                  </p>
+                ) : (
+                  <ul className="stack thread-search-results">
+                    {visibleSearchPage.results.map((item, index) => (
+                      <li key={`${item.threadId}:${item.messageId ?? "title"}`}>
+                        <button
+                          className="thread-search-result"
+                          onClick={() => activateSearchResult(item)}
+                          onKeyDown={(event) => handleSearchResultKeys(event, index)}
+                          ref={(node) => {
+                            if (node) searchResultRefs.current.set(index, node);
+                            else searchResultRefs.current.delete(index);
+                          }}
+                          type="button"
+                        >
+                          <span className="thread-search-result-header">
+                            <span className="thread-search-result-title">
+                              {item.threadTitle}
+                            </span>
+                            <span
+                              className={
+                                item.kind === "thread_title"
+                                  ? "status-label thread-search-kind thread-search-kind-title"
+                                  : "status-label thread-search-kind"
+                              }
+                            >
+                              {item.kind === "thread_title" ? "标题" : "内容"}
+                            </span>
+                          </span>
+                          {item.kind === "message" && item.snippet ? (
+                            <span className="thread-search-result-snippet">
+                              {item.snippet}
+                            </span>
+                          ) : null}
+                          <span className="thread-search-result-time">
+                            {readableTime(item.occurredAt)}
+                          </span>
+                        </button>
+                      </li>
+                    ))}
+                  </ul>
+                )}
+                {visibleSearchPage.nextCursor !== null ? (
+                  <button
+                    className="button-secondary"
+                    disabled={searchLoadingMore}
+                    onClick={loadMoreSearchResults}
+                    type="button"
+                  >
+                    {searchLoadingMore ? "正在加载更多…" : "加载更多搜索结果"}
+                  </button>
+                ) : null}
+                {searchLoadMoreError ? (
+                  <p className="error-text" role="alert">
+                    {searchLoadMoreError}
+                  </p>
+                ) : null}
+              </section>
+            ) : null}
+          </>
+        ) : null}
+        {searchActive ? null : (
         <div
           aria-label="线程视图"
           className="thread-view-tabs"
@@ -845,6 +1145,7 @@ export function ProjectThreadNavigation({
             已收藏
           </button>
         </div>
+        )}
         {selectionError ? (
           <p className="error-text" role="alert">
             {selectionError}
@@ -855,6 +1156,7 @@ export function ProjectThreadNavigation({
             {favoriteError}
           </p>
         ) : null}
+        {searchActive ? null : (
         <nav
           aria-busy={listState === "loading" ? "true" : undefined}
           aria-label="项目线程"
@@ -940,6 +1242,7 @@ export function ProjectThreadNavigation({
             </ul>
           )}
         </nav>
+        )}
         {createNotice ? (
           <p aria-atomic="true" aria-live="polite" role="status">
             {createNotice}

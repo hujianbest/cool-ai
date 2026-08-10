@@ -257,6 +257,15 @@ export const CURRENT_DATA_INVARIANTS = [
   `SELECT 1 AS invalid_projection_exceeds_outbox
    WHERE (SELECT COUNT(*) FROM audit_event_projection)
         >(SELECT COUNT(*) FROM audit_event_outbox)`,
+  // Feature 031: the search projection is derived-only (no FKs, A-140
+  // semantics); every index row must stay a subset of its fact sources.
+  `SELECT i.project_id FROM thread_search_index i
+   WHERE NOT EXISTS(SELECT 1 FROM collaboration_threads t
+                    WHERE (t.project_id,t.id)=(i.project_id,i.thread_id))`,
+  `SELECT i.project_id FROM thread_search_index i
+   WHERE i.kind='message' AND NOT EXISTS(
+     SELECT 1 FROM collaboration_messages m
+     WHERE (m.project_id,m.thread_id,m.id)=(i.project_id,i.thread_id,i.message_id))`,
 ] as const;
 
 function canonicalJson(value: string, maximum: number): unknown {

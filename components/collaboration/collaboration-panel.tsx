@@ -50,6 +50,7 @@ import { reduceTranscript, type TranscriptReplyReference } from "@/src/shared/tr
 
 type CollaborationPanelProps = {
   projectId: string;
+  requestedMessageId?: string | null;
   selectedRunId?: string | null;
   surface?: "all" | "chat" | "run";
   threadId?: string | null;
@@ -1085,6 +1086,7 @@ export function CollaborationPanel({
   onNestedModalChange,
   onRequestChat,
   projectId,
+  requestedMessageId = null,
   selectedRunId = null,
   startOnly = false,
   surface = "all",
@@ -1119,6 +1121,7 @@ export function CollaborationPanel({
   const [replyJumpMessageId, setReplyJumpMessageId] = useState<string | null>(null);
   const [locateMessageId, setLocateMessageId] = useState<string | null>(null);
   const [highlightMessageId, setHighlightMessageId] = useState<string | null>(null);
+  const [requestedMessageNotice, setRequestedMessageNotice] = useState(false);
   const [newEventCount, setNewEventCount] = useState(0);
   const [advanceError, setAdvanceError] = useState<string | null>(null);
   const [advanceCycle, setAdvanceCycle] = useState(0);
@@ -1157,6 +1160,7 @@ export function CollaborationPanel({
   const targetEpochRef = useRef(0);
   const factRequestRef = useRef(0);
   const factRequestInFlightRef = useRef(false);
+  const requestedMessageHandledRef = useRef<string | null>(null);
   const listboxId = `collaboration-members-${projectId}`;
   const fieldErrorId = `collaboration-message-error-${projectId}`;
   const targetKey = `${projectId}|${threadId ?? ""}|${selectedRunId ?? ""}`;
@@ -1363,6 +1367,8 @@ export function CollaborationPanel({
     setReplyJumpMessageId(null);
     setLocateMessageId(null);
     setHighlightMessageId(null);
+    setRequestedMessageNotice(false);
+    requestedMessageHandledRef.current = null;
     messageRefs.current.clear();
     void loadCollaboration(true, epoch);
   }, [loadCollaboration, reloadKey, targetKey]);
@@ -1569,6 +1575,110 @@ export function CollaborationPanel({
       }
     }
   }, [factsPage, factsTargetKey, projectId, targetGuard, targetKey, threadId]);
+
+  const backfillToRequestedMessage = useCallback(async (messageId: string) => {
+    if (!threadId || factRequestInFlightRef.current) return;
+    const visiblePage = factsTargetKey === targetKey ? factsPage : null;
+    let cursor = visiblePage?.nextAfter ?? null;
+    if (cursor === null) {
+      setRequestedMessageNotice(true);
+      return;
+    }
+    const epoch = targetEpochRef.current;
+    const request = targetGuard.capture();
+    const requestId = factRequestRef.current + 1;
+    factRequestRef.current = requestId;
+    factRequestInFlightRef.current = true;
+    setFactsPending(true);
+    setFactsError(null);
+    let merged = visiblePage?.items ?? [];
+    let found = false;
+    try {
+      while (cursor !== null) {
+        const response = await fetch(
+          `/api/projects/${encodeURIComponent(projectId)}/threads/${encodeURIComponent(
+            threadId,
+          )}/facts?after=${cursor}`,
+          { signal: request.signal },
+        );
+        const payload = await readApiResponse<unknown>(
+          response,
+          "无法加载协作事实，请稍后重试。",
+        );
+        const nextPage = parseFactPage(payload, projectId, threadId);
+        if (
+          !mountedRef.current
+          || epoch !== targetEpochRef.current
+          || requestId !== factRequestRef.current
+          || !request.isCurrent()
+        ) return;
+        const result = mergeThreadFacts(merged, nextPage.items);
+        merged = result.items;
+        cursor = nextPage.nextAfter;
+        if (result.added > 0) setFactsStatus(`已加载 ${result.added} 条事实`);
+        setFactsPage({ items: merged, nextAfter: cursor });
+        if (
+          merged.some(
+            (fact) => fact.messageId === messageId && fact.message !== null,
+          )
+        ) {
+          found = true;
+          break;
+        }
+      }
+      if (found) setLocateMessageId(messageId);
+      else setRequestedMessageNotice(true);
+    } catch (cause) {
+      if (
+        mountedRef.current
+        && epoch === targetEpochRef.current
+        && requestId === factRequestRef.current
+        && request.isCurrent()
+      ) {
+        setFactsError(caughtApiErrorCopy(cause, "无法加载协作事实，请稍后重试。"));
+      }
+    } finally {
+      if (requestId === factRequestRef.current) {
+        factRequestInFlightRef.current = false;
+        if (
+          mountedRef.current
+          && epoch === targetEpochRef.current
+          && request.isCurrent()
+        ) {
+          setFactsPending(false);
+        }
+      }
+    }
+  }, [factsPage, factsTargetKey, projectId, targetGuard, targetKey, threadId]);
+
+  useEffect(() => {
+    setRequestedMessageNotice(false);
+  }, [requestedMessageId]);
+
+  useEffect(() => {
+    if (!requestedMessageId || !threadId) return;
+    if (loading || loadError) return;
+    if (factsTargetKey !== targetKey || !factsPage) return;
+    const handledKey = `${targetKey}|${requestedMessageId}`;
+    if (requestedMessageHandledRef.current === handledKey) return;
+    if (messageRefs.current.has(requestedMessageId)) {
+      requestedMessageHandledRef.current = handledKey;
+      setLocateMessageId(requestedMessageId);
+      return;
+    }
+    if (factRequestInFlightRef.current) return;
+    requestedMessageHandledRef.current = handledKey;
+    void backfillToRequestedMessage(requestedMessageId);
+  }, [
+    backfillToRequestedMessage,
+    factsPage,
+    factsTargetKey,
+    loadError,
+    loading,
+    requestedMessageId,
+    targetKey,
+    threadId,
+  ]);
 
   useEffect(() => {
     if (!locateMessageId) return;
@@ -2951,6 +3061,11 @@ export function CollaborationPanel({
             </>
           ) : showChat ? (
             <p className="state-message">尚无协作消息。请发送第一条消息。</p>
+          ) : null}
+          {showChat && requestedMessageNotice ? (
+            <p className="muted state-message" role="status">
+              无法定位指定的消息：它不在当前可读取的协作历史中。
+            </p>
           ) : null}
           {showChat && factsError ? (
             <div className="state-message">

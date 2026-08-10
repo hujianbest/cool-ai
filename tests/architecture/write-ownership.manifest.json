@@ -8,7 +8,8 @@
     "execution_approvals": "Approval requests/rulings owned by governance per section-2; currently physically inside execution/ — extracted in T-08",
     "sequences": "collaboration_*_sequences counters are collaboration-internal identity infrastructure",
     "audit_projection": "feature 028: safe-execution appends audit_event_outbox rows atomically with execution_events; audit_event_projection/audit_projection_checkpoints belong to the operations-projection consumer (T-02), registered now with the audit-projection-store anchor writer",
-    "audit_outbox_shared_append": "feature 030: audit_event_outbox is a multi-source append seam — each source owner appends its own rows atomically inside its business transaction (safe-execution since 028, public-collaboration since 030); fact ownership of the table stays with safe-execution, additional source writers are registered in sharedAppendWriters"
+    "audit_outbox_shared_append": "feature 030: audit_event_outbox is a multi-source append seam — each source owner appends its own rows atomically inside its business transaction (safe-execution since 028, public-collaboration since 030); fact ownership of the table stays with safe-execution, additional source writers are registered in sharedAppendWriters",
+    "thread_search_index": "feature 031: derived search projection (thread titles + persisted public message bodies) owned by the operations-projection consumer (thread-search-index); no FKs by design (A-140 projection semantics), index⊆fact-source enforced by reopen data invariants"
   },
   "sharedAppendWriters": {
     "audit_event_outbox": [
@@ -90,7 +91,8 @@
     ],
     "operations-projection": [
       "audit_event_projection",
-      "audit_projection_checkpoints"
+      "audit_projection_checkpoints",
+      "thread_search_index"
     ],
     "review-delivery": [
       "review_attempts",

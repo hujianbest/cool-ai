@@ -79,6 +79,18 @@ const evidence = {
     resolve("features", "030-collaboration-audit-events", "evidence"),
     "collaboration-audit-narrow.png",
   ),
+  searchDark: join(
+    resolve("features", "031-thread-search", "evidence"),
+    "thread-search-dark.png",
+  ),
+  searchDesktop: join(
+    resolve("features", "031-thread-search", "evidence"),
+    "thread-search-desktop.png",
+  ),
+  searchNarrow: join(
+    resolve("features", "031-thread-search", "evidence"),
+    "thread-search-narrow.png",
+  ),
   results: join(evidenceDirectory, "persistent-threads-results.json"),
 };
 const PNG_1X1 = Buffer.from([
@@ -123,6 +135,7 @@ let serverOutput = "";
 let providerCalls = 0;
 let auditFacingText = "";
 let narrowAuditFacingText = "";
+let searchFacingText = "";
 
 for (const path of Object.values(evidence)) {
   mkdirSync(dirname(path), { recursive: true });
@@ -552,7 +565,7 @@ try {
   assert.equal(persisted.body.threads.length, 1);
   assert.equal(persisted.body.threads[0].title, "历史协作");
   const legacyThreadId = persisted.body.threads[0].id;
-  assert.equal(inspectDatabase().version, 16);
+  assert.equal(inspectDatabase().version, 17);
   pass("current-persistent-default-thread", { legacyThreadId });
   await axe(page, "current persistent project");
 
@@ -935,19 +948,30 @@ try {
   const cutFactsRoute = (url) =>
     url.pathname === `/api/projects/legacy-project/threads/${firstThread}/facts`;
   const cutFactsHandler = async (route) => {
-    const response = await route.fetch();
-    const text = await response.text();
+    // This route stays registered for the rest of the run, so every later
+    // facts poll passes through here; a poll aborted by a navigation makes
+    // fulfill() throw, and a second fulfill attempt crashes the runner with
+    // "Route is already handled". Parse and fulfill must therefore live in
+    // separate try blocks, and an aborted route is simply dropped.
     try {
-      const body = JSON.parse(text);
-      if (body && Array.isArray(body.items)) {
+      const response = await route.fetch();
+      const text = await response.text();
+      let body = null;
+      try {
+        const parsed = JSON.parse(text);
+        if (parsed && Array.isArray(parsed.items)) body = parsed;
+      } catch {
+        // Non-JSON or unexpected payload: fulfill the original response below.
+      }
+      if (body) {
         body.items = body.items.filter((fact) => fact.message?.id !== cutTargetId);
         await route.fulfill({ response, json: body });
         return;
       }
+      await route.fulfill({ response, body: text });
     } catch {
-      // Non-JSON or unexpected payload: fulfill the original response below.
+      // The request was aborted mid-handling; the page no longer awaits it.
     }
-    await route.fulfill({ response, body: text });
   };
   await page.route(cutFactsRoute, cutFactsHandler);
 
@@ -2337,6 +2361,401 @@ try {
   );
   pass("collaboration-audit-narrow-drawer-44px-axe");
 
+  // ---- feature 031 T-04: thread search real-browser acceptance ----
+  // Seeded after the audit section so the new outbox rows cannot shift the
+  // earlier exact audit assertions. Keywords are unique across the fixture:
+  // "quokka" lives in a legacy-project message (content hit), "云雀" in a
+  // legacy-project thread title (title hit), "walrus" only in a foreign
+  // project (cross-project isolation + empty state).
+  await page.setViewportSize({ height: 1050, width: 1500 });
+
+  const foreignProject = await api(page, "/api/projects", {
+    body: JSON.stringify({ name: "外部检索隔离项目" }),
+    headers: { "content-type": "application/json" },
+    method: "POST",
+  });
+  assert.equal(
+    foreignProject.status,
+    201,
+    `foreign project create failed: ${JSON.stringify(foreignProject.body)}`,
+  );
+  const foreignProjectId = foreignProject.body.project.id;
+  assert.ok(foreignProjectId);
+  const foreignMembers = await api(
+    page,
+    `/api/projects/${foreignProjectId}/members`,
+  );
+  assert.equal(foreignMembers.status, 200);
+  const foreignMembersUpdate = await api(
+    page,
+    `/api/projects/${foreignProjectId}/members`,
+    {
+      body: JSON.stringify({
+        agentIds: [alpha.id, beta.id],
+        expectedProjectVersion: foreignMembers.body.projectVersion,
+      }),
+      headers: { "content-type": "application/json" },
+      method: "PUT",
+    },
+  );
+  assert.equal(
+    foreignMembersUpdate.status,
+    200,
+    `foreign members update failed: ${JSON.stringify(foreignMembersUpdate.body)}`,
+  );
+  const foreignThreadPost = await api(
+    page,
+    `/api/projects/${foreignProjectId}/threads`,
+    {
+      body: JSON.stringify({
+        memberAgentIds: [alpha.id, beta.id],
+        operationId: randomUUID(),
+        title: "外部隔离线程",
+      }),
+      headers: { "content-type": "application/json" },
+      method: "POST",
+    },
+  );
+  assert.equal(
+    foreignThreadPost.status,
+    201,
+    `foreign thread create failed: ${JSON.stringify(foreignThreadPost.body)}`,
+  );
+  const foreignThreadId = foreignThreadPost.body.thread.id;
+  const foreignMessagePost = await api(
+    page,
+    `/api/projects/${foreignProjectId}/threads/${foreignThreadId}/messages`,
+    {
+      body: JSON.stringify({
+        content: "walrus 独有用词仅属外部项目。",
+        operationId: randomUUID(),
+      }),
+      headers: { "content-type": "application/json" },
+      method: "POST",
+    },
+  );
+  assert.equal(
+    foreignMessagePost.status,
+    201,
+    `foreign message post failed: ${JSON.stringify(foreignMessagePost.body)}`,
+  );
+
+  const larkThreadPost = await api(page, "/api/projects/legacy-project/threads", {
+    body: JSON.stringify({
+      memberAgentIds: ["legacy-agent-a", "legacy-agent-b"],
+      operationId: randomUUID(),
+      title: "云雀发布计划",
+    }),
+    headers: { "content-type": "application/json" },
+    method: "POST",
+  });
+  assert.equal(
+    larkThreadPost.status,
+    201,
+    `title-hit thread create failed: ${JSON.stringify(larkThreadPost.body)}`,
+  );
+  const larkThreadId = larkThreadPost.body.thread.id;
+  const larkMessagePost = await api(
+    page,
+    `/api/projects/legacy-project/threads/${larkThreadId}/messages`,
+    {
+      body: JSON.stringify({
+        content: "排期已与成员确认。",
+        operationId: randomUUID(),
+      }),
+      headers: { "content-type": "application/json" },
+      method: "POST",
+    },
+  );
+  assert.equal(larkMessagePost.status, 201);
+  const quokkaPost = await api(
+    page,
+    `/api/projects/legacy-project/threads/${firstThread}/messages`,
+    {
+      body: JSON.stringify({
+        content: "上线前再核对 quokka 检查单。",
+        operationId: randomUUID(),
+      }),
+      headers: { "content-type": "application/json" },
+      method: "POST",
+    },
+  );
+  assert.equal(
+    quokkaPost.status,
+    201,
+    `quokka message post failed: ${JSON.stringify(quokkaPost.body)}`,
+  );
+  const quokkaMessageId = quokkaPost.body.message.id;
+  assert.ok(quokkaMessageId);
+
+  const searchApi = (projectId, query) =>
+    api(
+      page,
+      `/api/projects/${projectId}/thread-search?q=${encodeURIComponent(query)}`,
+    );
+  const quokkaSearch = await searchApi("legacy-project", "quokka");
+  assert.equal(quokkaSearch.status, 200);
+  assert.equal(quokkaSearch.body.nextCursor, null);
+  assert.equal(quokkaSearch.body.results.length, 1);
+  assert.equal(quokkaSearch.body.results[0].kind, "message");
+  assert.equal(quokkaSearch.body.results[0].messageId, quokkaMessageId);
+  assert.equal(quokkaSearch.body.results[0].threadId, firstThread);
+  assert.ok(quokkaSearch.body.results[0].snippet.includes("quokka"));
+  const larkSearch = await searchApi("legacy-project", "云雀");
+  assert.equal(larkSearch.status, 200);
+  assert.equal(larkSearch.body.results.length, 1);
+  assert.equal(larkSearch.body.results[0].kind, "thread_title");
+  assert.equal(larkSearch.body.results[0].messageId, null);
+  assert.equal(larkSearch.body.results[0].threadId, larkThreadId);
+  assert.ok(larkSearch.body.results[0].snippet.includes("云雀发布计划"));
+  const foreignWalrus = await searchApi(foreignProjectId, "walrus");
+  assert.equal(foreignWalrus.status, 200);
+  assert.equal(foreignWalrus.body.results.length, 1);
+  assert.equal(foreignWalrus.body.results[0].kind, "message");
+  const legacyWalrus = await searchApi("legacy-project", "walrus");
+  assert.equal(legacyWalrus.status, 200);
+  assert.deepEqual(legacyWalrus.body.results, []);
+  const foreignLark = await searchApi(foreignProjectId, "云雀");
+  assert.equal(foreignLark.status, 200);
+  assert.deepEqual(foreignLark.body.results, []);
+  const unknownProjectSearch = await searchApi("foreign-project", "walrus");
+  assert.equal(unknownProjectSearch.status, 404);
+  assert.equal(unknownProjectSearch.body?.error?.code, "PROJECT_NOT_FOUND");
+  for (const body of [
+    quokkaSearch.body,
+    larkSearch.body,
+    foreignWalrus.body,
+    legacyWalrus.body,
+  ]) {
+    const text = JSON.stringify(body);
+    assert.equal(text.includes(apiKey), false, "search response leaks apiKey");
+    assert.equal(
+      text.includes(masterKey),
+      false,
+      "search response leaks masterKey",
+    );
+  }
+  pass("thread-search-api-kinds-snippet-cross-project-isolation");
+
+  await page.goto(`${baseUrl}${firstHref}`, { waitUntil: "networkidle" });
+  const threadSearchInput = page.getByLabel("搜索线程");
+  await threadSearchInput.waitFor();
+  await threadSearchInput.click();
+  await threadSearchInput.pressSequentially("quokka");
+  const searchRegion = page.getByRole("region", { name: "线程搜索结果" });
+  await searchRegion.waitFor();
+  const quokkaResult = searchRegion.locator(".thread-search-result", {
+    hasText: "quokka",
+  });
+  await quokkaResult.waitFor();
+  assert.equal(await searchRegion.locator(".thread-search-result").count(), 1);
+  const quokkaResultText = await quokkaResult.innerText();
+  assert.ok(quokkaResultText.includes("内容"), "message hit must show 内容 badge");
+  assert.ok(quokkaResultText.includes("quokka"), "snippet must carry the keyword");
+  const threadSearchInputBox = await threadSearchInput.boundingBox();
+  assert.ok(
+    threadSearchInputBox
+    && threadSearchInputBox.height >= 44
+    && threadSearchInputBox.width >= 44,
+    "search input must be at least 44x44",
+  );
+  const quokkaResultBox = await quokkaResult.boundingBox();
+  assert.ok(
+    quokkaResultBox && quokkaResultBox.height >= 44 && quokkaResultBox.width >= 44,
+    "search result must be at least 44x44",
+  );
+  searchFacingText = await page.locator("html").innerText();
+  await axe(page, "desktop light thread search results");
+  await page.screenshot({ fullPage: true, path: evidence.searchDesktop });
+  await threadSearchInput.focus();
+  await page.keyboard.press("ArrowDown");
+  assert.equal(
+    await quokkaResult.evaluate((node) => document.activeElement === node),
+    true,
+    "ArrowDown must move focus into the result list",
+  );
+  const resultFocusShadow = await quokkaResult.evaluate(
+    (node) => getComputedStyle(node).boxShadow,
+  );
+  assert.notEqual(
+    resultFocusShadow,
+    "none",
+    "keyboard-focused search result must show a visible focus ring",
+  );
+  await page.keyboard.press("Enter");
+  await page.waitForURL((url) =>
+    url.searchParams.get("thread") === firstThread
+    && url.searchParams.get("message") === quokkaMessageId
+  );
+  const locatedMessage = page.locator("li.reply-target-highlight", {
+    hasText: "quokka",
+  });
+  await locatedMessage.waitFor();
+  assert.equal(
+    await locatedMessage.evaluate((node) => document.activeElement === node),
+    true,
+    "located message must receive real focus",
+  );
+  const locatedBox = await locatedMessage.boundingBox();
+  assert.ok(
+    locatedBox && locatedBox.y >= 0 && locatedBox.y < 1050,
+    "located message must be scrolled into the viewport",
+  );
+  await axe(page, "desktop light located search message");
+  pass("thread-search-desktop-light-keyboard-locate-44px-axe");
+
+  await threadSearchInput.click();
+  await page.keyboard.press("Escape");
+  assert.equal(await threadSearchInput.inputValue(), "");
+  await searchRegion.waitFor({ state: "detached" });
+  await threadSearchInput.pressSequentially("云雀");
+  await searchRegion.waitFor();
+  const larkResult = searchRegion.locator(".thread-search-result", {
+    hasText: "云雀发布计划",
+  });
+  await larkResult.waitFor();
+  assert.equal(await searchRegion.locator(".thread-search-result").count(), 1);
+  assert.ok(
+    (await larkResult.innerText()).includes("标题"),
+    "title hit must show 标题 badge",
+  );
+  await larkResult.click();
+  await page.waitForURL((url) =>
+    url.searchParams.get("thread") === larkThreadId
+    && url.searchParams.get("message") === null
+  );
+  pass("thread-search-title-hit-navigation");
+
+  await threadSearchInput.click();
+  await threadSearchInput.fill("");
+  await threadSearchInput.pressSequentially("walrus");
+  await searchRegion.waitFor();
+  await searchRegion.getByText("无匹配结果。", { exact: true }).waitFor();
+  assert.equal(await searchRegion.locator(".thread-search-result").count(), 0);
+  pass("thread-search-empty-state-foreign-keyword");
+
+  const searchRoutePredicate = (url) =>
+    url.pathname === "/api/projects/legacy-project/thread-search";
+  await page.route(searchRoutePredicate, async (route) => {
+    await new Promise((resolveDelay) => setTimeout(resolveDelay, 1_200));
+    await route.continue();
+  });
+  try {
+    await threadSearchInput.fill("");
+    await threadSearchInput.pressSequentially("quokka");
+    const loadingStatus = page
+      .getByRole("status")
+      .filter({ hasText: "正在搜索…" });
+    await loadingStatus.waitFor();
+    await searchRegion
+      .locator(".thread-search-result", { hasText: "quokka" })
+      .waitFor();
+    await loadingStatus.waitFor({ state: "detached" });
+  } finally {
+    await page.unroute(searchRoutePredicate);
+  }
+  pass("thread-search-loading-state");
+
+  await page.getByRole("button", { name: /切换到暗色主题/ }).click();
+  await page.getByRole("button", { name: /切换到明色主题/ }).waitFor();
+  await searchRegion
+    .locator(".thread-search-result", { hasText: "quokka" })
+    .waitFor();
+  await axe(page, "desktop dark thread search results");
+  await page.screenshot({ fullPage: true, path: evidence.searchDark });
+  await page.getByRole("button", { name: /切换到明色主题/ }).click();
+  await page.getByRole("button", { name: /切换到暗色主题/ }).waitFor();
+  pass("thread-search-desktop-dark-light-axe");
+
+  await page.setViewportSize({ height: 844, width: 390 });
+  await page.goto(`${baseUrl}${firstHref}`, { waitUntil: "networkidle" });
+  const searchNavOpener = page.getByRole("button", { name: "打开项目导航" });
+  await searchNavOpener.click();
+  const searchDrawer = page.getByRole("dialog", { name: "项目导航" });
+  await searchDrawer.waitFor();
+  const narrowSearchInput = searchDrawer.getByLabel("搜索线程");
+  await narrowSearchInput.click();
+  await narrowSearchInput.pressSequentially("quokka");
+  const narrowSearchRegion = searchDrawer.getByRole("region", {
+    name: "线程搜索结果",
+  });
+  await narrowSearchRegion.waitFor();
+  const narrowResult = narrowSearchRegion.locator(".thread-search-result", {
+    hasText: "quokka",
+  });
+  await narrowResult.waitFor();
+  const narrowInputBox = await narrowSearchInput.boundingBox();
+  assert.ok(
+    narrowInputBox && narrowInputBox.height >= 44 && narrowInputBox.width >= 44,
+    "narrow search input must be at least 44x44",
+  );
+  const narrowResultBox = await narrowResult.boundingBox();
+  assert.ok(
+    narrowResultBox && narrowResultBox.height >= 44 && narrowResultBox.width >= 44,
+    "narrow search result must be at least 44x44",
+  );
+  await narrowSearchInput.focus();
+  await page.keyboard.press("ArrowDown");
+  assert.equal(
+    await narrowResult.evaluate((node) => document.activeElement === node),
+    true,
+    "narrow ArrowDown must move focus into the result list",
+  );
+  const narrowFocusShadow = await narrowResult.evaluate(
+    (node) => getComputedStyle(node).boxShadow,
+  );
+  assert.notEqual(
+    narrowFocusShadow,
+    "none",
+    "narrow keyboard-focused search result must show a visible focus ring",
+  );
+  await axe(page, "narrow thread search drawer");
+  await page.screenshot({ fullPage: true, path: evidence.searchNarrow });
+  await page.keyboard.press("Escape");
+  assert.equal(await narrowSearchInput.inputValue(), "");
+  await narrowSearchRegion.waitFor({ state: "detached" });
+  assert.equal(
+    await searchDrawer.isVisible(),
+    true,
+    "Escape with an active query must clear the search, not close the drawer",
+  );
+  assert.equal(
+    await narrowSearchInput.evaluate((node) => document.activeElement === node),
+    true,
+    "Escape must return focus to the search input",
+  );
+  await page.keyboard.press("Escape");
+  await searchDrawer.waitFor({ state: "detached" });
+  assert.equal(
+    await searchNavOpener.evaluate((node) => document.activeElement === node),
+    true,
+    "a second Escape must close the drawer and return focus to its opener",
+  );
+  pass("thread-search-narrow-44px-focus-layered-escape-axe");
+
+  await searchNavOpener.click();
+  await searchDrawer.waitFor();
+  await narrowSearchInput.click();
+  await narrowSearchInput.pressSequentially("quokka");
+  await narrowResult.waitFor();
+  await narrowResult.click();
+  await page.waitForURL((url) =>
+    url.searchParams.get("thread") === firstThread
+    && url.searchParams.get("message") === quokkaMessageId
+  );
+  await searchDrawer.getByRole("button", { name: "关闭项目导航" }).click();
+  await searchDrawer.waitFor({ state: "detached" });
+  await page.getByRole("button", { name: "打开编辑" }).click();
+  const searchEditorDrawer = page.getByRole("dialog", { name: "任务编辑" });
+  await searchEditorDrawer.waitFor();
+  await searchEditorDrawer.getByRole("tab", { name: "群聊" }).click();
+  await searchEditorDrawer
+    .getByText("上线前再核对 quokka 检查单。", { exact: true })
+    .waitFor();
+  await page.keyboard.press("Escape");
+  await searchEditorDrawer.waitFor({ state: "detached" });
+  pass("thread-search-narrow-result-navigation-locate");
+
   const gitCheckIgnore = spawnSync(
     "git",
     ["check-ignore", ".data/attachments/placeholder"],
@@ -2378,6 +2797,13 @@ try {
   ]
     .map((path) => readFileSync(path).toString("latin1"))
     .join("\n");
+  const searchScreenshotBytes = [
+    evidence.searchDark,
+    evidence.searchDesktop,
+    evidence.searchNarrow,
+  ]
+    .map((path) => readFileSync(path).toString("latin1"))
+    .join("\n");
   const publicSurfaces = [
     dom,
     databaseText,
@@ -2386,7 +2812,9 @@ try {
     existingEvidence,
     auditFacingText,
     narrowAuditFacingText,
+    searchFacingText,
     auditScreenshotBytes,
+    searchScreenshotBytes,
     JSON.stringify(results),
   ];
   for (const secret of [apiKey, masterKey, `Bearer ${apiKey}`]) {
@@ -2401,6 +2829,7 @@ try {
     serverOutput,
     auditFacingText,
     narrowAuditFacingText,
+    searchFacingText,
   ]) {
     assert.equal(
       surface.includes(attachmentsRoot),

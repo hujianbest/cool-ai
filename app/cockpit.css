@@ -512,6 +512,73 @@ ol {
   background: var(--interactive-soft-hover);
 }
 
+.thread-search {
+  display: flex;
+}
+
+.thread-search input {
+  flex: 1;
+}
+
+.thread-search-results {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+}
+
+.thread-search-result {
+  display: flex;
+  min-height: var(--control-min);
+  flex-direction: column;
+  align-items: stretch;
+  gap: var(--space-1);
+  border: var(--border-width) solid var(--border-subtle);
+  border-radius: var(--radius-sm);
+  padding: var(--space-2) var(--space-3);
+  background: var(--surface-card);
+  color: var(--text-primary);
+  text-align: left;
+}
+
+.thread-search-result:hover {
+  background: var(--interactive-soft-hover);
+}
+
+.thread-search-result-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--space-2);
+}
+
+.thread-search-result-title {
+  overflow: hidden;
+  font-weight: 600;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.thread-search-kind {
+  flex-shrink: 0;
+  color: var(--text-subtle);
+}
+
+.thread-search-kind-title {
+  color: var(--interactive-primary);
+  background: var(--interactive-soft);
+}
+
+.thread-search-result-snippet {
+  color: var(--text-secondary);
+  font: var(--text-sm) var(--font-sans);
+  overflow-wrap: anywhere;
+}
+
+.thread-search-result-time {
+  color: var(--text-subtle);
+  font: var(--text-xs) var(--font-sans);
+}
+
 .project-list .thread-favorite-toggle[aria-pressed="true"] {
   color: var(--interactive-primary);
 }

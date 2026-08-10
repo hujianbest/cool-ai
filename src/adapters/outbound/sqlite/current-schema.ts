@@ -12,7 +12,7 @@ export type CurrentSchemaManifest = {
 
 const CURRENT_SCHEMA_DEFINITION = {
   "identity": {
-    "userVersion": 16
+    "userVersion": 17
   },
   "objects": [
     {
@@ -211,6 +211,12 @@ const CURRENT_SCHEMA_DEFINITION = {
       "kind": "table",
       "name": "audit_projection_checkpoints",
       "createSql": "CREATE TABLE audit_projection_checkpoints(\n consumer_id TEXT PRIMARY KEY,\n last_outbox_seq INTEGER NOT NULL DEFAULT 0 CHECK(last_outbox_seq>=0),\n status TEXT NOT NULL CHECK(status IN ('idle','rebuilding')),\n updated_at TEXT NOT NULL CHECK(updated_at GLOB '????-??-??T??:??:??.???Z')\n)",
+      "dependsOn": []
+    },
+    {
+      "kind": "table",
+      "name": "thread_search_index",
+      "createSql": "CREATE TABLE thread_search_index(\n project_id TEXT NOT NULL,\n thread_id TEXT NOT NULL,\n kind TEXT NOT NULL CHECK(kind IN('thread_title','message')),\n message_id TEXT,\n content TEXT NOT NULL CHECK(length(content)>=1),\n occurred_at TEXT NOT NULL CHECK(occurred_at GLOB '????-??-??T??:??:??.???Z'),\n source_seq INTEGER NOT NULL CHECK(source_seq>=0),\n UNIQUE(project_id,thread_id,kind,message_id),\n CHECK((kind='thread_title' AND message_id IS NULL AND source_seq=0)\n    OR (kind='message' AND message_id IS NOT NULL AND source_seq>=1))\n)",
       "dependsOn": []
     },
     {
@@ -711,6 +717,14 @@ const CURRENT_SCHEMA_DEFINITION = {
       "createSql": "CREATE UNIQUE INDEX collaboration_one_open_decision ON decision_requests(run_id) WHERE status='open'",
       "dependsOn": [
         "decision_requests"
+      ]
+    },
+    {
+      "kind": "index",
+      "name": "thread_search_one_title",
+      "createSql": "CREATE UNIQUE INDEX thread_search_one_title ON thread_search_index(project_id,thread_id) WHERE kind='thread_title'",
+      "dependsOn": [
+        "thread_search_index"
       ]
     },
     {

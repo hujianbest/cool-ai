@@ -77,7 +77,7 @@ Capability ID 是稳定治理标识；owner 是唯一逻辑子系统，不等于
 - `CAP-RUN-06` Voice Adapter — owner: Runtime — 状态: 规划中 — 建立切片: S-50
 - `CAP-RUN-07` Public Runtime Events — owner: Runtime — 状态: 规划中 — 建立路径: S-23 的 Runtime 审计纵切；该片复用已交付 `CAP-OPS-01/02`，以 owner 可查询脱敏 Runtime session 事件并精确导航为独立结果
 - `CAP-OPS-01` Projection Consumer Foundation — owner: Operations Projection — 状态: 已交付核心（outbox/checkpoint/rebuild/freshness 基座）— 证据/建立切片: S-23 AUD-MVP [`progress.md`](../features/028-audit-projection-mvp/progress.md)；只消费 source owner 已提交事件，不拥有 producer
-- `CAP-OPS-02` Audit / Search / Timeline Projection — owner: Operations Projection — 状态: 部分可用（Safe Execution 审计最薄只读查询/展示已交付；搜索/时间轴未建）— 证据/建立切片: S-23 AUD-MVP [`progress.md`](../features/028-audit-projection-mvp/progress.md)；后续各 source-owner 纵切复用并扩充可查询事件，最终统一审计浏览器只组合已交付查询；S-17、S-39 在其各自用户结果内扩展
+- `CAP-OPS-02` Audit / Search / Timeline Projection — owner: Operations Projection — 状态: 部分可用（Safe Execution 审计最薄只读查询/展示、项目隔离线程搜索索引与消息定位已交付；时间轴未建）— 证据/建立切片: S-23 AUD-MVP [`progress.md`](../features/028-audit-projection-mvp/progress.md)、S-17 [`progress.md`](../features/031-thread-search/progress.md)；后续各 source-owner 纵切复用并扩充可查询事件，最终统一审计浏览器只组合已交付查询；S-39 在其用户结果内扩展
 - `CAP-OPS-03` Health / Usage / Contribution Insight — owner: Operations Projection — 状态: 规划中 — 建立切片: S-29、S-35～S-37
 - `CAP-OPS-04` Redacted Export & Delivery Replay — owner: Operations Projection — 状态: 规划中 — 建立切片: S-38、S-40
 
@@ -104,13 +104,13 @@ S-9～S-12 的 `依赖: S-*` 是原历史文字，只说明当时切片记录；
 
 ## 当前在途
 
-（无；S-16 已于 2026-08-10 ship，见已交付记录）
+（无；S-16 已于 2026-08-10、S-17 已于 2026-08-11 ship，见已交付记录）
 
 ## 主题簇一：公开协作
 
 主子系统为 Public Collaboration；搜索等派生能力可使用 Operations Projection，但不得成为 Thread/Message 命令事实源。
 
-- [ ] S-17 线程搜索与精确定位（CI-2.5） — 主子系统: Operations Projection；主 Capability: `CAP-OPS-02`；票据: 未创建；演示判据: owner 能按标题、内容和项目范围搜索线程并定位匹配消息，结果绝不跨项目泄漏；约束: 工作区=项目隔离，verified-handle=不适用，sandbox=不适用，凭据=索引排除秘密，审批=不适用，独立复核=交付必需，审计=查询不记录敏感正文；不复制 Clowder 品牌、源码或资产
+- [x] S-17 线程搜索与精确定位（CI-2.5） — 主子系统: Operations Projection；主 Capability: `CAP-OPS-02`；票据: [`features/031.../tickets.md`](../features/031-thread-search/tickets.md)；Ship: 2026-08-11（schema identity 16→17：thread_search_index；FTS5 勘察后选 LIKE contains 方案（A-169），消费协作 outbox、rebuild 完整性 fail-closed、snippet 命中窗口、游标分页、?thread=..&message=.. 精确 URL 定位、分层 Escape 修复；smoke:threads 42 断言 / 26 axe 状态 0 serious/critical；全量 264 文件/2367 用例 108.2s）；演示判据: owner 能按标题、内容和项目范围搜索线程并定位匹配消息，结果绝不跨项目泄漏；约束: 工作区=项目隔离，verified-handle=不适用，sandbox=不适用，凭据=索引排除秘密，审批=不适用，独立复核=交付必需，审计=查询不记录敏感正文；不复制 Clowder 品牌、源码或资产
   - 准入: 已交付前置: `CAP-COL-01`（已交付核心）；阻塞: S-23 的 `AUD-MVP` 先交付 `CAP-OPS-01` 与最薄 `CAP-OPS-02`，再由 `AUD-COL` 纵切交付 `CAP-COL-07` 并证明 Collaboration 事件可查询/导航；本片建立: `CAP-OPS-02` 的项目隔离线程索引与定位（规划中）。
 - [ ] S-18 线程标签与批量整理（CI-2.6） — 主子系统: Public Collaboration；主 Capability: `CAP-COL-02`；票据: 未创建；演示判据: owner 能创建、搜索、分配和删除项目内标签并批量整理线程，删除语义与刷新后状态一致；约束: 工作区=项目隔离，verified-handle=不适用，sandbox=不适用，凭据=不适用，审批=批量破坏性动作确认，独立复核=交付必需，审计=批量写入版本化；不复制 Clowder 品牌、源码或资产
   - 准入: 已交付前置: `CAP-COL-02` 的 Thread Catalog 核心；阻塞: `CAP-OPS-02` 线程查询（规划中，由 S-17 建立）与 `CAP-GOV-02` 批量破坏性确认（规划中，由 S-24 建立）；本片建立: `CAP-COL-02` 的标签与版本化批量整理（规划中）。

@@ -23,6 +23,7 @@ export * as missionWorkTasks from "@/src/adapters/outbound/sqlite/mission-work/t
 // operations-projection
 export * as auditProjectionConsumer from "@/src/adapters/outbound/sqlite/operations-projection/audit-projection-consumer";
 export * as auditProjectionQueries from "@/src/adapters/outbound/sqlite/operations-projection/audit-projection-queries";
+export * as threadSearchQueries from "@/src/adapters/outbound/sqlite/operations-projection/thread-search-queries";
 
 // project-workspace
 export * as membershipService from "@/src/adapters/outbound/sqlite/project-workspace/membership-service";

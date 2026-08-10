@@ -43,6 +43,7 @@ export type ProjectSelection = {
   href: `/projects/${string}`;
   projectHref: `/projects/${string}`;
   projectId: string;
+  messageId: string | null;
   runId: string | null;
   threadId: string | null;
 };
@@ -78,6 +79,7 @@ export function parseProjectSelection(value: string): ProjectSelection | null {
       href: projectHref,
       projectHref,
       projectId,
+      messageId: null,
       runId: null,
       threadId: null,
     };
@@ -86,19 +88,31 @@ export function parseProjectSelection(value: string): ProjectSelection | null {
 
   const searchParams = new URLSearchParams(rawQuery);
   for (const key of new Set(searchParams.keys())) {
-    if (key !== "thread" && key !== "run") return null;
+    if (key !== "thread" && key !== "run" && key !== "message") return null;
   }
   const threadValues = searchParams.getAll("thread");
   const runValues = searchParams.getAll("run");
-  if (threadValues.length !== 1 || runValues.length > 1) return null;
+  const messageValues = searchParams.getAll("message");
+  if (threadValues.length !== 1 || runValues.length > 1 || messageValues.length > 1) {
+    return null;
+  }
   const threadId = pathSafeId(threadValues[0]!);
   const runId = runValues.length === 1 ? pathSafeId(runValues[0]!) : null;
-  if (!threadId || (runValues.length === 1 && !runId)) return null;
+  const messageId = messageValues.length === 1 ? pathSafeId(messageValues[0]!) : null;
+  if (
+    !threadId
+    || (runValues.length === 1 && !runId)
+    || (messageValues.length === 1 && !messageId)
+  ) {
+    return null;
+  }
 
   const href = `${projectHref}?thread=${encodeURIComponent(threadId)}${
     runId ? `&run=${encodeURIComponent(runId)}` : ""
+  }${
+    messageId ? `&message=${encodeURIComponent(messageId)}` : ""
   }` as `/projects/${string}`;
-  return { href, projectHref, projectId, runId, threadId };
+  return { href, projectHref, messageId, projectId, runId, threadId };
 }
 
 export function parseSingleParam(

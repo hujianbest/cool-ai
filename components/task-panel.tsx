@@ -117,6 +117,7 @@ export function TaskPanel({
     threadId: string;
   } | null>(null);
   const [collaborationTarget, setCollaborationTarget] = useState<{
+    messageId: string | null;
     selectedRunId: string | null;
     threadId: string;
   } | null>(() => {
@@ -124,11 +125,18 @@ export function TaskPanel({
     const query = new URLSearchParams(window.location.search);
     const threadIds = query.getAll("thread");
     const runIds = query.getAll("run");
+    const messageIds = query.getAll("message");
     return threadIds.length === 1 &&
       threadIds[0]!.length > 0 &&
       (runIds.length === 0 ||
-        (runIds.length === 1 && runIds[0]!.length > 0))
-      ? { selectedRunId: runIds[0] ?? null, threadId: threadIds[0]! }
+        (runIds.length === 1 && runIds[0]!.length > 0)) &&
+      (messageIds.length === 0 ||
+        (messageIds.length === 1 && messageIds[0]!.length > 0))
+      ? {
+          messageId: messageIds[0] ?? null,
+          selectedRunId: runIds[0] ?? null,
+          threadId: threadIds[0]!,
+        }
       : null;
   });
   const collaborationTabRefs = useRef(new Map<string, HTMLButtonElement>());
@@ -149,12 +157,16 @@ export function TaskPanel({
     const query = new URLSearchParams(window.location.search);
     const threadIds = query.getAll("thread");
     const runIds = query.getAll("run");
+    const messageIds = query.getAll("message");
     const validThread = threadIds.length === 1 && threadIds[0]!.length > 0;
     const validRun = runIds.length === 0 ||
       (runIds.length === 1 && runIds[0]!.length > 0);
+    const validMessage = messageIds.length === 0 ||
+      (messageIds.length === 1 && messageIds[0]!.length > 0);
     setCollaborationTarget(
-      validThread && validRun
+      validThread && validRun && validMessage
         ? {
+            messageId: messageIds[0] ?? null,
             selectedRunId: runIds[0] ?? null,
             threadId: threadIds[0]!,
           }
@@ -467,6 +479,7 @@ export function TaskPanel({
                           onNestedModalChange={setNestedModalOpen}
                           onRequestChat={() => setCollaborationSurface("chat")}
                           projectId={projectId}
+                          requestedMessageId={collaborationTarget?.messageId}
                           selectedRunId={collaborationTarget?.selectedRunId}
                           startOnly={onboarding?.step === "goal"}
                           surface="run"
@@ -492,6 +505,7 @@ export function TaskPanel({
                         }
                         onNestedModalChange={setNestedModalOpen}
                         projectId={projectId}
+                        requestedMessageId={collaborationTarget?.messageId}
                         selectedRunId={collaborationTarget?.selectedRunId}
                         startOnly={onboarding?.step === "goal"}
                         surface={collaborationSurface}
@@ -513,6 +527,7 @@ export function TaskPanel({
                       setGoalFactsVersion((current) => current + 1)
                     }
                     projectId={projectId}
+                    requestedMessageId={collaborationTarget?.messageId}
                     selectedRunId={collaborationTarget?.selectedRunId}
                     startOnly={onboarding?.step === "goal"}
                     threadId={collaborationTarget?.threadId}
