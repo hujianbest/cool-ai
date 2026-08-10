@@ -303,6 +303,7 @@ describe("tuple-scoped thread history API", () => {
       mentionDisplayName: null,
       mentionMemberStatus: null,
       replyTo: null,
+      attachments: [],
       createdAt: "2026-08-08T08:00:01.000Z",
     });
 

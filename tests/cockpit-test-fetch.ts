@@ -90,6 +90,7 @@ export function threadDetailPayload(
 
 export function threadMessage(projectId: string): ThreadMessageDto {
   return {
+    attachments: [],
     authorAgentId: null,
     authorDisplayName: "项目所有者",
     authorType: "owner",

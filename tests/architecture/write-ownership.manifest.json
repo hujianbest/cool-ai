@@ -52,7 +52,9 @@
       "business_action_receipts",
       "thread_drafts",
       "input_history_entries",
-      "input_history_clear_events"
+      "input_history_clear_events",
+      "message_attachments",
+      "attachment_events"
     ],
     "safe-execution": [
       "executions",

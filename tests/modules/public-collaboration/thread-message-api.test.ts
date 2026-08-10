@@ -297,6 +297,7 @@ describe("tuple-scoped owner message API", () => {
       mentionDisplayName: "Agent agent-b",
       mentionMemberStatus: "current",
       replyTo: null,
+      attachments: [],
       createdAt: NOW,
     });
     expect(body.fact).toEqual({

@@ -2,6 +2,8 @@ import type { TransactionContext } from "@/src/application/transaction-context";
 import type { WorkItem } from "@/src/shared/project-context-contracts";
 
 import type {
+  AttachmentRemoveResponse,
+  AttachmentUploadResponse,
   ControlResponse,
   DecisionAnswerResponse,
   InputHistoryClearResponse,
@@ -98,6 +100,20 @@ export interface PublicCollaborationCommands {
     threadId: string,
     rawInput: unknown,
   ): PublicCollaborationCommandResult<ThreadDraftSaveResponse>;
+  uploadAttachment(
+    databasePath: string,
+    attachmentsRoot: string,
+    projectId: string,
+    threadId: string,
+    rawInput: { bytes: Uint8Array; fileName: unknown },
+  ): PublicCollaborationCommandResult<AttachmentUploadResponse>;
+  removeAttachment(
+    databasePath: string,
+    attachmentsRoot: string,
+    projectId: string,
+    threadId: string,
+    attachmentId: string,
+  ): PublicCollaborationCommandResult<AttachmentRemoveResponse>;
   clearThreadDraft(
     databasePath: string,
     projectId: string,

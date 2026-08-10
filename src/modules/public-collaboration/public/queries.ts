@@ -3,6 +3,7 @@ import type {
   CursorPage,
   FactPageResponse,
   InputHistorySearchResponse,
+  MessageAttachmentMimeType,
   MessagePageResponse,
   PublicCollaborationPageCursor,
   ThreadDraftReadResponse,
@@ -86,6 +87,13 @@ export interface PublicCollaborationQueries {
     databasePath: string,
     tuple: { messageId: string; projectId: string; threadId: string },
   ): unknown;
+  readAttachmentContent(
+    databasePath: string,
+    attachmentsRoot: string,
+    projectId: string,
+    threadId: string,
+    attachmentId: string,
+  ): { bytes: Uint8Array; mimeType: MessageAttachmentMimeType };
   readInlineOperation(
     databasePath: string,
     tuple: { projectId: string; runId: string; threadId: string },

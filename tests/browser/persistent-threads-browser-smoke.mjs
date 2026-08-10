@@ -12,7 +12,7 @@ import {
 } from "node:fs";
 import { createServer } from "node:http";
 import { tmpdir } from "node:os";
-import { join, resolve } from "node:path";
+import { dirname, join, resolve } from "node:path";
 import { DatabaseSync } from "node:sqlite";
 
 import AxeBuilder from "@axe-core/playwright";
@@ -36,6 +36,14 @@ const evidenceDirectory = resolve(
   "evidence",
 );
 const evidence = {
+  attachmentsDesktop: join(
+    resolve("features", "024-image-attachments", "evidence"),
+    "attachments-desktop.png",
+  ),
+  attachmentsNarrow: join(
+    resolve("features", "024-image-attachments", "evidence"),
+    "attachments-narrow.png",
+  ),
   desktop: join(evidenceDirectory, "persistent-threads-desktop.png"),
   narrow: join(evidenceDirectory, "persistent-threads-narrow.png"),
   policy: join(evidenceDirectory, "persistent-threads-policy-repair.png"),
@@ -53,6 +61,26 @@ const evidence = {
   ),
   results: join(evidenceDirectory, "persistent-threads-results.json"),
 };
+const PNG_1X1 = Buffer.from([
+  0x89, 0x50, 0x4e, 0x47, 0x0d, 0x0a, 0x1a, 0x0a,
+  0x00, 0x00, 0x00, 0x0d, 0x49, 0x48, 0x44, 0x52,
+  0x00, 0x00, 0x00, 0x01, 0x00, 0x00, 0x00, 0x01,
+  0x08, 0x06, 0x00, 0x00, 0x00, 0x1f, 0x15, 0xc4,
+  0x89, 0x00, 0x00, 0x00, 0x0a, 0x49, 0x44, 0x41,
+  0x54, 0x78, 0x9c, 0x63, 0x00, 0x01, 0x00, 0x00,
+  0x05, 0x00, 0x01, 0x0d, 0x0a, 0x2d, 0xb4, 0x00,
+  0x00, 0x00, 0x00, 0x49, 0x45, 0x4e, 0x44, 0xae,
+  0x42, 0x60, 0x82,
+]);
+const GIF_1X1 = Buffer.from([
+  0x47, 0x49, 0x46, 0x38, 0x39, 0x61, 0x01, 0x00,
+  0x01, 0x00, 0x80, 0x00, 0x00, 0x00, 0x00, 0x00,
+  0xff, 0xff, 0xff, 0x21, 0xf9, 0x04, 0x01, 0x00,
+  0x00, 0x00, 0x00, 0x2c, 0x00, 0x00, 0x00, 0x00,
+  0x01, 0x00, 0x01, 0x00, 0x00, 0x02, 0x02, 0x44,
+  0x01, 0x00, 0x3b,
+]);
+const attachmentsRoot = join(temporaryDirectory, "attachments");
 const stableConfig = ["next-env.d.ts", "tsconfig.json"]
   .map((path) => resolve(path))
   .filter(existsSync)
@@ -74,8 +102,10 @@ let browser;
 let serverOutput = "";
 let providerCalls = 0;
 
-mkdirSync(evidenceDirectory, { recursive: true });
-for (const path of Object.values(evidence)) rmSync(path, { force: true });
+for (const path of Object.values(evidence)) {
+  mkdirSync(dirname(path), { recursive: true });
+  rmSync(path, { force: true });
+}
 
 function pass(name, details = {}) {
   results.assertions.push({ name, status: "passed", ...details });
@@ -259,6 +289,19 @@ async function api(page, path, init) {
   }, { init, path });
 }
 
+async function evaluateWithNavigationRetry(page, fn, arg) {
+  for (let attempt = 0; attempt < 3; attempt += 1) {
+    try {
+      return await page.evaluate(fn, arg);
+    } catch (error) {
+      const navigation = String(error).includes("Execution context was destroyed");
+      if (!navigation || attempt === 2) throw error;
+      await page.waitForLoadState("networkidle");
+    }
+  }
+  throw new Error("unreachable");
+}
+
 async function createAgent(page, name, template, avatar, accent) {
   await page.getByRole("tab", { name: "Agent" }).click();
   await page.getByRole("button", { name: "创建 Agent" }).click();
@@ -379,8 +422,20 @@ function inspectDatabase() {
       WHERE project_id='legacy-project'
         AND status IN ('running','waiting_owner','paused','failed')
     `).get().count;
+    const attachments = database.prepare(`
+      SELECT id,project_id AS projectId,thread_id AS threadId,
+             message_id AS messageId,file_name AS fileName,size,
+             mime_type AS mimeType,storage_relpath AS storageRelpath,status
+      FROM message_attachments ORDER BY created_at,id
+    `).all();
+    const attachmentEvents = database.prepare(`
+      SELECT attachment_id AS attachmentId,type
+      FROM attachment_events ORDER BY created_at,id
+    `).all();
     return {
       activeRuns,
+      attachmentEvents,
+      attachments,
       factCount: facts.length,
       factIds: facts.map((fact) => fact.id),
       facts,
@@ -466,7 +521,7 @@ try {
   assert.equal(persisted.body.threads.length, 1);
   assert.equal(persisted.body.threads[0].title, "历史协作");
   const legacyThreadId = persisted.body.threads[0].id;
-  assert.equal(inspectDatabase().version, 12);
+  assert.equal(inspectDatabase().version, 13);
   pass("current-persistent-default-thread", { legacyThreadId });
   await axe(page, "current persistent project");
 
@@ -1008,8 +1063,8 @@ try {
   const draftComposer = page.getByLabel("发送给项目群聊");
   await draftComposer.waitFor();
   const draftText = "Draft continuity smoke note.";
-  const attachmentName = "smoke-notes.txt";
-  const attachmentSize = Buffer.from("thread smoke attachment").length;
+  const attachmentName = "smoke-notes.png";
+  const attachmentSize = PNG_1X1.length;
   const draftPut = (match) => page.waitForResponse((response) => {
     const request = response.request();
     if (request.method() !== "PUT" || !request.url().endsWith(`/threads/${firstThread}/draft`)) {
@@ -1055,20 +1110,31 @@ try {
     body?.content === draftText
     && Array.isArray(body?.attachments)
     && body.attachments.length === 1
+    && typeof body.attachments[0]?.attachmentId === "string"
     && typeof body?.replyToMessageId === "string"
   );
   await draftComposer.fill(draftText);
+  const draftUpload = page.waitForResponse((response) =>
+    response.request().method() === "POST"
+    && response.url().includes(`/threads/${firstThread}/attachments?name=`)
+  );
   await page.getByLabel("选择附件文件").setInputFiles({
-    buffer: Buffer.from("thread smoke attachment"),
-    mimeType: "text/plain",
+    buffer: PNG_1X1,
+    mimeType: "image/png",
     name: attachmentName,
   });
+  assert.equal((await draftUpload).status(), 201);
+  await page
+    .locator("form.composer .mention-chip", { hasText: "已上传" })
+    .waitFor();
   await page.getByRole("button", { name: /^回复 .+ 的消息/ }).first().click();
   const fullDraftResponse = await fullDraftSave;
   assert.equal((await fullDraftResponse.json()).contentSaved, true);
   const savedDraftBody = JSON.parse(fullDraftResponse.request().postData());
+  const draftAttachmentId = savedDraftBody.attachments[0].attachmentId;
+  assert.ok(draftAttachmentId.length > 0);
   assert.deepEqual(savedDraftBody.attachments, [
-    { name: attachmentName, size: attachmentSize },
+    { attachmentId: draftAttachmentId, name: attachmentName, size: attachmentSize },
   ]);
 
   await page.reload({ waitUntil: "networkidle" });
@@ -1076,15 +1142,38 @@ try {
     const composer = document.querySelector("form.composer textarea");
     return composer && composer.value === expected;
   }, draftText);
-  await page
-    .locator("form.composer .mention-chip", { hasText: `${attachmentName} · ${attachmentSize} B` })
-    .waitFor();
+  const restoredChip = page.locator("form.composer .mention-chip", {
+    hasText: `${attachmentName} · ${attachmentSize} B`,
+  });
+  await restoredChip.waitFor();
+  assert.ok((await restoredChip.textContent())?.includes("已上传"));
   await page
     .locator("form.composer .mention-chip", { hasText: /^回复 / })
     .waitFor();
   await axe(page, "desktop light draft restored");
   await page.screenshot({ fullPage: true, path: evidence.draftRestored });
   pass("draft-restore-text-attachment-reply-after-reload");
+
+  const orphanRemoval = page.waitForResponse((response) =>
+    response.request().method() === "DELETE"
+    && response.url().includes(`/threads/${firstThread}/attachments/`)
+  );
+  const orphanDraftSave = draftPut((body) =>
+    body?.content === draftText
+    && Array.isArray(body?.attachments)
+    && body.attachments.length === 0
+  );
+  await page.getByRole("button", { name: `移除附件 ${attachmentName}` }).click();
+  const orphanRemovalResponse = await orphanRemoval;
+  assert.ok(
+    orphanRemovalResponse.status() < 300,
+    `orphan removal failed: ${orphanRemovalResponse.status()}`,
+  );
+  await orphanDraftSave;
+  assert.equal(
+    await page.locator("form.composer .mention-chip", { hasText: attachmentName }).count(),
+    0,
+  );
 
   const draftRunSelector = page.getByRole("combobox", { name: "选择线程运行" });
   await draftRunSelector.selectOption(activeRun.id);
@@ -1259,6 +1348,409 @@ try {
   await clearRegion.waitFor({ state: "detached" });
   pass("input-history-clear-two-step-confirm-api-empty");
 
+  const threadState = await readThread(page, "legacy-project", firstThread);
+  const liveRunId = threadState.activeRun?.runId;
+  assert.ok(liveRunId, "first thread must have an active run for attachment send");
+  await page.addInitScript(() => {
+    window.__attachmentUploadProgress = [];
+    class ObservedXHR extends window.XMLHttpRequest {
+      constructor() {
+        super();
+        this.upload.addEventListener("progress", (event) => {
+          window.__attachmentUploadProgress.push({
+            lengthComputable: event.lengthComputable,
+            loaded: event.loaded,
+            total: event.total,
+          });
+        });
+      }
+    }
+    window.XMLHttpRequest = ObservedXHR;
+  });
+  await page.goto(`${baseUrl}${firstHref}&run=${liveRunId}`, {
+    waitUntil: "networkidle",
+  });
+  const attachComposer = page.getByLabel("发送给项目群聊");
+  await attachComposer.waitFor();
+
+  const attachmentPosts = [];
+  const attachmentPostTracker = (request) => {
+    if (
+      request.method() === "POST"
+      && new URL(request.url()).pathname
+        === `/api/projects/legacy-project/threads/${firstThread}/attachments`
+    ) {
+      attachmentPosts.push(request.url());
+    }
+  };
+  page.on("request", attachmentPostTracker);
+  await page.getByLabel("选择附件文件").setInputFiles({
+    buffer: Buffer.from("thread smoke attachment"),
+    mimeType: "text/plain",
+    name: "reject-me.txt",
+  });
+  await page
+    .getByText("仅支持 PNG/JPEG/GIF/WebP 图片附件。", { exact: true })
+    .waitFor();
+  await page.getByLabel("选择附件文件").setInputFiles({
+    buffer: Buffer.concat([PNG_1X1, Buffer.alloc(5 * 1024 * 1024)]),
+    mimeType: "image/png",
+    name: "too-big.png",
+  });
+  await page
+    .getByText("单个附件不能超过 5 MiB。", { exact: true })
+    .waitFor();
+  assert.deepEqual(
+    attachmentPosts,
+    [],
+    "client-rejected files must never reach the upload route",
+  );
+  page.off("request", attachmentPostTracker);
+  const bogusUpload = await page.evaluate(async (url) => {
+    const response = await fetch(url, {
+      body: new TextEncoder().encode("declared png but wrong magic"),
+      headers: { "content-type": "image/png" },
+      method: "POST",
+    });
+    let body = null;
+    try {
+      body = await response.json();
+    } catch {
+      body = null;
+    }
+    return { body, status: response.status };
+  }, `/api/projects/legacy-project/threads/${firstThread}/attachments?name=bogus.png`);
+  assert.equal(bogusUpload.status, 400);
+  assert.equal(bogusUpload.body?.error?.code, "INVALID_INPUT");
+  assert.equal(JSON.stringify(bogusUpload.body).includes(temporaryDirectory), false);
+  const oversizedUpload = await page.evaluate(async (url) => {
+    const bytes = new Uint8Array(5 * 1024 * 1024 + 1);
+    bytes.set([
+      0x89, 0x50, 0x4e, 0x47, 0x0d, 0x0a, 0x1a, 0x0a,
+      0x00, 0x00, 0x00, 0x0d, 0x49, 0x48, 0x44, 0x52,
+    ]);
+    const response = await fetch(url, {
+      body: bytes,
+      headers: { "content-type": "image/png" },
+      method: "POST",
+    });
+    let body = null;
+    try {
+      body = await response.json();
+    } catch {
+      body = null;
+    }
+    return { body, status: response.status };
+  }, `/api/projects/legacy-project/threads/${firstThread}/attachments?name=too-big-server.png`);
+  assert.equal(oversizedUpload.status, 413);
+  assert.equal(
+    JSON.stringify(oversizedUpload.body).includes(temporaryDirectory),
+    false,
+  );
+  pass("attachment-client-server-rejection-evidence");
+
+  const acceptName = "smoke-attach.png";
+  await page.getByLabel("选择附件文件").setInputFiles({
+    buffer: PNG_1X1,
+    mimeType: "image/png",
+    name: acceptName,
+  });
+  const acceptChip = page.locator("form.composer .mention-chip", {
+    hasText: `${acceptName} · ${PNG_1X1.length} B`,
+  });
+  await acceptChip.waitFor();
+  await page.waitForFunction((expected) => {
+    const chip = [...document.querySelectorAll("form.composer .mention-chip")]
+      .find((candidate) => candidate.textContent?.includes(expected));
+    return chip?.textContent?.includes("已上传") ?? false;
+  }, acceptName);
+  const progressEvents = await page.evaluate(
+    () => window.__attachmentUploadProgress ?? [],
+  );
+  assert.ok(
+    progressEvents.some((event) => event.loaded > 0),
+    "browser must fire real XHR upload progress events",
+  );
+
+  const pasteName = "smoke-pasted.gif";
+  const pasteOutcome = await page.evaluate(({ bytes, name }) => {
+    const composer = document.querySelector("form.composer textarea");
+    if (!composer) return "no-composer";
+    const data = new DataTransfer();
+    data.items.add(new File([new Uint8Array(bytes)], name, { type: "image/gif" }));
+    const event = new ClipboardEvent("paste", {
+      bubbles: true,
+      cancelable: true,
+      clipboardData: data,
+    });
+    composer.dispatchEvent(event);
+    return "dispatched";
+  }, { bytes: Array.from(GIF_1X1), name: pasteName });
+  assert.equal(pasteOutcome, "dispatched");
+  const pasteChip = page.locator("form.composer .mention-chip", {
+    hasText: `${pasteName} · ${GIF_1X1.length} B`,
+  });
+  await pasteChip.waitFor();
+  await page.waitForFunction((expected) => {
+    const chip = [...document.querySelectorAll("form.composer .mention-chip")]
+      .find((candidate) => candidate.textContent?.includes(expected));
+    return chip?.textContent?.includes("已上传") ?? false;
+  }, pasteName);
+  pass("attachment-select-progress-paste-upload-success");
+
+  const attachMessageText = "Owner message with image attachments.";
+  const attachmentSend = page.waitForResponse((response) =>
+    response.request().method() === "POST"
+    && response.url().endsWith(`/threads/${firstThread}/messages`)
+  );
+  const contentLoads = [];
+  const contentTracker = (response) => {
+    const url = new URL(response.url());
+    if (
+      url.pathname.includes("/attachments/")
+      && url.pathname.endsWith("/content")
+    ) {
+      contentLoads.push({
+        cacheControl: response.headers()["cache-control"] ?? "",
+        contentType: response.headers()["content-type"] ?? "",
+        nosniff: response.headers()["x-content-type-options"] ?? "",
+        status: response.status(),
+      });
+    }
+  };
+  page.on("response", contentTracker);
+  await attachComposer.fill(attachMessageText);
+  await page.getByRole("button", { name: "发送消息" }).click();
+  const attachmentSendResponse = await attachmentSend;
+  assert.equal(
+    attachmentSendResponse.status(),
+    201,
+    `attachment message failed: ${await attachmentSendResponse.text()}`,
+  );
+  const sentMessage = await attachmentSendResponse.json();
+  assert.equal(sentMessage.message.attachments.length, 2);
+  assert.deepEqual(
+    sentMessage.message.attachments.map((item) => item.fileName).sort(),
+    [acceptName, pasteName].sort(),
+  );
+  const sentRequestBody = JSON.parse(attachmentSendResponse.request().postData());
+  assert.equal(sentRequestBody.attachmentIds.length, 2);
+  const sentMessageId = sentMessage.message.id;
+  for (const name of [acceptName, pasteName]) {
+    const image = page.getByRole("img", { exact: true, name });
+    await image.waitFor();
+    assert.ok(
+      (await image.getAttribute("src"))
+        ?.startsWith(`/api/projects/legacy-project/threads/${firstThread}/attachments/`),
+    );
+    await page.waitForFunction((expected) => {
+      const node = [...document.querySelectorAll("img")]
+        .find((candidate) => candidate.alt === expected);
+      return node && node.complete && node.naturalWidth > 0;
+    }, name);
+  }
+  await page
+    .getByText(`image/png · ${PNG_1X1.length} B`, { exact: true })
+    .waitFor();
+  await page
+    .getByText(`image/gif · ${GIF_1X1.length} B`, { exact: true })
+    .waitFor();
+  assert.equal(await page.locator("form.composer .mention-chip").count(), 0);
+  assert.ok(
+    contentLoads.length >= 2,
+    "both attachment images must load through the delivery route",
+  );
+  for (const load of contentLoads) {
+    assert.equal(load.status, 200);
+    assert.ok(["image/gif", "image/png"].includes(load.contentType));
+    assert.equal(load.nosniff, "nosniff");
+    assert.ok(load.cacheControl.includes("private"));
+    assert.ok(load.cacheControl.includes("immutable"));
+  }
+  page.off("response", contentTracker);
+  await axe(page, "desktop light attachments transcript");
+  await page.screenshot({ fullPage: true, path: evidence.attachmentsDesktop });
+  pass("attachment-send-render-alt-metadata-delivery-headers");
+
+  const themeSwitcher = page.getByRole("button", { name: /切换到暗色主题/ });
+  await themeSwitcher.click();
+  await page.getByRole("button", { name: /切换到明色主题/ }).waitFor();
+  await page.getByRole("img", { exact: true, name: acceptName }).waitFor();
+  await axe(page, "desktop dark attachments transcript");
+  await page.getByRole("button", { name: /切换到明色主题/ }).click();
+  await page.getByRole("button", { name: /切换到暗色主题/ }).waitFor();
+
+  const beforeAttachmentRestart = inspectDatabase();
+  await restartApp(page);
+  // A fresh browser context proves cold-cache persistence: no shared
+  // connection pool or HTTP cache with the pre-restart page, so the bytes
+  // can only come from the restarted process reading them back from disk.
+  const verifyContext = await browser.newContext({
+    viewport: { height: 1050, width: 1500 },
+  });
+  const verifyPage = await verifyContext.newPage();
+  verifyPage.setDefaultTimeout(60_000);
+  await verifyPage.goto(`${baseUrl}${firstHref}&run=${liveRunId}`, {
+    waitUntil: "networkidle",
+  });
+  await verifyPage.getByText(attachMessageText, { exact: true }).waitFor();
+  for (const name of [acceptName, pasteName]) {
+    await verifyPage.getByRole("img", { exact: true, name }).waitFor();
+  }
+  const afterAttachmentRestart = inspectDatabase();
+  assert.deepEqual(
+    afterAttachmentRestart.attachments,
+    beforeAttachmentRestart.attachments,
+  );
+  assert.deepEqual(
+    afterAttachmentRestart.attachmentEvents,
+    beforeAttachmentRestart.attachmentEvents,
+  );
+  const linkedRows = afterAttachmentRestart.attachments;
+  assert.equal(linkedRows.length, 2);
+  for (const row of linkedRows) {
+    assert.equal(row.projectId, "legacy-project");
+    assert.equal(row.threadId, firstThread);
+    assert.equal(row.status, "linked");
+    assert.equal(row.messageId, sentMessageId);
+    assert.equal(row.storageRelpath, `legacy-project/${row.id}`);
+    const expectedBytes = row.fileName === acceptName ? PNG_1X1 : GIF_1X1;
+    const delivery = await evaluateWithNavigationRetry(
+      verifyPage,
+      async (path) => {
+        const response = await fetch(path);
+        const bytes = new Uint8Array(await response.arrayBuffer());
+        const bitmap = await createImageBitmap(new Blob([bytes]));
+        const decoded = { height: bitmap.height, width: bitmap.width };
+        bitmap.close();
+        return {
+          bytes: Array.from(bytes),
+          cacheControl: response.headers.get("cache-control") ?? "",
+          contentType: response.headers.get("content-type") ?? "",
+          decoded,
+          nosniff: response.headers.get("x-content-type-options") ?? "",
+          status: response.status,
+        };
+      },
+      `/api/projects/legacy-project/threads/${firstThread}/attachments/${row.id}/content`,
+    );
+    assert.equal(delivery.status, 200);
+    assert.equal(delivery.contentType, row.mimeType);
+    assert.equal(delivery.nosniff, "nosniff");
+    assert.ok(delivery.cacheControl.includes("private"));
+    assert.ok(delivery.cacheControl.includes("immutable"));
+    assert.deepEqual(
+      delivery.bytes,
+      Array.from(expectedBytes),
+      "restarted process must serve the exact stored bytes",
+    );
+    assert.deepEqual(
+      delivery.decoded,
+      { height: 1, width: 1 },
+      "delivered bytes must stay decodable images after restart",
+    );
+  }
+  assert.deepEqual(
+    afterAttachmentRestart.attachmentEvents.map((event) => event.type).sort(),
+    ["linked", "linked", "removed", "uploaded", "uploaded", "uploaded"],
+  );
+  const attachmentsDisk = join(attachmentsRoot, "legacy-project");
+  assert.ok(existsSync(attachmentsDisk));
+  assert.deepEqual(
+    readdirSync(attachmentsDisk).sort(),
+    linkedRows.map((row) => row.id).sort(),
+  );
+  const pngRow = linkedRows.find((row) => row.fileName === acceptName);
+  assert.equal(readFileSync(join(attachmentsDisk, pngRow.id)).equals(PNG_1X1), true);
+  const gifRow = linkedRows.find((row) => row.fileName === pasteName);
+  assert.equal(readFileSync(join(attachmentsDisk, gifRow.id)).equals(GIF_1X1), true);
+  assert.equal(
+    existsSync(join(attachmentsDisk, draftAttachmentId)),
+    false,
+    "removed orphan attachment bytes must be deleted",
+  );
+  for (const denied of [
+    `/api/projects/legacy-project/threads/${secondThread}/attachments/${linkedRows[0].id}/content`,
+    `/api/projects/foreign-project/threads/${firstThread}/attachments/${linkedRows[0].id}/content`,
+    `/api/projects/legacy-project/threads/${firstThread}/attachments/${randomUUID()}/content`,
+  ]) {
+    const deniedResponse = await api(verifyPage, denied);
+    assert.equal(deniedResponse.status, 404, `expected neutral 404 for ${denied}`);
+    assert.equal(
+      JSON.stringify(deniedResponse.body).includes(temporaryDirectory),
+      false,
+      "404 envelope must not echo host paths",
+    );
+  }
+  await verifyContext.close();
+  pass("attachment-restart-persistence-delivery-404-disk-evidence");
+
+  await page.setViewportSize({ height: 844, width: 390 });
+  await page.reload({ waitUntil: "networkidle" });
+  const attachmentEditorOpener = page.getByRole("button", { name: "打开编辑" });
+  await attachmentEditorOpener.click();
+  const attachmentEditor = page.getByRole("dialog", { name: "任务编辑" });
+  await attachmentEditor.getByRole("tab", { name: "群聊" }).click();
+  const narrowImage = attachmentEditor.getByRole("img", {
+    exact: true,
+    name: acceptName,
+  });
+  await narrowImage.waitFor();
+  await attachmentEditor
+    .getByText(`image/png · ${PNG_1X1.length} B`, { exact: true })
+    .waitFor();
+  const narrowList = attachmentEditor.locator(".message-attachments").first();
+  await narrowList.scrollIntoViewIfNeeded();
+  const narrowListBox = await narrowList.boundingBox();
+  assert.ok(narrowListBox && narrowListBox.width > 0);
+  assert.ok(narrowListBox.width <= 390);
+  const narrowAddButton = attachmentEditor.getByRole("button", { name: "添加附件" });
+  await narrowAddButton.scrollIntoViewIfNeeded();
+  const narrowAddBox = await narrowAddButton.boundingBox();
+  assert.ok(narrowAddBox && narrowAddBox.height >= 44 && narrowAddBox.width >= 44);
+  await attachmentEditor.getByLabel("发送给项目群聊").focus();
+  let addButtonFocused = false;
+  for (let attempt = 0; attempt < 15 && !addButtonFocused; attempt += 1) {
+    await page.keyboard.press("Tab");
+    addButtonFocused = await narrowAddButton.evaluate(
+      (node) => document.activeElement === node,
+    );
+  }
+  assert.ok(addButtonFocused, "添加附件 must be keyboard reachable");
+  await axe(page, "narrow attachments transcript");
+  await page.screenshot({ fullPage: true, path: evidence.attachmentsNarrow });
+  await page.keyboard.press("Escape");
+  await attachmentEditor.waitFor({ state: "detached" });
+  pass("attachment-narrow-dark-light-44px-keyboard-axe");
+
+  const gitCheckIgnore = spawnSync(
+    "git",
+    ["check-ignore", ".data/attachments/placeholder"],
+    { cwd: process.cwd(), encoding: "utf8" },
+  );
+  assert.equal(
+    gitCheckIgnore.status,
+    0,
+    `.data/attachments must be git-ignored: ${gitCheckIgnore.stderr}`,
+  );
+  const gitStatusData = spawnSync(
+    "git",
+    ["status", "--porcelain", "--", ".data/"],
+    { cwd: process.cwd(), encoding: "utf8" },
+  );
+  assert.equal(gitStatusData.status, 0);
+  assert.equal(
+    gitStatusData.stdout.trim(),
+    "",
+    ".data/ must stay out of git status",
+  );
+  assert.equal(
+    existsSync(resolve(".data", "attachments")),
+    false,
+    "attachment bytes must live beside the isolated smoke database, not the repo",
+  );
+  pass("attachment-artifacts-git-ignored-isolated-root");
+
   const dom = await page.evaluate(() => document.documentElement.outerHTML);
   const databaseText = JSON.stringify(inspectDatabase());
   const existingEvidence = readdirSync(evidenceDirectory)
@@ -1277,6 +1769,13 @@ try {
     for (const surface of publicSurfaces) {
       assert.equal(surface.includes(secret), false, "fixture secret leaked");
     }
+  }
+  for (const surface of [dom, databaseText, productApiBodies.join("\n"), serverOutput]) {
+    assert.equal(
+      surface.includes(attachmentsRoot),
+      false,
+      "host attachment root path leaked",
+    );
   }
   pass("no-secret-db-api-dom-evidence");
   results.status = "passed";
@@ -1318,6 +1817,11 @@ try {
         "--- server output (last 4000 chars) ---",
         serverOutput.slice(-4000),
       ].join("\n"),
+      "utf8",
+    );
+    writeFileSync(
+      join(evidenceDirectory, "persistent-threads-failure-server.log"),
+      serverOutput,
       "utf8",
     );
     console.log(`FAILURE EVIDENCE: ${failurePath}`);

@@ -24,6 +24,7 @@ export * as workspaceService from "@/src/adapters/outbound/sqlite/project-worksp
 
 // public-collaboration
 export * as advanceExecutor from "@/src/adapters/outbound/sqlite/public-collaboration/advance-executor";
+export * as attachmentService from "@/src/adapters/outbound/sqlite/public-collaboration/attachment-service";
 export * as inlineDecisionService from "@/src/adapters/outbound/sqlite/public-collaboration/inline-decision-service";
 export * as publicTextCredentialClassifier from "@/src/adapters/outbound/sqlite/public-collaboration/public-text-credential-classifier";
 export * as runService from "@/src/adapters/outbound/sqlite/public-collaboration/run-service";

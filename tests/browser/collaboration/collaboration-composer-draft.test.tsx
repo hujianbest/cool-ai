@@ -55,6 +55,7 @@ type DraftRecord = {
 
 function ownerMessage(overrides: Partial<ProjectMessage> = {}): ProjectMessage {
   return {
+    attachments: [],
     authorAgentId: null,
     authorDisplayName: "项目所有者",
     authorType: "owner",
@@ -103,6 +104,7 @@ function installFetch(options?: {
   function threadEnvelope(threadId: string) {
     const threadMessages = messages.map((item) => ({
       ...item,
+      attachments: [],
       projectId: "project-1",
       replyTo: null,
       threadId,
@@ -199,6 +201,7 @@ function installFetch(options?: {
             fact: { id: `fact-${message.id}` },
             message: {
               ...message,
+              attachments: [],
               projectId: "project-1",
               replyTo: null,
               threadId: TEST_THREAD_ID,
@@ -275,7 +278,8 @@ describe("composer draft recovery", () => {
 
     const composer = await screen.findByLabelText("发送给项目群聊");
     await waitFor(() => expect(composer).toHaveValue("恢复的文字"));
-    expect(await screen.findByText("notes.txt · 128 B")).toBeInTheDocument();
+    const placeholder = await screen.findByText(/notes\.txt · 128 B/);
+    expect(placeholder.textContent).toContain("需重新选择");
     expect(
       screen.getByText(/回复 项目所有者：Plan the release/),
     ).toBeInTheDocument();
@@ -444,6 +448,10 @@ describe("composer draft saving", () => {
     await waitFor(() => expect(composer).toHaveValue("发送后应清空"));
     expect(await screen.findByText(/notes\.txt/)).toBeInTheDocument();
 
+    await user.click(screen.getByRole("button", { name: "移除附件 notes.txt" }));
+    await waitFor(() => {
+      expect(screen.queryByText(/notes\.txt/)).not.toBeInTheDocument();
+    });
     await user.click(screen.getByRole("button", { name: "发送消息" }));
     await waitFor(() => expect(composer).toHaveValue(""));
     expect(screen.queryByText(/notes\.txt/)).not.toBeInTheDocument();
@@ -519,27 +527,29 @@ describe("composer reply and attachment placeholders", () => {
     );
   });
 
-  it("adds attachment placeholder chips with name and size only, removable, and saved", async () => {
-    const { draftCalls } = installFetch({ seedMessages: [ownerMessage()] });
+  it("keeps restored legacy placeholders blocking send until removed, and saves the removal", async () => {
+    const { draftCalls } = installFetch({
+      seedDrafts: {
+        [`project-1|${TEST_THREAD_ID}`]: {
+          attachments: [{ name: "plan.md", size: 5 }],
+          content: "带附件的草稿",
+          replyToMessageId: null,
+          updatedAt: "2026-08-10T00:00:00.000Z",
+          version: 1,
+        },
+      },
+      seedMessages: [ownerMessage()],
+    });
     const user = userEvent.setup();
     renderPanel();
     const composer = await screen.findByLabelText("发送给项目群聊");
-    fireEvent.change(composer, { target: { value: "带附件的草稿" } });
+    await waitFor(() => expect(composer).toHaveValue("带附件的草稿"));
 
-    const file = new File(["hello"], "plan.md");
-    const input = screen.getByLabelText("选择附件文件");
-    fireEvent.change(input, { target: { files: [file] } });
-    expect(await screen.findByText("plan.md · 5 B")).toBeInTheDocument();
-
-    await waitFor(
-      () => {
-        const puts = draftCalls.filter((call) => call.method === "PUT");
-        expect(puts.at(-1)?.body?.attachments).toEqual([
-          { name: "plan.md", size: 5 },
-        ]);
-      },
-      { timeout: 2000 },
-    );
+    const chip = await screen.findByText(/plan\.md · 5 B/);
+    expect(chip.textContent).toContain("需重新选择");
+    fireEvent.change(composer, { target: { value: "带附件的草稿。" } });
+    expect(screen.getByRole("button", { name: "发送消息" })).toBeDisabled();
+    expect(screen.getByText(/后才能发送/)).toBeInTheDocument();
 
     await user.click(screen.getByRole("button", { name: "移除附件 plan.md" }));
     expect(screen.queryByText(/plan\.md/)).not.toBeInTheDocument();
@@ -547,10 +557,13 @@ describe("composer reply and attachment placeholders", () => {
       () => {
         const puts = draftCalls.filter((call) => call.method === "PUT");
         expect(puts.at(-1)?.body?.attachments).toEqual([]);
-        expect(puts.at(-1)?.body?.content).toBe("带附件的草稿");
+        expect(puts.at(-1)?.body?.content).toBe("带附件的草稿。");
       },
       { timeout: 2000 },
     );
+    await waitFor(() => {
+      expect(screen.getByRole("button", { name: "发送消息" })).toBeEnabled();
+    });
   });
 
   it("disables composer affordances while a send is pending", async () => {
@@ -565,7 +578,7 @@ describe("composer reply and attachment placeholders", () => {
     await screen.findByText("Plan the release");
     await user.click(screen.getByRole("button", { name: /回复 项目所有者 的消息/ }));
 
-    const attach = screen.getByRole("button", { name: "添加附件占位" });
+    const attach = screen.getByRole("button", { name: "添加附件" });
     const removeReply = screen.getByRole("button", { name: "移除回复链接" });
     expect(attach).toBeEnabled();
     expect(removeReply).toBeEnabled();

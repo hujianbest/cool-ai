@@ -52,6 +52,7 @@ export type ProjectMessage = {
   mentionAgentId: string | null;
   mentionDisplayName: string | null;
   mentionMemberStatus: "current" | "left" | null;
+  attachments: ThreadMessageAttachmentRefDto[];
   createdAt: string;
 };
 
@@ -251,6 +252,13 @@ export type ThreadMessageReplySnapshot = {
   excerpt: string;
 };
 
+export type ThreadMessageAttachmentRefDto = {
+  id: string;
+  fileName: string;
+  size: number;
+  mimeType: MessageAttachmentMimeType;
+};
+
 export type ThreadMessageDto = {
   id: string;
   projectId: string;
@@ -265,6 +273,7 @@ export type ThreadMessageDto = {
   mentionDisplayName: string | null;
   mentionMemberStatus: "current" | "left" | null;
   replyTo: ThreadMessageReplySnapshot | null;
+  attachments: ThreadMessageAttachmentRefDto[];
   createdAt: string;
   blocks?: PublicStructuredBlockEnvelope[];
 };
@@ -349,6 +358,7 @@ export type MessagePageResponse = CursorPage<ThreadMessageDto>;
 export type FactPageResponse = CursorPage<ThreadFactDto>;
 
 export type ThreadDraftAttachmentDto = {
+  attachmentId?: string;
   name: string;
   size: number;
 };
@@ -374,6 +384,35 @@ export type ThreadDraftSaveResponse = {
 
 export type ThreadDraftClearResponse = {
   cleared: true;
+};
+
+export type MessageAttachmentMimeType =
+  | "image/png"
+  | "image/jpeg"
+  | "image/gif"
+  | "image/webp";
+
+export type MessageAttachmentDto = {
+  id: string;
+  projectId: string;
+  threadId: string;
+  messageId: string | null;
+  fileName: string;
+  size: number;
+  mimeType: MessageAttachmentMimeType;
+  sha256: string;
+  status: "uploaded" | "linked";
+  createdAt: string;
+  linkedAt: string | null;
+};
+
+export type AttachmentUploadResponse = {
+  attachment: MessageAttachmentDto;
+  reused: boolean;
+};
+
+export type AttachmentRemoveResponse = {
+  removed: true;
 };
 
 export type InputHistoryEntryDto = {

@@ -12,7 +12,7 @@ export type CurrentSchemaManifest = {
 
 const CURRENT_SCHEMA_DEFINITION = {
   "identity": {
-    "userVersion": 12
+    "userVersion": 13
   },
   "objects": [
     {
@@ -349,6 +349,18 @@ const CURRENT_SCHEMA_DEFINITION = {
       "kind": "table",
       "name": "input_history_clear_events",
       "createSql": "CREATE TABLE input_history_clear_events(\n id TEXT PRIMARY KEY,\n project_id TEXT NOT NULL REFERENCES projects(id) ON DELETE CASCADE,\n cleared_at TEXT NOT NULL CHECK(cleared_at GLOB '????-??-??T??:??:??.???Z')\n)",
+      "dependsOn": []
+    },
+    {
+      "kind": "table",
+      "name": "message_attachments",
+      "createSql": "CREATE TABLE message_attachments(\n id TEXT PRIMARY KEY,\n project_id TEXT NOT NULL,thread_id TEXT NOT NULL,message_id TEXT,\n file_name TEXT NOT NULL CHECK(length(CAST(file_name AS BLOB)) BETWEEN 1 AND 1024),\n size INTEGER NOT NULL CHECK(size BETWEEN 1 AND 5242880),\n mime_type TEXT NOT NULL CHECK(mime_type IN('image/png','image/jpeg','image/gif','image/webp')),\n sha256 TEXT NOT NULL CHECK(length(sha256)=64 AND sha256 NOT GLOB '*[^0-9a-f]*'),\n storage_relpath TEXT NOT NULL CHECK(length(CAST(storage_relpath AS BLOB)) BETWEEN 1 AND 512),\n status TEXT NOT NULL CHECK(status IN('uploaded','linked')),\n created_at TEXT NOT NULL CHECK(created_at GLOB '????-??-??T??:??:??.???Z'),\n linked_at TEXT CHECK(linked_at IS NULL OR linked_at GLOB '????-??-??T??:??:??.???Z'),\n UNIQUE(project_id,thread_id,id),UNIQUE(thread_id,sha256),\n CHECK((status='uploaded' AND message_id IS NULL AND linked_at IS NULL)\n    OR (status='linked' AND message_id IS NOT NULL AND linked_at IS NOT NULL)),\n FOREIGN KEY(project_id,thread_id) REFERENCES collaboration_threads(project_id,id) ON DELETE CASCADE,\n FOREIGN KEY(project_id,thread_id,message_id) REFERENCES collaboration_messages(project_id,thread_id,id) ON DELETE NO ACTION\n)",
+      "dependsOn": []
+    },
+    {
+      "kind": "table",
+      "name": "attachment_events",
+      "createSql": "CREATE TABLE attachment_events(\n id TEXT PRIMARY KEY,\n project_id TEXT NOT NULL,thread_id TEXT NOT NULL,attachment_id TEXT NOT NULL,\n type TEXT NOT NULL CHECK(type IN('uploaded','linked','removed')),\n created_at TEXT NOT NULL CHECK(created_at GLOB '????-??-??T??:??:??.???Z'),\n FOREIGN KEY(project_id,thread_id) REFERENCES collaboration_threads(project_id,id) ON DELETE CASCADE\n)",
       "dependsOn": []
     },
     {

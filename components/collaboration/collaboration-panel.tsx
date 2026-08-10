@@ -6,6 +6,7 @@ import {
   useMemo,
   useRef,
   useState,
+  type ClipboardEvent,
   type FormEvent,
   type KeyboardEvent,
   type RefObject,
@@ -13,6 +14,12 @@ import {
 import { createPortal } from "react-dom";
 
 import { useModalSurface } from "@/components/mobile-dialog";
+import {
+  COMPOSER_ATTACHMENT_MAX_BYTES,
+  COMPOSER_ATTACHMENT_MAX_COUNT,
+  COMPOSER_ATTACHMENT_MIME_TYPES,
+  uploadThreadAttachment,
+} from "@/components/collaboration/attachment-upload";
 import { InputHistoryPanel } from "@/components/collaboration/input-history-panel";
 import { StructuredMessageBlock } from "@/components/collaboration/structured-message-block";
 import { useTargetRequestGuard } from "@/components/collaboration/use-target-request-guard";
@@ -87,13 +94,37 @@ function graphemeLength(value: string): number {
 }
 
 const DRAFT_SAVE_DEBOUNCE_MS = 500;
-const MAX_COMPOSER_ATTACHMENTS = 8;
 const REPLY_EXCERPT_GRAPHEMES = 40;
 
+type ComposerAttachmentStatus = "failed" | "placeholder" | "uploaded" | "uploading";
+
 type ComposerAttachment = {
+  attachmentId: string | null;
+  clientId: number;
+  file: File | null;
   name: string;
+  progress: number;
   size: number;
+  status: ComposerAttachmentStatus;
 };
+
+function serializeDraftAttachment(attachment: ComposerAttachment) {
+  return attachment.status === "uploaded" && attachment.attachmentId !== null
+    ? {
+      attachmentId: attachment.attachmentId,
+      name: attachment.name,
+      size: attachment.size,
+    }
+    : { name: attachment.name, size: attachment.size };
+}
+
+let nextComposerAttachmentId = 1;
+
+function allocateComposerAttachmentId(): number {
+  const id = nextComposerAttachmentId;
+  nextComposerAttachmentId += 1;
+  return id;
+}
 
 type ComposerDraftState = {
   attachments: ComposerAttachment[];
@@ -141,17 +172,27 @@ function parseDraftReadResponse(
   }
   const attachments: ComposerAttachment[] = [];
   for (const raw of draft.attachments) {
+    const withReference = exactKeys(raw, ["attachmentId", "name", "size"]);
     if (
-      !exactKeys(raw, ["name", "size"])
+      !(withReference || exactKeys(raw, ["name", "size"]))
       || typeof raw.name !== "string"
       || raw.name.length === 0
       || graphemeLength(raw.name) > 255
       || !Number.isSafeInteger(raw.size)
       || Number(raw.size) < 0
+      || (withReference && typeof raw.attachmentId !== "string")
     ) {
       return "invalid";
     }
-    attachments.push({ name: raw.name, size: Number(raw.size) });
+    attachments.push({
+      attachmentId: withReference ? String(raw.attachmentId) : null,
+      clientId: allocateComposerAttachmentId(),
+      file: null,
+      name: raw.name,
+      progress: withReference ? 1 : 0,
+      size: Number(raw.size),
+      status: withReference ? "uploaded" : "placeholder",
+    });
   }
   return {
     attachments,
@@ -171,6 +212,7 @@ const activeRunStatuses = new Set(["running", "waiting_owner", "paused", "failed
 const POLL_INTERVAL_MS = 1_000;
 
 type CollaborationWriteReceipt = {
+  attachmentIds?: string[];
   baselineMessageIds: string[];
   mentionAgentId?: string;
   message: string;
@@ -201,6 +243,7 @@ function mutationIds(
   if (!exactKeys(value, keys)) return null;
   if (kind === "start" && value.created !== true) return null;
   if (!exactKeys(value.message, [
+    "attachments",
     "authorAgentId",
     "authorDisplayName",
     "authorType",
@@ -1122,7 +1165,28 @@ export function CollaborationPanel({
   const inputHistoryRecording = useInputHistoryRecording();
   const draftSaveTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const attachmentInputRef = useRef<HTMLInputElement>(null);
+  const attachmentUploadsRef = useRef(new Map<number, { abort: () => void }>());
+  const composerAttachmentsRef = useRef(composerAttachments);
+  const draftRef = useRef(draft);
+  const replyTargetRef = useRef(replyTargetMessageId);
+  const threadIdRef = useRef(threadId);
   const historyEntryRef = useRef<HTMLButtonElement | null>(null);
+
+  useEffect(() => {
+    draftRef.current = draft;
+    replyTargetRef.current = replyTargetMessageId;
+    threadIdRef.current = threadId;
+  }, [draft, replyTargetMessageId, threadId]);
+
+  function setChips(next: ComposerAttachment[]) {
+    composerAttachmentsRef.current = next;
+    setComposerAttachments(next);
+  }
+
+  function abortAttachmentUploads() {
+    for (const handle of attachmentUploadsRef.current.values()) handle.abort();
+    attachmentUploadsRef.current.clear();
+  }
 
   useEffect(() => {
     onboardingSelectedRunIdRef.current = selectedRunId;
@@ -1305,14 +1369,18 @@ export function CollaborationPanel({
 
   useEffect(() => {
     cancelPendingDraftSave();
+    abortAttachmentUploads();
     setDraft("");
-    setComposerAttachments([]);
+    setChips([]);
     setReplyTargetMessageId(null);
     setDraftSensitiveHint(false);
     setDraftError(null);
     if (!threadId) {
       setDraftRestoring(false);
-      return () => cancelPendingDraftSave();
+      return () => {
+        cancelPendingDraftSave();
+        abortAttachmentUploads();
+      };
     }
     const request = draftGuard.capture();
     setDraftRestoring(true);
@@ -1328,7 +1396,7 @@ export function CollaborationPanel({
         if (!request.isCurrent()) return;
         if (restored !== "invalid" && restored) {
           setDraft(restored.content);
-          setComposerAttachments(restored.attachments);
+          setChips(restored.attachments);
           setReplyTargetMessageId(restored.replyToMessageId);
         }
       } catch {
@@ -1339,7 +1407,10 @@ export function CollaborationPanel({
         if (request.isCurrent()) setDraftRestoring(false);
       }
     })();
-    return () => cancelPendingDraftSave();
+    return () => {
+      cancelPendingDraftSave();
+      abortAttachmentUploads();
+    };
   }, [draftGuard, projectId, threadId, targetKey]);
 
   useEffect(() => {
@@ -1949,7 +2020,7 @@ export function CollaborationPanel({
           ? { method: "DELETE", signal: request.signal }
           : {
               body: JSON.stringify({
-                attachments: next.attachments,
+                attachments: next.attachments.map(serializeDraftAttachment),
                 content: next.content,
                 replyToMessageId: next.replyToMessageId,
               }),
@@ -1999,31 +2070,166 @@ export function CollaborationPanel({
     if (composer instanceof HTMLElement) composer.focus();
   }
 
-  function addAttachmentPlaceholders(files: FileList | null) {
-    if (!files || sending) return;
-    const next = [...composerAttachments];
-    for (const file of Array.from(files)) {
-      if (next.length >= MAX_COMPOSER_ATTACHMENTS) break;
-      if (!file.name || graphemeLength(file.name) > 255) continue;
-      next.push({ name: file.name, size: file.size });
+  function addAttachmentFiles(files: File[]) {
+    if (files.length === 0 || sending) return;
+    const accepted: File[] = [];
+    for (const file of files) {
+      if (!COMPOSER_ATTACHMENT_MIME_TYPES.has(file.type)) {
+        setFieldError("仅支持 PNG/JPEG/GIF/WebP 图片附件。");
+        return;
+      }
+      if (file.size < 1 || file.size > COMPOSER_ATTACHMENT_MAX_BYTES) {
+        setFieldError("单个附件不能超过 5 MiB。");
+        return;
+      }
+      if (!file.name || graphemeLength(file.name) > 255) {
+        setFieldError("附件文件名无效。");
+        return;
+      }
+      accepted.push(file);
     }
-    if (next.length === composerAttachments.length) return;
-    setComposerAttachments(next);
+    if (composerAttachments.length + accepted.length > COMPOSER_ATTACHMENT_MAX_COUNT) {
+      setFieldError("一条消息最多 4 个附件。");
+      return;
+    }
+    setFieldError(null);
+    const chips = accepted.map((file) => ({
+      attachmentId: null,
+      clientId: allocateComposerAttachmentId(),
+      file,
+      name: file.name,
+      progress: 0,
+      size: file.size,
+      status: "uploading" as const,
+    }));
+    const next = [...composerAttachmentsRef.current, ...chips];
+    setChips(next);
     scheduleDraftSave({
       attachments: next,
       content: draft,
       replyToMessageId: replyTargetMessageId,
+    });
+    for (const chip of chips) startAttachmentUpload(chip);
+  }
+
+  function startAttachmentUpload(chip: ComposerAttachment) {
+    if (!threadId || !chip.file) return;
+    const uploadThreadId = threadId;
+    const handle = uploadThreadAttachment({
+      file: chip.file,
+      onProgress: (ratio) => {
+        setChips(composerAttachmentsRef.current.map((item) =>
+          item.clientId === chip.clientId && item.status === "uploading"
+            ? { ...item, progress: ratio }
+            : item,
+        ));
+      },
+      projectId,
+      threadId: uploadThreadId,
+    });
+    attachmentUploadsRef.current.set(chip.clientId, handle);
+    void handle.promise
+      .then((reference) => {
+        if (uploadThreadId !== threadIdRef.current) return;
+        const current = composerAttachmentsRef.current;
+        const duplicate = current.find(
+          (item) =>
+            item.clientId !== chip.clientId
+            && item.status === "uploaded"
+            && item.attachmentId === reference.id,
+        );
+        const next = current
+          .map((item) =>
+            item.clientId === chip.clientId
+              ? {
+                ...item,
+                attachmentId: reference.id,
+                name: reference.fileName,
+                progress: 1,
+                size: reference.size,
+                status: "uploaded" as const,
+              }
+              : item,
+          )
+          .filter((item) => !duplicate || item.clientId !== chip.clientId);
+        setChips(next);
+        scheduleDraftSave({
+          attachments: next,
+          content: draftRef.current,
+          replyToMessageId: replyTargetRef.current,
+        });
+      })
+      .catch(() => {
+        if (uploadThreadId !== threadIdRef.current) return;
+        setChips(composerAttachmentsRef.current.map((item) =>
+          item.clientId === chip.clientId && item.status === "uploading"
+            ? { ...item, status: "failed" as const }
+            : item,
+        ));
+      })
+      .finally(() => {
+        attachmentUploadsRef.current.delete(chip.clientId);
+      });
+  }
+
+  function retryAttachmentUpload(clientId: number) {
+    const chip = composerAttachments.find((item) => item.clientId === clientId);
+    if (!chip?.file || chip.status !== "failed") return;
+    const next = composerAttachments.map((item) =>
+      item.clientId === clientId
+        ? { ...item, progress: 0, status: "uploading" as const }
+        : item
+    );
+    setChips(next);
+    startAttachmentUpload({ ...chip, progress: 0, status: "uploading" });
+  }
+
+  function applyAttachmentRemoval(clientId: number) {
+    const next = composerAttachmentsRef.current.filter(
+      (item) => item.clientId !== clientId,
+    );
+    setChips(next);
+    scheduleDraftSave({
+      attachments: next,
+      content: draftRef.current,
+      replyToMessageId: replyTargetRef.current,
     });
   }
 
-  function removeAttachmentPlaceholder(index: number) {
-    const next = composerAttachments.filter((_, position) => position !== index);
-    setComposerAttachments(next);
-    scheduleDraftSave({
-      attachments: next,
-      content: draft,
-      replyToMessageId: replyTargetMessageId,
-    });
+  async function removeAttachment(clientId: number) {
+    const chip = composerAttachments.find((item) => item.clientId === clientId);
+    if (!chip) return;
+    if (chip.status === "uploading") {
+      attachmentUploadsRef.current.get(clientId)?.abort();
+      attachmentUploadsRef.current.delete(clientId);
+      applyAttachmentRemoval(clientId);
+      return;
+    }
+    if (chip.status === "uploaded" && chip.attachmentId && threadId) {
+      try {
+        const response = await fetch(
+          `/api/projects/${encodeURIComponent(projectId)}/threads/${encodeURIComponent(threadId)}/attachments/${encodeURIComponent(chip.attachmentId)}`,
+          { method: "DELETE" },
+        );
+        if (!response.ok) throw new Error("attachment removal failed");
+      } catch {
+        setDraftError("附件移除失败，请重试。");
+        return;
+      }
+    }
+    applyAttachmentRemoval(clientId);
+  }
+
+  function handleComposerPaste(event: ClipboardEvent<HTMLTextAreaElement>) {
+    const items = event.clipboardData?.items;
+    if (!items) return;
+    const files = Array.from(items)
+      .filter((item) => item.kind === "file" && item.type.startsWith("image/"))
+      .map((item) => item.getAsFile())
+      .filter((file): file is File => file !== null);
+    if (files.length === 0) return;
+    event.preventDefault();
+    addAttachmentFiles(files);
   }
 
   function changeReplyTarget(messageId: string | null) {
@@ -2038,7 +2244,7 @@ export function CollaborationPanel({
   function clearComposerDraftState() {
     cancelPendingDraftSave();
     setDraft("");
-    setComposerAttachments([]);
+    setChips([]);
     setReplyTargetMessageId(null);
     setDraftSensitiveHint(false);
     setDraftError(null);
@@ -2069,6 +2275,15 @@ export function CollaborationPanel({
       && !activeRunInOtherThread
     ) return;
     setFieldError(null);
+    const uploadedAttachmentIds = composerAttachments.flatMap((attachment) =>
+      attachment.status === "uploaded" && attachment.attachmentId !== null
+        ? [attachment.attachmentId]
+        : [],
+    );
+    if (composerAttachments.length > uploadedAttachmentIds.length) {
+      setFieldError("附件尚未就绪；请等待上传完成、重试失败项或移除后再发送。");
+      return;
+    }
     const hasActiveRun = Boolean(
       state?.run && activeRunStatuses.has(state.run.status),
     );
@@ -2076,9 +2291,14 @@ export function CollaborationPanel({
       setFieldError("启动新一轮运行时暂不能携带回复链接；请先移除回复链接。");
       return;
     }
+    if (uploadedAttachmentIds.length > 0 && !hasActiveRun && !activeRunInOtherThread) {
+      setFieldError("启动新一轮运行时暂不能携带附件；请先移除附件。");
+      return;
+    }
     cancelPendingDraftSave();
     if (activeRunInOtherThread) {
       await submitActiveMessage({
+        attachmentIds: uploadedAttachmentIds.length > 0 ? uploadedAttachmentIds : undefined,
         baselineMessageIds:
           state?.projectMessagesPage.items.map((item) => item.id) ?? [],
         mentionAgentId: selectedMember?.agentId,
@@ -2098,6 +2318,7 @@ export function CollaborationPanel({
       return;
     }
     const receipt: CollaborationWriteReceipt = {
+      attachmentIds: uploadedAttachmentIds.length > 0 ? uploadedAttachmentIds : undefined,
       baselineMessageIds:
         state?.projectMessagesPage.items.map((item) => item.id) ?? [],
       mentionAgentId: selectedMember?.agentId,
@@ -2213,6 +2434,7 @@ export function CollaborationPanel({
         {
         body: JSON.stringify({
           content: receipt.message,
+          ...(receipt.attachmentIds ? { attachmentIds: receipt.attachmentIds } : {}),
           ...(receipt.mentionAgentId
             ? { mentionAgentId: receipt.mentionAgentId }
             : {}),
@@ -2279,6 +2501,12 @@ export function CollaborationPanel({
     pages: [{ items: renderedFacts }],
     targetKey,
   });
+  const messageAttachmentsById = new Map(
+    (state?.projectMessagesPage.items ?? []).map((message) => [
+      message.id,
+      message.attachments,
+    ]),
+  );
   const loadedMessageIds = new Set(
     transcript.kind === "ready"
       ? transcript.entries.flatMap((entry) => entry.messageId ? [entry.messageId] : [])
@@ -2645,6 +2873,23 @@ export function CollaborationPanel({
                       )
                     ) : null}
                     {entry.text ? <p>{entry.text}</p> : null}
+                    {entry.messageId && threadId
+                      && (messageAttachmentsById.get(entry.messageId)?.length ?? 0) > 0 ? (
+                      <ul className="message-attachments">
+                        {messageAttachmentsById.get(entry.messageId)!.map((attachment) => (
+                          <li key={attachment.id}>
+                            <img
+                              alt={attachment.fileName}
+                              loading="lazy"
+                              src={`/api/projects/${encodeURIComponent(projectId)}/threads/${encodeURIComponent(threadId)}/attachments/${encodeURIComponent(attachment.id)}/content`}
+                            />
+                            <span className="muted">
+                              {attachment.mimeType} · {attachment.size} B
+                            </span>
+                          </li>
+                        ))}
+                      </ul>
+                    ) : null}
                     {entry.blocks.map((block) => (
                       <StructuredMessageBlock
                         block={block}
@@ -2758,6 +3003,7 @@ export function CollaborationPanel({
                 disabled={sending}
                 id={`collaboration-message-${projectId}`}
                 onChange={(event) => handleDraftChange(event.target.value)}
+                onPaste={handleComposerPaste}
                 value={draft}
               />
               {fieldError ? (
@@ -2781,16 +3027,39 @@ export function CollaborationPanel({
                     </button>
                   </span>
                 ) : null}
-                {composerAttachments.map((attachment, index) => (
+                {composerAttachments.map((attachment) => (
                   <span
                     className="mention-chip"
-                    key={`${attachment.name}:${index}`}
+                    key={attachment.clientId}
                   >
                     {attachment.name} · {attachment.size} B
+                    {attachment.status === "uploading" ? (
+                      <>
+                        {" · "}上传中 {Math.round(attachment.progress * 100)}%
+                        <progress
+                          aria-label={`${attachment.name} 上传进度`}
+                          max={1}
+                          value={attachment.progress}
+                        />
+                      </>
+                    ) : null}
+                    {attachment.status === "uploaded" ? " · 已上传" : null}
+                    {attachment.status === "failed" ? " · 上传失败" : null}
+                    {attachment.status === "placeholder" ? " · 需重新选择" : null}
+                    {attachment.status === "failed" && attachment.file ? (
+                      <button
+                        aria-label={`重试上传 ${attachment.name}`}
+                        disabled={sending}
+                        onClick={() => retryAttachmentUpload(attachment.clientId)}
+                        type="button"
+                      >
+                        重试
+                      </button>
+                    ) : null}
                     <button
                       aria-label={`移除附件 ${attachment.name}`}
                       disabled={sending}
-                      onClick={() => removeAttachmentPlaceholder(index)}
+                      onClick={() => void removeAttachment(attachment.clientId)}
                       type="button"
                     >
                       移除
@@ -2825,19 +3094,20 @@ export function CollaborationPanel({
                 </span>
               ) : null}
               <button
-                aria-label="添加附件占位"
+                aria-label="添加附件"
                 disabled={sending}
                 onClick={() => attachmentInputRef.current?.click()}
                 type="button"
               >
-                添加附件占位
+                添加附件
               </button>
               <input
+                accept="image/png,image/jpeg,image/gif,image/webp"
                 aria-label="选择附件文件"
                 className="sr-only"
                 multiple
                 onChange={(event) => {
-                  addAttachmentPlaceholders(event.target.files);
+                  addAttachmentFiles(Array.from(event.target.files ?? []));
                   event.target.value = "";
                 }}
                 ref={attachmentInputRef}
@@ -2919,7 +3189,14 @@ export function CollaborationPanel({
               ) : null}
             </div>
             <button
-              disabled={!draft.trim() || sending || !canSubmitMessage}
+              disabled={
+                !draft.trim()
+                || sending
+                || !canSubmitMessage
+                || composerAttachments.some(
+                  (attachment) => attachment.status !== "uploaded",
+                )
+              }
               type="submit"
             >
               {sending
@@ -2932,6 +3209,11 @@ export function CollaborationPanel({
                     ? "发送并开始新一轮"
                     : "发送并开始首次运行"}
             </button>
+            {composerAttachments.some(
+              (attachment) => attachment.status !== "uploaded",
+            ) ? (
+              <p className="muted">附件上传完成或移除后才能发送。</p>
+            ) : null}
             {!canSubmitMessage || activeRunInOtherThread ? (
               <p className="muted">
                 {activeRunInOtherThread

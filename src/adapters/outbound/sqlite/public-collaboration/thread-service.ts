@@ -16,6 +16,10 @@ import {
   nextThreadActivitySequenceTx,
   type ThreadFactIntent,
 } from "@/src/adapters/outbound/sqlite/public-collaboration/thread-fact-store";
+import {
+  linkMessageAttachmentsTx,
+  readMessageAttachmentRefsTx,
+} from "@/src/adapters/outbound/sqlite/public-collaboration/attachment-service";
 import { recordOwnerInputAndClearDraftTx } from "@/src/adapters/outbound/sqlite/public-collaboration/input-history-service";
 import { createCredentialVault } from "@/src/modules/identity-capability/internal/credential-vault";
 import {
@@ -141,6 +145,7 @@ export type ThreadMessageResponse = {
 export type ThreadMessageWriteFaultPoint =
   | "after_receipt"
   | "after_message"
+  | "after_attachment_link"
   | "after_fact"
   | "after_thread_update";
 
@@ -209,6 +214,7 @@ type MessageInput = {
   mentionAgentId: string | null;
   replyToMessageId: string | null;
   recordInputHistory: boolean;
+  attachmentIds: string[];
 };
 
 type RunStartInput = {
@@ -377,6 +383,7 @@ function parseMessageInput(rawInput: unknown): MessageInput {
     "mentionAgentId",
     "replyToMessageId",
     "recordInputHistory",
+    "attachmentIds",
   ]);
   const fields: Record<string, string> = {};
   for (const key of Object.keys(input)) {
@@ -425,10 +432,28 @@ function parseMessageInput(rawInput: unknown): MessageInput {
     fields.recordInputHistory = "invalid_format";
   }
 
+  let attachmentIds: string[] = [];
+  if (Object.hasOwn(input, "attachmentIds")) {
+    const rawIds = input.attachmentIds;
+    if (!Array.isArray(rawIds) || rawIds.some((id) => typeof id !== "string")) {
+      fields.attachmentIds = "invalid_format";
+    } else if (rawIds.length > 4) {
+      fields.attachmentIds = "too_many_items";
+    } else if (
+      rawIds.some((id) => !RESOURCE_ID.test(id))
+      || new Set(rawIds).size !== rawIds.length
+    ) {
+      fields.attachmentIds = "invalid_format";
+    } else {
+      attachmentIds = rawIds;
+    }
+  }
+
   if (Object.keys(fields).length > 0) {
     invalidInput("Message input is invalid.", fields);
   }
   return {
+    attachmentIds,
     content,
     mentionAgentId,
     operationId,
@@ -1472,6 +1497,7 @@ export function writeOwnerThreadMessage(
   const input = parseMessageInput(rawInput);
   hooks.credentialCheck?.(input.content);
   const requestHash = canonicalRequestHash({
+    attachmentIds: input.attachmentIds,
     content: input.content,
     mentionAgentId: input.mentionAgentId,
     recordInputHistory: input.recordInputHistory,
@@ -1525,7 +1551,26 @@ export function writeOwnerThreadMessage(
       const timestamp = new Date().toISOString();
       const messageId = randomUUID();
       const factId = randomUUID();
+      // Attachments are claimed before the message row exists; the whole unit
+      // commits or rolls back together, so a failure can never leave a
+      // half-linked attachment or a message without its refs.
+      if (input.attachmentIds.length > 0) {
+        linkMessageAttachmentsTx(database, {
+          attachmentIds: input.attachmentIds,
+          messageId,
+          projectId,
+          threadId,
+          timestamp,
+        });
+      }
+      const attachments = readMessageAttachmentRefsTx(database, {
+        messageId,
+        projectId,
+        threadId,
+      });
+      hooks.fault?.("after_attachment_link");
       const message: ThreadMessageDto = {
+        attachments,
         authorAgentId: null,
         authorDisplayName: "Owner",
         authorType: "owner",
@@ -1771,6 +1816,7 @@ export function startThreadRun(
         version: 1,
       };
       const message: ThreadMessageDto = {
+        attachments: [],
         authorAgentId: null,
         authorDisplayName: "Owner",
         authorType: "owner",
@@ -2201,7 +2247,10 @@ export function readThreadDetail(
   }
 }
 
-type MessageRow = Omit<ThreadMessageDto, "blocks" | "mentionMemberStatus" | "replyTo"> & {
+type MessageRow = Omit<
+  ThreadMessageDto,
+  "attachments" | "blocks" | "mentionMemberStatus" | "replyTo"
+> & {
   mentionIsCurrent: number | null;
   replyToMessageId: string | null;
   replyToSequence: number | null;
@@ -2298,7 +2347,10 @@ function decodeReplySnapshot(row: MessageRow): ThreadMessageReplySnapshot | null
   };
 }
 
-function mapMessageRow(row: MessageRow): ThreadMessageDto {
+function mapMessageRow(
+  database: DatabaseSync,
+  row: MessageRow,
+): ThreadMessageDto {
   if (
     !RESOURCE_ID.test(row.id)
     || !RESOURCE_ID.test(row.projectId)
@@ -2312,6 +2364,11 @@ function mapMessageRow(row: MessageRow): ThreadMessageDto {
     resourceNotFound();
   }
   return {
+    attachments: readMessageAttachmentRefsTx(database, {
+      messageId: row.id,
+      projectId: row.projectId,
+      threadId: row.threadId,
+    }),
     authorAgentId: row.authorAgentId,
     authorDisplayName: row.authorDisplayName,
     authorType: row.authorType,
@@ -2400,7 +2457,7 @@ function mapNestedMessage(database: DatabaseSync, row: FactRow): ThreadMessageDt
   ) {
     resourceNotFound();
   }
-  const message = mapMessageRow({
+  const message = mapMessageRow(database, {
     authorAgentId: row.messageAuthorAgentId,
     authorDisplayName: row.messageAuthorDisplayName,
     authorType: row.messageAuthorType,
@@ -2697,7 +2754,7 @@ export function readThreadMessages(
       .all(projectId, threadId, input.after, input.limit + 1) as MessageRow[];
     return {
       body: sequencePage(rows, input.limit, (row) => {
-        const message = mapMessageRow(row);
+        const message = mapMessageRow(database, row);
         const blocks = readPublicStructuredBlocksTx(database, {
           messageId: message.id,
           projectId: message.projectId,

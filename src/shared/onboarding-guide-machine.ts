@@ -159,6 +159,7 @@ const RUN_STATUSES = new Set([
   "stopped",
 ]);
 const MESSAGE_KEYS = new Set([
+  "attachments",
   "authorAgentId",
   "authorDisplayName",
   "authorType",
@@ -173,6 +174,13 @@ const MESSAGE_KEYS = new Set([
   "runId",
   "sequence",
   "threadId",
+]);
+const MESSAGE_ATTACHMENT_REF_KEYS = new Set(["fileName", "id", "mimeType", "size"]);
+const MESSAGE_ATTACHMENT_MIME_TYPES = new Set([
+  "image/gif",
+  "image/jpeg",
+  "image/png",
+  "image/webp",
 ]);
 const MESSAGE_WITH_BLOCKS_KEYS = new Set([...MESSAGE_KEYS, "blocks"]);
 const REPLY_SNAPSHOT_KEYS = new Set([
@@ -586,6 +594,20 @@ function isReplySnapshot(value: unknown): boolean {
   );
 }
 
+function isAttachmentRefList(value: unknown): boolean {
+  return (
+    Array.isArray(value) &&
+    value.every((item) =>
+      isRecord(item) &&
+      hasExactKeys(item, MESSAGE_ATTACHMENT_REF_KEYS) &&
+      isNonEmptyString(item.id) &&
+      isNonEmptyString(item.fileName) &&
+      isSafeInteger(item.size, 1) &&
+      MESSAGE_ATTACHMENT_MIME_TYPES.has(String(item.mimeType))
+    )
+  );
+}
+
 function parseProjectMessage(
   value: unknown,
   expectedProjectId: string,
@@ -614,6 +636,7 @@ function parseProjectMessage(
       value.mentionMemberStatus === "left"
     ) ||
     !(value.replyTo === null || isReplySnapshot(value.replyTo)) ||
+    !isAttachmentRefList(value.attachments) ||
     !isTimestamp(value.createdAt)
   ) {
     return null;

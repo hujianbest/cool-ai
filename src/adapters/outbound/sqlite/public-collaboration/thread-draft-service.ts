@@ -94,12 +94,16 @@ function parseDraftInput(rawInput: unknown): DraftInput {
         }
         const attachment = rawAttachment as Record<string, unknown>;
         const keys = Object.keys(attachment);
+        const attachmentId = attachment.attachmentId;
         const name = attachment.name;
         const size = attachment.size;
+        const hasReference = Object.hasOwn(attachment, "attachmentId");
         if (
-          keys.length !== 2
+          keys.length !== (hasReference ? 3 : 2)
           || !keys.includes("name")
           || !keys.includes("size")
+          || (hasReference
+            && (typeof attachmentId !== "string" || !RESOURCE_ID.test(attachmentId)))
           || typeof name !== "string"
           || graphemeLength(name) < 1
           || graphemeLength(name) > ATTACHMENT_NAME_MAX_GRAPHEMES
@@ -110,7 +114,11 @@ function parseDraftInput(rawInput: unknown): DraftInput {
           fields.attachments = "invalid_format";
           break;
         }
-        attachments.push({ name, size });
+        attachments.push(
+          hasReference
+            ? { attachmentId: attachmentId as string, name, size }
+            : { name, size },
+        );
       }
     }
   }

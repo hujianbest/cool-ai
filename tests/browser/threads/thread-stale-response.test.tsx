@@ -87,6 +87,7 @@ function threadSummary(project: string, thread: string) {
 function message(project: string, thread: string, content: string, runId: string | null = null) {
   const suffix = content.replaceAll(/[^A-Za-z0-9_-]/g, "-");
   return {
+    attachments: [],
     authorAgentId: null,
     authorDisplayName: "Owner",
     authorType: "owner" as const,

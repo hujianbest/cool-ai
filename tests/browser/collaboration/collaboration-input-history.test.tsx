@@ -68,6 +68,7 @@ type SendBody = {
 
 function ownerMessage(overrides: Partial<ProjectMessage> = {}): ProjectMessage {
   return {
+    attachments: [],
     authorAgentId: null,
     authorDisplayName: "项目所有者",
     authorType: "owner",
@@ -172,6 +173,7 @@ function installFetch(options?: {
             fact: { id: `fact-${message.id}` },
             message: {
               ...message,
+              attachments: [],
               projectId: "project-1",
               replyTo: null,
               threadId: TEST_THREAD_ID,
@@ -185,6 +187,7 @@ function installFetch(options?: {
       const threadId = threadMatch?.[1] ?? TEST_THREAD_ID;
       const threadMessages = messages.map((item) => ({
         ...item,
+        attachments: [],
         projectId: "project-1",
         replyTo: null,
         threadId,

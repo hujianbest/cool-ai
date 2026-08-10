@@ -21,6 +21,7 @@ import {
 import { createCredentialVault } from "@/src/modules/identity-capability/internal/credential-vault";
 import { type CredentialEnvelope } from "@/src/modules/identity-capability";
 import { openDatabase } from "@/src/adapters/outbound/sqlite/connection";
+import { readMessageAttachmentRefsTx } from "@/src/adapters/outbound/sqlite/public-collaboration/attachment-service";
 import type {
   AnswerDecisionResponse,
   CollaborationReadResponse,
@@ -80,7 +81,9 @@ type RunRow = {
   updatedAt: string;
 };
 
-type MessageRow = Omit<ProjectMessage, "mentionMemberStatus">;
+type MessageRow =
+  & Omit<ProjectMessage, "attachments" | "mentionMemberStatus">
+  & { threadId: string };
 type EventRow = {
   id: string;
   runId: string;
@@ -540,6 +543,7 @@ function insertOwnerMessage(
   timestamp: string,
 ): ProjectMessage {
   const message: ProjectMessage = {
+    attachments: [],
     authorAgentId: null,
     authorDisplayName: "Owner",
     authorType: "owner",
@@ -1498,6 +1502,7 @@ export function answerThreadDecision(
       const eventFactId = randomUUID();
       const mentionAgentId = input.mentionAgentId || null;
       const message: DecisionAnswerResponse["message"] = {
+        attachments: [],
         authorAgentId: null,
         authorDisplayName: "Owner",
         authorType: "owner",
@@ -2151,7 +2156,8 @@ function projectMessages(
 ): CursorPage<ProjectMessage> {
   const rows = database
     .prepare(
-      `SELECT id, sequence, run_id AS runId, author_type AS authorType,
+      `SELECT id, sequence, run_id AS runId, thread_id AS threadId,
+              author_type AS authorType,
               author_agent_id AS authorAgentId, author_display_name AS authorDisplayName,
               content, mention_agent_id AS mentionAgentId,
               mention_display_name AS mentionDisplayName, created_at AS createdAt
@@ -2163,8 +2169,13 @@ function projectMessages(
     .all(projectId, cursor.after, cursor.limit + 1) as MessageRow[];
   const hasMore = rows.length > cursor.limit;
   const pageRows = hasMore ? rows.slice(0, cursor.limit) : rows;
-  const items: ProjectMessage[] = pageRows.map((row) => ({
+  const items: ProjectMessage[] = pageRows.map(({ threadId, ...row }) => ({
     ...row,
+    attachments: readMessageAttachmentRefsTx(database, {
+      messageId: row.id,
+      projectId,
+      threadId,
+    }),
     mentionMemberStatus: row.mentionAgentId
       ? database
           .prepare(

@@ -26,6 +26,7 @@ function message(
   replyTo: ThreadMessageDto["replyTo"] = null,
 ): ThreadMessageDto {
   return {
+    attachments: [],
     authorAgentId: authorType === "agent" ? "agent-a" : null,
     authorDisplayName: authorType === "agent" ? "Alpha" : "项目所有者",
     authorType,

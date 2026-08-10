@@ -231,6 +231,20 @@ export const CURRENT_DATA_INVARIANTS = [
   `SELECT h.project_id FROM input_history_entries h
    WHERE NOT EXISTS(SELECT 1 FROM collaboration_threads t
                     WHERE (t.project_id,t.id)=(h.project_id,h.thread_id))`,
+  `SELECT a.id FROM message_attachments a
+   WHERE NOT EXISTS(SELECT 1 FROM collaboration_threads t
+                    WHERE (t.project_id,t.id)=(a.project_id,a.thread_id))`,
+  `SELECT e.id FROM attachment_events e
+   WHERE NOT EXISTS(SELECT 1 FROM collaboration_threads t
+                    WHERE (t.project_id,t.id)=(e.project_id,e.thread_id))`,
+  `SELECT a.id FROM message_attachments a
+   WHERE (a.status='linked')<>(a.message_id IS NOT NULL AND a.linked_at IS NOT NULL)
+      OR (a.linked_at IS NOT NULL AND a.linked_at<a.created_at)`,
+  `SELECT a.id FROM message_attachments a
+   WHERE a.storage_relpath<>a.project_id||'/'||a.id`,
+  `SELECT e.id FROM attachment_events e
+   JOIN message_attachments a ON a.id=e.attachment_id
+   WHERE (a.project_id,a.thread_id)<>(e.project_id,e.thread_id)`,
 ] as const;
 
 function canonicalJson(value: string, maximum: number): unknown {

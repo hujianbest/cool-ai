@@ -8,6 +8,8 @@
  */
 export type {
   AnswerDecisionResponse,
+  AttachmentRemoveResponse,
+  AttachmentUploadResponse,
   CollaborationApiError,
   CollaborationErrorCode,
   CollaborationReadResponse,
@@ -19,6 +21,8 @@ export type {
   DispatchReadiness,
   FactPageResponse,
   MemberPolicyDto,
+  MessageAttachmentDto,
+  MessageAttachmentMimeType,
   MessagePageResponse,
   ModelCallPublicError,
   ModelCallResult,
@@ -44,6 +48,7 @@ export type {
   InputHistorySearchResponse,
   ThreadFactBase,
   ThreadFactDto,
+  ThreadMessageAttachmentRefDto,
   ThreadMessageDto,
   ThreadMessageReplySnapshot,
   ThreadRunDto,

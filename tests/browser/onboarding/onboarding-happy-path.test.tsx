@@ -28,6 +28,7 @@ const threadId = "thread-onboarding";
 
 function collaborationState(started = false) {
   const message = {
+    attachments: [],
     authorAgentId: null,
     authorDisplayName: "项目所有者",
     authorType: "owner",
@@ -2151,6 +2152,7 @@ describe("progressive onboarding T-14 unknown-write reconciliation", () => {
   ) {
     const state = collaborationState(true);
     const extraMessages = messages.map((message) => ({
+      attachments: [],
       authorAgentId: null,
       authorDisplayName: "项目所有者",
       authorType: "owner" as const,

@@ -1034,6 +1034,22 @@ ol {
   flex-direction: column;
 }
 
+.message-attachments {
+  display: grid;
+  gap: var(--space-2);
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.message-attachments img {
+  display: block;
+  max-width: min(100%, calc(var(--control-min) * 8));
+  max-height: calc(var(--control-min) * 6);
+  border: 1px solid var(--border-subtle);
+  border-radius: var(--radius-sm);
+}
+
 .timeline-event-heading {
   display: flex;
   align-self: stretch;

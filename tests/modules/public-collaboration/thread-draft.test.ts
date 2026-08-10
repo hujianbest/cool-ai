@@ -290,6 +290,29 @@ describe("thread draft command/query seam", () => {
     expect(stored?.content).toBe("  Draft text with  padding  ");
   });
 
+  it("round-trips uploaded attachment references carrying attachmentId", () => {
+    const saved = saveThreadDraft(databasePath, "project-a", threadA, {
+      attachments: [
+        { attachmentId: "att-1", name: "photo.png", size: 2048 },
+        { name: "legacy.txt", size: 12 },
+      ],
+      content: "Mixed draft",
+      replyToMessageId: null,
+    });
+    expect(saved.status).toBe(200);
+    expect(saved.body.draft.attachments).toEqual([
+      { attachmentId: "att-1", name: "photo.png", size: 2048 },
+      { name: "legacy.txt", size: 12 },
+    ]);
+    expect(readThreadDraft(databasePath, "project-a", threadA).body).toEqual({
+      draft: saved.body.draft,
+    });
+    const stored = storedDraft("project-a", threadA);
+    expect(stored?.attachmentsJson).toBe(
+      '[{"attachmentId":"att-1","name":"photo.png","size":2048},{"name":"legacy.txt","size":12}]',
+    );
+  });
+
   it("overwrites the draft, increments the version, and honors an explicit null reply link", () => {
     saveThreadDraft(databasePath, "project-a", threadA, {
       attachments: [{ name: "first.png", size: 10 }],
@@ -504,6 +527,21 @@ describe("thread draft command/query seam", () => {
       { attachments: [{ name: "a.txt" }], content: "x", replyToMessageId: null },
       { attachments: "invalid_format" },
       "attachment missing size",
+    ],
+    [
+      { attachments: [{ attachmentId: 7, name: "a.txt", size: 1 }], content: "x", replyToMessageId: null },
+      { attachments: "invalid_format" },
+      "non-string attachmentId",
+    ],
+    [
+      { attachments: [{ attachmentId: "bad id", name: "a.txt", size: 1 }], content: "x", replyToMessageId: null },
+      { attachments: "invalid_format" },
+      "malformed attachmentId",
+    ],
+    [
+      { attachments: [{ attachmentId: "att-1", name: "a.txt", size: 1, extra: true }], content: "x", replyToMessageId: null },
+      { attachments: "invalid_format" },
+      "attachment reference with extra key",
     ],
     [
       { attachments: [{ name: "", size: 1 }], content: "x", replyToMessageId: null },

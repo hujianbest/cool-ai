@@ -71,6 +71,7 @@ function read(
     projectMessagesPage: {
       items: events.some((item) => item.type === "agent_message") ? [
         {
+          attachments: [],
           authorAgentId: "agent-a",
           authorDisplayName: "Alpha",
           authorType: "agent",
@@ -113,6 +114,7 @@ function strictThreadResponse(
   );
   const messages = payload.projectMessagesPage.items.map((item) => ({
     ...item,
+    attachments: [],
     projectId,
     replyTo: null,
     threadId: TEST_THREAD_ID,

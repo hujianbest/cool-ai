@@ -73,6 +73,7 @@ const previousRun = {
 };
 
 const ownerMessage = {
+  attachments: [],
   authorAgentId: null,
   authorDisplayName: "项目所有者",
   authorType: "owner",

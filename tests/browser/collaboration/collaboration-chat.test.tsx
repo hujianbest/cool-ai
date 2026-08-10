@@ -62,6 +62,7 @@ const members: MembershipState = {
 
 function ownerMessage(overrides: Partial<ProjectMessage> = {}): ProjectMessage {
   return {
+    attachments: [],
     authorAgentId: null,
     authorDisplayName: "项目所有者",
     authorType: "owner",
@@ -88,6 +89,7 @@ function installFetch(
     const read = await legacyResponse.json() as CollaborationReadResponse;
     const messages = read.projectMessagesPage.items.map((item) => ({
       ...item,
+      attachments: [],
       projectId: "project-1",
       replyTo: null,
       threadId: TEST_THREAD_ID,
@@ -407,6 +409,7 @@ describe("collaboration chat composer", () => {
             id: `fact-${message.id}`,
             message: {
               ...message,
+              attachments: [],
               projectId: "project-1",
               replyTo: null,
               threadId: TEST_THREAD_ID,
@@ -423,6 +426,7 @@ describe("collaboration chat composer", () => {
           },
           message: {
             ...message,
+            attachments: [],
             projectId: "project-1",
             replyTo: null,
             threadId: TEST_THREAD_ID,
