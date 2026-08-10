@@ -67,7 +67,10 @@ export function threadPolicy() {
 }
 
 export function threadListPayload(projectId: string) {
-  return { nextCursor: null, threads: [threadSummary(projectId)] };
+  return {
+    nextCursor: null,
+    threads: [{ ...threadSummary(projectId), favoritedAt: null, isFavorite: false }],
+  };
 }
 
 export function threadDetailPayload(

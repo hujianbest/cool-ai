@@ -7,6 +7,7 @@ import type {
   MessagePageResponse,
   PublicCollaborationPageCursor,
   ThreadDraftReadResponse,
+  ThreadListResponseDto,
   TimelineEvent,
 } from "./dto";
 
@@ -17,7 +18,7 @@ import type { PublicCollaborationCommandResult } from "./commands";
  * 当前具体实现为 src/adapters/outbound/sqlite/public-collaboration/ 下的
  * thread-service/run-service/run-timeline-service/structured-message-store/
  * inline-decision-service 的 DatabaseSync 自由函数。
- * ThreadListResponse/ThreadDetailResponse/ThreadOperationLookupResponse 等精确 DTO
+ * ThreadDetailResponse/ThreadOperationLookupResponse 等精确 DTO
  * 尚未沉淀进 src/shared 契约，先以 Record<string, unknown> 登记读 seam，
  * 随契约沉淀收窄（同 safe-execution 先例）。
  */
@@ -26,7 +27,7 @@ export interface PublicCollaborationQueries {
     databasePath: string,
     projectId: string,
     rawInput?: unknown,
-  ): PublicCollaborationCommandResult<Record<string, unknown>>;
+  ): PublicCollaborationCommandResult<ThreadListResponseDto>;
   readThreadDetail(
     databasePath: string,
     projectId: string,

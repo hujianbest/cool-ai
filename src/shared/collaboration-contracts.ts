@@ -357,6 +357,32 @@ export type ThreadFactDto =
 export type MessagePageResponse = CursorPage<ThreadMessageDto>;
 export type FactPageResponse = CursorPage<ThreadFactDto>;
 
+export type ThreadListItemDto = {
+  availability: PolicyAvailability;
+  createdAt: string;
+  favoritedAt: string | null;
+  id: string;
+  isFavorite: boolean;
+  lastActivitySequence: number;
+  policyVersion: number;
+  projectId: string;
+  title: string;
+  updatedAt: string;
+  version: number;
+};
+
+export type ThreadListResponseDto = {
+  nextCursor: string | null;
+  threads: ThreadListItemDto[];
+};
+
+export type ThreadFavoriteSetResponse = {
+  favoritedAt: string | null;
+  isFavorite: boolean;
+  projectId: string;
+  threadId: string;
+};
+
 export type ThreadDraftAttachmentDto = {
   attachmentId?: string;
   name: string;

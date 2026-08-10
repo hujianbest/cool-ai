@@ -12,6 +12,7 @@ import type {
   StartCollaborationResponse,
   ThreadDraftClearResponse,
   ThreadDraftSaveResponse,
+  ThreadFavoriteSetResponse,
 } from "./dto";
 
 export type TransitionReceipt =
@@ -119,6 +120,12 @@ export interface PublicCollaborationCommands {
     projectId: string,
     threadId: string,
   ): PublicCollaborationCommandResult<ThreadDraftClearResponse>;
+  setThreadFavorite(
+    databasePath: string,
+    projectId: string,
+    threadId: string,
+    rawInput: unknown,
+  ): PublicCollaborationCommandResult<ThreadFavoriteSetResponse>;
   clearInputHistory(
     databasePath: string,
     projectId: string,

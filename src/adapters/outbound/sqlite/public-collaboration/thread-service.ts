@@ -39,6 +39,8 @@ import type {
   RunStartResponse,
   ThreadDispatchReadiness,
   ThreadFactDto,
+  ThreadListItemDto,
+  ThreadListResponseDto,
   ThreadMessageDto,
   ThreadMessageReplySnapshot,
 } from "@/src/shared/collaboration-contracts";
@@ -170,10 +172,7 @@ export type ThreadOperationLookupResponse = {
   response: unknown | null;
 };
 
-export type ThreadListResponse = {
-  threads: ThreadSummary[];
-  nextCursor: string | null;
-};
+export type ThreadListResponse = ThreadListResponseDto;
 
 export type ThreadRun = {
   id: string;
@@ -516,14 +515,20 @@ function parseRunStartInput(rawInput: unknown): RunStartInput {
   };
 }
 
-function parseListInput(rawInput: unknown): { cursor: CursorValue | null; limit: number } {
+function parseListInput(rawInput: unknown): {
+  cursor: CursorValue | null;
+  favoritesOnly: boolean;
+  limit: number;
+} {
   if (!rawInput || typeof rawInput !== "object" || Array.isArray(rawInput)) {
     invalidInput("Thread list input is invalid.", { input: "invalid_format" });
   }
   const input = rawInput as Record<string, unknown>;
   const fields: Record<string, string> = {};
   for (const key of Object.keys(input)) {
-    if (key !== "cursor" && key !== "limit") fields[key] = "unknown";
+    if (key !== "cursor" && key !== "favoritesOnly" && key !== "limit") {
+      fields[key] = "unknown";
+    }
   }
   const limit = input.limit === undefined ? 50 : input.limit;
   if (!Number.isSafeInteger(limit) || Number(limit) < 1 || Number(limit) > 100) {
@@ -541,10 +546,21 @@ function parseListInput(rawInput: unknown): { cursor: CursorValue | null; limit:
       }
     }
   }
+  let favoritesOnly = false;
+  if (input.favoritesOnly !== undefined) {
+    if (typeof input.favoritesOnly !== "boolean") {
+      fields.favoritesOnly = "invalid_format";
+    } else {
+      favoritesOnly = input.favoritesOnly;
+    }
+  }
+  // The favorites view orders by favorited_at, not last_activity_sequence, so
+  // the activity cursor cannot address a position inside it.
+  if (favoritesOnly && cursor !== null) fields.cursor = "not_supported";
   if (Object.keys(fields).length > 0) {
     invalidInput("Thread list input is invalid.", fields);
   }
-  return { cursor, limit: Number(limit) };
+  return { cursor, favoritesOnly, limit: Number(limit) };
 }
 
 function parseSequencePageInput(rawInput: unknown): SequencePageInput {
@@ -2115,10 +2131,20 @@ export function listThreads(
                 threads.policy_version AS policyVersion,
                 threads.last_activity_sequence AS lastActivitySequence,
                 threads.version,threads.created_at AS createdAt,
-                threads.updated_at AS updatedAt
+                threads.updated_at AS updatedAt,
+                favorites.created_at AS favoritedAt
          FROM collaboration_threads AS threads
-         WHERE threads.project_id=? ${cursorPredicate}
-         ORDER BY threads.last_activity_sequence DESC,threads.id ASC
+         LEFT JOIN thread_favorites AS favorites
+           ON favorites.project_id=threads.project_id
+          AND favorites.thread_id=threads.id
+         WHERE threads.project_id=?
+           ${input.favoritesOnly ? "AND favorites.thread_id IS NOT NULL" : ""}
+           ${cursorPredicate}
+         ORDER BY ${
+           input.favoritesOnly
+             ? "favorites.created_at DESC,threads.id ASC"
+             : "threads.last_activity_sequence DESC,threads.id ASC"
+         }
          LIMIT ?`,
       )
       .all(...values) as Array<{
@@ -2130,18 +2156,20 @@ export function listThreads(
       version: number;
       createdAt: string;
       updatedAt: string;
+      favoritedAt: string | null;
     }>;
     const hasMore = rows.length > input.limit;
     const pageRows = hasMore ? rows.slice(0, input.limit) : rows;
-    const threads: ThreadSummary[] = pageRows.map((row) => ({
+    const threads: ThreadListItemDto[] = pageRows.map((row) => ({
       ...row,
       availability: readThreadPolicyFromDatabase(database, projectId, row.id).availability,
+      isFavorite: row.favoritedAt !== null,
     }));
     const last = threads.at(-1);
     return {
       body: {
         nextCursor:
-          hasMore && last
+          !input.favoritesOnly && hasMore && last
             ? encodeThreadCursor({ a: last.lastActivitySequence, id: last.id })
             : null,
         threads,

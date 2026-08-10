@@ -29,7 +29,9 @@ function thread(id: string, title: string, activity: number) {
   return {
     availability: "ready" as const,
     createdAt: "2026-08-08T00:00:00.000Z",
+    favoritedAt: null as string | null,
     id,
+    isFavorite: false,
     lastActivitySequence: activity,
     policyVersion: 1,
     projectId: project.id,
@@ -40,7 +42,11 @@ function thread(id: string, title: string, activity: number) {
 }
 
 function createdThread(id = "thread-created", title = "Release") {
-  const summary = thread(id, title, 9);
+  const {
+    favoritedAt: _favoritedAt,
+    isFavorite: _isFavorite,
+    ...summary
+  } = thread(id, title, 9);
   return {
     created: true as const,
     fact: {
@@ -460,7 +466,8 @@ describe("persistent project thread list and creation", () => {
 
   it("reconciles an unknown create by operation without resending", async () => {
     const created = createdThread("thread-reconciled", "Reconciled");
-    const { policy: _policy, ...createdSummary } = created.thread;
+    const { policy: _policy, ...createdDetail } = created.thread;
+    const createdSummary = { ...createdDetail, favoritedAt: null, isFavorite: false };
     let listReads = 0;
     const fetchMock = vi.fn(async (input: RequestInfo | URL, init?: RequestInit) => {
       const url = String(input);
@@ -542,5 +549,311 @@ describe("persistent project thread list and creation", () => {
     );
     expect(window.location.search).toBe("?thread=thread-1");
     expect(screen.queryByRole("button", { name: "Foreign" })).not.toBeInTheDocument();
+  });
+});
+
+describe("thread favorites UI", () => {
+  type ThreadItem = ReturnType<typeof thread>;
+  type FavoriteWriteHandler = (
+    threadId: string,
+    favorite: boolean,
+  ) => Response | Promise<Response>;
+
+  function favorited(id: string, title: string, activity: number, favoritedAt: string) {
+    return { ...thread(id, title, activity), favoritedAt, isFavorite: true };
+  }
+
+  function favoriteResponse(threadId: string, favorite: boolean, favoritedAt: string | null) {
+    return {
+      favoritedAt,
+      isFavorite: favorite,
+      projectId: project.id,
+      threadId,
+    };
+  }
+
+  function stubFavoriteServer(initial: ThreadItem[]) {
+    const favorites = new Map<string, string>();
+    for (const item of initial) {
+      if (item.isFavorite && item.favoritedAt) {
+        favorites.set(item.id, item.favoritedAt);
+      }
+    }
+    const calls: { favorite: boolean; threadId: string }[] = [];
+    let writeHandler: FavoriteWriteHandler | null = null;
+    const decorate = (item: ThreadItem) => ({
+      ...item,
+      favoritedAt: favorites.get(item.id) ?? null,
+      isFavorite: favorites.has(item.id),
+    });
+    const fetchMock = vi.fn(async (input: RequestInfo | URL, init?: RequestInit) => {
+      const url = String(input);
+      if (url === `/api/projects/${project.id}/threads?limit=100`) {
+        return Response.json(list(initial.map(decorate)));
+      }
+      if (url === `/api/projects/${project.id}/threads?limit=100&favorites=true`) {
+        const favoritesOnly = initial
+          .map(decorate)
+          .filter((item) => item.isFavorite)
+          .sort(
+            (left, right) =>
+              (right.favoritedAt ?? "").localeCompare(left.favoritedAt ?? "")
+              || left.id.localeCompare(right.id),
+          );
+        return Response.json(list(favoritesOnly));
+      }
+      const favoriteMatch = url.match(
+        new RegExp(`^/api/projects/${project.id}/threads/([^/]+)/favorite$`),
+      );
+      if (favoriteMatch && init?.method === "PUT") {
+        const body = JSON.parse(String(init.body)) as { favorite: boolean };
+        const threadId = favoriteMatch[1]!;
+        calls.push({ favorite: body.favorite, threadId });
+        if (writeHandler) return writeHandler(threadId, body.favorite);
+        if (body.favorite) favorites.set(threadId, "2026-08-10T00:00:00.000Z");
+        else favorites.delete(threadId);
+        return Response.json(
+          favoriteResponse(threadId, body.favorite, favorites.get(threadId) ?? null),
+        );
+      }
+      throw new Error(`Unexpected request: ${url}`);
+    });
+    return {
+      calls,
+      fetchMock,
+      setWriteHandler(handler: FavoriteWriteHandler | null) {
+        writeHandler = handler;
+      },
+    };
+  }
+
+  function threadTitles(): string[] {
+    return screen
+      .getAllByRole("button")
+      .filter((button) => button.dataset.threadId !== undefined)
+      .map((button) => button.textContent ?? "");
+  }
+
+  it("toggles favorites with aria-pressed, accessible names, keyboard, and stable list order", async () => {
+    const alpha = thread("thread-alpha", "Alpha", 2);
+    const beta = favorited("thread-beta", "Beta", 1, "2026-08-09T00:00:00.000Z");
+    const server = stubFavoriteServer([alpha, beta]);
+    vi.stubGlobal("fetch", server.fetchMock);
+    window.history.replaceState(null, "", `/projects/${project.id}?thread=${alpha.id}`);
+    const user = userEvent.setup();
+
+    render(<ThreadHarness />);
+
+    const alphaStar = await screen.findByRole("button", { name: "收藏线程 Alpha" });
+    expect(alphaStar).toHaveAttribute("aria-pressed", "false");
+    const betaStar = screen.getByRole("button", { name: "取消收藏 Beta" });
+    expect(betaStar).toHaveAttribute("aria-pressed", "true");
+
+    await user.click(alphaStar);
+    expect(
+      screen.getByRole("button", { name: "取消收藏 Alpha" }),
+    ).toHaveAttribute("aria-pressed", "true");
+    await waitFor(() =>
+      expect(server.calls).toEqual([{ favorite: true, threadId: "thread-alpha" }]),
+    );
+    expect(threadTitles()).toEqual(["Alpha", "Beta"]);
+
+    screen.getByRole("button", { name: "取消收藏 Beta" }).focus();
+    await user.keyboard("{Enter}");
+    await waitFor(() =>
+      expect(server.calls).toContainEqual({ favorite: false, threadId: "thread-beta" }),
+    );
+    expect(
+      await screen.findByRole("button", { name: "收藏线程 Beta" }),
+    ).toHaveAttribute("aria-pressed", "false");
+    expect(threadTitles()).toEqual(["Alpha", "Beta"]);
+  });
+
+  it("rolls back an optimistic favorite and surfaces an alert when the write fails", async () => {
+    const alpha = thread("thread-alpha", "Alpha", 1);
+    const server = stubFavoriteServer([alpha]);
+    server.setWriteHandler(() =>
+      Response.json(
+        { error: { code: "STORAGE_UNAVAILABLE", message: "read failed" } },
+        { status: 503 },
+      ),
+    );
+    vi.stubGlobal("fetch", server.fetchMock);
+    window.history.replaceState(null, "", `/projects/${project.id}?thread=${alpha.id}`);
+    const user = userEvent.setup();
+
+    render(<ThreadHarness />);
+
+    await user.click(await screen.findByRole("button", { name: "收藏线程 Alpha" }));
+    expect(await screen.findByRole("alert")).toHaveTextContent("服务暂时不可用");
+    expect(
+      screen.getByRole("button", { name: "收藏线程 Alpha" }),
+    ).toHaveAttribute("aria-pressed", "false");
+
+    server.setWriteHandler(() => {
+      throw new TypeError("connection lost");
+    });
+    await user.click(screen.getByRole("button", { name: "收藏线程 Alpha" }));
+    expect(await screen.findByRole("alert")).toHaveTextContent(
+      "无法更新收藏状态，请重试。",
+    );
+    expect(
+      screen.getByRole("button", { name: "收藏线程 Alpha" }),
+    ).toHaveAttribute("aria-pressed", "false");
+  });
+
+  it("disables the star toggle while the favorite write is pending", async () => {
+    const pending = deferredResponse();
+    const alpha = thread("thread-alpha", "Alpha", 1);
+    const server = stubFavoriteServer([alpha]);
+    server.setWriteHandler(() => pending.promise);
+    vi.stubGlobal("fetch", server.fetchMock);
+    window.history.replaceState(null, "", `/projects/${project.id}?thread=${alpha.id}`);
+    const user = userEvent.setup();
+
+    render(<ThreadHarness />);
+
+    await user.click(await screen.findByRole("button", { name: "收藏线程 Alpha" }));
+    expect(screen.getByRole("button", { name: "取消收藏 Alpha" })).toBeDisabled();
+
+    pending.resolve(
+      Response.json(favoriteResponse("thread-alpha", true, "2026-08-10T00:00:00.000Z")),
+    );
+    expect(
+      await screen.findByRole("button", { name: "取消收藏 Alpha" }),
+    ).toBeEnabled();
+  });
+
+  it("filters the favorites view with server order, removes unfavorited threads, and shows an empty state", async () => {
+    const alpha = favorited("thread-alpha", "Alpha", 3, "2026-08-09T10:00:00.000Z");
+    const beta = thread("thread-beta", "Beta", 2);
+    const charlie = favorited("thread-charlie", "Charlie", 1, "2026-08-09T09:00:00.000Z");
+    const server = stubFavoriteServer([alpha, beta, charlie]);
+    vi.stubGlobal("fetch", server.fetchMock);
+    window.history.replaceState(null, "", `/projects/${project.id}?thread=${beta.id}`);
+    const user = userEvent.setup();
+
+    render(<ThreadHarness />);
+
+    await screen.findByRole("button", { name: "Beta" });
+    await user.click(screen.getByRole("tab", { name: "已收藏" }));
+
+    expect(await screen.findByRole("button", { name: "Alpha" })).toBeVisible();
+    expect(screen.getByRole("button", { name: "Charlie" })).toBeVisible();
+    expect(screen.queryByRole("button", { name: "Beta" })).not.toBeInTheDocument();
+    expect(threadTitles()).toEqual(["Alpha", "Charlie"]);
+    expect(server.fetchMock).toHaveBeenCalledWith(
+      `/api/projects/${project.id}/threads?limit=100&favorites=true`,
+      expect.anything(),
+    );
+
+    await user.click(screen.getByRole("button", { name: "取消收藏 Alpha" }));
+    await waitFor(() =>
+      expect(screen.queryByRole("button", { name: "Alpha" })).not.toBeInTheDocument(),
+    );
+    expect(threadTitles()).toEqual(["Charlie"]);
+
+    await user.click(screen.getByRole("button", { name: "取消收藏 Charlie" }));
+    expect(
+      await screen.findByText(/暂无收藏线程/),
+    ).toBeVisible();
+
+    await user.click(screen.getByRole("button", { name: "查看全部线程" }));
+    expect(await screen.findByRole("button", { name: "Beta" })).toBeVisible();
+    expect(threadTitles()).toEqual(["Alpha", "Beta", "Charlie"]);
+  });
+
+  it("reinserts a thread into the favorites view when an unfavorite fails", async () => {
+    const alpha = favorited("thread-alpha", "Alpha", 2, "2026-08-09T10:00:00.000Z");
+    const beta = favorited("thread-beta", "Beta", 1, "2026-08-09T09:00:00.000Z");
+    const server = stubFavoriteServer([alpha, beta]);
+    vi.stubGlobal("fetch", server.fetchMock);
+    window.history.replaceState(null, "", `/projects/${project.id}?thread=${alpha.id}`);
+    const user = userEvent.setup();
+
+    render(<ThreadHarness />);
+
+    await user.click(await screen.findByRole("tab", { name: "已收藏" }));
+    await screen.findByRole("button", { name: "取消收藏 Beta" });
+
+    server.setWriteHandler(() => {
+      throw new TypeError("connection lost");
+    });
+    await user.click(screen.getByRole("button", { name: "取消收藏 Beta" }));
+
+    expect(await screen.findByRole("alert")).toHaveTextContent(
+      "无法更新收藏状态，请重试。",
+    );
+    expect(threadTitles()).toEqual(["Alpha", "Beta"]);
+    expect(
+      screen.getByRole("button", { name: "取消收藏 Beta" }),
+    ).toHaveAttribute("aria-pressed", "true");
+  });
+
+  it("keeps the selected thread context when switching between views", async () => {
+    const alpha = favorited("thread-alpha", "Alpha", 2, "2026-08-09T10:00:00.000Z");
+    const beta = thread("thread-beta", "Beta", 1);
+    const server = stubFavoriteServer([alpha, beta]);
+    vi.stubGlobal("fetch", server.fetchMock);
+    window.history.replaceState(null, "", `/projects/${project.id}?thread=${beta.id}`);
+    const user = userEvent.setup();
+
+    render(<ThreadHarness />);
+
+    await screen.findByRole("button", { name: "Beta" });
+    await user.click(screen.getByRole("tab", { name: "已收藏" }));
+    await screen.findByRole("button", { name: "Alpha" });
+
+    expect(window.location.search).toBe(`?thread=${beta.id}`);
+    expect(screen.queryByRole("alert")).not.toBeInTheDocument();
+
+    await user.click(screen.getByRole("tab", { name: "全部" }));
+    await screen.findByRole("button", { name: "Beta" });
+    expect(window.location.search).toBe(`?thread=${beta.id}`);
+    expect(screen.queryByRole("alert")).not.toBeInTheDocument();
+    expect(screen.getByRole("button", { name: "Beta" })).toHaveAttribute(
+      "aria-current",
+      "page",
+    );
+  });
+
+  it("moves between view tabs with arrow keys", async () => {
+    const alpha = favorited("thread-alpha", "Alpha", 1, "2026-08-09T10:00:00.000Z");
+    const server = stubFavoriteServer([alpha]);
+    vi.stubGlobal("fetch", server.fetchMock);
+    window.history.replaceState(null, "", `/projects/${project.id}?thread=${alpha.id}`);
+    const user = userEvent.setup();
+
+    render(<ThreadHarness />);
+
+    const allTab = await screen.findByRole("tab", { name: "全部" });
+    allTab.focus();
+    await user.keyboard("{ArrowRight}");
+    const favoritesTab = screen.getByRole("tab", { name: "已收藏" });
+    expect(favoritesTab).toHaveFocus();
+    expect(favoritesTab).toHaveAttribute("aria-selected", "true");
+    await screen.findByRole("button", { name: "取消收藏 Alpha" });
+
+    await user.keyboard("{ArrowLeft}");
+    expect(allTab).toHaveFocus();
+    expect(allTab).toHaveAttribute("aria-selected", "true");
+  });
+
+  it("restores favorite state from the server after a remount", async () => {
+    const alpha = thread("thread-alpha", "Alpha", 1);
+    const server = stubFavoriteServer([alpha]);
+    vi.stubGlobal("fetch", server.fetchMock);
+    window.history.replaceState(null, "", `/projects/${project.id}?thread=${alpha.id}`);
+    const user = userEvent.setup();
+
+    const first = render(<ThreadHarness />);
+    await user.click(await screen.findByRole("button", { name: "收藏线程 Alpha" }));
+    await screen.findByRole("button", { name: "取消收藏 Alpha" });
+    first.unmount();
+
+    render(<ThreadHarness />);
+    expect(
+      await screen.findByRole("button", { name: "取消收藏 Alpha" }),
+    ).toHaveAttribute("aria-pressed", "true");
   });
 });

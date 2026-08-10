@@ -59,6 +59,14 @@ const evidence = {
     evidenceDirectory,
     "persistent-threads-input-history.png",
   ),
+  favoritesDesktop: join(
+    resolve("features", "025-thread-favorites", "evidence"),
+    "favorites-desktop.png",
+  ),
+  favoritesNarrow: join(
+    resolve("features", "025-thread-favorites", "evidence"),
+    "favorites-narrow.png",
+  ),
   results: join(evidenceDirectory, "persistent-threads-results.json"),
 };
 const PNG_1X1 = Buffer.from([
@@ -270,6 +278,10 @@ async function axe(page, state) {
     contrast,
     state,
     violationCount: scan.violations.length,
+    violations: scan.violations.map((violation) => ({
+      id: violation.id,
+      impact: violation.impact,
+    })),
   });
   assert.deepEqual(blocking, [], `${state}: axe critical/serious must be 0`);
   assert.deepEqual(contrast, [], `${state}: WCAG AA color contrast must pass`);
@@ -432,6 +444,10 @@ function inspectDatabase() {
       SELECT attachment_id AS attachmentId,type
       FROM attachment_events ORDER BY created_at,id
     `).all();
+    const favorites = database.prepare(`
+      SELECT project_id AS projectId,thread_id AS threadId,created_at AS favoritedAt
+      FROM thread_favorites ORDER BY project_id,thread_id
+    `).all();
     return {
       activeRuns,
       attachmentEvents,
@@ -439,6 +455,7 @@ function inspectDatabase() {
       factCount: facts.length,
       factIds: facts.map((fact) => fact.id),
       facts,
+      favorites,
       ownership,
       policies,
       threads,
@@ -521,7 +538,7 @@ try {
   assert.equal(persisted.body.threads.length, 1);
   assert.equal(persisted.body.threads[0].title, "历史协作");
   const legacyThreadId = persisted.body.threads[0].id;
-  assert.equal(inspectDatabase().version, 13);
+  assert.equal(inspectDatabase().version, 14);
   pass("current-persistent-default-thread", { legacyThreadId });
   await axe(page, "current persistent project");
 
@@ -569,7 +586,7 @@ try {
   );
   pass("same-and-distinct-title-explicit-policies");
 
-  await page.getByRole("button", { name: "Duplicate title" }).last().click();
+  await page.getByRole("button", { exact: true, name: "Duplicate title" }).last().click();
   await page.waitForURL((url) => url.searchParams.get("thread") === firstThread);
   const firstHref = `/projects/legacy-project?thread=${firstThread}`;
   const thirdHref = `/projects/legacy-project?thread=${thirdThread}`;
@@ -1000,7 +1017,7 @@ try {
   await navigationOpener.focus();
   await page.keyboard.press("Enter");
   const navigationDialog = page.getByRole("dialog", { name: "项目导航" });
-  await navigationDialog.getByRole("button", { name: "Distinct title" }).focus();
+  await navigationDialog.getByRole("button", { exact: true, name: "Distinct title" }).focus();
   await page.keyboard.press("Enter");
   await page.waitForURL((url) => url.searchParams.get("thread") === thirdThread);
   await page.keyboard.press("Escape");
@@ -1722,6 +1739,257 @@ try {
   await page.keyboard.press("Escape");
   await attachmentEditor.waitFor({ state: "detached" });
   pass("attachment-narrow-dark-light-44px-keyboard-axe");
+
+  await page.setViewportSize({ height: 1050, width: 1500 });
+  await page.goto(`${baseUrl}${firstHref}`, { waitUntil: "networkidle" });
+  const threadsList = page.getByRole("navigation", {
+    exact: true,
+    name: "项目线程",
+  });
+  const viewTabs = page.getByRole("tablist", { name: "线程视图" });
+  const allViewTab = viewTabs.getByRole("tab", { name: "全部" });
+  const favoritesViewTab = viewTabs.getByRole("tab", { name: "已收藏" });
+  await allViewTab.waitFor();
+  assert.equal(await allViewTab.getAttribute("aria-selected"), "true");
+  assert.equal(await favoritesViewTab.getAttribute("aria-selected"), "false");
+  const favoritesQuery = () =>
+    page.waitForResponse((response) => {
+      const url = new URL(response.url());
+      return response.request().method() === "GET"
+        && url.pathname === "/api/projects/legacy-project/threads"
+        && url.searchParams.get("favorites") === "true";
+    });
+  const favoritePut = (threadId) =>
+    page.waitForResponse((response) =>
+      response.request().method() === "PUT"
+      && response.url().endsWith(`/threads/${threadId}/favorite`)
+    );
+  const favoritesEntryTexts = () =>
+    page.evaluate(() =>
+      [...document.querySelectorAll("#project-threads-list .thread-list-entry")]
+        .map((node) => node.textContent?.trim() ?? "")
+    );
+
+  const thirdEntry = threadsList.getByRole("button", {
+    exact: true,
+    name: "Distinct title",
+  });
+  const thirdStar = threadsList.getByRole("button", {
+    name: "收藏线程 Distinct title",
+  });
+  await thirdStar.waitFor();
+  assert.equal(await thirdStar.getAttribute("aria-pressed"), "false");
+  const thirdStarBox = await thirdStar.boundingBox();
+  assert.ok(
+    thirdStarBox && thirdStarBox.height >= 44 && thirdStarBox.width >= 44,
+    "desktop favorite star must stay >= 44px",
+  );
+  await thirdEntry.focus();
+  await page.keyboard.press("Tab");
+  assert.equal(
+    await thirdStar.evaluate((node) => document.activeElement === node),
+    true,
+    "favorite star must be one Tab away from its thread entry",
+  );
+  assert.notEqual(
+    await thirdStar.evaluate((node) => getComputedStyle(node).boxShadow),
+    "none",
+    "focused favorite star must show a visible focus ring",
+  );
+  const favoriteThird = favoritePut(thirdThread);
+  await page.keyboard.press("Space");
+  const favoriteThirdResponse = await favoriteThird;
+  assert.equal(favoriteThirdResponse.status(), 200);
+  const favoriteThirdBody = await favoriteThirdResponse.json();
+  assert.deepEqual(
+    Object.keys(favoriteThirdBody).sort(),
+    ["favoritedAt", "isFavorite", "projectId", "threadId"],
+  );
+  assert.equal(favoriteThirdBody.isFavorite, true);
+  assert.equal(typeof favoriteThirdBody.favoritedAt, "string");
+  assert.equal(favoriteThirdBody.projectId, "legacy-project");
+  assert.equal(favoriteThirdBody.threadId, thirdThread);
+  const thirdUnstar = threadsList.getByRole("button", {
+    name: "取消收藏 Distinct title",
+  });
+  await thirdUnstar.waitFor();
+  assert.equal(await thirdUnstar.getAttribute("aria-pressed"), "true");
+
+  const legacyStar = threadsList.getByRole("button", {
+    name: "收藏线程 历史协作",
+  });
+  await legacyStar.waitFor();
+  await legacyStar.focus();
+  const favoriteLegacy = favoritePut(legacyThreadId);
+  await page.keyboard.press("Enter");
+  const favoriteLegacyResponse = await favoriteLegacy;
+  assert.equal(favoriteLegacyResponse.status(), 200);
+  assert.equal((await favoriteLegacyResponse.json()).isFavorite, true);
+  const legacyUnstar = threadsList.getByRole("button", {
+    name: "取消收藏 历史协作",
+  });
+  await legacyUnstar.waitFor();
+  assert.equal(await legacyUnstar.getAttribute("aria-pressed"), "true");
+
+  const favoritesList = await api(
+    page,
+    "/api/projects/legacy-project/threads?favorites=true",
+  );
+  assert.equal(favoritesList.status, 200);
+  assert.equal(favoritesList.body.nextCursor, null);
+  assert.deepEqual(
+    favoritesList.body.threads.map((thread) => thread.id),
+    [legacyThreadId, thirdThread],
+    "favorites must order by favorited_at DESC",
+  );
+  for (const item of favoritesList.body.threads) {
+    assert.equal(item.isFavorite, true);
+    assert.equal(typeof item.favoritedAt, "string");
+  }
+  const legacyFavoritedAt = favoritesList.body.threads[0].favoritedAt;
+  const fullList = await api(
+    page,
+    "/api/projects/legacy-project/threads?limit=100",
+  );
+  const favoriteFlags = new Map(
+    fullList.body.threads.map((thread) => [thread.id, thread.isFavorite]),
+  );
+  assert.equal(favoriteFlags.get(legacyThreadId), true);
+  assert.equal(favoriteFlags.get(thirdThread), true);
+  assert.equal(favoriteFlags.get(firstThread), false);
+  assert.equal(favoriteFlags.get(secondThread), false);
+
+  const firstFavoritesLoad = favoritesQuery();
+  await favoritesViewTab.click();
+  assert.equal((await firstFavoritesLoad).status(), 200);
+  await page.waitForFunction(() =>
+    document.querySelectorAll("#project-threads-list .thread-list-entry")
+      .length === 2
+  );
+  assert.equal(await favoritesViewTab.getAttribute("aria-selected"), "true");
+  assert.equal(await allViewTab.getAttribute("aria-selected"), "false");
+  assert.deepEqual(
+    await favoritesEntryTexts(),
+    ["历史协作", "Distinct title"],
+    "favorites view must render favorited_at DESC order",
+  );
+  assert.equal(new URL(page.url()).searchParams.get("thread"), firstThread);
+  assert.equal(
+    await page.getByText(/所选线程无效/).count(),
+    0,
+    "favorites view must keep the current thread context without selection errors",
+  );
+  await axe(page, "desktop light favorites view");
+  await page.screenshot({ fullPage: true, path: evidence.favoritesDesktop });
+
+  const unfavoriteThird = favoritePut(thirdThread);
+  await thirdUnstar.click();
+  const unfavoriteThirdResponse = await unfavoriteThird;
+  assert.equal(unfavoriteThirdResponse.status(), 200);
+  assert.equal((await unfavoriteThirdResponse.json()).isFavorite, false);
+  await page.waitForFunction(() => {
+    const entries = [
+      ...document.querySelectorAll("#project-threads-list .thread-list-entry"),
+    ];
+    return entries.length === 1
+      && entries[0].textContent?.trim() === "历史协作";
+  });
+  pass("favorites-keyboard-toggle-view-order-unfavorite-desktop");
+
+  await page.getByRole("button", { name: /切换到暗色主题/ }).click();
+  await page.getByRole("button", { name: /切换到明色主题/ }).waitFor();
+  await legacyUnstar.waitFor();
+  assert.equal(await legacyUnstar.getAttribute("aria-pressed"), "true");
+  await axe(page, "desktop dark favorites view");
+  await page.getByRole("button", { name: /切换到明色主题/ }).click();
+  await page.getByRole("button", { name: /切换到暗色主题/ }).waitFor();
+  pass("favorites-view-dark-light-axe");
+
+  await page.setViewportSize({ height: 844, width: 390 });
+  await page.reload({ waitUntil: "networkidle" });
+  const favoritesNavOpener = page.getByRole("button", { name: "打开项目导航" });
+  await favoritesNavOpener.focus();
+  await page.keyboard.press("Enter");
+  const favoritesNavDialog = page.getByRole("dialog", { name: "项目导航" });
+  await favoritesNavDialog.getByRole("tab", { name: "已收藏" }).click();
+  const narrowFavoriteEntry = favoritesNavDialog.getByRole("button", {
+    exact: true,
+    name: "历史协作",
+  });
+  await narrowFavoriteEntry.waitFor();
+  const narrowStar = favoritesNavDialog.getByRole("button", {
+    name: "取消收藏 历史协作",
+  });
+  assert.equal(await narrowStar.getAttribute("aria-pressed"), "true");
+  await narrowStar.scrollIntoViewIfNeeded();
+  const narrowStarBox = await narrowStar.boundingBox();
+  assert.ok(
+    narrowStarBox && narrowStarBox.height >= 44 && narrowStarBox.width >= 44,
+    "narrow favorite star must stay >= 44px",
+  );
+  await narrowFavoriteEntry.focus();
+  await page.keyboard.press("Tab");
+  assert.equal(
+    await narrowStar.evaluate((node) => document.activeElement === node),
+    true,
+    "narrow favorite star must stay keyboard reachable",
+  );
+  assert.notEqual(
+    await narrowStar.evaluate((node) => getComputedStyle(node).boxShadow),
+    "none",
+  );
+  await axe(page, "narrow favorites view");
+  await page.screenshot({ fullPage: true, path: evidence.favoritesNarrow });
+  await page.keyboard.press("Escape");
+  await favoritesNavDialog.waitFor({ state: "detached" });
+  pass("favorites-narrow-drawer-44px-keyboard-focus-axe");
+
+  await page.setViewportSize({ height: 1050, width: 1500 });
+  await page.goto(`${baseUrl}${firstHref}`, { waitUntil: "networkidle" });
+  const beforeFavoriteRestart = inspectDatabase();
+  assert.equal(beforeFavoriteRestart.favorites.length, 1);
+  assert.equal(
+    beforeFavoriteRestart.favorites[0].projectId,
+    "legacy-project",
+  );
+  assert.equal(beforeFavoriteRestart.favorites[0].threadId, legacyThreadId);
+  assert.equal(
+    beforeFavoriteRestart.favorites[0].favoritedAt,
+    legacyFavoritedAt,
+  );
+  await restartApp(page);
+  await legacyUnstar.waitFor();
+  assert.equal(await legacyUnstar.getAttribute("aria-pressed"), "true");
+  const afterFavoriteRestart = inspectDatabase();
+  assert.deepEqual(
+    afterFavoriteRestart.favorites,
+    beforeFavoriteRestart.favorites,
+  );
+  const restartedFavorites = await api(
+    page,
+    "/api/projects/legacy-project/threads?favorites=true",
+  );
+  assert.deepEqual(
+    restartedFavorites.body.threads.map((thread) => thread.id),
+    [legacyThreadId],
+  );
+  assert.equal(restartedFavorites.body.threads[0].isFavorite, true);
+  assert.equal(
+    restartedFavorites.body.threads[0].favoritedAt,
+    legacyFavoritedAt,
+  );
+  const restartedFavoritesLoad = favoritesQuery();
+  await favoritesViewTab.click();
+  assert.equal((await restartedFavoritesLoad).status(), 200);
+  await page.waitForFunction(() => {
+    const entries = [
+      ...document.querySelectorAll("#project-threads-list .thread-list-entry"),
+    ];
+    return entries.length === 1
+      && entries[0].textContent?.trim() === "历史协作";
+  });
+  await axe(page, "desktop light favorites view after restart");
+  pass("favorites-restart-persistence-db-api-view");
 
   const gitCheckIgnore = spawnSync(
     "git",

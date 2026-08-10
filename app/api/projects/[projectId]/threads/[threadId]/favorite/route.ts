@@ -2,11 +2,11 @@ import { join } from "node:path";
 import { TextDecoder } from "node:util";
 
 import { collaborationErrorResponse } from "@/app/api/_shared/collaboration/collaboration-api";
-import { threadService } from "@/src/composition";
+import { threadFavoriteService } from "@/src/composition";
 import { CollaborationError } from "@/src/modules/public-collaboration";
 
 type RouteContext = {
-  params: Promise<{ projectId: string }>;
+  params: Promise<{ projectId: string; threadId: string }>;
 };
 
 const RESOURCE_ID = /^[A-Za-z0-9][A-Za-z0-9:_-]{0,199}$/;
@@ -21,17 +21,17 @@ function invalidInput(fields: Record<string, string>): never {
   throw new CollaborationError(
     "INVALID_INPUT",
     400,
-    "Thread input is invalid.",
+    "Thread favorite input is invalid.",
     { fields },
   );
 }
 
-function parseProjectId(value: string): string {
+function parsePathId(value: string, field: string): string {
   let decoded: string;
   try {
     decoded = decodeURIComponent(value);
   } catch {
-    return invalidInput({ projectId: "invalid_format" });
+    return invalidInput({ [field]: "invalid_format" });
   }
   if (
     decoded === "."
@@ -41,57 +41,9 @@ function parseProjectId(value: string): string {
     || decoded.includes("\0")
     || !RESOURCE_ID.test(decoded)
   ) {
-    return invalidInput({ projectId: "invalid_format" });
+    return invalidInput({ [field]: "invalid_format" });
   }
   return decoded;
-}
-
-function parseListQuery(request: Request): {
-  cursor?: string;
-  favoritesOnly?: boolean;
-  limit?: number;
-} {
-  const url = new URL(request.url);
-  const fields: Record<string, string> = {};
-  if (url.hash) fields.fragment = "unknown";
-  for (const key of new Set(url.searchParams.keys())) {
-    if (key !== "cursor" && key !== "favorites" && key !== "limit") {
-      fields[key] = "unknown";
-    }
-  }
-  const cursorValues = url.searchParams.getAll("cursor");
-  const limitValues = url.searchParams.getAll("limit");
-  const favoritesValues = url.searchParams.getAll("favorites");
-  if (cursorValues.length > 1) fields.cursor = "duplicate";
-  if (limitValues.length > 1) fields.limit = "duplicate";
-  if (favoritesValues.length > 1) fields.favorites = "duplicate";
-  const cursor = cursorValues[0];
-  const rawLimit = limitValues[0];
-  const rawFavorites = favoritesValues[0];
-  if (cursor !== undefined && cursor.length === 0) fields.cursor = "required";
-  if (rawLimit !== undefined && !DECIMAL_INTEGER.test(rawLimit)) {
-    fields.limit = rawLimit.length === 0 ? "required" : "invalid_format";
-  }
-  if (
-    rawFavorites !== undefined
-    && rawFavorites !== "true"
-    && rawFavorites !== "false"
-  ) {
-    fields.favorites = rawFavorites.length === 0 ? "required" : "invalid_format";
-  }
-  const limit = rawLimit === undefined ? undefined : Number(rawLimit);
-  if (
-    limit !== undefined
-    && (!Number.isSafeInteger(limit) || limit < 1 || limit > 100)
-  ) {
-    fields.limit = "invalid_range";
-  }
-  if (Object.keys(fields).length > 0) invalidInput(fields);
-  return {
-    ...(cursor === undefined ? {} : { cursor }),
-    ...(rawFavorites === undefined ? {} : { favoritesOnly: rawFavorites === "true" }),
-    ...(limit === undefined ? {} : { limit }),
-  };
 }
 
 function requireNoUrlSuffix(request: Request): void {
@@ -164,35 +116,26 @@ async function readStrictJson(request: Request): Promise<unknown> {
   }
 }
 
-export async function GET(
+export async function PUT(
   request: Request,
   context: RouteContext,
 ): Promise<Response> {
   try {
-    const projectId = parseProjectId((await context.params).projectId);
-    const result = threadService.listThreads(databasePath(), projectId, parseListQuery(request));
-    return Response.json(result.body, { status: result.status });
-  } catch (error) {
-    return collaborationErrorResponse(
-      error,
-      "GET /api/projects/:projectId/threads",
-    );
-  }
-}
-
-export async function POST(
-  request: Request,
-  context: RouteContext,
-): Promise<Response> {
-  try {
-    const projectId = parseProjectId((await context.params).projectId);
+    const params = await context.params;
+    const projectId = parsePathId(params.projectId, "projectId");
+    const threadId = parsePathId(params.threadId, "threadId");
     requireNoUrlSuffix(request);
-    const result = threadService.createThread(databasePath(), projectId, await readStrictJson(request));
+    const result = threadFavoriteService.setThreadFavorite(
+      databasePath(),
+      projectId,
+      threadId,
+      await readStrictJson(request),
+    );
     return Response.json(result.body, { status: result.status });
   } catch (error) {
     return collaborationErrorResponse(
       error,
-      "POST /api/projects/:projectId/threads",
+      "PUT /api/projects/:projectId/threads/:threadId/favorite",
     );
   }
 }

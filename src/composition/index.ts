@@ -32,6 +32,7 @@ export * as runTimelineService from "@/src/adapters/outbound/sqlite/public-colla
 export * as structuredMessageStore from "@/src/adapters/outbound/sqlite/public-collaboration/structured-message-store";
 export * as inputHistoryService from "@/src/adapters/outbound/sqlite/public-collaboration/input-history-service";
 export * as threadDraftService from "@/src/adapters/outbound/sqlite/public-collaboration/thread-draft-service";
+export * as threadFavoriteService from "@/src/adapters/outbound/sqlite/public-collaboration/thread-favorite-service";
 export * as threadService from "@/src/adapters/outbound/sqlite/public-collaboration/thread-service";
 export * as turnOrchestrator from "@/src/adapters/outbound/sqlite/public-collaboration/turn-orchestrator";
 export * as verifiedSourceProjection from "@/src/adapters/outbound/sqlite/public-collaboration/verified-source-projection";

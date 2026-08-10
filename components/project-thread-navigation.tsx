@@ -7,6 +7,7 @@ import {
   useRef,
   useState,
   type FormEvent,
+  type KeyboardEvent,
   type RefObject,
 } from "react";
 import { createPortal } from "react-dom";
@@ -84,6 +85,12 @@ const threadSummarySchema = z
 const threadDetailSchema = threadSummarySchema
   .extend({ policy: policySchema })
   .strict();
+const threadListItemSchema = threadSummarySchema
+  .extend({
+    favoritedAt: z.string().min(1).nullable(),
+    isFavorite: z.boolean(),
+  })
+  .strict();
 const threadCreatedFactSchema = z
   .object({
     activitySequence: positiveInteger,
@@ -113,7 +120,15 @@ const threadCreateResponseSchema = z
 const threadListResponseSchema = z
   .object({
     nextCursor: z.string().min(1).nullable(),
-    threads: z.array(threadSummarySchema),
+    threads: z.array(threadListItemSchema),
+  })
+  .strict();
+const threadFavoriteSetResponseSchema = z
+  .object({
+    favoritedAt: z.string().min(1).nullable(),
+    isFavorite: z.boolean(),
+    projectId: resourceId,
+    threadId: resourceId,
   })
   .strict();
 const operationLookupSchema = z
@@ -136,6 +151,8 @@ const operationLookupSchema = z
   .strict();
 
 type ThreadSummary = z.infer<typeof threadSummarySchema>;
+type ThreadListItem = z.infer<typeof threadListItemSchema>;
+type ThreadListView = "all" | "favorites";
 type ThreadCreateResponse = z.infer<typeof threadCreateResponseSchema>;
 
 function canonicalThreadHref(projectId: string, threadId: string): string {
@@ -172,6 +189,13 @@ function compareThreads(left: ThreadSummary, right: ThreadSummary): number {
   );
 }
 
+function compareFavorites(left: ThreadListItem, right: ThreadListItem): number {
+  return (
+    (right.favoritedAt ?? "").localeCompare(left.favoritedAt ?? "")
+    || left.id.localeCompare(right.id)
+  );
+}
+
 function assertThreadPage(
   payload: unknown,
   projectId: string,
@@ -187,6 +211,32 @@ function assertThreadPage(
   for (let index = 1; index < parsed.threads.length; index += 1) {
     if (compareThreads(parsed.threads[index - 1]!, parsed.threads[index]!) > 0) {
       throw new Error("invalid_thread_order");
+    }
+  }
+  return parsed;
+}
+
+function assertFavoritesPage(
+  payload: unknown,
+  projectId: string,
+): z.infer<typeof threadListResponseSchema> {
+  const parsed = threadListResponseSchema.parse(payload);
+  if (parsed.nextCursor !== null) {
+    throw new Error("invalid_favorites_page");
+  }
+  const seenIds = new Set<string>();
+  for (const thread of parsed.threads) {
+    if (thread.projectId !== projectId || seenIds.has(thread.id)) {
+      throw new Error("invalid_thread_tuple");
+    }
+    if (!thread.isFavorite || thread.favoritedAt === null) {
+      throw new Error("invalid_favorites_page");
+    }
+    seenIds.add(thread.id);
+  }
+  for (let index = 1; index < parsed.threads.length; index += 1) {
+    if (compareFavorites(parsed.threads[index - 1]!, parsed.threads[index]!) > 0) {
+      throw new Error("invalid_favorites_order");
     }
   }
   return parsed;
@@ -231,6 +281,24 @@ function currentMembers(payload: unknown): ProjectMember[] {
   );
 }
 
+function StarIcon({ filled }: { filled: boolean }) {
+  return (
+    <svg
+      aria-hidden="true"
+      fill={filled ? "currentColor" : "none"}
+      height={20}
+      stroke="currentColor"
+      strokeLinecap="round"
+      strokeLinejoin="round"
+      strokeWidth={1.5}
+      viewBox="0 0 24 24"
+      width={20}
+    >
+      <path d="M12 2.5l2.92 5.92 6.53.95-4.72 4.6 1.11 6.5L12 17.44l-5.84 3.07 1.11-6.5-4.72-4.6 6.53-.95L12 2.5z" />
+    </svg>
+  );
+}
+
 export function ProjectThreadNavigation({
   backgroundRef,
   onDialogChange,
@@ -241,10 +309,15 @@ export function ProjectThreadNavigation({
   const router = useRouter();
   const routerRef = useRef(router);
   routerRef.current = router;
-  const [threads, setThreads] = useState<ThreadSummary[]>([]);
+  const [threads, setThreads] = useState<ThreadListItem[]>([]);
   const [listState, setListState] = useState<ThreadListState>("loading");
   const [listError, setListError] = useState<string | null>(null);
   const [selectionError, setSelectionError] = useState<string | null>(null);
+  const [view, setView] = useState<ThreadListView>("all");
+  const [pendingFavoriteIds, setPendingFavoriteIds] = useState<ReadonlySet<string>>(
+    () => new Set<string>(),
+  );
+  const [favoriteError, setFavoriteError] = useState<string | null>(null);
   const [reloadKey, setReloadKey] = useState(0);
   const [locationVersion, setLocationVersion] = useState(0);
   const [dialogOpen, setDialogOpen] = useState(false);
@@ -264,6 +337,10 @@ export function ProjectThreadNavigation({
   const dialogRef = useRef<HTMLElement>(null);
   const titleInputRef = useRef<HTMLInputElement>(null);
   const threadButtonRefs = useRef(new Map<string, HTMLButtonElement>());
+  const allViewTabRef = useRef<HTMLButtonElement>(null);
+  const favoritesViewTabRef = useRef<HTMLButtonElement>(null);
+  const viewRef = useRef(view);
+  viewRef.current = view;
   const targetGuard = useTargetRequestGuard(`${projectId}||`);
 
   const closeDialog = useCallback(() => {
@@ -299,9 +376,18 @@ export function ProjectThreadNavigation({
   }, []);
 
   const loadThreads = useCallback(async (
+    view: ThreadListView,
     signal?: AbortSignal,
-  ): Promise<ThreadSummary[]> => {
-    const collected: ThreadSummary[] = [];
+  ): Promise<ThreadListItem[]> => {
+    if (view === "favorites") {
+      const response = await fetch(
+        `/api/projects/${encodeURIComponent(projectId)}/threads?limit=100&favorites=true`,
+        { signal },
+      );
+      if (!response.ok) throw new ApiDisplayError(await readError(response));
+      return assertFavoritesPage(await response.json(), projectId).threads;
+    }
+    const collected: ThreadListItem[] = [];
     const seenIds = new Set<string>();
     let cursor: string | null = null;
     do {
@@ -343,12 +429,15 @@ export function ProjectThreadNavigation({
     setCreateError(null);
     setIsSubmitting(false);
     setFocusThreadId(null);
+    setFavoriteError(null);
+    setPendingFavoriteIds(new Set());
     threadButtonRefs.current.clear();
-    void loadThreads(request.signal)
+    void loadThreads(view, request.signal)
       .then((loaded) => {
         if (!request.isCurrent()) return;
         setThreads(loaded);
         setListState(loaded.length === 0 ? "empty" : "ready");
+        if (view !== "all") return;
         const selection = threadSelectionFromUrl(projectId);
         if (loaded.length > 0 && selection.kind === "none") {
           const href = canonicalThreadHref(projectId, loaded[0]!.id);
@@ -376,7 +465,7 @@ export function ProjectThreadNavigation({
           ),
         );
       });
-  }, [loadThreads, onNavigate, projectId, reloadKey, targetGuard]);
+  }, [loadThreads, onNavigate, projectId, reloadKey, targetGuard, view]);
 
   useEffect(() => {
     if (!focusThreadId) return;
@@ -387,6 +476,7 @@ export function ProjectThreadNavigation({
   }, [focusThreadId, locationVersion, projectId, threads]);
 
   useEffect(() => {
+    if (view !== "all") return;
     if (listState !== "ready" || threads.length === 0) return;
     const selection = threadSelectionFromUrl(projectId);
     if (selection.kind === "none") {
@@ -404,7 +494,7 @@ export function ProjectThreadNavigation({
     } else {
       setSelectionError(null);
     }
-  }, [listState, locationVersion, onNavigate, projectId, threads]);
+  }, [listState, locationVersion, onNavigate, projectId, threads, view]);
 
   useEffect(() => {
     if (!dialogOpen) return;
@@ -452,6 +542,101 @@ export function ProjectThreadNavigation({
     routerRef.current.push(href);
   }
 
+  function selectView(next: ThreadListView, focusTab = false) {
+    setView(next);
+    if (focusTab) {
+      queueMicrotask(() => {
+        (next === "all" ? allViewTabRef : favoritesViewTabRef).current?.focus();
+      });
+    }
+  }
+
+  function handleViewKeys(event: KeyboardEvent<HTMLDivElement>) {
+    const order: ThreadListView[] = ["all", "favorites"];
+    const currentIndex = order.indexOf(view);
+    let next: ThreadListView | undefined;
+    if (event.key === "Home") next = order[0];
+    if (event.key === "End") next = order[order.length - 1];
+    if (event.key === "ArrowLeft") {
+      next = order[(currentIndex - 1 + order.length) % order.length];
+    }
+    if (event.key === "ArrowRight") {
+      next = order[(currentIndex + 1) % order.length];
+    }
+    if (!next) return;
+    event.preventDefault();
+    selectView(next, true);
+  }
+
+  function applyFavoriteState(
+    thread: ThreadListItem,
+    isFavorite: boolean,
+    favoritedAt: string | null,
+  ) {
+    setThreads((current) => {
+      const source = current.find((item) => item.id === thread.id) ?? thread;
+      const nextItem = { ...source, favoritedAt, isFavorite };
+      if (viewRef.current === "favorites") {
+        const remaining = current.filter((item) => item.id !== thread.id);
+        return isFavorite
+          ? [...remaining, nextItem].sort(compareFavorites)
+          : remaining;
+      }
+      return current.map((item) => (item.id === thread.id ? nextItem : item));
+    });
+  }
+
+  async function toggleFavorite(thread: ThreadListItem) {
+    if (pendingFavoriteIds.has(thread.id)) return;
+    const request = targetGuard.capture();
+    const nextFavorite = !thread.isFavorite;
+    const previous = {
+      favoritedAt: thread.favoritedAt,
+      isFavorite: thread.isFavorite,
+    };
+    setFavoriteError(null);
+    setPendingFavoriteIds((current) => new Set(current).add(thread.id));
+    applyFavoriteState(
+      thread,
+      nextFavorite,
+      nextFavorite ? new Date().toISOString() : null,
+    );
+    try {
+      const response = await fetch(
+        `/api/projects/${encodeURIComponent(projectId)}/threads/${encodeURIComponent(thread.id)}/favorite`,
+        {
+          body: JSON.stringify({ favorite: nextFavorite }),
+          headers: { "content-type": "application/json" },
+          method: "PUT",
+          signal: request.signal,
+        },
+      );
+      if (!request.isCurrent()) return;
+      if (!response.ok) {
+        throw new ApiDisplayError(await readError(response));
+      }
+      const result = threadFavoriteSetResponseSchema.parse(await response.json());
+      if (result.projectId !== projectId || result.threadId !== thread.id) {
+        throw new Error("invalid_favorite_tuple");
+      }
+      applyFavoriteState(thread, result.isFavorite, result.favoritedAt);
+    } catch (cause: unknown) {
+      if (!request.isCurrent()) return;
+      applyFavoriteState(thread, previous.isFavorite, previous.favoritedAt);
+      setFavoriteError(
+        caughtApiErrorCopy(cause, "无法更新收藏状态，请重试。"),
+      );
+    } finally {
+      if (request.isCurrent()) {
+        setPendingFavoriteIds((current) => {
+          const next = new Set(current);
+          next.delete(thread.id);
+          return next;
+        });
+      }
+    }
+  }
+
   function finishCreatedThread(
     created: ThreadCreateResponse,
     reconciled: boolean,
@@ -464,9 +649,10 @@ export function ProjectThreadNavigation({
     ) {
       throw new Error("invalid_created_tuple");
     }
+    const { policy: _createdPolicy, ...createdSummary } = created.thread;
     setThreads((current) =>
       [
-        created.thread,
+        { ...createdSummary, favoritedAt: null, isFavorite: false },
         ...current.filter((thread) => thread.id !== created.thread.id),
       ].sort(compareThreads),
     );
@@ -489,7 +675,7 @@ export function ProjectThreadNavigation({
     request: TargetRequest,
   ): Promise<boolean> {
     try {
-      const refreshed = await loadThreads(request.signal);
+      const refreshed = await loadThreads("all", request.signal);
       if (!request.isCurrent()) return false;
       const candidates = refreshed.filter((thread) => !previousIds.has(thread.id));
       const matches: ThreadCreateResponse[] = [];
@@ -615,7 +801,7 @@ export function ProjectThreadNavigation({
           <h2 className="surface-heading" id="project-threads-title">
             线程
           </h2>
-          {listState !== "empty" ? (
+          {listState !== "empty" && view === "all" ? (
             <button
               className="button-secondary"
               onClick={openDialog}
@@ -626,14 +812,53 @@ export function ProjectThreadNavigation({
             </button>
           ) : null}
         </div>
+        <div
+          aria-label="线程视图"
+          className="thread-view-tabs"
+          onKeyDown={handleViewKeys}
+          role="tablist"
+        >
+          <button
+            aria-controls="project-threads-list"
+            aria-selected={view === "all"}
+            className="nav-item"
+            id="thread-view-tab-all"
+            onClick={() => selectView("all")}
+            ref={allViewTabRef}
+            role="tab"
+            tabIndex={view === "all" ? 0 : -1}
+            type="button"
+          >
+            全部
+          </button>
+          <button
+            aria-controls="project-threads-list"
+            aria-selected={view === "favorites"}
+            className="nav-item"
+            id="thread-view-tab-favorites"
+            onClick={() => selectView("favorites")}
+            ref={favoritesViewTabRef}
+            role="tab"
+            tabIndex={view === "favorites" ? 0 : -1}
+            type="button"
+          >
+            已收藏
+          </button>
+        </div>
         {selectionError ? (
           <p className="error-text" role="alert">
             {selectionError}
           </p>
         ) : null}
+        {favoriteError ? (
+          <p className="error-text" role="alert">
+            {favoriteError}
+          </p>
+        ) : null}
         <nav
           aria-busy={listState === "loading" ? "true" : undefined}
           aria-label="项目线程"
+          id="project-threads-list"
         >
           {listState === "loading" ? (
             <p className="muted" role="status">
@@ -652,27 +877,40 @@ export function ProjectThreadNavigation({
                 重试加载线程
               </button>
             </div>
-          ) : listState === "empty" ? (
-            <div className="empty-guide state-message">
-              <p>暂无线程。创建线程后开始协作。</p>
-              <button
-                className="button-primary"
-                onClick={openDialog}
-                ref={createButtonRef}
-                type="button"
-              >
-                创建线程
-              </button>
-            </div>
+          ) : listState === "empty" || threads.length === 0 ? (
+            view === "favorites" ? (
+              <div className="empty-guide state-message">
+                <p>暂无收藏线程。在“全部”视图中收藏线程后会显示在这里。</p>
+                <button
+                  className="button-secondary"
+                  onClick={() => selectView("all")}
+                  type="button"
+                >
+                  查看全部线程
+                </button>
+              </div>
+            ) : (
+              <div className="empty-guide state-message">
+                <p>暂无线程。创建线程后开始协作。</p>
+                <button
+                  className="button-primary"
+                  onClick={openDialog}
+                  ref={createButtonRef}
+                  type="button"
+                >
+                  创建线程
+                </button>
+              </div>
+            )
           ) : (
             <ul className="project-list">
               {threads.map((thread) => (
-                <li key={thread.id}>
+                <li className="thread-list-item" key={thread.id}>
                   <button
                     aria-current={
                       thread.id === selectedThreadId ? "page" : undefined
                     }
-                    className="nav-item"
+                    className="nav-item thread-list-entry"
                     data-thread-id={thread.id}
                     onClick={() => chooseThread(thread.id)}
                     ref={(element) => {
@@ -682,6 +920,20 @@ export function ProjectThreadNavigation({
                     type="button"
                   >
                     {thread.title}
+                  </button>
+                  <button
+                    aria-label={
+                      thread.isFavorite
+                        ? `取消收藏 ${thread.title}`
+                        : `收藏线程 ${thread.title}`
+                    }
+                    aria-pressed={thread.isFavorite}
+                    className="thread-favorite-toggle"
+                    disabled={pendingFavoriteIds.has(thread.id)}
+                    onClick={() => void toggleFavorite(thread)}
+                    type="button"
+                  >
+                    <StarIcon filled={thread.isFavorite} />
                   </button>
                 </li>
               ))}

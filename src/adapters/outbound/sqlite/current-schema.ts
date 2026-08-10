@@ -12,7 +12,7 @@ export type CurrentSchemaManifest = {
 
 const CURRENT_SCHEMA_DEFINITION = {
   "identity": {
-    "userVersion": 13
+    "userVersion": 14
   },
   "objects": [
     {
@@ -337,6 +337,12 @@ const CURRENT_SCHEMA_DEFINITION = {
       "kind": "table",
       "name": "thread_drafts",
       "createSql": "CREATE TABLE thread_drafts(\n project_id TEXT NOT NULL,thread_id TEXT NOT NULL,\n content TEXT NOT NULL,\n attachments_json TEXT NOT NULL DEFAULT '[]' CHECK(json_valid(attachments_json) AND json_type(attachments_json)='array' AND length(CAST(attachments_json AS BLOB))<=65536),\n reply_to_message_id TEXT,\n version INTEGER NOT NULL CHECK(version>=1),\n updated_at TEXT NOT NULL CHECK(updated_at GLOB '????-??-??T??:??:??.???Z'),\n PRIMARY KEY(project_id,thread_id),\n FOREIGN KEY(project_id,thread_id) REFERENCES collaboration_threads(project_id,id) ON DELETE CASCADE\n)",
+      "dependsOn": []
+    },
+    {
+      "kind": "table",
+      "name": "thread_favorites",
+      "createSql": "CREATE TABLE thread_favorites(\n project_id TEXT NOT NULL,thread_id TEXT NOT NULL,\n created_at TEXT NOT NULL CHECK(created_at GLOB '????-??-??T??:??:??.???Z'),\n PRIMARY KEY(project_id,thread_id),\n FOREIGN KEY(project_id,thread_id) REFERENCES collaboration_threads(project_id,id) ON DELETE CASCADE\n)",
       "dependsOn": []
     },
     {

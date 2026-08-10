@@ -51,6 +51,7 @@
       "inline_decisions",
       "business_action_receipts",
       "thread_drafts",
+      "thread_favorites",
       "input_history_entries",
       "input_history_clear_events",
       "message_attachments",

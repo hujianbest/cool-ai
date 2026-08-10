@@ -81,7 +81,7 @@ function detail(project: string, thread: string, selectedRunId: string | null = 
 
 function threadSummary(project: string, thread: string) {
   const { policy: _policy, ...summary } = detail(project, thread).thread;
-  return summary;
+  return { ...summary, favoritedAt: null, isFavorite: false };
 }
 
 function message(project: string, thread: string, content: string, runId: string | null = null) {

@@ -71,10 +71,10 @@ describe("current canonical schema", () => {
     }
   });
 
-  it("bootstraps a missing database directly at identity 13", () => {
+  it("bootstraps a missing database directly at identity 14", () => {
     const database = openDatabase(databasePath());
     try {
-      expect(database.prepare("PRAGMA user_version").get()).toEqual({ user_version: 13 });
+      expect(database.prepare("PRAGMA user_version").get()).toEqual({ user_version: 14 });
     } finally {
       database.close();
     }
@@ -90,7 +90,7 @@ describe("current canonical schema", () => {
     missing.close();
     const empty = openDatabase(emptyPath);
     try {
-      expect(empty.prepare("PRAGMA user_version").get()).toEqual({ user_version: 13 });
+      expect(empty.prepare("PRAGMA user_version").get()).toEqual({ user_version: 14 });
       expect(schemaRows(empty)).toEqual(expected);
     } finally {
       empty.close();
@@ -232,7 +232,7 @@ describe("current canonical schema", () => {
     }
     const recovered = openDatabase(path);
     try {
-      expect(recovered.prepare("PRAGMA user_version").get()).toEqual({ user_version: 13 });
+      expect(recovered.prepare("PRAGMA user_version").get()).toEqual({ user_version: 14 });
     } finally {
       recovered.close();
     }

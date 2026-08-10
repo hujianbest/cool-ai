@@ -228,6 +228,9 @@ export const CURRENT_DATA_INVARIANTS = [
    WHERE d.reply_to_message_id IS NOT NULL
      AND NOT EXISTS(SELECT 1 FROM collaboration_messages m
                     WHERE (m.project_id,m.thread_id,m.id)=(d.project_id,d.thread_id,d.reply_to_message_id))`,
+  `SELECT f.project_id FROM thread_favorites f
+   WHERE NOT EXISTS(SELECT 1 FROM collaboration_threads t
+                    WHERE (t.project_id,t.id)=(f.project_id,f.thread_id))`,
   `SELECT h.project_id FROM input_history_entries h
    WHERE NOT EXISTS(SELECT 1 FROM collaboration_threads t
                     WHERE (t.project_id,t.id)=(h.project_id,h.thread_id))`,
