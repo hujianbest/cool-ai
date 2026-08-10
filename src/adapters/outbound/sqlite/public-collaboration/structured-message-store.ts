@@ -1,7 +1,10 @@
 import { randomUUID } from "node:crypto";
 import type { DatabaseSync } from "node:sqlite";
 
-import { CollaborationError } from "@/src/modules/public-collaboration";
+import {
+  CollaborationError,
+  type PendingProposalDto,
+} from "@/src/modules/public-collaboration";
 import { appendBatchTx } from "@/src/adapters/outbound/sqlite/public-collaboration/thread-fact-store";
 import { openDatabase } from "@/src/adapters/outbound/sqlite/connection";
 import {
@@ -574,6 +577,59 @@ export function readStructuredMessage(
       runId: message.runId,
       threadId: message.threadId,
     };
+  } finally {
+    database.close();
+  }
+}
+
+type PendingProposalRow = {
+  createdAt: string;
+  id: string;
+  messageId: string;
+  payloadJson: string;
+  runId: string | null;
+  threadId: string;
+};
+
+/**
+ * PublicCollaborationQueries.listPendingProposals 的实现（特性 029 T-01）。
+ * payload_json 经 proposalBlockSchema 约束（title/body 必填公开文本）；
+ * 非字符串字段降级为空串而非让列表失败（块行仍是事实源）。
+ */
+export function listPendingProposals(
+  databasePath: string,
+  projectId: string,
+): PendingProposalDto[] {
+  const database = openDatabase(databasePath);
+  try {
+    const rows = database.prepare(
+      `SELECT b.id,b.message_id AS messageId,b.thread_id AS threadId,b.run_id AS runId,
+              b.payload_json AS payloadJson,b.created_at AS createdAt
+       FROM structured_message_blocks b
+       JOIN structured_message_state_heads h
+         ON (h.project_id,h.thread_id,h.block_id)=(b.project_id,b.thread_id,b.id)
+       JOIN structured_message_state_revisions r
+         ON (r.project_id,r.thread_id,r.block_id,r.state_version)
+            =(h.project_id,h.thread_id,h.block_id,h.current_state_version)
+       WHERE b.project_id=? AND b.block_type='proposal'
+         AND json_extract(r.state_json,'$.status')='pending'
+       ORDER BY b.created_at DESC,b.id ASC`,
+    ).all(projectId) as unknown as PendingProposalRow[];
+    return rows.map((row) => {
+      const payload = JSON.parse(row.payloadJson) as {
+        body?: unknown;
+        title?: unknown;
+      };
+      return {
+        blockId: row.id,
+        body: typeof payload.body === "string" ? payload.body : "",
+        createdAt: row.createdAt,
+        messageId: row.messageId,
+        runId: row.runId,
+        threadId: row.threadId,
+        title: typeof payload.title === "string" ? payload.title : "",
+      };
+    });
   } finally {
     database.close();
   }

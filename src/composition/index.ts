@@ -4,6 +4,9 @@
  * Adapter 文件一个命名空间；本文件不含业务分支、校验或状态转换。
  */
 
+// governance
+export * as governanceApprovalCenterQueries from "@/src/adapters/outbound/sqlite/governance/approval-center-queries";
+
 // identity-capability
 export * as agentService from "@/src/adapters/outbound/sqlite/identity-capability/agent-service";
 export * as providerService from "@/src/adapters/outbound/sqlite/identity-capability/provider-service";

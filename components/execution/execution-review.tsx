@@ -673,14 +673,19 @@ export function ExecutionReview({
           <h4 ref={panelHeadingRef} tabIndex={-1}>时间线（{detail.counts.events}）</h4>
           <ResourceMessage empty="还没有时间线事件。" label="时间线" resource={events} />
           {events.items.length > 0 ? (
-            <ol aria-label="执行时间线" className="execution-timeline" role="log">
-              {events.items.map((event) => (
-                <li key={event.id}>
-                  <strong>{event.type}</strong>
-                  <span>#{event.sequence} · {event.actorType}</span>
-                </li>
-              ))}
-            </ol>
+            // role=log 与 ol 的 implicit list 角色互斥（显式角色覆盖后 li 失去
+            // list 父级，axe listitem serious）；log 活区语义上移到包裹 div，
+            // ol 恢复列表语义，两者兼得。
+            <div aria-label="执行时间线" role="log">
+              <ol className="execution-timeline">
+                {events.items.map((event) => (
+                  <li key={event.id}>
+                    <strong>{event.type}</strong>
+                    <span>#{event.sequence} · {event.actorType}</span>
+                  </li>
+                ))}
+              </ol>
+            </div>
           ) : null}
           <LoadMore
             error={events.items.length > 0 ? events.error : null}

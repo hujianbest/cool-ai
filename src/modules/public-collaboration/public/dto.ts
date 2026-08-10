@@ -86,3 +86,18 @@ export type PublicCollaborationPageCursor = {
   after: number;
   limit: number;
 };
+
+/**
+ * 待决内联决策 proposal 的跨域只读投影（特性 029 T-01 公开查询缝）。
+ * 只承载公开白名单字段：proposal payload 的 title/body 与定位 id；
+ * 状态语义由查询保证（仅 head 状态为 pending 的 proposal 入列）。
+ */
+export type PendingProposalDto = {
+  blockId: string;
+  body: string;
+  createdAt: string;
+  messageId: string;
+  runId: string | null;
+  threadId: string;
+  title: string;
+};

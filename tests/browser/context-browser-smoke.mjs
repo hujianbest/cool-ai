@@ -1579,7 +1579,7 @@ try {
   await page.keyboard.press("End");
   assert.equal(
     await contextDialog
-      .getByRole("tab", { name: "骨架运行" })
+      .getByRole("tab", { name: "审计" })
       .getAttribute("aria-selected"),
     "true",
   );

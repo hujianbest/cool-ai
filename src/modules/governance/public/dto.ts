@@ -1,5 +1,20 @@
 export type { ExecutionApprovalDto } from "@/src/shared/execution-contracts";
 
+export {
+  approvalCenterDecisionHintSchema,
+  approvalCenterDomainSchema,
+  approvalCenterItemDtoSchema,
+  approvalCenterItemKindSchema,
+  approvalCenterItemStatusSchema,
+  approvalCenterSourceRefSchema,
+  type ApprovalCenterDecisionHint,
+  type ApprovalCenterDomain,
+  type ApprovalCenterItemDto,
+  type ApprovalCenterItemKind,
+  type ApprovalCenterItemStatus,
+  type ApprovalCenterSourceRef,
+} from "@/src/shared/approval-center-contracts";
+
 import type { ExecutionApprovalDto } from "@/src/shared/execution-contracts";
 
 export type ApprovalStatus = ExecutionApprovalDto["status"];

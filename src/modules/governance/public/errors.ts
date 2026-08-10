@@ -12,3 +12,14 @@ export type ApprovalDecisionErrorCode =
   | "MANUAL_RECOVERY_REQUIRED"
   | "OPERATION_CONFLICT"
   | "OPERATION_IN_PROGRESS";
+
+/** Governance 读路径稳定错误：tuple 校验失败关闭，只暴露脱敏 code/message。 */
+export class GovernanceError extends Error {
+  readonly code: string;
+
+  constructor(code: string, message: string) {
+    super(message);
+    this.name = "GovernanceError";
+    this.code = code;
+  }
+}

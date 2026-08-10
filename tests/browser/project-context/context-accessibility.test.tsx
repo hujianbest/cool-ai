@@ -60,6 +60,9 @@ describe("context navigation accessibility", () => {
             nextBeforeSeq: null,
           });
         }
+        if (url.includes("/approvals/pending")) {
+          return Response.json({ approvals: [] });
+        }
         return Response.json({ members: [], projectVersion: 1 });
       }),
     );
@@ -75,6 +78,7 @@ describe("context navigation accessibility", () => {
     const memory = within(tabs).getByRole("tab", { name: "共享记忆" });
     const context = within(tabs).getByRole("tab", { name: "上下文预览" });
     const skeleton = within(tabs).getByRole("tab", { name: "骨架运行" });
+    const approvals = within(tabs).getByRole("tab", { name: "审批" });
     const audit = within(tabs).getByRole("tab", { name: "审计" });
     expect(memory).toHaveAttribute("aria-selected", "true");
     memory.focus();
@@ -85,6 +89,10 @@ describe("context navigation accessibility", () => {
     expect(audit).toHaveFocus();
     expect(audit).toHaveAttribute("aria-selected", "true");
     expect(await screen.findByText("尚无审计事件。")).toBeInTheDocument();
+    await user.keyboard("{ArrowLeft}");
+    expect(approvals).toHaveFocus();
+    expect(approvals).toHaveAttribute("aria-selected", "true");
+    expect(await screen.findByText("没有待裁决的请求。")).toBeInTheDocument();
     await user.keyboard("{ArrowLeft}");
     expect(skeleton).toHaveFocus();
     expect(screen.getByText("骨架内容")).toBeInTheDocument();

@@ -6,6 +6,8 @@ export type CurrentAdvanceFixtureInput = {
   additionalAgents?: Array<{ id: string; prompt: string }>;
   agentId: string;
   agentPrompt: string;
+  /** 同一数据库重复播种时区分硬编码 fact/message id 的前缀（默认 "fixture"）。 */
+  idPrefix?: string;
   missionId: string;
   now: string;
   ownerMessage: string | null;
@@ -108,6 +110,7 @@ export function seedCurrentAdvanceFixture(
     operationId: input.threadCreateOperationId,
     title: "Advance thread",
   }).body.thread.id;
+  const idPrefix = input.idPrefix ?? "fixture";
 
   const runDatabase = openDatabase(databasePath);
   runDatabase.exec("BEGIN IMMEDIATE");
@@ -145,10 +148,11 @@ export function seedCurrentAdvanceFixture(
          actor_id,run_id,message_id,run_event_id,policy_revision_id,payload_json,
          created_at
        ) VALUES (
-         'fixture-run-link',?,?,?,?,'run_linked','system',NULL,?,NULL,NULL,NULL,
+         ?,?,?,?,?,'run_linked','system',NULL,?,NULL,NULL,NULL,
          json_object('runId',?),?
        )`,
     ).run(
+      `${idPrefix}-run-link`,
       input.projectId,
       threadId,
       thread.sequence,
@@ -164,9 +168,10 @@ export function seedCurrentAdvanceFixture(
            author_display_name,content,mention_agent_id,mention_display_name,
            sequence,consumed_at,created_at
          ) VALUES (
-           'owner-message',?,?,?,'owner',NULL,'Owner',?,NULL,NULL,1,NULL,?
+           ?,?,?,?,'owner',NULL,'Owner',?,NULL,NULL,1,NULL,?
          )`,
       ).run(
+        `${idPrefix}-owner-message`,
         input.projectId,
         threadId,
         input.runId,
@@ -179,15 +184,18 @@ export function seedCurrentAdvanceFixture(
            actor_id,run_id,message_id,run_event_id,policy_revision_id,payload_json,
            created_at
          ) VALUES (
-           'fixture-owner-message',?,?,?,?,'owner_message','owner',NULL,?,
-           'owner-message',NULL,NULL,json_object('messageId','owner-message'),?
+           ?,?,?,?,?,'owner_message','owner',NULL,?,
+           ?,NULL,NULL,json_object('messageId',?),?
          )`,
       ).run(
+        `${idPrefix}-owner-message-fact`,
         input.projectId,
         threadId,
         thread.sequence + 1,
         activity.sequence + 1,
         input.runId,
+        `${idPrefix}-owner-message`,
+        `${idPrefix}-owner-message`,
         input.now,
       );
     }

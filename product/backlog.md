@@ -59,7 +59,7 @@ Capability ID 是稳定治理标识；owner 是唯一逻辑子系统，不等于
 - `CAP-EXE-04` Recovery Operations — owner: Safe Execution — 状态: 规划中 — 建立切片: S-44
 - `CAP-EXE-05` Public Execution Events — owner: Safe Execution — 状态: 已交付核心（execution_events 15 写入点同事务白名单 outbox）— 证据/建立切片: S-23 AUD-MVP [`progress.md`](../features/028-audit-projection-mvp/progress.md)
 - `CAP-GOV-01` Safe Execution Approval & Operation — owner: Governance — 状态: 部分可用（只覆盖 Safe Execution 冻结 execution/staged-merge 路径，不是通用 Governance）— 证据/建立切片: S-5；`src/adapters/outbound/sqlite/safe-execution/execution-approval-service.ts`、`tests/modules/safe-execution/execution-approvals.test.ts`
-- `CAP-GOV-02` Unified Governance — owner: Governance — 状态: 规划中 — 建立切片: S-24
+- `CAP-GOV-02` Unified Governance — owner: Governance — 状态: 已交付核心（执行+内联决策两域聚合/裁决分派/失效呈现）— 证据/建立切片: S-24 [`progress.md`](../features/029-unified-approval-center/progress.md)
 - `CAP-GOV-03` Public Governance Events — owner: Governance — 状态: 规划中 — 建立路径: S-23 的 Governance 审计纵切；该片复用已交付 `CAP-OPS-01/02`，以 owner 可查询脱敏 Approval 事件并精确导航为独立结果
 
 ### Review、Knowledge、Runtime 与 Projection
@@ -133,7 +133,7 @@ S-9～S-12 的 `依赖: S-*` 是原历史文字，只说明当时切片记录；
   - source-owner 扩展纵切：Project & Workspace、Public Collaboration、Mission & Work、Governance、Runtime 分别建立独立 `AUD-PWS`、`AUD-COL`、`AUD-MWK`、`AUD-GOV`、`AUD-RUN` 草案。每片 actor 均为 owner，主要架构单元是对应 source owner 的领域 Capability，分别建立 `CAP-PWS-03`、`CAP-COL-07`、`CAP-MWK-05`、`CAP-GOV-03`、`CAP-RUN-07`；每片必须复用已 ship 的 `CAP-OPS-01/02`，以“owner 能查询该领域脱敏事件并精确导航”为独立可演示结果，各 3–8 票，禁止交付不可观察 producer 或合并多个 source owner。
   - 最终组合纵切 `AUD-UI`：actor 是 owner；独立用户结果是“owner 能在统一审计浏览器筛选所有已交付来源并精确导航”。主领域 Capability: 不适用（不新增领域写事实）；主要架构单元: 入站 UI Adapter；消费 Capability: 已 ship 的 `CAP-EXE-05`、各 source event Capability、`CAP-OPS-01/02`；只做查询组合、状态与导航，各 producer 缺失时不进入该发布片；票据目标: 3–8。
   - 编号规则: `AUD-*` 是拆分草案标识；进入 `to-spec/implement` 前为每个实现片分配新的未占用 `S-*`，S-23 保留为发布追踪别名，不复用为多 owner 实现片。
-- [ ] S-24 跨域统一审批中心（CI-4.3） — 主子系统: Governance；主 Capability: `CAP-GOV-02`；票据: 未创建；演示判据: owner 能在单一入口查看执行、交棒和其他高风险请求的来源、影响与失效状态，批准或拒绝后原流程准确续接且过期请求失败关闭；约束: 工作区=显示精确目标，verified-handle=文件动作必需，sandbox=执行审批不解除隔离，凭据=请求内容脱敏，审批=本片核心且不可旁路，独立复核=交付必需，审计=裁决不可变；不复制 Clowder 品牌、源码或资产
+- [x] S-24 跨域统一审批中心（CI-4.3） — 主子系统: Governance；主 Capability: `CAP-GOV-02`；票据: [`features/029.../tickets.md`](../features/029-unified-approval-center/tickets.md)；Ship: 2026-08-10（零 schema/零新写路由：listPendingApprovals 跨域聚合+GET approvals/pending；审批 tab 分派既有裁决路由；续接端到端 7 场景零断裂；smoke:execution 69 断言 / 5 axe 状态 0 违规，顺手修复执行时间线 role=log 列表语义既有缺陷；全量绿、tsc/build 通过）；演示判据: owner 能在单一入口查看执行、内联决策等高风险请求的来源、影响与失效状态，批准或拒绝后原流程准确续接且过期请求失败关闭（"交棒"专门审批后续切片接入本中心）；约束: 工作区=显示精确目标，verified-handle=文件动作必需，sandbox=执行审批不解除隔离，凭据=请求内容脱敏，审批=本片核心且不可旁路，独立复核=交付必需（review 豁免记录于 progress），审计=裁决不可变；不复制 Clowder 品牌、源码或资产
   - 准入: 已交付前置: `CAP-EXE-01`、`CAP-COL-01`；`CAP-GOV-01` 只提供 Safe Execution scoped 现状证据，不是本片的通用 Governance 前置；阻塞: `CAP-OPS-01`/`CAP-OPS-02` 须由 S-23 拆分片建立；待验证: `CAP-COL-03` 高风险卡片来源（S-13 未 ship）；本片建立: `CAP-GOV-02` 的跨域 Approval 查询、裁决与来源 Workflow 续接（规划中）。
 - [ ] S-42 受控工作区编辑与 Git 合入（CI-3.5）【高风险安全切片】 — 主子系统: Safe Execution；主 Capability: `CAP-EXE-02`；票据: 未创建；演示判据: owner 能从只读预览发起编辑，在 sandbox 查看 diff、处理 stale/冲突并经审批安全合入 canonical workspace，越界或不可逆 Git 动作失败关闭；约束: 工作区=仅绑定范围，verified-handle=所有路径必需，sandbox=强制，凭据=禁止读取/写入秘密，审批=合入与破坏性 Git 必需，独立复核=结果合入前必需，审计=StagedChange/MergeJournal 完整；不复制 Clowder 品牌、源码或资产
   - 准入: 已交付前置: `CAP-PWS-01`、`CAP-EXE-01`、`CAP-REV-01`（已交付）与 `CAP-GOV-01`（仅同一冻结 Safe Execution/staged-merge 路径部分可用）；阻塞: `CAP-PWS-02`（S-22）、`CAP-OPS-01`/`CAP-OPS-02`（S-23 拆分片）规划中；本片建立: `CAP-EXE-02` 的受控编辑、Git stale/conflict 和批准后合入（规划中）。

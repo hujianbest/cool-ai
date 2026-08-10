@@ -43,8 +43,15 @@ const desktopScreenshot = join(evidenceDirectory, "demo-execution-desktop.png");
 const narrowScreenshot = join(evidenceDirectory, "demo-execution-narrow.png");
 const auditDesktopScreenshot = join(auditEvidenceDirectory, "demo-audit-desktop.png");
 const auditNarrowScreenshot = join(auditEvidenceDirectory, "demo-audit-narrow.png");
+const approvalCenterEvidenceDirectory = resolve("features", "029-unified-approval-center", "evidence");
+const approvalCenterDesktopScreenshot = join(approvalCenterEvidenceDirectory, "approval-center-desktop-light.png");
+const approvalCenterLapsedScreenshot = join(approvalCenterEvidenceDirectory, "approval-center-lapsed-desktop-light.png");
+const approvalCenterLapsedDarkScreenshot = join(approvalCenterEvidenceDirectory, "approval-center-lapsed-desktop-dark.png");
+const approvalCenterNarrowScreenshot = join(approvalCenterEvidenceDirectory, "approval-center-narrow-light.png");
+const approvalCenterResultsPath = join(approvalCenterEvidenceDirectory, "approval-center-acceptance-results.json");
 mkdirSync(evidenceDirectory, { recursive: true });
 mkdirSync(auditEvidenceDirectory, { recursive: true });
+mkdirSync(approvalCenterEvidenceDirectory, { recursive: true });
 
 const browserExecutable = [
   process.env.PLAYWRIGHT_CHROMIUM_EXECUTABLE,
@@ -60,6 +67,7 @@ let alphaAgentId = "";
 let betaAgentId = "";
 let collaborationStep = 0;
 let executionPhase = "isolated";
+let approvalCenterProposalSeeded = false;
 let providerAuthorizationCount = 0;
 let maxConcurrentProviderCalls = 0;
 let concurrentProviderCalls = 0;
@@ -107,9 +115,14 @@ function executionAction(taskTitle, step) {
     };
   }
   if (step === 0) {
+    // lapsed 造数必须写全新路径：沙盒快照会带上 canonical 里已合入的 beta.txt，
+    // 既有文件 + expectedHash=null 在 verified 写语义下失败关闭（-conflict/unverifiable），
+    // 与 restart 无关；各阶段 step 0 一贯只写新文件。
     const path = executionPhase === "conflict"
       ? "src/conflict.txt"
-      : alpha ? "src/alpha.txt" : "src/beta.txt";
+      : executionPhase === "lapsed"
+        ? "src/lapsed.txt"
+        : alpha ? "src/alpha.txt" : "src/beta.txt";
     const content = `${alpha ? "alpha" : "beta"} isolated edit\n`;
     return {
       action: {
@@ -155,7 +168,20 @@ function executionAction(taskTitle, step) {
 
 function collaborationAction(step) {
   if (step === 0) {
+    // 029 T-04：首个规划轮顺带 emit 一个待决 proposal 块（真实公共协作缝持久化），
+    // 作为审批中心内联决策域的待决造数；后续规划轮不再重复 emit。
+    const approvalCenterBlocks = approvalCenterProposalSeeded ? undefined : [{
+      actions: ["accept", "reject"],
+      blockRevision: 1,
+      blockSchemaVersion: 1,
+      blockType: "proposal",
+      body: "Decide the unified approval center end to end.",
+      logicalBlockId: "approval-center-proposal",
+      title: "Approval Center Proposal",
+    }];
+    approvalCenterProposalSeeded = true;
     return {
+      ...(approvalCenterBlocks ? { blocks: approvalCenterBlocks } : {}),
       claim: { clientKey: "alpha", source: "proposed" },
       disposition: {
         reason: "Beta owns the second independent execution task.",
@@ -787,6 +813,7 @@ let page;
 let desktopFacingText = "";
 let narrowFacingText = "";
 let narrowAuditFacingText = "";
+let approvalCenterFacingText = "";
 
 async function axeScan(state) {
   const scan = await new AxeBuilder({ page }).analyze();
@@ -810,6 +837,51 @@ async function axeScan(state) {
         .join(",")
     }]`,
   );
+  assert.deepEqual(blocking, [], `${state}: axe critical/serious must be 0`);
+  assert.deepEqual(contrast, [], `${state}: WCAG AA color contrast must pass`);
+}
+
+// ---- 029 T-04：统一审批中心验收计数与 axe 记录（结果落 evidence results.json） ----
+const approvalCenterAcceptance = { assertions: 0, axe: [], matrix: [] };
+
+function acOk(value, message) {
+  approvalCenterAcceptance.assertions += 1;
+  assert.ok(value, message);
+}
+
+function acEqual(actual, expected, message) {
+  approvalCenterAcceptance.assertions += 1;
+  assert.equal(actual, expected, message);
+}
+
+function acDeepEqual(actual, expected, message) {
+  approvalCenterAcceptance.assertions += 1;
+  assert.deepEqual(actual, expected, message);
+}
+
+async function axeApprovalCenter(state) {
+  const scan = await new AxeBuilder({ page }).analyze();
+  const blocking = scan.violations
+    .filter((violation) => violation.impact === "critical" || violation.impact === "serious")
+    .map((violation) => ({
+      id: violation.id,
+      impact: violation.impact,
+      targets: violation.nodes.map((node) => node.target),
+    }));
+  const contrast = scan.violations
+    .filter((violation) => violation.id === "color-contrast")
+    .flatMap((violation) => violation.nodes.map((node) => node.target));
+  approvalCenterAcceptance.axe.push({
+    blocking,
+    contrast,
+    state,
+    violationCount: scan.violations.length,
+    violations: scan.violations.map((violation) => ({
+      id: violation.id,
+      impact: violation.impact ?? "unknown",
+      targets: violation.nodes.flatMap((node) => node.target),
+    })),
+  });
   assert.deepEqual(blocking, [], `${state}: axe critical/serious must be 0`);
   assert.deepEqual(contrast, [], `${state}: WCAG AA color contrast must pass`);
 }
@@ -1054,40 +1126,283 @@ try {
       diagnosticDatabase.close();
     }
   }
-  const approvalResult = await page.evaluate(async (projectId) => {
-    const executions = (await (
-      await fetch(`/api/projects/${projectId}/executions`)
-    ).json()).executions;
-    const execution = executions.find(({ status }) => status === "waiting_approval");
-    const approvals = await (
-      await fetch(`/api/executions/${execution.id}/approvals?limit=10`)
-    ).json();
-    const approval = approvals.items.find(({ kind, status }) => (
-      kind === "command" && status === "pending"
-    ));
-    const response = await fetch(
-      `/api/executions/${execution.id}/approvals/${approval.id}`,
-      {
-        body: JSON.stringify({
-          action: "approve",
-          expectedVersion: execution.version,
-          operationId: crypto.randomUUID(),
-        }),
-        headers: { "content-type": "application/json" },
-        method: "POST",
-      },
-    );
+  // ---- APPROVAL CENTER ACCEPTANCE (feature 029 T-04, desktop light key path) ----
+  // 真实造数已就位：Beta 一次性命令审批待决（执行域）+ 首个规划轮 proposal 块待决
+  // （内联决策域，由 provider 在 collaborationAction step 0 emit）。本段经真实浏览器
+  // 在「审批」tab 完成呈现断言与批准/拒绝裁决，替代原裸 API 批准步骤（裁决仍落既
+  // 有域路由——UI 分派零新写路径）。
+  const acBaseline = await page.evaluate(async (projectId) => {
+    const response = await fetch(`/api/projects/${projectId}/approvals/pending`, { cache: "no-store" });
     return { body: await response.json(), status: response.status };
   }, context.projectId);
-  assert.equal(approvalResult.status, 200, JSON.stringify(approvalResult.body));
+  acEqual(acBaseline.status, 200, `center API must respond 200: ${JSON.stringify(acBaseline.body)}`);
+  acEqual(acBaseline.body.approvals.length, 2, "center must list the execution approval and the proposal");
+  const [acFirst, acSecond] = acBaseline.body.approvals;
+  acEqual(acFirst.domain, "execution", "newest item must be the execution approval");
+  acEqual(acFirst.kind, "command", "execution item must be the one-shot command approval");
+  acEqual(acFirst.status, "pending", "execution approval must be pending");
+  acEqual(acFirst.decisionHint, null, "a pending approval must stay decidable");
+  acEqual(
+    acFirst.sourceRef.executionId,
+    betaExecution.executionId,
+    "the approval must reference the Beta execution",
+  );
+  acOk(
+    typeof acFirst.title === "string" && acFirst.title.endsWith("--help"),
+    "command title must summarize executable and args",
+  );
+  acEqual(acSecond.domain, "inline_decision", "the second item must be the inline decision proposal");
+  acEqual(acSecond.kind, "proposal", "the inline item must be a proposal");
+  acEqual(acSecond.title, "Approval Center Proposal", "proposal title must come from the block payload");
+  const acProposalRef = {
+    blockId: acSecond.approvalId,
+    messageId: acSecond.sourceRef.messageId,
+    runId: acSecond.sourceRef.runId,
+    threadId: acSecond.sourceRef.threadId,
+  };
+  const acExecutionApprovalId = acFirst.approvalId;
+  const acCenterApiText = JSON.stringify(acBaseline.body);
+  for (const value of [
+    apiKey,
+    masterKey,
+    rawProviderMarker,
+    chainOfThoughtMarker,
+    environmentMarker,
+    temporaryDirectory,
+    "Authorization:",
+  ]) {
+    acOk(!acCenterApiText.includes(value), "center API payload must not leak forbidden markers");
+  }
+
+  const acPanel = page.locator(".cockpit-context");
+  await axeApprovalCenter("desktop light memory tab baseline before approval center");
+  const acMemoryTab = acPanel.getByRole("tab", { name: "共享记忆" });
+  await acMemoryTab.focus();
+  await page.keyboard.press("ArrowRight");
+  await page.keyboard.press("ArrowRight");
+  await page.keyboard.press("ArrowRight");
+  const acTab = acPanel.getByRole("tab", { name: "审批" });
+  acEqual(await acTab.getAttribute("aria-selected"), "true", "ArrowRight x3 must select the approval tab");
+  acOk(
+    await acTab.evaluate((element) => document.activeElement === element),
+    "tablist keyboard selection must focus the approval tab",
+  );
+  const acList = acPanel.getByRole("list", { name: "待裁决请求" });
+  await acList.waitFor();
+  const acItems = acList.locator("> li");
+  acEqual(await acItems.count(), 2, "approval center must render both pending items");
+  const acExecutionItem = acItems.nth(0);
+  const acProposalItem = acItems.nth(1);
+  acOk(
+    ((await acExecutionItem.locator("h3").textContent()) ?? "").includes("--help"),
+    "execution item title must render the command summary",
+  );
+  acEqual(
+    await acExecutionItem.getByText("执行", { exact: true }).count(),
+    1,
+    "execution item must carry the execution domain badge",
+  );
+  acEqual(
+    await acExecutionItem.getByText("待裁决", { exact: true }).count(),
+    1,
+    "execution item must carry the pending status badge",
+  );
+  acEqual(
+    await acExecutionItem.getByText("命令", { exact: true }).count(),
+    1,
+    "execution item must carry the command kind copy",
+  );
+  acOk(
+    ((await acExecutionItem.textContent()) ?? "").includes("Exercise one exact one-shot approval."),
+    "execution item must render the public impact summary",
+  );
+  acEqual(
+    await acProposalItem.locator("h3").textContent(),
+    "Approval Center Proposal",
+    "proposal item must render the block title",
+  );
+  acEqual(
+    await acProposalItem.getByText("内联决策", { exact: true }).count(),
+    1,
+    "proposal item must carry the inline decision domain badge",
+  );
+  acOk(
+    ((await acProposalItem.textContent()) ?? "").includes("Decide the unified approval center end to end."),
+    "proposal item must render the block body summary",
+  );
+  const acProposalLink = acProposalItem.getByRole("link", { name: "查看来源消息" });
+  const acProposalHref = (await acProposalLink.getAttribute("href")) ?? "";
+  acOk(
+    acProposalHref.includes(`thread=${acProposalRef.threadId}`)
+      && acProposalHref.includes(`run=${acProposalRef.runId}`),
+    "proposal source link must carry the canonical thread/run identity",
+  );
+  const acProposalLinkBox = await acProposalLink.boundingBox();
+  acOk(
+    acProposalLinkBox && acProposalLinkBox.height >= 44,
+    "the source link must be at least 44px tall",
+  );
+
+  // 来源定位（鼠标路径）：焦点真实落到执行卡标题。先钉住执行卡渲染，
+  // 消除 context 面板与运行详情列表的加载竞态。
+  await page.getByRole("region", { name: "Implement Beta file" }).waitFor();
+  await acExecutionItem.getByRole("button", { name: "定位来源执行" }).click();
+  await acPanel.getByText("已定位到来源执行。", { exact: true }).waitFor();
+  acEqual(
+    await page.evaluate(() => document.activeElement?.id ?? ""),
+    `execution-${betaExecution.executionId}-title`,
+    "locate source must move focus to the rendered execution card title",
+  );
+
+  acDeepEqual(
+    await acPanel.locator(".approval-center-panel").getByRole("button").evaluateAll((buttons) =>
+      buttons
+        .map((button) => {
+          const rect = button.getBoundingClientRect();
+          return {
+            height: rect.height,
+            label: button.getAttribute("aria-label") ?? button.textContent?.trim() ?? "",
+            width: rect.width,
+          };
+        })
+        .filter(({ height, width }) => height < 44 || width < 44),
+    ),
+    [],
+    "approval center buttons must be at least 44x44px",
+  );
+  await axeApprovalCenter("desktop light approval center pending list");
+  approvalCenterAcceptance.matrix.push("desktop-light");
+  await page.screenshot({ fullPage: true, path: approvalCenterDesktopScreenshot });
+
+  // 键盘裁决（批准）：tab → 刷新列表 → 批准 → Enter。
+  await acTab.focus();
+  await page.keyboard.press("Tab");
+  const acRefresh = acPanel.getByRole("button", { name: "刷新列表" });
+  acOk(
+    await acRefresh.evaluate((element) => document.activeElement === element),
+    "Tab from the approval tab must reach the refresh button",
+  );
+  await page.keyboard.press("Tab");
+  const acApprove = acExecutionItem.getByRole("button", { name: /^批准 .+--help$/u });
+  acOk(
+    await acApprove.evaluate((element) => document.activeElement === element),
+    "the second Tab must reach the execution approve button",
+  );
+  acOk(
+    await acApprove.evaluate(
+      (element) =>
+        element.matches(":focus-visible")
+        && getComputedStyle(element).boxShadow !== "none",
+    ),
+    "the keyboard-focused approve button must show a visible focus ring",
+  );
+  await page.keyboard.press("Enter");
+  await acPanel.getByText("已批准，列表已刷新。", { exact: true }).waitFor();
+  // 通知先于静默重取发出，钉住列表收缩后再断言，消除 notice/refresh 竞态。
+  await page.waitForFunction(
+    () => document.querySelectorAll(".approval-center-list > li").length === 1,
+  );
+  acEqual(await acItems.count(), 1, "the approved execution approval must leave the center list");
+  acEqual(
+    await acPanel.getByText(/--help/u).count(),
+    0,
+    "the approved item must not render anymore",
+  );
+
+  // 键盘裁决（拒绝）：刷新列表 → 批准 → 拒绝 → Enter。
+  await acTab.focus();
+  await page.keyboard.press("Tab");
+  await page.keyboard.press("Tab");
+  await page.keyboard.press("Tab");
+  const acReject = acPanel.getByRole("button", { name: "拒绝 Approval Center Proposal" });
+  acOk(
+    await acReject.evaluate((element) => document.activeElement === element),
+    "Tab x3 must reach the proposal reject button",
+  );
+  await page.keyboard.press("Enter");
+  await acPanel.getByText("已拒绝，列表已刷新。", { exact: true }).waitFor();
+  await acPanel.getByText("没有待裁决的请求。", { exact: true }).waitFor();
+  acEqual(await acList.count(), 0, "a fully decided center must collapse to the empty state");
+
+  const acDecisionTruth = await page.evaluate(
+    async ({ approvalId, executionId, projectId, ref }) => {
+      const center = await (
+        await fetch(`/api/projects/${projectId}/approvals/pending`, { cache: "no-store" })
+      ).json();
+      const block = await (
+        await fetch(
+          `/api/projects/${projectId}/threads/${ref.threadId}/runs/${ref.runId}`
+            + `/messages/${ref.messageId}/blocks/${ref.blockId}`,
+          { cache: "no-store" },
+        )
+      ).json();
+      const approvals = await (
+        await fetch(`/api/executions/${executionId}/approvals?limit=10`, { cache: "no-store" })
+      ).json();
+      return {
+        blockState: block.block.state,
+        centerCount: center.approvals.length,
+        executionApproval: approvals.items.find((item) => item.id === approvalId),
+      };
+    },
+    {
+      approvalId: acExecutionApprovalId,
+      executionId: betaExecution.executionId,
+      projectId: context.projectId,
+      ref: acProposalRef,
+    },
+  );
+  acEqual(acDecisionTruth.centerCount, 0, "center API must be empty after both decisions");
+  acEqual(
+    acDecisionTruth.executionApproval?.status,
+    "approved",
+    "the domain route must record the approval verdict",
+  );
+  acEqual(acDecisionTruth.blockState?.status, "rejected", "the proposal block must settle rejected");
+  acEqual(acDecisionTruth.blockState?.stateVersion, 2, "the proposal block must advance one state version");
+  console.log(
+    "APPROVAL CENTER DECISION PASS: keyboard approve/reject dispatched to domain routes, both items delisted",
+  );
+
   await page.reload({ waitUntil: "networkidle" });
   await openRunTab(page);
 
   await advanceUntilStatus(page, context.projectId, "staged", 2);
+  // 029 T-04 续跑证据：中心批准的命令在 advance 中被消费，Beta 推进到 staged。
+  const acContinuation = await page.evaluate(
+    async ({ approvalId, executionId }) => {
+      const detail = await (
+        await fetch(`/api/executions/${executionId}`, { cache: "no-store" })
+      ).json();
+      const approvals = await (
+        await fetch(`/api/executions/${executionId}/approvals?limit=10`, { cache: "no-store" })
+      ).json();
+      return {
+        approvalStatus: approvals.items.find((item) => item.id === approvalId)?.status,
+        executionStatus: detail.execution.status,
+      };
+    },
+    { approvalId: acExecutionApprovalId, executionId: betaExecution.executionId },
+  );
+  acEqual(
+    acContinuation.approvalStatus,
+    "consumed",
+    "the approved command must be consumed by the execution flow",
+  );
+  acEqual(
+    acContinuation.executionStatus,
+    "staged",
+    "the Beta execution must advance to staged after the center decision",
+  );
   assert.equal(existsSync(join(workspaceDirectory, "src", "alpha.txt")), false);
   assert.equal(existsSync(join(workspaceDirectory, "src", "beta.txt")), false);
   await page.reload({ waitUntil: "networkidle" });
   await openRunTab(page);
+  // 029 T-04 运行详情证据：执行卡状态从「等待审批」推进为「变更待审阅」。
+  await page
+    .getByRole("region", { name: "Implement Beta file" })
+    .getByText("变更待审阅", { exact: true })
+    .waitFor();
   const mergeResult = await page.evaluate(async (executionId) => {
     const detail = await (
       await fetch(`/api/executions/${executionId}`, { cache: "no-store" })
@@ -1299,6 +1614,197 @@ process.exit(2);`,
   await openRunTab(page);
   await page.getByText("已过期").waitFor();
 
+  // ---- APPROVAL CENTER ACCEPTANCE (feature 029 T-04, lapsed presentation) ----
+  // 真实失效造数：新规划轮启动一个 Beta 执行至 waiting_approval（一次性命令审批
+  // 待决），公开路由改使命目标使 frozen input 漂移，advance 触发域内失败关闭——
+  // 执行 stale、开放审批 expired（与 stop/stale 路径共用的同一写缝），零手改 DB。
+  collaborationStep = 0;
+  executionPhase = "lapsed";
+  modelSteps.clear();
+  const lapsedRunId = await planExecutableTasks(
+    page,
+    context.projectId,
+    context.threadId,
+    alpha.id,
+  );
+  const lapsedStarts = await startPlannedExecutions(page, {
+    projectId: context.projectId,
+    runId: lapsedRunId,
+    threadId: context.threadId,
+  }, 1);
+  assert.equal(lapsedStarts.length, 1);
+  assert.equal(lapsedStarts[0].status, 201, JSON.stringify(lapsedStarts[0].body));
+  const lapsedExecutionId = lapsedStarts[0].body.execution.id;
+  const lapsedDeadline = Date.now() + 90_000;
+  let lapsedDetail;
+  while (Date.now() < lapsedDeadline) {
+    lapsedDetail = await page.evaluate(async (executionId) => (
+      await (await fetch(`/api/executions/${executionId}`, { cache: "no-store" })).json()
+    ), lapsedExecutionId);
+    if (lapsedDetail.execution.status === "waiting_approval") break;
+    assert.ok(
+      ["queued", "running"].includes(lapsedDetail.execution.status),
+      `lapsed-fixture execution must stay advanceable: ${JSON.stringify(lapsedDetail.execution)}`,
+    );
+    const lapsedAdvance = await page.evaluate(
+      async ({ executionId, version }) => {
+        const response = await fetch(`/api/executions/${executionId}/advance`, {
+          body: JSON.stringify({
+            expectedVersion: version,
+            operationId: crypto.randomUUID(),
+          }),
+          headers: { "content-type": "application/json" },
+          method: "POST",
+        });
+        return { body: await response.json(), status: response.status };
+      },
+      { executionId: lapsedExecutionId, version: lapsedDetail.execution.version },
+    );
+    assert.ok(
+      (lapsedAdvance.status >= 200 && lapsedAdvance.status < 300) || lapsedAdvance.status === 409,
+      `lapsed-fixture advance failed: ${JSON.stringify(lapsedAdvance.body)}`,
+    );
+    await new Promise((done) => setTimeout(done, 200));
+  }
+  assert.equal(
+    lapsedDetail?.execution.status,
+    "waiting_approval",
+    "lapsed fixture must reach waiting_approval",
+  );
+
+  const lapsedOutcome = await page.evaluate(
+    async ({ executionId, projectId }) => {
+      const missionState = await (
+        await fetch(`/api/projects/${projectId}/mission`, { cache: "no-store" })
+      ).json();
+      const mission = missionState.mission;
+      const changed = await fetch(`/api/missions/${mission.id}`, {
+        body: JSON.stringify({
+          expectedVersion: mission.version,
+          goal: `${mission.goal} (approval expires)`,
+          title: mission.title,
+        }),
+        headers: { "content-type": "application/json" },
+        method: "PATCH",
+      });
+      const before = await (
+        await fetch(`/api/executions/${executionId}`, { cache: "no-store" })
+      ).json();
+      const advance = await fetch(`/api/executions/${executionId}/advance`, {
+        body: JSON.stringify({
+          expectedVersion: before.execution.version,
+          operationId: crypto.randomUUID(),
+        }),
+        headers: { "content-type": "application/json" },
+        method: "POST",
+      });
+      const advanceBody = await advance.json();
+      const after = await (
+        await fetch(`/api/executions/${executionId}`, { cache: "no-store" })
+      ).json();
+      const approvals = await (
+        await fetch(`/api/executions/${executionId}/approvals?limit=10`, { cache: "no-store" })
+      ).json();
+      return {
+        advanceBody,
+        advanceStatus: advance.status,
+        approvalStatus: approvals.items.find((item) => item.kind === "command")?.status,
+        changedStatus: changed.status,
+        executionStatus: after.execution.status,
+      };
+    },
+    { executionId: lapsedExecutionId, projectId: context.projectId },
+  );
+  acEqual(lapsedOutcome.changedStatus, 200, "the mission goal change must succeed");
+  acEqual(lapsedOutcome.advanceStatus, 409, "advancing a stale execution must fail closed");
+  acEqual(
+    lapsedOutcome.advanceBody?.error?.code,
+    "STALE_EXECUTION",
+    "the stale advance must carry the sanitized code",
+  );
+  acEqual(lapsedOutcome.executionStatus, "stale", "the execution must settle stale");
+  acEqual(
+    lapsedOutcome.approvalStatus,
+    "expired",
+    "the open approval must expire with the stale transition",
+  );
+
+  const acLapsed = await page.evaluate(async (projectId) => {
+    const response = await fetch(`/api/projects/${projectId}/approvals/pending`, { cache: "no-store" });
+    return { body: await response.json(), status: response.status };
+  }, context.projectId);
+  acEqual(acLapsed.status, 200, `center API must respond 200: ${JSON.stringify(acLapsed.body)}`);
+  acEqual(acLapsed.body.approvals.length, 1, "the center must list exactly the lapsed approval");
+  acEqual(acLapsed.body.approvals[0].status, "expired", "the lapsed item must map the expired status");
+  acEqual(
+    acLapsed.body.approvals[0].decisionHint,
+    "expired",
+    "the lapsed item must carry the expired decision hint",
+  );
+  acEqual(
+    acLapsed.body.approvals[0].sourceRef.executionId,
+    lapsedExecutionId,
+    "the lapsed item must reference the stale execution",
+  );
+
+  await page.reload({ waitUntil: "networkidle" });
+  await openRunTab(page);
+  const acLapsedPanel = page.locator(".cockpit-context");
+  const acLapsedTab = acLapsedPanel.getByRole("tab", { name: "审批" });
+  await acLapsedTab.click();
+  const acLapsedList = acLapsedPanel.getByRole("list", { name: "待裁决请求" });
+  await acLapsedList.waitFor();
+  const acLapsedItem = acLapsedList.locator("> li").nth(0);
+  acEqual(await acLapsedList.locator("> li").count(), 1, "the center must render exactly the lapsed item");
+  acEqual(
+    await acLapsedItem.getByText("已过期", { exact: true }).count(),
+    1,
+    "the lapsed status badge must render",
+  );
+  await acLapsedItem.getByText("无法裁决：请求已过期。", { exact: true }).waitFor();
+  acEqual(
+    await acLapsedItem.getByRole("button", { name: /^批准 /u }).count(),
+    0,
+    "the lapsed item must not render an approve button",
+  );
+  acEqual(
+    await acLapsedItem.getByRole("button", { name: /^拒绝 /u }).count(),
+    0,
+    "the lapsed item must not render a reject button",
+  );
+  const acLapsedLocate = acLapsedItem.getByRole("button", { name: "定位来源执行" });
+  const acLapsedLocateBox = await acLapsedLocate.boundingBox();
+  acOk(
+    acLapsedLocateBox && acLapsedLocateBox.height >= 44 && acLapsedLocateBox.width >= 44,
+    "the lapsed locate button must be at least 44x44",
+  );
+  const acLapsedTabBox = await acLapsedTab.boundingBox();
+  acOk(
+    acLapsedTabBox && acLapsedTabBox.height >= 44 && acLapsedTabBox.width >= 44,
+    "the approval tab must be at least 44x44",
+  );
+  await axeApprovalCenter("desktop light approval center lapsed item");
+  await page.screenshot({ fullPage: true, path: approvalCenterLapsedScreenshot });
+  approvalCenterFacingText = await page.locator("html").innerText();
+
+  // 暗色桌面关键路径复核：失效呈现与 axe。
+  await page.getByRole("button", { name: /切换到暗色主题/u }).click();
+  await page.getByRole("button", { name: /切换到明色主题/u }).waitFor();
+  await acLapsedItem.getByText("无法裁决：请求已过期。", { exact: true }).waitFor();
+  acEqual(
+    await acLapsedItem.getByText("已过期", { exact: true }).count(),
+    1,
+    "the dark theme must keep the lapsed presentation",
+  );
+  await axeApprovalCenter("desktop dark approval center lapsed item");
+  approvalCenterAcceptance.matrix.push("desktop-dark");
+  await page.screenshot({ fullPage: true, path: approvalCenterLapsedDarkScreenshot });
+  await page.getByRole("button", { name: /切换到明色主题/u }).click();
+  await page.getByRole("button", { name: /切换到暗色主题/u }).waitFor();
+  console.log(
+    "APPROVAL CENTER LAPSED PASS: stale transition expired the open approval, center renders it disabled with reason, decide routes fail closed, light/dark axe",
+  );
+
   // ---- AUDIT PANEL ACCEPTANCE (feature 028 T-04, desktop light key path) ----
   const auditApi = await page.evaluate(async (projectId) => {
     const pages = [];
@@ -1499,6 +2005,54 @@ process.exit(2);`,
   await contextOpener.focus();
   await page.keyboard.press("Enter");
   const contextDrawer = page.getByRole("dialog", { name: "当前任务上下文" });
+
+  // ---- APPROVAL CENTER ACCEPTANCE (feature 029 T-04, narrow drawer key path) ----
+  const narrowApprovalsTab = contextDrawer.getByRole("tab", { name: "审批" });
+  await narrowApprovalsTab.focus();
+  await page.keyboard.press("Enter");
+  acEqual(
+    await narrowApprovalsTab.getAttribute("aria-selected"),
+    "true",
+    "Enter must select the narrow approval tab",
+  );
+  const narrowApprovalList = contextDrawer.getByRole("list", { name: "待裁决请求" });
+  await narrowApprovalList.waitFor();
+  acEqual(
+    await narrowApprovalList.locator("> li").count(),
+    1,
+    "the narrow drawer must render the lapsed item",
+  );
+  await contextDrawer.getByText("无法裁决：请求已过期。", { exact: true }).waitFor();
+  acEqual(
+    await contextDrawer.getByRole("button", { name: /^批准 /u }).count(),
+    0,
+    "the narrow lapsed item must not render an approve button",
+  );
+  acEqual(
+    await contextDrawer.getByRole("button", { name: /^拒绝 /u }).count(),
+    0,
+    "the narrow lapsed item must not render a reject button",
+  );
+  const narrowApprovalLocate = contextDrawer.getByRole("button", { name: "定位来源执行" });
+  const narrowApprovalLocateBox = await narrowApprovalLocate.boundingBox();
+  acOk(
+    narrowApprovalLocateBox
+      && narrowApprovalLocateBox.height >= 44
+      && narrowApprovalLocateBox.width >= 44,
+    "the narrow lapsed locate button must be at least 44x44",
+  );
+  const narrowApprovalsTabBox = await narrowApprovalsTab.boundingBox();
+  acOk(
+    narrowApprovalsTabBox
+      && narrowApprovalsTabBox.height >= 44
+      && narrowApprovalsTabBox.width >= 44,
+    "the narrow approval tab must be at least 44x44",
+  );
+  await axeApprovalCenter("narrow light approval center drawer");
+  approvalCenterAcceptance.matrix.push("narrow-light");
+  await page.screenshot({ fullPage: true, path: approvalCenterNarrowScreenshot });
+  console.log("APPROVAL CENTER NARROW PASS: drawer renders the lapsed item disabled, 44px, axe");
+
   const narrowAuditTab = contextDrawer.getByRole("tab", { name: "审计" });
   await narrowAuditTab.focus();
   await page.keyboard.press("Enter");
@@ -1548,14 +2102,19 @@ process.exit(2);`,
   const surfaces = {
     api: apiBodies.join("\n"),
     database: databaseText(),
-    dom: `${desktopFacingText}\n${narrowFacingText}\n${narrowAuditFacingText}`,
+    dom: `${desktopFacingText}\n${narrowFacingText}\n${narrowAuditFacingText}\n${approvalCenterFacingText}`,
     logs: serverOutput,
     providerBodies: providerBodyText,
     screenshotFacingText: `${desktopFacingText}\n${narrowFacingText}\n${narrowAuditFacingText}\n${
-      readFileSync(desktopScreenshot).toString("latin1")
+      approvalCenterFacingText
+    }\n${readFileSync(desktopScreenshot).toString("latin1")
     }\n${readFileSync(narrowScreenshot).toString("latin1")
     }\n${readFileSync(auditDesktopScreenshot).toString("latin1")
-    }\n${readFileSync(auditNarrowScreenshot).toString("latin1")}`,
+    }\n${readFileSync(auditNarrowScreenshot).toString("latin1")
+    }\n${readFileSync(approvalCenterDesktopScreenshot).toString("latin1")
+    }\n${readFileSync(approvalCenterLapsedScreenshot).toString("latin1")
+    }\n${readFileSync(approvalCenterLapsedDarkScreenshot).toString("latin1")
+    }\n${readFileSync(approvalCenterNarrowScreenshot).toString("latin1")}`,
   };
   const forbidden = [
     apiKey,
@@ -1590,6 +2149,15 @@ process.exit(2);`,
     "SECURITY SCAN PASS: key/master/cipher/Authorization/raw host paths/env/CoT occurrences=0 "
     + "across provider bodies, DB, product API, DOM, logs, and screenshot-facing surfaces",
   );
+  writeFileSync(
+    approvalCenterResultsPath,
+    `${JSON.stringify(approvalCenterAcceptance, null, 2)}\n`,
+  );
+  console.log(
+    `APPROVAL CENTER ACCEPTANCE PASS: assertions=${approvalCenterAcceptance.assertions} `
+    + `axeStates=${approvalCenterAcceptance.axe.length} matrix=${approvalCenterAcceptance.matrix.join("/")}`,
+  );
+  console.log(`APPROVAL CENTER RESULTS: ${approvalCenterResultsPath}`);
   console.log(
     `BROWSER PASS: providerCalls=${providerCaptures.length} maxConcurrentProviderCalls=${maxConcurrentProviderCalls} `
     + Object.entries(finalCounts).map(([name, value]) => `${name}=${value}`).join(" "),

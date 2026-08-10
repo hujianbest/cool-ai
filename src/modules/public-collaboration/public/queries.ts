@@ -5,6 +5,7 @@ import type {
   InputHistorySearchResponse,
   MessageAttachmentMimeType,
   MessagePageResponse,
+  PendingProposalDto,
   PublicCollaborationPageCursor,
   ThreadDraftReadResponse,
   ThreadListResponseDto,
@@ -100,4 +101,14 @@ export interface PublicCollaborationQueries {
     tuple: { projectId: string; runId: string; threadId: string },
     operationId: string,
   ): PublicCollaborationCommandResult<unknown>;
+
+  /**
+   * 项目级待决 proposal 只读列表（特性 029 T-01）：仅 head 状态为 pending 的
+   * proposal 块入列；VERSION_CONFLICT 是裁决时结果而非持久状态，不改变块状态。
+   * 供 governance 审批中心等跨域聚合经本公开缝取数，避免直读本域表。
+   */
+  listPendingProposals(
+    databasePath: string,
+    projectId: string,
+  ): PendingProposalDto[];
 }
