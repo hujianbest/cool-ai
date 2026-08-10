@@ -98,6 +98,9 @@ describe("workspace and equal-member setup", () => {
           : "project-low";
         const version = projectId === "project-high" ? 9 : 2;
         if (url === "/api/agents") return Response.json({ agents });
+        if (url.includes("/workspace/files")) {
+          return Response.json({ entries: [], path: "." });
+        }
         if (url.endsWith("/workspace") && !init?.method) {
           return Response.json({ workspace: null, projectVersion: version });
         }
@@ -244,6 +247,9 @@ describe("workspace and equal-member setup", () => {
     const fetchMock = vi.fn(
       async (input: RequestInfo | URL, init?: RequestInit) => {
         const url = String(input);
+        if (url.includes("/workspace/files")) {
+          return Response.json({ entries: [], path: "." });
+        }
         if (url.endsWith("/workspace") && !init?.method) {
           return Response.json({
             workspace: { path: "D:\\old", status: "ready" },

@@ -31,7 +31,7 @@ Capability ID 是稳定治理标识；owner 是唯一逻辑子系统，不等于
 ### Project & Workspace
 
 - `CAP-PWS-01` Project / Workspace Binding Core — owner: Project & Workspace — 状态: 已交付核心 — 证据/建立切片: S-3；`src/adapters/outbound/sqlite/project-workspace/projects.ts`、`tests/modules/project-workspace/projects.service.test.ts`
-- `CAP-PWS-02` Verified Workspace Browse — owner: Project & Workspace — 状态: 规划中 — 建立切片: S-22
+- `CAP-PWS-02` Verified Workspace Browse — owner: Project & Workspace — 状态: 已交付核心（单绑定根浏览/预览；多根管理与 diff 预览未覆盖）— 证据/建立切片: S-22 [`progress.md`](../features/027-workspace-readonly-browser/progress.md)
 - `CAP-PWS-03` Public Project Events — owner: Project & Workspace — 状态: 规划中 — 建立路径: S-23 的 Project & Workspace 审计纵切；该片复用已交付 `CAP-OPS-01/02`，以 owner 可查询脱敏 Project 事件并精确导航为独立结果
 
 ### Mission & Work
@@ -125,7 +125,7 @@ S-9～S-12 的 `依赖: S-*` 是原历史文字，只说明当时切片记录；
 
 主子系统为 Project & Workspace、Safe Execution 或 Governance；每片只选其中一个主 owner，其他能力通过公开 Interface 参与。
 
-- [ ] S-22 绑定工作区只读浏览与预览（CI-3.2） — 主子系统: Project & Workspace；主 Capability: `CAP-PWS-02`；票据: 未创建；演示判据: owner 能浏览一个或多个已绑定根目录并只读预览文本、代码、diff 和支持的资产，越界、二进制和大文件得到明确拒绝或降级；约束: 工作区=严格限定绑定范围，verified-handle=所有路径访问必需，sandbox=预览解析隔离，凭据=敏感文件默认遮蔽，审批=不适用，独立复核=交付必需，审计=读取来源可追溯；不复制 Clowder 品牌、源码或资产
+- [x] S-22 绑定工作区只读浏览与预览（CI-3.2） — 主子系统: Project & Workspace；主 Capability: `CAP-PWS-02`；票据: [`features/027.../tickets.md`](../features/027-workspace-readonly-browser/tickets.md)；Ship: 2026-08-10（verified-handle 全程浏览/预览、越界与链接逃逸 fail-closed、512KiB 截断、四格式图片 dataUrl、敏感文件 mask-first 零内容探测、canary 泄漏扫描 0；smoke:context 71 断言 / 4 axe 状态 0 违规；全量 250 文件/2167 用例 116.6s）；演示判据: owner 能浏览已绑定根目录并只读预览文本、代码和支持的资产，越界、二进制和大文件得到明确拒绝或降级（diff 预览移交 S-42，多根管理随多绑定义务另行立项）；约束: 工作区=严格限定绑定范围，verified-handle=所有路径访问必需，sandbox=预览解析隔离，凭据=敏感文件默认遮蔽，审批=不适用，独立复核=交付必需（review 豁免记录于 progress），审计=读取来源可追溯；不复制 Clowder 品牌、源码或资产
   - 准入: 已交付前置: `CAP-PWS-01`、`CAP-EXE-01`（已交付核心，含 Windows verified-handle 证据）；本片建立: `CAP-PWS-02` 的多绑定根只读浏览、预览与敏感文件降级（规划中）。
 - [ ] S-23 脱敏统一审计浏览器（CI-3.8） — 主子系统: 不适用；主领域 Capability: 不适用（保留的产品追踪别名/发布结果，跨多个 source owner，本身不得进入 implement）；主要架构单元: 发布结果；消费 Capability: `CAP-EXE-05`、`CAP-PWS-03`、`CAP-COL-07`、`CAP-MWK-05`、`CAP-GOV-03`、`CAP-RUN-07`、`CAP-OPS-01`、`CAP-OPS-02`；票据: 未创建；演示判据: owner 能按项目、线程、任务和会话筛选公开事件并跳回精确来源，凭据、隐藏思维链和原始 provider 响应始终不可见；约束: 工作区=项目隔离，verified-handle=文件来源跳转必需，sandbox=执行事件只读，凭据=强制脱敏，审批=不适用，独立复核=交付必需，审计=来源、保留期和导出边界明确；不复制 Clowder 品牌、源码或资产
   - 准入: 已交付前置: `CAP-EXE-01`、`CAP-PWS-01`、`CAP-COL-01`、`CAP-MWK-01`（仅证明源事实存在，不证明公开 producer 已存在）；阻塞: 以下实现片尚未建立和 gate；本片建立: 不适用，S-23 只在子片全部 ship 后汇总发布验收。

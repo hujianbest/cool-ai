@@ -13,6 +13,8 @@ import { createPortal } from "react-dom";
 
 import { useModalSurface } from "@/components/mobile-dialog";
 import { WorkspaceOnboardingGuide } from "@/components/onboarding-guide";
+import { WorkspaceFilePreview } from "@/components/project-context/workspace-file-preview";
+import { WorkspaceFileTree } from "@/components/project-context/workspace-file-tree";
 import type { ApiError } from "@/src/shared/contracts";
 import type { WorkspaceState } from "@/src/shared/project-context-contracts";
 import {
@@ -87,6 +89,7 @@ export function WorkspaceSetup({
   const [isSaving, setIsSaving] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [success, setSuccess] = useState("");
+  const [selectedFile, setSelectedFile] = useState<string | null>(null);
   const [guideFacts, setGuideFacts] = useState<WorkspaceGuideEnvelope | null>(
     null,
   );
@@ -131,6 +134,7 @@ export function WorkspaceSetup({
     setLoadedVersion(1);
     setError(null);
     setSuccess("");
+    setSelectedFile(null);
     setGuideFacts(null);
     setGuideLoadError(false);
     setNeedsReload(false);
@@ -215,6 +219,7 @@ export function WorkspaceSetup({
         setGuideFacts(parsed);
         setGuideLoadError(false);
         setWorkspace(parsed.workspace);
+        if (parsed.workspace.path !== workspace?.path) setSelectedFile(null);
         setLoadedVersion(parsed.projectVersion);
         setPath(parsed.workspace.path);
         onVersionChange?.(parsed.projectVersion);
@@ -260,6 +265,7 @@ export function WorkspaceSetup({
       setGuideFacts(parsed);
       setGuideLoadError(false);
       setWorkspace(parsed.workspace);
+      if (parsed.workspace?.path !== workspace?.path) setSelectedFile(null);
       setLoadedVersion(parsed.projectVersion);
       setPath(parsed.workspace?.path ?? path);
       onVersionChange?.(parsed.projectVersion);
@@ -392,6 +398,25 @@ export function WorkspaceSetup({
               {success}
             </p>
           ) : null}
+          <div className="stack">
+            <h4>工作区文件</h4>
+            {workspace ? (
+              <>
+                <WorkspaceFileTree
+                  key={`${projectId}:${workspace.path}`}
+                  onFileSelect={setSelectedFile}
+                  projectId={projectId}
+                />
+                <WorkspaceFilePreview
+                  key={`preview-${projectId}:${workspace.path}`}
+                  filePath={selectedFile}
+                  projectId={projectId}
+                />
+              </>
+            ) : (
+              <p className="muted">绑定工作区后即可浏览文件。</p>
+            )}
+          </div>
         </div>
         </div>
       </section>

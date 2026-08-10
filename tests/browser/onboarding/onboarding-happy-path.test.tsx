@@ -271,6 +271,9 @@ function installHappyPathFetch() {
           workspace: { path: "D:\\workspace", status: "ready" },
         });
       }
+      if (url.includes("/workspace/files")) {
+        return Response.json({ entries: [], path: "." });
+      }
       if (url === `/api/projects/${project.id}/members`) {
         return Response.json({
           members: [
@@ -1340,6 +1343,9 @@ describe("progressive onboarding T-7 workspace binding", () => {
       vi.fn(async (input: RequestInfo | URL) => {
         const url = String(input);
         if (url.endsWith("/workspace")) return workspaceLoad;
+        if (url.includes("/workspace/files")) {
+          return Response.json({ entries: [], path: "." });
+        }
         const response = projectSurfaceResponse(url);
         if (response) return response;
         throw new Error(`Unexpected GET: ${url}`);
@@ -1422,6 +1428,9 @@ describe("progressive onboarding T-7 workspace binding", () => {
     vi.stubGlobal(
       "fetch",
       vi.fn(async (_input: RequestInfo | URL, init?: RequestInit) => {
+        if (String(_input).includes("/workspace/files")) {
+          return Response.json({ entries: [], path: "." });
+        }
         if (init?.method === "PUT") {
           putCount += 1;
           ready = true;
@@ -1469,6 +1478,9 @@ describe("progressive onboarding T-7 workspace binding", () => {
     vi.stubGlobal(
       "fetch",
       vi.fn(async (_input: RequestInfo | URL, init?: RequestInit) => {
+        if (String(_input).includes("/workspace/files")) {
+          return Response.json({ entries: [], path: "." });
+        }
         if (init?.method === "PUT") {
           putCount += 1;
           if (putCount === 2) {

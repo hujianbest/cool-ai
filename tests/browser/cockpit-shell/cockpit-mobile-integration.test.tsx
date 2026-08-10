@@ -61,6 +61,10 @@ function stubCockpitRequests(workspacePath?: string): void {
             : null,
           projectVersion: 1,
         },
+        "/api/projects/project-1/workspace/files?path=.": {
+          entries: [],
+          path: ".",
+        },
         "/api/projects/project-1/members": {
           members: [],
           projectVersion: 1,

@@ -36,6 +36,48 @@ const reboundWorkspaceDirectory = join(
 );
 mkdirSync(reboundWorkspaceDirectory);
 let reboundWorkspacePath = realpathSync(reboundWorkspaceDirectory);
+
+// --- 027 T-04：工作区只读浏览验收造数（真实临时工作区，smoke 结束随临时目录清理） ---
+const browseCanary = "WORKSPACE_ENV_CANARY_DO_NOT_LEAK_2026";
+const browseTextContent = [
+  "# 工作区指南",
+  "",
+  "这是用于浏览器验收的文本文件。",
+  "第二行内容。",
+  "",
+].join("\n");
+const browseTextBytes = Buffer.byteLength(browseTextContent, "utf8");
+const browseTextLines = (browseTextContent.match(/\n/g) ?? []).length;
+const browseLargeStart = "LARGE-FILE-START-MARKER";
+const browseLargeTail = "LARGE-FILE-TAIL-MARKER-PAST-512KIB";
+const browseLargeContent = (() => {
+  const filler = "0123456789abcdef0123456789abcdef0123456789abcdef0123456789ab\n";
+  const target = 540 * 1024;
+  let content = `${browseLargeStart}\n`;
+  while (content.length < target - browseLargeTail.length - filler.length) {
+    content += filler;
+  }
+  return `${content}${browseLargeTail}\n`;
+})();
+const browseLargeBytes = Buffer.byteLength(browseLargeContent, "utf8");
+const browsePngBytes = Buffer.from(
+  "iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mNkYPhfDwAChwGA60e6kgAAAABJRU5ErkJggg==",
+  "base64",
+);
+mkdirSync(join(workspaceDirectory, "docs", "inner"), { recursive: true });
+mkdirSync(join(workspaceDirectory, "assets"));
+writeFileSync(join(workspaceDirectory, "docs", "guide.md"), browseTextContent, "utf8");
+writeFileSync(join(workspaceDirectory, "docs", "inner", "deep.txt"), "深层嵌套文件。\n", "utf8");
+writeFileSync(join(workspaceDirectory, "assets", "logo.png"), browsePngBytes);
+writeFileSync(join(workspaceDirectory, "notes.txt"), "根目录笔记。\n", "utf8");
+writeFileSync(
+  join(workspaceDirectory, "app.bin"),
+  Buffer.from([0x00, 0xff, 0xfe, 0x01, 0x02, 0x03, 0x00, 0x10]),
+);
+writeFileSync(join(workspaceDirectory, ".env"), `SECRET_TOKEN=${browseCanary}\n`, "utf8");
+writeFileSync(join(workspaceDirectory, "large.txt"), browseLargeContent, "utf8");
+writeFileSync(join(reboundWorkspaceDirectory, "rebound-notes.txt"), "改绑后的工作区笔记。\n", "utf8");
+
 const databasePath = join(temporaryDirectory, "context-smoke.sqlite");
 const auditPath = join(temporaryDirectory, "workspace-audit.jsonl");
 const masterKey = randomBytes(32).toString("base64url");
@@ -79,6 +121,31 @@ const dependencyResultsPath = join(
   dependencyEvidenceDirectory,
   "dependencies-acceptance-results.json",
 );
+const browseEvidenceDirectory = resolve(
+  "features",
+  "027-workspace-readonly-browser",
+  "evidence",
+);
+const browseDesktopLightScreenshot = join(
+  browseEvidenceDirectory,
+  "workspace-browse-desktop-light.png",
+);
+const browseDesktopDarkScreenshot = join(
+  browseEvidenceDirectory,
+  "workspace-browse-desktop-dark.png",
+);
+const browseNarrowLightScreenshot = join(
+  browseEvidenceDirectory,
+  "workspace-browse-narrow-light.png",
+);
+const browseNarrowDarkScreenshot = join(
+  browseEvidenceDirectory,
+  "workspace-browse-narrow-dark.png",
+);
+const browseResultsPath = join(
+  browseEvidenceDirectory,
+  "workspace-browse-acceptance-results.json",
+);
 const browserExecutable = [
   process.env.PLAYWRIGHT_CHROMIUM_EXECUTABLE,
   "C:\\Program Files\\Google\\Chrome\\Application\\chrome.exe",
@@ -87,6 +154,7 @@ const browserExecutable = [
 
 mkdirSync(evidenceDirectory, { recursive: true });
 mkdirSync(dependencyEvidenceDirectory, { recursive: true });
+mkdirSync(browseEvidenceDirectory, { recursive: true });
 
 let providerAuthorizationCount = 0;
 const provider = createServer((request, response) => {
@@ -211,6 +279,48 @@ async function axeDependencies(page, state) {
       targets: violation.nodes.map((node) => node.target),
     }));
   dependencyAcceptance.axe.push({
+    blocking,
+    state,
+    violationCount: scan.violations.length,
+    violations: scan.violations.map((violation) => ({
+      id: violation.id,
+      impact: violation.impact ?? "unknown",
+    })),
+  });
+  assert.deepEqual(blocking, [], `${state}: axe critical/serious must be 0`);
+}
+
+// --- 027 T-04：工作区只读浏览验收助手 ---
+const browseAcceptance = { assertions: 0, axe: [], matrix: [] };
+
+function browseOk(value, message) {
+  browseAcceptance.assertions += 1;
+  assert.ok(value, message);
+}
+
+function browseEqual(actual, expected, message) {
+  browseAcceptance.assertions += 1;
+  assert.equal(actual, expected, message);
+}
+
+function browseDeepEqual(actual, expected, message) {
+  browseAcceptance.assertions += 1;
+  assert.deepEqual(actual, expected, message);
+}
+
+async function axeWorkspaceBrowse(page, state) {
+  const scan = await new AxeBuilder({ page }).analyze();
+  const blocking = scan.violations
+    .filter(
+      (violation) =>
+        violation.impact === "critical" || violation.impact === "serious",
+    )
+    .map((violation) => ({
+      id: violation.id,
+      impact: violation.impact,
+      targets: violation.nodes.map((node) => node.target),
+    }));
+  browseAcceptance.axe.push({
     blocking,
     state,
     violationCount: scan.violations.length,
@@ -399,6 +509,329 @@ try {
   boundWorkspacePath =
     (await page.getByLabel("工作区绑定状态").locator("code").textContent()) ??
     canonicalWorkspace;
+
+  // --- 027 T-04：工作区只读浏览真实浏览器验收（desktop light 全分支） ---
+  function browseSizeLabel(bytes) {
+    if (bytes < 1024) return `${bytes} B`;
+    const kib = bytes / 1024;
+    if (kib < 1024) {
+      return `${Number.isInteger(kib) ? kib : kib.toFixed(1)} KiB`;
+    }
+    const mib = kib / 1024;
+    return `${Number.isInteger(mib) ? mib : mib.toFixed(1)} MiB`;
+  }
+
+  const workspaceTree = page.getByRole("tree", { name: "工作区文件" });
+  await workspaceTree.waitFor();
+  browseDeepEqual(
+    await workspaceTree.locator(".workspace-tree-name").allTextContents(),
+    ["assets", "docs", ".env", "app.bin", "large.txt", "notes.txt"],
+    "root listing must sort directories first, then files by case-insensitive name",
+  );
+  browseEqual(
+    await workspaceTree
+      .getByRole("treeitem", { name: /\.env/ })
+      .getByText("已遮蔽", { exact: true })
+      .count(),
+    1,
+    ".env must carry the masked badge in the tree",
+  );
+
+  // 懒加载展开：docs → inner/guide.md（目录优先）
+  await workspaceTree
+    .getByRole("treeitem", { exact: true, name: "docs" })
+    .click();
+  const docsItem = workspaceTree.getByRole("treeitem", {
+    exact: true,
+    name: "docs",
+  });
+  browseEqual(
+    await docsItem.getAttribute("aria-expanded"),
+    "true",
+    "clicking a directory must expand it",
+  );
+  const guideItem = workspaceTree.getByRole("treeitem", {
+    exact: true,
+    name: "guide.md",
+  });
+  await guideItem.waitFor();
+  browseDeepEqual(
+    await workspaceTree.locator(".workspace-tree-name").allTextContents(),
+    ["assets", "docs", "inner", "guide.md", ".env", "app.bin", "large.txt", "notes.txt"],
+    "expanded docs must list the nested directory before files",
+  );
+
+  // 键盘导航：ArrowDown → inner，Enter 展开，ArrowLeft 收起，ArrowDown → guide.md
+  await page.keyboard.press("ArrowDown");
+  const innerItem = workspaceTree.getByRole("treeitem", {
+    exact: true,
+    name: "inner",
+  });
+  browseOk(
+    await innerItem.evaluate((element) => document.activeElement === element),
+    "ArrowDown must move focus to the next tree item",
+  );
+  await page.keyboard.press("Enter");
+  await workspaceTree
+    .getByRole("treeitem", { exact: true, name: "deep.txt" })
+    .waitFor();
+  browseEqual(
+    await innerItem.getAttribute("aria-expanded"),
+    "true",
+    "Enter on a collapsed directory must expand it",
+  );
+  await page.keyboard.press("ArrowLeft");
+  browseEqual(
+    await workspaceTree
+      .getByRole("treeitem", { exact: true, name: "deep.txt" })
+      .count(),
+    0,
+    "ArrowLeft on an expanded directory must collapse it",
+  );
+  await page.keyboard.press("ArrowDown");
+  browseOk(
+    await guideItem.evaluate(
+      (element) =>
+        document.activeElement === element
+        && element.matches(":focus-visible")
+        && getComputedStyle(element).boxShadow !== "none",
+    ),
+    "keyboard-focused tree item must show a visible focus ring",
+  );
+
+  // 文本预览分支：内容 + 路径头 + 行数/大小元信息
+  await page.keyboard.press("Enter");
+  const preview = page.getByRole("region", { name: "文件预览" });
+  const previewContent = preview.locator(".workspace-preview-content");
+  await previewContent.waitFor();
+  browseEqual(
+    await preview.locator(".workspace-preview-path code").textContent(),
+    "docs/guide.md",
+    "preview must show the workspace-relative path header",
+  );
+  browseEqual(
+    await preview.locator(".workspace-preview-meta").textContent(),
+    `${browseTextLines} 行 · ${browseSizeLabel(browseTextBytes)}`,
+    "text preview must show line count and full file size",
+  );
+  browseEqual(
+    await previewContent.textContent(),
+    browseTextContent,
+    "text preview must render the exact file content",
+  );
+  browseEqual(
+    await docsItem.getAttribute("aria-selected"),
+    "false",
+    "directories must not become selected when a file is picked",
+  );
+  browseEqual(
+    await guideItem.getAttribute("aria-selected"),
+    "true",
+    "the picked file must become the selected tree item",
+  );
+
+  // 大文件截断分支：>512KiB 文本截断并明示
+  await workspaceTree
+    .getByRole("treeitem", { exact: true, name: "large.txt" })
+    .click();
+  await preview
+    .getByText("已截断（仅显示前 512KiB）", { exact: true })
+    .waitFor();
+  const largeMeta = await preview
+    .locator(".workspace-preview-meta")
+    .textContent();
+  browseOk(
+    new RegExp(`^\\d+ 行 · ${browseSizeLabel(browseLargeBytes)}$`).test(
+      largeMeta ?? "",
+    ),
+    "truncated preview must keep showing the full file size",
+  );
+  const truncatedContent = (await previewContent.textContent()) ?? "";
+  browseOk(
+    truncatedContent.includes(browseLargeStart),
+    "truncated preview must include the start of the file",
+  );
+  browseOk(
+    !truncatedContent.includes(browseLargeTail),
+    "truncated preview must not include content past 512KiB",
+  );
+  browseOk(
+    truncatedContent.length <= 512 * 1024,
+    "truncated preview must not exceed the 512KiB text budget",
+  );
+
+  // 图片分支：png magic bytes 内联渲染
+  await workspaceTree
+    .getByRole("treeitem", { exact: true, name: "assets" })
+    .click();
+  const pngItem = workspaceTree.getByRole("treeitem", {
+    exact: true,
+    name: "logo.png",
+  });
+  await pngItem.waitFor();
+  await pngItem.click();
+  const previewImage = preview.getByRole("img", { name: "logo.png" });
+  await previewImage.waitFor();
+  browseOk(
+    ((await previewImage.getAttribute("src")) ?? "").startsWith(
+      "data:image/png;base64,",
+    ),
+    "image preview must inline a png data URL",
+  );
+  browseEqual(
+    await preview.locator(".workspace-preview-meta").textContent(),
+    `image/png · ${browseSizeLabel(browsePngBytes.length)}`,
+    "image preview must show the content type and size",
+  );
+
+  // 二进制降级分支
+  await workspaceTree
+    .getByRole("treeitem", { exact: true, name: "app.bin" })
+    .click();
+  await preview
+    .getByText("该文件类型不支持预览。", { exact: true })
+    .waitFor();
+  browseEqual(
+    await preview.locator(".workspace-preview-content").count(),
+    0,
+    "binary fallback must not render file content",
+  );
+
+  // 敏感遮蔽分支：占位 + DOM 零内容泄漏
+  await workspaceTree.getByRole("treeitem", { name: /\.env/ }).click();
+  await preview
+    .getByText("敏感文件已遮蔽，内容不回显。", { exact: true })
+    .waitFor();
+  browseEqual(
+    await preview.locator(".workspace-preview-content").count(),
+    0,
+    "masked preview must not render file content",
+  );
+  browseOk(
+    !(await page.content()).includes(browseCanary),
+    "the page DOM must never contain the .env canary",
+  );
+
+  // 只读断言：树与预览区无任何写/删/改入口
+  browseEqual(
+    await preview.getByRole("button").count(),
+    0,
+    "ready preview must render no buttons",
+  );
+  browseEqual(
+    await preview.getByRole("textbox").count(),
+    0,
+    "preview must render no text inputs",
+  );
+  browseEqual(
+    await preview.getByRole("link").count(),
+    0,
+    "preview must render no links",
+  );
+  browseEqual(
+    await preview.locator("[contenteditable]").count(),
+    0,
+    "preview must render no contenteditable surface",
+  );
+  browseEqual(
+    await workspaceTree.getByRole("button").count(),
+    0,
+    "ready tree must render no buttons",
+  );
+  browseEqual(
+    await workspaceTree.locator("input, textarea, select").count(),
+    0,
+    "tree must render no form controls",
+  );
+
+  // 44px 触控目标
+  browseDeepEqual(
+    await workspaceTree.getByRole("treeitem").evaluateAll((items) =>
+      items
+        .map((item) => item.getBoundingClientRect())
+        .filter((rect) => rect.height < 44),
+    ),
+    [],
+    "tree items must be at least 44px tall",
+  );
+
+  // 越界/逃逸路径直调 API：稳定脱敏拒绝，零宿主路径与零 canary 泄漏
+  const escapeProbes = await page.evaluate(async () => {
+    const projects = await (await fetch("/api/projects")).json();
+    const projectId = projects.projects[0].id;
+    const probes = [
+      ["files?path=..%2F", 400, "INVALID_INPUT"],
+      ["files?path=..%2F..%2F", 400, "INVALID_INPUT"],
+      ["files?path=%2Fetc%2Fpasswd", 400, "INVALID_INPUT"],
+      ["files?path=docs%2F..%2F..%2F", 400, "INVALID_INPUT"],
+      ["files?path=..%5C", 400, "INVALID_INPUT"],
+      ["files?path=a%00b", 400, "INVALID_INPUT"],
+      ["files?path=.env", 422, "WORKSPACE_PATH_REJECTED"],
+      ["file?path=..%2F.env", 400, "INVALID_INPUT"],
+      ["file?path=.env", 200, "sensitive-masked"],
+    ];
+    const results = [];
+    for (const [query, expectedStatus, expectedCode] of probes) {
+      const response = await fetch(
+        `/api/projects/${projectId}/workspace/${query}`,
+      );
+      results.push({
+        body: await response.text(),
+        expectedCode,
+        expectedStatus,
+        query,
+        status: response.status,
+      });
+    }
+    return results;
+  });
+  for (const probe of escapeProbes) {
+    browseEqual(
+      probe.status,
+      probe.expectedStatus,
+      `probe ${probe.query} must return ${probe.expectedStatus}`,
+    );
+    browseOk(
+      probe.body.includes(probe.expectedCode),
+      `probe ${probe.query} must carry the sanitized code ${probe.expectedCode}`,
+    );
+    browseOk(
+      !probe.body.includes(browseCanary),
+      `probe ${probe.query} must not leak the .env canary`,
+    );
+    browseOk(
+      !probe.body.includes(workspaceDirectory)
+        && !probe.body.includes(boundWorkspacePath),
+      `probe ${probe.query} must not leak host paths`,
+    );
+  }
+  browseEqual(
+    escapeProbes.find((probe) => probe.query === "file?path=.env")?.body,
+    '{"kind":"sensitive-masked"}',
+    "masked preview API must return the minimal mask payload",
+  );
+
+  await axeWorkspaceBrowse(page, "desktop light workspace browse");
+  browseAcceptance.matrix.push("desktop-light");
+  await page.screenshot({ fullPage: true, path: browseDesktopLightScreenshot });
+
+  // 暗色桌面关键路径复核
+  await setCockpitTheme(page, "dark");
+  await workspaceTree
+    .getByRole("treeitem", { exact: true, name: "notes.txt" })
+    .click();
+  await previewContent.waitFor();
+  browseOk(
+    ((await previewContent.textContent()) ?? "").includes("根目录笔记。"),
+    "dark theme must keep the text preview path working",
+  );
+  await axeWorkspaceBrowse(page, "desktop dark workspace browse");
+  browseAcceptance.matrix.push("desktop-dark");
+  await page.screenshot({ fullPage: true, path: browseDesktopDarkScreenshot });
+  await setCockpitTheme(page, "light");
+  console.log(
+    "WORKSPACE BROWSE DESKTOP PASS: tree ordering, keyboard, text/truncated/image/binary/masked branches, escape rejection, read-only, 44px, axe",
+  );
 
   const membersFieldset = page.getByRole("group", {
     name: "平等项目成员",
@@ -998,6 +1431,76 @@ try {
     true,
   );
 
+  // --- 027 T-04 narrow：改绑后工作区浏览关键路径（narrow light） ---
+  await projectsOpener.click();
+  const browseProjectsDialog = page.getByRole("dialog", { name: "项目导航" });
+  await browseProjectsDialog.waitFor();
+  const narrowTree = browseProjectsDialog.getByRole("tree", {
+    name: "工作区文件",
+  });
+  await narrowTree.waitFor();
+  browseDeepEqual(
+    await narrowTree.locator(".workspace-tree-name").allTextContents(),
+    ["rebound-notes.txt"],
+    "narrow drawer tree must reflect the rebound workspace root",
+  );
+  await narrowTree
+    .getByRole("treeitem", { exact: true, name: "rebound-notes.txt" })
+    .click();
+  const narrowPreview = browseProjectsDialog.getByRole("region", {
+    name: "文件预览",
+  });
+  const narrowPreviewContent = narrowPreview.locator(
+    ".workspace-preview-content",
+  );
+  await narrowPreviewContent.waitFor();
+  browseOk(
+    ((await narrowPreviewContent.textContent()) ?? "").includes(
+      "改绑后的工作区笔记。",
+    ),
+    "narrow drawer must preview a file from the rebound workspace",
+  );
+  browseDeepEqual(
+    await narrowTree.getByRole("treeitem").evaluateAll((items) =>
+      items
+        .map((item) => item.getBoundingClientRect())
+        .filter((rect) => rect.height < 44),
+    ),
+    [],
+    "narrow tree items must be at least 44px tall",
+  );
+  await axeWorkspaceBrowse(page, "narrow light workspace browse drawer");
+  browseAcceptance.matrix.push("narrow-light");
+  await page.screenshot({ fullPage: true, path: browseNarrowLightScreenshot });
+  await page.keyboard.press("Escape");
+  await browseProjectsDialog.waitFor({ state: "detached" });
+
+  // 暗色窄屏关键路径复核（抽屉外切换主题，避免 inert 背景）
+  await setCockpitTheme(page, "dark");
+  await projectsOpener.click();
+  const browseProjectsDialogDark = page.getByRole("dialog", {
+    name: "项目导航",
+  });
+  await browseProjectsDialogDark.waitFor();
+  const narrowTreeDark = browseProjectsDialogDark.getByRole("tree", {
+    name: "工作区文件",
+  });
+  await narrowTreeDark.waitFor();
+  browseDeepEqual(
+    await narrowTreeDark.locator(".workspace-tree-name").allTextContents(),
+    ["rebound-notes.txt"],
+    "narrow dark drawer must keep the rebound workspace tree",
+  );
+  await axeWorkspaceBrowse(page, "narrow dark workspace browse drawer");
+  browseAcceptance.matrix.push("narrow-dark");
+  await page.screenshot({ fullPage: true, path: browseNarrowDarkScreenshot });
+  await page.keyboard.press("Escape");
+  await browseProjectsDialogDark.waitFor({ state: "detached" });
+  await setCockpitTheme(page, "light");
+  console.log(
+    "WORKSPACE BROWSE NARROW PASS: rebound tree + preview in drawer, 44px, axe",
+  );
+
   await editorOpener.click();
   const editorDialog = page.getByRole("dialog", { name: "任务编辑" });
   await editorDialog.getByRole("tab", { name: "看板" }).click();
@@ -1141,6 +1644,15 @@ try {
     assert.equal(countOccurrences(projectResponseBodies.join("\n"), secret), 0);
     assert.equal(countOccurrences(serverOutput, secret), 0);
   }
+  // 027 T-04：.env canary 绝不出现在任何项目 API 响应或服务端日志
+  assert.equal(
+    countOccurrences(projectResponseBodies.join("\n"), browseCanary),
+    0,
+  );
+  assert.equal(countOccurrences(serverOutput, browseCanary), 0);
+  console.log(
+    "WORKSPACE BROWSE SECURITY PASS: .env canary=0 across project API responses and server logs",
+  );
   for (const path of new Set([
     workspaceDirectory,
     boundWorkspacePath,
@@ -1193,6 +1705,15 @@ try {
   );
   console.log(
     `DEPENDENCY ACCEPTANCE PASS: assertions=${dependencyAcceptance.assertions} axeStates=${dependencyAcceptance.axe.length} matrix=${dependencyAcceptance.matrix.join(",")}`,
+  );
+
+  writeFileSync(
+    browseResultsPath,
+    `${JSON.stringify(browseAcceptance, null, 2)}\n`,
+    "utf8",
+  );
+  console.log(
+    `WORKSPACE BROWSE ACCEPTANCE PASS: assertions=${browseAcceptance.assertions} axeStates=${browseAcceptance.axe.length} matrix=${browseAcceptance.matrix.join(",")}`,
   );
 
   console.log("BROWSER PASS: full S-3 desktop and narrow acceptance completed");

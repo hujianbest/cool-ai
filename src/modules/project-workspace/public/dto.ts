@@ -41,6 +41,41 @@ export type BindWorkspaceInput = {
   confirmRebind: boolean;
 };
 
+export type WorkspaceDirectoryEntry = {
+  kind: "dir" | "file";
+  name: string;
+  sensitive: boolean;
+  sizeBytes?: number;
+};
+
+export type WorkspaceDirectoryListing = {
+  entries: WorkspaceDirectoryEntry[];
+  path: string;
+};
+
+export type WorkspaceImageContentType =
+  | "image/gif"
+  | "image/jpeg"
+  | "image/png"
+  | "image/webp";
+
+export type WorkspaceFilePreview =
+  | {
+      content: string;
+      kind: "text";
+      lineCount: number;
+      sizeBytes: number;
+      truncated: boolean;
+    }
+  | {
+      contentType: WorkspaceImageContentType;
+      dataUrl: string;
+      kind: "image";
+      sizeBytes: number;
+    }
+  | { kind: "binary-unsupported" }
+  | { kind: "sensitive-masked" };
+
 export type WorkspaceOperation = "realpath" | "stat" | "access";
 
 export type WorkspaceFs = {

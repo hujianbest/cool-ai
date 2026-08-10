@@ -1213,6 +1213,111 @@ ol {
   color: var(--danger);
 }
 
+.workspace-tree {
+  min-width: 0;
+}
+
+.workspace-tree-list {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-1);
+}
+
+.workspace-tree-item {
+  display: flex;
+  min-height: var(--control-min);
+  align-items: center;
+  gap: var(--space-2);
+  border-radius: var(--radius-sm);
+  padding-block: var(--space-1);
+  padding-inline-end: var(--space-2);
+  color: var(--text-secondary);
+  cursor: pointer;
+}
+
+.workspace-tree-item:hover {
+  background: var(--interactive-soft-hover);
+  color: var(--text-primary);
+}
+
+.workspace-tree-item[aria-selected="true"] {
+  background: var(--interactive-soft);
+  color: var(--interactive-primary);
+}
+
+.workspace-tree-item:focus-visible {
+  outline: none;
+  box-shadow: var(--focus-ring);
+}
+
+.workspace-tree-icon {
+  display: inline-flex;
+  flex: none;
+  color: var(--text-subtle);
+}
+
+.workspace-tree-item[aria-selected="true"] .workspace-tree-icon {
+  color: var(--interactive-primary);
+}
+
+.workspace-tree-name {
+  min-width: 0;
+  overflow-wrap: anywhere;
+}
+
+.workspace-tree-status {
+  display: flex;
+  min-height: var(--control-min);
+  align-items: center;
+}
+
+.workspace-tree-branch-error {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: var(--space-2);
+}
+
+.workspace-preview {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-2);
+  min-width: 0;
+}
+
+.workspace-preview-path {
+  color: var(--text-muted);
+  font: var(--text-sm) var(--font-sans);
+}
+
+.workspace-preview-truncated {
+  border: var(--border-width) solid var(--border-strong);
+  border-radius: var(--radius-sm);
+  padding: var(--space-2) var(--space-3);
+  background: var(--interactive-soft);
+  color: var(--text-primary);
+  font: var(--text-sm) var(--font-sans);
+}
+
+.workspace-preview-content {
+  max-height: calc(var(--control-min) * 8);
+  overflow: auto;
+  border: var(--border-width) solid var(--border);
+  border-radius: var(--radius-sm);
+  padding: var(--space-3);
+  background: var(--surface-muted);
+  font: var(--text-sm) var(--font-mono);
+}
+
+.workspace-preview-image {
+  align-self: flex-start;
+  max-width: var(--full-width);
+  height: auto;
+  border: var(--border-width) solid var(--border);
+  border-radius: var(--radius-sm);
+  background: var(--surface);
+}
+
 .context-status {
   color: var(--text-muted);
 }
