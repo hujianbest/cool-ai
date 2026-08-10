@@ -66,6 +66,35 @@ export type MissionWriteActor =
   | { type: "owner" }
   | { type: "agent"; agentId: string };
 
+export type MissionDependencyNode = {
+  workItemId: string;
+  title: string;
+  status: WorkItemStatus;
+  blockedByIds: string[];
+  blockingIds: string[];
+  blockedReason: string | null;
+  cycleId: string | null;
+  missingDependencyIds: string[];
+};
+
+export type MissionDependencyEdge = {
+  fromWorkItemId: string;
+  toWorkItemId: string;
+};
+
+export type MissionDependencyCycle = {
+  cycleId: string;
+  memberWorkItemIds: string[];
+  path: string;
+};
+
+export type MissionDependencyInsight = {
+  nodes: MissionDependencyNode[];
+  edges: MissionDependencyEdge[];
+  cycles: MissionDependencyCycle[];
+  hasDependencies: boolean;
+};
+
 export type TaskExecutor = (goal: string) => string;
 
 /**

@@ -8,12 +8,14 @@ import {
   readFileSync,
   realpathSync,
   rmSync,
+  writeFileSync,
 } from "node:fs";
 import { createServer } from "node:http";
 import { tmpdir } from "node:os";
 import { join, resolve } from "node:path";
 import { DatabaseSync } from "node:sqlite";
 
+import AxeBuilder from "@axe-core/playwright";
 import { chromium } from "playwright";
 
 const host = "127.0.0.1";
@@ -52,6 +54,31 @@ const narrowScreenshot = join(
   "smoke-context-narrow.png",
 );
 const demoScreenshot = join(evidenceDirectory, "demo-project-context.png");
+const dependencyEvidenceDirectory = resolve(
+  "features",
+  "026-mission-dependency-insight",
+  "evidence",
+);
+const dependencyDesktopLightScreenshot = join(
+  dependencyEvidenceDirectory,
+  "dependencies-desktop-light.png",
+);
+const dependencyDesktopDarkScreenshot = join(
+  dependencyEvidenceDirectory,
+  "dependencies-desktop-dark.png",
+);
+const dependencyNarrowLightScreenshot = join(
+  dependencyEvidenceDirectory,
+  "dependencies-narrow-light.png",
+);
+const dependencyNarrowDarkScreenshot = join(
+  dependencyEvidenceDirectory,
+  "dependencies-narrow-dark.png",
+);
+const dependencyResultsPath = join(
+  dependencyEvidenceDirectory,
+  "dependencies-acceptance-results.json",
+);
 const browserExecutable = [
   process.env.PLAYWRIGHT_CHROMIUM_EXECUTABLE,
   "C:\\Program Files\\Google\\Chrome\\Application\\chrome.exe",
@@ -59,6 +86,7 @@ const browserExecutable = [
 ].find((candidate) => candidate && existsSync(candidate));
 
 mkdirSync(evidenceDirectory, { recursive: true });
+mkdirSync(dependencyEvidenceDirectory, { recursive: true });
 
 let providerAuthorizationCount = 0;
 const provider = createServer((request, response) => {
@@ -152,6 +180,82 @@ async function selectOptionContaining(select, text) {
   await select.selectOption(value);
 }
 
+// --- 026 T-03：Mission 依赖全景验收助手 ---
+const dependencyAcceptance = { assertions: 0, axe: [], matrix: [] };
+
+function depOk(value, message) {
+  dependencyAcceptance.assertions += 1;
+  assert.ok(value, message);
+}
+
+function depEqual(actual, expected, message) {
+  dependencyAcceptance.assertions += 1;
+  assert.equal(actual, expected, message);
+}
+
+function depDeepEqual(actual, expected, message) {
+  dependencyAcceptance.assertions += 1;
+  assert.deepEqual(actual, expected, message);
+}
+
+async function axeDependencies(page, state) {
+  const scan = await new AxeBuilder({ page }).analyze();
+  const blocking = scan.violations
+    .filter(
+      (violation) =>
+        violation.impact === "critical" || violation.impact === "serious",
+    )
+    .map((violation) => ({
+      id: violation.id,
+      impact: violation.impact,
+      targets: violation.nodes.map((node) => node.target),
+    }));
+  dependencyAcceptance.axe.push({
+    blocking,
+    state,
+    violationCount: scan.violations.length,
+    violations: scan.violations.map((violation) => ({
+      id: violation.id,
+      impact: violation.impact ?? "unknown",
+    })),
+  });
+  assert.deepEqual(blocking, [], `${state}: axe critical/serious must be 0`);
+}
+
+async function setCockpitTheme(page, theme) {
+  const currentTheme = await page.evaluate(
+    () => document.documentElement.dataset.theme ?? "light",
+  );
+  if (currentTheme === theme) return;
+  await page
+    .getByRole("button", {
+      name:
+        theme === "dark"
+          ? "当前为明色主题，切换到暗色主题"
+          : "当前为暗色主题，切换到明色主题",
+    })
+    .evaluate((button) => button.click());
+  assert.equal(
+    await page.evaluate(() => document.documentElement.dataset.theme),
+    theme,
+  );
+}
+
+function undersizedButtons(scope) {
+  return scope.getByRole("button").evaluateAll((buttons) =>
+    buttons
+      .map((button) => {
+        const rect = button.getBoundingClientRect();
+        return {
+          height: rect.height,
+          label: button.textContent?.trim() ?? "",
+          width: rect.width,
+        };
+      })
+      .filter(({ height, width }) => height < 44 || width < 44),
+  );
+}
+
 async function createTeamPrerequisites(page) {
   await page.goto(`${baseUrl}/team`, { waitUntil: "networkidle" });
   await page.getByRole("tab", { name: "模型服务" }).click();
@@ -185,7 +289,7 @@ async function createTeamPrerequisites(page) {
   await page.getByLabel("创建方式").selectOption("planner");
   await page.getByLabel("Agent 名称").fill("Context Planner");
   await page
-    .getByLabel("模型服务")
+    .getByLabel("模型服务", { exact: true })
     .selectOption({ label: "Context Local Provider" });
   await page.getByRole("checkbox", { name: "Context Skill" }).check();
   await page.getByRole("button", { name: "保存 Agent" }).click();
@@ -195,7 +299,7 @@ async function createTeamPrerequisites(page) {
   await page.getByLabel("创建方式").selectOption("builder");
   await page.getByLabel("Agent 名称").fill("Context Builder");
   await page
-    .getByLabel("模型服务")
+    .getByLabel("模型服务", { exact: true })
     .selectOption({ label: "Context Local Provider" });
   await page.getByRole("checkbox", { name: "Context Skill" }).check();
   await page.getByRole("checkbox", { name: "写入文件" }).check();
@@ -253,9 +357,10 @@ try {
     headless: true,
     ...(browserExecutable ? { executablePath: browserExecutable } : {}),
   });
-  const page = await browser.newPage({
+  const browserContext = await browser.newContext({
     viewport: { height: 1100, width: 1600 },
   });
+  const page = await browserContext.newPage();
   page.on("response", async (response) => {
     const url = response.url();
     if (
@@ -324,7 +429,7 @@ try {
   await page.getByLabel("任务标题").fill("Plan task");
   await page.getByLabel("任务说明").fill("Prepare the implementation");
   await selectOptionContaining(page.getByLabel("负责人"), "Context Planner");
-  await page.getByRole("button", { name: "创建任务" }).click();
+  await page.getByRole("button", { exact: true, name: "创建任务" }).click();
   await page.getByRole("heading", { name: "Plan task" }).waitFor();
 
   await page.getByLabel("任务标题").fill("Build task");
@@ -334,18 +439,23 @@ try {
     .getByRole("group", { name: "前置依赖" })
     .getByRole("checkbox", { name: "Plan task" })
     .check();
-  await page.getByRole("button", { name: "创建任务" }).click();
-  await page.getByRole("heading", { name: "Build task" }).waitFor();
+  await page.getByRole("button", { exact: true, name: "创建任务" }).click();
+  await page
+    .getByRole("region", { name: "使命任务看板" })
+    .getByRole("heading", { exact: true, name: "Build task" })
+    .waitFor();
 
   await page.getByRole("button", { name: "开始任务 Build task" }).click();
   await page
     .getByRole("alert")
     .getByText(/前置依赖尚未完成/)
     .waitFor();
+  // 统一完成门槛（特性 006）：看板"完成任务"要求先通过独立评审，评审路径由
+  // review smoke 覆盖；此处保留依赖守卫拦截与无依赖任务可启动的正向控制。
   await page.getByRole("button", { name: "开始任务 Plan task" }).click();
-  await page.getByRole("button", { name: "完成任务 Plan task" }).click();
-  await page.getByRole("button", { name: "开始任务 Build task" }).click();
-  await page.getByRole("button", { name: "完成任务 Build task" }).click();
+  await page
+    .getByRole("button", { name: "完成任务 Plan task" })
+    .waitFor();
 
   const missionState = await page.evaluate(async () => {
     const projects = await (await fetch("/api/projects")).json();
@@ -358,6 +468,339 @@ try {
   const planId = missionState.state.workItems.find(
     (item) => item.title === "Plan task",
   ).id;
+
+  // --- 026 T-03：Mission 依赖全景真实浏览器验收 ---
+  // 造数：既有 Plan→Build 链上补 Test(←Plan)、Ship(←Build,Test)，形成链+菱形。
+  // 环在持久层被 DEPENDENCY_CYCLE 守卫拒绝（合法路径不可达），循环呈现由组件测试覆盖。
+  await page.getByLabel("任务标题").fill("Test task");
+  await page.getByLabel("任务说明").fill("Verify the build outcome");
+  await selectOptionContaining(page.getByLabel("负责人"), "Context Builder");
+  await page
+    .getByRole("group", { name: "前置依赖" })
+    .getByRole("checkbox", { name: "Plan task" })
+    .check();
+  await page.getByRole("button", { exact: true, name: "创建任务" }).click();
+  const boardRegion = page.getByRole("region", { name: "使命任务看板" });
+  await boardRegion
+    .getByRole("heading", { exact: true, name: "Test task" })
+    .waitFor();
+
+  await page.getByLabel("任务标题").fill("Ship task");
+  await page.getByLabel("任务说明").fill("Release after build and test");
+  await selectOptionContaining(page.getByLabel("负责人"), "Context Builder");
+  const shipDependencies = page.getByRole("group", { name: "前置依赖" });
+  await shipDependencies
+    .getByRole("checkbox", { name: "Build task" })
+    .check();
+  await shipDependencies.getByRole("checkbox", { name: "Test task" }).check();
+  await page.getByRole("button", { exact: true, name: "创建任务" }).click();
+  await boardRegion
+    .getByRole("heading", { exact: true, name: "Ship task" })
+    .waitFor();
+
+  const dependencyRegion = page.getByRole("region", { name: "依赖全景" });
+  const dependencyList = dependencyRegion.getByRole("list", {
+    name: "任务依赖关系",
+  });
+  await dependencyRegion
+    .getByRole("heading", { exact: true, name: "Ship task" })
+    .waitFor();
+  depEqual(
+    await dependencyList.getByRole("listitem").count(),
+    4,
+    "dependency insight must list all four work item nodes",
+  );
+
+  function dependencyCard(title) {
+    return dependencyRegion.locator("li").filter({
+      has: page.getByRole("heading", { exact: true, name: title }),
+    });
+  }
+  const planCard = dependencyCard("Plan task");
+  const buildCard = dependencyCard("Build task");
+  const testCard = dependencyCard("Test task");
+  const shipCard = dependencyCard("Ship task");
+
+  depEqual(
+    await planCard.getByText("进行中", { exact: true }).count(),
+    1,
+    "Plan node must show the in-progress status badge",
+  );
+  depEqual(
+    await buildCard.getByText("待办", { exact: true }).count(),
+    1,
+    "Build node must show the todo status badge",
+  );
+  depEqual(
+    await testCard.getByText("待办", { exact: true }).count(),
+    1,
+    "Test node must show the todo status badge",
+  );
+  depEqual(
+    await shipCard.getByText("待办", { exact: true }).count(),
+    1,
+    "Ship node must show the todo status badge",
+  );
+  await shipCard
+    .getByText("前置依赖未完成：待办 2 项", { exact: true })
+    .waitFor();
+  await testCard
+    .getByText("前置依赖未完成：进行中 1 项", { exact: true })
+    .waitFor();
+  await buildCard
+    .getByText("前置依赖未完成：进行中 1 项", { exact: true })
+    .waitFor();
+  depEqual(
+    await planCard.getByText(/前置依赖未完成/).count(),
+    0,
+    "Plan node must not show a blocked reason",
+  );
+
+  depEqual(
+    await shipCard
+      .getByRole("button", { name: "定位任务 Build task" })
+      .count(),
+    1,
+    "Ship node must be blocked by Build",
+  );
+  depEqual(
+    await shipCard
+      .getByRole("button", { name: "定位任务 Test task" })
+      .count(),
+    1,
+    "Ship node must be blocked by Test",
+  );
+  depOk(
+    (await shipCard.textContent()).includes("被阻塞于："),
+    "Ship node must explain what blocks it",
+  );
+  depEqual(
+    await planCard
+      .getByRole("button", { name: "定位任务 Build task" })
+      .count(),
+    1,
+    "Plan node must block Build",
+  );
+  depEqual(
+    await planCard
+      .getByRole("button", { name: "定位任务 Test task" })
+      .count(),
+    1,
+    "Plan node must block Test",
+  );
+  depOk(
+    (await planCard.textContent()).includes("阻塞："),
+    "Plan node must explain what it blocks",
+  );
+  depOk(
+    !(await planCard.textContent()).includes("被阻塞于："),
+    "Plan node has no blockers",
+  );
+  depEqual(
+    await buildCard
+      .getByRole("button", { name: "定位任务 Plan task" })
+      .count(),
+    1,
+    "Build node must be blocked by Plan",
+  );
+  depEqual(
+    await testCard
+      .getByRole("button", { name: "定位任务 Plan task" })
+      .count(),
+    1,
+    "Test node must be blocked by Plan",
+  );
+
+  depEqual(
+    await dependencyRegion.getByText(/循环/).count(),
+    0,
+    "no cycle annotation may render without cycles",
+  );
+  depEqual(
+    await dependencyRegion.getByRole("textbox").count(),
+    0,
+    "dependency panel must stay read-only (no inputs)",
+  );
+  depEqual(
+    await dependencyRegion.getByRole("checkbox").count(),
+    0,
+    "dependency panel must stay read-only (no checkboxes)",
+  );
+
+  const dependencyApi = await page.evaluate(async () => {
+    const projects = await (await fetch("/api/projects")).json();
+    const projectId = projects.projects[0].id;
+    const state = await (
+      await fetch(`/api/projects/${projectId}/mission`)
+    ).json();
+    const missionId = state.mission.id;
+    const load = async () =>
+      (
+        await fetch(
+          `/api/projects/${projectId}/missions/${missionId}/dependencies`,
+        )
+      ).json();
+    return { first: await load(), second: await load() };
+  });
+  depEqual(
+    dependencyApi.first.hasDependencies,
+    true,
+    "API must report dependencies",
+  );
+  depEqual(dependencyApi.first.nodes.length, 4, "API must return four nodes");
+  depEqual(dependencyApi.first.edges.length, 4, "API must return four edges");
+  depEqual(dependencyApi.first.cycles.length, 0, "API must report no cycles");
+  depDeepEqual(
+    dependencyApi.second,
+    dependencyApi.first,
+    "dependency insight must be deterministic across calls",
+  );
+  const titleById = Object.fromEntries(
+    dependencyApi.first.nodes.map((node) => [node.workItemId, node.title]),
+  );
+  depDeepEqual(
+    dependencyApi.first.edges
+      .map(
+        (edge) =>
+          `${titleById[edge.fromWorkItemId]}->${titleById[edge.toWorkItemId]}`,
+      )
+      .sort(),
+    [
+      "Build task->Ship task",
+      "Plan task->Build task",
+      "Plan task->Test task",
+      "Test task->Ship task",
+    ],
+    "API edges must form the chain and the diamond",
+  );
+  const shipNode = dependencyApi.first.nodes.find(
+    (node) => node.title === "Ship task",
+  );
+  depEqual(
+    shipNode.blockedReason,
+    "前置依赖未完成：待办 2 项",
+    "API must derive the Ship blocked reason",
+  );
+
+  await shipCard.getByRole("button", { name: "定位任务 Test task" }).click();
+  const testHeading = boardRegion.getByRole("heading", {
+    exact: true,
+    name: "Test task",
+  });
+  depOk(
+    await testHeading.evaluate(
+      (element) => document.activeElement === element,
+    ),
+    "clicking a relation button must move focus to the board task card",
+  );
+
+  const planBuildButton = planCard.getByRole("button", {
+    name: "定位任务 Build task",
+  });
+  await planBuildButton.focus();
+  await page.keyboard.press("Enter");
+  const buildHeading = boardRegion.getByRole("heading", {
+    exact: true,
+    name: "Build task",
+  });
+  depOk(
+    await buildHeading.evaluate(
+      (element) => document.activeElement === element,
+    ),
+    "Enter on a relation button must move focus to the board task card",
+  );
+
+  const shipLocateButton = shipCard.getByRole("button", {
+    name: "定位任务 Ship task",
+  });
+  await shipLocateButton.focus();
+  depOk(
+    await shipLocateButton.evaluate(
+      (element) =>
+        element.matches(":focus-visible") &&
+        getComputedStyle(element).boxShadow !== "none",
+    ),
+    "keyboard-focused dependency buttons must show a visible focus ring",
+  );
+
+  depDeepEqual(
+    await undersizedButtons(dependencyRegion),
+    [],
+    "dependency panel buttons must be at least 44x44px",
+  );
+  await axeDependencies(page, "desktop light mission dependency insight");
+  dependencyAcceptance.matrix.push("desktop-light");
+  await page.screenshot({ fullPage: true, path: dependencyDesktopLightScreenshot });
+
+  await setCockpitTheme(page, "dark");
+  await shipCard
+    .getByText("前置依赖未完成：待办 2 项", { exact: true })
+    .waitFor();
+  depEqual(
+    await dependencyList.getByRole("listitem").count(),
+    4,
+    "dark theme must keep all four dependency nodes",
+  );
+  await axeDependencies(page, "desktop dark mission dependency insight");
+  dependencyAcceptance.matrix.push("desktop-dark");
+  await page.screenshot({ fullPage: true, path: dependencyDesktopDarkScreenshot });
+  await setCockpitTheme(page, "light");
+
+  // 无依赖 Mission 的 empty 态（第二项目隔离造数，不污染主项目事实）
+  await page.goto(baseUrl, { waitUntil: "networkidle" });
+  await page.getByLabel("项目名称").fill("Context Empty Project");
+  await page
+    .locator("form")
+    .filter({ has: page.getByLabel("项目名称") })
+    .getByRole("button", { name: "创建项目" })
+    .click();
+  await page.waitForURL(/\/projects\/[^/]+$/);
+  await page
+    .getByRole("heading", { name: "Context Empty Project" })
+    .waitFor();
+  await page.getByLabel("使命标题").fill("Empty Mission");
+  await page.getByLabel("使命目标").fill("No dependencies at all");
+  await page.getByRole("button", { name: "创建使命" }).click();
+  await page.getByRole("heading", { name: "Empty Mission" }).waitFor();
+  const emptyDependencyRegion = page.getByRole("region", { name: "依赖全景" });
+  await emptyDependencyRegion
+    .getByText("该 Mission 暂无依赖关系。", { exact: true })
+    .waitFor();
+  depEqual(
+    await emptyDependencyRegion.getByRole("list").count(),
+    0,
+    "empty mission must not render a dependency list",
+  );
+  depEqual(
+    await emptyDependencyRegion
+      .getByRole("button", { name: /定位任务/ })
+      .count(),
+    0,
+    "empty mission must not render locate buttons",
+  );
+
+  // 返回主项目：跨页导航后视图与事实源一致
+  await page.goto(`${baseUrl}/projects/${missionState.projectId}`, {
+    waitUntil: "networkidle",
+  });
+  await page
+    .getByRole("heading", { name: "Context Smoke Mission" })
+    .waitFor();
+  const refreshedDependencies = page.getByRole("region", { name: "依赖全景" });
+  await refreshedDependencies
+    .getByRole("list", { name: "任务依赖关系" })
+    .waitFor();
+  depEqual(
+    await refreshedDependencies.getByRole("listitem").count(),
+    4,
+    "dependency insight must stay consistent with the fact source after navigation",
+  );
+  await refreshedDependencies
+    .getByText("前置依赖未完成：待办 2 项", { exact: true })
+    .waitFor();
+  console.log(
+    "DEPENDENCY PANEL PASS: chain+diamond nodes, blocked reason, relations, locate navigation, empty state, refresh consistency",
+  );
 
   const rightPanel = page.locator(".cockpit-context");
   await createMemory(rightPanel, {
@@ -381,7 +824,7 @@ try {
   });
   await createMemory(rightPanel, {
     type: "事实",
-    content: "Plan task completed",
+    content: "Plan task started",
     sourceType: "work_item",
     sourceRef: planId,
   });
@@ -448,14 +891,14 @@ try {
   await page
     .getByRole("heading", { name: "Context Smoke Mission" })
     .waitFor();
-  await page
+  const persistedBoard = page
     .getByTestId("editor-surface")
-    .getByRole("heading", { exact: true, name: "Plan task" })
-    .waitFor();
-  await page
-    .getByTestId("editor-surface")
-    .getByRole("heading", { exact: true, name: "Build task" })
-    .waitFor();
+    .getByRole("region", { name: "使命任务看板" });
+  for (const title of ["Plan task", "Build task", "Test task", "Ship task"]) {
+    await persistedBoard
+      .getByRole("heading", { exact: true, name: title })
+      .waitFor();
+  }
   await page
     .locator(".cockpit-context")
     .getByRole("heading", { name: "Current context goal" })
@@ -469,34 +912,31 @@ try {
       document.activeElement.blur();
     }
   });
-  await page.keyboard.press("Tab");
+  // 活动栏（设置/主题）在 DOM 中先于移动工具栏，Tab 序会经过其控件；
+  // 此处验收三个抽屉入口按序键盘可达，而非钉死绝对 Tab 位次。
+  async function tabUntilFocused(locator, label, attempts = 16) {
+    for (let attempt = 0; attempt < attempts; attempt += 1) {
+      const focused = await locator
+        .evaluate((element) => document.activeElement === element)
+        .catch(() => false);
+      if (focused) return;
+      await page.keyboard.press("Tab");
+    }
+    assert.ok(
+      await locator.evaluate((element) => document.activeElement === element),
+      `${label} must be reachable by keyboard Tab`,
+    );
+  }
   const projectsOpener = page.getByRole("button", {
     name: "打开项目导航",
   });
-  assert.equal(
-    await projectsOpener.evaluate(
-      (element) => document.activeElement === element,
-    ),
-    true,
-  );
-  await page.keyboard.press("Tab");
+  await tabUntilFocused(projectsOpener, "打开项目导航");
   const editorOpener = page.getByRole("button", { name: "打开编辑" });
-  assert.equal(
-    await editorOpener.evaluate(
-      (element) => document.activeElement === element,
-    ),
-    true,
-  );
-  await page.keyboard.press("Tab");
+  await tabUntilFocused(editorOpener, "打开编辑");
   const contextOpener = page.getByRole("button", {
     name: "打开当前任务上下文",
   });
-  assert.equal(
-    await contextOpener.evaluate(
-      (element) => document.activeElement === element,
-    ),
-    true,
-  );
+  await tabUntilFocused(contextOpener, "打开当前任务上下文");
 
   await projectsOpener.click();
   const projectsDialog = page.getByRole("dialog", { name: "项目导航" });
@@ -560,6 +1000,7 @@ try {
 
   await editorOpener.click();
   const editorDialog = page.getByRole("dialog", { name: "任务编辑" });
+  await editorDialog.getByRole("tab", { name: "看板" }).click();
   await editorDialog
     .getByRole("heading", { name: "Context Smoke Mission" })
     .waitFor();
@@ -571,8 +1012,59 @@ try {
     ),
     true,
   );
+
+  // 026 T-03 narrow 矩阵：依赖全景在窄屏编辑抽屉内完整可达
+  const narrowDependencies = editorDialog.getByRole("region", {
+    name: "依赖全景",
+  });
+  await narrowDependencies
+    .getByRole("list", { name: "任务依赖关系" })
+    .waitFor();
+  depEqual(
+    await narrowDependencies.getByRole("listitem").count(),
+    4,
+    "narrow drawer must render all four dependency nodes",
+  );
+  await narrowDependencies
+    .getByText("前置依赖未完成：待办 2 项", { exact: true })
+    .waitFor();
+  depDeepEqual(
+    await undersizedButtons(narrowDependencies),
+    [],
+    "narrow dependency buttons must be at least 44x44px",
+  );
+  await axeDependencies(page, "narrow light mission dependency drawer");
+  dependencyAcceptance.matrix.push("narrow-light");
+  await page.screenshot({
+    fullPage: true,
+    path: dependencyNarrowLightScreenshot,
+  });
   await page.keyboard.press("Escape");
   await editorDialog.waitFor({ state: "detached" });
+
+  // 暗色窄屏关键路径复核（抽屉外切换主题，避免 inert 背景）
+  await setCockpitTheme(page, "dark");
+  await editorOpener.click();
+  const editorDialogDark = page.getByRole("dialog", { name: "任务编辑" });
+  await editorDialogDark.getByRole("tab", { name: "看板" }).click();
+  const narrowDependenciesDark = editorDialogDark.getByRole("region", {
+    name: "依赖全景",
+  });
+  await narrowDependenciesDark
+    .getByRole("list", { name: "任务依赖关系" })
+    .waitFor();
+  await narrowDependenciesDark
+    .getByText("前置依赖未完成：待办 2 项", { exact: true })
+    .waitFor();
+  await axeDependencies(page, "narrow dark mission dependency drawer");
+  dependencyAcceptance.matrix.push("narrow-dark");
+  await page.screenshot({
+    fullPage: true,
+    path: dependencyNarrowDarkScreenshot,
+  });
+  await page.keyboard.press("Escape");
+  await editorDialogDark.waitFor({ state: "detached" });
+  await setCockpitTheme(page, "light");
 
   await contextOpener.click();
   const contextDialog = page.getByRole("dialog", {
@@ -687,12 +1179,21 @@ try {
   assert.deepEqual(counts, {
     agents: 2,
     memory_entries: 5,
-    missions: 1,
+    missions: 2,
     project_memberships: 2,
-    projects: 1,
+    projects: 2,
     providers: 1,
-    work_items: 2,
+    work_items: 4,
   });
+
+  writeFileSync(
+    dependencyResultsPath,
+    `${JSON.stringify(dependencyAcceptance, null, 2)}\n`,
+    "utf8",
+  );
+  console.log(
+    `DEPENDENCY ACCEPTANCE PASS: assertions=${dependencyAcceptance.assertions} axeStates=${dependencyAcceptance.axe.length} matrix=${dependencyAcceptance.matrix.join(",")}`,
+  );
 
   console.log("BROWSER PASS: full S-3 desktop and narrow acceptance completed");
   console.log(`SMOKE SCREENSHOT: ${desktopScreenshot}`);

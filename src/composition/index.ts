@@ -14,6 +14,7 @@ export * as memoryService from "@/src/adapters/outbound/sqlite/knowledge-provena
 
 // mission-work
 export * as missionWork from "@/src/adapters/outbound/sqlite/mission-work/mission-service";
+export * as missionWorkDependencyInsight from "@/src/adapters/outbound/sqlite/mission-work/dependency-insight";
 export * as missionWorkTasks from "@/src/adapters/outbound/sqlite/mission-work/tasks";
 
 // project-workspace

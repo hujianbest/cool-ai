@@ -37,7 +37,7 @@ Capability ID 是稳定治理标识；owner 是唯一逻辑子系统，不等于
 ### Mission & Work
 
 - `CAP-MWK-01` Mission / Work Core — owner: Mission & Work — 状态: 已交付核心 — 证据/建立切片: S-3～S-6；`src/adapters/outbound/sqlite/mission-work/mission-service.ts`、`tests/modules/mission-work/mission-crud.test.ts`
-- `CAP-MWK-02` Mission Dependency Insight — owner: Mission & Work — 状态: 规划中 — 建立切片: S-25
+- `CAP-MWK-02` Mission Dependency Insight — owner: Mission & Work — 状态: 已交付核心 — 证据/建立切片: S-25 [`progress.md`](../features/026-mission-dependency-insight/progress.md)
 - `CAP-MWK-03` SOP State Projection — owner: Mission & Work — 状态: 规划中 — 建立切片: S-26
 - `CAP-MWK-04` Dispatch Lease Control — owner: Mission & Work — 状态: 规划中 — 建立切片: S-27
 - `CAP-MWK-05` Public Mission / Work Events — owner: Mission & Work — 状态: 规划中 — 建立路径: S-23 的 Mission & Work 审计纵切；该片复用已交付 `CAP-OPS-01/02`，以 owner 可查询脱敏 Mission/Work 事件并精确导航为独立结果
@@ -110,12 +110,6 @@ S-9～S-12 的 `依赖: S-*` 是原历史文字，只说明当时切片记录；
 
 主子系统为 Public Collaboration；搜索等派生能力可使用 Operations Projection，但不得成为 Thread/Message 命令事实源。
 
-- [ ] S-14 回复引用与来源跳转（CI-2.11） — 主子系统: Public Collaboration；主 Capability: `CAP-COL-02`；票据: 未创建；演示判据: owner 能回复一条公开消息并从引用跳回精确来源，被删或不可用来源显示稳定占位而不伪造内容；约束: 工作区=项目隔离，verified-handle=不适用，sandbox=不适用，凭据=引用内容脱敏，审批=不适用，独立复核=交付必需，审计=来源 tuple 不可伪造；不复制 Clowder 品牌、源码或资产
-  - 准入: 已交付前置: `CAP-COL-01` 与 `CAP-COL-02` 的 Thread/Message 核心（已交付，S-12 progress 与 thread tests）；本片建立: `CAP-COL-02` 的回复引用、精确跳转和不可用占位（规划中）。
-- [ ] S-15 线程草稿恢复与输入历史（CI-2.12） — 主子系统: Public Collaboration；主 Capability: `CAP-COL-04`；票据: 未创建；演示判据: owner 能按线程恢复文字、附件占位和回复引用草稿，搜索自己的输入历史并显式清除，重启后行为符合所选保留范围；约束: 工作区=项目隔离，verified-handle=不适用，sandbox=不适用，凭据=敏感输入不得保存，审批=不适用，独立复核=交付必需，审计=只记录清除/保留策略而不记录秘密；不复制 Clowder 品牌、源码或资产
-  - 准入: 已交付前置: `CAP-COL-01`；已交付架构单元: S-9 的本机非敏感偏好 Adapter（不是领域 Capability）；阻塞: `CAP-COL-02` 回复来源（规划中，由 S-14 建立）；本片建立: `CAP-COL-04` 的按线程草稿、输入历史和清除策略（规划中）。
-- [ ] S-16 项目聊天图片附件（CI-2.10） — 主子系统: Public Collaboration；主 Capability: `CAP-COL-05`；票据: 未创建；演示判据: owner 能粘贴或选择受支持图片发送，看到类型/大小/数量校验、上传进度、失败恢复和重启后的项目内附件；约束: 工作区=附件限定项目存储，verified-handle=本地文件读取必需，sandbox=解析隔离，凭据=不得嵌入或回显，审批=不适用，独立复核=交付必需，审计=上传来源与清理可追溯；不复制 Clowder 品牌、源码或资产
-  - 准入: 已交付前置: `CAP-COL-01`、`CAP-PWS-01`、`CAP-EXE-01`（已交付核心）；阻塞: `CAP-COL-04` 草稿附件占位（规划中，由 S-15 建立）；本片建立: `CAP-COL-05` 的项目附件存储、媒体校验与恢复（规划中）。
 - [ ] S-17 线程搜索与精确定位（CI-2.5） — 主子系统: Operations Projection；主 Capability: `CAP-OPS-02`；票据: 未创建；演示判据: owner 能按标题、内容和项目范围搜索线程并定位匹配消息，结果绝不跨项目泄漏；约束: 工作区=项目隔离，verified-handle=不适用，sandbox=不适用，凭据=索引排除秘密，审批=不适用，独立复核=交付必需，审计=查询不记录敏感正文；不复制 Clowder 品牌、源码或资产
   - 准入: 已交付前置: `CAP-COL-01`（已交付核心）；阻塞: S-23 的 `AUD-MVP` 先交付 `CAP-OPS-01` 与最薄 `CAP-OPS-02`，再由 `AUD-COL` 纵切交付 `CAP-COL-07` 并证明 Collaboration 事件可查询/导航；本片建立: `CAP-OPS-02` 的项目隔离线程索引与定位（规划中）。
 - [ ] S-18 线程标签与批量整理（CI-2.6） — 主子系统: Public Collaboration；主 Capability: `CAP-COL-02`；票据: 未创建；演示判据: owner 能创建、搜索、分配和删除项目内标签并批量整理线程，删除语义与刷新后状态一致；约束: 工作区=项目隔离，verified-handle=不适用，sandbox=不适用，凭据=不适用，审批=批量破坏性动作确认，独立复核=交付必需，审计=批量写入版本化；不复制 Clowder 品牌、源码或资产
@@ -150,7 +144,7 @@ S-9～S-12 的 `依赖: S-*` 是原历史文字，只说明当时切片记录；
 
 主子系统为 Mission & Work；图、SOP 与租约控制面必须读取同一任务事实，不建立第二任务状态机。
 
-- [ ] S-25 Mission 依赖与阻塞全景（CI-4.4） — 主子系统: Mission & Work；主 Capability: `CAP-MWK-02`；票据: 未创建；演示判据: owner 能查看复杂 Mission 的只读依赖图、循环与阻塞原因，并从节点定位现有任务而不产生第二套任务事实源；约束: 工作区=项目隔离，verified-handle=不适用，sandbox=不适用，凭据=不适用，审批=不适用，独立复核=交付必需，审计=图数据来源可追溯；不复制 Clowder 品牌、源码或资产
+- [x] S-25 Mission 依赖与阻塞全景（CI-4.4） — 主子系统: Mission & Work；主 Capability: `CAP-MWK-02`；票据: [`features/026.../tickets.md`](../features/026-mission-dependency-insight/tickets.md)；Ship: 2026-08-10（零 schema 变更纯派生读模型：getMissionDependencyInsight + GET dependencies 路由；Tarjan 循环检测、悬空依赖 missing 分类、阻塞原因派生；MissionBoard 只读依赖全景区 + 焦点缝导航；smoke:context 35 断言 / 4 axe 状态 0 违规；全量 246 文件/2111 用例 117.1s）；演示判据: owner 能查看复杂 Mission 的只读依赖图、循环与阻塞原因，并从节点定位现有任务而不产生第二套任务事实源；约束: 工作区=项目隔离，verified-handle=不适用，sandbox=不适用，凭据=不适用，审批=不适用，独立复核=交付必需（review 豁免记录于 progress），审计=图数据来源可追溯；不复制 Clowder 品牌、源码或资产
   - 准入: 已交付前置: `CAP-MWK-01`（已交付核心，mission service/tests）；本片建立: `CAP-MWK-02` 的只读依赖、循环与阻塞查询（规划中）。
 - [ ] S-26 可审计 SOP 与流程状态（CI-4.6） — 主子系统: Mission & Work；主 Capability: `CAP-MWK-03`；票据: 未创建；演示判据: owner 能看到仓库真实流程/SOP 的当前状态、来源和陈旧提示，刷新后与事实源一致且不建立第二状态机；约束: 工作区=只读绑定项目事实，verified-handle=读取流程文件必需，sandbox=不执行流程命令，凭据=不显示环境秘密，审批=不适用，独立复核=交付必需，审计=状态来源和时间可追溯；不复制 Clowder 品牌、源码或资产
   - 准入: 已交付前置: `CAP-MWK-01`（已交付）；阻塞: `CAP-PWS-02`（S-22）、`CAP-OPS-01`（S-23 的 `AUD-MVP` 纵切）、`CAP-MWK-02`（S-25）均规划中；本片建立: `CAP-MWK-03` 的来源化 SOP 状态与 freshness（规划中）。

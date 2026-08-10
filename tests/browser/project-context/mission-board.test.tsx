@@ -171,6 +171,14 @@ describe("Mission Board", () => {
         if (url.endsWith("/mission") && !init?.method) {
           return Response.json({ mission: currentMission, workItems: [] });
         }
+        if (url.endsWith("/dependencies") && !init?.method) {
+          return Response.json({
+            nodes: [],
+            edges: [],
+            cycles: [],
+            hasDependencies: false,
+          });
+        }
         if (url.endsWith("/mission") && init?.method === "POST") {
           currentMission = mission;
           return Response.json({ mission }, { status: 201 });
@@ -261,6 +269,14 @@ describe("Mission Board", () => {
         if (url.endsWith("/mission") && !init?.method) {
           return Response.json({ mission, workItems: items });
         }
+        if (url.endsWith("/dependencies") && !init?.method) {
+          return Response.json({
+            nodes: [],
+            edges: [],
+            cycles: [],
+            hasDependencies: false,
+          });
+        }
         if (
           url === "/api/missions/mission-1/work-items" &&
           init?.method === "POST"
@@ -339,6 +355,14 @@ describe("Mission Board", () => {
         }
         if (url.endsWith("/mission") && !init?.method) {
           return Response.json({ mission, workItems: items });
+        }
+        if (url.endsWith("/dependencies") && !init?.method) {
+          return Response.json({
+            nodes: [],
+            edges: [],
+            cycles: [],
+            hasDependencies: false,
+          });
         }
         if (url === "/api/work-items/item-1" && init?.method === "PATCH") {
           return Response.json({

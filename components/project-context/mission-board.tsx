@@ -8,6 +8,7 @@ import {
 } from "react";
 
 import type { ApiError } from "@/src/shared/contracts";
+import { MissionDependencyInsightPanel } from "@/components/project-context/mission-dependency-insight";
 import { MissionDeliverySurface } from "@/components/review/review-product-surface";
 import type {
   MembershipState,
@@ -275,9 +276,15 @@ export function MissionBoard({
 
   useEffect(() => {
     if (!focusWorkItemId) return;
-    workItemHeadingRefs.current.get(focusWorkItemId)?.focus();
+    const heading = workItemHeadingRefs.current.get(focusWorkItemId);
+    heading?.scrollIntoView?.({ block: "nearest" });
+    heading?.focus();
     setFocusWorkItemId(null);
   }, [focusWorkItemId, workItems]);
+
+  function locateWorkItem(workItemId: string) {
+    setFocusWorkItemId(workItemId);
+  }
 
   function resetOperationState() {
     setError(null);
@@ -993,6 +1000,12 @@ export function MissionBoard({
               </section>
             ))}
           </div>
+          <MissionDependencyInsightPanel
+            missionId={mission.id}
+            onLocateWorkItem={locateWorkItem}
+            projectId={projectId}
+            refreshSignal={workItems}
+          />
           <MissionDeliverySurface missionId={mission.id} />
         </>
       )}

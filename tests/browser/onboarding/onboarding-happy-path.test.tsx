@@ -323,6 +323,14 @@ function installHappyPathFetch() {
         }
         return Response.json({ mission, workItems: [] });
       }
+      if (url.endsWith("/dependencies")) {
+        return Response.json({
+          nodes: [],
+          edges: [],
+          cycles: [],
+          hasDependencies: false,
+        });
+      }
       const threadRead = !init?.method
         ? threadReadResponse(url, started)
         : null;
@@ -1931,6 +1939,14 @@ describe("progressive onboarding T-9 formal goal intake", () => {
         if (url.endsWith("/mission") && method === "POST") {
           return Response.json({ mission }, { status: 201 });
         }
+        if (url.endsWith("/dependencies")) {
+          return Response.json({
+            nodes: [],
+            edges: [],
+            cycles: [],
+            hasDependencies: false,
+          });
+        }
         throw new Error(`Unexpected request: ${method} ${url}`);
       }),
     );
@@ -1970,6 +1986,14 @@ describe("progressive onboarding T-9 formal goal intake", () => {
           return Response.json({
             mission: created ? mission : null,
             workItems: [],
+          });
+        }
+        if (url.endsWith("/dependencies")) {
+          return Response.json({
+            nodes: [],
+            edges: [],
+            cycles: [],
+            hasDependencies: false,
           });
         }
         throw new Error(`Unexpected request: ${url}`);
@@ -2224,6 +2248,14 @@ describe("progressive onboarding T-14 unknown-write reconciliation", () => {
           };
           throw new TypeError("response lost after commit");
         }
+        if (url.endsWith("/dependencies")) {
+          return Response.json({
+            nodes: [],
+            edges: [],
+            cycles: [],
+            hasDependencies: false,
+          });
+        }
         throw new Error(`Unexpected request: ${url}`);
       }),
     );
@@ -2268,6 +2300,14 @@ describe("progressive onboarding T-14 unknown-write reconciliation", () => {
             version: 2,
           };
           return Response.json({ mission: currentMission });
+        }
+        if (url.endsWith("/dependencies")) {
+          return Response.json({
+            nodes: [],
+            edges: [],
+            cycles: [],
+            hasDependencies: false,
+          });
         }
         throw new Error(`Unexpected request: ${url}`);
       }),
