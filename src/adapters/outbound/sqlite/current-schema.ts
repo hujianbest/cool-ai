@@ -12,7 +12,7 @@ export type CurrentSchemaManifest = {
 
 const CURRENT_SCHEMA_DEFINITION = {
   "identity": {
-    "userVersion": 14
+    "userVersion": 15
   },
   "objects": [
     {
@@ -193,6 +193,24 @@ const CURRENT_SCHEMA_DEFINITION = {
       "kind": "table",
       "name": "execution_events",
       "createSql": "CREATE TABLE execution_events(\n id TEXT PRIMARY KEY, project_id TEXT NOT NULL, execution_id TEXT NOT NULL,\n sequence INTEGER NOT NULL CHECK(sequence>=1), attempt_no INTEGER NOT NULL CHECK(attempt_no>=1),\n type TEXT NOT NULL, actor_type TEXT NOT NULL CHECK(actor_type IN ('owner','agent','system')), actor_id TEXT,\n payload_json TEXT NOT NULL CHECK(json_valid(payload_json) AND length(CAST(payload_json AS BLOB))<=65536),\n created_at TEXT NOT NULL CHECK(created_at GLOB '????-??-??T??:??:??.???Z'),\n UNIQUE(execution_id,sequence),\n FOREIGN KEY(project_id,execution_id) REFERENCES executions(project_id,id) ON DELETE CASCADE\n)",
+      "dependsOn": []
+    },
+    {
+      "kind": "table",
+      "name": "audit_event_outbox",
+      "createSql": "CREATE TABLE audit_event_outbox(\n id TEXT PRIMARY KEY,\n project_id TEXT NOT NULL REFERENCES projects(id) ON DELETE CASCADE,\n source TEXT NOT NULL CHECK(source='safe_execution'),\n event_type TEXT NOT NULL,\n payload_json TEXT NOT NULL CHECK(json_valid(payload_json) AND length(CAST(payload_json AS BLOB))<=65536),\n occurred_at TEXT NOT NULL CHECK(occurred_at GLOB '????-??-??T??:??:??.???Z'),\n outbox_seq INTEGER NOT NULL UNIQUE CHECK(outbox_seq>=1)\n)",
+      "dependsOn": []
+    },
+    {
+      "kind": "table",
+      "name": "audit_event_projection",
+      "createSql": "CREATE TABLE audit_event_projection(\n outbox_seq INTEGER NOT NULL UNIQUE CHECK(outbox_seq>=1),\n id TEXT NOT NULL,\n project_id TEXT NOT NULL,\n source TEXT NOT NULL,\n event_type TEXT NOT NULL,\n actor_type TEXT,\n occurred_at TEXT NOT NULL CHECK(occurred_at GLOB '????-??-??T??:??:??.???Z'),\n execution_id TEXT,\n payload_json TEXT NOT NULL CHECK(json_valid(payload_json) AND length(CAST(payload_json AS BLOB))<=65536)\n)",
+      "dependsOn": []
+    },
+    {
+      "kind": "table",
+      "name": "audit_projection_checkpoints",
+      "createSql": "CREATE TABLE audit_projection_checkpoints(\n consumer_id TEXT PRIMARY KEY,\n last_outbox_seq INTEGER NOT NULL DEFAULT 0 CHECK(last_outbox_seq>=0),\n status TEXT NOT NULL CHECK(status IN ('idle','rebuilding')),\n updated_at TEXT NOT NULL CHECK(updated_at GLOB '????-??-??T??:??:??.???Z')\n)",
       "dependsOn": []
     },
     {

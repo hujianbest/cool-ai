@@ -330,6 +330,25 @@ function modelFacts() {
   }>;
 }
 
+function outboxAuditFacts(): Array<{ eventId: string; seq: number }> {
+  return database.prepare(`
+    SELECT id AS eventId,outbox_seq AS seq
+    FROM audit_event_outbox ORDER BY outbox_seq
+  `).all() as Array<{ eventId: string; seq: number }>;
+}
+
+function committedEventIds(): string[] {
+  return (database.prepare(
+    "SELECT id FROM execution_events ORDER BY sequence",
+  ).all() as Array<{ id: string }>).map(({ id }) => id);
+}
+
+function committedUsageEventIds(): string[] {
+  return (database.prepare(`
+    SELECT id FROM execution_events WHERE type='usage_recorded' ORDER BY sequence
+  `).all() as Array<{ id: string }>).map(({ id }) => id);
+}
+
 function retryDependencies(): ExecutionControlDependencies {
   return {
     executionRoot: join(directory, "executions"),
@@ -459,6 +478,11 @@ describe("client-driven execution advance orchestration", () => {
         operationStatus: "pending",
         status: faultPoint === "after_call_terminal_commit" ? "succeeded" : "calling",
       })]);
+      // The audit outbox mirrors only committed execution_events rows: a fault
+      // before commit must leave no audit trace at all.
+      expect(outboxAuditFacts().map(({ eventId }) => eventId)).toEqual(
+        faultPoint === "after_call_terminal_commit" ? committedUsageEventIds() : [],
+      );
 
       database.prepare(`
         UPDATE execution_actions SET lease_expires_at='2000-01-01T00:00:00.000Z'
@@ -521,6 +545,12 @@ describe("client-driven execution advance orchestration", () => {
       expect(database.prepare(`
         SELECT count(*) AS count FROM execution_model_calls WHERE status='calling'
       `).get()).toEqual({ count: 0 });
+      // End to end: every committed execution event has exactly one audit
+      // outbox row, in order, with a dense monotonic sequence.
+      expect(outboxAuditFacts().map(({ eventId }) => eventId)).toEqual(committedEventIds());
+      expect(outboxAuditFacts().map(({ seq }) => seq)).toEqual(
+        committedEventIds().map((_, index) => index + 1),
+      );
     },
     10_000,
   );

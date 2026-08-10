@@ -15,6 +15,7 @@ import { tmpdir } from "node:os";
 import { join, resolve } from "node:path";
 import { DatabaseSync } from "node:sqlite";
 
+import AxeBuilder from "@axe-core/playwright";
 import { chromium } from "playwright";
 
 const host = "127.0.0.1";
@@ -37,9 +38,13 @@ const rawProviderMarker = `RAW_PROVIDER_${randomBytes(12).toString("hex")}`;
 const chainOfThoughtMarker = `COT_${randomBytes(12).toString("hex")}`;
 const environmentMarker = `ENV_${randomBytes(12).toString("hex")}`;
 const evidenceDirectory = resolve("features", "005-safe-parallel-execution", "evidence");
+const auditEvidenceDirectory = resolve("features", "028-audit-projection-mvp", "evidence");
 const desktopScreenshot = join(evidenceDirectory, "demo-execution-desktop.png");
 const narrowScreenshot = join(evidenceDirectory, "demo-execution-narrow.png");
+const auditDesktopScreenshot = join(auditEvidenceDirectory, "demo-audit-desktop.png");
+const auditNarrowScreenshot = join(auditEvidenceDirectory, "demo-audit-narrow.png");
 mkdirSync(evidenceDirectory, { recursive: true });
+mkdirSync(auditEvidenceDirectory, { recursive: true });
 
 const browserExecutable = [
   process.env.PLAYWRIGHT_CHROMIUM_EXECUTABLE,
@@ -348,6 +353,7 @@ async function warmAppRoutes() {
     `/api/projects/${missingId}/tasks`,
     `/api/projects/${missingId}/collaboration`,
     `/api/projects/${missingId}/executions`,
+    `/api/projects/${missingId}/audit-events`,
     `/api/projects/${missingId}/validation-policy`,
     `/api/projects/${missingId}/validation-policy/revisions`,
     `/api/executions/${missingId}`,
@@ -763,6 +769,9 @@ function counts() {
       "execution_staged_results",
       "execution_staged_files",
       "execution_events",
+      "audit_event_outbox",
+      "audit_event_projection",
+      "audit_projection_checkpoints",
     ];
     return Object.fromEntries(tables.map((table) => [
       table,
@@ -777,6 +786,53 @@ let browser;
 let page;
 let desktopFacingText = "";
 let narrowFacingText = "";
+let narrowAuditFacingText = "";
+
+async function axeScan(state) {
+  const scan = await new AxeBuilder({ page }).analyze();
+  const blocking = scan.violations
+    .filter((violation) => violation.impact === "critical" || violation.impact === "serious")
+    .map((violation) => ({
+      id: violation.id,
+      impact: violation.impact,
+      targets: violation.nodes.map((node) => node.target),
+    }));
+  const contrast = scan.violations
+    .filter((violation) => violation.id === "color-contrast")
+    .flatMap((violation) => violation.nodes.map((node) => node.target));
+  console.log(
+    `AXE ${state}: violations=${scan.violations.length} blocking=${blocking.length} [${
+      scan.violations
+        .map((violation) =>
+          `${violation.id}:${violation.impact}@${
+            violation.nodes.flatMap((node) => node.target).join("|")
+          }`)
+        .join(",")
+    }]`,
+  );
+  assert.deepEqual(blocking, [], `${state}: axe critical/serious must be 0`);
+  assert.deepEqual(contrast, [], `${state}: WCAG AA color contrast must pass`);
+}
+
+// Readable copy mirror of components/project-context/audit-panel.tsx; unknown
+// types fall back to the raw contract value exactly like the panel does.
+const AUDIT_EVENT_TYPE_COPY = {
+  action_finished: "动作已完成",
+  action_queued: "动作已排队",
+  approval_decided: "审批已决定",
+  approval_requested: "审批已请求",
+  attempt_started: "尝试已开始",
+  conflict_detected: "检测到冲突",
+  control_applied: "控制操作已应用",
+  execution_created: "执行已创建",
+  merged: "执行已合入",
+  stale_detected: "检测到上下文过期",
+  status_changed: "状态已变更",
+  tool_failed: "工具调用失败",
+  tool_requested: "工具已请求",
+  tool_succeeded: "工具调用成功",
+  usage_recorded: "用量已记录",
+};
 try {
   await listen(provider, providerPort);
   assert.ok(
@@ -790,7 +846,10 @@ try {
     headless: true,
     ...(browserExecutable ? { executablePath: browserExecutable } : {}),
   });
-  page = await browser.newPage({ viewport: { height: 1100, width: 1600 } });
+  const browserContext = await browser.newContext({
+    viewport: { height: 1100, width: 1600 },
+  });
+  page = await browserContext.newPage();
   page.setDefaultTimeout(60_000);
   page.on("response", async (response) => {
     if (response.url().startsWith(baseUrl) && response.url().includes("/api/")) {
@@ -1239,6 +1298,159 @@ process.exit(2);`,
   await page.getByRole("heading", { name: "Execution Smoke Mission" }).waitFor();
   await openRunTab(page);
   await page.getByText("已过期").waitFor();
+
+  // ---- AUDIT PANEL ACCEPTANCE (feature 028 T-04, desktop light key path) ----
+  const auditApi = await page.evaluate(async (projectId) => {
+    const pages = [];
+    let before = null;
+    for (let depth = 0; depth < 12; depth += 1) {
+      const response = await fetch(
+        `/api/projects/${projectId}/audit-events${before === null ? "" : `?before=${before}`}`,
+        { cache: "no-store" },
+      );
+      const body = await response.json();
+      if (!response.ok) return { error: body, status: response.status };
+      pages.push(body);
+      if (body.nextBeforeSeq === null) break;
+      before = body.nextBeforeSeq;
+    }
+    return { pages, status: 200 };
+  }, context.projectId);
+  assert.equal(auditApi.status, 200, JSON.stringify(auditApi.error));
+  const auditEvents = auditApi.pages.flatMap(({ events }) => events);
+  const firstAuditPage = auditApi.pages[0];
+  assert.ok(auditEvents.length > 0, "real executions must produce audit events");
+  assert.equal(
+    firstAuditPage.freshness.status,
+    "caught_up",
+    JSON.stringify(firstAuditPage.freshness),
+  );
+  for (let index = 1; index < auditEvents.length; index += 1) {
+    assert.ok(
+      auditEvents[index - 1].outboxSeq > auditEvents[index].outboxSeq,
+      "audit events must be globally descending by outbox_seq",
+    );
+  }
+  if (firstAuditPage.nextBeforeSeq !== null) {
+    const secondPage = auditApi.pages[1];
+    assert.ok(secondPage.events.length > 0, "cursor page must return older events");
+    assert.ok(
+      Math.max(...secondPage.events.map(({ outboxSeq }) => outboxSeq))
+        < firstAuditPage.nextBeforeSeq,
+      "before cursor must be exclusive",
+    );
+  }
+  const auditApiText = JSON.stringify(auditApi.pages);
+  for (const value of [
+    apiKey,
+    masterKey,
+    `Bearer ${apiKey}`,
+    rawProviderMarker,
+    chainOfThoughtMarker,
+    environmentMarker,
+    canonicalWorkspace,
+    realpathSync(executionRoot),
+    temporaryDirectory,
+    "Authorization:",
+  ]) {
+    assert.ok(!auditApiText.includes(value), "audit API payload leaked a forbidden marker");
+  }
+  const auditDatabaseCounts = (() => {
+    const database = openDatabase();
+    try {
+      return {
+        checkpoint: Number(database.prepare(`
+          SELECT last_outbox_seq AS value FROM audit_projection_checkpoints
+          WHERE consumer_id='audit-event-projection'
+        `).get().value),
+        maxSeq: Number(scalar(database, "SELECT COALESCE(MAX(outbox_seq),0) AS value FROM audit_event_outbox")),
+        outbox: Number(scalar(database, "SELECT COUNT(*) AS value FROM audit_event_outbox")),
+        projection: Number(scalar(database, "SELECT COUNT(*) AS value FROM audit_event_projection")),
+      };
+    } finally {
+      database.close();
+    }
+  })();
+  assert.equal(auditDatabaseCounts.outbox, auditEvents.length, "API must expose every outbox event");
+  assert.equal(auditDatabaseCounts.projection, auditDatabaseCounts.outbox, "read path must catch up the projection");
+  assert.equal(auditDatabaseCounts.checkpoint, auditDatabaseCounts.maxSeq, "checkpoint must be caught up");
+  console.log(`AUDIT API PASS: events=${auditEvents.length} freshness=caught_up pages=${auditApi.pages.length}`);
+
+  const contextPanel = page.locator(".cockpit-context");
+  const memoryTab = contextPanel.getByRole("tab", { name: "共享记忆" });
+  await memoryTab.focus();
+  // Same-page baseline with the audit panel still unmounted, so any axe
+  // violation present here is pre-existing cockpit chrome, not the new panel.
+  await axeScan("desktop light memory tab baseline");
+  await page.keyboard.press("End");
+  const auditTab = contextPanel.getByRole("tab", { name: "审计" });
+  assert.equal(await auditTab.getAttribute("aria-selected"), "true");
+  const auditList = contextPanel.getByRole("list", { name: "审计事件" });
+  await auditList.waitFor();
+  await contextPanel.getByText("已追平", { exact: true }).waitFor();
+  const auditRows = auditList.getByRole("listitem");
+  const firstPageRows = Math.min(auditEvents.length, 50);
+  await page.waitForFunction(
+    (expected) => document.querySelectorAll(".audit-event-list > li").length === expected,
+    firstPageRows,
+  );
+  const expectedFirstCopy =
+    AUDIT_EVENT_TYPE_COPY[auditEvents[0].eventType] ?? auditEvents[0].eventType;
+  const expectedLastCopy = AUDIT_EVENT_TYPE_COPY[auditEvents[firstPageRows - 1].eventType]
+    ?? auditEvents[firstPageRows - 1].eventType;
+  const firstRowText = await auditRows.first().innerText();
+  const lastRowText = await auditRows.nth(firstPageRows - 1).innerText();
+  assert.ok(firstRowText.includes(expectedFirstCopy), `first audit row must show readable type copy: ${firstRowText}`);
+  assert.ok(lastRowText.includes(expectedLastCopy), `last audit row must keep descending order: ${lastRowText}`);
+  for (let click = 0; click < 12; click += 1) {
+    const moreButton = contextPanel.getByRole("button", { name: "加载更多审计事件" });
+    if (!(await moreButton.isVisible().catch(() => false))) break;
+    const beforeCount = await auditRows.count();
+    await moreButton.click();
+    await page.waitForFunction(
+      (expected) => document.querySelectorAll(".audit-event-list > li").length > expected,
+      beforeCount,
+    );
+  }
+  assert.equal(
+    await auditRows.count(),
+    auditEvents.length,
+    "audit list must render every projected event after cursor paging",
+  );
+  const firstLocate = auditList.getByRole("button", { name: "定位来源执行" }).first();
+  const locateBox = await firstLocate.boundingBox();
+  assert.ok(locateBox && locateBox.height >= 44 && locateBox.width >= 44, "locate button must be at least 44x44");
+  const auditTabBox = await auditTab.boundingBox();
+  assert.ok(auditTabBox && auditTabBox.height >= 44 && auditTabBox.width >= 44, "audit tab must be at least 44x44");
+
+  const renderedExecutionIds = await page.evaluate(async (projectId) => (
+    await (await fetch(`/api/projects/${projectId}/executions`, { cache: "no-store" })).json()
+  ).executions.slice(0, 2).map(({ id }) => id), context.projectId);
+  const locateTarget = renderedExecutionIds
+    .map((executionId) => ({
+      executionId,
+      index: auditEvents.findIndex((event) => event.executionId === executionId),
+    }))
+    .find(({ index }) => index >= 0);
+  assert.ok(locateTarget, "a rendered execution card must have audit events");
+  await auditRows.nth(locateTarget.index)
+    .getByRole("button", { name: "定位来源执行" })
+    .click();
+  await page.waitForFunction(
+    (expectedId) => document.activeElement?.id === expectedId,
+    `execution-${locateTarget.executionId}-title`,
+  );
+  await contextPanel.getByText("已定位到来源执行。").waitFor();
+  await axeScan("desktop light audit panel");
+  await page.screenshot({ fullPage: true, path: auditDesktopScreenshot });
+  await page.getByRole("button", { name: /切换到暗色主题/ }).click();
+  await page.getByRole("button", { name: /切换到明色主题/ }).waitFor();
+  await contextPanel.getByText("已追平", { exact: true }).waitFor();
+  await axeScan("desktop dark audit panel");
+  await page.getByRole("button", { name: /切换到明色主题/ }).click();
+  await page.getByRole("button", { name: /切换到暗色主题/ }).waitFor();
+  console.log("AUDIT DESKTOP PASS: list+freshness+paging+locate+keyboard+44px+light/dark axe");
+
   desktopFacingText = await page.locator("html").innerText();
   await page.screenshot({ fullPage: true, path: desktopScreenshot });
 
@@ -1280,6 +1492,46 @@ process.exit(2);`,
   await detailDialog.waitFor({ state: "detached" });
   assert.equal(await firstSummary.evaluate((element) => document.activeElement === element), true);
 
+  // ---- AUDIT PANEL ACCEPTANCE (feature 028 T-04, narrow drawer key path) ----
+  await page.keyboard.press("Escape");
+  await editor.waitFor({ state: "detached" });
+  const contextOpener = page.getByRole("button", { name: "打开当前任务上下文" });
+  await contextOpener.focus();
+  await page.keyboard.press("Enter");
+  const contextDrawer = page.getByRole("dialog", { name: "当前任务上下文" });
+  const narrowAuditTab = contextDrawer.getByRole("tab", { name: "审计" });
+  await narrowAuditTab.focus();
+  await page.keyboard.press("Enter");
+  assert.equal(await narrowAuditTab.getAttribute("aria-selected"), "true");
+  const narrowAuditList = contextDrawer.getByRole("list", { name: "审计事件" });
+  await narrowAuditList.waitFor();
+  await contextDrawer.getByText("已追平", { exact: true }).waitFor();
+  const narrowLocate = narrowAuditList.getByRole("button", { name: "定位来源执行" }).first();
+  await narrowLocate.focus();
+  const narrowLocateBox = await narrowLocate.boundingBox();
+  assert.ok(
+    narrowLocateBox && narrowLocateBox.height >= 44 && narrowLocateBox.width >= 44,
+    "narrow locate button must be at least 44x44",
+  );
+  const narrowTabBox = await narrowAuditTab.boundingBox();
+  assert.ok(
+    narrowTabBox && narrowTabBox.height >= 44 && narrowTabBox.width >= 44,
+    "narrow audit tab must be at least 44x44",
+  );
+  await page.keyboard.press("Enter");
+  // The execution cards live in the closed editor drawer in narrow mode, so the
+  // locate seam must honestly report instead of faking a jump.
+  await contextDrawer
+    .getByText("该执行未显示在运行详情列表中（仅展示最近的执行）。")
+    .waitFor();
+  await axeScan("narrow audit drawer");
+  await page.screenshot({ fullPage: true, path: auditNarrowScreenshot });
+  narrowAuditFacingText = await page.locator("html").innerText();
+  await page.keyboard.press("Escape");
+  await contextDrawer.waitFor({ state: "detached" });
+  assert.equal(await contextOpener.evaluate((element) => document.activeElement === element), true);
+  console.log("AUDIT NARROW PASS: drawer list+freshness+keyboard+44px+honest locate+axe");
+
   const providerBodyText = providerCaptures.map(({ body }) => body).join("\n");
   assert.ok(providerCaptures.some(({ authorization }) => authorization === `Bearer ${apiKey}`));
   assert.ok(providerAuthorizationCount >= modelSteps.size + 1);
@@ -1296,12 +1548,14 @@ process.exit(2);`,
   const surfaces = {
     api: apiBodies.join("\n"),
     database: databaseText(),
-    dom: `${desktopFacingText}\n${narrowFacingText}`,
+    dom: `${desktopFacingText}\n${narrowFacingText}\n${narrowAuditFacingText}`,
     logs: serverOutput,
     providerBodies: providerBodyText,
-    screenshotFacingText: `${desktopFacingText}\n${narrowFacingText}\n${
+    screenshotFacingText: `${desktopFacingText}\n${narrowFacingText}\n${narrowAuditFacingText}\n${
       readFileSync(desktopScreenshot).toString("latin1")
-    }\n${readFileSync(narrowScreenshot).toString("latin1")}`,
+    }\n${readFileSync(narrowScreenshot).toString("latin1")
+    }\n${readFileSync(auditDesktopScreenshot).toString("latin1")
+    }\n${readFileSync(auditNarrowScreenshot).toString("latin1")}`,
   };
   const forbidden = [
     apiKey,
@@ -1343,6 +1597,8 @@ process.exit(2);`,
   console.log("PERSISTENCE PASS: refresh and process restart restored execution/manual recovery outcomes");
   console.log(`DESKTOP SCREENSHOT: ${desktopScreenshot}`);
   console.log(`NARROW SCREENSHOT: ${narrowScreenshot}`);
+  console.log(`AUDIT DESKTOP SCREENSHOT: ${auditDesktopScreenshot}`);
+  console.log(`AUDIT NARROW SCREENSHOT: ${auditNarrowScreenshot}`);
 } finally {
   await page?.unrouteAll({ behavior: "ignoreErrors" }).catch(() => undefined);
   await browser?.close();

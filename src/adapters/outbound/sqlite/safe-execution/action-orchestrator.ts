@@ -11,6 +11,7 @@ import {
   type CredentialEnvelope,
 } from "@/src/modules/identity-capability";
 import { openDatabase } from "@/src/adapters/outbound/sqlite/connection";
+import { appendExecutionAuditOutboxRow } from "@/src/adapters/outbound/sqlite/safe-execution/audit-event-outbox";
 import {
   acquireExecutionAction,
   finalizeExecutionAction,
@@ -782,6 +783,11 @@ async function runFileTool(
             WHERE id=? AND status IN ('ready','acting')
           `).run(row.attemptId);
         }
+        const failedPayload = {
+          code: "SANDBOX_UNVERIFIABLE",
+          toolCallId,
+          type: pending.action.type,
+        };
         currentDatabase.prepare(`
           INSERT INTO execution_events (
             id,project_id,execution_id,sequence,attempt_no,type,actor_type,
@@ -794,12 +800,18 @@ async function runFileTool(
           executionId,
           row.version,
           row.attemptNo,
-          JSON.stringify({
-            code: "SANDBOX_UNVERIFIABLE",
-            toolCallId,
-            type: pending.action.type,
-          }),
+          JSON.stringify(failedPayload),
         );
+        appendExecutionAuditOutboxRow(currentDatabase, {
+          actorId: null,
+          actorType: "agent",
+          attemptNo: row.attemptNo,
+          eventId,
+          eventType: "tool_failed",
+          executionId,
+          projectId: row.projectId,
+          sourcePayload: failedPayload,
+        });
       },
       httpStatus: 422,
       leaseToken: action.leaseToken,

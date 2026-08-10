@@ -248,6 +248,15 @@ export const CURRENT_DATA_INVARIANTS = [
   `SELECT e.id FROM attachment_events e
    JOIN message_attachments a ON a.id=e.attachment_id
    WHERE (a.project_id,a.thread_id)<>(e.project_id,e.thread_id)`,
+  `SELECT p.outbox_seq FROM audit_event_projection p
+   WHERE NOT EXISTS(SELECT 1 FROM audit_event_outbox o
+                    WHERE o.outbox_seq=p.outbox_seq)`,
+  `SELECT c.consumer_id FROM audit_projection_checkpoints c
+   WHERE c.last_outbox_seq>(SELECT COALESCE(MAX(o.outbox_seq),0)
+                            FROM audit_event_outbox o)`,
+  `SELECT 1 AS invalid_projection_exceeds_outbox
+   WHERE (SELECT COUNT(*) FROM audit_event_projection)
+        >(SELECT COUNT(*) FROM audit_event_outbox)`,
 ] as const;
 
 function canonicalJson(value: string, maximum: number): unknown {

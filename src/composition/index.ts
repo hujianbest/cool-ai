@@ -17,6 +17,10 @@ export * as missionWork from "@/src/adapters/outbound/sqlite/mission-work/missio
 export * as missionWorkDependencyInsight from "@/src/adapters/outbound/sqlite/mission-work/dependency-insight";
 export * as missionWorkTasks from "@/src/adapters/outbound/sqlite/mission-work/tasks";
 
+// operations-projection
+export * as auditProjectionConsumer from "@/src/adapters/outbound/sqlite/operations-projection/audit-projection-consumer";
+export * as auditProjectionQueries from "@/src/adapters/outbound/sqlite/operations-projection/audit-projection-queries";
+
 // project-workspace
 export * as membershipService from "@/src/adapters/outbound/sqlite/project-workspace/membership-service";
 export * as projects from "@/src/adapters/outbound/sqlite/project-workspace/projects";

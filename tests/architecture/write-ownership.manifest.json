@@ -6,7 +6,8 @@
     "model_calls": "per-domain visible usage facts (collaboration/execution/review) follow the domain owner per section-2 'visible usage facts' clauses, not the Runtime session-log capability (CAP-RUN-02+, unimplemented)",
     "review_memory": "review_memory_candidates/associations are memory-domain facts (actor/source/version per A-64/A-65) owned by knowledge-provenance; since T-07 memory_entries/review_memory_associations writers sit in src/adapters/outbound/sqlite/knowledge-provenance/ (memory-service.ts, memory-committer.ts); review_memory_candidates is still written inline by review/review-finalizer.ts under a transitional exemption — formalized in T-11/T-13",
     "execution_approvals": "Approval requests/rulings owned by governance per section-2; currently physically inside execution/ — extracted in T-08",
-    "sequences": "collaboration_*_sequences counters are collaboration-internal identity infrastructure"
+    "sequences": "collaboration_*_sequences counters are collaboration-internal identity infrastructure",
+    "audit_projection": "feature 028: safe-execution appends audit_event_outbox rows atomically with execution_events; audit_event_projection/audit_projection_checkpoints belong to the operations-projection consumer (T-02), registered now with the audit-projection-store anchor writer"
   },
   "owners": {
     "identity-capability": [
@@ -74,10 +75,15 @@
       "execution_validation_results",
       "execution_validation_output_chunks",
       "execution_merge_journals",
-      "execution_merge_files"
+      "execution_merge_files",
+      "audit_event_outbox"
     ],
     "governance": [
       "execution_approvals"
+    ],
+    "operations-projection": [
+      "audit_event_projection",
+      "audit_projection_checkpoints"
     ],
     "review-delivery": [
       "review_attempts",

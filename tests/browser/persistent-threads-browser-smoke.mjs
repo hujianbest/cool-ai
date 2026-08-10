@@ -538,7 +538,7 @@ try {
   assert.equal(persisted.body.threads.length, 1);
   assert.equal(persisted.body.threads[0].title, "历史协作");
   const legacyThreadId = persisted.body.threads[0].id;
-  assert.equal(inspectDatabase().version, 14);
+  assert.equal(inspectDatabase().version, 15);
   pass("current-persistent-default-thread", { legacyThreadId });
   await axe(page, "current persistent project");
 

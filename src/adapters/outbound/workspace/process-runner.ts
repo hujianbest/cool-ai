@@ -9,6 +9,7 @@ import {
   finalizeExecutionActionWithEffects,
   heartbeatExecutionAction,
 } from "@/src/adapters/outbound/sqlite/safe-execution/execution-actions";
+import { appendExecutionAuditOutboxRow } from "@/src/adapters/outbound/sqlite/safe-execution/audit-event-outbox";
 import {
   persistVerifiedSandboxManifest,
   type VerifiedSandboxManifest,
@@ -1232,6 +1233,18 @@ export async function executeCommandProcessAction(input: {
           AND current_attempt_no=? AND next_event_sequence=?
       `).run(input.projectId, action.executionId, action.attemptNo, action.sequence);
       if (execution.changes !== 1) throw new Error("Execution changed before command commit.");
+      const toolEventType = toolStatus === "succeeded" ? "tool_succeeded" : "tool_failed";
+      const toolEventId = randomUUID();
+      const toolPayload = {
+        authorizationSource: result.authorizationSource,
+        durationMs: result.durationMs,
+        exitCode: result.exitCode,
+        status: result.status,
+        stderr: result.stderr,
+        stdout: result.stdout,
+        toolCallId: action.toolCallId,
+        type: "command",
+      };
       database.prepare(`
         INSERT INTO execution_events (
           id,project_id,execution_id,sequence,attempt_no,type,actor_type,
@@ -1239,23 +1252,24 @@ export async function executeCommandProcessAction(input: {
         ) VALUES (?, ?, ?, ?, ?, ?, 'agent', NULL, ?,
           strftime('%Y-%m-%dT%H:%M:%fZ','now'))
       `).run(
-        randomUUID(),
+        toolEventId,
         input.projectId,
         action.executionId,
         action.sequence,
         action.attemptNo,
-        toolStatus === "succeeded" ? "tool_succeeded" : "tool_failed",
-        JSON.stringify({
-          authorizationSource: result.authorizationSource,
-          durationMs: result.durationMs,
-          exitCode: result.exitCode,
-          status: result.status,
-          stderr: result.stderr,
-          stdout: result.stdout,
-          toolCallId: action.toolCallId,
-          type: "command",
-        }),
+        toolEventType,
+        JSON.stringify(toolPayload),
       );
+      appendExecutionAuditOutboxRow(database, {
+        actorId: null,
+        actorType: "agent",
+        attemptNo: action.attemptNo,
+        eventId: toolEventId,
+        eventType: toolEventType,
+        executionId: action.executionId,
+        projectId: input.projectId,
+        sourcePayload: toolPayload,
+      });
     },
     httpStatus,
     leaseToken: acquired.leaseToken,

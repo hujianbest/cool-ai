@@ -9,6 +9,7 @@ import {
 import type { DatabaseSync } from "node:sqlite";
 
 import { consumeStagedMergeApproval } from "@/src/adapters/outbound/sqlite/governance/approval-store";
+import { appendExecutionAuditOutboxRow } from "@/src/adapters/outbound/sqlite/safe-execution/audit-event-outbox";
 import { normalizeCanonicalRelativePath } from "@/src/adapters/outbound/sqlite/safe-execution/execution-conflicts";
 import { staleExecutionIfFrozenInputChanged } from "@/src/adapters/outbound/sqlite/safe-execution/execution-frozen-input";
 import { ExecutionError } from "@/src/modules/safe-execution";
@@ -1308,6 +1309,7 @@ function insertEvent(
     type: string;
   },
 ): void {
+  const eventId = randomUUID();
   database.prepare(`
     INSERT INTO execution_events (
       id,project_id,execution_id,sequence,attempt_no,type,actor_type,actor_id,
@@ -1315,7 +1317,7 @@ function insertEvent(
     ) VALUES (?, ?, ?, ?, ?, ?, ?, NULL, ?,
       strftime('%Y-%m-%dT%H:%M:%fZ','now'))
   `).run(
-    randomUUID(),
+    eventId,
     input.projectId,
     input.executionId,
     input.sequence,
@@ -1324,6 +1326,16 @@ function insertEvent(
     input.actorType,
     JSON.stringify(input.payload),
   );
+  appendExecutionAuditOutboxRow(database, {
+    actorId: null,
+    actorType: input.actorType,
+    attemptNo: input.attemptNo,
+    eventId,
+    eventType: input.type,
+    executionId: input.executionId,
+    projectId: input.projectId,
+    sourcePayload: input.payload,
+  });
 }
 
 function commitDatabaseFacts(

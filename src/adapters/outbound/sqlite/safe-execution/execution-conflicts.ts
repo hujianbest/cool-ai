@@ -2,6 +2,7 @@ import { randomUUID } from "node:crypto";
 import type { DatabaseSync } from "node:sqlite";
 
 import { expireOpenApprovalsForProjectExecution } from "@/src/adapters/outbound/sqlite/governance/approval-store";
+import { appendExecutionAuditOutboxRow } from "@/src/adapters/outbound/sqlite/safe-execution/audit-event-outbox";
 
 export type CanonicalPathState = {
   exists: boolean;
@@ -203,6 +204,11 @@ export function staleExecutionForCanonicalPathChanges(
           WHERE project_id=? AND execution_id=? AND status='pending' AND action_count>0
         `).run(body, input.projectId, input.executionId);
       }
+      const staleEventId = randomUUID();
+      const stalePayload = {
+        categories: ["external_workspace"],
+        pathCount: comparison.mismatches.length,
+      };
       database.prepare(`
         INSERT INTO execution_events (
           id,project_id,execution_id,sequence,attempt_no,type,actor_type,actor_id,
@@ -210,16 +216,23 @@ export function staleExecutionForCanonicalPathChanges(
         ) VALUES (?, ?, ?, ?, ?, 'stale_detected', 'system', NULL, ?,
           strftime('%Y-%m-%dT%H:%M:%fZ','now'))
       `).run(
-        randomUUID(),
+        staleEventId,
         input.projectId,
         input.executionId,
         execution.nextEventSequence,
         input.attemptNo,
-        JSON.stringify({
-          categories: ["external_workspace"],
-          pathCount: comparison.mismatches.length,
-        }),
+        JSON.stringify(stalePayload),
       );
+      appendExecutionAuditOutboxRow(database, {
+        actorId: null,
+        actorType: "system",
+        attemptNo: input.attemptNo,
+        eventId: staleEventId,
+        eventType: "stale_detected",
+        executionId: input.executionId,
+        projectId: input.projectId,
+        sourcePayload: stalePayload,
+      });
       database.prepare(`
         UPDATE executions SET next_event_sequence=next_event_sequence+1
         WHERE project_id=? AND id=?
@@ -308,17 +321,29 @@ export function reserveExecutionStagedPaths(
         : new Set(conflictingRows
             .filter(({ executionId }) => executionId === execution.id)
             .map(({ pathKey }) => pathKey)).size;
+      const conflictEventId = randomUUID();
+      const conflictPayload = {
+        otherExecutionIds: others,
+        pathCount: conflictingPathCount,
+      };
       insertEvent.run(
-        randomUUID(),
+        conflictEventId,
         input.projectId,
         execution.id,
         execution.nextEventSequence,
         execution.attemptNo,
-        JSON.stringify({
-          otherExecutionIds: others,
-          pathCount: conflictingPathCount,
-        }),
+        JSON.stringify(conflictPayload),
       );
+      appendExecutionAuditOutboxRow(database, {
+        actorId: null,
+        actorType: "system",
+        attemptNo: execution.attemptNo,
+        eventId: conflictEventId,
+        eventType: "conflict_detected",
+        executionId: execution.id,
+        projectId: input.projectId,
+        sourcePayload: conflictPayload,
+      });
       database.prepare(`
         UPDATE executions SET next_event_sequence=next_event_sequence+1
         WHERE project_id=? AND id=?

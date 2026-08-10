@@ -1,6 +1,8 @@
 import { randomUUID } from "node:crypto";
 import type { DatabaseSync } from "node:sqlite";
 
+import { appendExecutionAuditOutboxRow } from "@/src/adapters/outbound/sqlite/safe-execution/audit-event-outbox";
+
 export const MAX_EXECUTION_BUSINESS_ROUNDS = 20;
 export const MAX_EXECUTION_TOOL_CALLS = 40;
 
@@ -124,13 +126,14 @@ export function appendExecutionEvent(
     SELECT current_attempt_no AS attemptNo,next_event_sequence AS sequence
     FROM executions WHERE project_id=? AND id=?
   `).get(input.projectId, input.executionId) as { attemptNo: number; sequence: number };
+  const eventId = randomUUID();
   database.prepare(`
     INSERT INTO execution_events (
       id,project_id,execution_id,sequence,attempt_no,type,actor_type,actor_id,
       payload_json,created_at
     ) VALUES (?,?,?,?,?,?,?,?,?,strftime('%Y-%m-%dT%H:%M:%fZ','now'))
   `).run(
-    randomUUID(),
+    eventId,
     input.projectId,
     input.executionId,
     row.sequence,
@@ -140,6 +143,16 @@ export function appendExecutionEvent(
     input.actorId,
     JSON.stringify(input.payload),
   );
+  appendExecutionAuditOutboxRow(database, {
+    actorId: input.actorId,
+    actorType: input.actorType,
+    attemptNo: row.attemptNo,
+    eventId,
+    eventType: input.type,
+    executionId: input.executionId,
+    projectId: input.projectId,
+    sourcePayload: input.payload,
+  });
   database.prepare(`
     UPDATE executions SET next_event_sequence=next_event_sequence+1
     WHERE project_id=? AND id=? AND next_event_sequence=?

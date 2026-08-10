@@ -70,6 +70,15 @@ function conflictDatabase(): { database: DatabaseSync; path: string } {
       payload_json TEXT NOT NULL,
       created_at TEXT NOT NULL
     );
+    CREATE TABLE audit_event_outbox(
+      id TEXT PRIMARY KEY,
+      project_id TEXT NOT NULL,
+      source TEXT NOT NULL,
+      event_type TEXT NOT NULL,
+      payload_json TEXT NOT NULL,
+      occurred_at TEXT NOT NULL,
+      outbox_seq INTEGER NOT NULL UNIQUE
+    );
     CREATE TABLE immutable_previews(id TEXT PRIMARY KEY, body TEXT NOT NULL);
     CREATE TABLE immutable_usage(id TEXT PRIMARY KEY, tokens INTEGER NOT NULL);
     CREATE TABLE task_state(id TEXT PRIMARY KEY, status TEXT NOT NULL);

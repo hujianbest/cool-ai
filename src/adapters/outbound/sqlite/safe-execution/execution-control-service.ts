@@ -9,6 +9,7 @@ import {
   expireOpenApprovalsForExecutionAt,
 } from "@/src/adapters/outbound/sqlite/governance/approval-store";
 import { captureExecutionFrozenInput } from "@/src/adapters/outbound/sqlite/safe-execution/execution-frozen-input";
+import { appendExecutionAuditOutboxRow } from "@/src/adapters/outbound/sqlite/safe-execution/audit-event-outbox";
 import { ExecutionError } from "@/src/modules/safe-execution";
 import {
   executionDtoFromDatabase,
@@ -187,13 +188,14 @@ function appendEvent(
     SELECT project_id AS projectId,next_event_sequence AS sequence
     FROM executions WHERE id=?
   `).get(executionId) as { projectId: string; sequence: number };
+  const eventId = randomUUID();
   database.prepare(`
     INSERT INTO execution_events (
       id,project_id,execution_id,sequence,attempt_no,type,actor_type,actor_id,
       payload_json,created_at
     ) VALUES (?,?,?,?,?,?,'owner',NULL,?,strftime('%Y-%m-%dT%H:%M:%fZ','now'))
   `).run(
-    randomUUID(),
+    eventId,
     identity.projectId,
     executionId,
     identity.sequence,
@@ -201,6 +203,16 @@ function appendEvent(
     type,
     JSON.stringify(payload),
   );
+  appendExecutionAuditOutboxRow(database, {
+    actorId: null,
+    actorType: "owner",
+    attemptNo,
+    eventId,
+    eventType: type,
+    executionId,
+    projectId: identity.projectId,
+    sourcePayload: payload,
+  });
   const incremented = database.prepare(`
     UPDATE executions SET next_event_sequence=next_event_sequence+1
     WHERE id=? AND next_event_sequence=?

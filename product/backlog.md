@@ -57,7 +57,7 @@ Capability ID 是稳定治理标识；owner 是唯一逻辑子系统，不等于
 - `CAP-EXE-02` Controlled Workspace Mutation — owner: Safe Execution — 状态: 规划中 — 建立切片: S-42
 - `CAP-EXE-03` Interactive Process & Preview — owner: Safe Execution — 状态: 规划中 — 建立切片: S-43
 - `CAP-EXE-04` Recovery Operations — owner: Safe Execution — 状态: 规划中 — 建立切片: S-44
-- `CAP-EXE-05` Public Execution Events — owner: Safe Execution — 状态: 规划中 — 建立路径: 作为 S-23 `AUD-MVP` 的协作 Capability，在以 `CAP-OPS-02` 为主 Capability 的同一可演示纵切中原子写入 source-owner event
+- `CAP-EXE-05` Public Execution Events — owner: Safe Execution — 状态: 已交付核心（execution_events 15 写入点同事务白名单 outbox）— 证据/建立切片: S-23 AUD-MVP [`progress.md`](../features/028-audit-projection-mvp/progress.md)
 - `CAP-GOV-01` Safe Execution Approval & Operation — owner: Governance — 状态: 部分可用（只覆盖 Safe Execution 冻结 execution/staged-merge 路径，不是通用 Governance）— 证据/建立切片: S-5；`src/adapters/outbound/sqlite/safe-execution/execution-approval-service.ts`、`tests/modules/safe-execution/execution-approvals.test.ts`
 - `CAP-GOV-02` Unified Governance — owner: Governance — 状态: 规划中 — 建立切片: S-24
 - `CAP-GOV-03` Public Governance Events — owner: Governance — 状态: 规划中 — 建立路径: S-23 的 Governance 审计纵切；该片复用已交付 `CAP-OPS-01/02`，以 owner 可查询脱敏 Approval 事件并精确导航为独立结果
@@ -76,8 +76,8 @@ Capability ID 是稳定治理标识；owner 是唯一逻辑子系统，不等于
 - `CAP-RUN-05` Browser Notification — owner: Runtime — 状态: 规划中 — 建立切片: S-41
 - `CAP-RUN-06` Voice Adapter — owner: Runtime — 状态: 规划中 — 建立切片: S-50
 - `CAP-RUN-07` Public Runtime Events — owner: Runtime — 状态: 规划中 — 建立路径: S-23 的 Runtime 审计纵切；该片复用已交付 `CAP-OPS-01/02`，以 owner 可查询脱敏 Runtime session 事件并精确导航为独立结果
-- `CAP-OPS-01` Projection Consumer Foundation — owner: Operations Projection — 状态: 规划中（架构收敛后扫描确认 `src/` 无 outbox/consumer/checkpoint 骨架）— 建立路径: 作为主 Capability `CAP-OPS-02` 的基础依赖，由 S-23 `AUD-MVP` 同片建立 consumer、checkpoint、rebuild 与 freshness；只消费 source owner 已提交事件，不拥有 producer
-- `CAP-OPS-02` Audit / Search / Timeline Projection — owner: Operations Projection — 状态: 规划中 — 建立路径: 作为 S-23 `AUD-MVP` 的主 Capability，先建立 Safe Execution 审计的最薄只读查询/展示；后续各 source-owner 纵切复用并扩充可查询事件，最终统一审计浏览器只组合已交付查询；S-17、S-39 在其各自用户结果内扩展
+- `CAP-OPS-01` Projection Consumer Foundation — owner: Operations Projection — 状态: 已交付核心（outbox/checkpoint/rebuild/freshness 基座）— 证据/建立切片: S-23 AUD-MVP [`progress.md`](../features/028-audit-projection-mvp/progress.md)；只消费 source owner 已提交事件，不拥有 producer
+- `CAP-OPS-02` Audit / Search / Timeline Projection — owner: Operations Projection — 状态: 部分可用（Safe Execution 审计最薄只读查询/展示已交付；搜索/时间轴未建）— 证据/建立切片: S-23 AUD-MVP [`progress.md`](../features/028-audit-projection-mvp/progress.md)；后续各 source-owner 纵切复用并扩充可查询事件，最终统一审计浏览器只组合已交付查询；S-17、S-39 在其各自用户结果内扩展
 - `CAP-OPS-03` Health / Usage / Contribution Insight — owner: Operations Projection — 状态: 规划中 — 建立切片: S-29、S-35～S-37
 - `CAP-OPS-04` Redacted Export & Delivery Replay — owner: Operations Projection — 状态: 规划中 — 建立切片: S-38、S-40
 

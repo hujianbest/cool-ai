@@ -2,6 +2,7 @@ import { randomUUID } from "node:crypto";
 import type { DatabaseSync } from "node:sqlite";
 
 import { insertCommandApprovalRequest } from "@/src/adapters/outbound/sqlite/governance/approval-store";
+import { appendExecutionAuditOutboxRow } from "@/src/adapters/outbound/sqlite/safe-execution/audit-event-outbox";
 import { CommandRequestError } from "@/src/modules/safe-execution";
 import { canonicalRequestHash } from "@/src/adapters/outbound/sqlite/public-collaboration/operation-receipts";
 import {
@@ -199,6 +200,7 @@ function insertEvent(
     type: string;
   },
 ): void {
+  const eventId = randomUUID();
   database.prepare(`
     INSERT INTO execution_events (
       id,project_id,execution_id,sequence,attempt_no,type,actor_type,
@@ -206,7 +208,7 @@ function insertEvent(
     ) VALUES (?, ?, ?, ?, ?, ?, 'agent', NULL, ?,
       strftime('%Y-%m-%dT%H:%M:%fZ','now'))
   `).run(
-    randomUUID(),
+    eventId,
     input.projectId,
     input.executionId,
     input.sequence,
@@ -214,6 +216,16 @@ function insertEvent(
     input.type,
     JSON.stringify(input.payload),
   );
+  appendExecutionAuditOutboxRow(database, {
+    actorId: null,
+    actorType: "agent",
+    attemptNo: input.attemptNo,
+    eventId,
+    eventType: input.type,
+    executionId: input.executionId,
+    projectId: input.projectId,
+    sourcePayload: input.payload,
+  });
 }
 
 export function requestExecutionCommand(input: CommandRequestInput): CommandRequestResult {

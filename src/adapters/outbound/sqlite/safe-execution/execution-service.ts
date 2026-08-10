@@ -5,6 +5,7 @@ import type { DatabaseSync } from "node:sqlite";
 import { canonicalRequestHash } from "@/src/adapters/outbound/sqlite/public-collaboration/operation-receipts";
 import { openDatabase } from "@/src/adapters/outbound/sqlite/connection";
 import { acquireExecutionAction } from "@/src/adapters/outbound/sqlite/safe-execution/execution-actions";
+import { appendExecutionAuditOutboxRow } from "@/src/adapters/outbound/sqlite/safe-execution/audit-event-outbox";
 import { captureExecutionFrozenInput } from "@/src/adapters/outbound/sqlite/safe-execution/execution-frozen-input";
 import { ExecutionError } from "@/src/modules/safe-execution";
 import type { SandboxExecutor } from "@/src/modules/safe-execution";
@@ -678,39 +679,63 @@ export async function startExecution(
            actor_type, actor_id, payload_json, created_at
          ) VALUES (?, ?, ?, ?, 1, ?, ?, ?, ?, ?)`,
       );
+      const createdEventId = randomUUID();
+      const createdPayload = {
+        agentId: task.agentId,
+        attemptNo: 1,
+        workItemId: input.workItemId,
+      };
       insertEvent.run(
-        randomUUID(),
+        createdEventId,
         projectId,
         executionId,
         1,
         "execution_created",
         "owner",
         null,
-        JSON.stringify({
-          agentId: task.agentId,
-          attemptNo: 1,
-          workItemId: input.workItemId,
-        }),
+        JSON.stringify(createdPayload),
         startedAt,
       );
+      appendExecutionAuditOutboxRow(database, {
+        actorId: null,
+        actorType: "owner",
+        attemptNo: 1,
+        eventId: createdEventId,
+        eventType: "execution_created",
+        executionId,
+        projectId,
+        sourcePayload: createdPayload,
+      });
+      const queuedEventId = randomUUID();
+      const queuedPayload = {
+        actionId,
+        actionIndex: 0,
+        attemptNo: 1,
+        kind: "sandbox_build",
+        operationId: input.operationId,
+        overallDeadlineAt,
+      };
       insertEvent.run(
-        randomUUID(),
+        queuedEventId,
         projectId,
         executionId,
         2,
         "action_queued",
         "system",
         null,
-        JSON.stringify({
-          actionId,
-          actionIndex: 0,
-          attemptNo: 1,
-          kind: "sandbox_build",
-          operationId: input.operationId,
-          overallDeadlineAt,
-        }),
+        JSON.stringify(queuedPayload),
         startedAt,
       );
+      appendExecutionAuditOutboxRow(database, {
+        actorId: null,
+        actorType: "system",
+        attemptNo: 1,
+        eventId: queuedEventId,
+        eventType: "action_queued",
+        executionId,
+        projectId,
+        sourcePayload: queuedPayload,
+      });
       return {
         externalInput: {
           actionId,

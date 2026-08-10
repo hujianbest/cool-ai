@@ -24,6 +24,7 @@ const errorCopy: Record<string, string> = {
   POLICY_SIZE_LIMIT_EXCEEDED: "验证政策超过 64 KiB。",
   POLICY_VERSION_CONFLICT: "验证政策版本已变化，草稿已保留。",
   PROJECT_NOT_FOUND: "未找到该项目。",
+  PROJECTION_REBUILD_IN_PROGRESS: "审计投影正在重建，请稍后重试。",
   PROVIDER_AUTH: "Provider 身份验证失败，请检查配置。",
   PROVIDER_RESPONSE_INVALID: "Provider 返回了无效响应。",
   PROVIDER_TIMEOUT: "Provider 请求超时，请稍后重试。",

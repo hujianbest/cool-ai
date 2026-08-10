@@ -3,6 +3,7 @@ import type { DatabaseSync } from "node:sqlite";
 
 import { canonicalRequestHash } from "@/src/adapters/outbound/sqlite/public-collaboration/operation-receipts";
 import { openDatabase } from "@/src/adapters/outbound/sqlite/connection";
+import { appendExecutionAuditOutboxRow } from "@/src/adapters/outbound/sqlite/safe-execution/audit-event-outbox";
 import {
   consumeApprovedApprovalById,
   expireApprovedApprovalById,
@@ -260,6 +261,14 @@ function appendDecisionEvent(
     SELECT next_event_sequence AS sequence,current_attempt_no AS attemptNo
     FROM executions WHERE id=?
   `).get(row.executionId) as { attemptNo: number; sequence: number };
+  const eventId = randomUUID();
+  const payload = {
+    action,
+    approvalId,
+    authorizationSource: "one_shot",
+    kind: row.kind,
+    status,
+  };
   database.prepare(`
     INSERT INTO execution_events (
       id,project_id,execution_id,sequence,attempt_no,type,actor_type,actor_id,
@@ -267,19 +276,23 @@ function appendDecisionEvent(
     ) VALUES (?, ?, ?, ?, ?, 'approval_decided', 'owner', NULL, ?,
       strftime('%Y-%m-%dT%H:%M:%fZ','now'))
   `).run(
-    randomUUID(),
+    eventId,
     row.projectId,
     row.executionId,
     execution.sequence,
     execution.attemptNo,
-    JSON.stringify({
-      action,
-      approvalId,
-      authorizationSource: "one_shot",
-      kind: row.kind,
-      status,
-    }),
+    JSON.stringify(payload),
   );
+  appendExecutionAuditOutboxRow(database, {
+    actorId: null,
+    actorType: "owner",
+    attemptNo: execution.attemptNo,
+    eventId,
+    eventType: "approval_decided",
+    executionId: row.executionId,
+    projectId: row.projectId,
+    sourcePayload: payload,
+  });
   database.prepare(`
     UPDATE executions SET next_event_sequence=next_event_sequence+1 WHERE id=?
   `).run(row.executionId);

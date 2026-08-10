@@ -49,8 +49,16 @@ describe("context navigation accessibility", () => {
     vi.stubGlobal(
       "fetch",
       vi.fn(async (input: RequestInfo | URL) => {
-        if (String(input).includes("/memories")) {
+        const url = String(input);
+        if (url.includes("/memories")) {
           return Response.json({ memories: [] });
+        }
+        if (url.includes("/audit-events")) {
+          return Response.json({
+            events: [],
+            freshness: { lag: 0, status: "caught_up" },
+            nextBeforeSeq: null,
+          });
         }
         return Response.json({ members: [], projectVersion: 1 });
       }),
@@ -67,18 +75,23 @@ describe("context navigation accessibility", () => {
     const memory = within(tabs).getByRole("tab", { name: "共享记忆" });
     const context = within(tabs).getByRole("tab", { name: "上下文预览" });
     const skeleton = within(tabs).getByRole("tab", { name: "骨架运行" });
+    const audit = within(tabs).getByRole("tab", { name: "审计" });
     expect(memory).toHaveAttribute("aria-selected", "true");
     memory.focus();
     await user.keyboard("{ArrowRight}");
     expect(context).toHaveFocus();
     expect(context).toHaveAttribute("aria-selected", "true");
     await user.keyboard("{End}");
+    expect(audit).toHaveFocus();
+    expect(audit).toHaveAttribute("aria-selected", "true");
+    expect(await screen.findByText("尚无审计事件。")).toBeInTheDocument();
+    await user.keyboard("{ArrowLeft}");
     expect(skeleton).toHaveFocus();
     expect(screen.getByText("骨架内容")).toBeInTheDocument();
     await user.keyboard("{Home}");
     expect(memory).toHaveFocus();
     await user.keyboard("{ArrowLeft}");
-    expect(skeleton).toHaveFocus();
+    expect(audit).toHaveFocus();
     expect(screen.getAllByRole("tabpanel")).toHaveLength(1);
   });
 

@@ -5,6 +5,7 @@ import {
   acquireExecutionAction,
   finalizeExecutionActionWithEffects,
 } from "@/src/adapters/outbound/sqlite/safe-execution/execution-actions";
+import { appendExecutionAuditOutboxRow } from "@/src/adapters/outbound/sqlite/safe-execution/audit-event-outbox";
 import { validateSandboxRelativePath } from "@/src/adapters/outbound/workspace/path-guard";
 import {
   persistVerifiedSandboxManifest,
@@ -675,6 +676,7 @@ function finalizeUnverifiableToolFailure(input: {
           WHERE id=? AND status IN ('ready','acting')
         `).run(input.action.attemptId);
       }
+      const failedPayload = { code: result.code, toolCallId, type: input.type };
       database.prepare(`
         INSERT INTO execution_events (
           id,project_id,execution_id,sequence,attempt_no,type,actor_type,
@@ -687,8 +689,18 @@ function finalizeUnverifiableToolFailure(input: {
         input.action.executionId,
         input.action.sequence,
         input.action.attemptNo,
-        JSON.stringify({ code: result.code, toolCallId, type: input.type }),
+        JSON.stringify(failedPayload),
       );
+      appendExecutionAuditOutboxRow(database, {
+        actorId: null,
+        actorType: "agent",
+        attemptNo: input.action.attemptNo,
+        eventId,
+        eventType: "tool_failed",
+        executionId: input.action.executionId,
+        projectId: input.projectId,
+        sourcePayload: failedPayload,
+      });
     },
     httpStatus: 422,
     leaseToken: input.leaseToken,
@@ -806,6 +818,18 @@ export async function executeListToolAction<Handle>(input: {
       if (execution.changes !== 1) {
         throw new Error("Execution changed before the list result could commit.");
       }
+      const listPayload = {
+        afterHash: null,
+        beforeHash: null,
+        resultSummary: {
+          entryCount: result.entries.length,
+          path: result.path,
+          totalObserved: result.totalObserved,
+          truncated: result.truncated,
+        },
+        toolCallId,
+        type: "list",
+      };
       database.prepare(`
         INSERT INTO execution_events (
           id,project_id,execution_id,sequence,attempt_no,type,actor_type,
@@ -818,19 +842,18 @@ export async function executeListToolAction<Handle>(input: {
         action.executionId,
         action.sequence,
         action.attemptNo,
-        JSON.stringify({
-          afterHash: null,
-          beforeHash: null,
-          resultSummary: {
-            entryCount: result.entries.length,
-            path: result.path,
-            totalObserved: result.totalObserved,
-            truncated: result.truncated,
-          },
-          toolCallId,
-          type: "list",
-        }),
+        JSON.stringify(listPayload),
       );
+      appendExecutionAuditOutboxRow(database, {
+        actorId: null,
+        actorType: "agent",
+        attemptNo: action.attemptNo,
+        eventId,
+        eventType: "tool_succeeded",
+        executionId: action.executionId,
+        projectId: input.projectId,
+        sourcePayload: listPayload,
+      });
     },
     httpStatus: 200,
     leaseToken: acquired.leaseToken,
@@ -958,6 +981,13 @@ export async function executeReadToolAction<Handle>(input: {
       if (execution.changes !== 1) {
         throw new Error("Execution changed before the read result could commit.");
       }
+      const readPayload = {
+        afterHash: null,
+        beforeHash: null,
+        resultSummary: summary,
+        toolCallId,
+        type: "read",
+      };
       database.prepare(`
         INSERT INTO execution_events (
           id,project_id,execution_id,sequence,attempt_no,type,actor_type,
@@ -970,14 +1000,18 @@ export async function executeReadToolAction<Handle>(input: {
         action.executionId,
         action.sequence,
         action.attemptNo,
-        JSON.stringify({
-          afterHash: null,
-          beforeHash: null,
-          resultSummary: summary,
-          toolCallId,
-          type: "read",
-        }),
+        JSON.stringify(readPayload),
       );
+      appendExecutionAuditOutboxRow(database, {
+        actorId: null,
+        actorType: "agent",
+        attemptNo: action.attemptNo,
+        eventId,
+        eventType: "tool_succeeded",
+        executionId: action.executionId,
+        projectId: input.projectId,
+        sourcePayload: readPayload,
+      });
     },
     httpStatus: 200,
     leaseToken: acquired.leaseToken,
@@ -1565,6 +1599,13 @@ export async function executeWriteToolAction<Handle, Previous>(input: {
         if (execution.changes !== 1) {
           throw new Error("Execution changed before the write result could commit.");
         }
+        const writePayload = {
+          afterHash: result.afterHash,
+          beforeHash: result.beforeHash,
+          resultSummary: result,
+          toolCallId,
+          type: "write",
+        };
         database.prepare(`
           INSERT INTO execution_events (
             id,project_id,execution_id,sequence,attempt_no,type,actor_type,
@@ -1577,14 +1618,18 @@ export async function executeWriteToolAction<Handle, Previous>(input: {
           action.executionId,
           action.sequence,
           action.attemptNo,
-          JSON.stringify({
-            afterHash: result.afterHash,
-            beforeHash: result.beforeHash,
-            resultSummary: result,
-            toolCallId,
-            type: "write",
-          }),
+          JSON.stringify(writePayload),
         );
+        appendExecutionAuditOutboxRow(database, {
+          actorId: null,
+          actorType: "agent",
+          attemptNo: action.attemptNo,
+          eventId,
+          eventType: "tool_succeeded",
+          executionId: action.executionId,
+          projectId: input.projectId,
+          sourcePayload: writePayload,
+        });
       },
       httpStatus: 200,
       leaseToken: acquired.leaseToken,

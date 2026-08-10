@@ -7,15 +7,17 @@ import {
   type ReactNode,
 } from "react";
 
+import { AuditPanel } from "@/components/project-context/audit-panel";
 import { ContextPreview } from "@/components/project-context/context-preview";
 import { MemoryPanel } from "@/components/project-context/memory-panel";
 
-type ContextTab = "memory" | "context" | "skeleton";
+type ContextTab = "memory" | "context" | "skeleton" | "audit";
 
 const TABS: Array<{ id: ContextTab; label: string }> = [
   { id: "memory", label: "共享记忆" },
   { id: "context", label: "上下文预览" },
   { id: "skeleton", label: "骨架运行" },
+  { id: "audit", label: "审计" },
 ];
 
 export function ProjectContextPanel({
@@ -85,6 +87,8 @@ export function ProjectContextPanel({
           <MemoryPanel projectId={projectId} />
         ) : activeTab === "context" ? (
           <ContextPreview projectId={projectId} />
+        ) : activeTab === "audit" ? (
+          <AuditPanel projectId={projectId} />
         ) : (
           skeleton
         )}

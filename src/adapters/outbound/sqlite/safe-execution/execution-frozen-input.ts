@@ -3,6 +3,7 @@ import type { DatabaseSync } from "node:sqlite";
 import { z } from "zod";
 
 import { expireOpenApprovalsForExecution } from "@/src/adapters/outbound/sqlite/governance/approval-store";
+import { appendExecutionAuditOutboxRow } from "@/src/adapters/outbound/sqlite/safe-execution/audit-event-outbox";
 import { ExecutionError } from "@/src/modules/safe-execution";
 import {
   frozenExecutionPromptInputSchema,
@@ -533,6 +534,8 @@ export function staleExecutionIfFrozenInputChanged(
     const sequence = (database.prepare(`
       SELECT next_event_sequence AS value FROM executions WHERE id=?
     `).get(executionId) as { value: number }).value;
+    const staleEventId = randomUUID();
+    const stalePayload = { categories, pathCount: 0 };
     database.prepare(`
       INSERT INTO execution_events (
         id,project_id,execution_id,sequence,attempt_no,type,actor_type,
@@ -540,13 +543,23 @@ export function staleExecutionIfFrozenInputChanged(
       ) VALUES (?, ?, ?, ?, ?, 'stale_detected', 'system', NULL, ?,
         strftime('%Y-%m-%dT%H:%M:%fZ','now'))
     `).run(
-      randomUUID(),
+      staleEventId,
       row.projectId,
       executionId,
       sequence,
       row.attemptNo,
-      JSON.stringify({ categories, pathCount: 0 }),
+      JSON.stringify(stalePayload),
     );
+    appendExecutionAuditOutboxRow(database, {
+      actorId: null,
+      actorType: "system",
+      attemptNo: row.attemptNo,
+      eventId: staleEventId,
+      eventType: "stale_detected",
+      executionId,
+      projectId: row.projectId,
+      sourcePayload: stalePayload,
+    });
     database.prepare(`
       UPDATE executions SET next_event_sequence=next_event_sequence+1 WHERE id=?
     `).run(executionId);
