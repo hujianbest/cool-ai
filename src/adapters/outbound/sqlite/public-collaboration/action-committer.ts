@@ -2,6 +2,7 @@ import { randomUUID } from "node:crypto";
 import type { DatabaseSync } from "node:sqlite";
 
 import { CollaborationError } from "@/src/modules/public-collaboration";
+import { appendCollaborationAuditOutboxRow } from "@/src/adapters/outbound/sqlite/public-collaboration/audit-event-outbox";
 import type { AgentTurn } from "@/src/modules/public-collaboration";
 import { collaborationPublicMessageWindow } from "@/src/adapters/outbound/sqlite/public-collaboration/prompt-builder";
 import {
@@ -238,6 +239,16 @@ function appendEvent(
       JSON.stringify(payload),
       timestamp,
     );
+  appendCollaborationAuditOutboxRow(database, {
+    actorId,
+    actorType,
+    eventId,
+    eventType: type,
+    projectId: context.projectId,
+    runId,
+    sourcePayload: payload,
+    threadId: context.threadId,
+  });
   const updated = database
     .prepare(
       `UPDATE collaboration_runs

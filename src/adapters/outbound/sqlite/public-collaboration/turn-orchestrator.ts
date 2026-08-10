@@ -2,6 +2,7 @@ import { randomUUID } from "node:crypto";
 import type { DatabaseSync } from "node:sqlite";
 
 import { commitAgentTaskActionsTx } from "@/src/adapters/outbound/sqlite/public-collaboration/action-committer";
+import { appendCollaborationAuditOutboxRow } from "@/src/adapters/outbound/sqlite/public-collaboration/audit-event-outbox";
 import {
   collaborationErrorBody,
   CollaborationError,
@@ -298,6 +299,16 @@ function appendEvent(
       JSON.stringify(payload),
       timestamp,
     );
+  appendCollaborationAuditOutboxRow(database, {
+    actorId,
+    actorType,
+    eventId,
+    eventType: type,
+    projectId: tuple.projectId,
+    runId: tuple.runId,
+    sourcePayload: payload,
+    threadId: tuple.threadId,
+  });
   database
     .prepare(
       `UPDATE collaboration_runs

@@ -1,4 +1,5 @@
 import { DatabaseSync } from "node:sqlite";
+import { threadId } from "node:worker_threads";
 import { afterEach } from "vitest";
 
 import { openDatabase } from "@/src/adapters/outbound/sqlite/connection";
@@ -25,7 +26,9 @@ afterEach(() => {
 
 export function memoryDatabasePath(): string {
   memoryDatabaseCounter += 1;
-  const databasePath = `file:cool-ai-test-${process.pid}-${memoryDatabaseCounter}?mode=memory&cache=shared`;
+  // pid+threadId keeps names unique under both forks (per-process) and threads
+  // (shared pid across worker threads of one process) Vitest pools.
+  const databasePath = `file:cool-ai-test-${process.pid}-${threadId}-${memoryDatabaseCounter}?mode=memory&cache=shared`;
   keeperConnections.push(openDatabase(databasePath));
   return databasePath;
 }
@@ -35,7 +38,7 @@ export function memoryDatabasePath(): string {
 // a plain connection that only pins the shared cache.
 export function rawMemoryDatabasePath(): string {
   memoryDatabaseCounter += 1;
-  const databasePath = `file:cool-ai-raw-${process.pid}-${memoryDatabaseCounter}?mode=memory&cache=shared`;
+  const databasePath = `file:cool-ai-raw-${process.pid}-${threadId}-${memoryDatabaseCounter}?mode=memory&cache=shared`;
   keeperConnections.push(new DatabaseSync(databasePath));
   return databasePath;
 }

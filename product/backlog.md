@@ -49,7 +49,7 @@ Capability ID 是稳定治理标识；owner 是唯一逻辑子系统，不等于
 - `CAP-COL-03` Structured Content & Inline Decision — owner: Public Collaboration — 状态: 已交付核心（S-13 于 2026-08-10 ship；File Reference 冻结、reopen 穷尽验证与 stale 对账由 017/018 子片加固）— 证据/建立切片: S-13 [`tickets.md`](../features/015-structured-messages-inline-decisions/tickets.md)、[`progress.md`](../features/015-structured-messages-inline-decisions/progress.md)
 - `CAP-COL-04` Composer & Queue Continuity — owner: Public Collaboration — 状态: 部分可用（按线程草稿、附件占位、输入历史与清除策略已交付；消息队列/Steer 未交付）— 证据/建立切片: S-15 [`progress.md`](../features/023-thread-drafts/progress.md)；扩展 S-21
 - `CAP-COL-05` Message Media — owner: Public Collaboration — 状态: 已交付核心（图片附件；非图片媒体未覆盖）— 证据/建立切片: S-16 [`progress.md`](../features/024-image-attachments/progress.md)
-- `CAP-COL-07` Public Collaboration Events — owner: Public Collaboration — 状态: 规划中 — 建立路径: S-23 的 Public Collaboration 审计纵切；该片复用已交付 `CAP-OPS-01/02`，以 owner 可查询脱敏 Thread/Run 事件并精确导航为独立结果
+- `CAP-COL-07` Public Collaboration Events — owner: Public Collaboration — 状态: 已交付核心 — 证据/建立切片: S-23 AUD-COL [`progress.md`](../features/030-collaboration-audit-events/progress.md)（16 类事件同事务 outbox、审计中心可查询并规范身份导航，复用已交付 `CAP-OPS-01/02`）
 
 ### Safe Execution 与 Governance
 

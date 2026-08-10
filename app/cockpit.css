@@ -1027,6 +1027,20 @@ ol {
   white-space: nowrap;
 }
 
+.audit-event-excerpt {
+  color: var(--text-subtle);
+  font: var(--text-sm) var(--font-sans);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.audit-event-list a {
+  display: inline-flex;
+  min-height: var(--control-min);
+  align-items: center;
+}
+
 .input-history-list time {
   color: var(--text-subtle);
   font: var(--text-sm) var(--font-sans);

@@ -67,6 +67,18 @@ const evidence = {
     resolve("features", "025-thread-favorites", "evidence"),
     "favorites-narrow.png",
   ),
+  auditDesktop: join(
+    resolve("features", "030-collaboration-audit-events", "evidence"),
+    "collaboration-audit-desktop.png",
+  ),
+  auditDark: join(
+    resolve("features", "030-collaboration-audit-events", "evidence"),
+    "collaboration-audit-dark.png",
+  ),
+  auditNarrow: join(
+    resolve("features", "030-collaboration-audit-events", "evidence"),
+    "collaboration-audit-narrow.png",
+  ),
   results: join(evidenceDirectory, "persistent-threads-results.json"),
 };
 const PNG_1X1 = Buffer.from([
@@ -109,6 +121,8 @@ let appServer;
 let browser;
 let serverOutput = "";
 let providerCalls = 0;
+let auditFacingText = "";
+let narrowAuditFacingText = "";
 
 for (const path of Object.values(evidence)) {
   mkdirSync(dirname(path), { recursive: true });
@@ -538,7 +552,7 @@ try {
   assert.equal(persisted.body.threads.length, 1);
   assert.equal(persisted.body.threads[0].title, "历史协作");
   const legacyThreadId = persisted.body.threads[0].id;
-  assert.equal(inspectDatabase().version, 15);
+  assert.equal(inspectDatabase().version, 16);
   pass("current-persistent-default-thread", { legacyThreadId });
   await axe(page, "current persistent project");
 
@@ -1991,6 +2005,338 @@ try {
   await axe(page, "desktop light favorites view after restart");
   pass("favorites-restart-persistence-db-api-view");
 
+  // ---- COLLABORATION AUDIT ACCEPTANCE (feature 030 T-03) ----
+  // Landing spot: smoke:threads already produces the richest real
+  // collaboration data (owner/agent messages, run lifecycle, decisions), so
+  // the collaboration audit section lives here; smoke:execution keeps the
+  // execution-domain audit section (028). Readable copy mirror of
+  // components/project-context/audit-panel.tsx; unknown types fall back to
+  // the raw contract value exactly like the panel does.
+  const COLLABORATION_AUDIT_EVENT_TYPE_COPY = {
+    action_rejected: "动作已被拒绝",
+    agent_message: "Agent 消息",
+    boundary_paused: "运行已在边界暂停",
+    context_changed: "上下文已变更",
+    decision_answered: "决策已答复",
+    decision_requested: "决策已请求",
+    handoff: "已交棒",
+    owner_message: "Owner 消息",
+    run_paused: "运行已暂停",
+    run_planned: "运行已规划",
+    run_resumed: "运行已恢复",
+    run_retried: "运行已重试",
+    run_started: "运行已开始",
+    run_stopped: "运行已停止",
+    task_claimed: "任务已认领",
+    tasks_created: "任务已创建",
+  };
+  const auditApi = await page.evaluate(async (projectId) => {
+    const pages = [];
+    let before = null;
+    for (let depth = 0; depth < 12; depth += 1) {
+      const response = await fetch(
+        `/api/projects/${projectId}/audit-events${before === null ? "" : `?before=${before}`}`,
+        { cache: "no-store" },
+      );
+      const body = await response.json();
+      if (!response.ok) return { error: body, status: response.status };
+      pages.push(body);
+      if (body.nextBeforeSeq === null) break;
+      before = body.nextBeforeSeq;
+    }
+    return { pages, status: 200 };
+  }, "legacy-project");
+  assert.equal(auditApi.status, 200, JSON.stringify(auditApi.error));
+  const auditEvents = auditApi.pages.flatMap(({ events }) => events);
+  assert.ok(auditEvents.length > 0, "real collaboration must produce audit events");
+  assert.equal(
+    auditApi.pages[0].freshness.status,
+    "caught_up",
+    JSON.stringify(auditApi.pages[0].freshness),
+  );
+  for (let index = 1; index < auditEvents.length; index += 1) {
+    assert.ok(
+      auditEvents[index - 1].outboxSeq > auditEvents[index].outboxSeq,
+      "audit events must be globally descending by outbox_seq",
+    );
+  }
+  // This smoke runs no safe-execution work, so every projected event is
+  // collaboration-sourced and carries the thread identity; owner messages
+  // posted outside a run start keep runId null.
+  for (const event of auditEvents) {
+    assert.ok(
+      Object.hasOwn(COLLABORATION_AUDIT_EVENT_TYPE_COPY, event.eventType),
+      `unexpected non-collaboration event type ${event.eventType}`,
+    );
+    assert.equal(event.executionId, null);
+    assert.equal(typeof event.payload.threadId, "string");
+  }
+  const auditEventTypes = new Set(auditEvents.map((event) => event.eventType));
+  for (const required of [
+    "agent_message",
+    "decision_requested",
+    "owner_message",
+    "run_started",
+    "run_stopped",
+  ]) {
+    assert.ok(auditEventTypes.has(required), `audit trail must include ${required}`);
+  }
+  const attachOwnerMessage = auditEvents.find((event) =>
+    event.eventType === "owner_message"
+    && event.payload.messageExcerpt === "Owner message with image attachments."
+  );
+  assert.ok(attachOwnerMessage, "owner message excerpt must reach the audit trail");
+  assert.equal(attachOwnerMessage.payload.threadId, firstThread);
+  assert.equal(attachOwnerMessage.payload.runId, null);
+  const secondThreadNote = auditEvents.find((event) =>
+    event.eventType === "owner_message"
+    && event.payload.messageExcerpt === "Second-thread owner note."
+  );
+  assert.ok(secondThreadNote, "second-thread owner note must reach the audit trail");
+  assert.equal(secondThreadNote.payload.threadId, secondThread);
+  assert.equal(secondThreadNote.payload.runId, null);
+  const stoppedEvent = auditEvents.find((event) =>
+    event.eventType === "run_stopped" && event.payload.runId === activeRun.id
+  );
+  assert.ok(stoppedEvent, "run_stopped must carry the stopped run identity");
+  assert.equal(stoppedEvent.payload.threadId, firstThread);
+  const auditApiText = JSON.stringify(auditApi.pages);
+  for (const value of [
+    apiKey,
+    masterKey,
+    `Bearer ${apiKey}`,
+    temporaryDirectory,
+    workspaceDirectory,
+    attachmentsRoot,
+    "Authorization:",
+  ]) {
+    assert.ok(!auditApiText.includes(value), "audit API payload leaked a forbidden marker");
+  }
+  const foreignAudit = await api(page, "/api/projects/foreign-project/audit-events");
+  assert.equal(foreignAudit.status, 404);
+  assert.equal(
+    JSON.stringify(foreignAudit.body).includes(temporaryDirectory),
+    false,
+    "404 envelope must not echo host paths",
+  );
+  const auditDatabaseCounts = (() => {
+    const database = new DatabaseSync(databasePath, { readOnly: true });
+    try {
+      const scalar = (sql) => Number(database.prepare(sql).get().value);
+      return {
+        checkpoint: Number(database.prepare(`
+          SELECT last_outbox_seq AS value FROM audit_projection_checkpoints
+          WHERE consumer_id='audit-event-projection'
+        `).get().value),
+        collaboration: scalar(
+          "SELECT COUNT(*) AS value FROM audit_event_outbox WHERE source='public_collaboration'",
+        ),
+        maxSeq: scalar("SELECT COALESCE(MAX(outbox_seq),0) AS value FROM audit_event_outbox"),
+        noise: scalar(
+          "SELECT COUNT(*) AS value FROM audit_event_outbox"
+          + " WHERE event_type IN ('model_call_started','model_call_succeeded','model_call_failed','usage_recorded','attempt_interrupted')",
+        ),
+        outbox: scalar("SELECT COUNT(*) AS value FROM audit_event_outbox"),
+        projection: scalar("SELECT COUNT(*) AS value FROM audit_event_projection"),
+      };
+    } finally {
+      database.close();
+    }
+  })();
+  assert.equal(auditDatabaseCounts.outbox, auditEvents.length, "API must expose every outbox event");
+  assert.equal(auditDatabaseCounts.collaboration, auditEvents.length);
+  assert.equal(auditDatabaseCounts.projection, auditDatabaseCounts.outbox, "read path must catch up the projection");
+  assert.equal(auditDatabaseCounts.checkpoint, auditDatabaseCounts.maxSeq, "checkpoint must be caught up");
+  assert.equal(auditDatabaseCounts.noise, 0, "noise event types must never enter the audit trail");
+  pass("collaboration-audit-api-projection-consistency", {
+    events: auditEvents.length,
+    pages: auditApi.pages.length,
+  });
+
+  await page.goto(`${baseUrl}${firstHref}`, { waitUntil: "networkidle" });
+  const auditContextPanel = page.locator(".cockpit-context");
+  await auditContextPanel.getByRole("tab", { name: "共享记忆" }).focus();
+  // Same-page baseline with the audit panel still unmounted, so any axe
+  // violation present here is pre-existing cockpit chrome, not the panel.
+  await axe(page, "desktop light memory tab audit baseline");
+  await page.keyboard.press("End");
+  const auditTab = auditContextPanel.getByRole("tab", { name: "审计" });
+  assert.equal(await auditTab.getAttribute("aria-selected"), "true");
+  assert.equal(
+    await auditTab.evaluate((node) => document.activeElement === node),
+    true,
+    "End key must move focus to the audit tab",
+  );
+  const auditList = auditContextPanel.getByRole("list", { name: "审计事件" });
+  await auditList.waitFor();
+  await auditContextPanel.getByText("已追平", { exact: true }).waitFor();
+  const auditRows = auditList.getByRole("listitem");
+  const firstPageRows = Math.min(auditEvents.length, 50);
+  await page.waitForFunction(
+    (expected) => document.querySelectorAll(".audit-event-list > li").length === expected,
+    firstPageRows,
+  );
+  const firstRowText = await auditRows.first().innerText();
+  assert.ok(
+    firstRowText.includes(COLLABORATION_AUDIT_EVENT_TYPE_COPY[auditEvents[0].eventType]),
+    `first audit row must show readable type copy: ${firstRowText}`,
+  );
+  const lastFirstPageRowText = await auditRows.nth(firstPageRows - 1).innerText();
+  assert.ok(
+    lastFirstPageRowText.includes(
+      COLLABORATION_AUDIT_EVENT_TYPE_COPY[auditEvents[firstPageRows - 1].eventType],
+    ),
+    `last first-page audit row must keep descending order: ${lastFirstPageRowText}`,
+  );
+  for (let click = 0; click < 12; click += 1) {
+    const moreButton = auditContextPanel.getByRole("button", { name: "加载更多审计事件" });
+    if (!(await moreButton.isVisible().catch(() => false))) break;
+    const beforeCount = await auditRows.count();
+    await moreButton.click();
+    await page.waitForFunction(
+      (expected) => document.querySelectorAll(".audit-event-list > li").length > expected,
+      beforeCount,
+    );
+  }
+  assert.equal(
+    await auditRows.count(),
+    auditEvents.length,
+    "audit list must render every projected event",
+  );
+  assert.equal(
+    await auditList.locator(".status-label.status-queued").count(),
+    auditEvents.length,
+    "every rendered row must carry the collaboration domain badge",
+  );
+  const excerptRow = auditRows.nth(auditEvents.indexOf(attachOwnerMessage));
+  assert.equal(
+    await excerptRow.locator(".audit-event-excerpt").innerText(),
+    "Owner message with image attachments.",
+    "message events must render the truncated public excerpt",
+  );
+  const stoppedLink = auditRows.nth(auditEvents.indexOf(stoppedEvent))
+    .getByRole("link", { name: "定位来源线程" });
+  assert.equal(
+    await stoppedLink.getAttribute("href"),
+    `/projects/legacy-project?thread=${firstThread}&run=${activeRun.id}`,
+  );
+  const noteLink = auditRows.nth(auditEvents.indexOf(secondThreadNote))
+    .getByRole("link", { name: "定位来源线程" });
+  assert.equal(
+    await noteLink.getAttribute("href"),
+    `/projects/legacy-project?thread=${secondThread}`,
+    "run-less owner message must link to the thread without a run param",
+  );
+  const auditTabBox = await auditTab.boundingBox();
+  assert.ok(auditTabBox && auditTabBox.height >= 44 && auditTabBox.width >= 44, "audit tab must be at least 44x44");
+  const stoppedLinkBox = await stoppedLink.boundingBox();
+  assert.ok(stoppedLinkBox && stoppedLinkBox.height >= 44 && stoppedLinkBox.width >= 44, "locate link must be at least 44x44");
+  await stoppedLink.focus();
+  assert.notEqual(
+    await stoppedLink.evaluate((node) => getComputedStyle(node).boxShadow),
+    "none",
+    "focused locate link must show a visible focus ring",
+  );
+  await page.keyboard.press("Enter");
+  try {
+    await page.waitForURL(
+      (url) => url.searchParams.get("thread") === firstThread
+        && url.searchParams.get("run") === activeRun.id,
+      { timeout: 10_000 },
+    );
+  } catch {
+    await stoppedLink.focus();
+    await page.keyboard.press("Enter");
+    await page.waitForURL((url) =>
+      url.searchParams.get("thread") === firstThread
+      && url.searchParams.get("run") === activeRun.id
+    );
+  }
+  const landedRunSelector = page.getByRole("combobox", { name: "选择线程运行" });
+  await landedRunSelector.waitFor();
+  assert.equal(
+    await landedRunSelector.inputValue(),
+    activeRun.id,
+    "locate link must land on the canonical thread+run identity",
+  );
+  pass("collaboration-audit-desktop-list-badge-excerpt-locate", {
+    events: auditEvents.length,
+  });
+
+  await auditContextPanel.getByRole("tab", { name: "审计" }).click();
+  await auditList.waitFor();
+  await auditContextPanel.getByText("已追平", { exact: true }).waitFor();
+  await page.waitForFunction(
+    (expected) => document.querySelectorAll(".audit-event-list > li").length === expected,
+    firstPageRows,
+  );
+  await axe(page, "desktop light collaboration audit panel");
+  await page.screenshot({ fullPage: true, path: evidence.auditDesktop });
+  auditFacingText = await page.locator("html").innerText();
+  await page.getByRole("button", { name: /切换到暗色主题/ }).click();
+  await page.getByRole("button", { name: /切换到明色主题/ }).waitFor();
+  await auditContextPanel.getByText("已追平", { exact: true }).waitFor();
+  const darkFirstRowText = await auditRows.first().innerText();
+  assert.ok(
+    darkFirstRowText.includes(COLLABORATION_AUDIT_EVENT_TYPE_COPY[auditEvents[0].eventType]),
+    "dark theme must keep the collaboration audit presentation",
+  );
+  await axe(page, "desktop dark collaboration audit panel");
+  await page.screenshot({ fullPage: true, path: evidence.auditDark });
+  await page.getByRole("button", { name: /切换到明色主题/ }).click();
+  await page.getByRole("button", { name: /切换到暗色主题/ }).waitFor();
+  pass("collaboration-audit-desktop-light-dark-axe");
+
+  await page.setViewportSize({ height: 844, width: 390 });
+  await page.reload({ waitUntil: "networkidle" });
+  const auditContextOpener = page.getByRole("button", { name: "打开当前任务上下文" });
+  await auditContextOpener.focus();
+  await page.keyboard.press("Enter");
+  const auditContextDrawer = page.getByRole("dialog", { name: "当前任务上下文" });
+  const narrowAuditTab = auditContextDrawer.getByRole("tab", { name: "审计" });
+  await narrowAuditTab.focus();
+  await page.keyboard.press("Enter");
+  assert.equal(await narrowAuditTab.getAttribute("aria-selected"), "true");
+  const narrowAuditList = auditContextDrawer.getByRole("list", { name: "审计事件" });
+  await narrowAuditList.waitFor();
+  await auditContextDrawer.getByText("已追平", { exact: true }).waitFor();
+  await page.waitForFunction(
+    (expected) => document.querySelectorAll(".audit-event-list > li").length === expected,
+    firstPageRows,
+  );
+  const narrowRows = narrowAuditList.getByRole("listitem");
+  const narrowFirstRowText = await narrowRows.first().innerText();
+  assert.ok(
+    narrowFirstRowText.includes(COLLABORATION_AUDIT_EVENT_TYPE_COPY[auditEvents[0].eventType]),
+    "narrow drawer must keep the collaboration audit presentation",
+  );
+  assert.equal(
+    await narrowRows.nth(auditEvents.indexOf(attachOwnerMessage))
+      .locator(".audit-event-excerpt").innerText(),
+    "Owner message with image attachments.",
+  );
+  const narrowLocateLink = narrowRows.nth(auditEvents.indexOf(stoppedEvent))
+    .getByRole("link", { name: "定位来源线程" });
+  assert.equal(
+    await narrowLocateLink.getAttribute("href"),
+    `/projects/legacy-project?thread=${firstThread}&run=${activeRun.id}`,
+  );
+  const narrowLocateBox = await narrowLocateLink.boundingBox();
+  assert.ok(narrowLocateBox && narrowLocateBox.height >= 44 && narrowLocateBox.width >= 44, "narrow locate link must be at least 44x44");
+  const narrowAuditTabBox = await narrowAuditTab.boundingBox();
+  assert.ok(narrowAuditTabBox && narrowAuditTabBox.height >= 44 && narrowAuditTabBox.width >= 44, "narrow audit tab must be at least 44x44");
+  await axe(page, "narrow collaboration audit drawer");
+  await page.screenshot({ fullPage: true, path: evidence.auditNarrow });
+  narrowAuditFacingText = await page.locator("html").innerText();
+  await page.keyboard.press("Escape");
+  await auditContextDrawer.waitFor({ state: "detached" });
+  assert.equal(
+    await auditContextOpener.evaluate((node) => document.activeElement === node),
+    true,
+    "Escape must return focus to the context drawer opener",
+  );
+  pass("collaboration-audit-narrow-drawer-44px-axe");
+
   const gitCheckIgnore = spawnSync(
     "git",
     ["check-ignore", ".data/attachments/placeholder"],
@@ -2025,12 +2371,22 @@ try {
     .filter((name) => name.endsWith(".json") || name.endsWith(".log"))
     .map((name) => readFileSync(join(evidenceDirectory, name), "utf8"))
     .join("\n");
+  const auditScreenshotBytes = [
+    evidence.auditDark,
+    evidence.auditDesktop,
+    evidence.auditNarrow,
+  ]
+    .map((path) => readFileSync(path).toString("latin1"))
+    .join("\n");
   const publicSurfaces = [
     dom,
     databaseText,
     productApiBodies.join("\n"),
     serverOutput,
     existingEvidence,
+    auditFacingText,
+    narrowAuditFacingText,
+    auditScreenshotBytes,
     JSON.stringify(results),
   ];
   for (const secret of [apiKey, masterKey, `Bearer ${apiKey}`]) {
@@ -2038,7 +2394,14 @@ try {
       assert.equal(surface.includes(secret), false, "fixture secret leaked");
     }
   }
-  for (const surface of [dom, databaseText, productApiBodies.join("\n"), serverOutput]) {
+  for (const surface of [
+    dom,
+    databaseText,
+    productApiBodies.join("\n"),
+    serverOutput,
+    auditFacingText,
+    narrowAuditFacingText,
+  ]) {
     assert.equal(
       surface.includes(attachmentsRoot),
       false,

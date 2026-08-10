@@ -15,8 +15,31 @@ import type {
 } from "@/src/shared/audit-contracts";
 import type { ApiError } from "@/src/shared/contracts";
 
-// Readable copy for the safe-execution audit event types, centralized so any
-// future type not yet mapped degrades to its raw contract value (never blank).
+// Readable copy for the collaboration audit event types (feature 030
+// selection, mirroring AUDITABLE_COLLABORATION_EVENT_TYPES server-side). The
+// map doubles as the domain classifier: a type listed here renders the
+// collaboration domain badge; anything else is a safe-execution event.
+const COLLABORATION_EVENT_TYPE_COPY: Record<string, string> = {
+  action_rejected: "动作已被拒绝",
+  agent_message: "Agent 消息",
+  boundary_paused: "运行已在边界暂停",
+  context_changed: "上下文已变更",
+  decision_answered: "决策已答复",
+  decision_requested: "决策已请求",
+  handoff: "已交棒",
+  owner_message: "Owner 消息",
+  run_paused: "运行已暂停",
+  run_planned: "运行已规划",
+  run_resumed: "运行已恢复",
+  run_retried: "运行已重试",
+  run_started: "运行已开始",
+  run_stopped: "运行已停止",
+  task_claimed: "任务已认领",
+  tasks_created: "任务已创建",
+};
+
+// Readable copy for the audit event types, centralized so any future type not
+// yet mapped degrades to its raw contract value (never blank).
 const EVENT_TYPE_COPY: Record<string, string> = {
   action_finished: "动作已完成",
   action_queued: "动作已排队",
@@ -33,6 +56,7 @@ const EVENT_TYPE_COPY: Record<string, string> = {
   tool_requested: "工具已请求",
   tool_succeeded: "工具调用成功",
   usage_recorded: "用量已记录",
+  ...COLLABORATION_EVENT_TYPE_COPY,
 };
 
 const ACTOR_TYPE_COPY: Record<string, string> = {
@@ -40,6 +64,63 @@ const ACTOR_TYPE_COPY: Record<string, string> = {
   owner: "Owner",
   system: "系统",
 };
+
+type AuditEventDomain = "collaboration" | "execution";
+
+const DOMAIN_COPY: Record<AuditEventDomain, string> = {
+  collaboration: "协作",
+  execution: "执行",
+};
+
+// Both variants are existing .status-label colors (approval-center precedent):
+// no new visual language for the domain badge.
+const DOMAIN_VARIANT: Record<AuditEventDomain, string> = {
+  collaboration: "status-queued",
+  execution: "status-running",
+};
+
+// The outbox sources write disjoint event-type sets (the collaboration
+// selection is a closed server-side constant), so the type classifies the
+// domain exactly; an unlisted future type conservatively shows 执行.
+function eventDomain(eventType: string): AuditEventDomain {
+  return eventType in COLLABORATION_EVENT_TYPE_COPY
+    ? "collaboration"
+    : "execution";
+}
+
+const MESSAGE_EVENT_TYPES: ReadonlySet<string> = new Set([
+  "agent_message",
+  "owner_message",
+]);
+
+// The server whitelist attaches messageExcerpt (already grapheme-truncated
+// and credential-screened) only to message events; anything malformed or
+// empty simply renders no excerpt.
+function messageExcerpt(event: AuditEventListItemDto): string | null {
+  if (!MESSAGE_EVENT_TYPES.has(event.eventType)) return null;
+  const excerpt = event.payload.messageExcerpt;
+  return typeof excerpt === "string" && excerpt !== "" ? excerpt : null;
+}
+
+// Collaboration locate uses the canonical target identity link
+// (canonicalRunHref / approval-center precedent): the 018/022 message focus
+// seam (messageRefs/jumpToReplyTarget) is panel-internal state with no URL
+// entry, and the project selection route accepts only thread/run params, so
+// message-level precision is not reachable from here — the link lands on the
+// thread/run instead of faking a message jump. Malformed references render
+// no link at all.
+function collaborationSourceHref(
+  projectId: string,
+  payload: Record<string, unknown>,
+): string | null {
+  const threadId = payload.threadId;
+  if (typeof threadId !== "string" || threadId === "") return null;
+  const runId = payload.runId;
+  const query = new URLSearchParams();
+  query.set("thread", threadId);
+  if (typeof runId === "string" && runId !== "") query.set("run", runId);
+  return `/projects/${encodeURIComponent(projectId)}?${query.toString()}`;
+}
 
 const FRESHNESS_COPY: Record<AuditProjectionFreshnessStatus, string> = {
   behind: "落后",
@@ -271,15 +352,27 @@ export function AuditPanel({ projectId }: { projectId: string }) {
             className="stack audit-event-list"
           >
             {events.map((event) => {
+              const domain = eventDomain(event.eventType);
               const executionId = event.executionId;
+              const excerpt = messageExcerpt(event);
+              const sourceHref = domain === "collaboration"
+                ? collaborationSourceHref(projectId, event.payload)
+                : null;
               return (
                 <li className="task-summary stack" key={event.id}>
                   <h3>{auditEventTypeCopy(event.eventType)}</h3>
                   <p>
+                    <span className={`status-label ${DOMAIN_VARIANT[domain]}`}>
+                      {DOMAIN_COPY[domain]}
+                    </span>
+                    {" "}
                     {actorCopy(event.actorType)}
                     {" · "}
                     <time dateTime={event.occurredAt}>{event.occurredAt}</time>
                   </p>
+                  {excerpt ? (
+                    <p className="audit-event-excerpt">{excerpt}</p>
+                  ) : null}
                   {executionId ? (
                     <button
                       onClick={() => locateExecution(executionId)}
@@ -288,6 +381,7 @@ export function AuditPanel({ projectId }: { projectId: string }) {
                       定位来源执行
                     </button>
                   ) : null}
+                  {sourceHref ? <a href={sourceHref}>定位来源线程</a> : null}
                 </li>
               );
             })}

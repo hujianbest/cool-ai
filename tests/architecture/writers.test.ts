@@ -13,7 +13,10 @@ import { readSource, ROOT, sourceFiles } from "./helpers";
 
 const MANIFEST = JSON.parse(
   readFileSync(resolve(ROOT, "tests/architecture/write-ownership.manifest.json"), "utf8"),
-) as { owners: Record<string, string[]> };
+) as {
+  owners: Record<string, string[]>;
+  sharedAppendWriters?: Record<string, string[]>;
+};
 
 /** Canonical bootstrap/validation lifecycle entry — DDL only, exempt from writer rules. */
 const LIFECYCLE_FILES = new Set([
@@ -129,8 +132,15 @@ describe("writer location by owner", () => {
     for (const owner of MIGRATED_OWNERS) {
       const allowed = OWNER_WRITER_DIRS[owner];
       for (const table of MANIFEST.owners[owner] ?? []) {
+        // Multi-source append seams (feature 030: audit_event_outbox) stay owned
+        // by their fact owner but accept appends from each registered source
+        // owner's adapter dirs.
+        const shared = MANIFEST.sharedAppendWriters?.[table];
+        const tableAllowed = shared
+          ? shared.flatMap((writer) => OWNER_WRITER_DIRS[writer] ?? [])
+          : allowed;
         for (const file of byTable.get(table) ?? []) {
-          if (!allowed.some((pattern) => pattern.test(file))) {
+          if (!tableAllowed.some((pattern) => pattern.test(file))) {
             const exempt = TRANSITIONAL_NON_OWNER_WRITERS.some(
               (entry) =>
                 entry.owner === owner && entry.table === table && entry.file === file,

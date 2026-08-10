@@ -29,6 +29,7 @@ import {
 import { openDatabase } from "@/src/adapters/outbound/sqlite/connection";
 import { readPublicStructuredBlocksTx } from "@/src/adapters/outbound/sqlite/public-collaboration/structured-message-store";
 import { assertPublicProjectionText } from "@/src/adapters/outbound/sqlite/public-collaboration/verified-source-projection";
+import { appendCollaborationAuditOutboxRow } from "@/src/adapters/outbound/sqlite/public-collaboration/audit-event-outbox";
 import { timelinePayloadSchemas } from "@/src/shared/collaboration-contracts";
 import type {
   CursorPage,
@@ -1956,14 +1957,24 @@ export function startThreadRun(
              payload_json,created_at
            ) VALUES (?,?,?,?,1,'run_started','owner',NULL,?,?)`,
         )
-        .run(
-          eventId,
-          projectId,
-          threadId,
-          runId,
-          JSON.stringify({ currentAgentId, messageId, messageSequence }),
-          timestamp,
-        );
+      .run(
+        eventId,
+        projectId,
+        threadId,
+        runId,
+        JSON.stringify({ currentAgentId, messageId, messageSequence }),
+        timestamp,
+      );
+      appendCollaborationAuditOutboxRow(database, {
+        actorId: null,
+        actorType: "owner",
+        eventId,
+        eventType: "run_started",
+        projectId,
+        runId,
+        sourcePayload: { currentAgentId, messageId, messageSequence },
+        threadId,
+      });
       hooks.fault?.("after_event");
       appendBatchTx(database, [
         {

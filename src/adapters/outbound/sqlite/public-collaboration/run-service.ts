@@ -22,6 +22,7 @@ import { createCredentialVault } from "@/src/modules/identity-capability/interna
 import { type CredentialEnvelope } from "@/src/modules/identity-capability";
 import { openDatabase } from "@/src/adapters/outbound/sqlite/connection";
 import { readMessageAttachmentRefsTx } from "@/src/adapters/outbound/sqlite/public-collaboration/attachment-service";
+import { appendCollaborationAuditOutboxRow } from "@/src/adapters/outbound/sqlite/public-collaboration/audit-event-outbox";
 import type {
   AnswerDecisionResponse,
   CollaborationReadResponse,
@@ -1239,6 +1240,16 @@ export function controlThreadRun(
           JSON.stringify(eventPayload),
           timestamp,
         );
+      appendCollaborationAuditOutboxRow(database, {
+        actorId: null,
+        actorType: "owner",
+        eventId,
+        eventType,
+        projectId,
+        runId,
+        sourcePayload: eventPayload,
+        threadId,
+      });
       hooks.fault?.("after_event");
 
       appendBatchTx(database, [{
@@ -1676,6 +1687,22 @@ export function answerThreadDecision(
         }),
         timestamp,
       );
+      appendCollaborationAuditOutboxRow(database, {
+        actorId: null,
+        actorType: "owner",
+        eventId,
+        eventType: "decision_answered",
+        projectId,
+        runId,
+        sourcePayload: {
+          answer: input.answer,
+          decisionId,
+          messageId,
+          messageSequence: row.nextMessageSequence,
+          nextAgentId,
+        },
+        threadId,
+      });
       hooks.fault?.("after_event");
       appendBatchTx(database, [
         {

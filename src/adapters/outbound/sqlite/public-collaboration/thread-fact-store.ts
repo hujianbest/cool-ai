@@ -1,5 +1,6 @@
 import type { DatabaseSync } from "node:sqlite";
 
+import { appendCollaborationAuditOutboxRow } from "@/src/adapters/outbound/sqlite/public-collaboration/audit-event-outbox";
 import { CollaborationError } from "@/src/modules/public-collaboration";
 
 type FactBase = {
@@ -111,6 +112,22 @@ export function appendBatchTx(
       JSON.stringify(fact.payload),
       fact.timestamp,
     );
+    // Owner messages are the one auditable collaboration fact that has no
+    // collaboration_events counterpart; mirror them into the audit outbox in
+    // the same transaction (feature 030). Agent messages already reach the
+    // outbox through the run-event write points.
+    if (fact.type === "owner_message") {
+      appendCollaborationAuditOutboxRow(database, {
+        actorId: fact.actorId,
+        actorType: fact.actorType,
+        eventId: fact.factId,
+        eventType: fact.type,
+        projectId: fact.projectId,
+        runId: fact.runId,
+        sourcePayload: { ...fact.payload, messageId: fact.messageId },
+        threadId: fact.threadId,
+      });
+    }
   }
 
   const last = stored[stored.length - 1];

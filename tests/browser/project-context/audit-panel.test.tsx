@@ -196,6 +196,223 @@ describe("Audit panel", () => {
     },
   );
 
+  it("renders collaboration event types with readable copy and raw fallback for unknown types", async () => {
+    const AuditPanel = await auditPanel();
+    const collaborationCopy: ReadonlyArray<readonly [string, string]> = [
+      ["run_started", "运行已开始"],
+      ["run_paused", "运行已暂停"],
+      ["run_resumed", "运行已恢复"],
+      ["run_stopped", "运行已停止"],
+      ["run_retried", "运行已重试"],
+      ["run_planned", "运行已规划"],
+      ["boundary_paused", "运行已在边界暂停"],
+      ["owner_message", "Owner 消息"],
+      ["agent_message", "Agent 消息"],
+      ["handoff", "已交棒"],
+      ["decision_requested", "决策已请求"],
+      ["decision_answered", "决策已答复"],
+      ["tasks_created", "任务已创建"],
+      ["task_claimed", "任务已认领"],
+      ["action_rejected", "动作已被拒绝"],
+      ["context_changed", "上下文已变更"],
+    ];
+    const events = collaborationCopy.map(([eventType], index) =>
+      auditEvent({
+        actorType: "owner",
+        eventType,
+        id: `event-${100 - index}`,
+        outboxSeq: 100 - index,
+        payload: { runId: "run-1", threadId: "thread-1" },
+      }),
+    );
+    events.push(auditEvent({
+      eventType: "future_collaboration_event",
+      id: "event-83",
+      outboxSeq: 83,
+      payload: { threadId: "thread-1" },
+    }));
+    vi.stubGlobal(
+      "fetch",
+      vi.fn(() => Promise.resolve(Response.json(page(events)))),
+    );
+    render(<AuditPanel projectId="project-1" />);
+
+    const list = await screen.findByRole("list", { name: "审计事件" });
+    for (const [, copy] of collaborationCopy) {
+      expect(within(list).getByRole("heading", { name: copy }))
+        .toBeInTheDocument();
+    }
+    expect(
+      within(list).getByRole("heading", { name: "future_collaboration_event" }),
+    ).toBeInTheDocument();
+  });
+
+  it("badges every event with its source domain in a mixed execution/collaboration list", async () => {
+    const AuditPanel = await auditPanel();
+    const events = [
+      auditEvent({
+        eventType: "execution_created",
+        executionId: "exec-1",
+        id: "event-30",
+        outboxSeq: 30,
+      }),
+      auditEvent({
+        actorType: "owner",
+        eventType: "owner_message",
+        id: "event-29",
+        outboxSeq: 29,
+        payload: { runId: "run-1", threadId: "thread-1" },
+      }),
+      auditEvent({
+        actorType: "agent",
+        eventType: "run_started",
+        id: "event-28",
+        outboxSeq: 28,
+        payload: { runId: "run-1", threadId: "thread-1" },
+      }),
+      auditEvent({
+        eventType: "tool_failed",
+        executionId: "exec-1",
+        id: "event-27",
+        outboxSeq: 27,
+      }),
+    ];
+    vi.stubGlobal(
+      "fetch",
+      vi.fn(() => Promise.resolve(Response.json(page(events)))),
+    );
+    render(<AuditPanel projectId="project-1" />);
+
+    const list = await screen.findByRole("list", { name: "审计事件" });
+    const rows = within(list).getAllByRole("listitem");
+    expect(rows).toHaveLength(4);
+    const executionBadge = within(rows[0]!).getByText("执行");
+    expect(executionBadge).toHaveClass("status-label");
+    expect(executionBadge).toHaveClass("status-running");
+    for (const row of [rows[1]!, rows[2]!]) {
+      const badge = within(row).getByText("协作");
+      expect(badge).toHaveClass("status-label");
+      expect(badge).toHaveClass("status-queued");
+    }
+    expect(within(rows[3]!).getByText("执行")).toHaveClass("status-running");
+    // Unknown types belong to the execution domain by default.
+    expect(within(rows[0]!).queryByText("协作")).toBeNull();
+  });
+
+  it("shows the sanitized message excerpt for message events only", async () => {
+    const AuditPanel = await auditPanel();
+    const events = [
+      auditEvent({
+        actorType: "owner",
+        eventType: "owner_message",
+        id: "event-40",
+        outboxSeq: 40,
+        payload: {
+          messageExcerpt: "请帮我审查这个计划",
+          runId: "run-1",
+          threadId: "thread-1",
+        },
+      }),
+      auditEvent({
+        actorType: "agent",
+        eventType: "agent_message",
+        id: "event-39",
+        outboxSeq: 39,
+        payload: {
+          messageExcerpt: "[redacted]",
+          runId: "run-1",
+          threadId: "thread-1",
+        },
+      }),
+      auditEvent({
+        actorType: "owner",
+        eventType: "owner_message",
+        id: "event-38",
+        outboxSeq: 38,
+        payload: { threadId: "thread-1" },
+      }),
+      auditEvent({
+        eventType: "run_started",
+        id: "event-37",
+        outboxSeq: 37,
+        payload: { runId: "run-1", threadId: "thread-1" },
+      }),
+    ];
+    vi.stubGlobal(
+      "fetch",
+      vi.fn(() => Promise.resolve(Response.json(page(events)))),
+    );
+    render(<AuditPanel projectId="project-1" />);
+
+    const list = await screen.findByRole("list", { name: "审计事件" });
+    const rows = within(list).getAllByRole("listitem");
+    const excerpt = within(rows[0]!).getByText("请帮我审查这个计划");
+    expect(excerpt).toHaveClass("audit-event-excerpt");
+    expect(within(rows[1]!).getByText("[redacted]"))
+      .toHaveClass("audit-event-excerpt");
+    // No excerpt row and non-message rows never render an excerpt element.
+    expect(rows[2]!.querySelector(".audit-event-excerpt")).toBeNull();
+    expect(rows[3]!.querySelector(".audit-event-excerpt")).toBeNull();
+  });
+
+  it("links collaboration events to the canonical thread/run target and keeps execution locate intact", async () => {
+    const AuditPanel = await auditPanel();
+    const events = [
+      auditEvent({
+        actorType: "agent",
+        eventType: "run_started",
+        id: "event-50",
+        outboxSeq: 50,
+        payload: { runId: "run-1", threadId: "thread-1" },
+      }),
+      auditEvent({
+        actorType: "owner",
+        eventType: "owner_message",
+        id: "event-49",
+        outboxSeq: 49,
+        payload: { threadId: "thread-2" },
+      }),
+      auditEvent({
+        eventType: "execution_created",
+        executionId: "exec-1",
+        id: "event-48",
+        outboxSeq: 48,
+      }),
+      auditEvent({
+        actorType: "agent",
+        eventType: "agent_message",
+        id: "event-47",
+        outboxSeq: 47,
+        payload: { runId: 42 },
+      }),
+    ];
+    vi.stubGlobal(
+      "fetch",
+      vi.fn(() => Promise.resolve(Response.json(page(events)))),
+    );
+    render(<AuditPanel projectId="project-1" />);
+
+    const list = await screen.findByRole("list", { name: "审计事件" });
+    const rows = within(list).getAllByRole("listitem");
+    expect(
+      within(rows[0]!).getByRole("link", { name: "定位来源线程" }),
+    ).toHaveAttribute(
+      "href",
+      "/projects/project-1?thread=thread-1&run=run-1",
+    );
+    // runId null (owner_message fact mirror) omits the run parameter.
+    expect(
+      within(rows[1]!).getByRole("link", { name: "定位来源线程" }),
+    ).toHaveAttribute("href", "/projects/project-1?thread=thread-2");
+    // Execution rows keep the in-page focus button and gain no link.
+    expect(
+      within(rows[2]!).getByRole("button", { name: "定位来源执行" }),
+    ).toBeInTheDocument();
+    expect(within(rows[2]!).queryByRole("link")).toBeNull();
+    // A malformed payload reference renders no link rather than a broken one.
+    expect(within(rows[3]!).queryByRole("link")).toBeNull();
+  });
+
   it("pages older events through the exclusive nextBeforeSeq cursor and keeps retry on failure", async () => {
     const AuditPanel = await auditPanel();
     const second = deferred<Response>();
