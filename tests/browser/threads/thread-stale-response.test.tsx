@@ -81,7 +81,7 @@ function detail(project: string, thread: string, selectedRunId: string | null = 
 
 function threadSummary(project: string, thread: string) {
   const { policy: _policy, ...summary } = detail(project, thread).thread;
-  return { ...summary, favoritedAt: null, isFavorite: false };
+  return { ...summary, favoritedAt: null, isFavorite: false, tags: [] };
 }
 
 function message(project: string, thread: string, content: string, runId: string | null = null) {
@@ -179,6 +179,9 @@ describe("canonical project/thread/run stale request protection", () => {
           nextCursor: null,
           threads: [threadSummary(newProject, "thread-new")],
         }));
+      }
+      if (url.includes("/thread-tags?limit=100")) {
+        return Promise.resolve(Response.json({ tags: [] }));
       }
       throw new Error(`Unexpected request: ${url}`);
     }));

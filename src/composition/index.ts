@@ -44,6 +44,7 @@ export * as inputHistoryService from "@/src/adapters/outbound/sqlite/public-coll
 export * as threadDraftService from "@/src/adapters/outbound/sqlite/public-collaboration/thread-draft-service";
 export * as threadFavoriteService from "@/src/adapters/outbound/sqlite/public-collaboration/thread-favorite-service";
 export * as threadService from "@/src/adapters/outbound/sqlite/public-collaboration/thread-service";
+export * as threadTagService from "@/src/adapters/outbound/sqlite/public-collaboration/thread-tag-service";
 export * as turnOrchestrator from "@/src/adapters/outbound/sqlite/public-collaboration/turn-orchestrator";
 export * as verifiedSourceProjection from "@/src/adapters/outbound/sqlite/public-collaboration/verified-source-projection";
 

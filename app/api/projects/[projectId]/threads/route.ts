@@ -50,24 +50,28 @@ function parseListQuery(request: Request): {
   cursor?: string;
   favoritesOnly?: boolean;
   limit?: number;
+  tagId?: string;
 } {
   const url = new URL(request.url);
   const fields: Record<string, string> = {};
   if (url.hash) fields.fragment = "unknown";
   for (const key of new Set(url.searchParams.keys())) {
-    if (key !== "cursor" && key !== "favorites" && key !== "limit") {
+    if (key !== "cursor" && key !== "favorites" && key !== "limit" && key !== "tagId") {
       fields[key] = "unknown";
     }
   }
   const cursorValues = url.searchParams.getAll("cursor");
   const limitValues = url.searchParams.getAll("limit");
   const favoritesValues = url.searchParams.getAll("favorites");
+  const tagIdValues = url.searchParams.getAll("tagId");
   if (cursorValues.length > 1) fields.cursor = "duplicate";
   if (limitValues.length > 1) fields.limit = "duplicate";
   if (favoritesValues.length > 1) fields.favorites = "duplicate";
+  if (tagIdValues.length > 1) fields.tagId = "duplicate";
   const cursor = cursorValues[0];
   const rawLimit = limitValues[0];
   const rawFavorites = favoritesValues[0];
+  const rawTagId = tagIdValues[0];
   if (cursor !== undefined && cursor.length === 0) fields.cursor = "required";
   if (rawLimit !== undefined && !DECIMAL_INTEGER.test(rawLimit)) {
     fields.limit = rawLimit.length === 0 ? "required" : "invalid_format";
@@ -78,6 +82,10 @@ function parseListQuery(request: Request): {
     && rawFavorites !== "false"
   ) {
     fields.favorites = rawFavorites.length === 0 ? "required" : "invalid_format";
+  }
+  if (rawTagId !== undefined) {
+    if (rawTagId.length === 0) fields.tagId = "required";
+    else if (!RESOURCE_ID.test(rawTagId)) fields.tagId = "invalid_format";
   }
   const limit = rawLimit === undefined ? undefined : Number(rawLimit);
   if (
@@ -91,6 +99,7 @@ function parseListQuery(request: Request): {
     ...(cursor === undefined ? {} : { cursor }),
     ...(rawFavorites === undefined ? {} : { favoritesOnly: rawFavorites === "true" }),
     ...(limit === undefined ? {} : { limit }),
+    ...(rawTagId === undefined ? {} : { tagId: rawTagId }),
   };
 }
 

@@ -357,6 +357,11 @@ export type ThreadFactDto =
 export type MessagePageResponse = CursorPage<ThreadMessageDto>;
 export type FactPageResponse = CursorPage<ThreadFactDto>;
 
+export type ThreadTagRefDto = {
+  id: string;
+  name: string;
+};
+
 export type ThreadListItemDto = {
   availability: PolicyAvailability;
   createdAt: string;
@@ -366,6 +371,7 @@ export type ThreadListItemDto = {
   lastActivitySequence: number;
   policyVersion: number;
   projectId: string;
+  tags: ThreadTagRefDto[];
   title: string;
   updatedAt: string;
   version: number;
@@ -381,6 +387,50 @@ export type ThreadFavoriteSetResponse = {
   isFavorite: boolean;
   projectId: string;
   threadId: string;
+};
+
+export type ThreadTagDto = {
+  createdAt: string;
+  id: string;
+  name: string;
+  projectId: string;
+};
+
+export type ThreadTagListItemDto = ThreadTagDto & {
+  threadCount: number;
+};
+
+export type ThreadTagListResponseDto = {
+  tags: ThreadTagListItemDto[];
+};
+
+export type ThreadTagCreateResponse = {
+  created: boolean;
+  tag: ThreadTagDto;
+};
+
+export type ThreadTagDeleteResponse = {
+  removedEdgeCount: number;
+  tagId: string;
+};
+
+export type ThreadTagAssignmentResponse = {
+  assigned: boolean;
+  projectId: string;
+  tagId: string;
+  threadId: string;
+};
+
+export type ThreadTagBatchAppliedItem = {
+  addedTagIds: string[];
+  removedTagIds: string[];
+  threadId: string;
+};
+
+export type ThreadTagBatchResponse = {
+  applied: ThreadTagBatchAppliedItem[];
+  operationId: string;
+  replayed: boolean;
 };
 
 export type ThreadDraftAttachmentDto = {

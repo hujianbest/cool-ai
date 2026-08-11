@@ -387,7 +387,7 @@ describe("thread list favorite projection seam", () => {
     const reopened = openDatabase(databasePath);
     try {
       expect(reopened.prepare("PRAGMA user_version").get()).toEqual({
-        user_version: 17,
+        user_version: 18,
       });
     } finally {
       reopened.close();

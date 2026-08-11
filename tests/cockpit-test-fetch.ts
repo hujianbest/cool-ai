@@ -69,7 +69,9 @@ export function threadPolicy() {
 export function threadListPayload(projectId: string) {
   return {
     nextCursor: null,
-    threads: [{ ...threadSummary(projectId), favoritedAt: null, isFavorite: false }],
+    threads: [
+      { ...threadSummary(projectId), favoritedAt: null, isFavorite: false, tags: [] },
+    ],
   };
 }
 
@@ -237,6 +239,9 @@ export function cockpitFetch(responses: QueuedResponse[]) {
       return Promise.resolve(
         Response.json({ mission: null, workItems: [] }),
       );
+    }
+    if (/\/api\/projects\/[^/]+\/thread-tags\?limit=100$/.test(url)) {
+      return Promise.resolve(Response.json({ tags: [] }));
     }
     if (/\/api\/projects\/[^/]+\/memories\?includeInactive=[01]$/.test(url)) {
       return Promise.resolve(Response.json({ memories: [] }));

@@ -13,6 +13,10 @@ import type {
   ThreadDraftClearResponse,
   ThreadDraftSaveResponse,
   ThreadFavoriteSetResponse,
+  ThreadTagAssignmentResponse,
+  ThreadTagBatchResponse,
+  ThreadTagCreateResponse,
+  ThreadTagDeleteResponse,
 } from "./dto";
 
 export type TransitionReceipt =
@@ -126,6 +130,27 @@ export interface PublicCollaborationCommands {
     threadId: string,
     rawInput: unknown,
   ): PublicCollaborationCommandResult<ThreadFavoriteSetResponse>;
+  createThreadTag(
+    databasePath: string,
+    projectId: string,
+    rawInput: unknown,
+  ): PublicCollaborationCommandResult<ThreadTagCreateResponse>;
+  deleteThreadTag(
+    databasePath: string,
+    projectId: string,
+    tagId: string,
+  ): PublicCollaborationCommandResult<ThreadTagDeleteResponse>;
+  setThreadTagAssignment(
+    databasePath: string,
+    projectId: string,
+    threadId: string,
+    rawInput: unknown,
+  ): PublicCollaborationCommandResult<ThreadTagAssignmentResponse>;
+  applyThreadTagBatch(
+    databasePath: string,
+    projectId: string,
+    rawInput: unknown,
+  ): PublicCollaborationCommandResult<ThreadTagBatchResponse>;
   clearInputHistory(
     databasePath: string,
     projectId: string,

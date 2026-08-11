@@ -9,6 +9,7 @@ import type {
   PublicCollaborationPageCursor,
   ThreadDraftReadResponse,
   ThreadListResponseDto,
+  ThreadTagListResponseDto,
   TimelineEvent,
 } from "./dto";
 
@@ -29,6 +30,11 @@ export interface PublicCollaborationQueries {
     projectId: string,
     rawInput?: unknown,
   ): PublicCollaborationCommandResult<ThreadListResponseDto>;
+  listProjectTags(
+    databasePath: string,
+    projectId: string,
+    rawInput?: unknown,
+  ): PublicCollaborationCommandResult<ThreadTagListResponseDto>;
   readThreadDetail(
     databasePath: string,
     projectId: string,

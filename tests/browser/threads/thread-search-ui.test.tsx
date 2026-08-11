@@ -35,6 +35,7 @@ function thread(id: string, title: string, activity: number) {
     lastActivitySequence: activity,
     policyVersion: 1,
     projectId: project.id,
+    tags: [] as Array<{ id: string; name: string }>,
     title,
     updatedAt: "2026-08-08T00:00:00.000Z",
     version: 1,
@@ -127,6 +128,9 @@ describe("thread search entry in project thread navigation", () => {
           searchCalls.push(url);
           return Response.json({ nextCursor: null, results: [] });
         }
+        if (url === `/api/projects/${project.id}/thread-tags?limit=100`) {
+          return Promise.resolve(Response.json({ tags: [] }));
+        }
         throw new Error(`Unexpected request: ${url}`);
       }),
     );
@@ -164,6 +168,9 @@ describe("thread search entry in project thread navigation", () => {
         }
         if (url === searchUrl("部署")) {
           return Response.json({ nextCursor: null, results });
+        }
+        if (url === `/api/projects/${project.id}/thread-tags?limit=100`) {
+          return Promise.resolve(Response.json({ tags: [] }));
         }
         throw new Error(`Unexpected request: ${url}`);
       }),
@@ -211,6 +218,9 @@ describe("thread search entry in project thread navigation", () => {
             results: [titleHit("thread-1", "发布计划")],
           });
         }
+        if (url === `/api/projects/${project.id}/thread-tags?limit=100`) {
+          return Promise.resolve(Response.json({ tags: [] }));
+        }
         throw new Error(`Unexpected request: ${url}`);
       }),
     );
@@ -256,6 +266,9 @@ describe("thread search entry in project thread navigation", () => {
             results: [titleHit("thread-1", "发布计划")],
           });
         }
+        if (url === `/api/projects/${project.id}/thread-tags?limit=100`) {
+          return Promise.resolve(Response.json({ tags: [] }));
+        }
         throw new Error(`Unexpected request: ${url}`);
       }),
     );
@@ -290,6 +303,9 @@ describe("thread search entry in project thread navigation", () => {
             nextCursor: null,
             results: [titleHit("thread-1", "发布计划")],
           });
+        }
+        if (url === `/api/projects/${project.id}/thread-tags?limit=100`) {
+          return Promise.resolve(Response.json({ tags: [] }));
         }
         throw new Error(`Unexpected request: ${url}`);
       }),
@@ -331,6 +347,9 @@ describe("thread search entry in project thread navigation", () => {
           );
         }
         if (url === searchUrl("发布")) return pending.promise;
+        if (url === `/api/projects/${project.id}/thread-tags?limit=100`) {
+          return Promise.resolve(Response.json({ tags: [] }));
+        }
         throw new Error(`Unexpected request: ${url}`);
       }),
     );
@@ -367,6 +386,9 @@ describe("thread search entry in project thread navigation", () => {
             nextCursor: null,
             results: [titleHit("thread-1", "发布计划")],
           });
+        }
+        if (url === `/api/projects/${project.id}/thread-tags?limit=100`) {
+          return Promise.resolve(Response.json({ tags: [] }));
         }
         throw new Error(`Unexpected request: ${url}`);
       }),
@@ -412,6 +434,9 @@ describe("thread search entry in project thread navigation", () => {
         if (url === searchUrl("部署", "cursor-page-2")) {
           return Response.json({ nextCursor: null, results: second });
         }
+        if (url === `/api/projects/${project.id}/thread-tags?limit=100`) {
+          return Promise.resolve(Response.json({ tags: [] }));
+        }
         throw new Error(`Unexpected request: ${url}`);
       }),
     );
@@ -455,6 +480,9 @@ describe("thread search entry in project thread navigation", () => {
         if (url === searchUrl("部署")) {
           return Response.json({ nextCursor: null, results });
         }
+        if (url === `/api/projects/${project.id}/thread-tags?limit=100`) {
+          return Promise.resolve(Response.json({ tags: [] }));
+        }
         throw new Error(`Unexpected request: ${url}`);
       }),
     );
@@ -496,6 +524,9 @@ describe("thread search entry in project thread navigation", () => {
         }
         if (url === searchUrl("部署")) {
           return Response.json({ nextCursor: null, results });
+        }
+        if (url === `/api/projects/${project.id}/thread-tags?limit=100`) {
+          return Promise.resolve(Response.json({ tags: [] }));
         }
         throw new Error(`Unexpected request: ${url}`);
       }),
@@ -549,6 +580,9 @@ describe("thread search entry in project thread navigation", () => {
             }),
           );
         }
+        if (url === `/api/projects/${project.id}/thread-tags?limit=100`) {
+          return Promise.resolve(Response.json({ tags: [] }));
+        }
         throw new Error(`Unexpected request: ${url}`);
       }),
     );
@@ -599,6 +633,9 @@ describe("thread search entry in project thread navigation", () => {
         if (url.startsWith(`/api/projects/${project.id}/thread-search`)) {
           if (init?.signal) searchSignals.push(init.signal);
           return pending.promise;
+        }
+        if (url.includes("/thread-tags?limit=100")) {
+          return Promise.resolve(Response.json({ tags: [] }));
         }
         throw new Error(`Unexpected request: ${url}`);
       }),
@@ -818,6 +855,9 @@ describe("collaboration panel consumes the URL message parameter", () => {
             }),
           );
         }
+        if (url === `/api/projects/${project.id}/thread-tags?limit=100`) {
+          return Promise.resolve(Response.json({ tags: [] }));
+        }
         throw new Error(`Unexpected request: ${url}`);
       }),
     );
@@ -868,6 +908,9 @@ describe("collaboration panel consumes the URL message parameter", () => {
             }),
           );
         }
+        if (url === `/api/projects/${project.id}/thread-tags?limit=100`) {
+          return Promise.resolve(Response.json({ tags: [] }));
+        }
         throw new Error(`Unexpected request: ${url}`);
       }),
     );
@@ -910,6 +953,9 @@ describe("collaboration panel consumes the URL message parameter", () => {
               nextAfter: null,
             }),
           );
+        }
+        if (url === `/api/projects/${project.id}/thread-tags?limit=100`) {
+          return Promise.resolve(Response.json({ tags: [] }));
         }
         throw new Error(`Unexpected request: ${url}`);
       }),
@@ -978,6 +1024,9 @@ describe("collaboration panel consumes the URL message parameter", () => {
             }),
           );
         }
+        if (url === `/api/projects/${project.id}/thread-tags?limit=100`) {
+          return Promise.resolve(Response.json({ tags: [] }));
+        }
         throw new Error(`Unexpected request: ${url}`);
       }),
     );
@@ -1030,6 +1079,9 @@ describe("collaboration panel consumes the URL message parameter", () => {
               nextAfter: null,
             }),
           );
+        }
+        if (url === `/api/projects/${project.id}/thread-tags?limit=100`) {
+          return Promise.resolve(Response.json({ tags: [] }));
         }
         throw new Error(`Unexpected request: ${url}`);
       }),

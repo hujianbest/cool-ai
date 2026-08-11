@@ -34,6 +34,27 @@ type ModalSurfaceOptions = {
 
 const EMPTY_SELECTORS: string[] = [];
 
+// body overflow is a single global resource shared by every modal surface;
+// layered surfaces (drawer paused under a dialog) hand the lock off without
+// restoring a stale value, so only the last unlock restores the pre-lock state.
+let overflowLockCount = 0;
+let overflowBeforeFirstLock = "";
+
+function lockBodyOverflow(): void {
+  if (overflowLockCount === 0) {
+    overflowBeforeFirstLock = document.body.style.overflow;
+  }
+  overflowLockCount += 1;
+  document.body.style.overflow = "hidden";
+}
+
+function unlockBodyOverflow(): void {
+  overflowLockCount = Math.max(0, overflowLockCount - 1);
+  if (overflowLockCount === 0) {
+    document.body.style.overflow = overflowBeforeFirstLock;
+  }
+}
+
 function focusableElements(root: HTMLElement): HTMLElement[] {
   return Array.from(
     root.querySelectorAll<HTMLElement>(
@@ -78,8 +99,7 @@ export function useModalSurface(
       element.setAttribute("inert", "");
       if (options?.hideBackground) element.setAttribute("aria-hidden", "true");
     });
-    const previousOverflow = document.body.style.overflow;
-    document.body.style.overflow = "hidden";
+    lockBodyOverflow();
 
     const dialog = dialogRef.current;
     const handleKeyDown = (event: globalThis.KeyboardEvent) => {
@@ -103,9 +123,14 @@ export function useModalSurface(
     };
     dialog?.addEventListener("keydown", handleKeyDown);
     queueMicrotask(() => {
+      const surface = dialogRef.current;
+      // A resuming surface (e.g. the narrow drawer resuming after a layered
+      // dialog closes) must not yank focus away from a control already inside
+      // it — the closing dialog's own restore target wins.
+      if (surface?.contains(document.activeElement)) return;
       const initialFocus =
         options?.initialFocusRef.current ??
-        dialogRef.current?.querySelector<HTMLElement>(
+        surface?.querySelector<HTMLElement>(
           '[data-dialog-close="true"]',
         );
       initialFocus?.focus();
@@ -119,12 +144,11 @@ export function useModalSurface(
           else element.setAttribute("aria-hidden", ariaHidden);
         }
       });
-      document.body.style.overflow = previousOverflow;
+      unlockBodyOverflow();
       options?.restoreFocusRef.current?.focus();
     };
   }, [active, dialogRef, legacyInertSelectors, options]);
 }
-
 export function trapModalFocus(
   event: KeyboardEvent<HTMLElement>,
   close: () => void,

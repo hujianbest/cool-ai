@@ -9,7 +9,8 @@
     "sequences": "collaboration_*_sequences counters are collaboration-internal identity infrastructure",
     "audit_projection": "feature 028: safe-execution appends audit_event_outbox rows atomically with execution_events; audit_event_projection/audit_projection_checkpoints belong to the operations-projection consumer (T-02), registered now with the audit-projection-store anchor writer",
     "audit_outbox_shared_append": "feature 030: audit_event_outbox is a multi-source append seam — each source owner appends its own rows atomically inside its business transaction (safe-execution since 028, public-collaboration since 030); fact ownership of the table stays with safe-execution, additional source writers are registered in sharedAppendWriters",
-    "thread_search_index": "feature 031: derived search projection (thread titles + persisted public message bodies) owned by the operations-projection consumer (thread-search-index); no FKs by design (A-140 projection semantics), index⊆fact-source enforced by reopen data invariants"
+    "thread_search_index": "feature 031: derived search projection (thread titles + persisted public message bodies) owned by the operations-projection consumer (thread-search-index); no FKs by design (A-140 projection semantics), index⊆fact-source enforced by reopen data invariants",
+    "thread_tags": "feature 032: project-scoped thread tag facts (thread_tags), assignment edges (thread_tag_edges), and versioned batch receipts (thread_tag_operations) owned by public-collaboration; tag delete clears edges explicitly in the same transaction (FK CASCADE is only the thread-cascade backstop), edges⊆threads/tags enforced by reopen data invariants; the T-03 batch command writes receipts through the insertThreadTagOperationReceiptTx anchor registered in thread-tag-service.ts"
   },
   "sharedAppendWriters": {
     "audit_event_outbox": [
@@ -61,6 +62,9 @@
       "business_action_receipts",
       "thread_drafts",
       "thread_favorites",
+      "thread_tags",
+      "thread_tag_edges",
+      "thread_tag_operations",
       "input_history_entries",
       "input_history_clear_events",
       "message_attachments",

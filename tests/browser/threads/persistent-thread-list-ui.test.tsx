@@ -35,6 +35,7 @@ function thread(id: string, title: string, activity: number) {
     lastActivitySequence: activity,
     policyVersion: 1,
     projectId: project.id,
+    tags: [] as Array<{ id: string; name: string }>,
     title,
     updatedAt: "2026-08-08T00:00:00.000Z",
     version: 1,
@@ -45,6 +46,7 @@ function createdThread(id = "thread-created", title = "Release") {
   const {
     favoritedAt: _favoritedAt,
     isFavorite: _isFavorite,
+    tags: _tags,
     ...summary
   } = thread(id, title, 9);
   return {
@@ -123,6 +125,9 @@ function stubListAndMembers(threads: ReturnType<typeof thread>[]) {
         members: [memberOne, memberTwo],
         projectVersion: 1,
       });
+    }
+    if (url === `/api/projects/${project.id}/thread-tags?limit=100`) {
+      return Response.json({ tags: [] });
     }
     throw new Error(`Unexpected request: ${url}`);
   });
@@ -254,7 +259,12 @@ describe("persistent project thread list and creation", () => {
         ),
       )
       .mockResolvedValueOnce(Response.json(list([])));
-    vi.stubGlobal("fetch", fetchMock);
+    const withTags = vi.fn(async (input: RequestInfo | URL, init?: RequestInit) => {
+      const url = String(input);
+      if (url.includes("/thread-tags")) return Response.json({ tags: [] });
+      return fetchMock(input, init);
+    });
+    vi.stubGlobal("fetch", withTags);
     window.history.replaceState(null, "", `/projects/${project.id}`);
     const user = userEvent.setup();
 
@@ -430,6 +440,9 @@ describe("persistent project thread list and creation", () => {
       if (url.endsWith("/threads") && init?.method === "POST") {
         return pending.promise;
       }
+      if (url.endsWith("/thread-tags?limit=100")) {
+        return Response.json({ tags: [] });
+      }
       throw new Error(`Unexpected request: ${url}`);
     });
     vi.stubGlobal("fetch", fetchMock);
@@ -467,7 +480,12 @@ describe("persistent project thread list and creation", () => {
   it("reconciles an unknown create by operation without resending", async () => {
     const created = createdThread("thread-reconciled", "Reconciled");
     const { policy: _policy, ...createdDetail } = created.thread;
-    const createdSummary = { ...createdDetail, favoritedAt: null, isFavorite: false };
+    const createdSummary = {
+      ...createdDetail,
+      favoritedAt: null,
+      isFavorite: false,
+      tags: [],
+    };
     let listReads = 0;
     const fetchMock = vi.fn(async (input: RequestInfo | URL, init?: RequestInit) => {
       const url = String(input);
@@ -492,6 +510,9 @@ describe("persistent project thread list and creation", () => {
           response: created,
           status: "completed",
         });
+      }
+      if (url.endsWith("/thread-tags?limit=100")) {
+        return Response.json({ tags: [] });
       }
       throw new Error(`Unexpected request: ${url}`);
     });
@@ -529,12 +550,14 @@ describe("persistent project thread list and creation", () => {
   it("rejects a cross-project list envelope without selecting a thread", async () => {
     vi.stubGlobal(
       "fetch",
-      vi.fn(async () =>
-        Response.json({
+      vi.fn(async (input: RequestInfo | URL) => {
+        const url = String(input);
+        if (url.includes("/thread-tags")) return Response.json({ tags: [] });
+        return Response.json({
           nextCursor: null,
           threads: [{ ...thread("thread-1", "Foreign", 1), projectId: "other" }],
-        }),
-      ),
+        });
+      }),
     );
     window.history.replaceState(
       null,
@@ -615,6 +638,9 @@ describe("thread favorites UI", () => {
         return Response.json(
           favoriteResponse(threadId, body.favorite, favorites.get(threadId) ?? null),
         );
+      }
+      if (url === `/api/projects/${project.id}/thread-tags?limit=100`) {
+        return Response.json({ tags: [] });
       }
       throw new Error(`Unexpected request: ${url}`);
     });

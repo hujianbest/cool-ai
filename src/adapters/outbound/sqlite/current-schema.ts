@@ -12,7 +12,7 @@ export type CurrentSchemaManifest = {
 
 const CURRENT_SCHEMA_DEFINITION = {
   "identity": {
-    "userVersion": 17
+    "userVersion": 18
   },
   "objects": [
     {
@@ -472,6 +472,24 @@ const CURRENT_SCHEMA_DEFINITION = {
       "dependsOn": []
     },
     {
+      "kind": "table",
+      "name": "thread_tags",
+      "createSql": "CREATE TABLE thread_tags(\n id TEXT PRIMARY KEY,project_id TEXT NOT NULL,\n name TEXT NOT NULL CHECK(length(name)>=1 AND name=trim(name)),\n name_key TEXT NOT NULL CHECK(length(name_key)>=1),\n created_at TEXT NOT NULL CHECK(created_at GLOB '????-??-??T??:??:??.???Z'),\n UNIQUE(project_id,id),UNIQUE(project_id,name_key),\n FOREIGN KEY(project_id) REFERENCES projects(id) ON DELETE CASCADE\n)",
+      "dependsOn": []
+    },
+    {
+      "kind": "table",
+      "name": "thread_tag_edges",
+      "createSql": "CREATE TABLE thread_tag_edges(\n project_id TEXT NOT NULL,thread_id TEXT NOT NULL,tag_id TEXT NOT NULL,\n created_at TEXT NOT NULL CHECK(created_at GLOB '????-??-??T??:??:??.???Z'),\n PRIMARY KEY(project_id,thread_id,tag_id),\n FOREIGN KEY(project_id,thread_id) REFERENCES collaboration_threads(project_id,id) ON DELETE CASCADE,\n FOREIGN KEY(project_id,tag_id) REFERENCES thread_tags(project_id,id) ON DELETE CASCADE\n)",
+      "dependsOn": []
+    },
+    {
+      "kind": "table",
+      "name": "thread_tag_operations",
+      "createSql": "CREATE TABLE thread_tag_operations(\n id TEXT NOT NULL,project_id TEXT NOT NULL,\n kind TEXT NOT NULL CHECK(kind='tag_batch'),\n request_hash TEXT NOT NULL CHECK(length(request_hash)=64 AND request_hash NOT GLOB '*[^0-9a-f]*'),\n status TEXT NOT NULL CHECK(status='completed'),\n http_status INTEGER,\n response_json TEXT CHECK(json_valid(response_json)),\n created_at TEXT NOT NULL CHECK(created_at GLOB '????-??-??T??:??:??.???Z'),\n PRIMARY KEY(project_id,id),UNIQUE(project_id,id,request_hash),\n FOREIGN KEY(project_id) REFERENCES projects(id) ON DELETE CASCADE\n)",
+      "dependsOn": []
+    },
+    {
       "kind": "index",
       "name": "agents_provider_id_idx",
       "createSql": "CREATE INDEX agents_provider_id_idx ON agents(provider_id)",
@@ -813,6 +831,14 @@ const CURRENT_SCHEMA_DEFINITION = {
       "createSql": "CREATE UNIQUE INDEX structured_message_blocks_message_position ON structured_message_blocks(project_id,thread_id,message_id,position)",
       "dependsOn": [
         "structured_message_blocks"
+      ]
+    },
+    {
+      "kind": "index",
+      "name": "thread_tag_edges_by_tag",
+      "createSql": "CREATE INDEX thread_tag_edges_by_tag ON thread_tag_edges(project_id,tag_id,thread_id)",
+      "dependsOn": [
+        "thread_tag_edges"
       ]
     },
     {

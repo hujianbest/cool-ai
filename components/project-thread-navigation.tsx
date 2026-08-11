@@ -90,10 +90,17 @@ const threadSummarySchema = z
 const threadDetailSchema = threadSummarySchema
   .extend({ policy: policySchema })
   .strict();
+const threadTagRefSchema = z
+  .object({
+    id: resourceId,
+    name: z.string().min(1),
+  })
+  .strict();
 const threadListItemSchema = threadSummarySchema
   .extend({
     favoritedAt: z.string().min(1).nullable(),
     isFavorite: z.boolean(),
+    tags: z.array(threadTagRefSchema),
   })
   .strict();
 const threadCreatedFactSchema = z
@@ -155,12 +162,56 @@ const operationLookupSchema = z
   })
   .strict();
 
+const threadTagSchema = z
+  .object({
+    createdAt: z.string().min(1),
+    id: resourceId,
+    name: z.string().min(1),
+    projectId: resourceId,
+  })
+  .strict();
+const threadTagListItemSchema = threadTagSchema
+  .extend({ threadCount: nonnegativeInteger })
+  .strict();
+const threadTagListResponseSchema = z
+  .object({ tags: z.array(threadTagListItemSchema) })
+  .strict();
+const threadTagCreateResponseSchema = z
+  .object({ created: z.boolean(), tag: threadTagSchema })
+  .strict();
+const threadTagDeleteResponseSchema = z
+  .object({ removedEdgeCount: nonnegativeInteger, tagId: resourceId })
+  .strict();
+const threadTagBatchResponseSchema = z
+  .object({
+    applied: z.array(
+      z
+        .object({
+          addedTagIds: z.array(resourceId),
+          removedTagIds: z.array(resourceId),
+          threadId: resourceId,
+        })
+        .strict(),
+    ),
+    operationId: z.string().uuid(),
+    replayed: z.boolean(),
+  })
+  .strict();
+
 type ThreadSummary = z.infer<typeof threadSummarySchema>;
 type ThreadListItem = z.infer<typeof threadListItemSchema>;
 type ThreadListView = "all" | "favorites";
 type ThreadCreateResponse = z.infer<typeof threadCreateResponseSchema>;
+type ThreadTagListItem = z.infer<typeof threadTagListItemSchema>;
+type TagListState = "error" | "loading" | "ready";
+type BatchRequest = {
+  addTagIds: string[];
+  removeTagIds: string[];
+  threadIds: string[];
+};
 
 const SEARCH_DEBOUNCE_MS = 300;
+const THREAD_TAG_NAME_MAX_GRAPHEMES = 40;
 
 function canonicalThreadHref(projectId: string, threadId: string): string {
   return `/projects/${encodeURIComponent(projectId)}?thread=${encodeURIComponent(threadId)}`;
@@ -282,6 +333,23 @@ function countGraphemes(value: string): number {
   ).length;
 }
 
+function toggleSetMember(
+  set: ReadonlySet<string>,
+  id: string,
+): ReadonlySet<string> {
+  const next = new Set(set);
+  if (next.has(id)) next.delete(id);
+  else next.add(id);
+  return next;
+}
+
+function dropSetMember(set: ReadonlySet<string>, id: string): ReadonlySet<string> {
+  if (!set.has(id)) return set;
+  const next = new Set(set);
+  next.delete(id);
+  return next;
+}
+
 function currentMembers(payload: unknown): ProjectMember[] {
   if (
     !payload ||
@@ -383,6 +451,56 @@ export function ProjectThreadNavigation({
   const favoritesViewTabRef = useRef<HTMLButtonElement>(null);
   const viewRef = useRef(view);
   viewRef.current = view;
+  const [tags, setTags] = useState<ThreadTagListItem[]>([]);
+  const [tagsState, setTagsState] = useState<TagListState>("loading");
+  const [tagsError, setTagsError] = useState<string | null>(null);
+  const [tagsReloadKey, setTagsReloadKey] = useState(0);
+  const tagsProjectRef = useRef(projectId);
+  const [activeTagId, setActiveTagId] = useState<string | null>(null);
+  const activeTagIdRef = useRef(activeTagId);
+  activeTagIdRef.current = activeTagId;
+  const [manageOpen, setManageOpen] = useState(false);
+  const [newTagName, setNewTagName] = useState("");
+  const [newTagError, setNewTagError] = useState<string | null>(null);
+  const [creatingTag, setCreatingTag] = useState(false);
+  const [manageNotice, setManageNotice] = useState<string | null>(null);
+  const [tagSearchText, setTagSearchText] = useState("");
+  const [pendingDeleteTag, setPendingDeleteTag] = useState<ThreadTagListItem | null>(
+    null,
+  );
+  const [deletingTag, setDeletingTag] = useState(false);
+  const [deleteTagError, setDeleteTagError] = useState<string | null>(null);
+  const [organizeMode, setOrganizeMode] = useState(false);
+  const organizeActiveRef = useRef(false);
+  organizeActiveRef.current = organizeMode;
+  const [selectedThreadIds, setSelectedThreadIds] = useState<ReadonlySet<string>>(
+    () => new Set<string>(),
+  );
+  const [batchAddTagIds, setBatchAddTagIds] = useState<ReadonlySet<string>>(
+    () => new Set<string>(),
+  );
+  const [batchRemoveTagIds, setBatchRemoveTagIds] = useState<ReadonlySet<string>>(
+    () => new Set<string>(),
+  );
+  const [batchConfirm, setBatchConfirm] = useState<BatchRequest | null>(null);
+  const [batchSubmitting, setBatchSubmitting] = useState(false);
+  const [batchError, setBatchError] = useState<string | null>(null);
+  const [batchNotice, setBatchNotice] = useState<string | null>(null);
+  const [batchRetry, setBatchRetry] = useState<{
+    addTagIds: string[];
+    operationId: string;
+    removeTagIds: string[];
+    threadIds: string[];
+  } | null>(null);
+  const manageButtonRef = useRef<HTMLButtonElement>(null);
+  const manageDialogRef = useRef<HTMLElement>(null);
+  const newTagInputRef = useRef<HTMLInputElement>(null);
+  const tagSearchInputRef = useRef<HTMLInputElement>(null);
+  const confirmDialogRef = useRef<HTMLElement>(null);
+  const deleteCancelRef = useRef<HTMLButtonElement>(null);
+  const organizeButtonRef = useRef<HTMLButtonElement>(null);
+  const batchConfirmDialogRef = useRef<HTMLElement>(null);
+  const batchConfirmApplyRef = useRef<HTMLButtonElement>(null);
   const targetGuard = useTargetRequestGuard(`${projectId}||`);
 
   const closeDialog = useCallback(() => {
@@ -403,9 +521,66 @@ export function ProjectThreadNavigation({
   );
   useModalSurface(modalOptions);
 
+  const closeManageDialog = useCallback(() => {
+    if (creatingTag) return;
+    setManageOpen(false);
+  }, [creatingTag]);
+  const manageModalOptions = useMemo(
+    () => ({
+      active: manageOpen,
+      dialogRef: manageDialogRef,
+      hideBackground: true,
+      inertRootRefs: [backgroundRef],
+      initialFocusRef: newTagInputRef,
+      onClose: closeManageDialog,
+      restoreFocusRef: manageButtonRef,
+    }),
+    [backgroundRef, closeManageDialog, manageOpen],
+  );
+  useModalSurface(manageModalOptions);
+
+  const closeDeleteConfirm = useCallback(() => {
+    if (deletingTag) return;
+    setPendingDeleteTag(null);
+  }, [deletingTag]);
+  const deleteConfirmModalOptions = useMemo(
+    () => ({
+      active: pendingDeleteTag !== null,
+      dialogRef: confirmDialogRef,
+      hideBackground: false,
+      inertRootRefs: [backgroundRef],
+      initialFocusRef: deleteCancelRef,
+      onClose: closeDeleteConfirm,
+      restoreFocusRef: tagSearchInputRef,
+    }),
+    [backgroundRef, closeDeleteConfirm, pendingDeleteTag],
+  );
+  useModalSurface(deleteConfirmModalOptions);
+
+  const closeBatchConfirm = useCallback(() => {
+    if (batchSubmitting) return;
+    setBatchConfirm(null);
+  }, [batchSubmitting]);
+  const batchConfirmModalOptions = useMemo(
+    () => ({
+      active: batchConfirm !== null,
+      dialogRef: batchConfirmDialogRef,
+      hideBackground: true,
+      inertRootRefs: [backgroundRef],
+      initialFocusRef: batchConfirmApplyRef,
+      onClose: closeBatchConfirm,
+      restoreFocusRef: organizeButtonRef,
+    }),
+    [backgroundRef, batchConfirm, closeBatchConfirm],
+  );
+  useModalSurface(batchConfirmModalOptions);
+
+  const anyDialogOpen =
+    dialogOpen || manageOpen || pendingDeleteTag !== null || batchConfirm !== null;
+
   useEffect(() => {
-    onDialogChange?.(dialogOpen);
-  }, [dialogOpen, onDialogChange]);
+    onDialogChange?.(anyDialogOpen);
+  }, [anyDialogOpen, onDialogChange]);
 
   useEffect(() => {
     onStateChange?.(listState);
@@ -419,6 +594,7 @@ export function ProjectThreadNavigation({
 
   const loadThreads = useCallback(async (
     view: ThreadListView,
+    tagId: string | null,
     signal?: AbortSignal,
   ): Promise<ThreadListItem[]> => {
     if (view === "favorites") {
@@ -433,11 +609,11 @@ export function ProjectThreadNavigation({
     const seenIds = new Set<string>();
     let cursor: string | null = null;
     do {
-      const suffix = cursor
-        ? `?limit=100&cursor=${encodeURIComponent(cursor)}`
-        : "?limit=100";
+      const params = ["limit=100"];
+      if (cursor) params.push(`cursor=${encodeURIComponent(cursor)}`);
+      if (tagId) params.push(`tagId=${encodeURIComponent(tagId)}`);
       const response = await fetch(
-        `/api/projects/${encodeURIComponent(projectId)}/threads${suffix}`,
+        `/api/projects/${encodeURIComponent(projectId)}/threads?${params.join("&")}`,
         { signal },
       );
       if (!response.ok) throw new ApiDisplayError(await readError(response));
@@ -479,15 +655,24 @@ export function ProjectThreadNavigation({
     setSearchPage(null);
     setSearchLoadingMore(false);
     setSearchLoadMoreError(null);
+    setOrganizeMode(false);
+    setSelectedThreadIds(new Set());
+    setBatchAddTagIds(new Set());
+    setBatchRemoveTagIds(new Set());
+    setBatchConfirm(null);
+    setBatchSubmitting(false);
+    setBatchError(null);
+    setBatchNotice(null);
+    setBatchRetry(null);
     searchEpochRef.current += 1;
     searchResultRefs.current.clear();
     threadButtonRefs.current.clear();
-    void loadThreads(view, request.signal)
+    void loadThreads(view, activeTagId, request.signal)
       .then((loaded) => {
         if (!request.isCurrent()) return;
         setThreads(loaded);
         setListState(loaded.length === 0 ? "empty" : "ready");
-        if (view !== "all") return;
+        if (view !== "all" || activeTagId) return;
         const selection = threadSelectionFromUrl(projectId);
         if (loaded.length > 0 && selection.kind === "none") {
           const href = canonicalThreadHref(projectId, loaded[0]!.id);
@@ -515,7 +700,75 @@ export function ProjectThreadNavigation({
           ),
         );
       });
-  }, [loadThreads, onNavigate, projectId, reloadKey, targetGuard, view]);
+  }, [activeTagId, loadThreads, onNavigate, projectId, reloadKey, targetGuard, view]);
+
+  useEffect(() => {
+    setActiveTagId(null);
+    setManageOpen(false);
+    setNewTagName("");
+    setNewTagError(null);
+    setCreatingTag(false);
+    setManageNotice(null);
+    setTagSearchText("");
+    setPendingDeleteTag(null);
+    setDeletingTag(false);
+    setDeleteTagError(null);
+  }, [projectId]);
+
+  useEffect(() => {
+    const request = targetGuard.capture();
+    if (tagsProjectRef.current !== projectId) {
+      tagsProjectRef.current = projectId;
+      setTags([]);
+      setTagsState("loading");
+    } else {
+      // Reloads keep the current chips visible; only the first load of a
+      // project shows the loading state.
+      setTagsState((current) => (current === "ready" ? current : "loading"));
+    }
+    setTagsError(null);
+    void fetch(
+      `/api/projects/${encodeURIComponent(projectId)}/thread-tags?limit=100`,
+      { signal: request.signal },
+    )
+      .then(async (response) => {
+        if (!response.ok) throw new ApiDisplayError(await readError(response));
+        return threadTagListResponseSchema.parse(await response.json());
+      })
+      .then((payload) => {
+        if (!request.isCurrent()) return;
+        for (const item of payload.tags) {
+          if (item.projectId !== projectId) throw new Error("invalid_tag_tuple");
+        }
+        setTags(payload.tags);
+        setTagsState("ready");
+      })
+      .catch((cause: unknown) => {
+        if (!request.isCurrent()) return;
+        setTags([]);
+        setTagsState("error");
+        setTagsError(caughtApiErrorCopy(cause, "无法加载标签，请重试。"));
+      });
+  }, [projectId, tagsReloadKey, targetGuard]);
+
+  const refreshThreadsSilently = useCallback(
+    async (request: TargetRequest) => {
+      try {
+        const loaded = await loadThreads(
+          viewRef.current,
+          activeTagIdRef.current,
+          request.signal,
+        );
+        if (!request.isCurrent()) return;
+        setThreads(loaded);
+        setListState(loaded.length === 0 ? "empty" : "ready");
+      } catch {
+        // Silent refresh keeps showing the current list; the next explicit
+        // reload surfaces any persistent failure.
+      }
+    },
+    [loadThreads],
+  );
 
   useEffect(() => {
     const query = searchText.trim();
@@ -527,6 +780,15 @@ export function ProjectThreadNavigation({
       setSearchError(null);
       setSearchPage(null);
       return;
+    }
+    if (organizeActiveRef.current) {
+      setOrganizeMode(false);
+      setSelectedThreadIds(new Set());
+      setBatchAddTagIds(new Set());
+      setBatchRemoveTagIds(new Set());
+      setBatchConfirm(null);
+      setBatchError(null);
+      setBatchRetry(null);
     }
     const epoch = searchEpochRef.current;
     setSearchState("loading");
@@ -564,7 +826,23 @@ export function ProjectThreadNavigation({
     // consume Escape natively while a query is active (input-history-panel
     // precedent) — the clear and focus return live here, not in onKeyDown.
     const handleKeyDown = (event: globalThis.KeyboardEvent) => {
-      if (event.key !== "Escape" || !searchActiveRef.current) return;
+      if (event.key !== "Escape") return;
+      if (organizeActiveRef.current) {
+        // Organize mode is the innermost layer above the list; the enclosing
+        // drawer surface must not consume this Escape (input-history-panel
+        // layered-dismissal precedent).
+        event.stopPropagation();
+        setOrganizeMode(false);
+        setSelectedThreadIds(new Set());
+        setBatchAddTagIds(new Set());
+        setBatchRemoveTagIds(new Set());
+        setBatchConfirm(null);
+        setBatchError(null);
+        setBatchRetry(null);
+        organizeButtonRef.current?.focus();
+        return;
+      }
+      if (!searchActiveRef.current) return;
       event.stopPropagation();
       setSearchText("");
       searchInputRef.current?.focus();
@@ -663,7 +941,7 @@ export function ProjectThreadNavigation({
   }, [focusThreadId, locationVersion, projectId, threads]);
 
   useEffect(() => {
-    if (view !== "all") return;
+    if (view !== "all" || activeTagId) return;
     if (listState !== "ready" || threads.length === 0) return;
     const selection = threadSelectionFromUrl(projectId);
     if (selection.kind === "none") {
@@ -681,7 +959,7 @@ export function ProjectThreadNavigation({
     } else {
       setSelectionError(null);
     }
-  }, [listState, locationVersion, onNavigate, projectId, threads, view]);
+  }, [activeTagId, listState, locationVersion, onNavigate, projectId, threads, view]);
 
   useEffect(() => {
     if (!dialogOpen) return;
@@ -839,7 +1117,7 @@ export function ProjectThreadNavigation({
     const { policy: _createdPolicy, ...createdSummary } = created.thread;
     setThreads((current) =>
       [
-        { ...createdSummary, favoritedAt: null, isFavorite: false },
+        { ...createdSummary, favoritedAt: null, isFavorite: false, tags: [] },
         ...current.filter((thread) => thread.id !== created.thread.id),
       ].sort(compareThreads),
     );
@@ -862,7 +1140,7 @@ export function ProjectThreadNavigation({
     request: TargetRequest,
   ): Promise<boolean> {
     try {
-      const refreshed = await loadThreads("all", request.signal);
+      const refreshed = await loadThreads("all", null, request.signal);
       if (!request.isCurrent()) return false;
       const candidates = refreshed.filter((thread) => !previousIds.has(thread.id));
       const matches: ThreadCreateResponse[] = [];
@@ -969,6 +1247,210 @@ export function ProjectThreadNavigation({
     }
   }
 
+  function selectTagFilter(tagId: string | null) {
+    if (view === "favorites" && tagId !== null) setView("all");
+    setActiveTagId((current) => (current === tagId ? null : tagId));
+  }
+
+  function handleFavoritesViewSelect() {
+    setActiveTagId(null);
+    setView("favorites");
+  }
+
+  function openManageDialog() {
+    setNewTagName("");
+    setNewTagError(null);
+    setTagSearchText("");
+    setManageNotice(null);
+    setDeleteTagError(null);
+    setManageOpen(true);
+  }
+
+  async function handleCreateTag(event: FormEvent<HTMLFormElement>) {
+    event.preventDefault();
+    const normalized = newTagName.trim();
+    if (countGraphemes(normalized) === 0) {
+      setNewTagError("请输入标签名称。");
+      return;
+    }
+    if (countGraphemes(normalized) > 40) {
+      setNewTagError("标签名称不能超过 40 个字符。");
+      return;
+    }
+    setNewTagError(null);
+    const request = targetGuard.capture();
+    setCreatingTag(true);
+    try {
+      const response = await fetch(
+        `/api/projects/${encodeURIComponent(projectId)}/thread-tags`,
+        {
+          body: JSON.stringify({ name: normalized }),
+          headers: { "content-type": "application/json" },
+          method: "POST",
+          signal: request.signal,
+        },
+      );
+      if (!request.isCurrent()) return;
+      if (!response.ok) throw new ApiDisplayError(await readError(response));
+      const result = threadTagCreateResponseSchema.parse(await response.json());
+      if (result.tag.projectId !== projectId) throw new Error("invalid_tag_tuple");
+      setTags((current) =>
+        current.some((tag) => tag.id === result.tag.id)
+          ? current
+          : [...current, { ...result.tag, threadCount: 0 }],
+      );
+      setNewTagName("");
+      setManageNotice(
+        result.created
+          ? `已创建标签“${result.tag.name}”。`
+          : `标签“${result.tag.name}”已存在。`,
+      );
+    } catch (cause: unknown) {
+      if (!request.isCurrent()) return;
+      setNewTagError(caughtApiErrorCopy(cause, "无法创建标签，请重试。"));
+    } finally {
+      if (request.isCurrent()) setCreatingTag(false);
+    }
+  }
+
+  async function confirmDeleteTag() {
+    if (!pendingDeleteTag || deletingTag) return;
+    const target = pendingDeleteTag;
+    const request = targetGuard.capture();
+    setDeletingTag(true);
+    setDeleteTagError(null);
+    try {
+      const response = await fetch(
+        `/api/projects/${encodeURIComponent(projectId)}/thread-tags/${encodeURIComponent(target.id)}`,
+        { method: "DELETE", signal: request.signal },
+      );
+      if (!request.isCurrent()) return;
+      if (!response.ok) throw new ApiDisplayError(await readError(response));
+      const result = threadTagDeleteResponseSchema.parse(await response.json());
+      if (result.tagId !== target.id) {
+        throw new Error("invalid_tag_tuple");
+      }
+      if (activeTagId === target.id) setActiveTagId(null);
+      setBatchAddTagIds((current) => dropSetMember(current, target.id));
+      setBatchRemoveTagIds((current) => dropSetMember(current, target.id));
+      setTagsReloadKey((current) => current + 1);
+      void refreshThreadsSilently(request);
+      setManageNotice(
+        `已删除标签“${target.name}”，解除 ${result.removedEdgeCount} 条分配。`,
+      );
+      setPendingDeleteTag(null);
+    } catch (cause: unknown) {
+      if (!request.isCurrent()) return;
+      setDeleteTagError(caughtApiErrorCopy(cause, "无法删除标签，请重试。"));
+    } finally {
+      if (request.isCurrent()) setDeletingTag(false);
+    }
+  }
+
+  function toggleThreadSelected(threadId: string) {
+    setSelectedThreadIds((current) => toggleSetMember(current, threadId));
+  }
+
+  function toggleBatchAddTag(tagId: string) {
+    const enabling = !batchAddTagIds.has(tagId);
+    setBatchAddTagIds((current) => toggleSetMember(current, tagId));
+    if (enabling) {
+      setBatchRemoveTagIds((current) => dropSetMember(current, tagId));
+    }
+  }
+
+  function toggleBatchRemoveTag(tagId: string) {
+    const enabling = !batchRemoveTagIds.has(tagId);
+    setBatchRemoveTagIds((current) => toggleSetMember(current, tagId));
+    if (enabling) {
+      setBatchAddTagIds((current) => dropSetMember(current, tagId));
+    }
+  }
+
+  const batchAddCount = batchAddTagIds.size;
+  const batchRemoveCount = batchRemoveTagIds.size;
+  const batchSelectionCount = selectedThreadIds.size;
+  const batchConfirmCopy = useMemo(() => {
+    if (!batchConfirm) return null;
+    const parts: string[] = [];
+    if (batchConfirm.addTagIds.length > 0) {
+      parts.push(`添加 ${batchConfirm.addTagIds.length} 个标签`);
+    }
+    if (batchConfirm.removeTagIds.length > 0) {
+      parts.push(`移除 ${batchConfirm.removeTagIds.length} 个标签`);
+    }
+    return `将为 ${batchConfirm.threadIds.length} 条线程${parts.join("、")}。`;
+  }, [batchConfirm]);
+
+  function exitOrganizeMode() {
+    setOrganizeMode(false);
+    setSelectedThreadIds(new Set());
+    setBatchAddTagIds(new Set());
+    setBatchRemoveTagIds(new Set());
+    setBatchConfirm(null);
+    setBatchError(null);
+    setBatchRetry(null);
+    organizeButtonRef.current?.focus();
+  }
+
+  function confirmBatch() {
+    setBatchError(null);
+    setBatchNotice(null);
+    setBatchConfirm({
+      addTagIds: Array.from(batchAddTagIds),
+      removeTagIds: Array.from(batchRemoveTagIds),
+      threadIds: Array.from(selectedThreadIds),
+    });
+  }
+
+  async function applyBatch(
+    confirmed: BatchRequest,
+    operationId: string,
+  ) {
+    if (batchSubmitting) return;
+    const request = targetGuard.capture();
+    setBatchSubmitting(true);
+    setBatchError(null);
+    try {
+      const response = await fetch(
+        `/api/projects/${encodeURIComponent(projectId)}/thread-tag-batch`,
+        {
+          body: JSON.stringify({
+            addTagIds: confirmed.addTagIds,
+            operationId,
+            removeTagIds: confirmed.removeTagIds,
+            threadIds: confirmed.threadIds,
+          }),
+          headers: { "content-type": "application/json" },
+          method: "POST",
+          signal: request.signal,
+        },
+      );
+      if (!request.isCurrent()) return;
+      if (!response.ok) throw new ApiDisplayError(await readError(response));
+      const result = threadTagBatchResponseSchema.parse(await response.json());
+      if (result.operationId !== operationId) throw new Error("invalid_batch_tuple");
+      setBatchRetry(null);
+      setBatchNotice(`已为 ${result.applied.length} 条线程更新标签。`);
+      setBatchConfirm(null);
+      setOrganizeMode(false);
+      setSelectedThreadIds(new Set());
+      setBatchAddTagIds(new Set());
+      setBatchRemoveTagIds(new Set());
+      setTagsReloadKey((current) => current + 1);
+      void refreshThreadsSilently(request);
+    } catch (cause: unknown) {
+      if (!request.isCurrent()) return;
+      setBatchConfirm(null);
+      setBatchRetry({ ...confirmed, operationId });
+      setBatchError(
+        caughtApiErrorCopy(cause, "批量更新失败，未写入任何变更，可重试。"),
+      );
+    } finally {
+      if (request.isCurrent()) setBatchSubmitting(false);
+    }
+  }
+
   const selectedThreadId =
     typeof window === "undefined" ? null : selectedThreadFromUrl(projectId);
   const submitReason = membersLoading
@@ -1000,6 +1482,27 @@ export function ProjectThreadNavigation({
               type="button"
             >
               创建线程
+            </button>
+          ) : null}
+          {listState !== "empty" ? (
+            <button
+              className="button-secondary"
+              onClick={openManageDialog}
+              ref={manageButtonRef}
+              type="button"
+            >
+              管理标签
+            </button>
+          ) : null}
+          {listState !== "empty" && view === "all" ? (
+            <button
+              aria-pressed={organizeMode}
+              className="button-secondary"
+              onClick={() => setOrganizeMode(true)}
+              ref={organizeButtonRef}
+              type="button"
+            >
+              整理线程
             </button>
           ) : null}
         </div>
@@ -1136,7 +1639,7 @@ export function ProjectThreadNavigation({
             aria-selected={view === "favorites"}
             className="nav-item"
             id="thread-view-tab-favorites"
-            onClick={() => selectView("favorites")}
+            onClick={handleFavoritesViewSelect}
             ref={favoritesViewTabRef}
             role="tab"
             tabIndex={view === "favorites" ? 0 : -1}
@@ -1145,6 +1648,149 @@ export function ProjectThreadNavigation({
             已收藏
           </button>
         </div>
+        )}
+        {searchActive ? null : (
+        <div className="thread-tag-filter-bar">
+          {tagsState === "loading" ? (
+            <p className="muted" role="status">
+              正在加载标签…
+            </p>
+          ) : null}
+          {tagsState === "error" ? (
+            <div className="thread-tag-filter-error">
+              <p className="error-text" role="alert">
+                {tagsError}
+              </p>
+              <button
+                className="button-secondary"
+                onClick={() => setTagsReloadKey((current) => current + 1)}
+                type="button"
+              >
+                重试加载标签
+              </button>
+            </div>
+          ) : null}
+          {tagsState === "ready" && tags.length > 0 && !organizeMode ? (
+            <div aria-label="按标签筛选线程" className="thread-tag-filter-chips" role="group">
+              <button
+                aria-pressed={activeTagId === null}
+                className={
+                  activeTagId === null
+                    ? "status-label thread-tag-filter-chip active"
+                    : "status-label thread-tag-filter-chip"
+                }
+                onClick={() => setActiveTagId(null)}
+                type="button"
+              >
+                全部
+              </button>
+              {tags.map((tag) => (
+                <button
+                  aria-pressed={activeTagId === tag.id}
+                  className={
+                    activeTagId === tag.id
+                      ? "status-label thread-tag-filter-chip active"
+                      : "status-label thread-tag-filter-chip"
+                  }
+                  key={tag.id}
+                  onClick={() => selectTagFilter(tag.id)}
+                  type="button"
+                >
+                  {tag.name}
+                </button>
+              ))}
+            </div>
+          ) : null}
+        </div>
+        )}
+        {searchActive || !organizeMode ? null : (
+        <section aria-label="批量整理线程" className="thread-batch-bar">
+          <button
+            className="button-secondary"
+            disabled={batchSubmitting}
+            onClick={exitOrganizeMode}
+            type="button"
+          >
+            取消整理
+          </button>
+          <p aria-atomic="true" aria-live="polite" className="muted" role="status">
+            {`已选 ${batchSelectionCount} 条线程`}
+          </p>
+          <div aria-label="添加标签" className="thread-batch-group" role="group">
+            {tags.map((tag) => (
+              <button
+                aria-pressed={batchAddTagIds.has(tag.id)}
+                className={
+                  batchAddTagIds.has(tag.id)
+                    ? "status-label thread-tag-filter-chip active"
+                    : "status-label thread-tag-filter-chip"
+                }
+                disabled={batchSubmitting}
+                key={tag.id}
+                onClick={() => toggleBatchAddTag(tag.id)}
+                type="button"
+              >
+                {tag.name}
+              </button>
+            ))}
+          </div>
+          <div aria-label="移除标签" className="thread-batch-group" role="group">
+            {tags.map((tag) => (
+              <button
+                aria-pressed={batchRemoveTagIds.has(tag.id)}
+                className={
+                  batchRemoveTagIds.has(tag.id)
+                    ? "status-label thread-tag-filter-chip active"
+                    : "status-label thread-tag-filter-chip"
+                }
+                disabled={batchSubmitting}
+                key={tag.id}
+                onClick={() => toggleBatchRemoveTag(tag.id)}
+                type="button"
+              >
+                {tag.name}
+              </button>
+            ))}
+          </div>
+          <button
+            className="button-primary"
+            disabled={
+              batchSubmitting
+              || batchSelectionCount === 0
+              || batchAddCount + batchRemoveCount === 0
+            }
+            onClick={confirmBatch}
+            type="button"
+          >
+            应用更改
+          </button>
+          {batchError ? (
+            <div className="thread-batch-error">
+              <p className="error-text" role="alert">
+                {batchError}
+              </p>
+              {batchRetry ? (
+                <button
+                  className="button-secondary"
+                  disabled={batchSubmitting}
+                  onClick={() =>
+                    void applyBatch(
+                      {
+                        addTagIds: batchRetry.addTagIds,
+                        removeTagIds: batchRetry.removeTagIds,
+                        threadIds: batchRetry.threadIds,
+                      },
+                      batchRetry.operationId,
+                    )
+                  }
+                  type="button"
+                >
+                  重试批量整理
+                </button>
+              ) : null}
+            </div>
+          ) : null}
+        </section>
         )}
         {selectionError ? (
           <p className="error-text" role="alert">
@@ -1191,6 +1837,17 @@ export function ProjectThreadNavigation({
                   查看全部线程
                 </button>
               </div>
+            ) : activeTagId ? (
+              <div className="empty-guide state-message">
+                <p>{`标签“${tags.find((tag) => tag.id === activeTagId)?.name ?? ""}”下暂无线程。`}</p>
+                <button
+                  className="button-secondary"
+                  onClick={() => setActiveTagId(null)}
+                  type="button"
+                >
+                  清除筛选
+                </button>
+              </div>
             ) : (
               <div className="empty-guide state-message">
                 <p>暂无线程。创建线程后开始协作。</p>
@@ -1208,21 +1865,49 @@ export function ProjectThreadNavigation({
             <ul className="project-list">
               {threads.map((thread) => (
                 <li className="thread-list-item" key={thread.id}>
-                  <button
-                    aria-current={
-                      thread.id === selectedThreadId ? "page" : undefined
-                    }
-                    className="nav-item thread-list-entry"
-                    data-thread-id={thread.id}
-                    onClick={() => chooseThread(thread.id)}
-                    ref={(element) => {
-                      if (element) threadButtonRefs.current.set(thread.id, element);
-                      else threadButtonRefs.current.delete(thread.id);
-                    }}
-                    type="button"
-                  >
-                    {thread.title}
-                  </button>
+                  {organizeMode ? (
+                    <label className="thread-list-select">
+                      <input
+                        aria-label={`选择线程 ${thread.title}`}
+                        checked={selectedThreadIds.has(thread.id)}
+                        disabled={batchSubmitting}
+                        onChange={() => toggleThreadSelected(thread.id)}
+                        type="checkbox"
+                      />
+                      <span className="sr-only">{`选择线程 ${thread.title}`}</span>
+                    </label>
+                  ) : null}
+                  <div className="thread-list-main">
+                    <button
+                      aria-current={
+                        !organizeMode && thread.id === selectedThreadId
+                          ? "page"
+                          : undefined
+                      }
+                      className="nav-item thread-list-entry"
+                      data-thread-id={thread.id}
+                      onClick={() => {
+                        if (organizeMode) toggleThreadSelected(thread.id);
+                        else chooseThread(thread.id);
+                      }}
+                      ref={(element) => {
+                        if (element) threadButtonRefs.current.set(thread.id, element);
+                        else threadButtonRefs.current.delete(thread.id);
+                      }}
+                      type="button"
+                    >
+                      {thread.title}
+                    </button>
+                    {thread.tags.length > 0 ? (
+                      <span className="thread-tag-chip-list">
+                        {thread.tags.map((tag) => (
+                          <span className="status-label thread-tag-chip" key={tag.id}>
+                            {tag.name}
+                          </span>
+                        ))}
+                      </span>
+                    ) : null}
+                  </div>
                   <button
                     aria-label={
                       thread.isFavorite
@@ -1231,7 +1916,7 @@ export function ProjectThreadNavigation({
                     }
                     aria-pressed={thread.isFavorite}
                     className="thread-favorite-toggle"
-                    disabled={pendingFavoriteIds.has(thread.id)}
+                    disabled={organizeMode || pendingFavoriteIds.has(thread.id)}
                     onClick={() => void toggleFavorite(thread)}
                     type="button"
                   >
@@ -1243,9 +1928,9 @@ export function ProjectThreadNavigation({
           )}
         </nav>
         )}
-        {createNotice ? (
+        {batchNotice ?? createNotice ? (
           <p aria-atomic="true" aria-live="polite" role="status">
-            {createNotice}
+            {batchNotice ?? createNotice}
           </p>
         ) : null}
       </section>
@@ -1400,6 +2085,217 @@ export function ProjectThreadNavigation({
                   </button>
                 </div>
               </form>
+            </section>,
+            document.body,
+          )
+        : null}
+      {manageOpen && typeof document !== "undefined"
+        ? createPortal(
+            <section
+              aria-labelledby="manage-tags-title"
+              aria-modal="true"
+              className="modal-surface manage-tags-dialog"
+              ref={manageDialogRef}
+              role="dialog"
+            >
+              <div className="section-heading-row">
+                <h2 id="manage-tags-title">管理标签</h2>
+                <button
+                  aria-label="关闭管理标签"
+                  className="button-ghost"
+                  onClick={closeManageDialog}
+                  type="button"
+                >
+                  关闭
+                </button>
+              </div>
+              {manageNotice ? (
+                <p aria-atomic="true" aria-live="polite" role="status">
+                  {manageNotice}
+                </p>
+              ) : null}
+              <form className="stack" onSubmit={handleCreateTag}>
+                <div className="form-field">
+                  <label htmlFor="new-thread-tag-name">新标签名称</label>
+                  <input
+                    aria-describedby="new-thread-tag-help"
+                    aria-invalid={newTagError ? "true" : undefined}
+                    disabled={creatingTag}
+                    id="new-thread-tag-name"
+                    onChange={(event) => setNewTagName(event.target.value)}
+                    placeholder="例如：发布阻塞"
+                    ref={newTagInputRef}
+                    value={newTagName}
+                  />
+                  <p className="muted" id="new-thread-tag-help">
+                    最多 40 个字符。
+                  </p>
+                  {newTagError ? (
+                    <p className="error-text" id="new-thread-tag-error" role="alert">
+                      {newTagError}
+                    </p>
+                  ) : null}
+                </div>
+                <button
+                  className="button-primary"
+                  disabled={creatingTag}
+                  type="submit"
+                >
+                  {creatingTag ? "正在创建…" : "创建标签"}
+                </button>
+              </form>
+              <div className="form-field">
+                <label htmlFor="manage-tag-search">搜索标签</label>
+                <input
+                  id="manage-tag-search"
+                  onChange={(event) => setTagSearchText(event.target.value)}
+                  placeholder="按名称过滤"
+                  ref={tagSearchInputRef}
+                  type="search"
+                  value={tagSearchText}
+                />
+              </div>
+              {tagsState === "loading" ? (
+                <p className="muted" role="status">
+                  正在加载标签…
+                </p>
+              ) : null}
+              {tagsState === "error" ? (
+                <div className="stack state-message">
+                  <p className="error-text" role="alert">
+                    {tagsError}
+                  </p>
+                  <button
+                    className="button-secondary"
+                    onClick={() => setTagsReloadKey((current) => current + 1)}
+                    type="button"
+                  >
+                    重试加载标签
+                  </button>
+                </div>
+              ) : null}
+              {tagsState === "ready" ? (
+                tags.length === 0 ? (
+                  <p className="muted" role="status">
+                    暂无标签。创建标签后开始整理线程。
+                  </p>
+                ) : (
+                  (() => {
+                    const query = tagSearchText.trim().toLowerCase();
+                    const visible = query
+                      ? tags.filter((tag) => tag.name.toLowerCase().includes(query))
+                      : tags;
+                    return visible.length === 0 ? (
+                      <p className="muted" role="status">
+                        无匹配标签。
+                      </p>
+                    ) : (
+                      <ul className="stack thread-tag-manage-list">
+                        {visible.map((tag) => (
+                          <li className="thread-tag-manage-item" key={tag.id}>
+                            <span className="thread-tag-list-name">{tag.name}</span>
+                            <span className="thread-tag-count">
+                              {`已分配 ${tag.threadCount} 条线程`}
+                            </span>
+                            <button
+                              aria-label={`删除标签 ${tag.name}`}
+                              className="button-secondary"
+                              disabled={deletingTag}
+                              onClick={() => {
+                                setDeleteTagError(null);
+                                setPendingDeleteTag(tag);
+                              }}
+                              type="button"
+                            >
+                              删除
+                            </button>
+                          </li>
+                        ))}
+                      </ul>
+                    );
+                  })()
+                )
+              ) : null}
+            </section>,
+            document.body,
+          )
+        : null}
+      {pendingDeleteTag && typeof document !== "undefined"
+        ? createPortal(
+            <section
+              aria-labelledby="delete-tag-title"
+              aria-modal="true"
+              className="modal-surface delete-tag-confirm"
+              ref={confirmDialogRef}
+              role="dialog"
+            >
+              <h2 id="delete-tag-title">删除标签</h2>
+              <p>
+                {`删除标签“${pendingDeleteTag.name}”将解除 ${pendingDeleteTag.threadCount} 条分配。此操作不可撤销。`}
+              </p>
+              {deleteTagError ? (
+                <p className="error-text" role="alert">
+                  {deleteTagError}
+                </p>
+              ) : null}
+              <div className="form-row">
+                <button
+                  className="button-primary"
+                  disabled={deletingTag}
+                  onClick={() => void confirmDeleteTag()}
+                  type="button"
+                >
+                  {deletingTag ? "正在删除…" : "确认删除"}
+                </button>
+                <button
+                  className="button-secondary"
+                  disabled={deletingTag}
+                  onClick={() => setPendingDeleteTag(null)}
+                  ref={deleteCancelRef}
+                  type="button"
+                >
+                  取消
+                </button>
+              </div>
+            </section>,
+            document.body,
+          )
+        : null}
+      {batchConfirm && typeof document !== "undefined"
+        ? createPortal(
+            <section
+              aria-labelledby="batch-apply-title"
+              aria-modal="true"
+              className="modal-surface batch-apply-confirm"
+              ref={batchConfirmDialogRef}
+              role="dialog"
+            >
+              <h2 id="batch-apply-title">确认批量整理</h2>
+              <p>{batchConfirmCopy}</p>
+              {batchConfirm.removeTagIds.length > 0 ? (
+                <p className="muted">
+                  移除会立即解除这些线程上的标签分配。
+                </p>
+              ) : null}
+              <div className="form-row">
+                <button
+                  className="button-primary"
+                  disabled={batchSubmitting}
+                  onClick={() => void applyBatch(batchConfirm, crypto.randomUUID())}
+                  ref={batchConfirmApplyRef}
+                  type="button"
+                >
+                  {batchSubmitting ? "正在提交…" : "确认应用"}
+                </button>
+                <button
+                  className="button-secondary"
+                  disabled={batchSubmitting}
+                  onClick={closeBatchConfirm}
+                  type="button"
+                >
+                  取消
+                </button>
+              </div>
             </section>,
             document.body,
           )

@@ -44,6 +44,7 @@ import type {
   ThreadListResponseDto,
   ThreadMessageDto,
   ThreadMessageReplySnapshot,
+  ThreadTagRefDto,
 } from "@/src/shared/collaboration-contracts";
 
 const RESOURCE_ID = /^[A-Za-z0-9][A-Za-z0-9:_-]{0,199}$/;
@@ -520,6 +521,7 @@ function parseListInput(rawInput: unknown): {
   cursor: CursorValue | null;
   favoritesOnly: boolean;
   limit: number;
+  tagId: string | null;
 } {
   if (!rawInput || typeof rawInput !== "object" || Array.isArray(rawInput)) {
     invalidInput("Thread list input is invalid.", { input: "invalid_format" });
@@ -527,7 +529,12 @@ function parseListInput(rawInput: unknown): {
   const input = rawInput as Record<string, unknown>;
   const fields: Record<string, string> = {};
   for (const key of Object.keys(input)) {
-    if (key !== "cursor" && key !== "favoritesOnly" && key !== "limit") {
+    if (
+      key !== "cursor"
+      && key !== "favoritesOnly"
+      && key !== "limit"
+      && key !== "tagId"
+    ) {
       fields[key] = "unknown";
     }
   }
@@ -558,10 +565,21 @@ function parseListInput(rawInput: unknown): {
   // The favorites view orders by favorited_at, not last_activity_sequence, so
   // the activity cursor cannot address a position inside it.
   if (favoritesOnly && cursor !== null) fields.cursor = "not_supported";
+  let tagId: string | null = null;
+  if (input.tagId !== undefined) {
+    if (typeof input.tagId !== "string" || !RESOURCE_ID.test(input.tagId)) {
+      fields.tagId = "invalid_format";
+    } else {
+      tagId = input.tagId;
+    }
+  }
+  // The tag filter keeps the last_activity_sequence ordering (cursor-compatible),
+  // which cannot be composed with the favorites ordering (A-186).
+  if (tagId !== null && favoritesOnly) fields.tagId = "not_combinable";
   if (Object.keys(fields).length > 0) {
     invalidInput("Thread list input is invalid.", fields);
   }
-  return { cursor, favoritesOnly, limit: Number(limit) };
+  return { cursor, favoritesOnly, limit: Number(limit), tagId };
 }
 
 function parseSequencePageInput(rawInput: unknown): SequencePageInput {
@@ -2132,6 +2150,7 @@ export function listThreads(
          )`
       : "";
     const values: Array<string | number> = [projectId];
+    if (input.tagId !== null) values.push(input.tagId);
     if (input.cursor) {
       values.push(input.cursor.a, input.cursor.a, input.cursor.id);
     }
@@ -2149,6 +2168,16 @@ export function listThreads(
            ON favorites.project_id=threads.project_id
           AND favorites.thread_id=threads.id
          WHERE threads.project_id=?
+           ${
+             input.tagId !== null
+               ? `AND EXISTS(
+                   SELECT 1 FROM thread_tag_edges AS tag_edges
+                   WHERE tag_edges.project_id=threads.project_id
+                     AND tag_edges.thread_id=threads.id
+                     AND tag_edges.tag_id=?
+                 )`
+               : ""
+           }
            ${input.favoritesOnly ? "AND favorites.thread_id IS NOT NULL" : ""}
            ${cursorPredicate}
          ORDER BY ${
@@ -2171,10 +2200,36 @@ export function listThreads(
     }>;
     const hasMore = rows.length > input.limit;
     const pageRows = hasMore ? rows.slice(0, input.limit) : rows;
+    // Tags come from one batched second query over the page's thread ids (no
+    // N+1), ordered by tag name so every item's projection is deterministic.
+    const tagsByThread = new Map<string, ThreadTagRefDto[]>();
+    if (pageRows.length > 0) {
+      const placeholders = pageRows.map(() => "?").join(",");
+      const tagRows = database
+        .prepare(
+          `SELECT edges.thread_id AS threadId,tags.id,tags.name
+           FROM thread_tag_edges AS edges
+           JOIN thread_tags AS tags
+             ON tags.project_id=edges.project_id AND tags.id=edges.tag_id
+           WHERE edges.project_id=? AND edges.thread_id IN (${placeholders})
+           ORDER BY tags.name,tags.id`,
+        )
+        .all(projectId, ...pageRows.map((row) => row.id)) as Array<{
+        id: string;
+        name: string;
+        threadId: string;
+      }>;
+      for (const row of tagRows) {
+        const list = tagsByThread.get(row.threadId);
+        if (list) list.push({ id: row.id, name: row.name });
+        else tagsByThread.set(row.threadId, [{ id: row.id, name: row.name }]);
+      }
+    }
     const threads: ThreadListItemDto[] = pageRows.map((row) => ({
       ...row,
       availability: readThreadPolicyFromDatabase(database, projectId, row.id).availability,
       isFavorite: row.favoritedAt !== null,
+      tags: tagsByThread.get(row.id) ?? [],
     }));
     const last = threads.at(-1);
     return {

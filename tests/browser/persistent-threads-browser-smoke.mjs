@@ -91,6 +91,22 @@ const evidence = {
     resolve("features", "031-thread-search", "evidence"),
     "thread-search-narrow.png",
   ),
+  tagsDark: join(
+    resolve("features", "032-thread-tags-bulk-organize", "evidence"),
+    "thread-tags-dark.png",
+  ),
+  tagsDesktop: join(
+    resolve("features", "032-thread-tags-bulk-organize", "evidence"),
+    "thread-tags-desktop.png",
+  ),
+  tagsNarrow: join(
+    resolve("features", "032-thread-tags-bulk-organize", "evidence"),
+    "thread-tags-narrow.png",
+  ),
+  tagsNarrowDark: join(
+    resolve("features", "032-thread-tags-bulk-organize", "evidence"),
+    "thread-tags-narrow-dark.png",
+  ),
   results: join(evidenceDirectory, "persistent-threads-results.json"),
 };
 const PNG_1X1 = Buffer.from([
@@ -136,6 +152,8 @@ let providerCalls = 0;
 let auditFacingText = "";
 let narrowAuditFacingText = "";
 let searchFacingText = "";
+let tagFacingText = "";
+let narrowTagFacingText = "";
 
 for (const path of Object.values(evidence)) {
   mkdirSync(dirname(path), { recursive: true });
@@ -565,7 +583,7 @@ try {
   assert.equal(persisted.body.threads.length, 1);
   assert.equal(persisted.body.threads[0].title, "历史协作");
   const legacyThreadId = persisted.body.threads[0].id;
-  assert.equal(inspectDatabase().version, 17);
+  assert.equal(inspectDatabase().version, 18);
   pass("current-persistent-default-thread", { legacyThreadId });
   await axe(page, "current persistent project");
 
@@ -2756,6 +2774,940 @@ try {
   await searchEditorDrawer.waitFor({ state: "detached" });
   pass("thread-search-narrow-result-navigation-locate");
 
+  // ---- feature 032 T-05: thread tags & bulk organize real-browser acceptance ----
+  // Cohesive single block after the 031 search section and before the terminal
+  // scans (031 A-179 zero-displacement precedent). Tag names are unique across
+  // the fixture: 发布阻塞/缺陷跟踪/文档待办 live in legacy-project, 外部标签 in
+  // the foreign project created by the search section (isolation probes).
+  await page.setViewportSize({ height: 1050, width: 1500 });
+  await page.goto(`${baseUrl}${firstHref}`, { waitUntil: "networkidle" });
+
+  const waitForActiveElement = (selector) =>
+    page.waitForFunction(
+      (expected) => document.activeElement?.matches(expected) ?? false,
+      selector,
+    );
+  const waitForActiveText = (text) =>
+    page.waitForFunction(
+      (expected) => document.activeElement?.textContent === expected,
+      text,
+    );
+
+  const manageTagsOpener = page.getByRole("button", { name: "管理标签" });
+  await manageTagsOpener.waitFor();
+  await manageTagsOpener.click();
+  const manageDialog = page.getByRole("dialog", { name: "管理标签" });
+  await manageDialog.waitFor();
+  const newTagInput = manageDialog.getByLabel("新标签名称");
+  await manageDialog
+    .getByText("暂无标签。创建标签后开始整理线程。", { exact: true })
+    .waitFor();
+  await waitForActiveElement(".manage-tags-dialog #new-thread-tag-name");
+  assert.equal(
+    await newTagInput.evaluate((node) => document.activeElement === node),
+    true,
+    "manage dialog must move focus to the new tag input",
+  );
+  await newTagInput.fill("   ");
+  await manageDialog.getByRole("button", { name: "创建标签" }).click();
+  await manageDialog.getByText("请输入标签名称。", { exact: true }).waitFor();
+  const createTagSubmit = manageDialog.getByRole("button", { name: "创建标签" });
+  const createTagSubmitBox = await createTagSubmit.boundingBox();
+  assert.ok(
+    createTagSubmitBox
+    && createTagSubmitBox.height >= 44
+    && createTagSubmitBox.width >= 44,
+    "create tag submit must stay >= 44px",
+  );
+  await newTagInput.fill("发布阻塞");
+  await createTagSubmit.click();
+  await manageDialog
+    .getByText("已创建标签“发布阻塞”。", { exact: true })
+    .waitFor();
+  await newTagInput.fill("  发布阻塞  ");
+  await createTagSubmit.click();
+  await manageDialog
+    .getByText("标签“发布阻塞”已存在。", { exact: true })
+    .waitFor();
+  assert.equal(
+    await manageDialog.locator(".thread-tag-manage-item").count(),
+    1,
+    "folded duplicate create must not add a second row",
+  );
+  await newTagInput.fill("缺陷跟踪");
+  await createTagSubmit.click();
+  await manageDialog
+    .getByText("已创建标签“缺陷跟踪”。", { exact: true })
+    .waitFor();
+  await newTagInput.fill("文档待办");
+  await createTagSubmit.click();
+  await manageDialog
+    .getByText("已创建标签“文档待办”。", { exact: true })
+    .waitFor();
+  await page.waitForFunction(() =>
+    document.querySelectorAll(".thread-tag-manage-item").length === 3
+  );
+  assert.equal(
+    await manageDialog.getByText("已分配 0 条线程", { exact: true }).count(),
+    3,
+    "fresh tags must report zero assignments",
+  );
+  const manageTagSearch = manageDialog.getByLabel("搜索标签");
+  await manageTagSearch.fill("缺陷");
+  await page.waitForFunction(() =>
+    document.querySelectorAll(".thread-tag-manage-item").length === 1
+  );
+  await manageDialog.getByText("缺陷跟踪", { exact: true }).waitFor();
+  await manageTagSearch.fill("不存在的标签");
+  await manageDialog.getByText("无匹配标签。", { exact: true }).waitFor();
+  assert.equal(
+    await manageDialog.locator(".thread-tag-manage-item").count(),
+    0,
+    "manage search empty state must list no items",
+  );
+  await manageTagSearch.fill("");
+  await page.waitForFunction(() =>
+    document.querySelectorAll(".thread-tag-manage-item").length === 3
+  );
+  const manageDeleteBox = await manageDialog
+    .getByRole("button", { name: "删除标签 缺陷跟踪" })
+    .boundingBox();
+  assert.ok(
+    manageDeleteBox && manageDeleteBox.height >= 44 && manageDeleteBox.width >= 44,
+    "manage dialog delete button must stay >= 44px",
+  );
+  const manageCloseBox = await manageDialog
+    .getByRole("button", { name: "关闭管理标签" })
+    .boundingBox();
+  assert.ok(
+    manageCloseBox && manageCloseBox.height >= 44 && manageCloseBox.width >= 44,
+    "manage dialog close button must stay >= 44px",
+  );
+  await axe(page, "desktop light manage tags dialog");
+  await page.keyboard.press("Escape");
+  await manageDialog.waitFor({ state: "detached" });
+  await waitForActiveText("管理标签");
+  assert.equal(
+    await manageTagsOpener.evaluate((node) => document.activeElement === node),
+    true,
+    "Escape must close the manage dialog and return focus to its opener",
+  );
+  pass("thread-tags-manage-create-search-validation-focus-44px-axe");
+
+  const tagList = await api(
+    page,
+    "/api/projects/legacy-project/thread-tags?limit=100",
+  );
+  assert.equal(tagList.status, 200);
+  assert.equal(tagList.body.tags.length, 3);
+  const tagByName = new Map(tagList.body.tags.map((tag) => [tag.name, tag]));
+  const releaseTag = tagByName.get("发布阻塞");
+  const defectTag = tagByName.get("缺陷跟踪");
+  const docsTag = tagByName.get("文档待办");
+  assert.ok(releaseTag && defectTag && docsTag);
+  for (const tag of [releaseTag, defectTag, docsTag]) {
+    assert.equal(tag.projectId, "legacy-project");
+    assert.equal(tag.threadCount, 0);
+  }
+  const tagQueryApi = await api(
+    page,
+    `/api/projects/legacy-project/thread-tags?q=${encodeURIComponent("缺陷")}`,
+  );
+  assert.equal(tagQueryApi.status, 200);
+  assert.deepEqual(
+    tagQueryApi.body.tags.map((tag) => tag.name),
+    ["缺陷跟踪"],
+    "tag query must be a literal contains match",
+  );
+
+  const assignTag = (threadId, tagId, assigned) =>
+    api(page, `/api/projects/legacy-project/threads/${threadId}/tags`, {
+      body: JSON.stringify({ assigned, tagId }),
+      headers: { "content-type": "application/json" },
+      method: "PUT",
+    });
+  const assignFirst = await assignTag(firstThread, releaseTag.id, true);
+  assert.equal(assignFirst.status, 200);
+  assert.deepEqual(assignFirst.body, {
+    assigned: true,
+    projectId: "legacy-project",
+    tagId: releaseTag.id,
+    threadId: firstThread,
+  });
+  const assignThirdRelease = await assignTag(thirdThread, releaseTag.id, true);
+  assert.equal(assignThirdRelease.status, 200);
+  assert.equal(assignThirdRelease.body.assigned, true);
+  const assignThirdDefect = await assignTag(thirdThread, defectTag.id, true);
+  assert.equal(assignThirdDefect.status, 200);
+  const assignRepeat = await assignTag(firstThread, releaseTag.id, true);
+  assert.equal(assignRepeat.status, 200);
+  assert.equal(assignRepeat.body.assigned, true);
+  const assignNoop = await assignTag(secondThread, releaseTag.id, false);
+  assert.equal(assignNoop.status, 200);
+  assert.equal(assignNoop.body.assigned, false);
+
+  await page.reload({ waitUntil: "networkidle" });
+  const threadItem = (threadId) =>
+    page.locator("#project-threads-list li", {
+      has: page.locator(`[data-thread-id="${threadId}"]`),
+    });
+  const itemChipTexts = (threadId) =>
+    threadItem(threadId).locator(".thread-tag-chip").allInnerTexts();
+  await page.waitForFunction(() =>
+    document.querySelectorAll("#project-threads-list .thread-tag-chip").length
+    === 3
+  );
+  assert.deepEqual(await itemChipTexts(firstThread), ["发布阻塞"]);
+  assert.deepEqual(await itemChipTexts(secondThread), []);
+  assert.deepEqual(await itemChipTexts(thirdThread), ["发布阻塞", "缺陷跟踪"]);
+
+  const tagFilterGroup = page.getByRole("group", { name: "按标签筛选线程" });
+  await tagFilterGroup.waitFor();
+  const allTagChip = tagFilterGroup.getByRole("button", {
+    exact: true,
+    name: "全部",
+  });
+  const releaseChip = tagFilterGroup.getByRole("button", { name: "发布阻塞" });
+  const defectChip = tagFilterGroup.getByRole("button", { name: "缺陷跟踪" });
+  const docsChip = tagFilterGroup.getByRole("button", { name: "文档待办" });
+  assert.equal(await allTagChip.getAttribute("aria-pressed"), "true");
+  const releaseChipBox = await releaseChip.boundingBox();
+  assert.ok(
+    releaseChipBox && releaseChipBox.height >= 44 && releaseChipBox.width >= 44,
+    "filter chip must stay >= 44px",
+  );
+  const listedThreadIds = () =>
+    page.evaluate(() =>
+      [...document.querySelectorAll("#project-threads-list .thread-list-entry")]
+        .map((node) => node.getAttribute("data-thread-id"))
+    );
+  const allThreadCount = (
+    await api(page, "/api/projects/legacy-project/threads?limit=100")
+  ).body.threads.length;
+  assert.equal((await listedThreadIds()).length, allThreadCount);
+  const tagFilterLoad = (tagId) =>
+    page.waitForResponse((response) => {
+      const url = new URL(response.url());
+      return response.request().method() === "GET"
+        && url.pathname === "/api/projects/legacy-project/threads"
+        && url.searchParams.get("tagId") === tagId;
+    });
+
+  const releaseFilterLoad = tagFilterLoad(releaseTag.id);
+  await releaseChip.click();
+  assert.equal((await releaseFilterLoad).status(), 200);
+  const releaseFiltered = await api(
+    page,
+    `/api/projects/legacy-project/threads?tagId=${releaseTag.id}`,
+  );
+  assert.equal(releaseFiltered.status, 200);
+  assert.deepEqual(
+    releaseFiltered.body.threads.map((thread) => thread.id).sort(),
+    [firstThread, thirdThread].sort(),
+  );
+  const thirdProjection = releaseFiltered.body.threads.find(
+    (thread) => thread.id === thirdThread,
+  );
+  assert.deepEqual(
+    thirdProjection.tags.map((tag) => tag.name),
+    ["发布阻塞", "缺陷跟踪"],
+    "list projection must carry the thread tags in name order",
+  );
+  await page.waitForFunction(() =>
+    document.querySelectorAll("#project-threads-list .thread-list-entry")
+      .length === 2
+  );
+  assert.deepEqual(
+    await listedThreadIds(),
+    releaseFiltered.body.threads.map((thread) => thread.id),
+    "filtered UI order must match the server page exactly",
+  );
+  assert.equal(await releaseChip.getAttribute("aria-pressed"), "true");
+  assert.equal(await allTagChip.getAttribute("aria-pressed"), "false");
+
+  const docsFilterLoad = tagFilterLoad(docsTag.id);
+  await docsChip.click();
+  assert.equal((await docsFilterLoad).status(), 200);
+  await page
+    .getByText("标签“文档待办”下暂无线程。", { exact: true })
+    .waitFor();
+  await page.getByRole("button", { name: "清除筛选" }).click();
+  await page.waitForFunction(
+    (count) =>
+      document.querySelectorAll("#project-threads-list .thread-list-entry")
+        .length === count,
+    allThreadCount,
+  );
+
+  const mutexFilter = await api(
+    page,
+    `/api/projects/legacy-project/threads?favorites=true&tagId=${defectTag.id}`,
+  );
+  assert.equal(mutexFilter.status, 400);
+  assert.equal(mutexFilter.body?.error?.code, "INVALID_INPUT");
+  assert.equal(mutexFilter.body?.error?.fields?.tagId, "not_combinable");
+  await favoritesViewTab.click();
+  await page.waitForFunction(() =>
+    document.querySelectorAll("#project-threads-list .thread-list-entry")
+      .length === 1
+  );
+  assert.equal(await favoritesViewTab.getAttribute("aria-selected"), "true");
+  const defectFilterLoad = tagFilterLoad(defectTag.id);
+  await defectChip.click();
+  assert.equal((await defectFilterLoad).status(), 200);
+  await page.waitForFunction(
+    (expected) => {
+      const entries = [
+        ...document.querySelectorAll("#project-threads-list .thread-list-entry"),
+      ];
+      return entries.length === 1
+        && entries[0].getAttribute("data-thread-id") === expected;
+    },
+    thirdThread,
+  );
+  assert.equal(
+    await allViewTab.getAttribute("aria-selected"),
+    "true",
+    "selecting a tag chip in favorites view must fall back to 全部",
+  );
+  assert.equal(await favoritesViewTab.getAttribute("aria-selected"), "false");
+  assert.equal(await defectChip.getAttribute("aria-pressed"), "true");
+  await allTagChip.click();
+  await page.waitForFunction(
+    (count) =>
+      document.querySelectorAll("#project-threads-list .thread-list-entry")
+        .length === count,
+    allThreadCount,
+  );
+  assert.equal(await allTagChip.getAttribute("aria-pressed"), "true");
+
+  tagFacingText = await page.locator("html").innerText();
+  await axe(page, "desktop light thread tag chips and filter");
+  await page.screenshot({ fullPage: true, path: evidence.tagsDesktop });
+
+  await page.getByRole("button", { name: /切换到暗色主题/ }).click();
+  await page.getByRole("button", { name: /切换到明色主题/ }).waitFor();
+  const darkDefectLoad = tagFilterLoad(defectTag.id);
+  await defectChip.click();
+  assert.equal((await darkDefectLoad).status(), 200);
+  await page.waitForFunction(
+    (expected) => {
+      const entries = [
+        ...document.querySelectorAll("#project-threads-list .thread-list-entry"),
+      ];
+      return entries.length === 1
+        && entries[0].getAttribute("data-thread-id") === expected;
+    },
+    thirdThread,
+  );
+  assert.deepEqual(await itemChipTexts(thirdThread), ["发布阻塞", "缺陷跟踪"]);
+  await axe(page, "desktop dark thread tag filter");
+  await page.screenshot({ fullPage: true, path: evidence.tagsDark });
+  await allTagChip.click();
+  await page.waitForFunction(
+    (count) =>
+      document.querySelectorAll("#project-threads-list .thread-list-entry")
+        .length === count,
+    allThreadCount,
+  );
+  await page.getByRole("button", { name: /切换到明色主题/ }).click();
+  await page.getByRole("button", { name: /切换到暗色主题/ }).waitFor();
+  pass("thread-tags-assign-chips-filter-mutex-dark-light-axe");
+
+  const organizeButton = page.getByRole("button", { name: "整理线程" });
+  await organizeButton.click();
+  assert.equal(await organizeButton.getAttribute("aria-pressed"), "true");
+  const batchBar = page.getByRole("region", { name: "批量整理线程" });
+  await batchBar.waitFor();
+  await batchBar.getByText("已选 0 条线程", { exact: true }).waitFor();
+  assert.equal(
+    await tagFilterGroup.count(),
+    0,
+    "filter chips must hide while organize mode is active",
+  );
+  const threadCheckbox = (threadId) => threadItem(threadId).getByRole("checkbox");
+  await threadCheckbox(firstThread).waitFor();
+  const selectLabelBox = await threadItem(firstThread)
+    .locator(".thread-list-select")
+    .boundingBox();
+  assert.ok(
+    selectLabelBox && selectLabelBox.height >= 44 && selectLabelBox.width >= 44,
+    "organize select control must stay >= 44px",
+  );
+  await threadCheckbox(firstThread).click();
+  await batchBar.getByText("已选 1 条线程", { exact: true }).waitFor();
+  await threadItem(secondThread).locator(".thread-list-entry").focus();
+  await page.keyboard.press("Shift+Tab");
+  assert.equal(
+    await threadCheckbox(secondThread).evaluate(
+      (node) => document.activeElement === node,
+    ),
+    true,
+    "Shift+Tab from a thread entry must reach its organize checkbox",
+  );
+  assert.notEqual(
+    await threadCheckbox(secondThread).evaluate(
+      (node) => getComputedStyle(node).boxShadow,
+    ),
+    "none",
+    "keyboard-focused organize checkbox must show a visible focus ring",
+  );
+  await page.keyboard.press("Space");
+  await batchBar.getByText("已选 2 条线程", { exact: true }).waitFor();
+  assert.equal(await threadCheckbox(secondThread).isChecked(), true);
+  const addGroup = batchBar.getByRole("group", { name: "添加标签" });
+  const removeGroup = batchBar.getByRole("group", { name: "移除标签" });
+  const addDefectChip = addGroup.getByRole("button", { name: "缺陷跟踪" });
+  await addDefectChip.click();
+  assert.equal(await addDefectChip.getAttribute("aria-pressed"), "true");
+  const removeReleaseChip = removeGroup.getByRole("button", { name: "发布阻塞" });
+  await removeReleaseChip.click();
+  assert.equal(await removeReleaseChip.getAttribute("aria-pressed"), "true");
+  const applyButton = batchBar.getByRole("button", { name: "应用更改" });
+  assert.equal(await applyButton.isDisabled(), false);
+  const batchPost = page.waitForResponse((response) =>
+    response.request().method() === "POST"
+    && response.url().endsWith("/api/projects/legacy-project/thread-tag-batch")
+  );
+  await applyButton.click();
+  const batchConfirmDialog = page.getByRole("dialog", { name: "确认批量整理" });
+  await batchConfirmDialog.waitFor();
+  await batchConfirmDialog
+    .getByText("将为 2 条线程添加 1 个标签、移除 1 个标签。", { exact: true })
+    .waitFor();
+  await batchConfirmDialog
+    .getByText("移除会立即解除这些线程上的标签分配。", { exact: true })
+    .waitFor();
+  const confirmApplyButton = batchConfirmDialog.getByRole("button", {
+    name: "确认应用",
+  });
+  await waitForActiveElement(".batch-apply-confirm button.button-primary");
+  assert.equal(
+    await confirmApplyButton.evaluate((node) => document.activeElement === node),
+    true,
+    "batch confirm must move focus to 确认应用",
+  );
+  await page.keyboard.press("Enter");
+  const batchResponse = await batchPost;
+  assert.equal(batchResponse.status(), 200);
+  const batchBody = await batchResponse.json();
+  assert.equal(batchBody.replayed, false);
+  assert.equal(batchBody.applied.length, 2);
+  const batchRequestBody = batchResponse.request().postDataJSON();
+  assert.ok(batchRequestBody.operationId);
+  assert.deepEqual(
+    batchRequestBody.threadIds.sort(),
+    [firstThread, secondThread].sort(),
+  );
+  assert.deepEqual(batchRequestBody.addTagIds, [defectTag.id]);
+  assert.deepEqual(batchRequestBody.removeTagIds, [releaseTag.id]);
+  const appliedFirst = batchBody.applied.find(
+    (item) => item.threadId === firstThread,
+  );
+  const appliedSecond = batchBody.applied.find(
+    (item) => item.threadId === secondThread,
+  );
+  assert.deepEqual(appliedFirst.addedTagIds, [defectTag.id]);
+  assert.deepEqual(appliedFirst.removedTagIds, [releaseTag.id]);
+  assert.deepEqual(appliedSecond.addedTagIds, [defectTag.id]);
+  assert.deepEqual(appliedSecond.removedTagIds, []);
+  await page.getByText("已为 2 条线程更新标签。", { exact: true }).waitFor();
+  await batchBar.waitFor({ state: "detached" });
+  assert.equal(await organizeButton.getAttribute("aria-pressed"), "false");
+  await page.waitForFunction(() => {
+    const chips = [
+      ...document.querySelectorAll("#project-threads-list .thread-tag-chip"),
+    ].map((node) => node.textContent);
+    return chips.length === 4
+      && chips.filter((name) => name === "缺陷跟踪").length === 3
+      && chips.filter((name) => name === "发布阻塞").length === 1;
+  });
+  assert.deepEqual(await itemChipTexts(firstThread), ["缺陷跟踪"]);
+  assert.deepEqual(await itemChipTexts(secondThread), ["缺陷跟踪"]);
+  assert.deepEqual(await itemChipTexts(thirdThread), ["发布阻塞", "缺陷跟踪"]);
+
+  const batchReplay = await api(
+    page,
+    "/api/projects/legacy-project/thread-tag-batch",
+    {
+      body: JSON.stringify({
+        addTagIds: batchRequestBody.addTagIds,
+        operationId: batchRequestBody.operationId,
+        removeTagIds: batchRequestBody.removeTagIds,
+        threadIds: batchRequestBody.threadIds,
+      }),
+      headers: { "content-type": "application/json" },
+      method: "POST",
+    },
+  );
+  assert.equal(batchReplay.status, 200);
+  assert.equal(batchReplay.body.replayed, true);
+  assert.equal(batchReplay.body.operationId, batchBody.operationId);
+  assert.deepEqual(batchReplay.body.applied, batchBody.applied);
+  const defectEdgesAfterReplay = await api(
+    page,
+    `/api/projects/legacy-project/threads?tagId=${defectTag.id}`,
+  );
+  assert.equal(
+    defectEdgesAfterReplay.body.threads.length,
+    3,
+    "replayed batch must not duplicate edges",
+  );
+  const batchConflict = await api(
+    page,
+    "/api/projects/legacy-project/thread-tag-batch",
+    {
+      body: JSON.stringify({
+        addTagIds: [],
+        operationId: batchRequestBody.operationId,
+        removeTagIds: [releaseTag.id],
+        threadIds: [thirdThread],
+      }),
+      headers: { "content-type": "application/json" },
+      method: "POST",
+    },
+  );
+  assert.equal(batchConflict.status, 409);
+  assert.equal(batchConflict.body?.error?.code, "OPERATION_CONFLICT");
+  pass("thread-tags-batch-organize-confirm-notice-replay-conflict");
+
+  await manageTagsOpener.click();
+  await manageDialog.waitFor();
+  await page.waitForFunction(() => {
+    const items = [
+      ...document.querySelectorAll(".thread-tag-manage-item"),
+    ].map((node) => node.textContent ?? "");
+    return items.some((text) =>
+      text.includes("发布阻塞") && text.includes("已分配 1 条线程")
+    )
+      && items.some((text) =>
+        text.includes("缺陷跟踪") && text.includes("已分配 3 条线程")
+      )
+      && items.some((text) =>
+        text.includes("文档待办") && text.includes("已分配 0 条线程")
+      );
+  });
+  await manageDialog.getByRole("button", { name: "删除标签 文档待办" }).click();
+  const deleteConfirm = page.getByRole("dialog", { name: "删除标签" });
+  await deleteConfirm.waitFor();
+  await deleteConfirm
+    .getByText("删除标签“文档待办”将解除 0 条分配。此操作不可撤销。", {
+      exact: true,
+    })
+    .waitFor();
+  const deleteCancelButton = deleteConfirm.getByRole("button", { name: "取消" });
+  await waitForActiveElement(".delete-tag-confirm button.button-secondary");
+  assert.equal(
+    await deleteCancelButton.evaluate((node) => document.activeElement === node),
+    true,
+    "delete confirm must move focus to 取消",
+  );
+  await page.keyboard.press("Escape");
+  await deleteConfirm.waitFor({ state: "detached" });
+  assert.equal(
+    await manageDialog.isVisible(),
+    true,
+    "Escape must dismiss only the delete confirm layer",
+  );
+  await waitForActiveElement(".manage-tags-dialog #manage-tag-search");
+  assert.equal(
+    await manageTagSearch.evaluate((node) => document.activeElement === node),
+    true,
+    "confirm Escape must return focus to the tag search input",
+  );
+  await manageDialog.getByRole("button", { name: "删除标签 文档待办" }).click();
+  await deleteConfirm.waitFor();
+  const docsDeleteResponse = page.waitForResponse((response) =>
+    response.request().method() === "DELETE"
+    && response.url().includes(
+      `/api/projects/legacy-project/thread-tags/${docsTag.id}`,
+    )
+  );
+  await deleteConfirm.getByRole("button", { name: "确认删除" }).click();
+  assert.equal((await docsDeleteResponse).status(), 200);
+  await manageDialog
+    .getByText("已删除标签“文档待办”，解除 0 条分配。", { exact: true })
+    .waitFor();
+  await page.waitForFunction(() =>
+    document.querySelectorAll(".thread-tag-manage-item").length === 2
+  );
+
+  await manageDialog.getByRole("button", { name: "删除标签 发布阻塞" }).click();
+  await deleteConfirm.waitFor();
+  await deleteConfirm
+    .getByText("删除标签“发布阻塞”将解除 1 条分配。此操作不可撤销。", {
+      exact: true,
+    })
+    .waitFor();
+  const releaseDeleteResponse = page.waitForResponse((response) =>
+    response.request().method() === "DELETE"
+    && response.url().includes(
+      `/api/projects/legacy-project/thread-tags/${releaseTag.id}`,
+    )
+  );
+  await deleteConfirm.getByRole("button", { name: "确认删除" }).click();
+  const releaseDelete = await releaseDeleteResponse;
+  assert.equal(releaseDelete.status(), 200);
+  const releaseDeleteBody = await releaseDelete.json();
+  assert.equal(releaseDeleteBody.tagId, releaseTag.id);
+  assert.equal(releaseDeleteBody.removedEdgeCount, 1);
+  await manageDialog
+    .getByText("已删除标签“发布阻塞”，解除 1 条分配。", { exact: true })
+    .waitFor();
+  await page.waitForFunction(() =>
+    document.querySelectorAll(".thread-tag-manage-item").length === 1
+  );
+  await page.keyboard.press("Escape");
+  await manageDialog.waitFor({ state: "detached" });
+  await waitForActiveText("管理标签");
+  assert.equal(
+    await manageTagsOpener.evaluate((node) => document.activeElement === node),
+    true,
+    "manage dialog Escape must return focus to its opener",
+  );
+  await tagFilterGroup.waitFor();
+  assert.deepEqual(
+    await tagFilterGroup.getByRole("button").allInnerTexts(),
+    ["全部", "缺陷跟踪"],
+    "deleted tags must leave the filter bar immediately",
+  );
+  await page.waitForFunction(() => {
+    const chips = [
+      ...document.querySelectorAll("#project-threads-list .thread-tag-chip"),
+    ].map((node) => node.textContent);
+    return chips.length === 3 && chips.every((name) => name === "缺陷跟踪");
+  });
+
+  await page.reload({ waitUntil: "networkidle" });
+  await tagFilterGroup.waitFor();
+  assert.deepEqual(
+    await tagFilterGroup.getByRole("button").allInnerTexts(),
+    ["全部", "缺陷跟踪"],
+    "deleted tags must stay out of the filter bar after reload",
+  );
+  await page.waitForFunction(() => {
+    const chips = [
+      ...document.querySelectorAll("#project-threads-list .thread-tag-chip"),
+    ].map((node) => node.textContent);
+    return chips.length === 3 && chips.every((name) => name === "缺陷跟踪");
+  });
+  const tagsAfterDelete = await api(
+    page,
+    "/api/projects/legacy-project/thread-tags?limit=100",
+  );
+  assert.deepEqual(
+    tagsAfterDelete.body.tags.map((tag) => [tag.name, tag.threadCount]),
+    [["缺陷跟踪", 3]],
+  );
+  const deletedTagFilter = await api(
+    page,
+    `/api/projects/legacy-project/threads?tagId=${releaseTag.id}`,
+  );
+  assert.equal(deletedTagFilter.status, 200);
+  assert.deepEqual(
+    deletedTagFilter.body.threads,
+    [],
+    "deleted tag filter must be an empty page",
+  );
+  pass("thread-tags-delete-confirm-count-views-consistent-reload");
+
+  await restartApp(page);
+  await tagFilterGroup.waitFor();
+  const tagsAfterRestart = await api(
+    page,
+    "/api/projects/legacy-project/thread-tags?limit=100",
+  );
+  assert.deepEqual(
+    tagsAfterRestart.body.tags.map((tag) => [tag.name, tag.threadCount]),
+    [["缺陷跟踪", 3]],
+    "tags and usage counts must survive an app restart",
+  );
+  const defectAfterRestart = await api(
+    page,
+    `/api/projects/legacy-project/threads?tagId=${defectTag.id}`,
+  );
+  assert.equal(defectAfterRestart.status, 200);
+  assert.deepEqual(
+    defectAfterRestart.body.threads.map((thread) => thread.id).sort(),
+    [firstThread, secondThread, thirdThread].sort(),
+  );
+  await page.waitForFunction(() => {
+    const chips = [
+      ...document.querySelectorAll("#project-threads-list .thread-tag-chip"),
+    ].map((node) => node.textContent);
+    return chips.length === 3 && chips.every((name) => name === "缺陷跟踪");
+  });
+  assert.deepEqual(
+    await tagFilterGroup.getByRole("button").allInnerTexts(),
+    ["全部", "缺陷跟踪"],
+  );
+  pass("thread-tags-restart-persistence-api-view");
+
+  const foreignTagCreate = await api(
+    page,
+    `/api/projects/${foreignProjectId}/thread-tags`,
+    {
+      body: JSON.stringify({ name: "外部标签" }),
+      headers: { "content-type": "application/json" },
+      method: "POST",
+    },
+  );
+  assert.equal(foreignTagCreate.status, 200);
+  assert.equal(foreignTagCreate.body.created, true);
+  const foreignTag = foreignTagCreate.body.tag;
+  assert.equal(foreignTag.projectId, foreignProjectId);
+  const legacyTagsAfterForeign = await api(
+    page,
+    "/api/projects/legacy-project/thread-tags?limit=100",
+  );
+  assert.equal(
+    legacyTagsAfterForeign.body.tags.some(
+      (tag) => tag.id === foreignTag.id || tag.name === "外部标签",
+    ),
+    false,
+    "foreign tag must not appear in the legacy project",
+  );
+  const foreignTagList = await api(
+    page,
+    `/api/projects/${foreignProjectId}/thread-tags?limit=100`,
+  );
+  assert.equal(foreignTagList.status, 200);
+  assert.deepEqual(
+    foreignTagList.body.tags.map((tag) => tag.name),
+    ["外部标签"],
+  );
+  const foreignTagSearch = await api(
+    page,
+    `/api/projects/${foreignProjectId}/thread-tags?q=${encodeURIComponent("缺陷")}`,
+  );
+  assert.equal(foreignTagSearch.status, 200);
+  assert.deepEqual(
+    foreignTagSearch.body.tags,
+    [],
+    "foreign project must not search-hit legacy tags",
+  );
+  assert.equal(
+    await tagFilterGroup.getByRole("button", { name: "外部标签" }).count(),
+    0,
+    "foreign tag must never reach the filter bar",
+  );
+  const crossAssignments = [
+    [
+      `/api/projects/legacy-project/threads/${firstThread}/tags`,
+      { assigned: true, tagId: foreignTag.id },
+    ],
+    [
+      `/api/projects/${foreignProjectId}/threads/${firstThread}/tags`,
+      { assigned: true, tagId: foreignTag.id },
+    ],
+    [
+      `/api/projects/legacy-project/threads/${foreignThreadId}/tags`,
+      { assigned: true, tagId: defectTag.id },
+    ],
+  ];
+  for (const [path, payload] of crossAssignments) {
+    const denied = await api(page, path, {
+      body: JSON.stringify(payload),
+      headers: { "content-type": "application/json" },
+      method: "PUT",
+    });
+    assert.equal(denied.status, 404, `cross-tuple assignment must 404: ${path}`);
+    assert.equal(denied.body?.error?.code, "RESOURCE_NOT_FOUND");
+    assert.equal(
+      JSON.stringify(denied.body).includes(foreignProjectId),
+      false,
+      "404 envelope must not echo the foreign project id",
+    );
+  }
+  const foreignTagDelete = await api(
+    page,
+    `/api/projects/legacy-project/thread-tags/${foreignTag.id}`,
+    { method: "DELETE" },
+  );
+  assert.equal(foreignTagDelete.status, 404);
+  assert.equal(foreignTagDelete.body?.error?.code, "RESOURCE_NOT_FOUND");
+  const foreignBatch = await api(
+    page,
+    "/api/projects/legacy-project/thread-tag-batch",
+    {
+      body: JSON.stringify({
+        addTagIds: [foreignTag.id],
+        operationId: randomUUID(),
+        removeTagIds: [],
+        threadIds: [firstThread],
+      }),
+      headers: { "content-type": "application/json" },
+      method: "POST",
+    },
+  );
+  assert.equal(foreignBatch.status, 404);
+  assert.equal(foreignBatch.body?.error?.code, "RESOURCE_NOT_FOUND");
+  const foreignTagFilter = await api(
+    page,
+    `/api/projects/legacy-project/threads?tagId=${foreignTag.id}`,
+  );
+  assert.equal(foreignTagFilter.status, 200);
+  assert.deepEqual(
+    foreignTagFilter.body.threads,
+    [],
+    "foreign tagId filter must stay an empty page",
+  );
+  const defectEdgesAfterCross = await api(
+    page,
+    `/api/projects/legacy-project/threads?tagId=${defectTag.id}`,
+  );
+  assert.equal(
+    defectEdgesAfterCross.body.threads.length,
+    3,
+    "rejected cross-tuple writes must not change edges",
+  );
+  for (const body of [
+    tagList.body,
+    tagQueryApi.body,
+    assignFirst.body,
+    batchBody,
+    batchReplay.body,
+    releaseDeleteBody,
+    foreignTagCreate.body,
+    foreignTagList.body,
+  ]) {
+    const text = JSON.stringify(body);
+    assert.equal(text.includes(apiKey), false, "tag API response leaks apiKey");
+    assert.equal(
+      text.includes(masterKey),
+      false,
+      "tag API response leaks masterKey",
+    );
+  }
+  pass("thread-tags-cross-project-isolation-tuple-404-secret-scan");
+
+  await page.setViewportSize({ height: 844, width: 390 });
+  await page.reload({ waitUntil: "networkidle" });
+  const tagNavOpener = page.getByRole("button", { name: "打开项目导航" });
+  await tagNavOpener.click();
+  const tagNavDrawer = page.getByRole("dialog", { name: "项目导航" });
+  await tagNavDrawer.waitFor();
+  const narrowManageOpener = tagNavDrawer.getByRole("button", { name: "管理标签" });
+  await narrowManageOpener.click();
+  const narrowManageDialog = page.getByRole("dialog", { name: "管理标签" });
+  await narrowManageDialog.waitFor();
+  await waitForActiveElement(".manage-tags-dialog #new-thread-tag-name");
+  assert.equal(
+    await narrowManageDialog
+      .getByLabel("新标签名称")
+      .evaluate((node) => document.activeElement === node),
+    true,
+    "narrow manage dialog must move focus to the new tag input",
+  );
+  const narrowTagSearch = narrowManageDialog.getByLabel("搜索标签");
+  await narrowTagSearch.fill("缺陷");
+  await page.waitForFunction(() =>
+    document.querySelectorAll(".thread-tag-manage-item").length === 1
+  );
+  await narrowManageDialog
+    .getByText("已分配 3 条线程", { exact: true })
+    .waitFor();
+  const narrowDeleteBox = await narrowManageDialog
+    .getByRole("button", { name: "删除标签 缺陷跟踪" })
+    .boundingBox();
+  assert.ok(
+    narrowDeleteBox && narrowDeleteBox.height >= 44 && narrowDeleteBox.width >= 44,
+    "narrow delete tag button must stay >= 44px",
+  );
+  const narrowManageCloseBox = await narrowManageDialog
+    .getByRole("button", { name: "关闭管理标签" })
+    .boundingBox();
+  assert.ok(
+    narrowManageCloseBox
+    && narrowManageCloseBox.height >= 44
+    && narrowManageCloseBox.width >= 44,
+    "narrow manage close button must stay >= 44px",
+  );
+  narrowTagFacingText = await page.locator("html").innerText();
+  await axe(page, "narrow light manage tags dialog");
+  await page.keyboard.press("Escape");
+  await narrowManageDialog.waitFor({ state: "detached" });
+  await waitForActiveText("管理标签");
+  assert.equal(
+    await narrowManageOpener.evaluate((node) => document.activeElement === node),
+    true,
+    "narrow manage Escape must return focus to its opener",
+  );
+  const narrowFilterGroup = tagNavDrawer.getByRole("group", {
+    name: "按标签筛选线程",
+  });
+  const narrowAllChip = narrowFilterGroup.getByRole("button", {
+    exact: true,
+    name: "全部",
+  });
+  const narrowDefectChip = narrowFilterGroup.getByRole("button", {
+    name: "缺陷跟踪",
+  });
+  await narrowDefectChip.waitFor();
+  const narrowChipBox = await narrowDefectChip.boundingBox();
+  assert.ok(
+    narrowChipBox && narrowChipBox.height >= 44 && narrowChipBox.width >= 44,
+    "narrow filter chip must stay >= 44px",
+  );
+  await narrowAllChip.focus();
+  await page.keyboard.press("Tab");
+  assert.equal(
+    await narrowDefectChip.evaluate((node) => document.activeElement === node),
+    true,
+    "Tab must move focus from 全部 to the tag filter chip",
+  );
+  assert.notEqual(
+    await narrowDefectChip.evaluate((node) => getComputedStyle(node).boxShadow),
+    "none",
+    "keyboard-focused filter chip must show a visible focus ring",
+  );
+  await page.keyboard.press("Enter");
+  await page.waitForFunction(() =>
+    document.querySelectorAll("#project-threads-list .thread-list-entry")
+      .length === 3
+  );
+  assert.equal(await narrowDefectChip.getAttribute("aria-pressed"), "true");
+  await axe(page, "narrow light tag filter drawer");
+  await page.screenshot({ fullPage: true, path: evidence.tagsNarrow });
+  await narrowAllChip.click();
+  await page.waitForFunction(
+    (count) =>
+      document.querySelectorAll("#project-threads-list .thread-list-entry")
+        .length === count,
+    allThreadCount,
+  );
+  await page.keyboard.press("Escape");
+  await tagNavDrawer.waitFor({ state: "detached" });
+  await waitForActiveText("项目");
+  assert.equal(
+    await tagNavOpener.evaluate((node) => document.activeElement === node),
+    true,
+    "Escape must close the drawer and return focus to its opener",
+  );
+  pass("thread-tags-narrow-light-manage-filter-44px-keyboard-focus-axe");
+
+  await page.getByRole("button", { name: /切换到暗色主题/ }).click();
+  await page.getByRole("button", { name: /切换到明色主题/ }).waitFor();
+  await tagNavOpener.click();
+  await tagNavDrawer.waitFor();
+  const narrowDarkChip = tagNavDrawer
+    .getByRole("group", { name: "按标签筛选线程" })
+    .getByRole("button", { name: "缺陷跟踪" });
+  await narrowDarkChip.waitFor();
+  await narrowDarkChip.click();
+  await page.waitForFunction(() =>
+    document.querySelectorAll("#project-threads-list .thread-list-entry")
+      .length === 3
+  );
+  assert.equal(await narrowDarkChip.getAttribute("aria-pressed"), "true");
+  await axe(page, "narrow dark tag filter drawer");
+  await page.screenshot({ fullPage: true, path: evidence.tagsNarrowDark });
+  await page.keyboard.press("Escape");
+  await tagNavDrawer.waitFor({ state: "detached" });
+  await page.getByRole("button", { name: /切换到明色主题/ }).click();
+  await page.getByRole("button", { name: /切换到暗色主题/ }).waitFor();
+  pass("thread-tags-narrow-dark-filter-axe");
+
   const gitCheckIgnore = spawnSync(
     "git",
     ["check-ignore", ".data/attachments/placeholder"],
@@ -2804,6 +3756,14 @@ try {
   ]
     .map((path) => readFileSync(path).toString("latin1"))
     .join("\n");
+  const tagScreenshotBytes = [
+    evidence.tagsDark,
+    evidence.tagsDesktop,
+    evidence.tagsNarrow,
+    evidence.tagsNarrowDark,
+  ]
+    .map((path) => readFileSync(path).toString("latin1"))
+    .join("\n");
   const publicSurfaces = [
     dom,
     databaseText,
@@ -2813,8 +3773,11 @@ try {
     auditFacingText,
     narrowAuditFacingText,
     searchFacingText,
+    tagFacingText,
+    narrowTagFacingText,
     auditScreenshotBytes,
     searchScreenshotBytes,
+    tagScreenshotBytes,
     JSON.stringify(results),
   ];
   for (const secret of [apiKey, masterKey, `Bearer ${apiKey}`]) {
@@ -2830,6 +3793,8 @@ try {
     auditFacingText,
     narrowAuditFacingText,
     searchFacingText,
+    tagFacingText,
+    narrowTagFacingText,
   ]) {
     assert.equal(
       surface.includes(attachmentsRoot),

@@ -45,7 +45,7 @@ Capability ID 是稳定治理标识；owner 是唯一逻辑子系统，不等于
 ### Public Collaboration
 
 - `CAP-COL-01` Public Collaboration Core — owner: Public Collaboration — 状态: 已交付核心 — 证据/建立切片: S-4、S-12；`src/adapters/outbound/sqlite/public-collaboration/thread-service.ts`、`tests/modules/public-collaboration/thread-message-api.test.ts`
-- `CAP-COL-02` Thread Catalog & Lifecycle — owner: Public Collaboration — 状态: 部分可用（Thread 创建、列表、切换、成员策略、回复引用与精确跳转已交付；标签、收藏和回收站未交付）— 证据/建立切片: S-12 [`progress.md`](../features/014-persistent-project-threads/progress.md)、S-14 [`progress.md`](../features/022-reply-references/progress.md)；扩展 S-18～S-20
+- `CAP-COL-02` Thread Catalog & Lifecycle — owner: Public Collaboration — 状态: 部分可用（Thread 创建、列表、切换、成员策略、回复引用与精确跳转、项目内标签与批量整理已交付；回收站未交付）— 证据/建立切片: S-12 [`progress.md`](../features/014-persistent-project-threads/progress.md)、S-14 [`progress.md`](../features/022-reply-references/progress.md)、S-18 [`progress.md`](../features/032-thread-tags-bulk-organize/progress.md)；扩展 S-20
 - `CAP-COL-03` Structured Content & Inline Decision — owner: Public Collaboration — 状态: 已交付核心（S-13 于 2026-08-10 ship；File Reference 冻结、reopen 穷尽验证与 stale 对账由 017/018 子片加固）— 证据/建立切片: S-13 [`tickets.md`](../features/015-structured-messages-inline-decisions/tickets.md)、[`progress.md`](../features/015-structured-messages-inline-decisions/progress.md)
 - `CAP-COL-04` Composer & Queue Continuity — owner: Public Collaboration — 状态: 部分可用（按线程草稿、附件占位、输入历史与清除策略已交付；消息队列/Steer 未交付）— 证据/建立切片: S-15 [`progress.md`](../features/023-thread-drafts/progress.md)；扩展 S-21
 - `CAP-COL-05` Message Media — owner: Public Collaboration — 状态: 已交付核心（图片附件；非图片媒体未覆盖）— 证据/建立切片: S-16 [`progress.md`](../features/024-image-attachments/progress.md)
@@ -104,7 +104,7 @@ S-9～S-12 的 `依赖: S-*` 是原历史文字，只说明当时切片记录；
 
 ## 当前在途
 
-（无；S-16 已于 2026-08-10、S-17 已于 2026-08-11 ship，见已交付记录）
+（无；S-16 已于 2026-08-10、S-17/S-18 已于 2026-08-11 ship，见已交付记录）
 
 ## 主题簇一：公开协作
 
@@ -112,7 +112,7 @@ S-9～S-12 的 `依赖: S-*` 是原历史文字，只说明当时切片记录；
 
 - [x] S-17 线程搜索与精确定位（CI-2.5） — 主子系统: Operations Projection；主 Capability: `CAP-OPS-02`；票据: [`features/031.../tickets.md`](../features/031-thread-search/tickets.md)；Ship: 2026-08-11（schema identity 16→17：thread_search_index；FTS5 勘察后选 LIKE contains 方案（A-169），消费协作 outbox、rebuild 完整性 fail-closed、snippet 命中窗口、游标分页、?thread=..&message=.. 精确 URL 定位、分层 Escape 修复；smoke:threads 42 断言 / 26 axe 状态 0 serious/critical；全量 264 文件/2367 用例 108.2s）；演示判据: owner 能按标题、内容和项目范围搜索线程并定位匹配消息，结果绝不跨项目泄漏；约束: 工作区=项目隔离，verified-handle=不适用，sandbox=不适用，凭据=索引排除秘密，审批=不适用，独立复核=交付必需，审计=查询不记录敏感正文；不复制 Clowder 品牌、源码或资产
   - 准入: 已交付前置: `CAP-COL-01`（已交付核心）；阻塞: S-23 的 `AUD-MVP` 先交付 `CAP-OPS-01` 与最薄 `CAP-OPS-02`，再由 `AUD-COL` 纵切交付 `CAP-COL-07` 并证明 Collaboration 事件可查询/导航；本片建立: `CAP-OPS-02` 的项目隔离线程索引与定位（规划中）。
-- [ ] S-18 线程标签与批量整理（CI-2.6） — 主子系统: Public Collaboration；主 Capability: `CAP-COL-02`；票据: 未创建；演示判据: owner 能创建、搜索、分配和删除项目内标签并批量整理线程，删除语义与刷新后状态一致；约束: 工作区=项目隔离，verified-handle=不适用，sandbox=不适用，凭据=不适用，审批=批量破坏性动作确认，独立复核=交付必需，审计=批量写入版本化；不复制 Clowder 品牌、源码或资产
+- [x] S-18 线程标签与批量整理（CI-2.6） — 主子系统: Public Collaboration；主 Capability: `CAP-COL-02`；票据: [`features/032.../tickets.md`](../features/032-thread-tags-bulk-organize/tickets.md)；Ship: 2026-08-11（schema identity 17→18 纯增 thread_tags/thread_tag_edges/thread_tag_operations 三表；折叠唯一幂等创建、contains 搜索+用量计数、同事务清边删除、幂等分配、listThreads tagId 筛选 + 恒在 tags 投影、receipt 批量整理重放安全/原子/上限；UI 管理对话框+chips+筛选条+多选批量条；顺手修 useModalSurface 抽屉暂停/恢复双缺陷（A-205）；smoke:threads 50 断言 / 32 axe 态 0 serious/critical；全量 267 文件/2431 用例 118.2s）；演示判据: owner 能创建、搜索、分配和删除项目内标签并批量整理线程，删除语义与刷新后状态一致；约束: 工作区=项目隔离，verified-handle=不适用，sandbox=不适用，凭据=不适用，审批=批量破坏性动作确认，独立复核=交付必需，审计=批量写入版本化；不复制 Clowder 品牌、源码或资产
   - 准入: 已交付前置: `CAP-COL-02` 的 Thread Catalog 核心；阻塞: `CAP-OPS-02` 线程查询（规划中，由 S-17 建立）与 `CAP-GOV-02` 批量破坏性确认（规划中，由 S-24 建立）；本片建立: `CAP-COL-02` 的标签与版本化批量整理（规划中）。
 - [x] S-19 线程收藏与排序（CI-2.7） — 主子系统: Public Collaboration；主 Capability: `CAP-COL-02`；票据: [`features/025.../tickets.md`](../features/025-thread-favorites/tickets.md)；Ship: 2026-08-10（schema identity 13→14：thread_favorites；幂等收藏命令、列表恒在投影 + favorites=true 稳定排序、星标 aria-pressed 乐观回滚、tablist 收藏视图、重启保持；smoke:threads 30 断言 / 18 axe 状态 0 违规；全量 244 文件/2089 用例 110.9s）；演示判据: owner 能收藏/取消收藏线程并在独立视图稳定排序，重启后收藏状态保持；约束: 工作区=项目隔离，verified-handle=不适用，sandbox=不适用，凭据=不适用，审批=不适用，独立复核=交付必需（review 豁免记录于 progress），审计=收藏写入可追溯（行内 created_at）；不复制 Clowder 品牌、源码或资产
   - 准入: 已交付前置: `CAP-COL-02` 的 Thread Catalog 核心；已交付架构单元: S-9 的本机非敏感偏好 Adapter（不是领域 Capability）；本片建立: `CAP-COL-02` 的收藏与稳定排序（规划中）。

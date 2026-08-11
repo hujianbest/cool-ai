@@ -69,6 +69,7 @@ function stubCockpitRequests(workspacePath?: string): void {
           members: [],
           projectVersion: 1,
         },
+        "/api/projects/project-1/thread-tags?limit=100": { tags: [] },
         "/api/agents": { agents: [] },
       };
       const payload = payloads[url];
@@ -153,6 +154,42 @@ describe("owner-controlled cockpit mobile surfaces", () => {
     );
     expect(document.querySelectorAll('[aria-modal="true"]')).toHaveLength(1);
     expect(rebindOpener).toHaveFocus();
+  });
+
+  it("returns focus to a layered thread dialog opener inside the drawer on close", async () => {
+    stubViewport(true);
+    stubCockpitRequests();
+    const user = userEvent.setup();
+    render(<ProjectPanel />);
+    const projectOpener = screen.getByRole("button", { name: "打开项目导航" });
+    await user.click(projectOpener);
+    const projects = screen.getByRole("dialog", { name: "项目导航" });
+    const manageOpener = await within(projects).findByRole("button", {
+      name: "管理标签",
+    });
+    await user.click(manageOpener);
+
+    const manage = await screen.findByRole("dialog", { name: "管理标签" });
+    expect(projects).not.toHaveAttribute("aria-modal");
+    expect(within(manage).getByLabelText("新标签名称")).toHaveFocus();
+
+    await user.keyboard("{Escape}");
+    await waitFor(() =>
+      expect(screen.queryByRole("dialog", { name: "管理标签" })).toBeNull(),
+    );
+    expect(screen.getByRole("dialog", { name: "项目导航" })).toHaveAttribute(
+      "aria-modal",
+      "true",
+    );
+    expect(manageOpener).toHaveFocus();
+    expect(document.body.style.overflow).toBe("hidden");
+
+    await user.keyboard("{Escape}");
+    await waitFor(() =>
+      expect(screen.queryByRole("dialog", { name: "项目导航" })).toBeNull(),
+    );
+    expect(projectOpener).toHaveFocus();
+    expect(document.body.style.overflow).toBe("");
   });
 
   it("allows one trapped inert modal at a time and preserves the collaboration draft", async () => {

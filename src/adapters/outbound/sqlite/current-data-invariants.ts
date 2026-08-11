@@ -231,6 +231,12 @@ export const CURRENT_DATA_INVARIANTS = [
   `SELECT f.project_id FROM thread_favorites f
    WHERE NOT EXISTS(SELECT 1 FROM collaboration_threads t
                     WHERE (t.project_id,t.id)=(f.project_id,f.thread_id))`,
+  `SELECT e.project_id FROM thread_tag_edges e
+   WHERE NOT EXISTS(SELECT 1 FROM collaboration_threads t
+                    WHERE (t.project_id,t.id)=(e.project_id,e.thread_id))`,
+  `SELECT e.project_id FROM thread_tag_edges e
+   WHERE NOT EXISTS(SELECT 1 FROM thread_tags g
+                    WHERE (g.project_id,g.id)=(e.project_id,e.tag_id))`,
   `SELECT h.project_id FROM input_history_entries h
    WHERE NOT EXISTS(SELECT 1 FROM collaboration_threads t
                     WHERE (t.project_id,t.id)=(h.project_id,h.thread_id))`,
