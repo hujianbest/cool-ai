@@ -168,7 +168,7 @@ function insertOutboxRow(input: {
 
 describe("audit outbox schema", () => {
   it("bootstraps the three audit tables at identity 17", () => {
-    expect(database.prepare("PRAGMA user_version").get()).toEqual({ user_version: 18 });
+    expect(database.prepare("PRAGMA user_version").get()).toEqual({ user_version: 19 });
     const names = database.prepare(`
       SELECT name FROM sqlite_master
       WHERE type='table' AND name LIKE 'audit_%' ORDER BY name

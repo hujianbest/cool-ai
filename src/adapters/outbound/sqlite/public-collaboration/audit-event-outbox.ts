@@ -24,6 +24,9 @@ export const AUDITABLE_COLLABORATION_EVENT_TYPES: ReadonlySet<string> = new Set(
   "run_stopped",
   "task_claimed",
   "tasks_created",
+  "thread_deleted",
+  "thread_purged",
+  "thread_restored",
 ]);
 
 // Flat public scalar keys that already appear in the collaboration event
@@ -42,7 +45,7 @@ const PUBLIC_PAYLOAD_KEYS: ReadonlySet<string> = new Set([
 // Public conversation text keys (already owner-visible in the thread UI). They
 // enter the audit trail only as bounded, credential-classified excerpts.
 const EXCERPT_TEXT_KEYS: ReadonlySet<string> = new Set([
-  "answer", "question", "reason", "summary",
+  "answer", "question", "reason", "summary", "title",
 ]);
 
 export const AUDIT_EXCERPT_MAX_GRAPHEMES = 200;

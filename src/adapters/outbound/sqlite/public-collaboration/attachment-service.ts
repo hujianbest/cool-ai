@@ -5,6 +5,7 @@ import type { DatabaseSync } from "node:sqlite";
 
 import { CollaborationError } from "@/src/modules/public-collaboration";
 import { openDatabase } from "@/src/adapters/outbound/sqlite/connection";
+import { ensureActiveThread } from "@/src/adapters/outbound/sqlite/public-collaboration/active-thread-guards";
 import type {
   AttachmentRemoveResponse,
   AttachmentUploadResponse,
@@ -129,20 +130,6 @@ function resolveStoragePath(
   return target;
 }
 
-function requireThreadTuple(
-  database: DatabaseSync,
-  projectId: string,
-  threadId: string,
-): void {
-  if (
-    !database
-      .prepare("SELECT 1 FROM collaboration_threads WHERE project_id=? AND id=?")
-      .get(projectId, threadId)
-  ) {
-    resourceNotFound();
-  }
-}
-
 type AttachmentRow = {
   createdAt: string;
   fileName: string;
@@ -220,7 +207,7 @@ export function uploadAttachment(
   database.exec("PRAGMA busy_timeout=5000");
   try {
     return transaction(database, () => {
-      requireThreadTuple(database, projectId, threadId);
+      ensureActiveThread(database, projectId, threadId);
 
       const existing = database
         .prepare(`${ATTACHMENT_SELECT} WHERE project_id=? AND thread_id=? AND sha256=?`)
@@ -301,7 +288,7 @@ export function removeAttachment(
   database.exec("PRAGMA busy_timeout=5000");
   try {
     return transaction(database, () => {
-      requireThreadTuple(database, projectId, threadId);
+      ensureActiveThread(database, projectId, threadId);
       const row = database
         .prepare(`${ATTACHMENT_SELECT} WHERE project_id=? AND thread_id=? AND id=?`)
         .get(projectId, threadId, attachmentId) as AttachmentRow | undefined;
@@ -438,7 +425,7 @@ export function readAttachmentContent(
 ): AttachmentContent {
   const database = openDatabase(databasePath);
   try {
-    requireThreadTuple(database, projectId, threadId);
+    ensureActiveThread(database, projectId, threadId);
     const row = database
       .prepare(
         `SELECT status,message_id AS messageId,mime_type AS mimeType

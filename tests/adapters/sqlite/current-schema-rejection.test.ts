@@ -54,7 +54,7 @@ const cases: Array<{
   input: UnsupportedSchemaInput;
   label: string;
 }> = [
-  ...([1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 17] as const).map((userVersion) => ({
+  ...([1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 17, 18] as const).map((userVersion) => ({
     expectedCode: "SCHEMA_UNSUPPORTED" as const,
     input: { kind: "legacy-identity" as const, userVersion },
     label: `legacy identity ${userVersion}`,
@@ -71,7 +71,7 @@ const cases: Array<{
   },
   {
     expectedCode: "SCHEMA_UNSUPPORTED",
-    input: { kind: "unsupported-identity", userVersion: 19 },
+    input: { kind: "unsupported-identity", userVersion: 20 },
     label: "unsupported future identity",
   },
   {

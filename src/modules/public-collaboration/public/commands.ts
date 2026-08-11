@@ -10,9 +10,12 @@ import type {
   ProjectMessageResponse,
   RunStartResponse,
   StartCollaborationResponse,
+  ThreadDeleteResponse,
+  ThreadPurgeResponse,
   ThreadDraftClearResponse,
   ThreadDraftSaveResponse,
   ThreadFavoriteSetResponse,
+  ThreadRestoreResponse,
   ThreadTagAssignmentResponse,
   ThreadTagBatchResponse,
   ThreadTagCreateResponse,
@@ -130,6 +133,22 @@ export interface PublicCollaborationCommands {
     threadId: string,
     rawInput: unknown,
   ): PublicCollaborationCommandResult<ThreadFavoriteSetResponse>;
+  deleteThread(
+    databasePath: string,
+    projectId: string,
+    threadId: string,
+  ): PublicCollaborationCommandResult<ThreadDeleteResponse>;
+  restoreThread(
+    databasePath: string,
+    projectId: string,
+    threadId: string,
+  ): PublicCollaborationCommandResult<ThreadRestoreResponse>;
+  purgeThread(
+    databasePath: string,
+    attachmentsRoot: string,
+    projectId: string,
+    threadId: string,
+  ): PublicCollaborationCommandResult<ThreadPurgeResponse>;
   createThreadTag(
     databasePath: string,
     projectId: string,

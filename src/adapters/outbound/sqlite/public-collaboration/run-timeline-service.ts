@@ -2,6 +2,7 @@ import type { DatabaseSync } from "node:sqlite";
 
 import { CollaborationError } from "@/src/modules/public-collaboration";
 import { openDatabase } from "@/src/adapters/outbound/sqlite/connection";
+import { ensureActiveThread } from "@/src/adapters/outbound/sqlite/public-collaboration/active-thread-guards";
 import {
   timelinePayloadSchemas,
   type CursorPage,
@@ -46,6 +47,7 @@ function requireRunTuple(
   threadId: string,
   runId: string,
 ): void {
+  ensureActiveThread(database, projectId, threadId);
   const row = database.prepare(
     `SELECT 1
      FROM collaboration_runs AS run

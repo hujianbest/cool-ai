@@ -488,7 +488,9 @@ describe("manage tags dialog", () => {
       ),
     );
 
-    await within(dialog).findByRole("status");
+    expect(
+      await within(dialog).findByText("已删除标签“发布”，解除 1 条分配。"),
+    ).toBeInTheDocument();
     await user.click(
       within(dialog).getByRole("button", { name: "关闭管理标签" }),
     );

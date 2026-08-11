@@ -95,6 +95,12 @@ export function searchInputHistory(
         `SELECT id,thread_id AS threadId,content,created_at AS createdAt
          FROM input_history_entries
          WHERE project_id=? AND content LIKE '%'||?||'%' ESCAPE '\\'
+           AND EXISTS(
+             SELECT 1 FROM collaboration_threads AS threads
+             WHERE threads.project_id=input_history_entries.project_id
+               AND threads.id=input_history_entries.thread_id
+               AND threads.deleted_at IS NULL
+           )
          ORDER BY created_at DESC,id DESC
          LIMIT ${SEARCH_LIMIT}`,
       )

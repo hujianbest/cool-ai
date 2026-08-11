@@ -10,6 +10,7 @@ import {
   completeOperationReceipt,
   readOperationReceipt,
 } from "@/src/adapters/outbound/sqlite/public-collaboration/operation-receipts";
+import { ensureActiveThread } from "@/src/adapters/outbound/sqlite/public-collaboration/active-thread-guards";
 import {
   appendBatchTx,
   nextThreadActivitySequenceTx,
@@ -1007,6 +1008,7 @@ export function controlThreadRun(
   let tupleExists = false;
   try {
     return transaction(database, () => {
+      ensureActiveThread(database, projectId, threadId);
       const row = database
         .prepare(
           `SELECT runs.id,runs.project_id AS projectId,runs.thread_id AS threadId,
@@ -1342,6 +1344,7 @@ export function answerThreadDecision(
   let tupleExists = false;
   try {
     return transaction(database, () => {
+      ensureActiveThread(database, projectId, threadId);
       const row = database
         .prepare(
           `SELECT decisions.id,decisions.project_id AS projectId,

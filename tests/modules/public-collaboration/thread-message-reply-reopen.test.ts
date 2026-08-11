@@ -59,7 +59,7 @@ function expectReopenFailClosed(): void {
   const raw = new DatabaseSync(databasePath);
   try {
     expect(raw.isTransaction).toBe(false);
-    expect(raw.prepare("PRAGMA user_version").get()).toEqual({ user_version: 18 });
+    expect(raw.prepare("PRAGMA user_version").get()).toEqual({ user_version: 19 });
   } finally {
     raw.close();
   }
@@ -164,7 +164,7 @@ describe("reply edge reopen validation on a legal owner graph", () => {
     for (let reopen = 0; reopen < 2; reopen += 1) {
       const database = openDatabase(databasePath);
       try {
-        expect(database.prepare("PRAGMA user_version").get()).toEqual({ user_version: 18 });
+        expect(database.prepare("PRAGMA user_version").get()).toEqual({ user_version: 19 });
       } finally {
         database.close();
       }

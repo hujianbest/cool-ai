@@ -36,6 +36,9 @@ const COLLABORATION_EVENT_TYPE_COPY: Record<string, string> = {
   run_stopped: "运行已停止",
   task_claimed: "任务已认领",
   tasks_created: "任务已创建",
+  thread_deleted: "线程已移入回收站",
+  thread_purged: "线程已永久删除",
+  thread_restored: "线程已恢复",
 };
 
 // Readable copy for the audit event types, centralized so any future type not

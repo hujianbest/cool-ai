@@ -2,6 +2,7 @@ import type { DatabaseSync } from "node:sqlite";
 
 import { CollaborationError } from "@/src/modules/public-collaboration";
 import { openDatabase } from "@/src/adapters/outbound/sqlite/connection";
+import { ensureActiveThread } from "@/src/adapters/outbound/sqlite/public-collaboration/active-thread-guards";
 import type { ThreadFavoriteSetResponse } from "@/src/shared/collaboration-contracts";
 
 function transaction<T>(database: DatabaseSync, operation: () => T): T {
@@ -23,14 +24,6 @@ function invalidInput(fields: Record<string, string>): never {
   });
 }
 
-function resourceNotFound(): never {
-  throw new CollaborationError(
-    "RESOURCE_NOT_FOUND",
-    404,
-    "Resource was not found.",
-  );
-}
-
 function parseFavoriteInput(rawInput: unknown): { favorite: boolean } {
   if (!rawInput || typeof rawInput !== "object" || Array.isArray(rawInput)) {
     invalidInput({ input: "invalid_format" });
@@ -49,20 +42,6 @@ function parseFavoriteInput(rawInput: unknown): { favorite: boolean } {
   return { favorite: input.favorite as boolean };
 }
 
-function requireThreadTuple(
-  database: DatabaseSync,
-  projectId: string,
-  threadId: string,
-): void {
-  if (
-    !database
-      .prepare("SELECT 1 FROM collaboration_threads WHERE project_id=? AND id=?")
-      .get(projectId, threadId)
-  ) {
-    resourceNotFound();
-  }
-}
-
 // Favorites are an idempotent preference-class fact (draft precedent): no
 // operation receipt, no version column. A repeated `true` keeps the original
 // created_at so the favorites view ordering stays stable across re-marks.
@@ -77,7 +56,7 @@ export function setThreadFavorite(
   database.exec("PRAGMA busy_timeout=5000");
   try {
     return transaction(database, () => {
-      requireThreadTuple(database, projectId, threadId);
+      ensureActiveThread(database, projectId, threadId);
       if (input.favorite) {
         database
           .prepare(

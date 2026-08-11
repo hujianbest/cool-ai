@@ -43,6 +43,7 @@ export * as structuredMessageStore from "@/src/adapters/outbound/sqlite/public-c
 export * as inputHistoryService from "@/src/adapters/outbound/sqlite/public-collaboration/input-history-service";
 export * as threadDraftService from "@/src/adapters/outbound/sqlite/public-collaboration/thread-draft-service";
 export * as threadFavoriteService from "@/src/adapters/outbound/sqlite/public-collaboration/thread-favorite-service";
+export * as threadLifecycleService from "@/src/adapters/outbound/sqlite/public-collaboration/thread-lifecycle-service";
 export * as threadService from "@/src/adapters/outbound/sqlite/public-collaboration/thread-service";
 export * as threadTagService from "@/src/adapters/outbound/sqlite/public-collaboration/thread-tag-service";
 export * as turnOrchestrator from "@/src/adapters/outbound/sqlite/public-collaboration/turn-orchestrator";

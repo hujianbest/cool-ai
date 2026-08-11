@@ -18,6 +18,7 @@ export class CollaborationError extends Error {
       fields?: Record<string, string>;
       currentVersion?: number;
       missing?: Array<"participants" | "tasks" | "claim">;
+      reason?: "thread_deleted";
     } = {},
   ) {
     super(message);
@@ -41,6 +42,7 @@ export function collaborationErrorBody(
       ...(error.details.currentVersion !== undefined
         ? { currentVersion: error.details.currentVersion }
         : {}),
+      ...(error.details.reason ? { reason: error.details.reason } : {}),
     },
   };
 }

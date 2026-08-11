@@ -272,6 +272,9 @@ export const CURRENT_DATA_INVARIANTS = [
    WHERE i.kind='message' AND NOT EXISTS(
      SELECT 1 FROM collaboration_messages m
      WHERE (m.project_id,m.thread_id,m.id)=(i.project_id,i.thread_id,i.message_id))`,
+  // Feature 033: purge markers live only inside the purge transaction; a row
+  // visible in a consistent snapshot means a marker leaked its transaction.
+  `SELECT m.project_id FROM thread_purge_markers m`,
 ] as const;
 
 function canonicalJson(value: string, maximum: number): unknown {

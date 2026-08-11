@@ -7,6 +7,7 @@ import type {
   MessagePageResponse,
   PendingProposalDto,
   PublicCollaborationPageCursor,
+  RecycleBinListResponseDto,
   ThreadDraftReadResponse,
   ThreadListResponseDto,
   ThreadTagListResponseDto,
@@ -30,6 +31,16 @@ export interface PublicCollaborationQueries {
     projectId: string,
     rawInput?: unknown,
   ): PublicCollaborationCommandResult<ThreadListResponseDto>;
+  /**
+   * 回收站只读缝（特性 033 T-03）：仅列 `deleted_at IS NOT NULL` 的线程，
+   * `deleted_at DESC, id ASC` 决胜 + 游标分页；活跃线程永不入列，
+   * 跨项目由 tuple 谓词机械隔离。
+   */
+  listDeletedThreads(
+    databasePath: string,
+    projectId: string,
+    rawInput?: unknown,
+  ): PublicCollaborationCommandResult<RecycleBinListResponseDto>;
   listProjectTags(
     databasePath: string,
     projectId: string,

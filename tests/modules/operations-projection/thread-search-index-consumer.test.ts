@@ -313,7 +313,7 @@ function checkpointRow(): { lastOutboxSeq: number; status: string } | undefined 
 describe("thread search index schema", () => {
   it("bootstraps identity 17 with the thread_search_index table and its constraints", () => {
     seedProjectOnly();
-    expect(database.prepare("PRAGMA user_version").get()).toEqual({ user_version: 18 });
+    expect(database.prepare("PRAGMA user_version").get()).toEqual({ user_version: 19 });
 
     insertIndexRow({ content: "部署计划讨论", kind: "thread_title", threadId: "thread-1" });
     insertIndexRow({

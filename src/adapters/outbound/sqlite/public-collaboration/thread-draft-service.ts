@@ -2,6 +2,7 @@ import type { DatabaseSync } from "node:sqlite";
 
 import { CollaborationError } from "@/src/modules/public-collaboration";
 import { openDatabase } from "@/src/adapters/outbound/sqlite/connection";
+import { ensureActiveThread } from "@/src/adapters/outbound/sqlite/public-collaboration/active-thread-guards";
 import { classifyPublicTextFromDatabaseConnection } from "@/src/adapters/outbound/sqlite/public-collaboration/public-text-credential-classifier";
 import type {
   ThreadDraftAttachmentDto,
@@ -39,14 +40,6 @@ function invalidInput(fields: Record<string, string>): never {
   throw new CollaborationError("INVALID_INPUT", 400, "Thread draft input is invalid.", {
     fields,
   });
-}
-
-function resourceNotFound(): never {
-  throw new CollaborationError(
-    "RESOURCE_NOT_FOUND",
-    404,
-    "Resource was not found.",
-  );
 }
 
 type DraftInput = {
@@ -155,20 +148,6 @@ const DRAFT_SELECT = `SELECT project_id AS projectId,thread_id AS threadId,conte
                              updated_at AS updatedAt
                       FROM thread_drafts`;
 
-function requireThreadTuple(
-  database: DatabaseSync,
-  projectId: string,
-  threadId: string,
-): void {
-  if (
-    !database
-      .prepare("SELECT 1 FROM collaboration_threads WHERE project_id=? AND id=?")
-      .get(projectId, threadId)
-  ) {
-    resourceNotFound();
-  }
-}
-
 function readDraftRow(
   database: DatabaseSync,
   projectId: string,
@@ -218,7 +197,7 @@ export function saveThreadDraft(
   database.exec("PRAGMA busy_timeout=5000");
   try {
     return transaction(database, () => {
-      requireThreadTuple(database, projectId, threadId);
+      ensureActiveThread(database, projectId, threadId);
       requireReplyTarget(database, projectId, threadId, input.replyToMessageId);
       const contentSaved =
         classifyPublicTextFromDatabaseConnection(database, input.content) === null;
@@ -271,7 +250,7 @@ export function clearThreadDraft(
   database.exec("PRAGMA busy_timeout=5000");
   try {
     return transaction(database, () => {
-      requireThreadTuple(database, projectId, threadId);
+      ensureActiveThread(database, projectId, threadId);
       database
         .prepare("DELETE FROM thread_drafts WHERE project_id=? AND thread_id=?")
         .run(projectId, threadId);
@@ -289,7 +268,7 @@ export function readThreadDraft(
 ): { body: ThreadDraftReadResponse; status: 200 } {
   const database = openDatabase(databasePath);
   try {
-    requireThreadTuple(database, projectId, threadId);
+    ensureActiveThread(database, projectId, threadId);
     const row = readDraftRow(database, projectId, threadId);
     return {
       body: { draft: row ? mapDraftRow(row) : null },

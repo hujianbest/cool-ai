@@ -3,6 +3,7 @@ import type { DatabaseSync } from "node:sqlite";
 
 import { CollaborationError } from "@/src/modules/public-collaboration";
 import { openDatabase } from "@/src/adapters/outbound/sqlite/connection";
+import { ensureActiveThread } from "@/src/adapters/outbound/sqlite/public-collaboration/active-thread-guards";
 import { canonicalRequestHash } from "@/src/adapters/outbound/sqlite/public-collaboration/operation-receipts";
 import type {
   ThreadTagAssignmentResponse,
@@ -180,7 +181,13 @@ export function listProjectTags(
                 tags.created_at AS createdAt,
                 (SELECT count(*) FROM thread_tag_edges AS edges
                   WHERE edges.project_id=tags.project_id
-                    AND edges.tag_id=tags.id) AS threadCount
+                    AND edges.tag_id=tags.id
+                    AND EXISTS(
+                      SELECT 1 FROM collaboration_threads AS threads
+                      WHERE threads.project_id=edges.project_id
+                        AND threads.id=edges.thread_id
+                        AND threads.deleted_at IS NULL
+                    )) AS threadCount
          FROM thread_tags AS tags
          WHERE tags.project_id=?
            ${input.query === null ? "" : "AND instr(lower(tags.name), lower(?))>0"}
@@ -281,6 +288,7 @@ export function setThreadTagAssignment(
   database.exec("PRAGMA busy_timeout=5000");
   try {
     return transaction(database, () => {
+      ensureActiveThread(database, projectId, threadId);
       requireAssignmentTuple(database, projectId, threadId, input.tagId);
       if (input.assigned) {
         database
@@ -409,7 +417,7 @@ function requireBatchThreads(
   const found = database
     .prepare(
       `SELECT count(*) AS count FROM collaboration_threads
-       WHERE project_id=? AND id IN (${placeholders})`,
+       WHERE project_id=? AND deleted_at IS NULL AND id IN (${placeholders})`,
     )
     .get(projectId, ...threadIds) as { count: number };
   if (Number(found.count) !== threadIds.length) resourceNotFound();

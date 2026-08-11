@@ -147,6 +147,7 @@ const HIT_SELECT = `
   JOIN collaboration_threads t
     ON t.project_id=i.project_id AND t.id=i.thread_id
   WHERE i.project_id=? AND instr(lower(i.content), lower(?))>0
+    AND t.deleted_at IS NULL
 `;
 
 // occurred_at DESC, then (thread_id, message_id) ASC: within one project the

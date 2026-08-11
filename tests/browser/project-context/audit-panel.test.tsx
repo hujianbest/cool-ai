@@ -247,6 +247,41 @@ describe("Audit panel", () => {
     ).toBeInTheDocument();
   });
 
+  it("renders the thread recycle-bin lifecycle events with collaboration copy and badge", async () => {
+    const AuditPanel = await auditPanel();
+    const lifecycleCopy: ReadonlyArray<readonly [string, string]> = [
+      ["thread_deleted", "线程已移入回收站"],
+      ["thread_restored", "线程已恢复"],
+      ["thread_purged", "线程已永久删除"],
+    ];
+    const events = lifecycleCopy.map(([eventType], index) =>
+      auditEvent({
+        actorType: "owner",
+        eventType,
+        id: `event-${100 - index}`,
+        outboxSeq: 100 - index,
+        payload: { threadId: "thread-1" },
+      }),
+    );
+    vi.stubGlobal(
+      "fetch",
+      vi.fn(() => Promise.resolve(Response.json(page(events)))),
+    );
+    render(<AuditPanel projectId="project-1" />);
+
+    const list = await screen.findByRole("list", { name: "审计事件" });
+    const rows = within(list).getAllByRole("listitem");
+    expect(rows).toHaveLength(3);
+    rows.forEach((row, index) => {
+      expect(
+        within(row).getByRole("heading", { name: lifecycleCopy[index]![1] }),
+      ).toBeInTheDocument();
+      const badge = within(row).getByText("协作");
+      expect(badge).toHaveClass("status-label");
+      expect(badge).toHaveClass("status-queued");
+    });
+  });
+
   it("badges every event with its source domain in a mixed execution/collaboration list", async () => {
     const AuditPanel = await auditPanel();
     const events = [

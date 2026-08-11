@@ -69,8 +69,15 @@ class CollaborationResponseError extends ApiDisplayError {
   constructor(
     message: string,
     readonly status: number,
+    readonly reason: "thread_deleted" | null = null,
   ) {
     super(message);
+  }
+}
+
+class ThreadDeletedError extends CollaborationResponseError {
+  constructor() {
+    super("该线程已移入回收站。", 404, "thread_deleted");
   }
 }
 
@@ -79,9 +86,24 @@ class InvalidThreadEnvelopeError extends Error {}
 async function readApiResponse<T>(response: Response, fallback: string): Promise<T> {
   const payload = await readJson<T & Partial<CollaborationApiError>>(response);
   if (!response.ok) {
+    if (
+      payload
+      && typeof payload === "object"
+      && "error" in payload
+      && payload.error
+      && typeof payload.error === "object"
+      && (payload.error as { reason?: string }).reason === "thread_deleted"
+    ) {
+      throw new ThreadDeletedError();
+    }
     throw new CollaborationResponseError(apiErrorCopy(payload, fallback), response.status);
   }
   return payload;
+}
+
+function parseThreadRestoreResponse(value: unknown, threadId: string): boolean {
+  if (!exactKeys(value, ["restored", "threadId"])) return false;
+  return value.restored === true && value.threadId === threadId;
 }
 
 function operationId(): string {
@@ -1104,6 +1126,10 @@ export function CollaborationPanel({
   const [loading, setLoading] = useState(true);
   const [sending, setSending] = useState(false);
   const [reloadKey, setReloadKey] = useState(0);
+  const [threadDeletedPlaceholder, setThreadDeletedPlaceholder] = useState(false);
+  const [threadDeletedRestorePending, setThreadDeletedRestorePending] = useState(false);
+  const [threadDeletedError, setThreadDeletedError] = useState<string | null>(null);
+  const [threadDeletedNotice, setThreadDeletedNotice] = useState("");
   const [factsPage, setFactsPage] = useState<FactPageResponse | null>(null);
   const [factsTargetKey, setFactsTargetKey] = useState("");
   const [factsError, setFactsError] = useState<string | null>(null);
@@ -1257,6 +1283,8 @@ export function CollaborationPanel({
           && expectedEpoch === targetEpochRef.current
           && request.isCurrent()
         ) {
+          setThreadDeletedPlaceholder(false);
+          setThreadDeletedError(null);
           applyRead(result.state, true);
           setRunSelection({
             activeRun: result.envelope.activeRun,
@@ -1270,9 +1298,13 @@ export function CollaborationPanel({
             );
           } else {
             setRunSelectionNotice((current) =>
+              current === "线程已恢复。"
+                ? current
+                : (
               current === "所选运行无效或已失效，已清除选择。"
                 ? current
                 : "尚未选择运行"
+                )
             );
           }
           if (showLoading) {
@@ -1285,6 +1317,18 @@ export function CollaborationPanel({
       }
       throw new Error("thread tuple required");
     } catch (cause) {
+      if (
+        cause instanceof ThreadDeletedError
+        && threadId
+        && mountedRef.current
+        && expectedEpoch === targetEpochRef.current
+        && request.isCurrent()
+      ) {
+        setThreadDeletedPlaceholder(true);
+        setThreadDeletedError(null);
+        setLoadError(null);
+        return;
+      }
       if (
         selectedRunId
         && (
@@ -1337,6 +1381,10 @@ export function CollaborationPanel({
     factRequestInFlightRef.current = false;
     setState(null);
     setRunSelection(null);
+    setThreadDeletedPlaceholder(false);
+    setThreadDeletedRestorePending(false);
+    setThreadDeletedError(null);
+    setThreadDeletedNotice("");
     setFactsPage(null);
     setFactsTargetKey("");
     setFactsError(null);
@@ -2660,6 +2708,44 @@ export function CollaborationPanel({
     window.dispatchEvent(new PopStateEvent("popstate"));
   }
 
+  async function restoreDeletedThread() {
+    if (!threadId) return;
+    setThreadDeletedRestorePending(true);
+    setThreadDeletedError(null);
+    try {
+      const response = await fetch(
+        `/api/projects/${encodeURIComponent(projectId)}/threads/${encodeURIComponent(threadId)}/restore`,
+        { method: "POST" },
+      );
+      const payload = await readJson<unknown>(response);
+      if (!response.ok) {
+        throw new Error(
+          apiErrorCopy(
+            payload as Partial<CollaborationApiError>,
+            "恢复线程失败，请稍后重试。",
+          ),
+        );
+      }
+      if (!parseThreadRestoreResponse(payload, threadId)) {
+        throw new Error("invalid thread restore response");
+      }
+      setThreadDeletedPlaceholder(false);
+      setThreadDeletedNotice("线程已恢复。");
+      setRunSelectionNotice("线程已恢复。");
+      setReloadKey((value) => value + 1);
+    } catch (cause) {
+      setThreadDeletedError(caughtApiErrorCopy(cause, "恢复线程失败，请稍后重试。"));
+    } finally {
+      setThreadDeletedRestorePending(false);
+    }
+  }
+
+  function returnToThreadList() {
+    const href = `/projects/${encodeURIComponent(projectId)}`;
+    window.history.replaceState(window.history.state, "", href);
+    window.dispatchEvent(new PopStateEvent("popstate"));
+  }
+
   return (
     <section aria-labelledby="collaboration-title" className="stack">
       <div className="panel-heading">
@@ -2686,7 +2772,7 @@ export function CollaborationPanel({
         ) : null}
       </div>
 
-      {showRun ? (
+      {showRun && !threadDeletedPlaceholder ? (
         <section
           aria-labelledby={`run-selection-title-${projectId}`}
           className="run-detail"
@@ -2815,6 +2901,31 @@ export function CollaborationPanel({
         <p aria-busy="true" className="state-message">
           正在加载项目群聊…
         </p>
+      ) : threadDeletedPlaceholder ? (
+        <div className="state-message thread-deleted-placeholder">
+          <p>该线程已移入回收站。</p>
+          {threadDeletedError ? (
+            <p className="error-text" role="alert">
+              {threadDeletedError}
+            </p>
+          ) : null}
+          <div className="form-row">
+            <button
+              disabled={threadDeletedRestorePending}
+              onClick={() => void restoreDeletedThread()}
+              type="button"
+            >
+              {threadDeletedRestorePending ? "正在恢复…" : "恢复线程"}
+            </button>
+            <button
+              disabled={threadDeletedRestorePending}
+              onClick={returnToThreadList}
+              type="button"
+            >
+              返回线程列表
+            </button>
+          </div>
+        </div>
       ) : loadError ? (
         <div className="state-message">
           <p className="error-text" role="alert">
@@ -3405,6 +3516,11 @@ export function CollaborationPanel({
           ) : null}
         </>
       )}
+      {threadDeletedNotice ? (
+        <p aria-live="polite" role="status">
+          {threadDeletedNotice}
+        </p>
+      ) : null}
     </section>
   );
 }

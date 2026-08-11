@@ -45,7 +45,13 @@
     ".next-attach-repro-2692/types/**/*.ts",
     ".next-attach-repro-2692/dev/types/**/*.ts",
     ".next-thread-smoke-2288/types/**/*.ts",
-    ".next-thread-smoke-2288/dev/types/**/*.ts"
+    ".next-thread-smoke-2288/dev/types/**/*.ts",
+    ".next-thread-smoke-4208/types/**/*.ts",
+    ".next-thread-smoke-4208/dev/types/**/*.ts",
+    ".next-thread-smoke-18160/types/**/*.ts",
+    ".next-thread-smoke-18160/dev/types/**/*.ts",
+    ".next-thread-smoke-2364/types/**/*.ts",
+    ".next-thread-smoke-2364/dev/types/**/*.ts"
   ],
   "exclude": [
     "node_modules"

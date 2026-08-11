@@ -27,6 +27,12 @@ import {
 } from "@/src/shared/api-error-copy";
 import type { ApiError } from "@/src/shared/contracts";
 import type {
+  RecycleBinListResponseDto,
+  ThreadDeleteResponse,
+  ThreadPurgeResponse,
+  ThreadRestoreResponse,
+} from "@/src/shared/collaboration-contracts";
+import type {
   MembershipState,
   ProjectMember,
 } from "@/src/shared/project-context-contracts";
@@ -36,6 +42,7 @@ import {
 } from "@/src/shared/thread-search-contracts";
 
 type ThreadListState = "loading" | "empty" | "ready" | "error";
+type RecycleBinState = "loading" | "empty" | "ready" | "error";
 type ThreadSearchState = "error" | "idle" | "loading";
 type UrlThreadSelection =
   | { kind: "none"; threadId: null }
@@ -143,6 +150,43 @@ const threadFavoriteSetResponseSchema = z
     threadId: resourceId,
   })
   .strict();
+const threadDeleteResponseSchema = z
+  .object({
+    deleted: z.boolean(),
+    deletedAt: z.string().min(1),
+    threadId: resourceId,
+  })
+  .strict();
+const threadRestoreResponseSchema = z
+  .object({
+    restored: z.boolean(),
+    threadId: resourceId,
+  })
+  .strict();
+const threadPurgeResponseSchema = z
+  .object({
+    purged: z.literal(true),
+    removedAttachmentCount: nonnegativeInteger,
+    removedMessageCount: nonnegativeInteger,
+    threadId: resourceId,
+  })
+  .strict();
+const recycleBinItemSchema = z
+  .object({
+    attachmentCount: nonnegativeInteger,
+    deletedAt: z.string().min(1),
+    id: resourceId,
+    messageCount: nonnegativeInteger,
+    projectId: resourceId,
+    title: z.string().min(1),
+  })
+  .strict();
+const recycleBinResponseSchema = z
+  .object({
+    nextCursor: z.string().min(1).nullable(),
+    threads: z.array(recycleBinItemSchema),
+  })
+  .strict();
 const operationLookupSchema = z
   .object({
     httpStatus: z.number().int().min(100).max(599).nullable(),
@@ -200,8 +244,9 @@ const threadTagBatchResponseSchema = z
 
 type ThreadSummary = z.infer<typeof threadSummarySchema>;
 type ThreadListItem = z.infer<typeof threadListItemSchema>;
-type ThreadListView = "all" | "favorites";
+type ThreadListView = "all" | "favorites" | "recycle_bin";
 type ThreadCreateResponse = z.infer<typeof threadCreateResponseSchema>;
+type RecycleBinItem = z.infer<typeof recycleBinItemSchema>;
 type ThreadTagListItem = z.infer<typeof threadTagListItemSchema>;
 type TagListState = "error" | "loading" | "ready";
 type BatchRequest = {
@@ -327,6 +372,14 @@ async function readError(response: Response): Promise<string> {
   }
 }
 
+async function readApiError(response: Response): Promise<ApiError | null> {
+  try {
+    return (await response.json()) as ApiError;
+  } catch {
+    return null;
+  }
+}
+
 function countGraphemes(value: string): number {
   return Array.from(
     new Intl.Segmenter("zh-CN", { granularity: "grapheme" }).segment(value),
@@ -406,6 +459,15 @@ export function ProjectThreadNavigation({
   const [threads, setThreads] = useState<ThreadListItem[]>([]);
   const [listState, setListState] = useState<ThreadListState>("loading");
   const [listError, setListError] = useState<string | null>(null);
+  const [recycleBinState, setRecycleBinState] = useState<RecycleBinState>("loading");
+  const [recycleBinError, setRecycleBinError] = useState<string | null>(null);
+  const [recycleBin, setRecycleBin] = useState<RecycleBinItem[]>([]);
+  const [recycleBinNextCursor, setRecycleBinNextCursor] = useState<string | null>(null);
+  const [recycleBinLoadingMore, setRecycleBinLoadingMore] = useState(false);
+  const [recycleBinAlertByThread, setRecycleBinAlertByThread] = useState<
+    Record<string, string>
+  >({});
+  const [recycleReloadKey, setRecycleReloadKey] = useState(0);
   const [selectionError, setSelectionError] = useState<string | null>(null);
   const [view, setView] = useState<ThreadListView>("all");
   const [pendingFavoriteIds, setPendingFavoriteIds] = useState<ReadonlySet<string>>(
@@ -449,6 +511,7 @@ export function ProjectThreadNavigation({
   const threadButtonRefs = useRef(new Map<string, HTMLButtonElement>());
   const allViewTabRef = useRef<HTMLButtonElement>(null);
   const favoritesViewTabRef = useRef<HTMLButtonElement>(null);
+  const recycleBinViewTabRef = useRef<HTMLButtonElement>(null);
   const viewRef = useRef(view);
   viewRef.current = view;
   const [tags, setTags] = useState<ThreadTagListItem[]>([]);
@@ -501,6 +564,20 @@ export function ProjectThreadNavigation({
   const organizeButtonRef = useRef<HTMLButtonElement>(null);
   const batchConfirmDialogRef = useRef<HTMLElement>(null);
   const batchConfirmApplyRef = useRef<HTMLButtonElement>(null);
+  const [pendingDeleteThread, setPendingDeleteThread] = useState<ThreadListItem | null>(
+    null,
+  );
+  const [deletingThread, setDeletingThread] = useState(false);
+  const [deleteThreadError, setDeleteThreadError] = useState<string | null>(null);
+  const deleteThreadDialogRef = useRef<HTMLElement>(null);
+  const deleteThreadCancelRef = useRef<HTMLButtonElement>(null);
+  const [pendingPurgeThread, setPendingPurgeThread] = useState<RecycleBinItem | null>(
+    null,
+  );
+  const [purgingThread, setPurgingThread] = useState(false);
+  const [purgeThreadError, setPurgeThreadError] = useState<string | null>(null);
+  const purgeThreadDialogRef = useRef<HTMLElement>(null);
+  const purgeThreadCancelRef = useRef<HTMLButtonElement>(null);
   const targetGuard = useTargetRequestGuard(`${projectId}||`);
 
   const closeDialog = useCallback(() => {
@@ -575,8 +652,49 @@ export function ProjectThreadNavigation({
   );
   useModalSurface(batchConfirmModalOptions);
 
+  const closeDeleteThreadConfirm = useCallback(() => {
+    if (deletingThread) return;
+    setPendingDeleteThread(null);
+  }, [deletingThread]);
+  const deleteThreadModalOptions = useMemo(
+    () => ({
+      active: pendingDeleteThread !== null,
+      dialogRef: deleteThreadDialogRef,
+      hideBackground: false,
+      inertRootRefs: [backgroundRef],
+      initialFocusRef: deleteThreadCancelRef,
+      onClose: closeDeleteThreadConfirm,
+      restoreFocusRef: createButtonRef,
+    }),
+    [backgroundRef, closeDeleteThreadConfirm, pendingDeleteThread],
+  );
+  useModalSurface(deleteThreadModalOptions);
+
+  const closePurgeThreadConfirm = useCallback(() => {
+    if (purgingThread) return;
+    setPendingPurgeThread(null);
+  }, [purgingThread]);
+  const purgeThreadModalOptions = useMemo(
+    () => ({
+      active: pendingPurgeThread !== null,
+      dialogRef: purgeThreadDialogRef,
+      hideBackground: false,
+      inertRootRefs: [backgroundRef],
+      initialFocusRef: purgeThreadCancelRef,
+      onClose: closePurgeThreadConfirm,
+      restoreFocusRef: recycleBinViewTabRef,
+    }),
+    [backgroundRef, closePurgeThreadConfirm, pendingPurgeThread],
+  );
+  useModalSurface(purgeThreadModalOptions);
+
   const anyDialogOpen =
-    dialogOpen || manageOpen || pendingDeleteTag !== null || batchConfirm !== null;
+    dialogOpen
+    || manageOpen
+    || pendingDeleteTag !== null
+    || batchConfirm !== null
+    || pendingDeleteThread !== null
+    || pendingPurgeThread !== null;
 
   useEffect(() => {
     onDialogChange?.(anyDialogOpen);
@@ -627,6 +745,25 @@ export function ProjectThreadNavigation({
       }
     }
     return collected;
+  }, [projectId]);
+
+  const loadRecycleBinPage = useCallback(async (
+    cursor: string | null,
+    signal?: AbortSignal,
+  ): Promise<z.infer<typeof recycleBinResponseSchema>> => {
+    const params = new URLSearchParams();
+    params.set("limit", "50");
+    if (cursor) params.set("cursor", cursor);
+    const response = await fetch(
+      `/api/projects/${encodeURIComponent(projectId)}/thread-recycle-bin?${params.toString()}`,
+      { signal },
+    );
+    if (!response.ok) throw new ApiDisplayError(await readError(response));
+    const parsed = recycleBinResponseSchema.parse(await response.json());
+    for (const item of parsed.threads) {
+      if (item.projectId !== projectId) throw new Error("invalid_recycle_bin_tuple");
+    }
+    return parsed;
   }, [projectId]);
 
   useEffect(() => {
@@ -703,6 +840,29 @@ export function ProjectThreadNavigation({
   }, [activeTagId, loadThreads, onNavigate, projectId, reloadKey, targetGuard, view]);
 
   useEffect(() => {
+    if (view !== "recycle_bin") return;
+    const request = targetGuard.capture();
+    setRecycleBinState("loading");
+    setRecycleBinError(null);
+    setRecycleBinAlertByThread({});
+    setRecycleBin([]);
+    setRecycleBinNextCursor(null);
+    setRecycleBinLoadingMore(false);
+    void loadRecycleBinPage(null, request.signal)
+      .then((page) => {
+        if (!request.isCurrent()) return;
+        setRecycleBin(page.threads);
+        setRecycleBinNextCursor(page.nextCursor);
+        setRecycleBinState(page.threads.length === 0 ? "empty" : "ready");
+      })
+      .catch((cause: unknown) => {
+        if (!request.isCurrent()) return;
+        setRecycleBinState("error");
+        setRecycleBinError(caughtApiErrorCopy(cause, "无法加载回收站，请稍后重试。"));
+      });
+  }, [loadRecycleBinPage, recycleReloadKey, targetGuard, view]);
+
+  useEffect(() => {
     setActiveTagId(null);
     setManageOpen(false);
     setNewTagName("");
@@ -713,6 +873,19 @@ export function ProjectThreadNavigation({
     setPendingDeleteTag(null);
     setDeletingTag(false);
     setDeleteTagError(null);
+    setRecycleBin([]);
+    setRecycleBinState("loading");
+    setRecycleBinError(null);
+    setRecycleBinNextCursor(null);
+    setRecycleBinLoadingMore(false);
+    setRecycleBinAlertByThread({});
+    setRecycleReloadKey(0);
+    setPendingDeleteThread(null);
+    setDeletingThread(false);
+    setDeleteThreadError(null);
+    setPendingPurgeThread(null);
+    setPurgingThread(false);
+    setPurgeThreadError(null);
   }, [projectId]);
 
   useEffect(() => {
@@ -768,6 +941,21 @@ export function ProjectThreadNavigation({
       }
     },
     [loadThreads],
+  );
+
+  const refreshRecycleBinSilently = useCallback(
+    async (request: TargetRequest) => {
+      try {
+        const page = await loadRecycleBinPage(null, request.signal);
+        if (!request.isCurrent()) return;
+        setRecycleBin(page.threads);
+        setRecycleBinNextCursor(page.nextCursor);
+        setRecycleBinState(page.threads.length === 0 ? "empty" : "ready");
+      } catch {
+        // Silent refresh keeps current recycle-bin rows visible.
+      }
+    },
+    [loadRecycleBinPage],
   );
 
   useEffect(() => {
@@ -1017,7 +1205,7 @@ export function ProjectThreadNavigation({
   }
 
   function handleViewKeys(event: KeyboardEvent<HTMLDivElement>) {
-    const order: ThreadListView[] = ["all", "favorites"];
+    const order: ThreadListView[] = ["all", "favorites", "recycle_bin"];
     const currentIndex = order.indexOf(view);
     let next: ThreadListView | undefined;
     if (event.key === "Home") next = order[0];
@@ -1100,6 +1288,143 @@ export function ProjectThreadNavigation({
         });
       }
     }
+  }
+
+  async function confirmDeleteThread() {
+    if (!pendingDeleteThread || deletingThread) return;
+    const target = pendingDeleteThread;
+    const request = targetGuard.capture();
+    setDeletingThread(true);
+    setDeleteThreadError(null);
+    try {
+      const response = await fetch(
+        `/api/projects/${encodeURIComponent(projectId)}/threads/${encodeURIComponent(target.id)}`,
+        { method: "DELETE", signal: request.signal },
+      );
+      if (!request.isCurrent()) return;
+      if (!response.ok) throw new ApiDisplayError(await readError(response));
+      const result = threadDeleteResponseSchema.parse(
+        (await response.json()) as ThreadDeleteResponse,
+      );
+      if (result.threadId !== target.id) throw new Error("invalid_thread_delete_tuple");
+      setPendingDeleteThread(null);
+      setCreateNotice(`线程“${target.title}”已移入回收站。`);
+      setRecycleReloadKey((current) => current + 1);
+      void refreshThreadsSilently(request);
+      void refreshRecycleBinSilently(request);
+      const selected = selectedThreadFromUrl(projectId);
+      if (selected === target.id) {
+        const href = `/projects/${encodeURIComponent(projectId)}`;
+        onNavigate?.(href);
+        routerRef.current.push(href);
+      }
+    } catch (cause: unknown) {
+      if (!request.isCurrent()) return;
+      setDeleteThreadError(caughtApiErrorCopy(cause, "无法移入回收站，请稍后重试。"));
+    } finally {
+      if (request.isCurrent()) setDeletingThread(false);
+    }
+  }
+
+  async function restoreThread(item: RecycleBinItem) {
+    const request = targetGuard.capture();
+    setRecycleBinAlertByThread((current) => ({ ...current, [item.id]: "" }));
+    try {
+      const response = await fetch(
+        `/api/projects/${encodeURIComponent(projectId)}/threads/${encodeURIComponent(item.id)}/restore`,
+        {
+          body: JSON.stringify({}),
+          headers: { "content-type": "application/json" },
+          method: "POST",
+          signal: request.signal,
+        },
+      );
+      if (!request.isCurrent()) return;
+      if (!response.ok) throw new ApiDisplayError(await readError(response));
+      const result = threadRestoreResponseSchema.parse(
+        (await response.json()) as ThreadRestoreResponse,
+      );
+      if (result.threadId !== item.id) throw new Error("invalid_thread_restore_tuple");
+      setCreateNotice(`线程“${item.title}”已恢复。`);
+      setRecycleReloadKey((current) => current + 1);
+      void refreshThreadsSilently(request);
+      void refreshRecycleBinSilently(request);
+    } catch (cause: unknown) {
+      if (!request.isCurrent()) return;
+      setRecycleBinAlertByThread((current) => ({
+        ...current,
+        [item.id]: caughtApiErrorCopy(cause, "恢复线程失败，请稍后重试。"),
+      }));
+    }
+  }
+
+  async function confirmPurgeThread() {
+    if (!pendingPurgeThread || purgingThread) return;
+    const target = pendingPurgeThread;
+    const request = targetGuard.capture();
+    setPurgingThread(true);
+    setPurgeThreadError(null);
+    setRecycleBinAlertByThread((current) => ({ ...current, [target.id]: "" }));
+    try {
+      const response = await fetch(
+        `/api/projects/${encodeURIComponent(projectId)}/threads/${encodeURIComponent(target.id)}/purge`,
+        {
+          body: JSON.stringify({}),
+          headers: { "content-type": "application/json" },
+          method: "POST",
+          signal: request.signal,
+        },
+      );
+      if (!request.isCurrent()) return;
+      if (!response.ok) {
+        if (response.status === 409) {
+          const payload = await readApiError(response);
+          if (payload?.error?.fields?.threadId === "has_executions") {
+            setPendingPurgeThread(null);
+            setRecycleBinAlertByThread((current) => ({
+              ...current,
+              [target.id]: "该线程已产生执行记录，不可永久删除",
+            }));
+            return;
+          }
+        }
+        throw new ApiDisplayError(await readError(response));
+      }
+      const result = threadPurgeResponseSchema.parse(
+        (await response.json()) as ThreadPurgeResponse,
+      );
+      if (result.threadId !== target.id) throw new Error("invalid_thread_purge_tuple");
+      setPendingPurgeThread(null);
+      setCreateNotice(`线程“${target.title}”已永久删除。`);
+      setRecycleReloadKey((current) => current + 1);
+      void refreshThreadsSilently(request);
+      void refreshRecycleBinSilently(request);
+    } catch (cause: unknown) {
+      if (!request.isCurrent()) return;
+      setPurgeThreadError(caughtApiErrorCopy(cause, "永久删除失败，请稍后重试。"));
+    } finally {
+      if (request.isCurrent()) setPurgingThread(false);
+    }
+  }
+
+  function loadMoreRecycleBin() {
+    if (!recycleBinNextCursor || recycleBinLoadingMore) return;
+    const request = targetGuard.capture();
+    setRecycleBinLoadingMore(true);
+    setRecycleBinError(null);
+    void loadRecycleBinPage(recycleBinNextCursor, request.signal)
+      .then((page) => {
+        if (!request.isCurrent()) return;
+        setRecycleBin((current) => [...current, ...page.threads]);
+        setRecycleBinNextCursor(page.nextCursor);
+      })
+      .catch((cause: unknown) => {
+        if (!request.isCurrent()) return;
+        setRecycleBinError(caughtApiErrorCopy(cause, "无法加载更多回收站线程，请稍后重试。"));
+      })
+      .finally(() => {
+        if (request.isCurrent()) setRecycleBinLoadingMore(false);
+      });
   }
 
   function finishCreatedThread(
@@ -1647,9 +1972,22 @@ export function ProjectThreadNavigation({
           >
             已收藏
           </button>
+          <button
+            aria-controls="project-threads-list"
+            aria-selected={view === "recycle_bin"}
+            className="nav-item"
+            id="thread-view-tab-recycle-bin"
+            onClick={() => selectView("recycle_bin")}
+            ref={recycleBinViewTabRef}
+            role="tab"
+            tabIndex={view === "recycle_bin" ? 0 : -1}
+            type="button"
+          >
+            回收站
+          </button>
         </div>
         )}
-        {searchActive ? null : (
+        {searchActive || view === "recycle_bin" ? null : (
         <div className="thread-tag-filter-bar">
           {tagsState === "loading" ? (
             <p className="muted" role="status">
@@ -1808,7 +2146,68 @@ export function ProjectThreadNavigation({
           aria-label="项目线程"
           id="project-threads-list"
         >
-          {listState === "loading" ? (
+          {view === "recycle_bin" ? (
+            recycleBinState === "loading" ? (
+              <p className="muted" role="status">正在加载回收站…</p>
+            ) : recycleBinState === "error" ? (
+              <div className="stack state-message">
+                <p className="error-text" role="alert">{recycleBinError}</p>
+                <button
+                  className="button-secondary"
+                  onClick={() => setRecycleReloadKey((current) => current + 1)}
+                  type="button"
+                >
+                  重试加载回收站
+                </button>
+              </div>
+            ) : recycleBin.length === 0 ? (
+              <div className="empty-guide state-message">
+                <p>回收站为空。</p>
+              </div>
+            ) : (
+              <ul className="project-list">
+                {recycleBin.map((item) => (
+                  <li className="thread-list-item" key={item.id}>
+                    <div className="thread-list-main">
+                      <p className="thread-recycle-title">{item.title}</p>
+                      <p className="thread-recycle-meta">
+                        删除于 {readableTime(item.deletedAt)}
+                      </p>
+                      <p className="thread-recycle-counts">
+                        {`消息 ${item.messageCount} · 附件 ${item.attachmentCount}`}
+                      </p>
+                      {recycleBinAlertByThread[item.id] ? (
+                        <p className="error-text" role="alert">
+                          {recycleBinAlertByThread[item.id]}
+                        </p>
+                      ) : null}
+                    </div>
+                    <div className="thread-recycle-item-actions">
+                      <button
+                        aria-label={`恢复 ${item.title}`}
+                        className="thread-recycle-item-action"
+                        onClick={() => void restoreThread(item)}
+                        type="button"
+                      >
+                        恢复
+                      </button>
+                      <button
+                        aria-label={`永久删除 ${item.title}`}
+                        className="thread-recycle-item-action"
+                        onClick={() => {
+                          setPurgeThreadError(null);
+                          setPendingPurgeThread(item);
+                        }}
+                        type="button"
+                      >
+                        永久删除
+                      </button>
+                    </div>
+                  </li>
+                ))}
+              </ul>
+            )
+          ) : listState === "loading" ? (
             <p className="muted" role="status">
               正在加载线程…
             </p>
@@ -1908,6 +2307,19 @@ export function ProjectThreadNavigation({
                       </span>
                     ) : null}
                   </div>
+                  {!organizeMode ? (
+                    <button
+                      aria-label={`移入回收站 ${thread.title}`}
+                      className="thread-recycle-item-action"
+                      onClick={() => {
+                        setDeleteThreadError(null);
+                        setPendingDeleteThread(thread);
+                      }}
+                      type="button"
+                    >
+                      移入回收站
+                    </button>
+                  ) : null}
                   <button
                     aria-label={
                       thread.isFavorite
@@ -1926,6 +2338,16 @@ export function ProjectThreadNavigation({
               ))}
             </ul>
           )}
+          {view === "recycle_bin" && recycleBinNextCursor !== null ? (
+            <button
+              className="button-secondary"
+              disabled={recycleBinLoadingMore}
+              onClick={loadMoreRecycleBin}
+              type="button"
+            >
+              {recycleBinLoadingMore ? "正在加载更多…" : "加载更多回收站线程"}
+            </button>
+          ) : null}
         </nav>
         )}
         {batchNotice ?? createNotice ? (
@@ -2291,6 +2713,82 @@ export function ProjectThreadNavigation({
                   className="button-secondary"
                   disabled={batchSubmitting}
                   onClick={closeBatchConfirm}
+                  type="button"
+                >
+                  取消
+                </button>
+              </div>
+            </section>,
+            document.body,
+          )
+        : null}
+      {pendingDeleteThread && typeof document !== "undefined"
+        ? createPortal(
+            <section
+              aria-labelledby="thread-delete-title"
+              aria-modal="true"
+              className="modal-surface thread-delete-confirm"
+              ref={deleteThreadDialogRef}
+              role="dialog"
+            >
+              <h2 id="thread-delete-title">移入回收站</h2>
+              <p>移入后可从回收站恢复。</p>
+              {deleteThreadError ? (
+                <p className="error-text" role="alert">{deleteThreadError}</p>
+              ) : null}
+              <div className="form-row">
+                <button
+                  className="button-primary"
+                  disabled={deletingThread}
+                  onClick={() => void confirmDeleteThread()}
+                  type="button"
+                >
+                  {deletingThread ? "正在移入…" : "确认移入"}
+                </button>
+                <button
+                  className="button-secondary"
+                  disabled={deletingThread}
+                  onClick={closeDeleteThreadConfirm}
+                  ref={deleteThreadCancelRef}
+                  type="button"
+                >
+                  取消
+                </button>
+              </div>
+            </section>,
+            document.body,
+          )
+        : null}
+      {pendingPurgeThread && typeof document !== "undefined"
+        ? createPortal(
+            <section
+              aria-labelledby="thread-purge-title"
+              aria-modal="true"
+              className="modal-surface thread-purge-confirm"
+              ref={purgeThreadDialogRef}
+              role="dialog"
+            >
+              <h2 id="thread-purge-title">永久删除线程</h2>
+              <p>
+                {`将永久删除 ${pendingPurgeThread.messageCount} 条消息、${pendingPurgeThread.attachmentCount} 个附件。此操作不可恢复；删除操作会记录在审计日志中。`}
+              </p>
+              {purgeThreadError ? (
+                <p className="error-text" role="alert">{purgeThreadError}</p>
+              ) : null}
+              <div className="form-row">
+                <button
+                  className="button-primary"
+                  disabled={purgingThread}
+                  onClick={() => void confirmPurgeThread()}
+                  type="button"
+                >
+                  {purgingThread ? "正在删除…" : "永久删除"}
+                </button>
+                <button
+                  className="button-secondary"
+                  disabled={purgingThread}
+                  onClick={closePurgeThreadConfirm}
+                  ref={purgeThreadCancelRef}
                   type="button"
                 >
                   取消

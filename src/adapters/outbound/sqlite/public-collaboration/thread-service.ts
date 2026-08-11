@@ -12,6 +12,10 @@ import {
   readOperationReceipt,
 } from "@/src/adapters/outbound/sqlite/public-collaboration/operation-receipts";
 import {
+  ensureActiveThread,
+  threadDeletedNotFound,
+} from "@/src/adapters/outbound/sqlite/public-collaboration/active-thread-guards";
+import {
   appendBatchTx,
   nextThreadActivitySequenceTx,
   type ThreadFactIntent,
@@ -1331,7 +1335,8 @@ export function updateThreadPolicy(
                   policy_version AS policyVersion,
                   next_fact_sequence AS nextFactSequence,
                   last_activity_sequence AS lastActivitySequence,
-                  version,created_at AS createdAt,updated_at AS updatedAt
+                  version,created_at AS createdAt,updated_at AS updatedAt,
+                  deleted_at AS deletedAt
            FROM collaboration_threads
            WHERE project_id=? AND id=?`,
         )
@@ -1347,6 +1352,7 @@ export function updateThreadPolicy(
             version: number;
             createdAt: string;
             updatedAt: string;
+            deletedAt: string | null;
           }
         | undefined;
       if (!current) {
@@ -1354,6 +1360,14 @@ export function updateThreadPolicy(
           "RESOURCE_NOT_FOUND",
           404,
           "Thread was not found.",
+        );
+      }
+      if (current.deletedAt !== null) {
+        throw new CollaborationError(
+          "RESOURCE_NOT_FOUND",
+          404,
+          "Thread was not found.",
+          { reason: "thread_deleted" },
         );
       }
 
@@ -1544,12 +1558,15 @@ export function writeOwnerThreadMessage(
     return transaction(database, () => {
       const thread = database
         .prepare(
-          `SELECT next_fact_sequence AS nextFactSequence
+          `SELECT next_fact_sequence AS nextFactSequence,deleted_at AS deletedAt
            FROM collaboration_threads
            WHERE project_id=? AND id=?`,
         )
-        .get(projectId, threadId) as { nextFactSequence: number } | undefined;
+        .get(projectId, threadId) as
+        | { nextFactSequence: number; deletedAt: string | null }
+        | undefined;
       if (!thread) resourceNotFound();
+      if (thread.deletedAt !== null) threadDeletedNotFound();
 
       const prior = readOperationReceipt<ThreadMessageResponse>(
         database,
@@ -1735,11 +1752,14 @@ export function startThreadRun(
     return transaction(database, () => {
       const thread = database
         .prepare(
-          `SELECT next_fact_sequence AS nextFactSequence
+          `SELECT next_fact_sequence AS nextFactSequence,deleted_at AS deletedAt
            FROM collaboration_threads WHERE project_id=? AND id=?`,
         )
-        .get(projectId, threadId) as { nextFactSequence: number } | undefined;
+        .get(projectId, threadId) as
+        | { nextFactSequence: number; deletedAt: string | null }
+        | undefined;
       if (!thread) resourceNotFound();
+      if (thread.deletedAt !== null) threadDeletedNotFound();
 
       const prior = readOperationReceipt<RunStartResponse>(
         database,
@@ -2098,6 +2118,7 @@ export function readThreadOperation(
 ): { body: ThreadOperationLookupResponse; status: 200 } {
   const database = openDatabase(databasePath);
   try {
+    ensureActiveThread(database, projectId, threadId);
     const row = database
       .prepare(
         `SELECT operations.id AS operationId,operations.kind,operations.status,
@@ -2168,6 +2189,7 @@ export function listThreads(
            ON favorites.project_id=threads.project_id
           AND favorites.thread_id=threads.id
          WHERE threads.project_id=?
+           AND threads.deleted_at IS NULL
            ${
              input.tagId !== null
                ? `AND EXISTS(
@@ -2255,6 +2277,7 @@ export function readThreadDetail(
 ): { body: ThreadDetailResponse; status: 200 } {
   const database = openDatabase(databasePath);
   try {
+    ensureActiveThread(database, projectId, threadId);
     const row = database
       .prepare(
         `SELECT id,project_id AS projectId,title,policy_version AS policyVersion,
@@ -2390,22 +2413,6 @@ type FactRow = {
   messageReplyToAuthorDisplayName: string | null;
   messageReplyToExcerpt: string | null;
 };
-
-function requireThreadTuple(
-  database: DatabaseSync,
-  projectId: string,
-  threadId: string,
-): void {
-  if (
-    !database
-      .prepare(
-        "SELECT 1 FROM collaboration_threads WHERE project_id=? AND id=?",
-      )
-      .get(projectId, threadId)
-  ) {
-    resourceNotFound();
-  }
-}
 
 function decodeReplySnapshot(row: MessageRow): ThreadMessageReplySnapshot | null {
   const {
@@ -2821,7 +2828,7 @@ export function readThreadMessages(
   const input = parseSequencePageInput(rawInput);
   const database = openDatabase(databasePath);
   try {
-    requireThreadTuple(database, projectId, threadId);
+    ensureActiveThread(database, projectId, threadId);
     const rows = database
       .prepare(
         `SELECT messages.id,messages.project_id AS projectId,
@@ -2873,7 +2880,7 @@ export function readThreadFacts(
   const input = parseSequencePageInput(rawInput);
   const database = openDatabase(databasePath);
   try {
-    requireThreadTuple(database, projectId, threadId);
+    ensureActiveThread(database, projectId, threadId);
     const rows = database
       .prepare(
         `SELECT facts.id,facts.project_id AS projectId,facts.thread_id AS threadId,

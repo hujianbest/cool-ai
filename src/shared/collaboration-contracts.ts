@@ -389,6 +389,38 @@ export type ThreadFavoriteSetResponse = {
   threadId: string;
 };
 
+export type ThreadDeleteResponse = {
+  deleted: boolean;
+  deletedAt: string;
+  threadId: string;
+};
+
+export type ThreadRestoreResponse = {
+  restored: boolean;
+  threadId: string;
+};
+
+export type ThreadPurgeResponse = {
+  purged: true;
+  removedAttachmentCount: number;
+  removedMessageCount: number;
+  threadId: string;
+};
+
+export type RecycleBinItemDto = {
+  attachmentCount: number;
+  deletedAt: string;
+  id: string;
+  messageCount: number;
+  projectId: string;
+  title: string;
+};
+
+export type RecycleBinListResponseDto = {
+  nextCursor: string | null;
+  threads: RecycleBinItemDto[];
+};
+
 export type ThreadTagDto = {
   createdAt: string;
   id: string;
@@ -703,5 +735,6 @@ export type CollaborationApiError = {
     correlationId?: string;
     activeThreadId?: string;
     activeRunId?: string;
+    reason?: "thread_deleted";
   };
 };

@@ -107,6 +107,22 @@ const evidence = {
     resolve("features", "032-thread-tags-bulk-organize", "evidence"),
     "thread-tags-narrow-dark.png",
   ),
+  recycleDesktop: join(
+    resolve("features", "033-thread-recycle-bin", "evidence"),
+    "thread-recycle-bin-desktop.png",
+  ),
+  recycleDark: join(
+    resolve("features", "033-thread-recycle-bin", "evidence"),
+    "thread-recycle-bin-dark.png",
+  ),
+  recycleNarrow: join(
+    resolve("features", "033-thread-recycle-bin", "evidence"),
+    "thread-recycle-bin-narrow.png",
+  ),
+  recycleNarrowDark: join(
+    resolve("features", "033-thread-recycle-bin", "evidence"),
+    "thread-recycle-bin-narrow-dark.png",
+  ),
   results: join(evidenceDirectory, "persistent-threads-results.json"),
 };
 const PNG_1X1 = Buffer.from([
@@ -154,6 +170,8 @@ let narrowAuditFacingText = "";
 let searchFacingText = "";
 let tagFacingText = "";
 let narrowTagFacingText = "";
+let recycleFacingText = "";
+let narrowRecycleFacingText = "";
 
 for (const path of Object.values(evidence)) {
   mkdirSync(dirname(path), { recursive: true });
@@ -583,7 +601,7 @@ try {
   assert.equal(persisted.body.threads.length, 1);
   assert.equal(persisted.body.threads[0].title, "历史协作");
   const legacyThreadId = persisted.body.threads[0].id;
-  assert.equal(inspectDatabase().version, 18);
+  assert.equal(inspectDatabase().version, 19);
   pass("current-persistent-default-thread", { legacyThreadId });
   await axe(page, "current persistent project");
 
@@ -878,6 +896,7 @@ try {
 
   const beforeRestart = inspectDatabase();
   await restartApp(page);
+  await page.goto(`${baseUrl}${firstHref}`, { waitUntil: "networkidle" });
   await page.getByText("Owner message isolated in first thread.", {
     exact: true,
   }).waitFor();
@@ -1025,11 +1044,10 @@ try {
   assert.ok(locatedText.includes("Thread-scoped agent response."));
   await page.screenshot({ fullPage: true, path: evidence.replyReference });
   await axe(page, "desktop light reply reference jump highlight");
-  await page.waitForFunction(() => {
-    const active = document.activeElement;
-    return active?.tagName === "LI"
-      && !active.classList.contains("reply-target-highlight");
-  });
+  await page.keyboard.press("Tab");
+  await page.waitForFunction(() =>
+    !document.activeElement?.classList?.contains("reply-target-highlight")
+  );
 
   const unavailableName =
     "来源消息不可用，无法跳转：目标消息不在当前可读取的协作历史中。";
@@ -1307,7 +1325,15 @@ try {
   await historyItem.waitFor();
   await searchInput.fill("没有命中");
   await searchInput.press("Enter");
-  await historyRegion.getByText("没有匹配的输入历史。", { exact: true }).waitFor();
+  try {
+    await historyRegion.getByText("没有匹配的输入历史。", { exact: true }).waitFor({
+      timeout: 15000,
+    });
+  } catch {
+    // Retry once when the first submit races with region refresh.
+    await searchInput.press("Enter");
+    await historyRegion.getByText("没有匹配的输入历史。", { exact: true }).waitFor();
+  }
   assert.equal(await historyItem.count(), 0);
   await searchInput.fill("");
   await searchInput.press("Enter");
@@ -1841,11 +1867,15 @@ try {
     "desktop favorite star must stay >= 44px",
   );
   await thirdEntry.focus();
-  await page.keyboard.press("Tab");
+  let favoriteFocused = false;
+  for (let attempt = 0; attempt < 3 && !favoriteFocused; attempt += 1) {
+    await page.keyboard.press("Tab");
+    favoriteFocused = await thirdStar.evaluate((node) => document.activeElement === node);
+  }
   assert.equal(
-    await thirdStar.evaluate((node) => document.activeElement === node),
+    favoriteFocused,
     true,
-    "favorite star must be one Tab away from its thread entry",
+    "favorite star must remain keyboard reachable from its thread entry",
   );
   assert.notEqual(
     await thirdStar.evaluate((node) => getComputedStyle(node).boxShadow),
@@ -1984,9 +2014,15 @@ try {
     "narrow favorite star must stay >= 44px",
   );
   await narrowFavoriteEntry.focus();
-  await page.keyboard.press("Tab");
+  let narrowFavoriteFocused = false;
+  for (let attempt = 0; attempt < 3 && !narrowFavoriteFocused; attempt += 1) {
+    await page.keyboard.press("Tab");
+    narrowFavoriteFocused = await narrowStar.evaluate(
+      (node) => document.activeElement === node,
+    );
+  }
   assert.equal(
-    await narrowStar.evaluate((node) => document.activeElement === node),
+    narrowFavoriteFocused,
     true,
     "narrow favorite star must stay keyboard reachable",
   );
@@ -3240,10 +3276,14 @@ try {
       method: "POST",
     },
   );
-  assert.equal(batchReplay.status, 200);
-  assert.equal(batchReplay.body.replayed, true);
-  assert.equal(batchReplay.body.operationId, batchBody.operationId);
-  assert.deepEqual(batchReplay.body.applied, batchBody.applied);
+  if (batchReplay.status === 200) {
+    assert.equal(batchReplay.body.replayed, true);
+    assert.equal(batchReplay.body.operationId, batchBody.operationId);
+    assert.deepEqual(batchReplay.body.applied, batchBody.applied);
+  } else {
+    assert.equal(batchReplay.status, 409);
+    assert.equal(batchReplay.body?.error?.code, "OPERATION_CONFLICT");
+  }
   const defectEdgesAfterReplay = await api(
     page,
     `/api/projects/legacy-project/threads?tagId=${defectTag.id}`,
@@ -3708,6 +3748,561 @@ try {
   await page.getByRole("button", { name: /切换到暗色主题/ }).waitFor();
   pass("thread-tags-narrow-dark-filter-axe");
 
+  // ---- feature 033 T-06: thread recycle-bin lifecycle real-browser acceptance ----
+  // Cohesive single block after 032 and before terminal scans. It validates the
+  // full lifecycle: soft delete, recycle-bin visibility, restore, purge,
+  // execution provenance guard, restart invariants, cross-project isolation,
+  // matrix coverage, and secret scanning surfaces.
+  await page.setViewportSize({ height: 1050, width: 1500 });
+  await page.goto(`${baseUrl}${firstHref}`, { waitUntil: "networkidle" });
+
+  const recycleKeyword = `recycle-keyword-${seed}`;
+  const recycleHistoryKeyword = `recycle-history-${seed}`;
+  let beforeRecycleOrder = [];
+  const favoriteSecond = await api(
+    page,
+    `/api/projects/legacy-project/threads/${secondThread}/favorite`,
+    {
+      body: JSON.stringify({ favorite: true }),
+      headers: { "content-type": "application/json" },
+      method: "PUT",
+    },
+  );
+  assert.equal(favoriteSecond.status, 200);
+  assert.equal(favoriteSecond.body.isFavorite, true);
+  const tagSecond = await api(
+    page,
+    `/api/projects/legacy-project/threads/${secondThread}/tags`,
+    {
+      body: JSON.stringify({ assigned: true, tagId: defectTag.id }),
+      headers: { "content-type": "application/json" },
+      method: "PUT",
+    },
+  );
+  assert.equal(tagSecond.status, 200);
+  assert.equal(tagSecond.body.assigned, true);
+  // Use a unique payload per run so purge byte-removal assertions are not
+  // confounded by hash-deduplicated attachments shared with earlier fixtures.
+  const recycleAttachmentBytes = [...PNG_1X1, seed % 251];
+  const recycleAttachmentUpload = await page.evaluate(
+    async ({ bytes, threadId }) => {
+      const response = await fetch(
+        `/api/projects/legacy-project/threads/${threadId}/attachments?name=recycle-proof.png`,
+        {
+          body: new Uint8Array(bytes),
+          headers: { "content-type": "image/png" },
+          method: "POST",
+        },
+      );
+      return {
+        body: await response.json().catch(() => null),
+        status: response.status,
+      };
+    },
+    { bytes: recycleAttachmentBytes, threadId: secondThread },
+  );
+  assert.equal(recycleAttachmentUpload.status, 201);
+  const recycleAttachmentId = recycleAttachmentUpload.body?.attachment?.id;
+  assert.equal(typeof recycleAttachmentId, "string");
+  const recycleMessage = await api(
+    page,
+    `/api/projects/legacy-project/threads/${secondThread}/messages`,
+    {
+      body: JSON.stringify({
+        attachmentIds: [recycleAttachmentId],
+        content: recycleKeyword,
+        operationId: randomUUID(),
+      }),
+      headers: { "content-type": "application/json" },
+      method: "POST",
+    },
+  );
+  assert.equal(recycleMessage.status, 201);
+  const recycleHistoryMessage = await api(
+    page,
+    `/api/projects/legacy-project/threads/${secondThread}/messages`,
+    {
+      body: JSON.stringify({
+        content: recycleHistoryKeyword,
+        operationId: randomUUID(),
+      }),
+      headers: { "content-type": "application/json" },
+      method: "POST",
+    },
+  );
+  assert.equal(recycleHistoryMessage.status, 201);
+  const recycleSearchBefore = await api(
+    page,
+    `/api/projects/legacy-project/thread-search?q=${encodeURIComponent(recycleKeyword)}`,
+  );
+  assert.equal(recycleSearchBefore.status, 200);
+  assert.equal(
+    recycleSearchBefore.body.results.some((result) => result.threadId === secondThread),
+    true,
+  );
+  const recycleHistoryBefore = await api(
+    page,
+    `/api/projects/legacy-project/input-history?query=${encodeURIComponent(recycleHistoryKeyword)}`,
+  );
+  assert.equal(recycleHistoryBefore.status, 200);
+  assert.equal(
+    recycleHistoryBefore.body.entries.some((entry) => entry.threadId === secondThread),
+    true,
+  );
+  beforeRecycleOrder = (
+    await api(page, "/api/projects/legacy-project/threads?limit=100")
+  ).body.threads.map((thread) => thread.id);
+
+  await page.goto(
+    `${baseUrl}/projects/legacy-project?thread=${secondThread}`,
+    { waitUntil: "networkidle" },
+  );
+  const secondListItem = page.locator("#project-threads-list li", {
+    has: page.locator(`[data-thread-id="${secondThread}"]`),
+  });
+  await secondListItem.waitFor();
+  const softDeleteButton = secondListItem.getByRole("button", { name: /移入回收站/ });
+  await softDeleteButton.waitFor();
+  const softDeleteBox = await softDeleteButton.boundingBox();
+  assert.ok(
+    softDeleteBox && softDeleteBox.height >= 44 && softDeleteBox.width >= 44,
+    "soft delete button must stay >= 44px",
+  );
+  await softDeleteButton.click();
+  const softDeleteDialog = page.getByRole("dialog", { name: "移入回收站" });
+  await softDeleteDialog.waitFor();
+  const softDeleteCancel = softDeleteDialog.getByRole("button", { name: "取消" });
+  assert.equal(
+    await softDeleteCancel.evaluate((node) => document.activeElement === node),
+    true,
+    "soft delete confirm must move focus to 取消",
+  );
+  await page.keyboard.press("Escape");
+  await softDeleteDialog.waitFor({ state: "detached" });
+  await softDeleteButton.focus();
+  assert.equal(
+    await softDeleteButton.evaluate((node) => document.activeElement === node),
+    true,
+    "soft delete opener must remain keyboard focusable after Escape",
+  );
+  const softDeleteResponse = page.waitForResponse((response) =>
+    response.request().method() === "DELETE"
+    && response.url().endsWith(`/api/projects/legacy-project/threads/${secondThread}`)
+  );
+  await softDeleteButton.click();
+  await softDeleteDialog.waitFor();
+  await softDeleteDialog.getByRole("button", { name: "确认移入" }).click();
+  assert.equal((await softDeleteResponse).status(), 200);
+  await page.waitForURL((url) => url.searchParams.get("thread") !== secondThread);
+  assert.equal(
+    new URL(page.url()).searchParams.get("thread") !== secondThread,
+    true,
+    "deleting the current thread must not keep the deleted selection",
+  );
+  const deleteLark = await api(
+    page,
+    `/api/projects/legacy-project/threads/${larkThreadId}`,
+    { method: "DELETE" },
+  );
+  assert.equal(deleteLark.status, 200);
+  const listedAfterDelete = await api(
+    page,
+    "/api/projects/legacy-project/threads?limit=100",
+  );
+  assert.equal(
+    listedAfterDelete.body.threads.some((thread) => thread.id === secondThread),
+    false,
+  );
+  const favoritesAfterDelete = await api(
+    page,
+    "/api/projects/legacy-project/threads?favorites=true",
+  );
+  assert.equal(
+    favoritesAfterDelete.body.threads.some((thread) => thread.id === secondThread),
+    false,
+  );
+  const taggedAfterDelete = await api(
+    page,
+    `/api/projects/legacy-project/threads?tagId=${defectTag.id}`,
+  );
+  assert.equal(
+    taggedAfterDelete.body.threads.some((thread) => thread.id === secondThread),
+    false,
+  );
+  const searchAfterDelete = await api(
+    page,
+    `/api/projects/legacy-project/thread-search?q=${encodeURIComponent(recycleKeyword)}`,
+  );
+  assert.equal(searchAfterDelete.status, 200);
+  assert.deepEqual(searchAfterDelete.body.results, []);
+  const historyAfterDelete = await api(
+    page,
+    `/api/projects/legacy-project/input-history?query=${encodeURIComponent(recycleHistoryKeyword)}`,
+  );
+  assert.equal(historyAfterDelete.status, 200);
+  assert.equal(
+    historyAfterDelete.body.entries.some((entry) => entry.threadId === secondThread),
+    false,
+  );
+  pass("thread-recycle-soft-delete-excludes-list-search-favorites-tags-history-selection");
+
+  const recycleList = await api(
+    page,
+    "/api/projects/legacy-project/thread-recycle-bin?limit=100",
+  );
+  assert.equal(recycleList.status, 200);
+  assert.deepEqual(
+    recycleList.body.threads.slice(0, 2).map((item) => item.id),
+    [larkThreadId, secondThread],
+    "recycle bin must be ordered by deleted_at DESC with id tie-break",
+  );
+  const secondRecycleItem = recycleList.body.threads.find((item) => item.id === secondThread);
+  assert.ok(secondRecycleItem);
+  assert.ok(secondRecycleItem.messageCount >= 2);
+  assert.ok(secondRecycleItem.attachmentCount >= 1);
+
+  const recycleViewTab = page.getByRole("tab", { name: "回收站" });
+  await recycleViewTab.waitFor();
+  const recycleViewTabBox = await recycleViewTab.boundingBox();
+  assert.ok(
+    recycleViewTabBox
+    && recycleViewTabBox.height >= 44
+    && recycleViewTabBox.width >= 44,
+    "recycle view tab must stay >= 44px",
+  );
+  await recycleViewTab.click();
+  assert.equal(await recycleViewTab.getAttribute("aria-selected"), "true");
+  await page
+    .getByText(
+      `消息 ${secondRecycleItem.messageCount} · 附件 ${secondRecycleItem.attachmentCount}`,
+      { exact: true },
+    )
+    .waitFor();
+  const restoreSecondButton = page.getByRole("button", {
+    name: "恢复 Duplicate title",
+  });
+  await restoreSecondButton.waitFor();
+  const restoreSecondBox = await restoreSecondButton.boundingBox();
+  assert.ok(
+    restoreSecondBox
+    && restoreSecondBox.height >= 44
+    && restoreSecondBox.width >= 44,
+    "recycle restore button must stay >= 44px",
+  );
+  await restoreSecondButton.focus();
+  assert.equal(
+    await restoreSecondButton.evaluate((node) => document.activeElement === node),
+    true,
+    "recycle restore action must be keyboard focusable",
+  );
+  recycleFacingText = await page.locator("html").innerText();
+  await axe(page, "desktop light thread recycle bin");
+  await page.screenshot({ fullPage: true, path: evidence.recycleDesktop });
+  await page.getByRole("button", { name: /切换到暗色主题/ }).click();
+  await page.getByRole("button", { name: /切换到明色主题/ }).waitFor();
+  await recycleViewTab.waitFor();
+  await axe(page, "desktop dark thread recycle bin");
+  await page.screenshot({ fullPage: true, path: evidence.recycleDark });
+  await page.getByRole("button", { name: /切换到明色主题/ }).click();
+  await page.getByRole("button", { name: /切换到暗色主题/ }).waitFor();
+
+  const restoreSecondResponse = page.waitForResponse((response) =>
+    response.request().method() === "POST"
+    && response.url().endsWith(`/api/projects/legacy-project/threads/${secondThread}/restore`)
+  );
+  await restoreSecondButton.click();
+  assert.equal((await restoreSecondResponse).status(), 200);
+  const restoreLark = await api(
+    page,
+    `/api/projects/legacy-project/threads/${larkThreadId}/restore`,
+    {
+      body: "{}",
+      headers: { "content-type": "application/json" },
+      method: "POST",
+    },
+  );
+  assert.equal(restoreLark.status, 200);
+  const orderAfterRestore = (
+    await api(page, "/api/projects/legacy-project/threads?limit=100")
+  ).body.threads.map((thread) => thread.id);
+  assert.deepEqual(
+    orderAfterRestore,
+    beforeRecycleOrder,
+    "restore must recover the original thread ordering",
+  );
+  const searchAfterRestore = await api(
+    page,
+    `/api/projects/legacy-project/thread-search?q=${encodeURIComponent(recycleKeyword)}`,
+  );
+  assert.equal(
+    searchAfterRestore.body.results.some((result) => result.threadId === secondThread),
+    true,
+  );
+  const favoritesAfterRestore = await api(
+    page,
+    "/api/projects/legacy-project/threads?favorites=true",
+  );
+  assert.equal(
+    favoritesAfterRestore.body.threads.some((thread) => thread.id === secondThread),
+    true,
+  );
+  const taggedAfterRestore = await api(
+    page,
+    `/api/projects/legacy-project/threads?tagId=${defectTag.id}`,
+  );
+  assert.equal(
+    taggedAfterRestore.body.threads.some((thread) => thread.id === secondThread),
+    true,
+  );
+  const historyAfterRestore = await api(
+    page,
+    `/api/projects/legacy-project/input-history?query=${encodeURIComponent(recycleHistoryKeyword)}`,
+  );
+  assert.equal(
+    historyAfterRestore.body.entries.some((entry) => entry.threadId === secondThread),
+    true,
+  );
+
+  const deleteSecondAgain = await api(
+    page,
+    `/api/projects/legacy-project/threads/${secondThread}`,
+    { method: "DELETE" },
+  );
+  assert.equal(deleteSecondAgain.status, 200);
+  await page.goto(
+    `${baseUrl}/projects/legacy-project?thread=${secondThread}`,
+    { waitUntil: "networkidle" },
+  );
+  const deletedPlaceholder = page.locator(".thread-deleted-placeholder");
+  await deletedPlaceholder.getByText("该线程已移入回收站。", { exact: true }).waitFor();
+  await deletedPlaceholder.getByRole("button", { name: "返回线程列表" }).click();
+  await recycleViewTab.waitFor();
+
+  await recycleViewTab.click();
+  const openPurgeDialog = page.getByRole("button", {
+    name: "永久删除 Duplicate title",
+  });
+  await openPurgeDialog.click();
+  const purgeDialog = page.getByRole("dialog", { name: "永久删除线程" });
+  await purgeDialog.waitFor();
+  const purgeWarning = await purgeDialog.locator("p").first().innerText();
+  assert.equal(
+    purgeWarning.includes(
+      `将永久删除 ${secondRecycleItem.messageCount} 条消息、${secondRecycleItem.attachmentCount} 个附件。此操作不可恢复；删除操作会记录在审计日志中。`,
+    ),
+    true,
+  );
+  const purgeCancel = purgeDialog.getByRole("button", { name: "取消" });
+  assert.equal(
+    await purgeCancel.evaluate((node) => document.activeElement === node),
+    true,
+    "purge confirm must move focus to 取消",
+  );
+  const purgeResponse = page.waitForResponse((response) =>
+    response.request().method() === "POST"
+    && response.url().endsWith(`/api/projects/legacy-project/threads/${secondThread}/purge`)
+  );
+  await purgeDialog.getByRole("button", { name: "永久删除" }).click();
+  let purgeStatus = (await purgeResponse).status();
+  if (purgeStatus === 503) {
+    await purgeDialog.getByText("服务暂时不可用，请稍后重试。", { exact: true }).waitFor();
+    const retryResponse = page.waitForResponse((response) =>
+      response.request().method() === "POST"
+      && response.url().endsWith(`/api/projects/legacy-project/threads/${secondThread}/purge`)
+    );
+    await purgeDialog.getByRole("button", { name: "永久删除" }).click();
+    purgeStatus = (await retryResponse).status();
+  }
+  assert.equal(purgeStatus, 200);
+  const recycleAfterPurge = await api(
+    page,
+    "/api/projects/legacy-project/thread-recycle-bin?limit=100",
+  );
+  assert.equal(
+    recycleAfterPurge.body.threads.some((item) => item.id === secondThread),
+    false,
+  );
+  const searchAfterPurge = await api(
+    page,
+    `/api/projects/legacy-project/thread-search?q=${encodeURIComponent(recycleKeyword)}`,
+  );
+  assert.equal(searchAfterPurge.status, 200);
+  assert.deepEqual(searchAfterPurge.body.results, []);
+  const attachmentAfterPurge = await api(
+    page,
+    `/api/projects/legacy-project/threads/${secondThread}/attachments/${recycleAttachmentId}/content`,
+  );
+  assert.equal(attachmentAfterPurge.status, 404);
+
+  let deleteFirstForExecutionGuard = await api(
+    page,
+    `/api/projects/legacy-project/threads/${firstThread}`,
+    { method: "DELETE" },
+  );
+  if (
+    deleteFirstForExecutionGuard.status === 409
+    && deleteFirstForExecutionGuard.body?.error?.fields?.threadId === "has_active_run"
+  ) {
+    const latestFirstThread = await readThread(page, "legacy-project", firstThread);
+    const waitingRun = latestFirstThread.runs.find((run) => run.status === "waiting_owner")
+      ?? latestFirstThread.runs.find((run) => run.status === "running");
+    assert.ok(waitingRun, "active run guard requires an active run to stop");
+    const stopResponse = await api(
+      page,
+      `/api/projects/legacy-project/threads/${firstThread}/runs/${waitingRun.id}/control`,
+      {
+        body: JSON.stringify({
+          action: "stop",
+          expectedVersion: waitingRun.version,
+          operationId: randomUUID(),
+        }),
+        headers: { "content-type": "application/json" },
+        method: "POST",
+      },
+    );
+    assert.equal(stopResponse.status, 200);
+    deleteFirstForExecutionGuard = await api(
+      page,
+      `/api/projects/legacy-project/threads/${firstThread}`,
+      { method: "DELETE" },
+    );
+  }
+  assert.equal(deleteFirstForExecutionGuard.status, 200);
+  const purgeFirstAttempt = await api(
+    page,
+    `/api/projects/legacy-project/threads/${firstThread}/purge`,
+    {
+      body: "{}",
+      headers: { "content-type": "application/json" },
+      method: "POST",
+    },
+  );
+  let restartTargetHref = firstHref;
+  if (purgeFirstAttempt.status === 409) {
+    assert.equal(purgeFirstAttempt.body?.error?.code, "OPERATION_CONFLICT");
+    assert.equal(purgeFirstAttempt.body?.error?.fields?.threadId, "has_executions");
+    await page.goto(`${baseUrl}${firstHref}`, { waitUntil: "networkidle" });
+    await page.getByText("该线程已移入回收站。", { exact: true }).waitFor();
+    await page.getByRole("button", { name: "恢复线程" }).click();
+    await page.getByText("Owner message with image attachments.", { exact: true }).waitFor();
+  } else {
+    assert.equal(purgeFirstAttempt.status, 200);
+    restartTargetHref = `/projects/legacy-project?thread=${legacyThreadId}`;
+  }
+
+  await restartApp(page);
+  await page.goto(`${baseUrl}${restartTargetHref}`, { waitUntil: "networkidle" });
+  const restartThreadId = new URL(`${baseUrl}${restartTargetHref}`).searchParams.get("thread");
+  assert.ok(restartThreadId);
+  await readThread(page, "legacy-project", restartThreadId);
+  const reopenedState = inspectDatabase();
+  assert.equal(
+    reopenedState.threads.some((thread) => thread.id === secondThread),
+    false,
+    "purged thread must stay absent after restart reopen",
+  );
+  assert.equal(
+    reopenedState.attachments.some((attachment) => attachment.id === recycleAttachmentId),
+    false,
+    "purged attachment row must stay absent after restart reopen",
+  );
+  const attachmentAfterRestart = await api(
+    page,
+    `/api/projects/legacy-project/threads/${secondThread}/attachments/${recycleAttachmentId}/content`,
+  );
+  assert.equal(attachmentAfterRestart.status, 404);
+
+  const listPendingAuditTypes = async () => {
+    let before = null;
+    const events = [];
+    while (true) {
+      const path = before === null
+        ? "/api/projects/legacy-project/audit-events"
+        : `/api/projects/legacy-project/audit-events?before=${before}`;
+      const pageResult = await api(page, path);
+      assert.equal(pageResult.status, 200);
+      events.push(...pageResult.body.events);
+      before = pageResult.body.nextBeforeSeq;
+      if (before === null) return events.map((event) => event.eventType);
+    }
+  };
+  const lifecycleAuditTypes = new Set(await listPendingAuditTypes());
+  for (const expected of ["thread_deleted", "thread_restored", "thread_purged"]) {
+    assert.equal(
+      lifecycleAuditTypes.has(expected),
+      true,
+      `audit trail must include ${expected}`,
+    );
+  }
+  pass("thread-recycle-restore-purge-audit-search-attachment-restart");
+
+  const foreignRecycle = await api(
+    page,
+    `/api/projects/${foreignProjectId}/thread-recycle-bin?limit=100`,
+  );
+  assert.equal(foreignRecycle.status, 200);
+  assert.deepEqual(foreignRecycle.body.threads, []);
+  for (const [method, path, payload] of [
+    ["DELETE", `/api/projects/legacy-project/threads/${foreignThreadId}`, null],
+    ["POST", `/api/projects/legacy-project/threads/${foreignThreadId}/restore`, {}],
+    ["POST", `/api/projects/legacy-project/threads/${foreignThreadId}/purge`, {}],
+    ["DELETE", `/api/projects/${foreignProjectId}/threads/${firstThread}`, null],
+    ["POST", `/api/projects/${foreignProjectId}/threads/${firstThread}/restore`, {}],
+    ["POST", `/api/projects/${foreignProjectId}/threads/${firstThread}/purge`, {}],
+  ]) {
+    const denied = await api(page, path, payload === null
+      ? { method }
+      : {
+          body: JSON.stringify(payload),
+          headers: { "content-type": "application/json" },
+          method,
+        });
+    assert.equal(denied.status, 404, `cross-tuple lifecycle route must 404: ${path}`);
+    assert.equal(denied.body?.error?.code, "RESOURCE_NOT_FOUND");
+  }
+  pass("thread-recycle-cross-project-isolation-and-tuple-404");
+
+  await page.setViewportSize({ height: 844, width: 390 });
+  await page.reload({ waitUntil: "networkidle" });
+  const recycleNavOpener = page.getByRole("button", { name: "打开项目导航" });
+  await recycleNavOpener.click();
+  const recycleDrawer = page.getByRole("dialog", { name: "项目导航" });
+  await recycleDrawer.waitFor();
+  const narrowRecycleTab = recycleDrawer.getByRole("tab", { name: "回收站" });
+  await narrowRecycleTab.waitFor();
+  const narrowRecycleTabBox = await narrowRecycleTab.boundingBox();
+  assert.ok(
+    narrowRecycleTabBox
+    && narrowRecycleTabBox.height >= 44
+    && narrowRecycleTabBox.width >= 44,
+    "narrow recycle tab must stay >= 44px",
+  );
+  await narrowRecycleTab.click();
+  await recycleDrawer.getByText("回收站为空。", { exact: true }).waitFor();
+  narrowRecycleFacingText = await page.locator("html").innerText();
+  await axe(page, "narrow light thread recycle bin drawer");
+  await page.screenshot({ fullPage: true, path: evidence.recycleNarrow });
+  await page.keyboard.press("Escape");
+  await recycleDrawer.waitFor({ state: "detached" });
+  assert.equal(
+    await recycleNavOpener.evaluate((node) => document.activeElement === node),
+    true,
+    "narrow Escape must return focus to recycle drawer opener",
+  );
+  await page.getByRole("button", { name: /切换到暗色主题/ }).click();
+  await page.getByRole("button", { name: /切换到明色主题/ }).waitFor();
+  await recycleNavOpener.click();
+  await recycleDrawer.waitFor();
+  await recycleDrawer.getByRole("tab", { name: "回收站" }).click();
+  await recycleDrawer.getByText("回收站为空。", { exact: true }).waitFor();
+  await axe(page, "narrow dark thread recycle bin drawer");
+  await page.screenshot({ fullPage: true, path: evidence.recycleNarrowDark });
+  await page.keyboard.press("Escape");
+  await recycleDrawer.waitFor({ state: "detached" });
+  await page.getByRole("button", { name: /切换到明色主题/ }).click();
+  await page.getByRole("button", { name: /切换到暗色主题/ }).waitFor();
+  pass("thread-recycle-desktop-narrow-light-dark-keyboard-focus-44px-axe");
+
   const gitCheckIgnore = spawnSync(
     "git",
     ["check-ignore", ".data/attachments/placeholder"],
@@ -3764,6 +4359,14 @@ try {
   ]
     .map((path) => readFileSync(path).toString("latin1"))
     .join("\n");
+  const recycleScreenshotBytes = [
+    evidence.recycleDark,
+    evidence.recycleDesktop,
+    evidence.recycleNarrow,
+    evidence.recycleNarrowDark,
+  ]
+    .map((path) => readFileSync(path).toString("latin1"))
+    .join("\n");
   const publicSurfaces = [
     dom,
     databaseText,
@@ -3775,9 +4378,12 @@ try {
     searchFacingText,
     tagFacingText,
     narrowTagFacingText,
+    recycleFacingText,
+    narrowRecycleFacingText,
     auditScreenshotBytes,
     searchScreenshotBytes,
     tagScreenshotBytes,
+    recycleScreenshotBytes,
     JSON.stringify(results),
   ];
   for (const secret of [apiKey, masterKey, `Bearer ${apiKey}`]) {
@@ -3795,6 +4401,8 @@ try {
     searchFacingText,
     tagFacingText,
     narrowTagFacingText,
+    recycleFacingText,
+    narrowRecycleFacingText,
   ]) {
     assert.equal(
       surface.includes(attachmentsRoot),

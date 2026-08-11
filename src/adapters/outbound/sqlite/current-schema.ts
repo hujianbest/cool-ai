@@ -12,7 +12,7 @@ export type CurrentSchemaManifest = {
 
 const CURRENT_SCHEMA_DEFINITION = {
   "identity": {
-    "userVersion": 18
+    "userVersion": 19
   },
   "objects": [
     {
@@ -318,7 +318,7 @@ const CURRENT_SCHEMA_DEFINITION = {
     {
       "kind": "table",
       "name": "collaboration_threads",
-      "createSql": "CREATE TABLE collaboration_threads(\n id TEXT PRIMARY KEY,project_id TEXT NOT NULL,title TEXT NOT NULL CHECK(length(title)>=1 AND title=trim(title)),\n active_policy_revision_id TEXT NOT NULL,policy_version INTEGER NOT NULL CHECK(policy_version>=1),\n next_fact_sequence INTEGER NOT NULL CHECK(next_fact_sequence>=1),last_activity_sequence INTEGER NOT NULL CHECK(last_activity_sequence>=1),\n version INTEGER NOT NULL CHECK(version>=1),\n created_at TEXT NOT NULL CHECK(created_at GLOB '????-??-??T??:??:??.???Z'),\n updated_at TEXT NOT NULL CHECK(updated_at GLOB '????-??-??T??:??:??.???Z'),\n UNIQUE(project_id,id),UNIQUE(project_id,last_activity_sequence),\n FOREIGN KEY(project_id) REFERENCES projects(id) ON DELETE CASCADE,\n FOREIGN KEY(project_id,id,active_policy_revision_id)\n  REFERENCES collaboration_thread_policy_revisions(project_id,thread_id,id)\n  ON DELETE NO ACTION DEFERRABLE INITIALLY DEFERRED\n)",
+      "createSql": "CREATE TABLE collaboration_threads(\n id TEXT PRIMARY KEY,project_id TEXT NOT NULL,title TEXT NOT NULL CHECK(length(title)>=1 AND title=trim(title)),\n active_policy_revision_id TEXT NOT NULL,policy_version INTEGER NOT NULL CHECK(policy_version>=1),\n next_fact_sequence INTEGER NOT NULL CHECK(next_fact_sequence>=1),last_activity_sequence INTEGER NOT NULL CHECK(last_activity_sequence>=1),\n version INTEGER NOT NULL CHECK(version>=1),\n created_at TEXT NOT NULL CHECK(created_at GLOB '????-??-??T??:??:??.???Z'),\n updated_at TEXT NOT NULL CHECK(updated_at GLOB '????-??-??T??:??:??.???Z'),\n deleted_at TEXT CHECK(deleted_at IS NULL OR deleted_at GLOB '????-??-??T??:??:??.???Z'),\n UNIQUE(project_id,id),UNIQUE(project_id,last_activity_sequence),\n FOREIGN KEY(project_id) REFERENCES projects(id) ON DELETE CASCADE,\n FOREIGN KEY(project_id,id,active_policy_revision_id)\n  REFERENCES collaboration_thread_policy_revisions(project_id,thread_id,id)\n  ON DELETE NO ACTION DEFERRABLE INITIALLY DEFERRED\n)",
       "dependsOn": []
     },
     {
@@ -487,6 +487,12 @@ const CURRENT_SCHEMA_DEFINITION = {
       "kind": "table",
       "name": "thread_tag_operations",
       "createSql": "CREATE TABLE thread_tag_operations(\n id TEXT NOT NULL,project_id TEXT NOT NULL,\n kind TEXT NOT NULL CHECK(kind='tag_batch'),\n request_hash TEXT NOT NULL CHECK(length(request_hash)=64 AND request_hash NOT GLOB '*[^0-9a-f]*'),\n status TEXT NOT NULL CHECK(status='completed'),\n http_status INTEGER,\n response_json TEXT CHECK(json_valid(response_json)),\n created_at TEXT NOT NULL CHECK(created_at GLOB '????-??-??T??:??:??.???Z'),\n PRIMARY KEY(project_id,id),UNIQUE(project_id,id,request_hash),\n FOREIGN KEY(project_id) REFERENCES projects(id) ON DELETE CASCADE\n)",
+      "dependsOn": []
+    },
+    {
+      "kind": "table",
+      "name": "thread_purge_markers",
+      "createSql": "CREATE TABLE thread_purge_markers(\n project_id TEXT NOT NULL,thread_id TEXT NOT NULL,\n created_at TEXT NOT NULL CHECK(created_at GLOB '????-??-??T??:??:??.???Z'),\n PRIMARY KEY(project_id,thread_id),\n FOREIGN KEY(project_id) REFERENCES projects(id) ON DELETE CASCADE\n)",
       "dependsOn": []
     },
     {
@@ -842,6 +848,14 @@ const CURRENT_SCHEMA_DEFINITION = {
       ]
     },
     {
+      "kind": "index",
+      "name": "collaboration_threads_recycle_bin",
+      "createSql": "CREATE INDEX collaboration_threads_recycle_bin ON collaboration_threads(project_id,deleted_at) WHERE deleted_at IS NOT NULL",
+      "dependsOn": [
+        "collaboration_threads"
+      ]
+    },
+    {
       "kind": "trigger",
       "name": "validation_policy_revision_no_update",
       "createSql": "CREATE TRIGGER validation_policy_revision_no_update BEFORE UPDATE ON project_validation_policy_revisions BEGIN SELECT RAISE(ABORT,'IMMUTABLE_POLICY_REVISION'); END",
@@ -1060,7 +1074,7 @@ const CURRENT_SCHEMA_DEFINITION = {
     {
       "kind": "trigger",
       "name": "thread_policy_revision_no_delete",
-      "createSql": "CREATE TRIGGER thread_policy_revision_no_delete BEFORE DELETE ON collaboration_thread_policy_revisions\n WHEN EXISTS(SELECT 1 FROM projects WHERE id=OLD.project_id)\n BEGIN SELECT RAISE(ABORT,'IMMUTABLE_THREAD_POLICY_REVISION'); END",
+      "createSql": "CREATE TRIGGER thread_policy_revision_no_delete BEFORE DELETE ON collaboration_thread_policy_revisions\n WHEN EXISTS(SELECT 1 FROM projects WHERE id=OLD.project_id)\n AND NOT EXISTS(SELECT 1 FROM thread_purge_markers m WHERE m.project_id=OLD.project_id AND m.thread_id=OLD.thread_id)\n BEGIN SELECT RAISE(ABORT,'IMMUTABLE_THREAD_POLICY_REVISION'); END",
       "dependsOn": [
         "collaboration_thread_policy_revisions"
       ]
@@ -1076,7 +1090,7 @@ const CURRENT_SCHEMA_DEFINITION = {
     {
       "kind": "trigger",
       "name": "thread_policy_member_no_delete",
-      "createSql": "CREATE TRIGGER thread_policy_member_no_delete BEFORE DELETE ON collaboration_thread_policy_members\n WHEN EXISTS(SELECT 1 FROM projects WHERE id=OLD.project_id)\n BEGIN SELECT RAISE(ABORT,'IMMUTABLE_THREAD_POLICY_MEMBER'); END",
+      "createSql": "CREATE TRIGGER thread_policy_member_no_delete BEFORE DELETE ON collaboration_thread_policy_members\n WHEN EXISTS(SELECT 1 FROM projects WHERE id=OLD.project_id)\n AND NOT EXISTS(SELECT 1 FROM thread_purge_markers m WHERE m.project_id=OLD.project_id AND m.thread_id=OLD.thread_id)\n BEGIN SELECT RAISE(ABORT,'IMMUTABLE_THREAD_POLICY_MEMBER'); END",
       "dependsOn": [
         "collaboration_thread_policy_members"
       ]
@@ -1092,7 +1106,7 @@ const CURRENT_SCHEMA_DEFINITION = {
     {
       "kind": "trigger",
       "name": "thread_fact_no_delete",
-      "createSql": "CREATE TRIGGER thread_fact_no_delete BEFORE DELETE ON collaboration_thread_facts\n WHEN EXISTS(SELECT 1 FROM projects WHERE id=OLD.project_id)\n BEGIN SELECT RAISE(ABORT,'IMMUTABLE_THREAD_FACT'); END",
+      "createSql": "CREATE TRIGGER thread_fact_no_delete BEFORE DELETE ON collaboration_thread_facts\n WHEN EXISTS(SELECT 1 FROM projects WHERE id=OLD.project_id)\n AND NOT EXISTS(SELECT 1 FROM thread_purge_markers m WHERE m.project_id=OLD.project_id AND m.thread_id=OLD.thread_id)\n BEGIN SELECT RAISE(ABORT,'IMMUTABLE_THREAD_FACT'); END",
       "dependsOn": [
         "collaboration_thread_facts"
       ]

@@ -53,3 +53,13 @@ export function insertAllThreadSearchTitleRows(database: DatabaseSync): number {
 export function clearThreadSearchIndex(database: DatabaseSync): void {
   database.exec("DELETE FROM thread_search_index");
 }
+
+export function deleteThreadSearchIndexRowsTx(
+  database: DatabaseSync,
+  input: { projectId: string; threadId: string },
+): number {
+  return Number(database.prepare(
+    `DELETE FROM thread_search_index
+     WHERE project_id=? AND thread_id=?`,
+  ).run(input.projectId, input.threadId).changes);
+}

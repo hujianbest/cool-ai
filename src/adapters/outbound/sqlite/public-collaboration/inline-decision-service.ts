@@ -3,6 +3,7 @@ import { randomUUID } from "node:crypto";
 import { z } from "zod";
 
 import { CollaborationError } from "@/src/modules/public-collaboration";
+import { ensureActiveThread } from "@/src/adapters/outbound/sqlite/public-collaboration/active-thread-guards";
 import { appendBatchTx } from "@/src/adapters/outbound/sqlite/public-collaboration/thread-fact-store";
 import { openDatabase } from "@/src/adapters/outbound/sqlite/connection";
 import {
@@ -273,6 +274,7 @@ export function decideInline(
   const database = openDatabase(databasePath);
   database.exec("BEGIN IMMEDIATE");
   try {
+    ensureActiveThread(database, tuple.projectId, tuple.threadId);
     const row = blockState(database, tuple);
     const hash = requestHash(tuple, row.blockRevision, request);
     const prior = existingOperation(database, tuple, request.operationId);
@@ -456,6 +458,7 @@ export function readInlineOperation(
 ): { body: unknown; status: number } {
   const database = openDatabase(databasePath);
   try {
+    ensureActiveThread(database, tuple.projectId, tuple.threadId);
     const row = existingOperation(database, {
       ...tuple,
       blockId: "",
