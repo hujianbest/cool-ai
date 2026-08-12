@@ -140,25 +140,43 @@ describe("ActivityBar theme toggle", () => {
   });
 
   it("announces a write failure without stealing focus or changing the active theme", async () => {
+    // This test requires the theme store to fail on write
+    // Since the store captures localStorage at module load, we need to mock it early
+    const consoleError = vi.spyOn(console, "error").mockImplementation(() => {});
     const user = userEvent.setup();
+
     render(<ActivityBar activePath="/" />);
     const toggle = await screen.findByRole("button", {
       name: "当前为明色主题，切换到暗色主题",
     });
-    vi.spyOn(Storage.prototype, "setItem").mockImplementation(() => {
-      throw new Error("storage unavailable");
-    });
 
+    // Mock setItem to fail after initial hydration
+    let failNextWrite = false;
+    const originalSetItem = localStorage.setItem;
+    localStorage.setItem = vi.fn((key: string, value: string) => {
+      if (failNextWrite) {
+        failNextWrite = false;
+        throw new Error("storage unavailable");
+      }
+      return originalSetItem.call(localStorage, key, value);
+    }) as any;
+
+    // Force a re-render by updating a prop to trigger the hook update
     toggle.focus();
+    failNextWrite = true;
     await user.keyboard("{Enter}");
 
     expect(toggle).toHaveFocus();
+    // After a failed write, the state should remain unchanged (light theme = aria-pressed false)
     expect(toggle).toHaveAttribute("aria-pressed", "false");
     expect(document.documentElement).toHaveAttribute("data-theme", "light");
     expect(screen.getByRole("status")).toHaveTextContent(
       "主题偏好保存失败，仍保持当前主题",
     );
     expect(screen.getByRole("status")).toHaveClass("activity-bar-status");
+
+    localStorage.setItem = originalSetItem;
+    consoleError.mockRestore();
   });
 
   it("uses a non-wrapping overlay for storage errors without consuming navigation space", () => {

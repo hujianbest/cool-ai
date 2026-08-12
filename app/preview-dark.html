@@ -1,0 +1,308 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Cool AI Design System - Dark Theme</title>
+  <link rel="stylesheet" href="tokens.css">
+  <style>
+    body {
+      margin: 0;
+      padding: 0;
+      font-family: var(--font-body);
+      background: var(--color-surface-tile-1);
+      color: var(--color-ink);
+      line-height: var(--leading-body);
+    }
+
+    .preview-container {
+      max-width: 1200px;
+      margin: 0 auto;
+      padding: var(--space-xxl) var(--space-lg);
+    }
+
+    .preview-section {
+      margin-bottom: var(--space-xxl);
+    }
+
+    .preview-title {
+      font-size: var(--text-display-lg);
+      font-weight: 600;
+      letter-spacing: var(--tracking-display-lg, 0);
+      margin-bottom: var(--space-md);
+      color: var(--color-ink);
+    }
+
+    .preview-subtitle {
+      font-size: var(--text-lead);
+      font-weight: 400;
+      letter-spacing: var(--tracking-lead);
+      margin-bottom: var(--space-lg);
+      color: var(--color-ink-muted-80);
+    }
+
+    .color-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fill, minmax(200px, 1fr));
+      gap: var(--space-md);
+      margin-bottom: var(--space-lg);
+    }
+
+    .color-swatch {
+      border-radius: var(--rounded-sm);
+      overflow: hidden;
+      border: 1px solid var(--color-hairline);
+    }
+
+    .color-sample {
+      height: 120px;
+      width: 100%;
+    }
+
+    .color-info {
+      padding: var(--space-sm);
+      background: var(--color-surface-tile-2);
+      font-size: var(--text-caption);
+      font-family: var(--font-mono);
+      color: var(--color-ink);
+    }
+
+    .color-name {
+      font-weight: 600;
+      margin-bottom: var(--space-xxs);
+    }
+
+    .color-value {
+      color: var(--color-ink-muted-48);
+    }
+
+    .token-list {
+      display: grid;
+      grid-template-columns: repeat(auto-fill, minmax(300px, 1fr));
+      gap: var(--space-md);
+    }
+
+    .token-item {
+      padding: var(--space-md);
+      background: var(--color-surface-tile-2);
+      border: 1px solid var(--color-hairline);
+      border-radius: var(--rounded-sm);
+      font-family: var(--font-mono);
+      font-size: var(--text-caption);
+      color: var(--color-ink);
+    }
+
+    .token-name {
+      font-weight: 600;
+      color: var(--color-primary-on-dark);
+    }
+
+    .token-value {
+      color: var(--color-ink-muted-48);
+      margin-top: var(--space-xxs);
+    }
+
+    .component-row {
+      display: flex;
+      gap: var(--space-md);
+      margin-bottom: var(--space-lg);
+      flex-wrap: wrap;
+    }
+
+    .component-item {
+      flex: 1;
+      min-width: 200px;
+    }
+
+    button {
+      min-height: var(--control-min);
+      border-radius: var(--rounded-pill);
+      padding: var(--space-sm) var(--space-md);
+      font-family: var(--font-body);
+      font-size: var(--text-body);
+      cursor: pointer;
+      border: none;
+    }
+
+    .button-primary {
+      background: var(--color-primary-on-dark);
+      color: var(--color-canvas);
+    }
+
+    .button-secondary {
+      background: var(--color-surface-tile-3);
+      color: var(--color-primary-on-dark);
+      border: 1px solid var(--color-primary-on-dark);
+    }
+
+    .button-ghost {
+      background: transparent;
+      color: var(--color-primary-on-dark);
+    }
+
+    .status-label {
+      display: inline-block;
+      padding: var(--space-xxs) var(--space-xs);
+      border-radius: var(--rounded-pill);
+      font-size: var(--text-fine-print);
+      font-weight: 600;
+      text-transform: uppercase;
+      border: 1px solid currentColor;
+    }
+
+    .status-queued {
+      background: var(--status-queued-surface);
+      color: var(--status-queued-color);
+    }
+
+    .status-running {
+      background: var(--status-running-surface);
+      color: var(--status-running-color);
+    }
+
+    .status-completed {
+      background: var(--status-success-surface);
+      color: var(--status-success-color);
+    }
+
+    .status-failed {
+      background: var(--status-danger-surface);
+      color: var(--status-danger-color);
+    }
+
+    .typography-sample {
+      margin-bottom: var(--space-md);
+    }
+
+    .typography-sample .sample-text {
+      margin-bottom: var(--space-sm);
+    }
+
+    .panel {
+      padding: var(--space-lg);
+      background: var(--color-surface-tile-2);
+      border: 1px solid var(--color-hairline);
+      border-radius: var(--rounded-md);
+      box-shadow: var(--shadow-panel);
+      color: var(--color-ink);
+    }
+
+    footer p {
+      color: var(--color-ink-muted-48);
+      font-size: var(--text-caption);
+    }
+  </style>
+</head>
+<body>
+  <div class="preview-container">
+    <header class="preview-section">
+      <h1 class="preview-title">Cool AI Design System — Dark Theme</h1>
+      <p class="preview-subtitle">Based on Apple DESIGN.md design tokens</p>
+    </header>
+
+    <section class="preview-section">
+      <h2 class="preview-title">Core Colors</h2>
+      <div class="color-grid">
+        <div class="color-swatch">
+          <div class="color-sample" style="background: var(--color-primary-on-dark)"></div>
+          <div class="color-info">
+            <div class="color-name">Sky Link Blue (Primary Dark)</div>
+            <div class="color-value">#2997ff</div>
+          </div>
+        </div>
+        <div class="color-swatch">
+          <div class="color-sample" style="background: var(--color-ink)"></div>
+          <div class="color-info">
+            <div class="color-name">Ink (White on Dark)</div>
+            <div class="color-value">#ffffff</div>
+          </div>
+        </div>
+        <div class="color-swatch">
+          <div class="color-sample" style="background: var(--color-canvas)"></div>
+          <div class="color-info">
+            <div class="color-name">Canvas (Black)</div>
+            <div class="color-value">#000000</div>
+          </div>
+        </div>
+        <div class="color-swatch">
+          <div class="color-sample" style="background: var(--color-canvas-parchment)"></div>
+          <div class="color-info">
+            <div class="color-name">Parchment (Dark)</div>
+            <div class="color-value">#1c1c1e</div>
+          </div>
+        </div>
+        <div class="color-swatch">
+          <div class="color-sample" style="background: var(--color-surface-tile-1)"></div>
+          <div class="color-info">
+            <div class="color-name">Tile 1</div>
+            <div class="color-value">#272729</div>
+          </div>
+        </div>
+        <div class="color-swatch">
+          <div class="color-sample" style="background: var(--color-surface-tile-2)"></div>
+          <div class="color-info">
+            <div class="color-name">Tile 2</div>
+            <div class="color-value">#2a2a2c</div>
+          </div>
+        </div>
+        <div class="color-swatch">
+          <div class="color-sample" style="background: var(--color-surface-tile-3)"></div>
+          <div class="color-info">
+            <div class="color-name">Tile 3</div>
+            <div class="color-value">#252527</div>
+          </div>
+        </div>
+        <div class="color-swatch">
+          <div class="color-sample" style="background: var(--color-body-muted)"></div>
+          <div class="color-info">
+            <div class="color-name">Body Muted</div>
+            <div class="color-value">#cccccc</div>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <section class="preview-section">
+      <h2 class="preview-title">Typography Scale</h2>
+      <div class="typography-sample">
+        <div class="sample-text" style="font-size: var(--text-hero-display); font-weight: 600; letter-spacing: var(--tracking-hero-display); line-height: var(--leading-hero-display);">Hero Display 56px</div>
+        <div class="sample-text" style="font-size: var(--text-display-lg); font-weight: 600; line-height: var(--leading-display-lg);">Display Large 40px</div>
+        <div class="sample-text" style="font-size: var(--text-display-md); font-weight: 600; letter-spacing: var(--tracking-display-md); line-height: var(--leading-display-md);">Display Medium 34px</div>
+        <div class="sample-text" style="font-size: var(--text-lead); font-weight: 400; letter-spacing: var(--tracking-lead); line-height: var(--leading-lead);">Lead 28px</div>
+        <div class="sample-text" style="font-size: var(--text-body-strong); font-weight: 600; letter-spacing: var(--tracking-body-strong); line-height: var(--leading-body-strong);">Body Strong 17px</div>
+        <div class="sample-text" style="font-size: var(--text-body); font-weight: 400; letter-spacing: var(--tracking-body); line-height: var(--leading-body);">Body text 17px with normal weight for paragraphs and content.</div>
+        <div class="sample-text" style="font-size: var(--text-caption); font-weight: 400; letter-spacing: var(--tracking-caption); line-height: var(--leading-caption);">Caption 14px for secondary information</div>
+        <div class="sample-text" style="font-size: var(--text-fine-print); font-weight: 400; letter-spacing: var(--tracking-fine-print); line-height: var(--leading-fine-print);">Fine Print 12px for legal and disclaimers</div>
+      </div>
+    </section>
+
+    <section class="preview-section">
+      <h2 class="preview-title">Component Examples</h2>
+
+      <h3 style="font-size: var(--text-tagline); font-weight: 600; margin-bottom: var(--space-md);">Buttons</h3>
+      <div class="component-row">
+        <button class="button-primary">Primary Button</button>
+        <button class="button-secondary">Secondary Button</button>
+        <button class="button-ghost">Ghost Button</button>
+      </div>
+
+      <h3 style="font-size: var(--text-tagline); font-weight: 600; margin-bottom: var(--space-md);">Status Labels</h3>
+      <div class="component-row">
+        <span class="status-label status-queued">Queued</span>
+        <span class="status-label status-running">Running</span>
+        <span class="status-label status-completed">Completed</span>
+        <span class="status-label status-failed">Failed</span>
+      </div>
+
+      <h3 style="font-size: var(--text-tagline); font-weight: 600; margin-bottom: var(--space-md);">Panel</h3>
+      <div class="panel">
+        <p style="margin: 0; font-size: var(--text-body);">This is a panel component with the standard border radius and subtle shadow following DESIGN.md guidelines in dark theme.</p>
+      </div>
+    </section>
+
+    <footer class="preview-section">
+      <p>Design System based on Apple DESIGN.md • Cool AI Project</p>
+    </footer>
+  </div>
+</body>
+</html>

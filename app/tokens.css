@@ -1,44 +1,124 @@
 :root {
   color-scheme: light;
 
+  /* DESIGN.md Core Color Tokens */
+  --color-primary: #0066cc;
+  --color-primary-focus: #0071e3;
+  --color-primary-on-dark: #2997ff;
+  --color-ink: #1d1d1f;
+  --color-body: #1d1d1f;
+  --color-body-on-dark: #ffffff;
+  --color-body-muted: #cccccc;
+  --color-ink-muted-80: #333333;
+  --color-ink-muted-48: #7a7a7a;
+  --color-divider-soft: #f0f0f0;
+  --color-hairline: #e0e0e0;
+  --color-canvas: #ffffff;
+  --color-canvas-parchment: #f5f5f7;
+  --color-surface-pearl: #fafafc;
+  --color-surface-tile-1: #272729;
+  --color-surface-tile-2: #2a2a2c;
+  --color-surface-tile-3: #252527;
+  --color-surface-black: #000000;
+
+  /* DESIGN.md Typography Tokens */
+  --font-display: "SF Pro Display", system-ui, -apple-system, sans-serif;
+  --font-body: "SF Pro Text", system-ui, -apple-system, sans-serif;
   --font-sans: -apple-system, "PingFang SC", "Noto Sans SC", "Segoe UI Variable", "Microsoft YaHei UI", system-ui, sans-serif;
   --font-mono: "Cascadia Mono", "Consolas", monospace;
+
+  /* DESIGN.md Typography Scale */
+  --text-hero-display: 56px;
+  --text-display-lg: 40px;
+  --text-display-md: 34px;
+  --text-lead: 28px;
+  --text-lead-airy: 24px;
+  --text-tagline: 21px;
+  --text-body-strong: 17px;
+  --text-body: 17px;
+  --text-dense-link: 17px;
+  --text-caption: 14px;
+  --text-caption-strong: 14px;
+  --text-button-large: 18px;
+  --text-button-utility: 14px;
+  --text-fine-print: 12px;
+  --text-micro-legal: 10px;
+  --text-nav-link: 12px;
+
+  /* DESIGN.md Line Heights */
+  --leading-hero-display: 1.07;
+  --leading-display-lg: 1.1;
+  --leading-display-md: 1.47;
+  --leading-lead: 1.14;
+  --leading-lead-airy: 1.5;
+  --leading-tagline: 1.19;
+  --leading-body-strong: 1.24;
+  --leading-body: 1.47;
+  --leading-dense-link: 2.41;
+  --leading-caption: 1.43;
+  --leading-caption-strong: 1.29;
+  --leading-button-large: 1.0;
+  --leading-button-utility: 1.29;
+  --leading-fine-print: 1.0;
+  --leading-micro-legal: 1.3;
+  --leading-nav-link: 1.0;
+
+  /* DESIGN.md Letter Spacing */
+  --tracking-hero-display: -0.28px;
+  --tracking-display-md: -0.374px;
+  --tracking-lead: 0.196px;
+  --tracking-tagline: 0.231px;
+  --tracking-body-strong: -0.374px;
+  --tracking-body: -0.374px;
+  --tracking-caption: -0.224px;
+  --tracking-caption-strong: -0.224px;
+  --tracking-button-utility: -0.224px;
+  --tracking-fine-print: -0.12px;
+  --tracking-micro-legal: -0.08px;
+  --tracking-nav-link: -0.12px;
+
+  /* DESIGN.md Rounded Scale */
+  --rounded-none: 0px;
+  --rounded-xs: 5px;
+  --rounded-sm: 8px;
+  --rounded-md: 11px;
+  --rounded-lg: 18px;
+  --rounded-pill: 9999px;
+  --rounded-full: 9999px;
+
+  /* DESIGN.md Spacing Scale */
+  --space-xxs: 4px;
+  --space-xs: 8px;
+  --space-sm: 12px;
+  --space-md: 17px;
+  --space-lg: 24px;
+  --space-xl: 32px;
+  --space-xxl: 48px;
+  --space-section: 80px;
+
+  /* DESIGN.md Shadow */
+  --shadow-product: rgba(0, 0, 0, 0.22) 3px 5px 30px 0;
+  --shadow-panel: rgba(0, 0, 0, 0.08) 0px 1px 0px;
+
+  /* Product Extension Tokens */
   --sr-only-size: 1px;
   --mission-board-columns: repeat(4, minmax(0, 1fr));
   --single-column: minmax(0, 1fr);
   --leading-content-columns: auto minmax(0, 1fr);
   --execution-review-facts-columns: minmax(0, 1fr) minmax(0, 2fr);
 
-  --surface-sunken: #F3EFE7;
-  --surface-panel: #F7F3EC;
-  --surface-main: #FBF8F2;
-  --surface-card: #FFFDF8;
-  --text-primary: #28241F;
-  --text-secondary: #514B43;
-  --text-subtle: #6B645B;
-  --border-subtle: #948779;
-  --border-strong: #6B6258;
-  --interactive-primary: #3F675F;
-  --interactive-primary-hover: #31554E;
-  --interactive-soft: #E1ECE8;
-  --interactive-soft-hover: #D4E3DE;
+  /* Semantic Status Colors */
   --status-queued-surface: #FAF3E0;
   --status-running-surface: #E1ECE8;
   --status-success-surface: #E2EDE4;
   --status-danger-surface: #F4E3DC;
+  --status-queued-color: #86662F;
+  --status-running-color: #3F675F;
+  --status-success-color: #3F6A4D;
+  --status-danger-color: #A0443F;
+
+  /* Agent Identity Colors */
   --agent-warm: #A75F49;
-  --success: #3F6A4D;
-  --warning: #86662F;
-  --danger: #A0443F;
-
-  --canvas: var(--surface-sunken);
-  --surface: var(--surface-card);
-  --surface-muted: var(--surface-panel);
-  --text: var(--text-primary);
-  --text-muted: var(--text-subtle);
-  --border: var(--border-subtle);
-  --accent: var(--interactive-primary);
-
   --agent-sage-fg: #315A52;
   --agent-sage-bg: #E1ECE8;
   --agent-terracotta-fg: #7B3F31;
@@ -52,12 +132,34 @@
   --agent-olive-fg: #4F5824;
   --agent-olive-bg: #E9EDD7;
 
+  /* Semantic Surface Mapping */
+  --surface-sunken: var(--color-canvas-parchment);
+  --surface-panel: var(--color-canvas-parchment);
+  --surface-main: var(--color-canvas);
+  --surface-card: var(--color-canvas);
+  --text-primary: var(--color-ink);
+  --text-secondary: var(--color-ink-muted-80);
+  --text-subtle: var(--color-ink-muted-48);
+  --border-subtle: var(--color-divider-soft);
+  --border-strong: var(--color-ink-muted-80);
+  --interactive-primary: var(--color-primary);
+  --interactive-primary-hover: var(--color-primary-focus);
+  --interactive-soft: var(--color-canvas-parchment);
+  --interactive-soft-hover: #E8E8E8;
+
+  /* Legacy Aliases */
+  --success: var(--status-success-color);
+  --warning: var(--status-queued-color);
+  --danger: var(--status-danger-color);
+
+  /* Legacy Text Scale */
   --text-xs: 0.75rem/1rem;
   --text-sm: 0.875rem/1.25rem;
   --text-md: 1rem/1.5rem;
   --text-lg: 1.25rem/1.75rem;
   --text-xl: 1.75rem/2.25rem;
 
+  /* Legacy Spacing */
   --space-1: 0.25rem;
   --space-2: 0.5rem;
   --space-3: 0.75rem;
@@ -66,17 +168,21 @@
   --space-6: 1.5rem;
   --space-8: 2rem;
 
+  /* Legacy Rounded */
   --radius-sm: 0.5rem;
   --radius-md: 0.75rem;
   --radius-lg: 1rem;
   --border-width: 0.0625rem;
 
-  --shadow-1: 0 0.25rem 0.75rem rgba(77, 65, 49, 0.08);
-  --shadow-2: 0 0.625rem 1.875rem rgba(77, 65, 49, 0.14);
-  --shadow-panel: var(--shadow-1);
-  --focus-ring-color: #3F675F;
-  --focus-ring: 0 0 0 0.1875rem var(--focus-ring-color);
+  /* Legacy Shadows */
+  --shadow-1: 0 0.25rem 0.75rem rgba(0, 0, 0, 0.08);
+  --shadow-2: 0 0.625rem 1.875rem rgba(0, 0, 0, 0.14);
 
+  /* Focus Ring */
+  --focus-ring-color: var(--color-primary-focus);
+  --focus-ring: 0 0 0 2px var(--color-primary-focus);
+
+  /* Layout Tokens */
   --activity-bar-width: 3rem;
   --sidebar-width: 15.5rem;
   --context-width: 20rem;
@@ -95,28 +201,40 @@
 :root[data-theme="dark"] {
   color-scheme: dark;
 
-  --surface-sunken: #151A18;
-  --surface-panel: #1B211F;
-  --surface-main: #202724;
-  --surface-card: #252D2A;
-  --text-primary: #F3EFE7;
-  --text-secondary: #D3CDC3;
-  --text-subtle: #B5ADA1;
-  --border-subtle: #807970;
-  --border-strong: #A69D91;
-  --interactive-primary: #83B3A8;
-  --interactive-primary-hover: #9AC6BC;
-  --interactive-soft: #2C403B;
-  --interactive-soft-hover: #365149;
+  /* DESIGN.md Dark Theme Core Color Tokens */
+  --color-primary: #0066cc;
+  --color-primary-focus: #0071e3;
+  --color-primary-on-dark: #2997ff;
+  --color-ink: #ffffff;
+  --color-body: #ffffff;
+  --color-body-on-dark: #ffffff;
+  --color-body-muted: #cccccc;
+  --color-ink-muted-80: #cccccc;
+  --color-ink-muted-48: #7a7a7a;
+  --color-divider-soft: #2a2a2c;
+  --color-hairline: #3a3a3c;
+  --color-canvas: #000000;
+  --color-canvas-parchment: #1c1c1e;
+  --color-surface-pearl: #2c2c2e;
+  --color-surface-tile-1: #272729;
+  --color-surface-tile-2: #2a2a2c;
+  --color-surface-tile-3: #252527;
+  --color-surface-black: #000000;
+
+  /* Dark Theme Status Surfaces */
   --status-queued-surface: #3B3322;
-  --status-running-surface: #243B36;
+  --status-running-surface: #1a2f29;
   --status-success-surface: #253A2C;
   --status-danger-surface: #402925;
-  --agent-warm: #D88B72;
-  --success: #8FC69E;
-  --warning: #D4B66F;
-  --danger: #E79288;
 
+  /* Dark Theme Status Colors */
+  --status-queued-color: #D4B66F;
+  --status-running-color: #83B3A8;
+  --status-success-color: #8FC69E;
+  --status-danger-color: #E79288;
+
+  /* Dark Theme Agent Colors */
+  --agent-warm: #D88B72;
   --agent-sage-fg: #A6D6CB;
   --agent-sage-bg: #243B36;
   --agent-terracotta-fg: #E6A18C;
@@ -130,11 +248,34 @@
   --agent-olive-fg: #C5CF8A;
   --agent-olive-bg: #343822;
 
+  /* Dark Theme Semantic Surface Mapping */
+  --surface-sunken: var(--color-surface-tile-1);
+  --surface-panel: var(--color-surface-tile-2);
+  --surface-main: var(--color-surface-tile-1);
+  --surface-card: var(--color-surface-tile-3);
+  --text-primary: var(--color-ink);
+  --text-secondary: var(--color-ink-muted-80);
+  --text-subtle: var(--color-ink-muted-48);
+  --border-subtle: var(--color-divider-soft);
+  --border-strong: var(--color-ink-muted-80);
+  --interactive-primary: var(--color-primary-on-dark);
+  --interactive-primary-hover: #4da6ff;
+  --interactive-soft: #2C403B;
+  --interactive-soft-hover: #365149;
+
+  /* Dark Theme Legacy Aliases */
+  --success: var(--status-success-color);
+  --warning: var(--status-queued-color);
+  --danger: var(--status-danger-color);
+
+  /* Dark Theme Shadows */
   --shadow-1: 0 0.25rem 0.75rem rgba(0, 0, 0, 0.28);
   --shadow-2: 0 0.625rem 1.875rem rgba(0, 0, 0, 0.42);
-  --shadow-panel: var(--shadow-1);
+  --shadow-panel: rgba(255, 255, 255, 0.08) 0px 1px 0px;
+
+  /* Dark Theme Focus Ring */
   --focus-ring-color: #9AC6BC;
-  --focus-ring: 0 0 0 0.1875rem var(--focus-ring-color);
+  --focus-ring: 0 0 0 2px #9AC6BC;
 }
 
 /* responsive-cockpit */

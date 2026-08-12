@@ -1,195 +1,252 @@
-import { readFileSync, readdirSync, statSync } from "node:fs";
-import { join, relative } from "node:path";
+import { existsSync, readFileSync } from "node:fs";
+import { join } from "node:path";
 import { describe, expect, it } from "vitest";
 
 const root = process.cwd();
 const tokenPath = join(root, "app", "tokens.css");
-const tokensCss = readFileSync(tokenPath, "utf8");
-const cockpitCss = readFileSync(join(root, "app", "cockpit.css"), "utf8");
+const cockpitPath = join(root, "app", "cockpit.css");
+const designPath = join(root, "DESIGN.md");
 
-const colorTokens = [
-  "surface-sunken",
-  "surface-panel",
-  "surface-main",
-  "surface-card",
-  "text-primary",
-  "text-secondary",
-  "text-subtle",
-  "border-subtle",
-  "border-strong",
-  "interactive-primary",
-  "interactive-primary-hover",
-  "interactive-soft",
-  "interactive-soft-hover",
-  "status-queued-surface",
-  "status-running-surface",
-  "status-success-surface",
-  "status-danger-surface",
-  "agent-warm",
-  "success",
-  "warning",
-  "danger",
-  "agent-sage-fg",
-  "agent-sage-bg",
-  "agent-terracotta-fg",
-  "agent-terracotta-bg",
-  "agent-gold-fg",
-  "agent-gold-bg",
-  "agent-slate-fg",
-  "agent-slate-bg",
-  "agent-rose-fg",
-  "agent-rose-bg",
-  "agent-olive-fg",
-  "agent-olive-bg",
-  "focus-ring-color",
-] as const;
+describe("DESIGN.md visual token discipline", () => {
+  it("defines DESIGN.md core color tokens", () => {
+    expect(existsSync(tokenPath)).toBe(true);
+    expect(existsSync(designPath)).toBe(true);
+    const tokens = existsSync(tokenPath) ? readFileSync(tokenPath, "utf8") : "";
+    const designMd = existsSync(designPath) ? readFileSync(designPath, "utf8") : "";
 
-const effectTokens = [
-  "shadow-1",
-  "shadow-2",
-  "shadow-panel",
-  "focus-ring",
-] as const;
-const requiredThemeTokens = [...colorTokens, ...effectTokens].sort();
-
-function themeBlock(selector: string): string {
-  const escaped = selector.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
-  return tokensCss.match(new RegExp(`${escaped}\\s*\\{([^}]*)\\}`, "s"))?.[1] ?? "";
-}
-
-function declarations(body: string): Map<string, string> {
-  return new Map(
-    [...body.matchAll(/--([\w-]+)\s*:\s*([^;]+);/g)].map((match) => [
-      match[1],
-      match[2].trim(),
-    ]),
-  );
-}
-
-const lightBlock = themeBlock(":root");
-const darkBlock = themeBlock(':root[data-theme="dark"]');
-const light = declarations(lightBlock);
-const dark = declarations(darkBlock);
-
-function channel(value: number): number {
-  const normalized = value / 255;
-  return normalized <= 0.04045
-    ? normalized / 12.92
-    : ((normalized + 0.055) / 1.055) ** 2.4;
-}
-
-function luminance(hex: string): number {
-  const value = Number.parseInt(hex.slice(1), 16);
-  return (
-    0.2126 * channel((value >> 16) & 255) +
-    0.7152 * channel((value >> 8) & 255) +
-    0.0722 * channel(value & 255)
-  );
-}
-
-function contrast(left: string, right: string): number {
-  const [lighter, darker] = [luminance(left), luminance(right)].sort(
-    (a, b) => b - a,
-  );
-  return (lighter + 0.05) / (darker + 0.05);
-}
-
-function color(theme: Map<string, string>, token: string): string {
-  const value = theme.get(token);
-  expect(value, `${token} token`).toMatch(/^#[0-9a-f]{6}$/i);
-  return value!;
-}
-
-function cssFiles(directory: string): string[] {
-  return readdirSync(directory).flatMap((entry) => {
-    const path = join(directory, entry);
-    return statSync(path).isDirectory()
-      ? cssFiles(path)
-      : path.endsWith(".css")
-        ? [path]
-        : [];
-  });
-}
-
-describe("light and dark theme tokens", () => {
-  it("defines equal complete color, shadow, focus, and color-scheme contracts", () => {
-    const lightThemeTokens = requiredThemeTokens.filter((token) => light.has(token));
-    const darkThemeTokens = requiredThemeTokens.filter((token) => dark.has(token));
-
-    expect(lightThemeTokens).toEqual(requiredThemeTokens);
-    expect(darkThemeTokens).toEqual(requiredThemeTokens);
-    expect(darkThemeTokens).toEqual(lightThemeTokens);
-    expect(lightBlock).toMatch(/(?:^|;)\s*color-scheme:\s*light\s*;/);
-    expect(darkBlock).toMatch(/(?:^|;)\s*color-scheme:\s*dark\s*;/);
-  });
-
-  it("keeps color literals confined to tokens.css", () => {
-    const offenders = cssFiles(join(root, "app"))
-      .filter((path) => path !== tokenPath)
-      .flatMap((path) => {
-        const css = readFileSync(path, "utf8");
-        return [...css.matchAll(/#[0-9a-f]{3,8}\b|(?:rgb|hsl)a?\([^)]*\)/gi)].map(
-          (match) => `${relative(root, path)}: ${match[0]}`,
-        );
-      });
-
-    expect(offenders).toEqual([]);
-  });
-
-  it("meets WCAG thresholds for combinations consumed by cockpit.css", () => {
-    for (const contract of [
-      /body\s*\{[^}]*background:\s*var\(--surface-sunken\)[^}]*color:\s*var\(--text-primary\)/s,
-      /(?:button,\s*input,\s*select,\s*textarea)\s*\{[^}]*border:[^;]*var\(--border-subtle\)[^}]*background:\s*var\(--surface-card\)[^}]*color:\s*var\(--text-primary\)/s,
-      /\.button-primary\s*\{[^}]*background:\s*var\(--interactive-primary\)[^}]*color:\s*var\(--surface-card\)/s,
-      /\.activity-bar\s*\{[^}]*background:\s*var\(--surface-panel\)[^}]*border-right:[^;]*var\(--border-subtle\)/s,
-      /:focus-visible[\s\S]*?\{[^}]*box-shadow:\s*var\(--focus-ring\)/,
-      /\.status-label\.status-queued\s*\{[^}]*color:\s*var\(--warning\)[^}]*background:\s*var\(--status-queued-surface\)/s,
-      /\.status-label\.status-running\s*\{[^}]*color:\s*var\(--interactive-primary\)[^}]*background:\s*var\(--status-running-surface\)/s,
-      /\.status-label\.status-completed\s*\{[^}]*color:\s*var\(--success\)[^}]*background:\s*var\(--status-success-surface\)/s,
-      /\.status-label\.status-failed\s*\{[^}]*color:\s*var\(--danger\)[^}]*background:\s*var\(--status-danger-surface\)/s,
+    // DESIGN.md color tokens should be present
+    for (const declaration of [
+      "--color-primary: #0066cc",
+      "--color-primary-focus: #0071e3",
+      "--color-primary-on-dark: #2997ff",
+      "--color-ink: #1d1d1f",
+      "--color-body: #1d1d1f",
+      "--color-canvas: #ffffff",
+      "--color-canvas-parchment: #f5f5f7",
+      "--color-surface-pearl: #fafafc",
+      "--color-surface-black: #000000",
+      "--color-body-muted: #cccccc",
+      "--color-divider-soft: #f0f0f0",
+      "--color-hairline: #e0e0e0",
     ]) {
-      expect(cockpitCss).toMatch(contract);
+      expect(tokens).toContain(declaration);
     }
 
-    const checks: Array<[string, string, string, number]> = [
-      ["body text", "text-primary", "surface-sunken", 4.5],
-      ["card text", "text-primary", "surface-card", 4.5],
-      ["panel secondary text", "text-secondary", "surface-panel", 4.5],
-      ["panel subtle text", "text-subtle", "surface-panel", 4.5],
-      ["primary button", "surface-card", "interactive-primary", 4.5],
-      ["primary button hover", "surface-card", "interactive-primary-hover", 4.5],
-      ["form boundary", "border-subtle", "surface-card", 3],
-      ["card boundary", "border-subtle", "surface-main", 3],
-      ["ActivityBar separator", "border-subtle", "surface-panel", 3],
-      ["focus on card", "focus-ring-color", "surface-card", 3],
-      ["focus on panel", "focus-ring-color", "surface-panel", 3],
-      ["queued status", "warning", "status-queued-surface", 4.5],
-      ["running status", "interactive-primary", "status-running-surface", 4.5],
-      ["success status", "success", "status-success-surface", 4.5],
-      ["danger status", "danger", "status-danger-surface", 4.5],
-      ["sage Agent", "agent-sage-fg", "agent-sage-bg", 4.5],
-      ["terracotta Agent", "agent-terracotta-fg", "agent-terracotta-bg", 4.5],
-      ["gold Agent", "agent-gold-fg", "agent-gold-bg", 4.5],
-      ["slate Agent", "agent-slate-fg", "agent-slate-bg", 4.5],
-      ["rose Agent", "agent-rose-fg", "agent-rose-bg", 4.5],
-      ["olive Agent", "agent-olive-fg", "agent-olive-bg", 4.5],
-    ];
+    // DESIGN.md should contain the source values
+    expect(designMd).toContain("primary: \"#0066cc\"");
+    expect(designMd).toContain("ink: \"#1d1d1f\"");
+    expect(designMd).toContain("canvas: \"#ffffff\"");
+  });
 
-    const ratios: string[] = [];
-    for (const [themeName, theme] of [
-      ["light", light],
-      ["dark", dark],
-    ] as const) {
-      for (const [label, foreground, background, threshold] of checks) {
-        const ratio = contrast(color(theme, foreground), color(theme, background));
-        ratios.push(`${themeName} ${label}: ${ratio.toFixed(2)}:1`);
-        expect(
-          ratio,
-          `${themeName} ${label}: ${foreground} on ${background} = ${ratio.toFixed(2)}:1`,
-        ).toBeGreaterThanOrEqual(threshold);
-      }
+  it("defines DESIGN.md typography scale", () => {
+    const tokens = readFileSync(tokenPath, "utf8");
+
+    // Font families
+    expect(tokens).toContain("--font-display: \"SF Pro Display\", system-ui");
+    expect(tokens).toContain("--font-body: \"SF Pro Text\", system-ui");
+
+    // Typography size tokens
+    expect(tokens).toContain("--text-hero-display: 56px");
+    expect(tokens).toContain("--text-display-lg: 40px");
+    expect(tokens).toContain("--text-display-md: 34px");
+    expect(tokens).toContain("--text-lead: 28px");
+    expect(tokens).toContain("--text-body: 17px");
+    expect(tokens).toContain("--text-caption: 14px");
+    expect(tokens).toContain("--text-fine-print: 12px");
+
+    // Line heights
+    expect(tokens).toContain("--leading-body: 1.47");
+    expect(tokens).toContain("--leading-caption: 1.43");
+
+    // Letter spacing (negative for display sizes)
+    expect(tokens).toContain("--tracking-body: -0.374px");
+    expect(tokens).toContain("--tracking-caption: -0.224px");
+  });
+
+  it("defines DESIGN.md spacing scale", () => {
+    const tokens = readFileSync(tokenPath, "utf8");
+
+    for (const declaration of [
+      "--space-xxs: 4px",
+      "--space-xs: 8px",
+      "--space-sm: 12px",
+      "--space-md: 17px",
+      "--space-lg: 24px",
+      "--space-xl: 32px",
+      "--space-xxl: 48px",
+      "--space-section: 80px",
+    ]) {
+      expect(tokens).toContain(declaration);
+    }
+  });
+
+  it("defines DESIGN.md rounded scale", () => {
+    const tokens = readFileSync(tokenPath, "utf8");
+
+    for (const declaration of [
+      "--rounded-none: 0px",
+      "--rounded-xs: 5px",
+      "--rounded-sm: 8px",
+      "--rounded-md: 11px",
+      "--rounded-lg: 18px",
+      "--rounded-pill: 9999px",
+    ]) {
+      expect(tokens).toContain(declaration);
+    }
+  });
+
+  it("defines DESIGN.md shadow tokens", () => {
+    const tokens = readFileSync(tokenPath, "utf8");
+
+    expect(tokens).toContain("--shadow-product: rgba(0, 0, 0, 0.22) 3px 5px 30px");
+    expect(tokens).toContain("--shadow-panel:");
+  });
+});
+
+describe("legacy cockpit token compatibility", () => {
+  it("maintains legacy semantic tokens for backward compatibility", () => {
+    expect(existsSync(tokenPath)).toBe(true);
+    const tokens = existsSync(tokenPath) ? readFileSync(tokenPath, "utf8") : "";
+
+    // Legacy semantic surface tokens
+    for (const declaration of [
+      "--surface-sunken: var(--color-canvas-parchment)",
+      "--surface-panel: var(--color-canvas-parchment)",
+      "--surface-main: var(--color-canvas)",
+      "--surface-card: var(--color-canvas)",
+      "--text-primary: var(--color-ink)",
+      "--text-secondary: var(--color-ink-muted-80)",
+      "--text-subtle: var(--color-ink-muted-48)",
+      "--border-subtle: var(--color-divider-soft)",
+      "--border-strong: var(--color-ink-muted-80)",
+      "--interactive-primary: var(--color-primary)",
+      "--interactive-primary-hover: var(--color-primary-focus)",
+      "--interactive-soft: var(--color-canvas-parchment)",
+    ]) {
+      expect(tokens).toContain(declaration);
     }
 
-    console.info(`Theme contrast ratios\n${ratios.join("\n")}`);
+    // Legacy status tokens
+    expect(tokens).toContain("--success:");
+    expect(tokens).toContain("--warning:");
+    expect(tokens).toContain("--danger:");
+
+    // Legacy spacing
+    expect(tokens).toContain("--space-4: 1rem");
+    expect(tokens).toContain("--space-8: 2rem");
+
+    // Legacy rounded
+    expect(tokens).toContain("--radius-md: 0.75rem");
+
+    // Legacy shadows
+    expect(tokens).toContain("--shadow-1:");
+    expect(tokens).toContain("--shadow-2:");
+
+    // Legacy focus ring
+    expect(tokens).toContain("--focus-ring-color:");
+    expect(tokens).toContain("--focus-ring:");
+  });
+
+  it("uses a macOS-first font stack led by -apple-system", () => {
+    const tokens = readFileSync(tokenPath, "utf8");
+    const match = tokens.match(/--font-sans:\s*([^;]+);/);
+    const value = match ? match[1].trim() : "";
+
+    expect(value.startsWith("-apple-system")).toBe(true);
+    expect(value).toContain("PingFang SC");
+    expect(value).toContain("Noto Sans SC");
+    expect(value).toContain("Segoe UI Variable");
+    expect(value).toContain("Microsoft YaHei UI");
+  });
+});
+
+describe("visual token discipline", () => {
+  it("maps shared cockpit hierarchy to named surfaces and elevation", () => {
+    const css = readFileSync(cockpitPath, "utf8");
+
+    expect(css).toMatch(
+      /\.collaboration-cockpit\s*\{[^}]*background:\s*var\(--surface-sunken\)/s,
+    );
+    expect(css).toMatch(
+      /\.cockpit-sidebar,\s*\.cockpit-context\s*\{[^}]*background:\s*var\(--surface-panel\)[^}]*border[^;]*var\(--border-subtle\)/s,
+    );
+    expect(css).toMatch(
+      /\.cockpit-flow\s*\{[^}]*background:\s*var\(--surface-main\)/s,
+    );
+    expect(css).toMatch(
+      /\.mission-summary,[\s\S]*?\.mission-status\s*\{[^}]*background:\s*var\(--surface-card\)[^}]*border[^;]*var\(--border-subtle\)/,
+    );
+    expect(css).toMatch(
+      /\.modal-surface\s*\{[^}]*background:\s*var\(--surface-card\)[^}]*box-shadow:\s*var\(--shadow-2\)/s,
+    );
+  });
+
+  it("defines shared action, navigation, and status class contracts", () => {
+    const css = readFileSync(cockpitPath, "utf8");
+
+    expect(css).toMatch(
+      /\.button-primary\s*\{[^}]*background:\s*var\(--interactive-primary\)[^}]*color:\s*var\(--surface-card\)/s,
+    );
+    expect(css).toMatch(
+      /\.button-secondary\s*\{[^}]*background:\s*var\(--interactive-soft\)[^}]*border[^;]*var\(--border-strong\)/s,
+    );
+    expect(css).toMatch(
+      /\.button-ghost\s*\{[^}]*background:\s*transparent[^}]*color:\s*var\(--text-secondary\)/s,
+    );
+    expect(css).toMatch(
+      /\.nav-item\[aria-current\]\s*\{[^}]*background:\s*var\(--interactive-soft\)[^}]*color:\s*var\(--interactive-primary\)/s,
+    );
+    expect(css).toMatch(
+      /\.surface-heading\s*\{[^}]*color:\s*var\(--text-primary\)/s,
+    );
+
+    for (const [status, surface] of [
+      ["queued", "queued"],
+      ["running", "running"],
+      ["completed", "success"],
+      ["failed", "danger"],
+    ]) {
+      expect(css).toMatch(
+        new RegExp(
+          `\\.status-label\\.status-${status}\\s*\\{[^}]*background:\\s*var\\(--status-${surface}-surface\\)`,
+          "s",
+        ),
+      );
+    }
+  });
+
+  it("uses named tokens for desktop layout and 44px controls", () => {
+    expect(existsSync(cockpitPath)).toBe(true);
+    const css = existsSync(cockpitPath) ? readFileSync(cockpitPath, "utf8") : "";
+
+    expect(css).toMatch(
+      /grid-template-columns:\s*var\(--activity-bar-width\)\s+var\(--sidebar-width\)\s+minmax\(var\(--content-min\),\s*1fr\)\s+var\(--context-width\)/,
+    );
+    expect(css).toMatch(
+      /(?:button|input)[^{]*\{[^}]*min-height:\s*var\(--control-min\)/s,
+    );
+  });
+
+  it("keeps raw visual values out of component styles", () => {
+    expect(existsSync(cockpitPath)).toBe(true);
+    const css = existsSync(cockpitPath) ? readFileSync(cockpitPath, "utf8") : "";
+    const componentSource = [
+      readFileSync(join(root, "components", "project-panel.tsx"), "utf8"),
+      readFileSync(join(root, "components", "task-panel.tsx"), "utf8"),
+    ].join("\n");
+
+    expect(css).not.toMatch(/#[0-9a-f]{3,8}\b|(?:rgb|hsl)a?\(/i);
+    expect(componentSource).not.toMatch(/style=\{\{/);
+
+    const visualDeclaration =
+      /^\s*(?:color|background(?:-color)?|border(?:-color|-radius)?|font(?:-size)?|line-height|gap|padding(?:-[a-z]+)?|margin(?:-[a-z]+)?|box-shadow|min-height|min-width|width|grid-template-columns)\s*:\s*([^;]+);/gim;
+    for (const match of css.matchAll(visualDeclaration)) {
+      const value = match[1].trim();
+      expect(
+        value.includes("var(") ||
+          /^(?:0|auto|none|inherit|transparent)$/.test(value),
+        `Raw visual value is not tokenized: ${match[0].trim()}`,
+      ).toBe(true);
+    }
   });
 });

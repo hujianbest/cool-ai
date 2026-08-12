@@ -37,4 +37,13 @@ if (typeof window !== "undefined") {
     cleanup();
     window.history.replaceState(null, "", "/");
   });
+
+  // Setup localStorage for jsdom tests
+  const { JSDOM } = await import("jsdom");
+  if (typeof localStorage === "undefined") {
+    const jsdom = new JSDOM("<!DOCTYPE html><html><body></body></html>", {
+      url: "http://localhost",
+    });
+    global.localStorage = jsdom.window.localStorage;
+  }
 }
