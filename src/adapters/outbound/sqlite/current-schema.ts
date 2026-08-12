@@ -12,7 +12,7 @@ export type CurrentSchemaManifest = {
 
 const CURRENT_SCHEMA_DEFINITION = {
   "identity": {
-    "userVersion": 19
+    "userVersion": 20
   },
   "objects": [
     {
@@ -494,6 +494,20 @@ const CURRENT_SCHEMA_DEFINITION = {
       "name": "thread_purge_markers",
       "createSql": "CREATE TABLE thread_purge_markers(\n project_id TEXT NOT NULL,thread_id TEXT NOT NULL,\n created_at TEXT NOT NULL CHECK(created_at GLOB '????-??-??T??:??:??.???Z'),\n PRIMARY KEY(project_id,thread_id),\n FOREIGN KEY(project_id) REFERENCES projects(id) ON DELETE CASCADE\n)",
       "dependsOn": []
+    },
+    {
+      "kind": "table",
+      "name": "thread_message_queue",
+      "createSql": "CREATE TABLE thread_message_queue(\n id TEXT PRIMARY KEY,project_id TEXT NOT NULL,thread_id TEXT NOT NULL,\n content TEXT NOT NULL CHECK(length(content)>=1),\n position INTEGER NOT NULL CHECK(position>=1),\n status TEXT NOT NULL CHECK(status IN('pending','consumed','cancelled')),\n operation_id TEXT NOT NULL,\n created_at TEXT NOT NULL CHECK(created_at GLOB '????-??-??T??:??:??.???Z'),\n updated_at TEXT NOT NULL CHECK(updated_at GLOB '????-??-??T??:??:??.???Z'),\n UNIQUE(project_id,thread_id,position),\n FOREIGN KEY(project_id,thread_id) REFERENCES collaboration_threads(project_id,id) ON DELETE CASCADE\n)",
+      "dependsOn": []
+    },
+    {
+      "kind": "index",
+      "name": "thread_message_queue_pending_idx",
+      "createSql": "CREATE INDEX thread_message_queue_pending_idx\n ON thread_message_queue(project_id,thread_id,position,id)\n WHERE status='pending'",
+      "dependsOn": [
+        "thread_message_queue"
+      ]
     },
     {
       "kind": "index",

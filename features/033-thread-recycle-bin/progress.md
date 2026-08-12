@@ -1,10 +1,10 @@
 # 进度
 
 - 特性: 033-thread-recycle-bin（对应切片: S-20 / CI-2.8）
-- 当前阶段: implement（T-01..T-06 已勾选，待 ship 收口）
+- 当前阶段: done
 - 执行模式: auto（用户 2026-08-09 明示：不在电脑前，问题按助手推荐处理）
 - 已加载扩展: 无
-- 下一步: 进入 ship（整理验收证据与切片提交）
+- 下一步: 等待下一切片准入
 - 用户可感知: 是
 - 评审状态: 项目级 review 豁免（AGENTS.md 2026-08-09 起生效）；不伪造评审工件；spec/architecture/tickets 由主会话按 backlog S-20 已确认条目直接产出
 - 共享理解: backlog S-20 条目视为 auto-approved 2026-08-11
@@ -19,3 +19,4 @@
 - 2026-08-11 T-04 完成（项目级 review 豁免，实现委派 subagent）：两轮 RED/GREEN——R1 命令缝（`tests/modules/public-collaboration/thread-lifecycle.test.ts` 新增 purge 断言先红：`purgeThread` 缺失、触发器门负例缺失、executions 守卫缺失）→ GREEN（`thread-lifecycle-service.ts` 增 `purgeThread`：tuple+回收站校验、executions 预检 409 `fields.threadId="has_executions"`、事务内 `insertThreadPurgeMarkerTx`→显式删除 facts/state_heads/state_revisions/blocks/business_action_receipts/inline_decisions→`deleteThreadSearchIndexRowsTx` 清索引→收集 attachment `storage_relpath`→`DELETE collaboration_threads` 级联余图→同事务 unlink 字节失败即回滚→重算 `next_activity_sequence=1+COALESCE(MAX(...),0)`→删 marker→写 `thread_purged` 审计并提交；返回 `ThreadPurgeResponse`）。R2 路由缝（`app/api/projects/[projectId]/threads/[threadId]/purge/route.ts` 先红后绿）→ GREEN（`POST` 严格空 JSON `{}`、拒绝 query/fragment/尾缀、脱敏错误映射、全响应 `cache-control: no-store`）。验证矩阵全覆盖：逐表零残留、无 marker 直删 facts 触发器 ABORT、executions 引用稳定 409 且 FK 兜底、附件字节实删、搜索零命中、重试 purge 明确 404、审计 outbox 落 `thread_purged`、跨 tuple 404。聚焦验证全绿：`npx vitest run tests/modules/public-collaboration/thread-lifecycle.test.ts`（28/28）；`npx vitest run tests/modules/public-collaboration tests/adapters/sqlite tests/modules/operations-projection`（79 文件 1021 用例）；`npx tsc --noEmit` 干净。实现默认落台账 A-228。未 commit/push。
 - 2026-08-11 T-05 完成（项目级 review 豁免，主会话实现）：三轮 RED/GREEN——R1 回收站导航缝（`tests/browser/threads/thread-recycle-bin-ui.test.tsx` 首轮红：缺第三 tab/空态/删除确认）→ GREEN（`components/project-thread-navigation.tsx` 增 `recycle_bin` 视图状态机、`listDeletedThreads` 拉取与 cursor 分页、列表项「移入回收站」轻确认、回收站行内「恢复/永久删除」与强确认、`has_executions` 409 行内 `role=alert`、删除当前线程回项目根、静默刷新与 target guard）。R2 当前导航占位缝（同套件红：`thread_deleted` 404 未落占位）→ GREEN（`components/collaboration/collaboration-panel.tsx` 识别 404 reason=`thread_deleted`，渲染「该线程已移入回收站。」+「恢复线程/返回线程列表」，恢复走既有 restore 路由并回填成功状态，保持 epoch+Abort 防陈旧）。R3 样式契约缝（同套件红：缺回收站 token 规则）→ GREEN（`app/cockpit.css` 补 `.thread-recycle-*`、`.thread-delete-confirm`、`.thread-purge-confirm`、`.thread-deleted-placeholder` 全 token 规则，`thread-recycle-item-action` 明确 `min-height/min-width: var(--control-min)`）。验证：`npx vitest run tests/browser/threads/thread-recycle-bin-ui.test.tsx`（5/5）、`npx vitest run tests/browser/threads`（8 文件 94 用例全绿）、`npx tsc --noEmit` 干净。实现默认落台账 A-229。未 commit/push。
 - 2026-08-12 T-06 完成（项目级 review 豁免，主会话实现）：延续既有 033 验收段并补齐稳健性修复——`thread-tags-ui` 歧义 `role=status` 断言改为精确文案；回收站恢复排序基线改为删除前快照；输入历史空结果等待加入一次重试；当前线程“返回线程列表”断言改为作用域点击并等待回收站视图可见；永久删除段兼容瞬时 503 后重试；执行守卫分支兼容 `has_active_run` 先停后删与 purge 结果分支。实现侧同步修复：`restoreThread`/`deleteThread` 不再改写 `updated_at`，避免恢复后列表顺序漂移；`purgeThread` 仅在无跨线程引用时 unlink 字节并容忍 ENOENT，避免哈希去重附件导致假性 503。一次性验证通过：`npm run smoke:threads` PASS（`THREAD SMOKE PASS`，含 033 四张证据图）、`npx vitest run` PASS（272 文件 2499 用例）、`npx tsc --noEmit` PASS、`npm run build` PASS。
+- 2026-08-12 ship 收口：已完成项目级 review 豁免下的实现收尾、证据归档与切片提交；提交 `235d887` 已推送到 `origin/master`。S-20 对应 backlog 条目应标记为已交付并回写 `CAP-COL-02` 能力状态描述。

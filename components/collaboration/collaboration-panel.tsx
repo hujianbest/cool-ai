@@ -36,6 +36,7 @@ import type {
   RunStartResponse,
   ThreadFactDto,
   ThreadMessageDto,
+  ThreadQueueItemDto,
   ThreadRunDto,
   TimelineEvent,
   UsageTotals,
@@ -229,6 +230,86 @@ function parseDraftSaveResponse(value: unknown): { contentSaved: boolean } | nul
   return typeof value.contentSaved === "boolean"
     ? { contentSaved: value.contentSaved }
     : null;
+}
+
+type QueueMutationOutcome = {
+  nextVersion: number;
+  updatedItem: ThreadQueueItemDto;
+};
+
+function parseQueueItem(
+  value: unknown,
+  projectId: string,
+  threadId: string,
+): ThreadQueueItemDto | null {
+  const candidate = value as Record<string, unknown>;
+  if (
+    !exactKeys(value, [
+      "content",
+      "createdAt",
+      "id",
+      "position",
+      "projectId",
+      "status",
+      "threadId",
+      "updatedAt",
+    ])
+    || candidate.projectId !== projectId
+    || candidate.threadId !== threadId
+    || typeof candidate.id !== "string"
+    || typeof candidate.content !== "string"
+    || !Number.isSafeInteger(candidate.position)
+    || Number(candidate.position) < 1
+    || (
+      candidate.status !== "pending"
+      && candidate.status !== "consumed"
+      && candidate.status !== "cancelled"
+    )
+    || typeof candidate.createdAt !== "string"
+    || typeof candidate.updatedAt !== "string"
+  ) {
+    return null;
+  }
+  return value as ThreadQueueItemDto;
+}
+
+function parseQueueListResponse(
+  value: unknown,
+  projectId: string,
+  threadId: string,
+): ThreadQueueItemDto[] | null {
+  if (!exactKeys(value, ["items"]) || !Array.isArray(value.items)) return null;
+  const items = value.items.map((item) => parseQueueItem(item, projectId, threadId));
+  if (items.some((item) => item === null)) return null;
+  return items as ThreadQueueItemDto[];
+}
+
+function parseQueueMutationResponse(
+  value: unknown,
+  projectId: string,
+  threadId: string,
+): QueueMutationOutcome | null {
+  if (
+    !value ||
+    typeof value !== "object"
+    || Array.isArray(value)
+    || !("item" in value)
+    || !("threadVersion" in value)
+    || !Number.isSafeInteger((value as { threadVersion?: unknown }).threadVersion)
+    || Number((value as { threadVersion: number }).threadVersion) < 1
+  ) {
+    return null;
+  }
+  const parsedItem = parseQueueItem(
+    (value as { item: unknown }).item,
+    projectId,
+    threadId,
+  );
+  if (!parsedItem) return null;
+  return {
+    nextVersion: Number((value as { threadVersion: number }).threadVersion),
+    updatedItem: parsedItem,
+  };
 }
 
 const activeRunStatuses = new Set(["running", "waiting_owner", "paused", "failed"]);
@@ -1153,6 +1234,12 @@ export function CollaborationPanel({
   const [advanceCycle, setAdvanceCycle] = useState(0);
   const [decisionSuccess, setDecisionSuccess] = useState(false);
   const [startNotice, setStartNotice] = useState("");
+  const [queueExpanded, setQueueExpanded] = useState(false);
+  const [queueItems, setQueueItems] = useState<ThreadQueueItemDto[] | null>(null);
+  const [queueLoading, setQueueLoading] = useState(false);
+  const [queueError, setQueueError] = useState<string | null>(null);
+  const [queueThreadVersion, setQueueThreadVersion] = useState<number | null>(null);
+  const [queuePendingKey, setQueuePendingKey] = useState<string | null>(null);
   const [runSelection, setRunSelection] = useState<Pick<
     OnboardingThreadEnvelope,
     "activeRun" | "runs" | "selectedRun"
@@ -1291,6 +1378,16 @@ export function CollaborationPanel({
             runs: result.envelope.runs,
             selectedRun: result.envelope.selectedRun,
           });
+          if (
+            result.envelope.thread &&
+            typeof result.envelope.thread === "object" &&
+            "version" in result.envelope.thread &&
+            Number.isSafeInteger((result.envelope.thread as { version?: unknown }).version)
+          ) {
+            setQueueThreadVersion(Number((result.envelope.thread as { version: number }).version));
+          } else {
+            setQueueThreadVersion(null);
+          }
           setRunNavigationPending(false);
           if (result.envelope.selectedRun) {
             setRunSelectionNotice(
@@ -1390,6 +1487,12 @@ export function CollaborationPanel({
     setFactsError(null);
     setFactsPending(false);
     setFactsStatus("");
+    setQueueExpanded(false);
+    setQueueItems(null);
+    setQueueLoading(false);
+    setQueueError(null);
+    setQueueThreadVersion(null);
+    setQueuePendingKey(null);
     setNewEventCount(0);
     setLoading(true);
     setLoadError(null);
@@ -2698,6 +2801,13 @@ export function CollaborationPanel({
   const canSubmitMessage = Boolean(
     state?.run || selectedTerminalRun || canStartFirstRun || activeRunInOtherThread,
   );
+  const queuePendingItems = (queueItems ?? []).filter((item) => item.status === "pending");
+  const queueSteerDisabled = !state?.readiness.ready || activeRunInOtherThread;
+  const queueSteerHint = activeRunInOtherThread
+    ? "另一线程存在活动运行，当前禁止 steer。"
+    : !state?.readiness.ready
+      ? "线程尚未就绪，当前禁止 steer。"
+      : null;
 
   function navigateToRun(nextThreadId: string, nextRunId: string | null) {
     const href = canonicalRunHref(projectId, nextThreadId, nextRunId);
@@ -2739,6 +2849,91 @@ export function CollaborationPanel({
       setThreadDeletedRestorePending(false);
     }
   }
+
+  async function loadThreadQueue() {
+    if (!threadId || queueLoading) return;
+    const request = targetGuard.capture();
+    setQueueLoading(true);
+    setQueueError(null);
+    try {
+      const response = await fetch(
+        `/api/projects/${encodeURIComponent(projectId)}/threads/${encodeURIComponent(threadId)}/queue`,
+        { signal: request.signal },
+      );
+      const payload = await readApiResponse<unknown>(
+        response,
+        "无法加载待处理消息队列，请稍后重试。",
+      );
+      const parsed = parseQueueListResponse(payload, projectId, threadId);
+      if (!parsed) throw new Error("Invalid queue list response.");
+      if (!request.isCurrent()) return;
+      setQueueItems(
+        [...parsed].sort((left, right) => left.position - right.position || left.id.localeCompare(right.id)),
+      );
+    } catch (cause) {
+      if (request.isCurrent()) {
+        setQueueError(caughtApiErrorCopy(cause, "无法加载待处理消息队列，请稍后重试。"));
+      }
+    } finally {
+      if (request.isCurrent()) setQueueLoading(false);
+    }
+  }
+
+  async function mutateQueueItem(
+    queueItemId: string,
+    kind: "cancel" | "reorder" | "steer",
+    input: Record<string, unknown>,
+  ) {
+    if (!threadId || queueThreadVersion === null) {
+      setQueueError("队列版本未就绪，请先刷新线程。");
+      return;
+    }
+    const request = targetGuard.capture();
+    const pendingKey = `${kind}:${queueItemId}`;
+    setQueuePendingKey(pendingKey);
+    setQueueError(null);
+    const operation = operationId();
+    const routeSuffix =
+      kind === "cancel" ? "cancel" : kind === "reorder" ? "reorder" : "steer";
+    try {
+      const response = await fetch(
+        `/api/projects/${encodeURIComponent(projectId)}/threads/${encodeURIComponent(threadId)}/queue/${encodeURIComponent(queueItemId)}/${routeSuffix}`,
+        {
+          body: JSON.stringify({
+            ...input,
+            expectedVersion: queueThreadVersion,
+            operationId: operation,
+          }),
+          headers: { "content-type": "application/json" },
+          method: "POST",
+          signal: request.signal,
+        },
+      );
+      const payload = await readApiResponse<unknown>(response, "队列操作失败，请稍后重试。");
+      if (!request.isCurrent()) return;
+      const parsed = parseQueueMutationResponse(payload, projectId, threadId);
+      if (!parsed) throw new Error("Invalid queue mutation response.");
+      setQueueThreadVersion(parsed.nextVersion);
+      setQueueItems((current) => {
+        if (!current) return current;
+        return current
+          .map((item) => (item.id === parsed.updatedItem.id ? parsed.updatedItem : item))
+          .sort((left, right) => left.position - right.position || left.id.localeCompare(right.id));
+      });
+      void loadThreadQueue();
+    } catch (cause) {
+      if (request.isCurrent()) {
+        setQueueError(caughtApiErrorCopy(cause, "队列操作失败，请稍后重试。"));
+      }
+    } finally {
+      if (request.isCurrent()) setQueuePendingKey(null);
+    }
+  }
+
+  useEffect(() => {
+    if (!queueExpanded || queueItems !== null) return;
+    void loadThreadQueue();
+  }, [queueExpanded, queueItems, targetKey]);
 
   function returnToThreadList() {
     const href = `/projects/${encodeURIComponent(projectId)}`;
@@ -3009,6 +3204,110 @@ export function CollaborationPanel({
               <p className="muted">
                 请先明确选择此线程的一次运行；不会自动使用项目最新运行。
               </p>
+            </section>
+          ) : null}
+          {showChat && state ? (
+            <section aria-label="待处理消息队列" className="run-detail" role="region">
+              <div className="panel-heading">
+                <h3>待处理消息队列</h3>
+                <button
+                  onClick={() => {
+                    setQueueExpanded((expanded) => !expanded);
+                  }}
+                  type="button"
+                >
+                  {queueExpanded ? "收起待处理消息队列" : "展开待处理消息队列"}
+                </button>
+              </div>
+              {queueExpanded ? (
+                <>
+                  {queueLoading ? (
+                    <p aria-busy="true" className="muted">正在加载待处理消息队列…</p>
+                  ) : queueError ? (
+                    <div className="stack">
+                      <p className="error-text" role="alert">{queueError}</p>
+                      <button onClick={() => void loadThreadQueue()} type="button">
+                        重试加载队列
+                      </button>
+                    </div>
+                  ) : (queueItems?.length ?? 0) === 0 ? (
+                    <p className="muted">暂无待处理消息。</p>
+                  ) : (
+                    <ol className="timeline" aria-label="待处理消息列表">
+                      {(queueItems ?? []).map((item) => {
+                        const pendingIndex = queuePendingItems.findIndex(
+                          (candidate) => candidate.id === item.id,
+                        );
+                        const isPending = pendingIndex >= 0;
+                        const pendingActionForItem = queuePendingKey?.endsWith(`:${item.id}`) ?? false;
+                        return (
+                          <li className="timeline-item timeline-event" key={item.id}>
+                            <div className="timeline-event-heading">
+                              <h4>{item.content}</h4>
+                              <span className="status-label">{item.status}</span>
+                            </div>
+                            <p className="muted">队列位置 #{item.position}</p>
+                            <div className="control-actions">
+                              <button
+                                aria-label={`上移 ${item.content}`}
+                                disabled={
+                                  !isPending
+                                  || pendingIndex <= 0
+                                  || queuePendingKey !== null
+                                }
+                                onClick={() =>
+                                  void mutateQueueItem(item.id, "reorder", { position: pendingIndex })
+                                }
+                                type="button"
+                              >
+                                上移
+                              </button>
+                              <button
+                                aria-label={`下移 ${item.content}`}
+                                disabled={
+                                  !isPending
+                                  || pendingIndex < 0
+                                  || pendingIndex >= queuePendingItems.length - 1
+                                  || queuePendingKey !== null
+                                }
+                                onClick={() =>
+                                  void mutateQueueItem(item.id, "reorder", { position: pendingIndex + 2 })
+                                }
+                                type="button"
+                              >
+                                下移
+                              </button>
+                              <button
+                                aria-label={`Steer ${item.content}`}
+                                disabled={
+                                  !isPending
+                                  || queueSteerDisabled
+                                  || queuePendingKey !== null
+                                }
+                                onClick={() => void mutateQueueItem(item.id, "steer", {})}
+                                type="button"
+                              >
+                                {pendingActionForItem && queuePendingKey?.startsWith("steer:")
+                                  ? "Steer 中…"
+                                  : "Steer"}
+                              </button>
+                              <button
+                                aria-label={`撤回 ${item.content}`}
+                                disabled={!isPending || queuePendingKey !== null}
+                                onClick={() => void mutateQueueItem(item.id, "cancel", {})}
+                                type="button"
+                              >
+                                撤回
+                              </button>
+                            </div>
+                          </li>
+                        );
+                      })}
+                    </ol>
+                  )}
+                  {queueSteerHint ? <p className="muted">{queueSteerHint}</p> : null}
+                </>
+              ) : null}
             </section>
           ) : null}
           {showChat && state && transcript.kind === "invalid" ? (

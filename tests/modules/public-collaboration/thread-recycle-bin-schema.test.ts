@@ -81,10 +81,10 @@ afterEach(() => {
 });
 
 describe("thread recycle bin schema seam", () => {
-  it("bootstraps identity 19 with deleted_at, the recycle-bin partial index and thread_purge_markers", () => {
+  it("bootstraps current identity with deleted_at, the recycle-bin partial index and thread_purge_markers", () => {
     const raw = new DatabaseSync(databasePath);
     try {
-      expect(raw.prepare("PRAGMA user_version").get()).toEqual({ user_version: 19 });
+      expect(raw.prepare("PRAGMA user_version").get()).toEqual({ user_version: 20 });
       const objects = raw
         .prepare(
           `SELECT type,name FROM sqlite_master
@@ -261,7 +261,7 @@ describe("thread recycle bin schema seam", () => {
     );
   });
 
-  it("reopens an exact identity-19 database idempotently with a soft-deleted thread", () => {
+  it("reopens an exact current-identity database idempotently with a soft-deleted thread", () => {
     const threadId = createSeededThread("project-a", "Thread A");
     const raw = new DatabaseSync(databasePath);
     try {
@@ -277,7 +277,7 @@ describe("thread recycle bin schema seam", () => {
       const database = openDatabase(databasePath);
       try {
         expect(database.prepare("PRAGMA user_version").get()).toEqual({
-          user_version: 19,
+          user_version: 20,
         });
         expect(
           database

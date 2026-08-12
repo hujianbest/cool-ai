@@ -71,10 +71,10 @@ describe("current canonical schema", () => {
     }
   });
 
-  it("bootstraps a missing database directly at identity 18", () => {
+  it("bootstraps a missing database directly at identity 20", () => {
     const database = openDatabase(databasePath());
     try {
-      expect(database.prepare("PRAGMA user_version").get()).toEqual({ user_version: 19 });
+      expect(database.prepare("PRAGMA user_version").get()).toEqual({ user_version: 20 });
     } finally {
       database.close();
     }
@@ -90,10 +90,33 @@ describe("current canonical schema", () => {
     missing.close();
     const empty = openDatabase(emptyPath);
     try {
-      expect(empty.prepare("PRAGMA user_version").get()).toEqual({ user_version: 19 });
+      expect(empty.prepare("PRAGMA user_version").get()).toEqual({ user_version: 20 });
       expect(schemaRows(empty)).toEqual(expected);
     } finally {
       empty.close();
+    }
+  });
+
+  it("contains canonical thread queue table and pending index", () => {
+    const database = openDatabase(databasePath());
+    try {
+      const queueTable = database.prepare(`
+        SELECT sql
+        FROM sqlite_master
+        WHERE type='table' AND name='thread_message_queue'
+      `).get() as { sql: string } | undefined;
+      const pendingIndex = database.prepare(`
+        SELECT sql
+        FROM sqlite_master
+        WHERE type='index' AND name='thread_message_queue_pending_idx'
+      `).get() as { sql: string } | undefined;
+      expect(queueTable?.sql).toContain(
+        "status TEXT NOT NULL CHECK(status IN('pending','consumed','cancelled'))",
+      );
+      expect(queueTable?.sql).toContain("UNIQUE(project_id,thread_id,position)");
+      expect(pendingIndex?.sql).toContain("WHERE status='pending'");
+    } finally {
+      database.close();
     }
   });
 
@@ -232,7 +255,7 @@ describe("current canonical schema", () => {
     }
     const recovered = openDatabase(path);
     try {
-      expect(recovered.prepare("PRAGMA user_version").get()).toEqual({ user_version: 19 });
+      expect(recovered.prepare("PRAGMA user_version").get()).toEqual({ user_version: 20 });
     } finally {
       recovered.close();
     }

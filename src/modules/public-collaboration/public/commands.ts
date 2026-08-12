@@ -15,6 +15,10 @@ import type {
   ThreadDraftClearResponse,
   ThreadDraftSaveResponse,
   ThreadFavoriteSetResponse,
+  ThreadQueueCancelResponse,
+  ThreadQueueEnqueueResponse,
+  ThreadQueueReorderResponse,
+  ThreadQueueSteerResponse,
   ThreadRestoreResponse,
   ThreadTagAssignmentResponse,
   ThreadTagBatchResponse,
@@ -101,6 +105,33 @@ export interface PublicCollaborationCommands {
     threadId: string,
     rawInput: unknown,
   ): PublicCollaborationCommandResult<Record<string, unknown>>;
+  enqueueThreadMessage(
+    databasePath: string,
+    projectId: string,
+    threadId: string,
+    rawInput: unknown,
+  ): PublicCollaborationCommandResult<ThreadQueueEnqueueResponse>;
+  cancelQueuedMessage(
+    databasePath: string,
+    projectId: string,
+    threadId: string,
+    queueItemId: string,
+    rawInput: unknown,
+  ): PublicCollaborationCommandResult<ThreadQueueCancelResponse>;
+  reorderQueuedMessage(
+    databasePath: string,
+    projectId: string,
+    threadId: string,
+    queueItemId: string,
+    rawInput: unknown,
+  ): PublicCollaborationCommandResult<ThreadQueueReorderResponse>;
+  steerQueuedMessage(
+    databasePath: string,
+    projectId: string,
+    threadId: string,
+    queueItemId: string,
+    rawInput: unknown,
+  ): PublicCollaborationCommandResult<ThreadQueueSteerResponse>;
 
   saveThreadDraft(
     databasePath: string,

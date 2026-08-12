@@ -382,6 +382,47 @@ export type ThreadListResponseDto = {
   threads: ThreadListItemDto[];
 };
 
+export type ThreadQueueStatus = "pending" | "consumed" | "cancelled";
+
+export type ThreadQueueItemDto = {
+  content: string;
+  createdAt: string;
+  id: string;
+  position: number;
+  projectId: string;
+  status: ThreadQueueStatus;
+  threadId: string;
+  updatedAt: string;
+};
+
+export type ThreadQueueListResponseDto = {
+  items: ThreadQueueItemDto[];
+};
+
+export type ThreadQueueEnqueueResponse = {
+  created: true;
+  item: ThreadQueueItemDto;
+  threadVersion: number;
+};
+
+export type ThreadQueueCancelResponse = {
+  cancelled: boolean;
+  item: ThreadQueueItemDto;
+  threadVersion: number;
+};
+
+export type ThreadQueueReorderResponse = {
+  reordered: boolean;
+  item: ThreadQueueItemDto;
+  threadVersion: number;
+};
+
+export type ThreadQueueSteerResponse = {
+  item: ThreadQueueItemDto;
+  steered: boolean;
+  threadVersion: number;
+};
+
 export type ThreadFavoriteSetResponse = {
   favoritedAt: string | null;
   isFavorite: boolean;

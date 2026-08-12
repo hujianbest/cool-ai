@@ -10,6 +10,7 @@ import type {
   RecycleBinListResponseDto,
   ThreadDraftReadResponse,
   ThreadListResponseDto,
+  ThreadQueueListResponseDto,
   ThreadTagListResponseDto,
   TimelineEvent,
 } from "./dto";
@@ -46,6 +47,11 @@ export interface PublicCollaborationQueries {
     projectId: string,
     rawInput?: unknown,
   ): PublicCollaborationCommandResult<ThreadTagListResponseDto>;
+  listThreadQueue(
+    databasePath: string,
+    projectId: string,
+    threadId: string,
+  ): PublicCollaborationCommandResult<ThreadQueueListResponseDto>;
   readThreadDetail(
     databasePath: string,
     projectId: string,

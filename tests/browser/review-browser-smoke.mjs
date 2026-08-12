@@ -768,7 +768,10 @@ try {
   await memoryTab.focus();
   await page.keyboard.press("Enter");
   try {
-    await page.getByText(memoryMarker, { exact: true }).waitFor();
+    await page
+      .getByTestId("review-access-background")
+      .getByText(memoryMarker, { exact: true })
+      .waitFor();
   } catch (error) {
     const memories = await page.evaluate(async (projectId) => {
       const response = await fetch(

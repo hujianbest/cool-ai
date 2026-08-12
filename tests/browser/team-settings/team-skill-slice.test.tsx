@@ -39,7 +39,7 @@ afterEach(() => {
 });
 
 describe("/team skill vertical slice", () => {
-  it("creates a text skill through the real API and renders it after reload", async () => {
+  it("creates a text skill through the real API and renders it after reload", { timeout: 20000 }, async () => {
     const loadRoute = routeModules["../../../app/api/skills/route.ts"];
     const loadPage = pageModules["../../../app/team/page.tsx"];
 

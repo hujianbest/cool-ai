@@ -47,6 +47,12 @@ import type {
   ThreadListItemDto,
   ThreadListResponseDto,
   ThreadMessageDto,
+  ThreadQueueCancelResponse,
+  ThreadQueueEnqueueResponse,
+  ThreadQueueItemDto,
+  ThreadQueueListResponseDto,
+  ThreadQueueReorderResponse,
+  ThreadQueueSteerResponse,
   ThreadMessageReplySnapshot,
   ThreadTagRefDto,
 } from "@/src/shared/collaboration-contracts";
@@ -227,6 +233,28 @@ type RunStartInput = {
   message: string;
   mentionAgentId: string | null;
   recordInputHistory: boolean;
+};
+
+type QueueEnqueueInput = {
+  content: string;
+  expectedVersion: number;
+  operationId: string;
+};
+
+type QueueCancelInput = {
+  expectedVersion: number;
+  operationId: string;
+};
+
+type QueueReorderInput = {
+  expectedVersion: number;
+  operationId: string;
+  position: number;
+};
+
+type QueueSteerInput = {
+  expectedVersion: number;
+  operationId: string;
 };
 
 export type ThreadRunStartFaultPoint =
@@ -464,6 +492,143 @@ function parseMessageInput(rawInput: unknown): MessageInput {
     operationId,
     recordInputHistory: input.recordInputHistory !== false,
     replyToMessageId,
+  };
+}
+
+function parseQueueEnqueueInput(rawInput: unknown): QueueEnqueueInput {
+  if (!rawInput || typeof rawInput !== "object" || Array.isArray(rawInput)) {
+    invalidInput("Queue enqueue input is invalid.", { input: "invalid_format" });
+  }
+  const input = rawInput as Record<string, unknown>;
+  const allowedKeys = new Set(["content", "expectedVersion", "operationId"]);
+  const fields: Record<string, string> = {};
+  for (const key of Object.keys(input)) {
+    if (!allowedKeys.has(key)) fields[key] = "unknown";
+  }
+  for (const key of allowedKeys) {
+    if (!Object.hasOwn(input, key)) fields[key] = "required";
+  }
+  const operationId = typeof input.operationId === "string" ? input.operationId : "";
+  if (!OPERATION_ID.test(operationId)) fields.operationId = "invalid_format";
+  const expectedVersion = input.expectedVersion;
+  if (
+    !Number.isSafeInteger(expectedVersion)
+    || Number(expectedVersion) < 1
+  ) {
+    fields.expectedVersion = "invalid_range";
+  }
+  const content = typeof input.content === "string" ? input.content.trim() : "";
+  const contentLength = graphemeLength(content);
+  if (contentLength === 0) fields.content = "required";
+  else if (contentLength > 10_000) fields.content = "too_long";
+  if (Object.keys(fields).length > 0) {
+    invalidInput("Queue enqueue input is invalid.", fields);
+  }
+  return {
+    content,
+    expectedVersion: Number(expectedVersion),
+    operationId,
+  };
+}
+
+function parseQueueCancelInput(rawInput: unknown): QueueCancelInput {
+  if (!rawInput || typeof rawInput !== "object" || Array.isArray(rawInput)) {
+    invalidInput("Queue cancel input is invalid.", { input: "invalid_format" });
+  }
+  const input = rawInput as Record<string, unknown>;
+  const allowedKeys = new Set(["expectedVersion", "operationId"]);
+  const fields: Record<string, string> = {};
+  for (const key of Object.keys(input)) {
+    if (!allowedKeys.has(key)) fields[key] = "unknown";
+  }
+  for (const key of allowedKeys) {
+    if (!Object.hasOwn(input, key)) fields[key] = "required";
+  }
+  const operationId = typeof input.operationId === "string" ? input.operationId : "";
+  if (!OPERATION_ID.test(operationId)) fields.operationId = "invalid_format";
+  const expectedVersion = input.expectedVersion;
+  if (
+    !Number.isSafeInteger(expectedVersion)
+    || Number(expectedVersion) < 1
+  ) {
+    fields.expectedVersion = "invalid_range";
+  }
+  if (Object.keys(fields).length > 0) {
+    invalidInput("Queue cancel input is invalid.", fields);
+  }
+  return {
+    expectedVersion: Number(expectedVersion),
+    operationId,
+  };
+}
+
+function parseQueueReorderInput(rawInput: unknown): QueueReorderInput {
+  if (!rawInput || typeof rawInput !== "object" || Array.isArray(rawInput)) {
+    invalidInput("Queue reorder input is invalid.", { input: "invalid_format" });
+  }
+  const input = rawInput as Record<string, unknown>;
+  const allowedKeys = new Set(["expectedVersion", "operationId", "position"]);
+  const fields: Record<string, string> = {};
+  for (const key of Object.keys(input)) {
+    if (!allowedKeys.has(key)) fields[key] = "unknown";
+  }
+  for (const key of allowedKeys) {
+    if (!Object.hasOwn(input, key)) fields[key] = "required";
+  }
+  const operationId = typeof input.operationId === "string" ? input.operationId : "";
+  if (!OPERATION_ID.test(operationId)) fields.operationId = "invalid_format";
+  const expectedVersion = input.expectedVersion;
+  if (
+    !Number.isSafeInteger(expectedVersion)
+    || Number(expectedVersion) < 1
+  ) {
+    fields.expectedVersion = "invalid_range";
+  }
+  const position = input.position;
+  if (
+    !Number.isSafeInteger(position)
+    || Number(position) < 1
+  ) {
+    fields.position = "invalid_range";
+  }
+  if (Object.keys(fields).length > 0) {
+    invalidInput("Queue reorder input is invalid.", fields);
+  }
+  return {
+    expectedVersion: Number(expectedVersion),
+    operationId,
+    position: Number(position),
+  };
+}
+
+function parseQueueSteerInput(rawInput: unknown): QueueSteerInput {
+  if (!rawInput || typeof rawInput !== "object" || Array.isArray(rawInput)) {
+    invalidInput("Queue steer input is invalid.", { input: "invalid_format" });
+  }
+  const input = rawInput as Record<string, unknown>;
+  const allowedKeys = new Set(["expectedVersion", "operationId"]);
+  const fields: Record<string, string> = {};
+  for (const key of Object.keys(input)) {
+    if (!allowedKeys.has(key)) fields[key] = "unknown";
+  }
+  for (const key of allowedKeys) {
+    if (!Object.hasOwn(input, key)) fields[key] = "required";
+  }
+  const operationId = typeof input.operationId === "string" ? input.operationId : "";
+  if (!OPERATION_ID.test(operationId)) fields.operationId = "invalid_format";
+  const expectedVersion = input.expectedVersion;
+  if (
+    !Number.isSafeInteger(expectedVersion)
+    || Number(expectedVersion) < 1
+  ) {
+    fields.expectedVersion = "invalid_range";
+  }
+  if (Object.keys(fields).length > 0) {
+    invalidInput("Queue steer input is invalid.", fields);
+  }
+  return {
+    expectedVersion: Number(expectedVersion),
+    operationId,
   };
 }
 
@@ -1843,15 +2008,26 @@ export function startThreadRun(
       }
 
       const currentAgentId = dispatch.selectedMemberId!;
+      const messageSequence = currentMessageSequence(database, projectId, threadId);
+      const firstActivity = nextThreadActivitySequenceTx(database, projectId);
+      const timestamp = new Date().toISOString();
+      const consumedQueueItem = consumePendingQueueHeadTx(
+        database,
+        projectId,
+        threadId,
+        timestamp,
+      );
+      const messageContent = consumedQueueItem?.content ?? input.message;
+      if (consumedQueueItem) {
+        hooks.credentialCheck?.(messageContent);
+      }
+      const mentionAgentId = consumedQueueItem ? null : input.mentionAgentId;
       const mentionDisplayName = resolveMessageMention(
         database,
         projectId,
         threadId,
-        input.mentionAgentId,
+        mentionAgentId,
       );
-      const messageSequence = currentMessageSequence(database, projectId, threadId);
-      const firstActivity = nextThreadActivitySequenceTx(database, projectId);
-      const timestamp = new Date().toISOString();
       const runId = randomUUID();
       const messageId = randomUUID();
       const eventId = randomUUID();
@@ -1875,12 +2051,12 @@ export function startThreadRun(
         authorAgentId: null,
         authorDisplayName: "Owner",
         authorType: "owner",
-        content: input.message,
+        content: messageContent,
         createdAt: timestamp,
         id: messageId,
-        mentionAgentId: input.mentionAgentId,
+        mentionAgentId,
         mentionDisplayName,
-        mentionMemberStatus: input.mentionAgentId === null ? null : "current",
+        mentionMemberStatus: mentionAgentId === null ? null : "current",
         projectId,
         replyTo: null,
         runId,
@@ -2071,7 +2247,7 @@ export function startThreadRun(
         database,
         projectId,
         threadId,
-        input.message,
+        messageContent,
         timestamp,
         input.recordInputHistory,
       );
@@ -2264,6 +2440,685 @@ export function listThreads(
       },
       status: 200,
     };
+  } finally {
+    database.close();
+  }
+}
+
+type QueueThreadState = {
+  deletedAt: string | null;
+  version: number;
+};
+
+type QueueItemRow = {
+  content: string;
+  createdAt: string;
+  id: string;
+  position: number;
+  projectId: string;
+  status: ThreadQueueItemDto["status"];
+  threadId: string;
+  updatedAt: string;
+};
+
+function readQueueThreadState(
+  database: DatabaseSync,
+  projectId: string,
+  threadId: string,
+): QueueThreadState {
+  const row = database.prepare(
+    `SELECT deleted_at AS deletedAt,version
+     FROM collaboration_threads
+     WHERE project_id=? AND id=?`,
+  ).get(projectId, threadId) as QueueThreadState | undefined;
+  if (!row) resourceNotFound();
+  if (row.deletedAt !== null) threadDeletedNotFound();
+  return row;
+}
+
+function readQueueItem(
+  database: DatabaseSync,
+  projectId: string,
+  threadId: string,
+  queueItemId: string,
+): QueueItemRow {
+  const row = database.prepare(
+    `SELECT id,project_id AS projectId,thread_id AS threadId,content,
+            position,status,created_at AS createdAt,updated_at AS updatedAt
+     FROM thread_message_queue
+     WHERE project_id=? AND thread_id=? AND id=?`,
+  ).get(projectId, threadId, queueItemId) as QueueItemRow | undefined;
+  if (!row) resourceNotFound();
+  return row;
+}
+
+function mapQueueItem(row: QueueItemRow): ThreadQueueItemDto {
+  return {
+    content: row.content,
+    createdAt: row.createdAt,
+    id: row.id,
+    position: row.position,
+    projectId: row.projectId,
+    status: row.status,
+    threadId: row.threadId,
+    updatedAt: row.updatedAt,
+  };
+}
+
+function consumePendingQueueHeadTx(
+  database: DatabaseSync,
+  projectId: string,
+  threadId: string,
+  timestamp: string,
+): QueueItemRow | null {
+  const head = database.prepare(
+    `SELECT id,project_id AS projectId,thread_id AS threadId,content,
+            position,status,created_at AS createdAt,updated_at AS updatedAt
+     FROM thread_message_queue
+     WHERE project_id=? AND thread_id=? AND status='pending'
+     ORDER BY position ASC,id ASC
+     LIMIT 1`,
+  ).get(projectId, threadId) as QueueItemRow | undefined;
+  if (!head) return null;
+  const consumed = database.prepare(
+    `UPDATE thread_message_queue
+     SET status='consumed',updated_at=?
+     WHERE project_id=? AND thread_id=? AND id=? AND status='pending'`,
+  ).run(timestamp, projectId, threadId, head.id);
+  if (consumed.changes !== 1) return null;
+  return {
+    ...head,
+    status: "consumed",
+    updatedAt: timestamp,
+  };
+}
+
+export function enqueueThreadMessage(
+  databasePath: string,
+  projectId: string,
+  threadId: string,
+  rawInput: unknown,
+): { body: ThreadQueueEnqueueResponse; status: 201 } {
+  const input = parseQueueEnqueueInput(rawInput);
+  const requestHash = canonicalRequestHash({
+    content: input.content,
+    expectedVersion: input.expectedVersion,
+  });
+  const database = openDatabase(databasePath);
+  database.exec("PRAGMA busy_timeout=5000");
+  try {
+    return transaction(database, () => {
+      readQueueThreadState(database, projectId, threadId);
+      const prior = readOperationReceipt<ThreadQueueEnqueueResponse>(
+        database,
+        projectId,
+        input.operationId,
+        "message",
+        requestHash,
+      );
+      if (prior) {
+        if (prior.body.item.threadId !== threadId) {
+          throw new CollaborationError(
+            "OPERATION_CONFLICT",
+            409,
+            "Operation id was already used for different input.",
+          );
+        }
+        return prior as { body: ThreadQueueEnqueueResponse; status: 201 };
+      }
+
+      const current = readQueueThreadState(database, projectId, threadId);
+      if (current.version !== input.expectedVersion) {
+        throw new CollaborationError(
+          "VERSION_CONFLICT",
+          409,
+          "Thread version has changed.",
+          { currentVersion: current.version },
+        );
+      }
+      const timestamp = new Date().toISOString();
+      const queueItemId = randomUUID();
+      const nextPosition = (
+        database.prepare(
+          `SELECT COALESCE(MAX(position),0)+1 AS nextPosition
+           FROM thread_message_queue
+           WHERE project_id=? AND thread_id=?`,
+        ).get(projectId, threadId) as { nextPosition: number }
+      ).nextPosition;
+      database.prepare(
+        `INSERT INTO thread_message_queue(
+           id,project_id,thread_id,content,position,status,operation_id,created_at,updated_at
+         ) VALUES (?, ?, ?, ?, ?, 'pending', ?, ?, ?)`,
+      ).run(
+        queueItemId,
+        projectId,
+        threadId,
+        input.content,
+        nextPosition,
+        input.operationId,
+        timestamp,
+        timestamp,
+      );
+      database.prepare(
+        `UPDATE collaboration_threads
+         SET version=version+1,updated_at=?
+         WHERE project_id=? AND id=? AND version=?`,
+      ).run(timestamp, projectId, threadId, input.expectedVersion);
+      const body: ThreadQueueEnqueueResponse = {
+        created: true,
+        item: {
+          content: input.content,
+          createdAt: timestamp,
+          id: queueItemId,
+          position: nextPosition,
+          projectId,
+          status: "pending",
+          threadId,
+          updatedAt: timestamp,
+        },
+        threadVersion: input.expectedVersion + 1,
+      };
+      completeOperationReceipt(database, {
+        body,
+        kind: "message",
+        operationId: input.operationId,
+        projectId,
+        requestHash,
+        runId: null,
+        status: 201,
+        threadId,
+        timestamp,
+      });
+      return { body, status: 201 as const };
+    });
+  } finally {
+    database.close();
+  }
+}
+
+export function cancelQueuedMessage(
+  databasePath: string,
+  projectId: string,
+  threadId: string,
+  queueItemId: string,
+  rawInput: unknown,
+): { body: ThreadQueueCancelResponse; status: 200 } {
+  const input = parseQueueCancelInput(rawInput);
+  const requestHash = canonicalRequestHash({
+    expectedVersion: input.expectedVersion,
+    queueItemId,
+  });
+  const database = openDatabase(databasePath);
+  database.exec("PRAGMA busy_timeout=5000");
+  try {
+    return transaction(database, () => {
+      readQueueThreadState(database, projectId, threadId);
+      const prior = readOperationReceipt<ThreadQueueCancelResponse>(
+        database,
+        projectId,
+        input.operationId,
+        "control",
+        requestHash,
+      );
+      if (prior) {
+        if (prior.body.item.threadId !== threadId || prior.body.item.id !== queueItemId) {
+          throw new CollaborationError(
+            "OPERATION_CONFLICT",
+            409,
+            "Operation id was already used for different input.",
+          );
+        }
+        return prior as { body: ThreadQueueCancelResponse; status: 200 };
+      }
+
+      const item = readQueueItem(database, projectId, threadId, queueItemId);
+      if (item.status === "consumed") {
+        throw new CollaborationError(
+          "ACTION_CONFLICT",
+          409,
+          "Queued message is already consumed.",
+        );
+      }
+
+      const current = readQueueThreadState(database, projectId, threadId);
+      const timestamp = new Date().toISOString();
+      if (item.status === "cancelled") {
+        const body: ThreadQueueCancelResponse = {
+          cancelled: false,
+          item: mapQueueItem(item),
+          threadVersion: current.version,
+        };
+        completeOperationReceipt(database, {
+          body,
+          kind: "control",
+          operationId: input.operationId,
+          projectId,
+          requestHash,
+          runId: null,
+          status: 200,
+          threadId,
+          timestamp,
+        });
+        return { body, status: 200 as const };
+      }
+      if (current.version !== input.expectedVersion) {
+        throw new CollaborationError(
+          "VERSION_CONFLICT",
+          409,
+          "Thread version has changed.",
+          { currentVersion: current.version },
+        );
+      }
+      database.prepare(
+        `UPDATE thread_message_queue
+         SET status='cancelled',updated_at=?
+         WHERE project_id=? AND thread_id=? AND id=? AND status='pending'`,
+      ).run(timestamp, projectId, threadId, queueItemId);
+      database.prepare(
+        `UPDATE collaboration_threads
+         SET version=version+1,updated_at=?
+         WHERE project_id=? AND id=? AND version=?`,
+      ).run(timestamp, projectId, threadId, input.expectedVersion);
+      const body: ThreadQueueCancelResponse = {
+        cancelled: true,
+        item: {
+          ...mapQueueItem(item),
+          status: "cancelled",
+          updatedAt: timestamp,
+        },
+        threadVersion: input.expectedVersion + 1,
+      };
+      completeOperationReceipt(database, {
+        body,
+        kind: "control",
+        operationId: input.operationId,
+        projectId,
+        requestHash,
+        runId: null,
+        status: 200,
+        threadId,
+        timestamp,
+      });
+      return { body, status: 200 as const };
+    });
+  } finally {
+    database.close();
+  }
+}
+
+export function reorderQueuedMessage(
+  databasePath: string,
+  projectId: string,
+  threadId: string,
+  queueItemId: string,
+  rawInput: unknown,
+): { body: ThreadQueueReorderResponse; status: 200 } {
+  const input = parseQueueReorderInput(rawInput);
+  const requestHash = canonicalRequestHash({
+    expectedVersion: input.expectedVersion,
+    position: input.position,
+    queueItemId,
+  });
+  const database = openDatabase(databasePath);
+  database.exec("PRAGMA busy_timeout=5000");
+  try {
+    return transaction(database, () => {
+      readQueueThreadState(database, projectId, threadId);
+      const prior = readOperationReceipt<ThreadQueueReorderResponse>(
+        database,
+        projectId,
+        input.operationId,
+        "control",
+        requestHash,
+      );
+      if (prior) {
+        if (prior.body.item.threadId !== threadId || prior.body.item.id !== queueItemId) {
+          throw new CollaborationError(
+            "OPERATION_CONFLICT",
+            409,
+            "Operation id was already used for different input.",
+          );
+        }
+        return prior as { body: ThreadQueueReorderResponse; status: 200 };
+      }
+
+      const item = readQueueItem(database, projectId, threadId, queueItemId);
+      if (item.status !== "pending") {
+        throw new CollaborationError(
+          "ACTION_CONFLICT",
+          409,
+          "Only pending queued message can be reordered.",
+        );
+      }
+
+      const current = readQueueThreadState(database, projectId, threadId);
+      if (current.version !== input.expectedVersion) {
+        throw new CollaborationError(
+          "VERSION_CONFLICT",
+          409,
+          "Thread version has changed.",
+          { currentVersion: current.version },
+        );
+      }
+
+      const pending = database.prepare(
+        `SELECT id,position
+         FROM thread_message_queue
+         WHERE project_id=? AND thread_id=? AND status='pending'
+         ORDER BY position ASC,id ASC`,
+      ).all(projectId, threadId) as Array<{ id: string; position: number }>;
+      const currentIndex = pending.findIndex(({ id }) => id === queueItemId);
+      if (currentIndex < 0) {
+        throw new CollaborationError(
+          "ACTION_CONFLICT",
+          409,
+          "Only pending queued message can be reordered.",
+        );
+      }
+      if (input.position > pending.length) {
+        throw new CollaborationError(
+          "INVALID_INPUT",
+          400,
+          "Queue reorder input is invalid.",
+          { fields: { position: "invalid_range" } },
+        );
+      }
+      const targetIndex = input.position - 1;
+      const timestamp = new Date().toISOString();
+      if (targetIndex === currentIndex) {
+        const body: ThreadQueueReorderResponse = {
+          item: mapQueueItem(item),
+          reordered: false,
+          threadVersion: current.version,
+        };
+        completeOperationReceipt(database, {
+          body,
+          kind: "control",
+          operationId: input.operationId,
+          projectId,
+          requestHash,
+          runId: null,
+          status: 200,
+          threadId,
+          timestamp,
+        });
+        return { body, status: 200 as const };
+      }
+
+      const pendingIds = pending.map(({ id }) => id);
+      const [movedId] = pendingIds.splice(currentIndex, 1);
+      pendingIds.splice(targetIndex, 0, movedId);
+      const stablePositions = pending.map(({ position }) => position);
+      const finalPositionById = new Map<string, number>();
+      pendingIds.forEach((id, index) => {
+        finalPositionById.set(id, stablePositions[index]!);
+      });
+      const changedIds = pendingIds.filter(
+        (id) => finalPositionById.get(id) !== pending.find((row) => row.id === id)?.position,
+      );
+      if (changedIds.length > 0) {
+        const tempOffset = 1_000_000;
+        const bumpPosition = database.prepare(
+          `UPDATE thread_message_queue
+           SET position=position+?,updated_at=?
+           WHERE project_id=? AND thread_id=? AND id=? AND status='pending'`,
+        );
+        const setPosition = database.prepare(
+          `UPDATE thread_message_queue
+           SET position=?,updated_at=?
+           WHERE project_id=? AND thread_id=? AND id=? AND status='pending'`,
+        );
+        for (const id of changedIds) {
+          bumpPosition.run(tempOffset, timestamp, projectId, threadId, id);
+        }
+        for (const id of changedIds) {
+          const nextPosition = finalPositionById.get(id);
+          if (nextPosition === undefined) {
+            throw new CollaborationError(
+              "STORAGE_UNAVAILABLE",
+              503,
+              "Queue reorder storage is unavailable.",
+            );
+          }
+          setPosition.run(nextPosition, timestamp, projectId, threadId, id);
+        }
+      }
+      database.prepare(
+        `UPDATE collaboration_threads
+         SET version=version+1,updated_at=?
+         WHERE project_id=? AND id=? AND version=?`,
+      ).run(timestamp, projectId, threadId, input.expectedVersion);
+
+      const nextPosition = finalPositionById.get(queueItemId) ?? item.position;
+      const body: ThreadQueueReorderResponse = {
+        item: {
+          ...mapQueueItem(item),
+          position: nextPosition,
+          updatedAt: timestamp,
+        },
+        reordered: true,
+        threadVersion: input.expectedVersion + 1,
+      };
+      completeOperationReceipt(database, {
+        body,
+        kind: "control",
+        operationId: input.operationId,
+        projectId,
+        requestHash,
+        runId: null,
+        status: 200,
+        threadId,
+        timestamp,
+      });
+      return { body, status: 200 as const };
+    });
+  } finally {
+    database.close();
+  }
+}
+
+export function steerQueuedMessage(
+  databasePath: string,
+  projectId: string,
+  threadId: string,
+  queueItemId: string,
+  rawInput: unknown,
+): { body: ThreadQueueSteerResponse; status: 200 } {
+  const input = parseQueueSteerInput(rawInput);
+  const requestHash = canonicalRequestHash({
+    expectedVersion: input.expectedVersion,
+    queueItemId,
+  });
+  const database = openDatabase(databasePath);
+  database.exec("PRAGMA busy_timeout=5000");
+  try {
+    return transaction(database, () => {
+      readQueueThreadState(database, projectId, threadId);
+      const prior = readOperationReceipt<ThreadQueueSteerResponse>(
+        database,
+        projectId,
+        input.operationId,
+        "control",
+        requestHash,
+      );
+      if (prior) {
+        if (prior.body.item.threadId !== threadId || prior.body.item.id !== queueItemId) {
+          throw new CollaborationError(
+            "OPERATION_CONFLICT",
+            409,
+            "Operation id was already used for different input.",
+          );
+        }
+        return prior as { body: ThreadQueueSteerResponse; status: 200 };
+      }
+
+      const item = readQueueItem(database, projectId, threadId, queueItemId);
+      if (item.status !== "pending") {
+        throw new CollaborationError(
+          "ACTION_CONFLICT",
+          409,
+          "Only pending queued message can be steered.",
+        );
+      }
+      const current = readQueueThreadState(database, projectId, threadId);
+      if (current.version !== input.expectedVersion) {
+        throw new CollaborationError(
+          "VERSION_CONFLICT",
+          409,
+          "Thread version has changed.",
+          { currentVersion: current.version },
+        );
+      }
+
+      const active = database
+        .prepare(
+          `SELECT 1
+           FROM collaboration_runs
+           WHERE project_id=?
+             AND status IN ('running','waiting_owner','paused','failed')
+             AND thread_id<>?
+           LIMIT 1`,
+        )
+        .get(projectId, threadId);
+      const dispatch = resolveThreadDispatchFromDatabase(
+        database,
+        projectId,
+        threadId,
+        { kind: "start" },
+        {
+          missingProjectFacts: missingProjectFactsFromDatabase(database, projectId),
+          projectRunActive: Boolean(active),
+        },
+      ).dispatch;
+      if (dispatch !== "ready") {
+        throw new CollaborationError(
+          "ACTION_CONFLICT",
+          409,
+          `Queue steer is disabled when dispatch is ${dispatch}.`,
+        );
+      }
+
+      const pending = database.prepare(
+        `SELECT id,position
+         FROM thread_message_queue
+         WHERE project_id=? AND thread_id=? AND status='pending'
+         ORDER BY position ASC,id ASC`,
+      ).all(projectId, threadId) as Array<{ id: string; position: number }>;
+      const currentIndex = pending.findIndex(({ id }) => id === queueItemId);
+      if (currentIndex < 0) {
+        throw new CollaborationError(
+          "ACTION_CONFLICT",
+          409,
+          "Only pending queued message can be steered.",
+        );
+      }
+      const timestamp = new Date().toISOString();
+      if (currentIndex === 0) {
+        const body: ThreadQueueSteerResponse = {
+          item: mapQueueItem(item),
+          steered: false,
+          threadVersion: current.version,
+        };
+        completeOperationReceipt(database, {
+          body,
+          kind: "control",
+          operationId: input.operationId,
+          projectId,
+          requestHash,
+          runId: null,
+          status: 200,
+          threadId,
+          timestamp,
+        });
+        return { body, status: 200 as const };
+      }
+
+      const pendingIds = pending.map(({ id }) => id);
+      const [movedId] = pendingIds.splice(currentIndex, 1);
+      pendingIds.unshift(movedId);
+      const stablePositions = pending.map(({ position }) => position);
+      const finalPositionById = new Map<string, number>();
+      pendingIds.forEach((id, index) => {
+        finalPositionById.set(id, stablePositions[index]!);
+      });
+      const changedIds = pendingIds.filter(
+        (id) => finalPositionById.get(id) !== pending.find((row) => row.id === id)?.position,
+      );
+      if (changedIds.length > 0) {
+        const tempOffset = 1_000_000;
+        const bumpPosition = database.prepare(
+          `UPDATE thread_message_queue
+           SET position=position+?,updated_at=?
+           WHERE project_id=? AND thread_id=? AND id=? AND status='pending'`,
+        );
+        const setPosition = database.prepare(
+          `UPDATE thread_message_queue
+           SET position=?,updated_at=?
+           WHERE project_id=? AND thread_id=? AND id=? AND status='pending'`,
+        );
+        for (const id of changedIds) {
+          bumpPosition.run(tempOffset, timestamp, projectId, threadId, id);
+        }
+        for (const id of changedIds) {
+          const nextPosition = finalPositionById.get(id);
+          if (nextPosition === undefined) {
+            throw new CollaborationError(
+              "STORAGE_UNAVAILABLE",
+              503,
+              "Queue steer storage is unavailable.",
+            );
+          }
+          setPosition.run(nextPosition, timestamp, projectId, threadId, id);
+        }
+      }
+      database.prepare(
+        `UPDATE collaboration_threads
+         SET version=version+1,updated_at=?
+         WHERE project_id=? AND id=? AND version=?`,
+      ).run(timestamp, projectId, threadId, input.expectedVersion);
+      const body: ThreadQueueSteerResponse = {
+        item: {
+          ...mapQueueItem(item),
+          position: finalPositionById.get(queueItemId) ?? item.position,
+          updatedAt: timestamp,
+        },
+        steered: true,
+        threadVersion: input.expectedVersion + 1,
+      };
+      completeOperationReceipt(database, {
+        body,
+        kind: "control",
+        operationId: input.operationId,
+        projectId,
+        requestHash,
+        runId: null,
+        status: 200,
+        threadId,
+        timestamp,
+      });
+      return { body, status: 200 as const };
+    });
+  } finally {
+    database.close();
+  }
+}
+
+export function listThreadQueue(
+  databasePath: string,
+  projectId: string,
+  threadId: string,
+): { body: ThreadQueueListResponseDto; status: 200 } {
+  const database = openDatabase(databasePath);
+  try {
+    ensureActiveThread(database, projectId, threadId);
+    const items = database.prepare(
+      `SELECT id,project_id AS projectId,thread_id AS threadId,content,
+              position,status,created_at AS createdAt,updated_at AS updatedAt
+       FROM thread_message_queue
+       WHERE project_id=? AND thread_id=?
+       ORDER BY position ASC,id ASC`,
+    ).all(projectId, threadId) as ThreadQueueItemDto[];
+    return { body: { items }, status: 200 };
   } finally {
     database.close();
   }

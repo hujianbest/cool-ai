@@ -11,7 +11,8 @@
     "audit_outbox_shared_append": "feature 030: audit_event_outbox is a multi-source append seam — each source owner appends its own rows atomically inside its business transaction (safe-execution since 028, public-collaboration since 030); fact ownership of the table stays with safe-execution, additional source writers are registered in sharedAppendWriters",
     "thread_search_index": "feature 031: derived search projection (thread titles + persisted public message bodies) owned by the operations-projection consumer (thread-search-index); no FKs by design (A-140 projection semantics), index⊆fact-source enforced by reopen data invariants",
     "thread_tags": "feature 032: project-scoped thread tag facts (thread_tags), assignment edges (thread_tag_edges), and versioned batch receipts (thread_tag_operations) owned by public-collaboration; tag delete clears edges explicitly in the same transaction (FK CASCADE is only the thread-cascade backstop), edges⊆threads/tags enforced by reopen data invariants; the T-03 batch command writes receipts through the insertThreadTagOperationReceiptTx anchor registered in thread-tag-service.ts",
-    "thread_purge_markers": "feature 033: transaction-local purge exemption markers (inserted at purge start, deleted before commit) owned by public-collaboration; no FK to collaboration_threads by design (the row is about to disappear), projects CASCADE is the only lifecycle backstop, empty-table enforced by reopen data invariants"
+    "thread_purge_markers": "feature 033: transaction-local purge exemption markers (inserted at purge start, deleted before commit) owned by public-collaboration; no FK to collaboration_threads by design (the row is about to disappear), projects CASCADE is the only lifecycle backstop, empty-table enforced by reopen data invariants",
+    "thread_message_queue": "feature 034: per-thread pending owner-message queue (enqueue/cancel/reorder/steer commands, run-window head consumption) owned by public-collaboration; thread tuple CASCADE is the lifecycle backstop, status vocabulary (pending/consumed/cancelled) and position uniqueness enforced by CHECK/UNIQUE constraints and reopen data invariants"
   },
   "sharedAppendWriters": {
     "audit_event_outbox": [
@@ -67,6 +68,7 @@
       "thread_tag_edges",
       "thread_tag_operations",
       "thread_purge_markers",
+      "thread_message_queue",
       "input_history_entries",
       "input_history_clear_events",
       "message_attachments",

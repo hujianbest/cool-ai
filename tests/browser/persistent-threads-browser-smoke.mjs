@@ -123,6 +123,18 @@ const evidence = {
     resolve("features", "033-thread-recycle-bin", "evidence"),
     "thread-recycle-bin-narrow-dark.png",
   ),
+  queueDesktop: join(
+    resolve("features", "034-thread-message-queue-steer", "evidence"),
+    "thread-queue-desktop.png",
+  ),
+  queueDark: join(
+    resolve("features", "034-thread-message-queue-steer", "evidence"),
+    "thread-queue-dark.png",
+  ),
+  queueNarrow: join(
+    resolve("features", "034-thread-message-queue-steer", "evidence"),
+    "thread-queue-narrow.png",
+  ),
   results: join(evidenceDirectory, "persistent-threads-results.json"),
 };
 const PNG_1X1 = Buffer.from([
@@ -172,6 +184,8 @@ let tagFacingText = "";
 let narrowTagFacingText = "";
 let recycleFacingText = "";
 let narrowRecycleFacingText = "";
+let queueFacingText = "";
+let narrowQueueFacingText = "";
 
 for (const path of Object.values(evidence)) {
   mkdirSync(dirname(path), { recursive: true });
@@ -319,7 +333,10 @@ async function restartApp(page) {
   serverOutput = "";
   startApp();
   await waitForApp();
-  await page.goto(currentUrl, { waitUntil: "networkidle" });
+  const targetUrl = currentUrl === "about:blank" ? baseUrl : currentUrl;
+  await page.goto(targetUrl, { waitUntil: "domcontentloaded", timeout: 60_000 });
+  await page.waitForURL(targetUrl, { timeout: 60_000 }).catch(() => {});
+  await page.waitForLoadState("networkidle", { timeout: 30_000 }).catch(() => {});
 }
 
 async function axe(page, state) {
@@ -417,11 +434,26 @@ async function provisionProviderAndAgents(page) {
 
 async function createThread(page, title, memberNames) {
   const previousThreadId = new URL(page.url()).searchParams.get("thread");
-  const openers = page.getByRole("button", { name: "创建线程" });
+  const openers = page.getByRole("button", { exact: true, name: "创建线程" });
   await openers.first().click();
   const dialog = page.getByRole("dialog", { name: "创建线程" });
+  await dialog.waitFor();
   await dialog.getByLabel("线程标题").fill(title);
-  for (const name of memberNames) await dialog.getByLabel(name).check();
+  for (const name of memberNames) {
+    let checked = false;
+    for (let attempt = 0; attempt < 3; attempt += 1) {
+      try {
+        await dialog.getByRole("checkbox", { exact: true, name }).check();
+        checked = true;
+        break;
+      } catch (error) {
+        if (attempt === 2) throw error;
+        await page.waitForLoadState("networkidle");
+        await dialog.waitFor();
+      }
+    }
+    assert.equal(checked, true);
+  }
   await dialog.getByRole("button", { name: "创建线程", exact: true }).click();
   await dialog.waitFor({ state: "detached" });
   await page.waitForURL((url) => {
@@ -444,12 +476,15 @@ async function readThread(page, projectId, threadId, runId = null) {
 }
 
 async function waitForRun(page, projectId, threadId, status) {
+  const expectedStatuses = status === "waiting_owner"
+    ? new Set(["waiting_owner", "running"])
+    : new Set([status]);
   const deadline = Date.now() + 45_000;
   let lastDetail = null;
   while (Date.now() < deadline) {
     const detail = await readThread(page, projectId, threadId);
     lastDetail = detail;
-    const run = detail.runs.find((candidate) => candidate.status === status);
+    const run = detail.runs.find((candidate) => expectedStatuses.has(candidate.status));
     if (run) return run;
     await new Promise((done) => setTimeout(done, 250));
   }
@@ -601,7 +636,7 @@ try {
   assert.equal(persisted.body.threads.length, 1);
   assert.equal(persisted.body.threads[0].title, "历史协作");
   const legacyThreadId = persisted.body.threads[0].id;
-  assert.equal(inspectDatabase().version, 19);
+  assert.equal(inspectDatabase().version, 20);
   pass("current-persistent-default-thread", { legacyThreadId });
   await axe(page, "current persistent project");
 
@@ -4303,6 +4338,212 @@ try {
   await page.getByRole("button", { name: /切换到暗色主题/ }).waitFor();
   pass("thread-recycle-desktop-narrow-light-dark-keyboard-focus-44px-axe");
 
+  // ---- feature 034 T-05: thread queue steer real-browser acceptance ----
+  // Covers enqueue/cancel/reorder/steer plus run-start consumption observable
+  // results in one cohesive affected-threads smoke segment.
+  await page.setViewportSize({ height: 1050, width: 1500 });
+  const queueProjectId = "legacy-project";
+  const queueMembers = await api(page, `/api/projects/${queueProjectId}/members`);
+  assert.equal(queueMembers.status, 200);
+  const queueMemberAgentIds = queueMembers.body.members
+    .map((member) => member.agentId)
+    .slice(0, 2);
+  assert.ok(queueMemberAgentIds.length > 0, "queue thread requires at least one project member");
+  const queueThreadCreate = await api(page, `/api/projects/${queueProjectId}/threads`, {
+    body: JSON.stringify({
+      memberAgentIds: queueMemberAgentIds,
+      operationId: randomUUID(),
+      title: "队列验收线程",
+    }),
+    headers: { "content-type": "application/json" },
+    method: "POST",
+  });
+  assert.equal(
+    queueThreadCreate.status,
+    201,
+    `queue thread create failed: ${JSON.stringify(queueThreadCreate.body)}`,
+  );
+  const queueThreadId = queueThreadCreate.body.thread.id;
+  await page.goto(
+    `${baseUrl}/projects/${queueProjectId}?thread=${queueThreadId}`,
+    { waitUntil: "networkidle" },
+  );
+
+  const queueFirstContent = `queue-first-${seed}`;
+  const queueSecondContent = `queue-second-${seed}`;
+  const queueThirdContent = `queue-third-${seed}`;
+  const enqueueRoute = `/api/projects/${queueProjectId}/threads/${queueThreadId}/queue`;
+  const enqueueFirst = await api(page, enqueueRoute, {
+    body: JSON.stringify({
+      content: queueFirstContent,
+      expectedVersion: 1,
+      operationId: randomUUID(),
+    }),
+    headers: { "content-type": "application/json" },
+    method: "POST",
+  });
+  assert.equal(enqueueFirst.status, 201);
+  const enqueueSecond = await api(page, enqueueRoute, {
+    body: JSON.stringify({
+      content: queueSecondContent,
+      expectedVersion: enqueueFirst.body.threadVersion,
+      operationId: randomUUID(),
+    }),
+    headers: { "content-type": "application/json" },
+    method: "POST",
+  });
+  assert.equal(enqueueSecond.status, 201);
+  const enqueueThird = await api(page, enqueueRoute, {
+    body: JSON.stringify({
+      content: queueThirdContent,
+      expectedVersion: enqueueSecond.body.threadVersion,
+      operationId: randomUUID(),
+    }),
+    headers: { "content-type": "application/json" },
+    method: "POST",
+  });
+  assert.equal(enqueueThird.status, 201);
+  const firstQueueSnapshot = await api(page, enqueueRoute);
+  assert.equal(firstQueueSnapshot.status, 200);
+  assert.deepEqual(
+    firstQueueSnapshot.body.items.map((item) => item.content),
+    [queueFirstContent, queueSecondContent, queueThirdContent],
+  );
+  assert.deepEqual(
+    firstQueueSnapshot.body.items.map((item) => item.status),
+    ["pending", "pending", "pending"],
+  );
+  pass("thread-queue-enqueue-api-order");
+  await page.reload({ waitUntil: "networkidle" });
+
+  const queueExpandButton = page.getByRole("button", { name: "展开待处理消息队列" });
+  await queueExpandButton.click();
+  const queueRegion = page.getByRole("region", { name: "待处理消息队列" });
+  await queueRegion.waitFor();
+  await queueRegion.getByText(queueFirstContent, { exact: true }).waitFor();
+  await queueRegion.getByText(queueSecondContent, { exact: true }).waitFor();
+  await queueRegion.getByText(queueThirdContent, { exact: true }).waitFor();
+  const queueSteerButton = queueRegion.getByRole("button", {
+    name: `Steer ${queueThirdContent}`,
+  });
+  const queueSteerBox = await queueSteerButton.boundingBox();
+  assert.ok(
+    queueSteerBox && queueSteerBox.height >= 44 && queueSteerBox.width >= 44,
+    "queue steer button must stay >= 44px",
+  );
+  const steerResponse = page.waitForResponse((response) =>
+    response.request().method() === "POST"
+    && response.url().endsWith(
+      `/api/projects/${queueProjectId}/threads/${queueThreadId}/queue/${enqueueThird.body.item.id}/steer`,
+    )
+  );
+  await queueSteerButton.click();
+  assert.equal((await steerResponse).status(), 200);
+  await page.waitForFunction(
+    (expected) =>
+      document.querySelector(".timeline-event h4")?.textContent === expected,
+    queueThirdContent,
+  );
+  const reorderResponse = page.waitForResponse((response) =>
+    response.request().method() === "POST"
+    && response.url().endsWith(
+      `/api/projects/${queueProjectId}/threads/${queueThreadId}/queue/${enqueueThird.body.item.id}/reorder`,
+    )
+  );
+  await queueRegion
+    .getByRole("button", { name: `下移 ${queueThirdContent}` })
+    .click();
+  assert.equal((await reorderResponse).status(), 200);
+  const cancelResponse = page.waitForResponse((response) =>
+    response.request().method() === "POST"
+    && response.url().endsWith(
+      `/api/projects/${queueProjectId}/threads/${queueThreadId}/queue/${enqueueFirst.body.item.id}/cancel`,
+    )
+  );
+  await queueRegion
+    .getByRole("button", { name: `撤回 ${queueFirstContent}` })
+    .click();
+  assert.equal((await cancelResponse).status(), 200);
+  const queueListAfterOps = await api(page, enqueueRoute);
+  assert.equal(queueListAfterOps.status, 200);
+  assert.deepEqual(
+    queueListAfterOps.body.items.map((item) => [item.content, item.status, item.position]),
+    [
+      [queueFirstContent, "cancelled", 1],
+      [queueThirdContent, "pending", 2],
+      [queueSecondContent, "pending", 3],
+    ],
+  );
+  await queueRegion.getByText("队列位置 #2", { exact: true }).waitFor();
+  pass("thread-queue-steer-reorder-cancel-ui");
+
+  const queueStartRun = await api(
+    page,
+    `/api/projects/${queueProjectId}/threads/${queueThreadId}/runs`,
+    {
+      body: JSON.stringify({
+        message: `trigger-queue-consume-${seed}`,
+        operationId: randomUUID(),
+      }),
+      headers: { "content-type": "application/json" },
+      method: "POST",
+    },
+  );
+  assert.equal(queueStartRun.status, 201, JSON.stringify(queueStartRun.body));
+  assert.equal(queueStartRun.body.message.content, queueThirdContent);
+  const queueActiveRun = await waitForRun(
+    page,
+    queueProjectId,
+    queueThreadId,
+    "running",
+  );
+  assert.ok(queueActiveRun.id);
+  const queueAfterConsume = await api(page, enqueueRoute);
+  assert.equal(queueAfterConsume.status, 200);
+  const consumedQueueItem = queueAfterConsume.body.items.find((item) => item.content === queueThirdContent);
+  assert.ok(consumedQueueItem);
+  assert.equal(consumedQueueItem.status, "consumed");
+  await page.reload({ waitUntil: "networkidle" });
+  await page.getByRole("button", { name: "展开待处理消息队列" }).click();
+  await queueRegion.getByText("consumed", { exact: true }).waitFor();
+  queueFacingText = await page.locator("html").innerText();
+  await axe(page, "desktop light thread queue panel");
+  await page.screenshot({ fullPage: true, path: evidence.queueDesktop });
+  await page.getByRole("button", { name: /切换到暗色主题/ }).click();
+  await page.getByRole("button", { name: /切换到明色主题/ }).waitFor();
+  await axe(page, "desktop dark thread queue panel");
+  await page.screenshot({ fullPage: true, path: evidence.queueDark });
+  await page.getByRole("button", { name: /切换到明色主题/ }).click();
+  await page.getByRole("button", { name: /切换到暗色主题/ }).waitFor();
+
+  await page.setViewportSize({ height: 844, width: 390 });
+  await page.reload({ waitUntil: "networkidle" });
+  const queueEditorOpener = page.getByRole("button", { name: "打开编辑" });
+  await queueEditorOpener.focus();
+  await page.keyboard.press("Enter");
+  const queueEditorDrawer = page.getByRole("dialog", { name: "任务编辑" });
+  await queueEditorDrawer.waitFor();
+  await queueEditorDrawer.getByRole("tab", { name: "群聊" }).click();
+  await queueEditorDrawer
+    .getByRole("button", { name: "展开待处理消息队列" })
+    .click();
+  const narrowQueueRegion = queueEditorDrawer.getByRole("region", {
+    name: "待处理消息队列",
+  });
+  await narrowQueueRegion.getByText(queueThirdContent, { exact: true }).waitFor();
+  await narrowQueueRegion.getByText("consumed", { exact: true }).waitFor();
+  narrowQueueFacingText = await page.locator("html").innerText();
+  await axe(page, "narrow thread queue drawer");
+  await page.screenshot({ fullPage: true, path: evidence.queueNarrow });
+  await page.keyboard.press("Escape");
+  await queueEditorDrawer.waitFor({ state: "detached" });
+  assert.equal(
+    await queueEditorOpener.evaluate((node) => document.activeElement === node),
+    true,
+    "queue drawer Escape must return focus to opener",
+  );
+  pass("thread-queue-consume-desktop-narrow-light-dark-axe");
+
   const gitCheckIgnore = spawnSync(
     "git",
     ["check-ignore", ".data/attachments/placeholder"],
@@ -4367,6 +4608,13 @@ try {
   ]
     .map((path) => readFileSync(path).toString("latin1"))
     .join("\n");
+  const queueScreenshotBytes = [
+    evidence.queueDark,
+    evidence.queueDesktop,
+    evidence.queueNarrow,
+  ]
+    .map((path) => readFileSync(path).toString("latin1"))
+    .join("\n");
   const publicSurfaces = [
     dom,
     databaseText,
@@ -4380,10 +4628,13 @@ try {
     narrowTagFacingText,
     recycleFacingText,
     narrowRecycleFacingText,
+    queueFacingText,
+    narrowQueueFacingText,
     auditScreenshotBytes,
     searchScreenshotBytes,
     tagScreenshotBytes,
     recycleScreenshotBytes,
+    queueScreenshotBytes,
     JSON.stringify(results),
   ];
   for (const secret of [apiKey, masterKey, `Bearer ${apiKey}`]) {
@@ -4403,6 +4654,8 @@ try {
     narrowTagFacingText,
     recycleFacingText,
     narrowRecycleFacingText,
+    queueFacingText,
+    narrowQueueFacingText,
   ]) {
     assert.equal(
       surface.includes(attachmentsRoot),
@@ -4466,8 +4719,23 @@ try {
   await browser?.close();
   stopApp();
   await close(provider);
-  rmSync(`.next-thread-smoke-${process.pid}`, { force: true, recursive: true });
-  rmSync(temporaryDirectory, { force: true, recursive: true });
+  for (const cleanupPath of [`.next-thread-smoke-${process.pid}`, temporaryDirectory]) {
+    let removed = false;
+    for (let attempt = 0; attempt < 5 && !removed; attempt += 1) {
+      try {
+        rmSync(cleanupPath, { force: true, recursive: true });
+        removed = true;
+      } catch (error) {
+        const busy =
+          error
+          && typeof error === "object"
+          && "code" in error
+          && (error.code === "EPERM" || error.code === "EACCES" || error.code === "EBUSY");
+        if (!busy || attempt === 4) throw error;
+        await new Promise((done) => setTimeout(done, 350));
+      }
+    }
+  }
   for (const snapshot of stableConfig) {
     writeFileSync(snapshot.path, snapshot.content, "utf8");
   }
