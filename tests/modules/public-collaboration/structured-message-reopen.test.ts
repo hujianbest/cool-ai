@@ -300,7 +300,7 @@ describe("Structured Message migration/reopen persistence seam", () => {
     for (let reopen = 0; reopen < 2; reopen += 1) {
       const database = openDatabase(databasePath);
       try {
-        expect(database.prepare("PRAGMA user_version").get()).toEqual({ user_version: 20 });
+        expect(database.prepare("PRAGMA user_version").get()).toEqual({ user_version: 21 });
       } finally {
         database.close();
       }
@@ -370,7 +370,7 @@ describe("Structured Message migration/reopen persistence seam", () => {
         const raw = new DatabaseSync(databasePath);
         try {
           expect(raw.isTransaction).toBe(false);
-          expect(raw.prepare("PRAGMA user_version").get()).toEqual({ user_version: 20 });
+          expect(raw.prepare("PRAGMA user_version").get()).toEqual({ user_version: 21 });
         } finally {
           raw.close();
         }

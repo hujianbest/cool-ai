@@ -1595,6 +1595,590 @@ try {
     true,
   );
 
+  // ---- MISSION-WORK AUDIT ACCEPTANCE (feature 035 T-03) ----
+  // Landing spot: smoke:context already produces the richest real
+  // mission/work-item facts (026 section above); the task-run lifecycle is
+  // seeded here through the public API (the deterministic executor always
+  // completes, so task_failed rendering stays jsdom-covered). The copy map
+  // mirrors components/project-context/audit-panel.tsx exactly.
+  const missionWorkAuditAcceptance = { assertions: 0, axe: [], matrix: [] };
+  const missionWorkAuditOk = (value, message) => {
+    missionWorkAuditAcceptance.assertions += 1;
+    assert.ok(value, message);
+  };
+  const missionWorkAuditEqual = (actual, expected, message) => {
+    missionWorkAuditAcceptance.assertions += 1;
+    assert.equal(actual, expected, message);
+  };
+  const axeMissionWorkAudit = async (state) => {
+    const scan = await new AxeBuilder({ page }).analyze();
+    const blocking = scan.violations
+      .filter(
+        (violation) =>
+          violation.impact === "critical" || violation.impact === "serious",
+      )
+      .map((violation) => ({
+        id: violation.id,
+        impact: violation.impact,
+        targets: violation.nodes.map((node) => node.target),
+      }));
+    missionWorkAuditAcceptance.axe.push({
+      blocking,
+      state,
+      violationCount: scan.violations.length,
+    });
+    assert.deepEqual(blocking, [], `${state}: axe critical/serious must be 0`);
+  };
+  const MISSION_WORK_AUDIT_EVENT_TYPE_COPY = {
+    mission_created: "使命已创建",
+    task_completed: "任务已完成",
+    task_created: "任务已创建",
+    task_failed: "任务已失败",
+    task_started: "任务已开始",
+    work_item_created: "看板任务已创建",
+    work_item_status_changed: "看板任务状态已变更",
+  };
+  const missionWorkEvidenceDirectory = resolve(
+    "features",
+    "035-mission-work-audit-events",
+    "evidence",
+  );
+  mkdirSync(missionWorkEvidenceDirectory, { recursive: true });
+  const missionWorkAuditDesktopScreenshot = join(
+    missionWorkEvidenceDirectory,
+    "mission-work-audit-desktop.png",
+  );
+  const missionWorkAuditDarkScreenshot = join(
+    missionWorkEvidenceDirectory,
+    "mission-work-audit-dark.png",
+  );
+  const missionWorkAuditNarrowScreenshot = join(
+    missionWorkEvidenceDirectory,
+    "mission-work-audit-narrow.png",
+  );
+  const missionWorkAuditResultsPath = join(
+    missionWorkEvidenceDirectory,
+    "mission-work-audit-acceptance.json",
+  );
+
+  const seededTask = await page.evaluate(async (projectId) => {
+    const create = await fetch(`/api/projects/${projectId}/tasks`, {
+      body: JSON.stringify({ goal: "审计验收骨架任务" }),
+      headers: { "content-type": "application/json" },
+      method: "POST",
+    });
+    const created = await create.json();
+    if (!create.ok) return { status: create.status };
+    const start = await fetch(`/api/tasks/${created.task.id}/start`, {
+      method: "POST",
+    });
+    if (!start.ok) return { status: start.status };
+    const execute = await fetch(`/api/tasks/${created.task.id}/execute`, {
+      method: "POST",
+    });
+    const executed = await execute.json();
+    if (!execute.ok) return { status: execute.status };
+    return { status: 200, task: executed.task };
+  }, missionState.projectId);
+  missionWorkAuditEqual(
+    seededTask.status,
+    200,
+    "task-run lifecycle seeding must succeed",
+  );
+  missionWorkAuditEqual(
+    seededTask.task.status,
+    "completed",
+    "deterministic executor must complete the task",
+  );
+  const seededTaskId = seededTask.task.id;
+
+  const missionWorkAuditApi = await page.evaluate(async (projectId) => {
+    const pages = [];
+    let before = null;
+    for (let depth = 0; depth < 12; depth += 1) {
+      const response = await fetch(
+        `/api/projects/${projectId}/audit-events${before === null ? "" : `?before=${before}`}`,
+        { cache: "no-store" },
+      );
+      const body = await response.json();
+      if (!response.ok) return { error: body, status: response.status };
+      pages.push(body);
+      if (body.nextBeforeSeq === null) break;
+      before = body.nextBeforeSeq;
+    }
+    return { pages, status: 200 };
+  }, missionState.projectId);
+  missionWorkAuditEqual(
+    missionWorkAuditApi.status,
+    200,
+    JSON.stringify(missionWorkAuditApi.error),
+  );
+  missionWorkAuditEqual(
+    missionWorkAuditApi.pages.length,
+    1,
+    "all mission-work events must fit on a single page",
+  );
+  const missionWorkAuditEvents = missionWorkAuditApi.pages.flatMap(
+    ({ events }) => events,
+  );
+  missionWorkAuditOk(
+    missionWorkAuditEvents.length > 0,
+    "real mission/work facts must produce audit events",
+  );
+  missionWorkAuditEqual(
+    missionWorkAuditApi.pages[0].freshness.status,
+    "caught_up",
+    JSON.stringify(missionWorkAuditApi.pages[0].freshness),
+  );
+  for (let index = 1; index < missionWorkAuditEvents.length; index += 1) {
+    missionWorkAuditOk(
+      missionWorkAuditEvents[index - 1].outboxSeq
+        > missionWorkAuditEvents[index].outboxSeq,
+      "audit events must be globally descending by outbox_seq",
+    );
+  }
+  // This smoke runs no execution/collaboration work, so every projected event
+  // is mission-work sourced.
+  for (const event of missionWorkAuditEvents) {
+    missionWorkAuditOk(
+      Object.hasOwn(MISSION_WORK_AUDIT_EVENT_TYPE_COPY, event.eventType),
+      `unexpected non-mission-work event type ${event.eventType}`,
+    );
+    missionWorkAuditEqual(event.executionId, null);
+  }
+  const missionWorkEventTypes = new Set(
+    missionWorkAuditEvents.map((event) => event.eventType),
+  );
+  for (const required of [
+    "mission_created",
+    "task_completed",
+    "task_created",
+    "task_started",
+    "work_item_created",
+    "work_item_status_changed",
+  ]) {
+    missionWorkAuditOk(
+      missionWorkEventTypes.has(required),
+      `audit trail must include ${required}`,
+    );
+  }
+  const missionCreatedEvent = missionWorkAuditEvents.find(
+    (event) => event.eventType === "mission_created",
+  );
+  missionWorkAuditEqual(
+    missionCreatedEvent.payload.title,
+    "Context Smoke Mission",
+    "mission excerpt must be verbatim",
+  );
+  missionWorkAuditEqual(
+    missionCreatedEvent.payload.missionId,
+    missionState.state.mission.id,
+  );
+  const planTransitionEvent = missionWorkAuditEvents.find(
+    (event) => event.eventType === "work_item_status_changed",
+  );
+  missionWorkAuditEqual(planTransitionEvent.payload.workItemId, planId);
+  missionWorkAuditEqual(
+    planTransitionEvent.payload.title,
+    "Plan task",
+    "work item excerpt must be verbatim",
+  );
+  missionWorkAuditEqual(planTransitionEvent.payload.fromStatus, "todo");
+  missionWorkAuditEqual(planTransitionEvent.payload.toStatus, "in_progress");
+  // The rejected Build-task start (dependency guard) must not enter the trail.
+  missionWorkAuditOk(
+    !missionWorkAuditEvents.some(
+      (event) =>
+        event.eventType === "work_item_status_changed"
+        && event.payload.title === "Build task",
+    ),
+    "rejected transitions must not produce audit rows",
+  );
+  const seededTaskEvents = missionWorkAuditEvents.filter(
+    (event) => event.payload.taskId === seededTaskId,
+  );
+  missionWorkAuditEqual(
+    seededTaskEvents.length,
+    3,
+    "task lifecycle must mirror created/started/completed",
+  );
+  missionWorkAuditEqual(
+    seededTaskEvents[0].eventType,
+    "task_completed",
+    "latest task event must sort first",
+  );
+  missionWorkAuditEqual(
+    seededTaskEvents[0].payload.title,
+    "审计验收骨架任务",
+    "task excerpt must be verbatim",
+  );
+  // The second project's mission must stay isolated from this project's trail.
+  missionWorkAuditOk(
+    !missionWorkAuditEvents.some((event) => event.payload.title === "Empty Mission"),
+    "cross-project mission events must stay isolated",
+  );
+  const missionWorkAuditApiText = JSON.stringify(missionWorkAuditApi.pages);
+  for (const value of [
+    testApiKey,
+    masterKey,
+    `Bearer ${testApiKey}`,
+    validationToken,
+    temporaryDirectory,
+    workspaceDirectory,
+    "Authorization:",
+  ]) {
+    missionWorkAuditOk(
+      !missionWorkAuditApiText.includes(value),
+      "audit API payload leaked a forbidden marker",
+    );
+  }
+  const foreignMissionWorkAudit = await page.evaluate(async () => {
+    const response = await fetch("/api/projects/foreign-project/audit-events", {
+      cache: "no-store",
+    });
+    return { body: await response.json(), status: response.status };
+  });
+  missionWorkAuditEqual(
+    foreignMissionWorkAudit.status,
+    404,
+    "foreign project audit read must 404",
+  );
+  missionWorkAuditOk(
+    !JSON.stringify(foreignMissionWorkAudit.body).includes(temporaryDirectory),
+    "404 envelope must not echo host paths",
+  );
+  // Row counts are project-scoped (the API is project-scoped): the second
+  // project's "Empty Mission" row legitimately lives in the same global
+  // outbox, while checkpoint/maxSeq stay global consumer facts.
+  const missionWorkAuditCounts = (() => {
+    const database = new DatabaseSync(databasePath, { readOnly: true });
+    try {
+      const scalar = (sql, ...params) =>
+        Number(database.prepare(sql).get(...params).value);
+      return {
+        checkpoint: scalar(
+          "SELECT last_outbox_seq AS value FROM audit_projection_checkpoints"
+            + " WHERE consumer_id='audit-event-projection'",
+        ),
+        maxSeq: scalar(
+          "SELECT COALESCE(MAX(outbox_seq),0) AS value FROM audit_event_outbox",
+        ),
+        missionWork: scalar(
+          "SELECT COUNT(*) AS value FROM audit_event_outbox"
+            + " WHERE source='mission_work' AND project_id=?",
+          missionState.projectId,
+        ),
+        outbox: scalar(
+          "SELECT COUNT(*) AS value FROM audit_event_outbox WHERE project_id=?",
+          missionState.projectId,
+        ),
+        projection: scalar(
+          "SELECT COUNT(*) AS value FROM audit_event_projection WHERE project_id=?",
+          missionState.projectId,
+        ),
+      };
+    } finally {
+      database.close();
+    }
+  })();
+  missionWorkAuditEqual(
+    missionWorkAuditCounts.outbox,
+    missionWorkAuditEvents.length,
+    "API must expose every project outbox event",
+  );
+  missionWorkAuditEqual(
+    missionWorkAuditCounts.missionWork,
+    missionWorkAuditEvents.length,
+    "every event in this smoke is mission-work sourced",
+  );
+  missionWorkAuditEqual(
+    missionWorkAuditCounts.projection,
+    missionWorkAuditCounts.outbox,
+    "read path must catch up the projection",
+  );
+  missionWorkAuditEqual(
+    missionWorkAuditCounts.checkpoint,
+    missionWorkAuditCounts.maxSeq,
+    "checkpoint must be caught up",
+  );
+  console.log(
+    `MISSION-WORK AUDIT API PASS: events=${missionWorkAuditEvents.length}, single page, outbox==projection==API, checkpoint caught up, foreign 404`,
+  );
+
+  // Desktop: reload before asserting the panel (A-237 — the API-side seeding
+  // bypasses any mounted panel), then exercise the audit tab end to end.
+  await page.setViewportSize({ height: 1100, width: 1600 });
+  await page.reload({ waitUntil: "networkidle" });
+  const missionWorkContextPanel = page.locator(".cockpit-context");
+  await missionWorkContextPanel
+    .getByRole("tab", { name: "共享记忆" })
+    .focus();
+  await page.keyboard.press("End");
+  const missionWorkAuditTab = missionWorkContextPanel.getByRole("tab", {
+    name: "审计",
+  });
+  missionWorkAuditEqual(
+    await missionWorkAuditTab.getAttribute("aria-selected"),
+    "true",
+    "End key must select the audit tab",
+  );
+  missionWorkAuditOk(
+    await missionWorkAuditTab.evaluate(
+      (node) => document.activeElement === node,
+    ),
+    "End key must move focus to the audit tab",
+  );
+  const missionWorkAuditList = missionWorkContextPanel.getByRole("list", {
+    name: "审计事件",
+  });
+  await missionWorkAuditList.waitFor();
+  await missionWorkContextPanel
+    .getByText("已追平", { exact: true })
+    .waitFor();
+  await page.waitForFunction(
+    (expected) =>
+      document.querySelectorAll(".audit-event-list > li").length === expected,
+    missionWorkAuditEvents.length,
+  );
+  const missionWorkAuditRows = missionWorkAuditList.getByRole("listitem");
+  const firstMissionWorkRow = missionWorkAuditRows.first();
+  await firstMissionWorkRow
+    .getByRole("heading", { name: "任务已完成" })
+    .waitFor();
+  missionWorkAuditEqual(
+    await firstMissionWorkRow.locator(".audit-event-excerpt").innerText(),
+    "审计验收骨架任务",
+    "first row must render the verbatim task excerpt",
+  );
+  missionWorkAuditOk(
+    await firstMissionWorkRow
+      .getByText("任务", { exact: true })
+      .evaluate(
+        (node) =>
+          node.classList.contains("status-label")
+          && node.classList.contains("status-completed"),
+      ),
+    "first row badge must use the completed status variant",
+  );
+  missionWorkAuditEqual(
+    await missionWorkAuditList.locator(".status-label.status-completed").count(),
+    missionWorkAuditEvents.length,
+    "every rendered row must carry the task domain badge",
+  );
+  const planLocateLink = missionWorkAuditRows
+    .nth(missionWorkAuditEvents.indexOf(planTransitionEvent))
+    .getByRole("link", { name: "定位来源任务" });
+  missionWorkAuditEqual(
+    await planLocateLink.getAttribute("href"),
+    `/projects/${missionState.projectId}/tasks/${planId}`,
+  );
+  const missionLocateLink = missionWorkAuditRows
+    .nth(missionWorkAuditEvents.indexOf(missionCreatedEvent))
+    .getByRole("link", { name: "定位来源使命" });
+  missionWorkAuditEqual(
+    await missionLocateLink.getAttribute("href"),
+    `/projects/${missionState.projectId}/missions/${missionState.state.mission.id}`,
+  );
+  const taskLocateLink = firstMissionWorkRow.getByRole("link", {
+    name: "定位来源任务",
+  });
+  missionWorkAuditEqual(
+    await taskLocateLink.getAttribute("href"),
+    `/projects/${missionState.projectId}/task-runs/${seededTaskId}`,
+  );
+  const missionWorkAuditTabBox = await missionWorkAuditTab.boundingBox();
+  missionWorkAuditOk(
+    missionWorkAuditTabBox
+      && missionWorkAuditTabBox.height >= 44
+      && missionWorkAuditTabBox.width >= 44,
+    "audit tab must be at least 44x44",
+  );
+  const planLocateBox = await planLocateLink.boundingBox();
+  missionWorkAuditOk(
+    planLocateBox && planLocateBox.height >= 44 && planLocateBox.width >= 44,
+    "locate link must be at least 44x44",
+  );
+  await planLocateLink.focus();
+  missionWorkAuditOk(
+    (await planLocateLink.evaluate((node) => getComputedStyle(node).boxShadow))
+      !== "none",
+    "focused locate link must show a visible focus ring",
+  );
+  await axeMissionWorkAudit("desktop light mission-work audit panel");
+  missionWorkAuditAcceptance.matrix.push("desktop-light");
+  await page.screenshot({
+    fullPage: true,
+    path: missionWorkAuditDesktopScreenshot,
+  });
+  const missionWorkAuditFacingText = await page.locator("html").innerText();
+  await setCockpitTheme(page, "dark");
+  await missionWorkContextPanel
+    .getByText("已追平", { exact: true })
+    .waitFor();
+  await missionWorkAuditRows
+    .first()
+    .getByRole("heading", { name: "任务已完成" })
+    .waitFor();
+  await axeMissionWorkAudit("desktop dark mission-work audit panel");
+  missionWorkAuditAcceptance.matrix.push("desktop-dark");
+  await page.screenshot({
+    fullPage: true,
+    path: missionWorkAuditDarkScreenshot,
+  });
+  await setCockpitTheme(page, "light");
+  console.log(
+    "MISSION-WORK AUDIT DESKTOP PASS: keyboard End, badge/copy/excerpt, locate hrefs, 44px, focus ring, axe light+dark",
+  );
+
+  await page.setViewportSize({ height: 844, width: 390 });
+  await page.reload({ waitUntil: "networkidle" });
+  const missionWorkContextOpener = page.getByRole("button", {
+    name: "打开当前任务上下文",
+  });
+  await missionWorkContextOpener.focus();
+  await page.keyboard.press("Enter");
+  const missionWorkContextDrawer = page.getByRole("dialog", {
+    name: "当前任务上下文",
+  });
+  const narrowMissionWorkAuditTab = missionWorkContextDrawer.getByRole("tab", {
+    name: "审计",
+  });
+  await narrowMissionWorkAuditTab.focus();
+  await page.keyboard.press("Enter");
+  missionWorkAuditEqual(
+    await narrowMissionWorkAuditTab.getAttribute("aria-selected"),
+    "true",
+    "Enter must select the narrow audit tab",
+  );
+  const narrowMissionWorkAuditList = missionWorkContextDrawer.getByRole(
+    "list",
+    { name: "审计事件" },
+  );
+  await narrowMissionWorkAuditList.waitFor();
+  await missionWorkContextDrawer
+    .getByText("已追平", { exact: true })
+    .waitFor();
+  await page.waitForFunction(
+    (expected) =>
+      document.querySelectorAll(".audit-event-list > li").length === expected,
+    missionWorkAuditEvents.length,
+  );
+  const narrowMissionWorkRows = narrowMissionWorkAuditList.getByRole(
+    "listitem",
+  );
+  await narrowMissionWorkRows
+    .first()
+    .getByRole("heading", { name: "任务已完成" })
+    .waitFor();
+  missionWorkAuditEqual(
+    await narrowMissionWorkRows
+      .first()
+      .locator(".audit-event-excerpt")
+      .innerText(),
+    "审计验收骨架任务",
+    "narrow drawer must keep the task excerpt",
+  );
+  const narrowTaskLocate = narrowMissionWorkRows
+    .first()
+    .getByRole("link", { name: "定位来源任务" });
+  missionWorkAuditEqual(
+    await narrowTaskLocate.getAttribute("href"),
+    `/projects/${missionState.projectId}/task-runs/${seededTaskId}`,
+  );
+  const narrowTaskLocateBox = await narrowTaskLocate.boundingBox();
+  missionWorkAuditOk(
+    narrowTaskLocateBox
+      && narrowTaskLocateBox.height >= 44
+      && narrowTaskLocateBox.width >= 44,
+    "narrow locate link must be at least 44x44",
+  );
+  const narrowMissionWorkTabBox = await narrowMissionWorkAuditTab.boundingBox();
+  missionWorkAuditOk(
+    narrowMissionWorkTabBox
+      && narrowMissionWorkTabBox.height >= 44
+      && narrowMissionWorkTabBox.width >= 44,
+    "narrow audit tab must be at least 44x44",
+  );
+  await axeMissionWorkAudit("narrow light mission-work audit drawer");
+  missionWorkAuditAcceptance.matrix.push("narrow-light");
+  await page.screenshot({
+    fullPage: true,
+    path: missionWorkAuditNarrowScreenshot,
+  });
+  const narrowMissionWorkAuditFacingText = await page
+    .locator("html")
+    .innerText();
+  await page.keyboard.press("Escape");
+  await missionWorkContextDrawer.waitFor({ state: "detached" });
+  missionWorkAuditOk(
+    await missionWorkContextOpener.evaluate(
+      (node) => document.activeElement === node,
+    ),
+    "Escape must return focus to the context drawer opener",
+  );
+  console.log(
+    "MISSION-WORK AUDIT NARROW PASS: drawer presentation kept, locate href, 44px, axe",
+  );
+
+  // Secret scan: facing text is captured on the project page, which
+  // legitimately renders the allowlisted workspace path, so facing text is
+  // scanned for fixture secrets only; screenshot bytes are also scanned for
+  // host paths (compressed pixels cannot contain page text).
+  const missionWorkAuditScreenshotBytes = [
+    missionWorkAuditDarkScreenshot,
+    missionWorkAuditDesktopScreenshot,
+    missionWorkAuditNarrowScreenshot,
+  ]
+    .map((path) => readFileSync(path).toString("latin1"))
+    .join("\n");
+  for (const surface of [
+    missionWorkAuditFacingText,
+    narrowMissionWorkAuditFacingText,
+    missionWorkAuditScreenshotBytes,
+  ]) {
+    for (const secret of [
+      testApiKey,
+      masterKey,
+      `Bearer ${testApiKey}`,
+      validationToken,
+      providerBaseUrl,
+    ]) {
+      missionWorkAuditOk(
+        !surface.includes(secret),
+        "mission-work audit surface leaked a fixture secret",
+      );
+    }
+  }
+  for (const hostPath of [
+    temporaryDirectory,
+    workspaceDirectory,
+    boundWorkspacePath,
+    reboundWorkspaceDirectory,
+    reboundWorkspacePath,
+  ]) {
+    missionWorkAuditOk(
+      !missionWorkAuditScreenshotBytes.includes(hostPath),
+      "mission-work audit screenshot bytes leaked a host path",
+    );
+  }
+  writeFileSync(
+    missionWorkAuditResultsPath,
+    `${JSON.stringify(
+      {
+        assertions: missionWorkAuditAcceptance.assertions,
+        axe: missionWorkAuditAcceptance.axe,
+        events: missionWorkAuditEvents.length,
+        matrix: missionWorkAuditAcceptance.matrix,
+      },
+      null,
+      2,
+    )}\n`,
+    "utf8",
+  );
+  console.log(
+    `MISSION-WORK AUDIT ACCEPTANCE PASS: assertions=${missionWorkAuditAcceptance.assertions} axeStates=${missionWorkAuditAcceptance.axe.length} matrix=${missionWorkAuditAcceptance.matrix.join(",")}`,
+  );
+
   const auditOperations = readFileSync(auditPath, "utf8")
     .trim()
     .split(/\r?\n/)

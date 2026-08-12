@@ -585,3 +585,235 @@ describe("Audit panel", () => {
     expect(screen.queryByText("状态已变更")).toBeNull();
   });
 });
+
+describe("Audit panel mission-work events", () => {
+  it("renders mission-work types with readable copy and the task domain badge in a mixed three-domain list", async () => {
+    const AuditPanel = await auditPanel();
+    const missionWorkCopy: ReadonlyArray<readonly [string, string]> = [
+      ["mission_created", "使命已创建"],
+      ["task_created", "任务已创建"],
+      ["task_started", "任务已开始"],
+      ["task_completed", "任务已完成"],
+      ["task_failed", "任务已失败"],
+      ["work_item_created", "看板任务已创建"],
+      ["work_item_status_changed", "看板任务状态已变更"],
+    ];
+    const events = missionWorkCopy.map(([eventType], index) =>
+      auditEvent({
+        actorType: "owner",
+        eventType,
+        id: `event-${100 - index}`,
+        outboxSeq: 100 - index,
+        payload: {
+          missionId: "mission-1",
+          title: `样例 ${eventType}`,
+          workItemId: "work-1",
+        },
+      }),
+    );
+    events.push(auditEvent({
+      eventType: "execution_created",
+      executionId: "exec-1",
+      id: "event-90",
+      outboxSeq: 90,
+    }));
+    events.push(auditEvent({
+      actorType: "agent",
+      eventType: "run_started",
+      id: "event-89",
+      outboxSeq: 89,
+      payload: { runId: "run-1", threadId: "thread-1" },
+    }));
+    vi.stubGlobal(
+      "fetch",
+      vi.fn(() => Promise.resolve(Response.json(page(events)))),
+    );
+    render(<AuditPanel projectId="project-1" />);
+
+    const list = await screen.findByRole("list", { name: "审计事件" });
+    for (const [, copy] of missionWorkCopy) {
+      expect(within(list).getByRole("heading", { name: copy }))
+        .toBeInTheDocument();
+    }
+    const rows = within(list).getAllByRole("listitem");
+    expect(rows).toHaveLength(9);
+    for (const row of rows.slice(0, 7)) {
+      const badge = within(row).getByText("任务", { selector: "span" });
+      expect(badge).toHaveClass("status-label");
+      expect(badge).toHaveClass("status-completed");
+    }
+    expect(within(rows[7]!).getByText("执行")).toHaveClass("status-running");
+    expect(within(rows[8]!).getByText("协作")).toHaveClass("status-queued");
+    // 只读断言：任务域事件同样不提供任何编辑入口。
+    expect(within(list).queryByRole("textbox")).toBeNull();
+    expect(within(list).queryByRole("checkbox")).toBeNull();
+    expect(within(list).queryByRole("button", { name: /编辑|删除|修改/ }))
+      .toBeNull();
+  });
+
+  it("links mission-work events to canonical task/mission targets only when references are valid", async () => {
+    const AuditPanel = await auditPanel();
+    const events = [
+      auditEvent({
+        actorType: "owner",
+        eventType: "work_item_status_changed",
+        id: "event-60",
+        outboxSeq: 60,
+        payload: {
+          fromStatus: "todo",
+          missionId: "mission-1",
+          title: "写规格",
+          toStatus: "in_progress",
+          workItemId: "work-1",
+        },
+      }),
+      auditEvent({
+        actorType: "owner",
+        eventType: "mission_created",
+        id: "event-59",
+        outboxSeq: 59,
+        payload: { missionId: "mission-1", title: "交付审计" },
+      }),
+      auditEvent({
+        eventType: "task_started",
+        id: "event-58",
+        outboxSeq: 58,
+        payload: {
+          message: "Task started.",
+          status: "running",
+          taskId: "task-1",
+          title: "整理仓库",
+        },
+      }),
+      // A malformed workItemId falls back to the valid mission reference.
+      auditEvent({
+        actorType: "owner",
+        eventType: "work_item_created",
+        id: "event-57",
+        outboxSeq: 57,
+        payload: { missionId: "mission-1", title: "坏行", workItemId: 42 },
+      }),
+      // Every reference malformed or absent renders no link at all.
+      auditEvent({
+        actorType: "owner",
+        eventType: "mission_created",
+        id: "event-56",
+        outboxSeq: 56,
+        payload: { missionId: "", title: "空引用" },
+      }),
+      auditEvent({
+        eventType: "task_failed",
+        id: "event-55",
+        outboxSeq: 55,
+        payload: { message: "Task failed.", status: "failed", title: "无引用" },
+      }),
+    ];
+    vi.stubGlobal(
+      "fetch",
+      vi.fn(() => Promise.resolve(Response.json(page(events)))),
+    );
+    render(<AuditPanel projectId="project-1" />);
+
+    const list = await screen.findByRole("list", { name: "审计事件" });
+    const rows = within(list).getAllByRole("listitem");
+    expect(rows).toHaveLength(6);
+    expect(
+      within(rows[0]!).getByRole("link", { name: "定位来源任务" }),
+    ).toHaveAttribute("href", "/projects/project-1/tasks/work-1");
+    expect(
+      within(rows[1]!).getByRole("link", { name: "定位来源使命" }),
+    ).toHaveAttribute("href", "/projects/project-1/missions/mission-1");
+    expect(
+      within(rows[2]!).getByRole("link", { name: "定位来源任务" }),
+    ).toHaveAttribute("href", "/projects/project-1/task-runs/task-1");
+    expect(
+      within(rows[3]!).getByRole("link", { name: "定位来源使命" }),
+    ).toHaveAttribute("href", "/projects/project-1/missions/mission-1");
+    expect(within(rows[4]!).queryByRole("link")).toBeNull();
+    expect(within(rows[5]!).queryByRole("link")).toBeNull();
+  });
+
+  it("shows the public title excerpt for mission-work events only", async () => {
+    const AuditPanel = await auditPanel();
+    const events = [
+      auditEvent({
+        eventType: "task_created",
+        id: "event-70",
+        outboxSeq: 70,
+        payload: {
+          message: "Task queued.",
+          status: "queued",
+          taskId: "task-1",
+          title: "整理仓库",
+        },
+      }),
+      auditEvent({
+        actorType: "agent",
+        eventType: "work_item_created",
+        id: "event-69",
+        outboxSeq: 69,
+        payload: {
+          missionId: "mission-1",
+          title: "[redacted]",
+          workItemId: "work-1",
+        },
+      }),
+      // No title and empty title render no excerpt element.
+      auditEvent({
+        actorType: "owner",
+        eventType: "mission_created",
+        id: "event-68",
+        outboxSeq: 68,
+        payload: { missionId: "mission-1" },
+      }),
+      auditEvent({
+        actorType: "system",
+        eventType: "work_item_status_changed",
+        id: "event-67",
+        outboxSeq: 67,
+        payload: {
+          fromStatus: "done",
+          missionId: "mission-1",
+          title: "",
+          toStatus: "in_progress",
+          workItemId: "work-1",
+        },
+      }),
+      // Execution events never render a mission-work title excerpt.
+      auditEvent({
+        eventType: "execution_created",
+        executionId: "exec-1",
+        id: "event-66",
+        outboxSeq: 66,
+        payload: { title: "不应显示", workItemId: "work-9" },
+      }),
+      // 030 message excerpt behavior stays intact.
+      auditEvent({
+        actorType: "owner",
+        eventType: "owner_message",
+        id: "event-65",
+        outboxSeq: 65,
+        payload: { messageExcerpt: "协作摘要", threadId: "thread-1" },
+      }),
+    ];
+    vi.stubGlobal(
+      "fetch",
+      vi.fn(() => Promise.resolve(Response.json(page(events)))),
+    );
+    render(<AuditPanel projectId="project-1" />);
+
+    const list = await screen.findByRole("list", { name: "审计事件" });
+    const rows = within(list).getAllByRole("listitem");
+    expect(rows).toHaveLength(6);
+    expect(within(rows[0]!).getByText("整理仓库"))
+      .toHaveClass("audit-event-excerpt");
+    expect(within(rows[1]!).getByText("[redacted]"))
+      .toHaveClass("audit-event-excerpt");
+    expect(rows[2]!.querySelector(".audit-event-excerpt")).toBeNull();
+    expect(rows[3]!.querySelector(".audit-event-excerpt")).toBeNull();
+    expect(rows[4]!.querySelector(".audit-event-excerpt")).toBeNull();
+    expect(screen.queryByText("不应显示")).toBeNull();
+    expect(within(rows[5]!).getByText("协作摘要"))
+      .toHaveClass("audit-event-excerpt");
+  });
+});

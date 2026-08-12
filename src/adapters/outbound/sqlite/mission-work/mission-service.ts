@@ -14,6 +14,10 @@ import {
   readControlOperationPrior,
 } from "@/src/adapters/outbound/sqlite/public-collaboration/mission-control-receipts";
 import { MissionError } from "@/src/modules/mission-work";
+import {
+  appendWorkItemCreatedAuditOutboxRow,
+  appendWorkItemStatusAuditOutboxRow,
+} from "@/src/adapters/outbound/sqlite/mission-work/audit-event-outbox";
 import type { CreateMissionInput } from "@/src/modules/mission-work";
 import type { TransitionReceipt } from "@/src/modules/public-collaboration";
 import type {
@@ -456,6 +460,15 @@ function createWorkItemTx(
   ensureDependencyScope(database, mission.id, id, parsed.dependencyIds);
   ensureReplacementAcyclic(database, mission.id, id, parsed.dependencyIds);
   replaceDependencyRows(database, id, parsed.dependencyIds);
+  appendWorkItemCreatedAuditOutboxRow(database, {
+    actorId: null,
+    actorType: "owner",
+    missionId: mission.id,
+    occurredAt: timestamp,
+    projectId: mission.projectId,
+    title: parsed.title,
+    workItemId: id,
+  });
   return workItemById(database, id)!;
 }
 
@@ -598,6 +611,17 @@ export function createWorkItemBatchTx(
       .run(timestamp, expectedMissionId, projectId);
     if (updated.changes !== 1) throw actionConflict();
   }
+  for (const proposal of parsed) {
+    appendWorkItemCreatedAuditOutboxRow(database, {
+      actorId: actor.type === "agent" ? actor.agentId : null,
+      actorType: actor.type,
+      missionId: mission.id,
+      occurredAt: timestamp,
+      projectId,
+      title: proposal.title,
+      workItemId: keyToId[proposal.clientKey],
+    });
+  }
   return keyToId;
 }
 
@@ -650,6 +674,14 @@ export function claimWorkItemTx(
   if (updated.changes !== 1) {
     throw actionConflict(workItemById(database, workItemId)?.version);
   }
+  appendWorkItemStatusAuditOutboxRow(database, {
+    actorId: agentId,
+    actorType: "agent",
+    fromStatus: "todo",
+    occurredAt: timestamp,
+    toStatus: "in_progress",
+    workItemId,
+  });
   return workItemById(database, workItemId)!;
 }
 
@@ -851,13 +883,14 @@ export function transitionWorkItemTx(
   if (input.toStatus === "in_progress") {
     ensureDependenciesDone(database, current.dependencyIds);
   }
+  const occurredAt = new Date().toISOString();
   const updated = database.prepare(`
     UPDATE work_items
     SET status=?,version=version+1,updated_at=?
     WHERE id=? AND version=? AND status=?
   `).run(
     input.toStatus,
-    new Date().toISOString(),
+    occurredAt,
     input.workItemId,
     input.expectedVersion,
     current.status,
@@ -871,6 +904,14 @@ export function transitionWorkItemTx(
       workItemById(database, input.workItemId)?.version,
     );
   }
+  appendWorkItemStatusAuditOutboxRow(database, {
+    actorId: input.actor.type === "agent" ? input.actor.agentId : null,
+    actorType: input.actor.type,
+    fromStatus: current.status,
+    occurredAt,
+    toStatus: input.toStatus,
+    workItemId: input.workItemId,
+  });
   return workItemById(database, input.workItemId)!;
 }
 

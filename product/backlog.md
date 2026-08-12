@@ -40,7 +40,7 @@ Capability ID 是稳定治理标识；owner 是唯一逻辑子系统，不等于
 - `CAP-MWK-02` Mission Dependency Insight — owner: Mission & Work — 状态: 已交付核心 — 证据/建立切片: S-25 [`progress.md`](../features/026-mission-dependency-insight/progress.md)
 - `CAP-MWK-03` SOP State Projection — owner: Mission & Work — 状态: 规划中 — 建立切片: S-26
 - `CAP-MWK-04` Dispatch Lease Control — owner: Mission & Work — 状态: 规划中 — 建立切片: S-27
-- `CAP-MWK-05` Public Mission / Work Events — owner: Mission & Work — 状态: 规划中 — 建立路径: S-23 的 Mission & Work 审计纵切；该片复用已交付 `CAP-OPS-01/02`，以 owner 可查询脱敏 Mission/Work 事件并精确导航为独立结果
+- `CAP-MWK-05` Public Mission / Work Events — owner: Mission & Work — 状态: 已交付核心 — 证据/建立切片: S-23 AUD-MWK（分配实现片号 S-51）[`progress.md`](../features/035-mission-work-audit-events/progress.md)（7 类事件同事务 outbox、审计中心可查询并规范身份导航，复用已交付 `CAP-OPS-01/02`）
 
 ### Public Collaboration
 

@@ -1,4 +1,5 @@
 import type { TransactionContext } from "@/src/application/transaction-context";
+import { appendMissionCreatedAuditOutboxRow } from "@/src/adapters/outbound/sqlite/mission-work/audit-event-outbox";
 import { canonicalRequestHash } from "@/src/adapters/outbound/sqlite/public-collaboration/operation-receipts";
 import {
   MissionError,
@@ -76,6 +77,12 @@ export class SqliteMissionCommandCapability implements MissionCommandCapability 
         occurredAt,
         occurredAt,
       );
+    appendMissionCreatedAuditOutboxRow(database, {
+      missionId,
+      occurredAt,
+      projectId: command.projectId,
+      title: command.title,
+    });
 
     return {
       mission: {

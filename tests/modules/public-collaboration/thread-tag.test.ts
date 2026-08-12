@@ -330,7 +330,7 @@ describe("thread tag schema seam", () => {
     const databasePath = memoryDatabasePath();
     const raw = new DatabaseSync(databasePath);
     try {
-      expect(raw.prepare("PRAGMA user_version").get()).toEqual({ user_version: 20 });
+      expect(raw.prepare("PRAGMA user_version").get()).toEqual({ user_version: 21 });
       const objects = raw
         .prepare(
           `SELECT type,name FROM sqlite_master
@@ -765,7 +765,7 @@ describe("thread tag reopen seam", () => {
       const reopened = openDatabase(databasePath);
       try {
         expect(reopened.prepare("PRAGMA user_version").get()).toEqual({
-          user_version: 20,
+          user_version: 21,
         });
       } finally {
         reopened.close();
@@ -1296,7 +1296,7 @@ describe("thread list tag filter and projection seam", () => {
       const reopened = openDatabase(databasePath);
       try {
         expect(reopened.prepare("PRAGMA user_version").get()).toEqual({
-          user_version: 20,
+          user_version: 21,
         });
       } finally {
         reopened.close();

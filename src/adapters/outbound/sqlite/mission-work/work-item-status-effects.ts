@@ -1,5 +1,6 @@
 import type { DatabaseSync } from "node:sqlite";
 
+import { appendWorkItemStatusAuditOutboxRow } from "@/src/adapters/outbound/sqlite/mission-work/audit-event-outbox";
 import type {
   MarkReviewedWorkItemDoneInput,
   MarkWorkItemDoneInput,
@@ -21,28 +22,61 @@ export function markWorkItemDoneTx(
   database: DatabaseSync,
   input: MarkWorkItemDoneInput,
 ): WorkItemStatusWriteResult {
-  return database.prepare(`
+  const updated = database.prepare(`
     UPDATE work_items SET status='done',version=version+1,updated_at=?
     WHERE id=? AND version=? AND status='in_progress'
   `).run(input.occurredAt, input.workItemId, input.expectedVersion);
+  if (updated.changes === 1) {
+    appendWorkItemStatusAuditOutboxRow(database, {
+      actorId: null,
+      actorType: "system",
+      fromStatus: "in_progress",
+      occurredAt: input.occurredAt,
+      toStatus: "done",
+      workItemId: input.workItemId,
+    });
+  }
+  return updated;
 }
 
 export function markReviewedWorkItemDoneTx(
   database: DatabaseSync,
   input: MarkReviewedWorkItemDoneInput,
 ): WorkItemStatusWriteResult {
-  return database.prepare(`
+  const updated = database.prepare(`
         UPDATE work_items SET status='done',version=version+1,updated_at=?
         WHERE id=? AND mission_id=? AND status='in_progress'
       `).run(input.occurredAt, input.workItemId, input.missionId);
+  if (updated.changes === 1) {
+    appendWorkItemStatusAuditOutboxRow(database, {
+      actorId: null,
+      actorType: "system",
+      fromStatus: "in_progress",
+      occurredAt: input.occurredAt,
+      toStatus: "done",
+      workItemId: input.workItemId,
+    });
+  }
+  return updated;
 }
 
 export function markWorkItemInProgressTx(
   database: DatabaseSync,
   input: MarkWorkItemInProgressInput,
 ): WorkItemStatusWriteResult {
-  return database.prepare(`
+  const updated = database.prepare(`
       UPDATE work_items SET status='in_progress',version=version+1,updated_at=?
       WHERE id=? AND status='done'
     `).run(input.occurredAt, input.workItemId);
+  if (updated.changes === 1) {
+    appendWorkItemStatusAuditOutboxRow(database, {
+      actorId: null,
+      actorType: "system",
+      fromStatus: "done",
+      occurredAt: input.occurredAt,
+      toStatus: "in_progress",
+      workItemId: input.workItemId,
+    });
+  }
+  return updated;
 }

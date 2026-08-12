@@ -41,6 +41,22 @@ const COLLABORATION_EVENT_TYPE_COPY: Record<string, string> = {
   thread_restored: "线程已恢复",
 };
 
+// Readable copy for the mission-work audit event types (feature 035
+// selection, mirroring AUDITABLE_MISSION_WORK_EVENT_TYPES server-side). The
+// map doubles as the mission-domain classifier: the outbox sources write
+// disjoint event-type sets, so a type listed here renders the task domain
+// badge. 看板任务 names work items (the mission-board vocabulary) to keep
+// them distinct from task-run 任务活动 events.
+const MISSION_WORK_EVENT_TYPE_COPY: Record<string, string> = {
+  mission_created: "使命已创建",
+  task_completed: "任务已完成",
+  task_created: "任务已创建",
+  task_failed: "任务已失败",
+  task_started: "任务已开始",
+  work_item_created: "看板任务已创建",
+  work_item_status_changed: "看板任务状态已变更",
+};
+
 // Readable copy for the audit event types, centralized so any future type not
 // yet mapped degrades to its raw contract value (never blank).
 const EVENT_TYPE_COPY: Record<string, string> = {
@@ -60,6 +76,7 @@ const EVENT_TYPE_COPY: Record<string, string> = {
   tool_succeeded: "工具调用成功",
   usage_recorded: "用量已记录",
   ...COLLABORATION_EVENT_TYPE_COPY,
+  ...MISSION_WORK_EVENT_TYPE_COPY,
 };
 
 const ACTOR_TYPE_COPY: Record<string, string> = {
@@ -68,27 +85,29 @@ const ACTOR_TYPE_COPY: Record<string, string> = {
   system: "系统",
 };
 
-type AuditEventDomain = "collaboration" | "execution";
+type AuditEventDomain = "collaboration" | "execution" | "mission";
 
 const DOMAIN_COPY: Record<AuditEventDomain, string> = {
   collaboration: "协作",
   execution: "执行",
+  mission: "任务",
 };
 
-// Both variants are existing .status-label colors (approval-center precedent):
-// no new visual language for the domain badge.
+// All variants are existing .status-label colors (approval-center precedent):
+// no new visual language for the domain badge. status-completed is the
+// remaining neutral variant after 030 took queued/running.
 const DOMAIN_VARIANT: Record<AuditEventDomain, string> = {
   collaboration: "status-queued",
   execution: "status-running",
+  mission: "status-completed",
 };
 
-// The outbox sources write disjoint event-type sets (the collaboration
-// selection is a closed server-side constant), so the type classifies the
-// domain exactly; an unlisted future type conservatively shows 执行.
+// The outbox sources write disjoint event-type sets (each selection is a
+// closed server-side constant), so the type classifies the domain exactly; an
+// unlisted future type conservatively shows 执行.
 function eventDomain(eventType: string): AuditEventDomain {
-  return eventType in COLLABORATION_EVENT_TYPE_COPY
-    ? "collaboration"
-    : "execution";
+  if (eventType in COLLABORATION_EVENT_TYPE_COPY) return "collaboration";
+  return eventType in MISSION_WORK_EVENT_TYPE_COPY ? "mission" : "execution";
 }
 
 const MESSAGE_EVENT_TYPES: ReadonlySet<string> = new Set([
@@ -123,6 +142,52 @@ function collaborationSourceHref(
   query.set("thread", threadId);
   if (typeof runId === "string" && runId !== "") query.set("run", runId);
   return `/projects/${encodeURIComponent(projectId)}?${query.toString()}`;
+}
+
+// The server whitelist attaches the public title (already grapheme-truncated
+// and credential-screened) to mission-work events; anything malformed or
+// empty simply renders no excerpt, per the 030 excerpt precedent.
+function missionWorkExcerpt(event: AuditEventListItemDto): string | null {
+  const title = event.payload.title;
+  return typeof title === "string" && title !== "" ? title : null;
+}
+
+// Mission-work locate uses the canonical resource identity route
+// (/projects/{id}/{resource...}, the memory-source href precedent): the
+// mission-board focus seam is panel-internal state with no URL entry (the 026
+// focusWorkItemId mechanism), so the link lands on the honest
+// source-reference page instead of faking an in-page jump. Work items resolve
+// to the established tasks/{id} shape; missions and task runs follow the same
+// catch-all convention. References are validated one by one in specificity
+// order — the first strictly valid one wins, malformed entries are skipped,
+// and a payload with no valid reference renders no link at all.
+function missionWorkSourceHref(
+  projectId: string,
+  payload: Record<string, unknown>,
+): { href: string; label: string } | null {
+  const project = encodeURIComponent(projectId);
+  const workItemId = payload.workItemId;
+  if (typeof workItemId === "string" && workItemId !== "") {
+    return {
+      href: `/projects/${project}/tasks/${encodeURIComponent(workItemId)}`,
+      label: "定位来源任务",
+    };
+  }
+  const missionId = payload.missionId;
+  if (typeof missionId === "string" && missionId !== "") {
+    return {
+      href: `/projects/${project}/missions/${encodeURIComponent(missionId)}`,
+      label: "定位来源使命",
+    };
+  }
+  const taskId = payload.taskId;
+  if (typeof taskId === "string" && taskId !== "") {
+    return {
+      href: `/projects/${project}/task-runs/${encodeURIComponent(taskId)}`,
+      label: "定位来源任务",
+    };
+  }
+  return null;
 }
 
 const FRESHNESS_COPY: Record<AuditProjectionFreshnessStatus, string> = {
@@ -357,9 +422,14 @@ export function AuditPanel({ projectId }: { projectId: string }) {
             {events.map((event) => {
               const domain = eventDomain(event.eventType);
               const executionId = event.executionId;
-              const excerpt = messageExcerpt(event);
+              const excerpt = domain === "mission"
+                ? missionWorkExcerpt(event)
+                : messageExcerpt(event);
               const sourceHref = domain === "collaboration"
                 ? collaborationSourceHref(projectId, event.payload)
+                : null;
+              const missionSource = domain === "mission"
+                ? missionWorkSourceHref(projectId, event.payload)
                 : null;
               return (
                 <li className="task-summary stack" key={event.id}>
@@ -385,6 +455,9 @@ export function AuditPanel({ projectId }: { projectId: string }) {
                     </button>
                   ) : null}
                   {sourceHref ? <a href={sourceHref}>定位来源线程</a> : null}
+                  {missionSource
+                    ? <a href={missionSource.href}>{missionSource.label}</a>
+                    : null}
                 </li>
               );
             })}

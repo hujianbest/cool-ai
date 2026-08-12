@@ -128,13 +128,16 @@ type OutboxRow = {
   source: string;
 };
 
+// This suite's subject is the collaboration writer seam; since feature 035 the
+// shared outbox also carries mission_work rows (written earlier in the same
+// turn-finalize transaction), so the reader scopes to this source.
 function outboxRows(path: string = databasePath): OutboxRow[] {
   const reader = openDatabase(path);
   try {
     return reader.prepare(`
       SELECT id,project_id AS projectId,source,event_type AS eventType,
              payload_json AS payloadJson,occurred_at AS occurredAt,outbox_seq AS seq
-      FROM audit_event_outbox ORDER BY outbox_seq
+      FROM audit_event_outbox WHERE source='public_collaboration' ORDER BY outbox_seq
     `).all() as OutboxRow[];
   } finally {
     reader.close();
@@ -143,7 +146,7 @@ function outboxRows(path: string = databasePath): OutboxRow[] {
 
 describe("collaboration audit outbox schema", () => {
   it("bootstraps identity 17 and accepts the public_collaboration outbox source", () => {
-    expect(database.prepare("PRAGMA user_version").get()).toEqual({ user_version: 20 });
+    expect(database.prepare("PRAGMA user_version").get()).toEqual({ user_version: 21 });
     seedProjectOnly();
     database.prepare(`
       INSERT INTO audit_event_outbox (
@@ -322,7 +325,7 @@ describe("collaboration audit outbox write seam", () => {
     database.close();
     database = openDatabase(databasePath);
 
-    expect(database.prepare("PRAGMA user_version").get()).toEqual({ user_version: 20 });
+    expect(database.prepare("PRAGMA user_version").get()).toEqual({ user_version: 21 });
     expect(outboxRows()).toEqual(before);
   });
 
@@ -539,7 +542,12 @@ describe("collaboration audit outbox event selection", () => {
       "agent_message",
       "run_planned",
     ]);
-    expect(rows.map((row) => row.seq)).toEqual([1, 2, 3, 4, 5, 6, 7, 8, 9, 10]);
+    // The global outbox_seq space is shared with the mission_work source since
+    // feature 035, so collaboration rows keep strict monotonic order but are
+    // no longer guaranteed contiguous numbering.
+    const seqs = rows.map((row) => row.seq);
+    expect(new Set(seqs).size).toBe(seqs.length);
+    expect(seqs).toEqual([...seqs].sort((a, b) => a - b));
     expect(new Set(rows.map((row) => row.source))).toEqual(new Set(["public_collaboration"]));
 
     const tasksCreated = JSON.parse(rows[1]!.payloadJson) as Record<string, unknown>;

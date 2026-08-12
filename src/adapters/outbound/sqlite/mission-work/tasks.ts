@@ -8,6 +8,7 @@ import type {
   TaskStatus,
 } from "@/src/shared/contracts";
 import { openDatabase } from "@/src/adapters/outbound/sqlite/connection";
+import { appendTaskEventAuditOutboxRow } from "@/src/adapters/outbound/sqlite/mission-work/audit-event-outbox";
 import {
   TaskDomainError,
   TaskExecutionError,
@@ -110,6 +111,7 @@ function appendState(
         VALUES (?, ?, ?, ?, ?, ?)
       `)
       .run(event.id, event.taskId, event.sequence, event.status, event.message, event.createdAt);
+    appendTaskEventAuditOutboxRow(database, { event, task });
     database.exec("COMMIT");
   } catch (cause) {
     database.exec("ROLLBACK");
@@ -194,6 +196,7 @@ export function createTask(
           VALUES (?, ?, ?, ?, ?, ?)
         `)
         .run(event.id, event.taskId, event.sequence, event.status, event.message, event.createdAt);
+      appendTaskEventAuditOutboxRow(database, { event, task });
       database.exec("COMMIT");
     } catch (cause) {
       database.exec("ROLLBACK");
