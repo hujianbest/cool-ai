@@ -43,6 +43,6 @@ Cool AI 驾驶舱自 S-8/S-10 后采用暖色自研 token，但视觉契约散�
 
 - 项目级 review 豁免（AGENTS.md，2026-08-09）适用于本特性；豁免记录在 progress.md，不伪造评审工件。
 - 视觉方向（A-242）以 ship 演示验收为最终确认点；验收不通过则按反馈回滚或调整 token 后重跑。
-- 参考证据：`features/035-design-md-ui-redesign/evidence/cool-ai-design-md-case.html`（暖陶工作台案例，作为格式与结构参考；色板以根目录 DESIGN.md 为准）。
+- 参考证据：`product/ui/cool-ai-design-md-case.html`（暖陶工作台案例，作为格式与结构参考；色板以 `product/ui/DESIGN.md` 为准）。
 
 - 用户确认: auto-approved 2026-08-12（A-240～A-244；演示验收在 ship 阶段呈上）

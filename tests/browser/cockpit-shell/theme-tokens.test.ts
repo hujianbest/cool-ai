@@ -5,7 +5,7 @@ import { describe, expect, it } from "vitest";
 const root = process.cwd();
 const tokenPath = join(root, "app", "tokens.css");
 const cockpitPath = join(root, "app", "cockpit.css");
-const designPath = join(root, "DESIGN.md");
+const designPath = join(root, "product", "ui", "DESIGN.md");
 
 describe("DESIGN.md visual token discipline", () => {
   it("defines DESIGN.md core color tokens", () => {

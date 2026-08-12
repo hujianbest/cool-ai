@@ -18,7 +18,7 @@ description: DESIGN.md 设计令牌规范扩展。绑定阶段: to-architecture�
 
 ### 创建决策
 
-1. 项目根已有 `DESIGN.md` → 跳过创建，在 `architecture.md` 横切约定中引用
+1. 已有 `product/ui/DESIGN.md`（或项目根 `DESIGN.md`）→ 跳过创建，在 `architecture.md` 横切约定中引用
 2. 有 UI 但无 `DESIGN.md` → 提议创建（记入 `product/assumptions.md`），确认后执行提取
 3. 无 UI → 不适用
 

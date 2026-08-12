@@ -12,7 +12,7 @@
 - 用户 2026-08-12 提出整体 UI 改版意向，并确认采用 Google Stitch 思路的 DESIGN.md（参考 awesome-design-md 的 Apple 案例结构）。
 - 用户 2026-08-12 指示：本切片追加到既有在途切片之后排队，避免与并行开发冲突（A-238）。
 - 用户 2026-08-12 指示：DESIGN.md 为产品级单一事实源，落盘于仓库根目录（`/DESIGN.md`，Apple 原文件逐字保存），不随 035 特性目录存放（A-239）。
-- 会话内已产出「暖陶工作台」全页案例（`evidence/cool-ai-design-md-case.html`），作为后续 to-spec 的视觉参考证据。
+- 会话内已产出「暖陶工作台」全页案例，归档至 `product/ui/cool-ai-design-md-case.html` 作为后续 UI 设计的约束与视觉参考证据。
 
 ## 待决问题（grill 前沿）
 

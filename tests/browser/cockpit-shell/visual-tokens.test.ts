@@ -4,7 +4,7 @@ import { describe, expect, it } from "vitest";
 
 const root = process.cwd();
 const tokenPath = join(root, "app", "tokens.css");
-const designPath = join(root, "DESIGN.md");
+const designPath = join(root, "product", "ui", "DESIGN.md");
 const tokensCss = readFileSync(tokenPath, "utf8");
 const designMd = readFileSync(designPath, "utf8");
 const cockpitCss = readFileSync(join(root, "app", "cockpit.css"), "utf8");
