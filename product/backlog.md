@@ -40,7 +40,7 @@ Capability ID 是稳定治理标识；owner 是唯一逻辑子系统，不等于
 - `CAP-MWK-02` Mission Dependency Insight — owner: Mission & Work — 状态: 已交付核心 — 证据/建立切片: S-25 [`progress.md`](../features/026-mission-dependency-insight/progress.md)
 - `CAP-MWK-03` SOP State Projection — owner: Mission & Work — 状态: 规划中 — 建立切片: S-26
 - `CAP-MWK-04` Dispatch Lease Control — owner: Mission & Work — 状态: 规划中 — 建立切片: S-27
-- `CAP-MWK-05` Public Mission / Work Events — owner: Mission & Work — 状态: 已交付核心 — 证据/建立切片: S-23 AUD-MWK（分配实现片号 S-51）[`progress.md`](../features/035-mission-work-audit-events/progress.md)（7 类事件同事务 outbox、审计中心可查询并规范身份导航，复用已交付 `CAP-OPS-01/02`）
+- `CAP-MWK-05` Public Mission / Work Events — owner: Mission & Work — 状态: 已交付核心 — 证据/建立切片: S-23 AUD-MWK（实现片号 S-51，与同日并行交付的整体 UI 改版片号双占，见 A-256）[`progress.md`](../features/035-mission-work-audit-events/progress.md)（7 类事件同事务 outbox、审计中心可查询并规范身份导航，复用已交付 `CAP-OPS-01/02`）
 
 ### Public Collaboration
 
@@ -222,8 +222,8 @@ S-9～S-12 的 `依赖: S-*` 是原历史文字，只说明当时切片记录；
 
 主子系统: 不适用（只改变设计令牌与入站 UI Adapter，不新增领域事实）；主要架构单元为设计令牌单一事实源 + 入站 UI Adapter；消费已交付 UI 呈现面。
 
-- [ ] S-51 整体 UI 改版：DESIGN.md 设计基座与应用壳层（排队） — 主子系统: 不适用；主领域 Capability: 不适用（只建立设计令牌单一事实源并改变入站 UI Adapter，不新增领域事实）；主要架构单元: DESIGN.md（设计令牌/组件规范单一事实源）+ 入站 UI Adapter；消费 Capability: 已交付的 `CAP-PWS-01`、`CAP-MWK-01`、`CAP-COL-01/02/03/04/05`、`CAP-EXE-01`、`CAP-REV-01`、`CAP-GOV-02` 等 UI 呈现面；票据: 未创建；演示判据: owner 能打开 DESIGN.md 配套的 preview/preview-dark 页面看到统一设计语言，应用壳层与公共组件与 token 单一事实源一致，亮暗主题、键盘操作与 axe 关键路径不回归；约束: 工作区=不适用，verified-handle=不适用，sandbox=不适用，凭据=不适用，审批=不适用，独立复核=交付必需（项目级 review 豁免按 AGENTS.md 记录于 progress），审计=不适用；不复制 Clowder 品牌、源码或资产
-  - 排期: 2026-08-12 用户指示追加到既有在途切片之后（A-238），避免与并行开发冲突；不在本阶段与既有切片并行实现。
+- [x] S-51 整体 UI 改版：DESIGN.md 设计基座与应用壳层 — 主子系统: 不适用；主领域 Capability: 不适用（只建立设计令牌单一事实源并改变入站 UI Adapter，不新增领域事实）；主要架构单元: DESIGN.md（设计令牌/组件规范单一事实源）+ 入站 UI Adapter；消费 Capability: 已交付的 `CAP-PWS-01`、`CAP-MWK-01`、`CAP-COL-01/02/03/04/05`、`CAP-EXE-01`、`CAP-REV-01`、`CAP-GOV-02` 等 UI 呈现面；票据: [`features/035-design-md-ui-redesign/tickets.md`](../features/035-design-md-ui-redesign/tickets.md)；Ship: 2026-08-12，DESIGN.md 落为产品级设计契约、tokens.css 全映射 + 扩展 token、明暗 preview 页面与应用壳层收敛、视觉回归 29/29、typecheck/build 通过；演示判据: owner 能打开 DESIGN.md 配套的 preview/preview-dark 页面看到统一设计语言，应用壳层与公共组件与 token 单一事实源一致，亮暗主题、键盘操作与 axe 关键路径不回归；约束: 工作区=不适用，verified-handle=不适用，sandbox=不适用，凭据=不适用，审批=不适用，独立复核=交付必需（项目级 review 豁免按 AGENTS.md 记录于 progress），审计=不适用；不复制 Clowder 品牌、源码或资产
+  - 排期: 2026-08-12 用户指示追加到既有在途切片之后（A-242），同日又指示立即自动完成（A-244 覆盖排队语义）；注：S-51 片号与同日并行交付的 AUD-MWK 审计实现片双占（双 035 特性号同理），见 A-256。
   - 准入: 已交付前置: 既有在途切片完成后解锁（共享 `app/tokens.css`/组件面，避免并行写冲突）；本片建立: DESIGN.md、tokens.css 对齐、preview.html 与应用壳层/公共组件收敛（规划中；grill 收尾后进入 to-spec）。
 
 - 2026-08-10 [发现] tests/browser 下 review-browser-full-chain 存在既有不稳定选择器（记忆标题同现于复核与上下文两面板，strict-mode 冲突，复跑即过）；建议按面板 scope 收敛选择器。来源：017 T-05 全量验证。

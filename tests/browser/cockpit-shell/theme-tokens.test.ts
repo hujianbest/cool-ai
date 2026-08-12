@@ -116,7 +116,9 @@ describe("legacy cockpit token compatibility", () => {
       "--surface-card: var(--color-canvas)",
       "--text-primary: var(--color-ink)",
       "--text-secondary: var(--color-ink-muted-80)",
-      "--text-subtle: var(--color-ink-muted-48)",
+      // AA override: DESIGN.md ink-muted-48 (#7a7a7a) is for disabled/fine-print
+      // and fails 4.5:1 on light surfaces, so --text-subtle uses a darker tone.
+      "--text-subtle: #666666",
       "--border-subtle: var(--color-divider-soft)",
       "--border-strong: var(--color-ink-muted-80)",
       "--interactive-primary: var(--color-primary)",

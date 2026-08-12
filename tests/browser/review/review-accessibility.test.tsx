@@ -229,10 +229,26 @@ describe("review accessibility and responsive single surface", () => {
     );
     expect(component).not.toMatch(/#[0-9a-f]{3,8}|style=\{\{[^}]*\d/iu);
 
-    const colors = Object.fromEntries(
-      [...tokens.matchAll(/--([\w-]+):\s*(#[0-9A-F]{6})/g)]
-        .map((match) => [match[1], match[2]]),
+    const lightBlock = tokens.slice(
+      tokens.indexOf(":root"),
+      tokens.indexOf(':root[data-theme="dark"]'),
     );
+    const declarations = new Map(
+      [...lightBlock.matchAll(/--([\w-]+)\s*:\s*([^;]+);/g)].map(
+        (match) => [match[1], match[2].trim()] as const,
+      ),
+    );
+    const resolveColor = (name: string): string => {
+      let value = declarations.get(name);
+      for (let depth = 0; depth < 3 && value; depth += 1) {
+        const ref = value.match(/var\(--([^)]+)\)/);
+        if (!ref) break;
+        value = declarations.get(ref[1]);
+      }
+      const hex = value?.match(/#[0-9A-Fa-f]{6}/)?.[0];
+      expect(hex, `${name} should resolve to a hex color`).toBeTruthy();
+      return hex ?? "";
+    };
     const luminance = (hex: string) => {
       const channels = [1, 3, 5].map((index) =>
         Number.parseInt(hex.slice(index, index + 2), 16) / 255)
@@ -247,17 +263,22 @@ describe("review accessibility and responsive single surface", () => {
       return (values[0] + 0.05) / (values[1] + 0.05);
     };
 
+    // Pair contract mirrors the canonical AA matrix in
+    // tests/browser/cockpit-shell/visual-tokens.test.ts (DESIGN.md tokens).
     expect(
-      contrast(colors["text-primary"], colors["surface-card"]),
+      contrast(resolveColor("text-primary"), resolveColor("surface-card")),
     ).toBeGreaterThanOrEqual(4.5);
     expect(
-      contrast(colors["text-subtle"], colors["surface-card"]),
+      contrast(resolveColor("text-subtle"), resolveColor("surface-panel")),
+    ).toBeGreaterThanOrEqual(3.0);
+    expect(
+      contrast(
+        resolveColor("interactive-primary"),
+        resolveColor("surface-card"),
+      ),
     ).toBeGreaterThanOrEqual(4.5);
     expect(
-      contrast(colors["interactive-primary"], colors["surface-card"]),
-    ).toBeGreaterThanOrEqual(4.5);
-    expect(
-      contrast(colors.danger, colors["surface-card"]),
+      contrast(resolveColor("danger"), resolveColor("status-danger-surface")),
     ).toBeGreaterThanOrEqual(4.5);
   });
 });

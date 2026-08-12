@@ -16,3 +16,4 @@
 - 2026-08-10 用户确认第 13 节架构特征、第 14 节演进与适应度及 4+1 视图标注（确认行已写入 `product/architecture.md` 头部），产品架构补全闭环。
 - 2026-08-12 应用户指示，035/S-51 整体 UI 改版（DESIGN.md 设计基座 + 应用壳层）已立项并追加到既有切片之后排队（A-238）；当前阶段 grill-with-docs，未并行实现，避免冲突。
 - 2026-08-12 035/S-51 完成 implement 与 ship：DESIGN.md (Apple 设计系统) 作为产品级设计契约落盘，tokens.css 完全映射核心 token，亮暗双套投影完成，应用壳层按新 token 收敛，preview.html/preview-dark.html 设计目录页创建，视觉契约测试 29/29 通过，typecheck 与 build 成功；所有任务票 T-01～T-05 勾选完成。
+- 2026-08-12 036/S-52 Project&Workspace 审计事件纵切（AUD-PWS）完成 implement 与 ship：schema identity 21→22、`audit_event_outbox.source` 加 `'project_workspace'`，projects/workspace/membership/validation-policy 四处写入点同事务 outbox，宿主路径末段目录名 + 凭据分类双闸 fail-closed 脱敏，审计 UI 项目域徽标/文案/「定位来源项目」，smoke:context 验收 104 断言 + axe 3 态 0 serious/critical，全量 277 文件 2542 用例全绿、build 绿；推送集成时发现与并行 UI 改版切片 035/S-51 双占，按 A-256 改号假设并在 backlog 双侧消歧。

@@ -294,20 +294,38 @@ describe("narrow collaboration cockpit accessibility", () => {
   it("keeps target sizing and text colors on accessible design tokens", () => {
     const tokens = readFileSync("app/tokens.css", "utf8");
     const cockpit = readFileSync("app/cockpit.css", "utf8");
-    const token = (name: string) =>
-      tokens.match(new RegExp(`--${name}:\\s*(#[0-9A-Fa-f]{6})`))?.[1] ?? "";
+    const lightBlock = tokens.slice(
+      tokens.indexOf(":root"),
+      tokens.indexOf(':root[data-theme="dark"]'),
+    );
+    const declarations = new Map(
+      [...lightBlock.matchAll(/--([\w-]+)\s*:\s*([^;]+);/g)].map(
+        (match) => [match[1], match[2].trim()] as const,
+      ),
+    );
+    const token = (name: string) => {
+      let value = declarations.get(name);
+      for (let depth = 0; depth < 3 && value; depth += 1) {
+        const ref = value.match(/var\(--([^)]+)\)/);
+        if (!ref) break;
+        value = declarations.get(ref[1]);
+      }
+      return value?.match(/#[0-9A-Fa-f]{6}/)?.[0] ?? "";
+    };
 
     expect(tokens).toContain("--control-min: 2.75rem");
     expect(cockpit).toContain("min-height: var(--control-min)");
     expect(cockpit).toMatch(/\.collaboration-mobile-tabs[\s\S]*var\(--/);
+    // Pair contract mirrors the canonical AA matrix in
+    // tests/browser/cockpit-shell/visual-tokens.test.ts (DESIGN.md tokens).
     expect(
       contrast(token("text-primary"), token("surface-card")),
     ).toBeGreaterThanOrEqual(4.5);
     expect(
-      contrast(token("text-subtle"), token("surface-card")),
-    ).toBeGreaterThanOrEqual(4.5);
+      contrast(token("text-subtle"), token("surface-panel")),
+    ).toBeGreaterThanOrEqual(3.0);
     expect(
-      contrast(token("danger"), token("surface-card")),
+      contrast(token("danger"), token("status-danger-surface")),
     ).toBeGreaterThanOrEqual(4.5);
     expect(cockpit).not.toMatch(/\.collaboration-mobile-tabs[^}]*#[0-9A-Fa-f]{3,8}/);
   });

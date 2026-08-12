@@ -139,7 +139,9 @@
   --surface-card: var(--color-canvas);
   --text-primary: var(--color-ink);
   --text-secondary: var(--color-ink-muted-80);
-  --text-subtle: var(--color-ink-muted-48);
+  /* DESIGN.md reserves ink-muted-48 for disabled/fine-print; continuous
+     secondary text needs an AA-compliant tone (4.5+ on canvas & parchment). */
+  --text-subtle: #666666;
   --border-subtle: var(--color-divider-soft);
   --border-strong: var(--color-ink-muted-80);
   --interactive-primary: var(--color-primary);
@@ -255,13 +257,16 @@
   --surface-card: var(--color-surface-tile-3);
   --text-primary: var(--color-ink);
   --text-secondary: var(--color-ink-muted-80);
-  --text-subtle: var(--color-ink-muted-48);
+  /* Dark counterpart of the light AA override for secondary text. */
+  --text-subtle: #98989d;
   --border-subtle: var(--color-divider-soft);
   --border-strong: var(--color-ink-muted-80);
   --interactive-primary: var(--color-primary-on-dark);
   --interactive-primary-hover: #4da6ff;
-  --interactive-soft: #2C403B;
-  --interactive-soft-hover: #365149;
+  /* AA: #2997ff text on the previous green tints (#2C403B/#365149) reached only
+     ~3.7:1; neutral tile tones keep selected/hover labels at 4.5+. */
+  --interactive-soft: #272729;
+  --interactive-soft-hover: #3a3a3c;
 
   /* Dark Theme Legacy Aliases */
   --success: var(--status-success-color);

@@ -150,24 +150,19 @@ describe("ActivityBar theme toggle", () => {
       name: "当前为明色主题，切换到暗色主题",
     });
 
-    // Mock setItem to fail after initial hydration
-    let failNextWrite = false;
-    const originalSetItem = localStorage.setItem;
-    localStorage.setItem = vi.fn((key: string, value: string) => {
-      if (failNextWrite) {
-        failNextWrite = false;
+    // jsdom Storage instances do not honor own-property setItem overrides for
+    // window.localStorage writes, so the failure must be injected on the
+    // Storage prototype (verified by focused probe).
+    const setItemSpy = vi
+      .spyOn(Storage.prototype, "setItem")
+      .mockImplementation(() => {
         throw new Error("storage unavailable");
-      }
-      return originalSetItem.call(localStorage, key, value);
-    }) as any;
+      });
 
-    // Force a re-render by updating a prop to trigger the hook update
     toggle.focus();
-    failNextWrite = true;
     await user.keyboard("{Enter}");
 
     expect(toggle).toHaveFocus();
-    // After a failed write, the state should remain unchanged (light theme = aria-pressed false)
     expect(toggle).toHaveAttribute("aria-pressed", "false");
     expect(document.documentElement).toHaveAttribute("data-theme", "light");
     expect(screen.getByRole("status")).toHaveTextContent(
@@ -175,7 +170,7 @@ describe("ActivityBar theme toggle", () => {
     );
     expect(screen.getByRole("status")).toHaveClass("activity-bar-status");
 
-    localStorage.setItem = originalSetItem;
+    setItemSpy.mockRestore();
     consoleError.mockRestore();
   });
 
