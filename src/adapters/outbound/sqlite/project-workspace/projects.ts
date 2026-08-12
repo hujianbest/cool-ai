@@ -2,6 +2,7 @@ import { randomUUID } from "node:crypto";
 
 import type { Project } from "@/src/shared/contracts";
 import { openDatabase } from "@/src/adapters/outbound/sqlite/connection";
+import { appendProjectCreatedAuditOutboxRow } from "@/src/adapters/outbound/sqlite/project-workspace/audit-event-outbox";
 import { initializeValidationPolicy } from "@/src/adapters/outbound/sqlite/project-workspace/validation-policy-service";
 
 type ProjectRow = {
@@ -37,6 +38,11 @@ export function createProject(name: string, databasePath: string): Project {
       .prepare("INSERT INTO projects (id, name, created_at) VALUES (?, ?, ?)")
       .run(project.id, project.name, project.createdAt);
     initializeValidationPolicy(database, project.id, project.createdAt);
+    appendProjectCreatedAuditOutboxRow(database, {
+      occurredAt: project.createdAt,
+      projectId: project.id,
+      projectName: project.name,
+    });
     database.exec("COMMIT");
     return project;
   } catch (error) {

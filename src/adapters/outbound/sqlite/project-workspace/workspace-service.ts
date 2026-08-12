@@ -8,6 +8,7 @@ import { isAbsolute } from "node:path";
 import type { DatabaseSync } from "node:sqlite";
 
 import { openDatabase } from "@/src/adapters/outbound/sqlite/connection";
+import { appendWorkspaceBindingAuditOutboxRow } from "@/src/adapters/outbound/sqlite/project-workspace/audit-event-outbox";
 import { WorkspaceError } from "@/src/modules/project-workspace";
 import type {
   WorkspaceFs,
@@ -214,6 +215,22 @@ export async function bindWorkspace(
            WHERE id = ?`,
         )
         .run(canonicalPath, canonicalKey, projectId);
+      // Re-asserting the already-bound workspace is a no-op re-affirm, not an
+      // auditable change; only a first bind or a real rebind enters the feed.
+      const bindingEventType = project.workspaceKey === null
+        ? "workspace_bound"
+        : project.workspaceKey !== canonicalKey
+          ? "workspace_rebound"
+          : null;
+      if (bindingEventType) {
+        appendWorkspaceBindingAuditOutboxRow(database, {
+          eventType: bindingEventType,
+          occurredAt: new Date().toISOString(),
+          previousWorkspacePath: project.workspacePath,
+          projectId,
+          workspacePath: canonicalPath,
+        });
+      }
       database.exec("COMMIT");
     } catch (error) {
       rollback(database);

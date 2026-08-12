@@ -12,7 +12,7 @@ export type CurrentSchemaManifest = {
 
 const CURRENT_SCHEMA_DEFINITION = {
   "identity": {
-    "userVersion": 21
+    "userVersion": 22
   },
   "objects": [
     {
@@ -198,7 +198,7 @@ const CURRENT_SCHEMA_DEFINITION = {
     {
       "kind": "table",
       "name": "audit_event_outbox",
-      "createSql": "CREATE TABLE audit_event_outbox(\n id TEXT PRIMARY KEY,\n project_id TEXT NOT NULL REFERENCES projects(id) ON DELETE CASCADE,\n source TEXT NOT NULL CHECK(source IN('safe_execution','public_collaboration','mission_work')),\n event_type TEXT NOT NULL,\n payload_json TEXT NOT NULL CHECK(json_valid(payload_json) AND length(CAST(payload_json AS BLOB))<=65536),\n occurred_at TEXT NOT NULL CHECK(occurred_at GLOB '????-??-??T??:??:??.???Z'),\n outbox_seq INTEGER NOT NULL UNIQUE CHECK(outbox_seq>=1)\n)",
+      "createSql": "CREATE TABLE audit_event_outbox(\n id TEXT PRIMARY KEY,\n project_id TEXT NOT NULL REFERENCES projects(id) ON DELETE CASCADE,\n source TEXT NOT NULL CHECK(source IN('safe_execution','public_collaboration','mission_work','project_workspace')),\n event_type TEXT NOT NULL,\n payload_json TEXT NOT NULL CHECK(json_valid(payload_json) AND length(CAST(payload_json AS BLOB))<=65536),\n occurred_at TEXT NOT NULL CHECK(occurred_at GLOB '????-??-??T??:??:??.???Z'),\n outbox_seq INTEGER NOT NULL UNIQUE CHECK(outbox_seq>=1)\n)",
       "dependsOn": []
     },
     {

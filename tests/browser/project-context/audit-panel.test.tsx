@@ -817,3 +817,229 @@ describe("Audit panel mission-work events", () => {
       .toHaveClass("audit-event-excerpt");
   });
 });
+
+describe("Audit panel project-workspace events", () => {
+  it("renders project-workspace types with readable copy and the neutral project badge in a mixed four-domain list", async () => {
+    const AuditPanel = await auditPanel();
+    const projectCopy: ReadonlyArray<readonly [string, string]> = [
+      ["project_created", "项目已创建"],
+      ["workspace_bound", "工作区已绑定"],
+      ["workspace_rebound", "工作区已改绑"],
+      ["member_joined", "成员已加入"],
+      ["member_removed", "成员已移除"],
+      ["validation_policy_changed", "验证政策已变更"],
+    ];
+    const events = projectCopy.map(([eventType], index) =>
+      auditEvent({
+        actorType: "owner",
+        eventType,
+        id: `event-${100 - index}`,
+        outboxSeq: 100 - index,
+        payload: { projectName: `样例 ${eventType}` },
+      }),
+    );
+    events.push(auditEvent({
+      eventType: "execution_created",
+      executionId: "exec-1",
+      id: "event-90",
+      outboxSeq: 90,
+    }));
+    events.push(auditEvent({
+      actorType: "agent",
+      eventType: "run_started",
+      id: "event-89",
+      outboxSeq: 89,
+      payload: { runId: "run-1", threadId: "thread-1" },
+    }));
+    events.push(auditEvent({
+      actorType: "owner",
+      eventType: "work_item_created",
+      id: "event-88",
+      outboxSeq: 88,
+      payload: { missionId: "mission-1", title: "看板样例", workItemId: "work-1" },
+    }));
+    vi.stubGlobal(
+      "fetch",
+      vi.fn(() => Promise.resolve(Response.json(page(events)))),
+    );
+    render(<AuditPanel projectId="project-1" />);
+
+    const list = await screen.findByRole("list", { name: "审计事件" });
+    for (const [, copy] of projectCopy) {
+      expect(within(list).getByRole("heading", { name: copy }))
+        .toBeInTheDocument();
+    }
+    const rows = within(list).getAllByRole("listitem");
+    expect(rows).toHaveLength(9);
+    for (const row of rows.slice(0, 6)) {
+      // The project badge reuses the bare neutral .status-label base variant
+      // (review/thread-policy precedent): no status-* modifier is attached.
+      const badge = within(row).getByText("项目", { selector: "span" });
+      expect(badge).toHaveClass("status-label", { exact: true });
+    }
+    expect(within(rows[6]!).getByText("执行")).toHaveClass("status-running");
+    expect(within(rows[7]!).getByText("协作")).toHaveClass("status-queued");
+    expect(within(rows[8]!).getByText("任务")).toHaveClass("status-completed");
+    // 只读断言：项目域事件同样不提供任何编辑入口。
+    expect(within(list).queryByRole("textbox")).toBeNull();
+    expect(within(list).queryByRole("checkbox")).toBeNull();
+    expect(within(list).queryByRole("button", { name: /编辑|删除|修改/ }))
+      .toBeNull();
+  });
+
+  it("links project-workspace events to the canonical project identity", async () => {
+    const AuditPanel = await auditPanel();
+    const events = [
+      auditEvent({
+        actorType: "owner",
+        eventType: "project_created",
+        id: "event-60",
+        outboxSeq: 60,
+        payload: { projectName: "审计项目" },
+      }),
+      auditEvent({
+        actorType: "owner",
+        eventType: "member_joined",
+        id: "event-59",
+        outboxSeq: 59,
+        payload: { agentDisplayName: "Alpha", agentId: "agent-alpha" },
+      }),
+    ];
+    vi.stubGlobal(
+      "fetch",
+      vi.fn(() => Promise.resolve(Response.json(page(events)))),
+    );
+    render(<AuditPanel projectId="project-1" />);
+
+    const list = await screen.findByRole("list", { name: "审计事件" });
+    const rows = within(list).getAllByRole("listitem");
+    expect(rows).toHaveLength(2);
+    for (const row of rows) {
+      expect(
+        within(row).getByRole("link", { name: "定位来源项目" }),
+      ).toHaveAttribute("href", "/projects/project-1");
+    }
+  });
+
+  it("renders no project locate link when the project identity is malformed", async () => {
+    const AuditPanel = await auditPanel();
+    vi.stubGlobal(
+      "fetch",
+      vi.fn(() => Promise.resolve(Response.json(page([
+        auditEvent({
+          actorType: "owner",
+          eventType: "project_created",
+          id: "event-50",
+          outboxSeq: 50,
+          payload: { projectName: "审计项目" },
+        }),
+      ])))),
+    );
+    render(<AuditPanel projectId="" />);
+
+    const list = await screen.findByRole("list", { name: "审计事件" });
+    const rows = within(list).getAllByRole("listitem");
+    expect(rows).toHaveLength(1);
+    expect(within(rows[0]!).queryByRole("link")).toBeNull();
+  });
+
+  it("shows the public project summary fields and omits malformed or foreign excerpts", async () => {
+    const AuditPanel = await auditPanel();
+    const events = [
+      auditEvent({
+        actorType: "owner",
+        eventType: "project_created",
+        id: "event-70",
+        outboxSeq: 70,
+        payload: { projectName: "审计项目" },
+      }),
+      auditEvent({
+        actorType: "owner",
+        eventType: "workspace_rebound",
+        id: "event-69",
+        outboxSeq: 69,
+        payload: {
+          previousWorkspaceName: "alpha-workspace",
+          workspaceName: "beta-workspace",
+        },
+      }),
+      auditEvent({
+        actorType: "owner",
+        eventType: "workspace_bound",
+        id: "event-68",
+        outboxSeq: 68,
+        payload: { workspaceName: "alpha-workspace" },
+      }),
+      auditEvent({
+        actorType: "owner",
+        eventType: "member_removed",
+        id: "event-67",
+        outboxSeq: 67,
+        payload: { agentDisplayName: "Beta", agentId: "agent-beta" },
+      }),
+      auditEvent({
+        actorType: "owner",
+        eventType: "validation_policy_changed",
+        id: "event-66",
+        outboxSeq: 66,
+        payload: { entryCount: 3, policyHash: "a".repeat(64), revisionNo: 2 },
+      }),
+      // Malformed fields render no excerpt element.
+      auditEvent({
+        actorType: "owner",
+        eventType: "validation_policy_changed",
+        id: "event-65",
+        outboxSeq: 65,
+        payload: { entryCount: "3", revisionNo: 2 },
+      }),
+      auditEvent({
+        actorType: "owner",
+        eventType: "project_created",
+        id: "event-64",
+        outboxSeq: 64,
+        payload: { projectName: "" },
+      }),
+      // Execution events never render a project-domain summary.
+      auditEvent({
+        eventType: "execution_created",
+        executionId: "exec-1",
+        id: "event-63",
+        outboxSeq: 63,
+        payload: { projectName: "不应显示" },
+      }),
+      // 030 message excerpt behavior stays intact.
+      auditEvent({
+        actorType: "owner",
+        eventType: "owner_message",
+        id: "event-62",
+        outboxSeq: 62,
+        payload: { messageExcerpt: "协作摘要", threadId: "thread-1" },
+      }),
+    ];
+    vi.stubGlobal(
+      "fetch",
+      vi.fn(() => Promise.resolve(Response.json(page(events)))),
+    );
+    render(<AuditPanel projectId="project-1" />);
+
+    const list = await screen.findByRole("list", { name: "审计事件" });
+    const rows = within(list).getAllByRole("listitem");
+    expect(rows).toHaveLength(9);
+    expect(within(rows[0]!).getByText("审计项目"))
+      .toHaveClass("audit-event-excerpt");
+    expect(within(rows[1]!).getByText("alpha-workspace → beta-workspace"))
+      .toHaveClass("audit-event-excerpt");
+    expect(within(rows[2]!).getByText("alpha-workspace"))
+      .toHaveClass("audit-event-excerpt");
+    expect(within(rows[3]!).getByText("Beta"))
+      .toHaveClass("audit-event-excerpt");
+    expect(within(rows[4]!).getByText("修订 #2 · 3 项"))
+      .toHaveClass("audit-event-excerpt");
+    expect(rows[5]!.querySelector(".audit-event-excerpt")).toBeNull();
+    expect(rows[6]!.querySelector(".audit-event-excerpt")).toBeNull();
+    expect(rows[7]!.querySelector(".audit-event-excerpt")).toBeNull();
+    expect(screen.queryByText("不应显示")).toBeNull();
+    expect(within(rows[8]!).getByText("协作摘要"))
+      .toHaveClass("audit-event-excerpt");
+  });
+});

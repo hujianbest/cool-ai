@@ -465,7 +465,7 @@ describe("applyThreadTagBatch command seam", () => {
       const reopened = openDatabase(databasePath);
       try {
         expect(reopened.prepare("PRAGMA user_version").get()).toEqual({
-          user_version: 21,
+          user_version: 22,
         });
       } finally {
         reopened.close();

@@ -57,6 +57,19 @@ const MISSION_WORK_EVENT_TYPE_COPY: Record<string, string> = {
   work_item_status_changed: "看板任务状态已变更",
 };
 
+// Readable copy for the project-workspace audit event types (feature 036
+// selection, mirroring AUDITABLE_PROJECT_WORKSPACE_EVENT_TYPES server-side).
+// The map doubles as the project-domain classifier. 验证政策 follows the
+// validation-policy-panel vocabulary (修订/项).
+const PROJECT_WORKSPACE_EVENT_TYPE_COPY: Record<string, string> = {
+  member_joined: "成员已加入",
+  member_removed: "成员已移除",
+  project_created: "项目已创建",
+  validation_policy_changed: "验证政策已变更",
+  workspace_bound: "工作区已绑定",
+  workspace_rebound: "工作区已改绑",
+};
+
 // Readable copy for the audit event types, centralized so any future type not
 // yet mapped degrades to its raw contract value (never blank).
 const EVENT_TYPE_COPY: Record<string, string> = {
@@ -77,6 +90,7 @@ const EVENT_TYPE_COPY: Record<string, string> = {
   usage_recorded: "用量已记录",
   ...COLLABORATION_EVENT_TYPE_COPY,
   ...MISSION_WORK_EVENT_TYPE_COPY,
+  ...PROJECT_WORKSPACE_EVENT_TYPE_COPY,
 };
 
 const ACTOR_TYPE_COPY: Record<string, string> = {
@@ -85,21 +99,26 @@ const ACTOR_TYPE_COPY: Record<string, string> = {
   system: "系统",
 };
 
-type AuditEventDomain = "collaboration" | "execution" | "mission";
+type AuditEventDomain = "collaboration" | "execution" | "mission" | "project";
 
 const DOMAIN_COPY: Record<AuditEventDomain, string> = {
   collaboration: "协作",
   execution: "执行",
   mission: "任务",
+  project: "项目",
 };
 
 // All variants are existing .status-label colors (approval-center precedent):
-// no new visual language for the domain badge. status-completed is the
-// remaining neutral variant after 030 took queued/running.
+// no new visual language for the domain badge. 030 took queued (协作),
+// running (执行), and 035 took completed (任务); the only remaining modifier
+// status-failed is danger semantics and wrong for a neutral domain badge, so
+// 项目 reuses the bare .status-label base ("" below — review-material /
+// thread-policy panels already use the unmodified neutral label).
 const DOMAIN_VARIANT: Record<AuditEventDomain, string> = {
   collaboration: "status-queued",
   execution: "status-running",
   mission: "status-completed",
+  project: "",
 };
 
 // The outbox sources write disjoint event-type sets (each selection is a
@@ -107,6 +126,7 @@ const DOMAIN_VARIANT: Record<AuditEventDomain, string> = {
 // unlisted future type conservatively shows 执行.
 function eventDomain(eventType: string): AuditEventDomain {
   if (eventType in COLLABORATION_EVENT_TYPE_COPY) return "collaboration";
+  if (eventType in PROJECT_WORKSPACE_EVENT_TYPE_COPY) return "project";
   return eventType in MISSION_WORK_EVENT_TYPE_COPY ? "mission" : "execution";
 }
 
@@ -188,6 +208,60 @@ function missionWorkSourceHref(
     };
   }
   return null;
+}
+
+function publicText(value: unknown): string | null {
+  return typeof value === "string" && value !== "" ? value : null;
+}
+
+// The server whitelist attaches public, already grapheme-truncated and
+// credential-screened fields to project-workspace events (030 excerpt
+// precedent): project/workspace names, member display names, and the policy
+// revision counters. Anything malformed or empty simply renders no excerpt.
+function projectWorkspaceSummary(event: AuditEventListItemDto): string | null {
+  const payload = event.payload;
+  switch (event.eventType) {
+    case "project_created":
+      return publicText(payload.projectName);
+    case "workspace_bound":
+      return publicText(payload.workspaceName);
+    case "workspace_rebound": {
+      const workspaceName = publicText(payload.workspaceName);
+      if (workspaceName === null) return null;
+      const previous = publicText(payload.previousWorkspaceName);
+      return previous === null ? workspaceName : `${previous} → ${workspaceName}`;
+    }
+    case "member_joined":
+    case "member_removed":
+      return publicText(payload.agentDisplayName);
+    case "validation_policy_changed": {
+      const { entryCount, revisionNo } = payload;
+      if (
+        typeof revisionNo !== "number"
+        || !Number.isSafeInteger(revisionNo)
+        || revisionNo < 1
+        || typeof entryCount !== "number"
+        || !Number.isSafeInteger(entryCount)
+        || entryCount < 0
+      ) {
+        return null;
+      }
+      return `修订 #${revisionNo} · ${entryCount} 项`;
+    }
+    default:
+      return null;
+  }
+}
+
+// Project-workspace locate lands on the canonical project identity route
+// (/projects/{projectId} renders the real ProjectPanel): the workspace,
+// member, and policy surfaces are project-panel internal seams with no URL
+// entry (018 message-focus precedent), and the audit API is already
+// project-scoped, so the panel's own projectId prop is the canonical identity
+// — no payload key is involved. A malformed identity renders no link at all.
+function projectSourceHref(projectId: string): string | null {
+  if (projectId === "") return null;
+  return `/projects/${encodeURIComponent(projectId)}`;
 }
 
 const FRESHNESS_COPY: Record<AuditProjectionFreshnessStatus, string> = {
@@ -424,18 +498,28 @@ export function AuditPanel({ projectId }: { projectId: string }) {
               const executionId = event.executionId;
               const excerpt = domain === "mission"
                 ? missionWorkExcerpt(event)
-                : messageExcerpt(event);
+                : domain === "project"
+                  ? projectWorkspaceSummary(event)
+                  : messageExcerpt(event);
               const sourceHref = domain === "collaboration"
                 ? collaborationSourceHref(projectId, event.payload)
                 : null;
               const missionSource = domain === "mission"
                 ? missionWorkSourceHref(projectId, event.payload)
                 : null;
+              const projectSource = domain === "project"
+                ? projectSourceHref(projectId)
+                : null;
+              const domainVariant = DOMAIN_VARIANT[domain];
               return (
                 <li className="task-summary stack" key={event.id}>
                   <h3>{auditEventTypeCopy(event.eventType)}</h3>
                   <p>
-                    <span className={`status-label ${DOMAIN_VARIANT[domain]}`}>
+                    <span
+                      className={domainVariant
+                        ? `status-label ${domainVariant}`
+                        : "status-label"}
+                    >
                       {DOMAIN_COPY[domain]}
                     </span>
                     {" "}
@@ -457,6 +541,9 @@ export function AuditPanel({ projectId }: { projectId: string }) {
                   {sourceHref ? <a href={sourceHref}>定位来源线程</a> : null}
                   {missionSource
                     ? <a href={missionSource.href}>{missionSource.label}</a>
+                    : null}
+                  {projectSource
+                    ? <a href={projectSource}>定位来源项目</a>
                     : null}
                 </li>
               );

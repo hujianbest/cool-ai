@@ -1638,6 +1638,16 @@ try {
     work_item_created: "看板任务已创建",
     work_item_status_changed: "看板任务状态已变更",
   };
+  // Mirrors PROJECT_WORKSPACE_EVENT_TYPE_COPY in
+  // components/project-context/audit-panel.tsx exactly (feature 036).
+  const PROJECT_WORKSPACE_AUDIT_EVENT_TYPE_COPY = {
+    member_joined: "成员已加入",
+    member_removed: "成员已移除",
+    project_created: "项目已创建",
+    validation_policy_changed: "验证政策已变更",
+    workspace_bound: "工作区已绑定",
+    workspace_rebound: "工作区已改绑",
+  };
   const missionWorkEvidenceDirectory = resolve(
     "features",
     "035-mission-work-audit-events",
@@ -1718,9 +1728,17 @@ try {
     1,
     "all mission-work events must fit on a single page",
   );
-  const missionWorkAuditEvents = missionWorkAuditApi.pages.flatMap(
+  // Feature 036: this trail is now mixed — project/workspace facts
+  // (project_created, workspace_bound, member_joined, workspace_rebound)
+  // legitimately share the project-scoped feed. The full list drives
+  // ordering/DOM counts; mission-work assertions filter by source type set.
+  const auditEvents = missionWorkAuditApi.pages.flatMap(
     ({ events }) => events,
   );
+  const missionWorkAuditEvents = auditEvents.filter((event) =>
+    Object.hasOwn(MISSION_WORK_AUDIT_EVENT_TYPE_COPY, event.eventType));
+  const projectWorkspaceAuditEvents = auditEvents.filter((event) =>
+    Object.hasOwn(PROJECT_WORKSPACE_AUDIT_EVENT_TYPE_COPY, event.eventType));
   missionWorkAuditOk(
     missionWorkAuditEvents.length > 0,
     "real mission/work facts must produce audit events",
@@ -1730,19 +1748,20 @@ try {
     "caught_up",
     JSON.stringify(missionWorkAuditApi.pages[0].freshness),
   );
-  for (let index = 1; index < missionWorkAuditEvents.length; index += 1) {
+  for (let index = 1; index < auditEvents.length; index += 1) {
     missionWorkAuditOk(
-      missionWorkAuditEvents[index - 1].outboxSeq
-        > missionWorkAuditEvents[index].outboxSeq,
+      auditEvents[index - 1].outboxSeq
+        > auditEvents[index].outboxSeq,
       "audit events must be globally descending by outbox_seq",
     );
   }
   // This smoke runs no execution/collaboration work, so every projected event
-  // is mission-work sourced.
-  for (const event of missionWorkAuditEvents) {
+  // is mission-work or project-workspace sourced.
+  for (const event of auditEvents) {
     missionWorkAuditOk(
-      Object.hasOwn(MISSION_WORK_AUDIT_EVENT_TYPE_COPY, event.eventType),
-      `unexpected non-mission-work event type ${event.eventType}`,
+      Object.hasOwn(MISSION_WORK_AUDIT_EVENT_TYPE_COPY, event.eventType)
+        || Object.hasOwn(PROJECT_WORKSPACE_AUDIT_EVENT_TYPE_COPY, event.eventType),
+      `unexpected event type ${event.eventType}`,
     );
     missionWorkAuditEqual(event.executionId, null);
   }
@@ -1812,10 +1831,16 @@ try {
     "审计验收骨架任务",
     "task excerpt must be verbatim",
   );
-  // The second project's mission must stay isolated from this project's trail.
+  // The second project's facts must stay isolated from this project's trail.
   missionWorkAuditOk(
-    !missionWorkAuditEvents.some((event) => event.payload.title === "Empty Mission"),
+    !auditEvents.some((event) => event.payload.title === "Empty Mission"),
     "cross-project mission events must stay isolated",
+  );
+  missionWorkAuditOk(
+    !auditEvents.some(
+      (event) => event.payload.projectName === "Context Empty Project",
+    ),
+    "cross-project project events must stay isolated",
   );
   const missionWorkAuditApiText = JSON.stringify(missionWorkAuditApi.pages);
   for (const value of [
@@ -1825,6 +1850,9 @@ try {
     validationToken,
     temporaryDirectory,
     workspaceDirectory,
+    boundWorkspacePath,
+    reboundWorkspaceDirectory,
+    reboundWorkspacePath,
     "Authorization:",
   ]) {
     missionWorkAuditOk(
@@ -1883,13 +1911,18 @@ try {
   })();
   missionWorkAuditEqual(
     missionWorkAuditCounts.outbox,
-    missionWorkAuditEvents.length,
+    auditEvents.length,
     "API must expose every project outbox event",
   );
   missionWorkAuditEqual(
     missionWorkAuditCounts.missionWork,
     missionWorkAuditEvents.length,
-    "every event in this smoke is mission-work sourced",
+    "mission-work source count must match the filtered API events",
+  );
+  missionWorkAuditEqual(
+    missionWorkAuditCounts.missionWork + projectWorkspaceAuditEvents.length,
+    auditEvents.length,
+    "mission-work + project-workspace events must partition the trail",
   );
   missionWorkAuditEqual(
     missionWorkAuditCounts.projection,
@@ -1938,7 +1971,7 @@ try {
   await page.waitForFunction(
     (expected) =>
       document.querySelectorAll(".audit-event-list > li").length === expected,
-    missionWorkAuditEvents.length,
+    auditEvents.length,
   );
   const missionWorkAuditRows = missionWorkAuditList.getByRole("listitem");
   const firstMissionWorkRow = missionWorkAuditRows.first();
@@ -1963,17 +1996,24 @@ try {
   missionWorkAuditEqual(
     await missionWorkAuditList.locator(".status-label.status-completed").count(),
     missionWorkAuditEvents.length,
-    "every rendered row must carry the task domain badge",
+    "every mission-work row must carry the task domain badge",
+  );
+  missionWorkAuditEqual(
+    await missionWorkAuditList
+      .locator(".status-label:not(.status-queued):not(.status-running):not(.status-completed):not(.status-failed)")
+      .count(),
+    projectWorkspaceAuditEvents.length,
+    "every project-workspace row must carry the neutral project badge",
   );
   const planLocateLink = missionWorkAuditRows
-    .nth(missionWorkAuditEvents.indexOf(planTransitionEvent))
+    .nth(auditEvents.indexOf(planTransitionEvent))
     .getByRole("link", { name: "定位来源任务" });
   missionWorkAuditEqual(
     await planLocateLink.getAttribute("href"),
     `/projects/${missionState.projectId}/tasks/${planId}`,
   );
   const missionLocateLink = missionWorkAuditRows
-    .nth(missionWorkAuditEvents.indexOf(missionCreatedEvent))
+    .nth(auditEvents.indexOf(missionCreatedEvent))
     .getByRole("link", { name: "定位来源使命" });
   missionWorkAuditEqual(
     await missionLocateLink.getAttribute("href"),
@@ -2061,7 +2101,7 @@ try {
   await page.waitForFunction(
     (expected) =>
       document.querySelectorAll(".audit-event-list > li").length === expected,
-    missionWorkAuditEvents.length,
+    auditEvents.length,
   );
   const narrowMissionWorkRows = narrowMissionWorkAuditList.getByRole(
     "listitem",
@@ -2298,6 +2338,714 @@ try {
   );
   console.log(
     `WORKSPACE BROWSE ACCEPTANCE PASS: assertions=${browseAcceptance.assertions} axeStates=${browseAcceptance.axe.length} matrix=${browseAcceptance.matrix.join(",")}`,
+  );
+
+  // ---- PROJECT-WORKSPACE AUDIT ACCEPTANCE (feature 036 T-03) ----
+  // Landing spot: smoke:context already produces real project/workspace facts
+  // (project creation, workspace bind + rebind, member joins); the two facts
+  // it cannot produce are seeded here through the public API — a temp agent
+  // join/remove (both real members carry work-item assignments, so removal
+  // needs an unassigned agent) and a saved validation-policy revision. Runs
+  // after the table-count assertions above because the temp agent
+  // legitimately moves the agents count. The copy map mirrors
+  // components/project-context/audit-panel.tsx exactly.
+  const projectWorkspaceAuditAcceptance = { assertions: 0, axe: [], matrix: [] };
+  const projectAuditOk = (value, message) => {
+    projectWorkspaceAuditAcceptance.assertions += 1;
+    assert.ok(value, message);
+  };
+  const projectAuditEqual = (actual, expected, message) => {
+    projectWorkspaceAuditAcceptance.assertions += 1;
+    assert.equal(actual, expected, message);
+  };
+  const projectAuditDeepEqual = (actual, expected, message) => {
+    projectWorkspaceAuditAcceptance.assertions += 1;
+    assert.deepEqual(actual, expected, message);
+  };
+  const axeProjectWorkspaceAudit = async (state) => {
+    const scan = await new AxeBuilder({ page }).analyze();
+    const blocking = scan.violations
+      .filter(
+        (violation) =>
+          violation.impact === "critical" || violation.impact === "serious",
+      )
+      .map((violation) => ({
+        id: violation.id,
+        impact: violation.impact,
+        targets: violation.nodes.map((node) => node.target),
+      }));
+    projectWorkspaceAuditAcceptance.axe.push({
+      blocking,
+      state,
+      violationCount: scan.violations.length,
+    });
+    assert.deepEqual(blocking, [], `${state}: axe critical/serious must be 0`);
+  };
+  const projectWorkspaceEvidenceDirectory = resolve(
+    "features",
+    "036-project-workspace-audit-events",
+    "evidence",
+  );
+  mkdirSync(projectWorkspaceEvidenceDirectory, { recursive: true });
+  const projectAuditDesktopScreenshot = join(
+    projectWorkspaceEvidenceDirectory,
+    "project-workspace-audit-desktop.png",
+  );
+  const projectAuditDarkScreenshot = join(
+    projectWorkspaceEvidenceDirectory,
+    "project-workspace-audit-dark.png",
+  );
+  const projectAuditNarrowScreenshot = join(
+    projectWorkspaceEvidenceDirectory,
+    "project-workspace-audit-narrow.png",
+  );
+  const projectAuditResultsPath = join(
+    projectWorkspaceEvidenceDirectory,
+    "project-workspace-audit-acceptance.json",
+  );
+
+  const projectAuditSeed = await page.evaluate(
+    async ({ projectId, executable }) => {
+      const agentsResponse = await fetch("/api/agents", { cache: "no-store" });
+      const agentsBody = await agentsResponse.json();
+      if (!agentsResponse.ok) return { stage: "agents", status: agentsResponse.status };
+      const planner = agentsBody.agents.find(
+        (agent) => agent.name === "Context Planner",
+      );
+      const createAgent = await fetch("/api/agents", {
+        body: JSON.stringify({
+          accentToken: planner.accentToken,
+          avatarText: planner.avatarText,
+          maxHandoffs: planner.maxHandoffs,
+          maxTokens: planner.maxTokens,
+          model: planner.model,
+          name: "Audit Temp Agent",
+          permissions: planner.permissions,
+          providerId: planner.providerId,
+          reviewCapable: planner.reviewCapable,
+          role: planner.role,
+          skillIds: planner.skillIds,
+          systemPrompt: planner.systemPrompt,
+        }),
+        headers: { "content-type": "application/json" },
+        method: "POST",
+      });
+      const createdAgent = await createAgent.json();
+      if (createAgent.status !== 201) {
+        return { stage: "create-agent", status: createAgent.status };
+      }
+      const membersResponse = await fetch(
+        `/api/projects/${projectId}/members`,
+        { cache: "no-store" },
+      );
+      const membersState = await membersResponse.json();
+      if (!membersResponse.ok) {
+        return { stage: "members-get", status: membersResponse.status };
+      }
+      const currentAgentIds = membersState.members.map(
+        (member) => member.agentId,
+      );
+      const join = await fetch(`/api/projects/${projectId}/members`, {
+        body: JSON.stringify({
+          agentIds: [...currentAgentIds, createdAgent.agent.id],
+          expectedProjectVersion: membersState.projectVersion,
+        }),
+        headers: { "content-type": "application/json" },
+        method: "PUT",
+      });
+      const joinedState = await join.json();
+      if (!join.ok) return { stage: "member-join", status: join.status };
+      const remove = await fetch(`/api/projects/${projectId}/members`, {
+        body: JSON.stringify({
+          agentIds: currentAgentIds,
+          expectedProjectVersion: joinedState.projectVersion,
+        }),
+        headers: { "content-type": "application/json" },
+        method: "PUT",
+      });
+      if (!remove.ok) return { stage: "member-remove", status: remove.status };
+      const policyResponse = await fetch(
+        `/api/projects/${projectId}/validation-policy`,
+        { cache: "no-store" },
+      );
+      const policyState = await policyResponse.json();
+      if (!policyResponse.ok) {
+        return { stage: "policy-get", status: policyResponse.status };
+      }
+      const save = await fetch(
+        `/api/projects/${projectId}/validation-policy`,
+        {
+          body: JSON.stringify({
+            entries: [{
+              args: ["--version"],
+              executable,
+              required: false,
+              workdir: ".",
+            }],
+            expectedVersion: policyState.policy.version,
+            operationId: crypto.randomUUID(),
+            warningAccepted: true,
+          }),
+          headers: { "content-type": "application/json" },
+          method: "PUT",
+        },
+      );
+      const saved = await save.json();
+      if (!save.ok) return { stage: "policy-save", status: save.status };
+      return {
+        agentId: createdAgent.agent.id,
+        outcome: saved.outcome,
+        reasonCode: saved.reasonCode,
+        revisionNo: saved.policy.revisionNo,
+        status: 200,
+      };
+    },
+    { executable: process.execPath, projectId: missionState.projectId },
+  );
+  projectAuditEqual(
+    projectAuditSeed.status,
+    200,
+    `project audit seeding must succeed: ${JSON.stringify(projectAuditSeed)}`,
+  );
+  projectAuditEqual(
+    projectAuditSeed.outcome,
+    "saved",
+    "policy save must be accepted (node --version is standing-eligible)",
+  );
+
+  const projectAuditApi = await page.evaluate(async (projectId) => {
+    const pages = [];
+    let before = null;
+    for (let depth = 0; depth < 12; depth += 1) {
+      const response = await fetch(
+        `/api/projects/${projectId}/audit-events${before === null ? "" : `?before=${before}`}`,
+        { cache: "no-store" },
+      );
+      const body = await response.json();
+      if (!response.ok) return { error: body, status: response.status };
+      pages.push(body);
+      if (body.nextBeforeSeq === null) break;
+      before = body.nextBeforeSeq;
+    }
+    return { pages, status: 200 };
+  }, missionState.projectId);
+  projectAuditEqual(
+    projectAuditApi.status,
+    200,
+    JSON.stringify(projectAuditApi.error),
+  );
+  projectAuditEqual(
+    projectAuditApi.pages.length,
+    1,
+    "all project events must fit on a single page",
+  );
+  const projectAuditEvents = projectAuditApi.pages.flatMap(
+    ({ events }) => events,
+  );
+  const projectDomainEvents = projectAuditEvents.filter((event) =>
+    Object.hasOwn(PROJECT_WORKSPACE_AUDIT_EVENT_TYPE_COPY, event.eventType));
+  projectAuditEqual(
+    projectDomainEvents.length,
+    8,
+    "project domain trail must be created/bound/rebound + 3 joins + 1 remove + 1 policy change",
+  );
+  projectAuditEqual(
+    projectAuditApi.pages[0].freshness.status,
+    "caught_up",
+    JSON.stringify(projectAuditApi.pages[0].freshness),
+  );
+  for (const required of Object.keys(PROJECT_WORKSPACE_AUDIT_EVENT_TYPE_COPY)) {
+    projectAuditOk(
+      projectDomainEvents.some((event) => event.eventType === required),
+      `project audit trail must include ${required}`,
+    );
+  }
+  const projectCreatedEvent = projectDomainEvents.find(
+    (event) => event.eventType === "project_created",
+  );
+  projectAuditEqual(
+    projectCreatedEvent.payload.projectName,
+    "Context Smoke Project",
+    "project creation excerpt must be verbatim",
+  );
+  const boundEvents = projectDomainEvents.filter(
+    (event) => event.eventType === "workspace_bound",
+  );
+  projectAuditEqual(
+    boundEvents.length,
+    1,
+    "the same-path workspace re-assert must not produce a second bound row",
+  );
+  projectAuditEqual(boundEvents[0].payload.workspaceName, "real-workspace");
+  projectAuditEqual(
+    boundEvents[0].payload.previousWorkspaceName,
+    undefined,
+    "initial binding must not carry a previous workspace name",
+  );
+  const reboundEvent = projectDomainEvents.find(
+    (event) => event.eventType === "workspace_rebound",
+  );
+  projectAuditEqual(reboundEvent.payload.workspaceName, "rebound-real-workspace");
+  projectAuditEqual(
+    reboundEvent.payload.previousWorkspaceName,
+    "real-workspace",
+    "rebound must carry the redacted previous basename",
+  );
+  const joinedNames = projectDomainEvents
+    .filter((event) => event.eventType === "member_joined")
+    .map((event) => event.payload.agentDisplayName)
+    .sort();
+  projectAuditDeepEqual(
+    joinedNames,
+    ["Audit Temp Agent", "Context Builder", "Context Planner"],
+    "member joins must carry redacted display names",
+  );
+  const removedEvents = projectDomainEvents.filter(
+    (event) => event.eventType === "member_removed",
+  );
+  projectAuditEqual(removedEvents.length, 1);
+  projectAuditEqual(
+    removedEvents[0].payload.agentDisplayName,
+    "Audit Temp Agent",
+  );
+  projectAuditEqual(
+    removedEvents[0].payload.agentId,
+    projectAuditSeed.agentId,
+    "member removal must reference the temp agent id",
+  );
+  const policyEvent = projectDomainEvents.find(
+    (event) => event.eventType === "validation_policy_changed",
+  );
+  projectAuditEqual(policyEvent.payload.revisionNo, projectAuditSeed.revisionNo);
+  projectAuditEqual(policyEvent.payload.entryCount, 1);
+  projectAuditEqual(policyEvent.payload.warningAccepted, true);
+  projectAuditOk(
+    /^[0-9a-f]{64}$/.test(policyEvent.payload.policyHash),
+    "policy change must carry the public policy hash",
+  );
+  projectAuditOk(
+    !("executable" in policyEvent.payload)
+      && !("workdir" in policyEvent.payload),
+    "policy entry executables/workdirs must never enter the payload",
+  );
+  for (const event of projectDomainEvents) {
+    projectAuditEqual(event.actorType, "owner");
+    projectAuditEqual(event.executionId, null);
+  }
+  projectAuditOk(
+    !projectAuditEvents.some(
+      (event) => event.payload.projectName === "Context Empty Project",
+    ),
+    "cross-project project events must stay isolated",
+  );
+  const projectAuditApiText = JSON.stringify(projectAuditApi.pages);
+  for (const value of [
+    testApiKey,
+    masterKey,
+    `Bearer ${testApiKey}`,
+    validationToken,
+    providerBaseUrl,
+    temporaryDirectory,
+    workspaceDirectory,
+    boundWorkspacePath,
+    reboundWorkspaceDirectory,
+    reboundWorkspacePath,
+    process.execPath,
+    "Authorization:",
+  ]) {
+    projectAuditOk(
+      !projectAuditApiText.includes(value),
+      `project audit API payload leaked a forbidden marker: ${value.slice(0, 24)}`,
+    );
+  }
+  const foreignProjectAudit = await page.evaluate(async () => {
+    const response = await fetch("/api/projects/foreign-project/audit-events", {
+      cache: "no-store",
+    });
+    return { body: await response.json(), status: response.status };
+  });
+  projectAuditEqual(
+    foreignProjectAudit.status,
+    404,
+    "foreign project audit read must 404",
+  );
+  projectAuditOk(
+    !JSON.stringify(foreignProjectAudit.body).includes(temporaryDirectory),
+    "404 envelope must not echo host paths",
+  );
+  // The second project carries its own project_created fact; both directions
+  // of project scoping must hold.
+  const emptyProjectAudit = await page.evaluate(async () => {
+    const projects = await (await fetch("/api/projects", { cache: "no-store" }))
+      .json();
+    const empty = projects.projects.find(
+      (project) => project.name === "Context Empty Project",
+    );
+    const response = await fetch(
+      `/api/projects/${empty.id}/audit-events`,
+      { cache: "no-store" },
+    );
+    return { body: await response.json(), status: response.status };
+  });
+  projectAuditEqual(emptyProjectAudit.status, 200);
+  projectAuditDeepEqual(
+    emptyProjectAudit.body.events.map((event) => [
+      event.eventType,
+      event.payload.projectName ?? event.payload.title,
+    ]),
+    [
+      ["mission_created", "Empty Mission"],
+      ["project_created", "Context Empty Project"],
+    ],
+    "the second project trail must hold only its own facts",
+  );
+  // Project-scoped counts: the second project's project_created row
+  // legitimately lives in the same global outbox, while checkpoint/maxSeq
+  // stay global consumer facts.
+  const projectAuditCounts = (() => {
+    const database = new DatabaseSync(databasePath, { readOnly: true });
+    try {
+      const scalar = (sql, ...params) =>
+        Number(database.prepare(sql).get(...params).value);
+      return {
+        checkpoint: scalar(
+          "SELECT last_outbox_seq AS value FROM audit_projection_checkpoints"
+            + " WHERE consumer_id='audit-event-projection'",
+        ),
+        maxSeq: scalar(
+          "SELECT COALESCE(MAX(outbox_seq),0) AS value FROM audit_event_outbox",
+        ),
+        outbox: scalar(
+          "SELECT COUNT(*) AS value FROM audit_event_outbox WHERE project_id=?",
+          missionState.projectId,
+        ),
+        projectWorkspace: scalar(
+          "SELECT COUNT(*) AS value FROM audit_event_outbox"
+            + " WHERE source='project_workspace' AND project_id=?",
+          missionState.projectId,
+        ),
+        projection: scalar(
+          "SELECT COUNT(*) AS value FROM audit_event_projection WHERE project_id=?",
+          missionState.projectId,
+        ),
+      };
+    } finally {
+      database.close();
+    }
+  })();
+  projectAuditEqual(
+    projectAuditCounts.outbox,
+    projectAuditEvents.length,
+    "API must expose every project outbox event",
+  );
+  projectAuditEqual(
+    projectAuditCounts.projectWorkspace,
+    projectDomainEvents.length,
+    "project_workspace source count must match the filtered API events",
+  );
+  projectAuditEqual(
+    projectAuditCounts.projection,
+    projectAuditCounts.outbox,
+    "read path must catch up the projection",
+  );
+  projectAuditEqual(
+    projectAuditCounts.checkpoint,
+    projectAuditCounts.maxSeq,
+    "checkpoint must be caught up",
+  );
+  console.log(
+    `PROJECT-WORKSPACE AUDIT API PASS: projectEvents=${projectDomainEvents.length}, single page, six types, redacted basenames/members, outbox==projection==API, foreign 404, cross-project isolation`,
+  );
+
+  // Desktop: reload before asserting the panel (A-237 — the API-side seeding
+  // bypasses any mounted panel), then exercise the audit tab end to end.
+  await page.setViewportSize({ height: 1100, width: 1600 });
+  await page.reload({ waitUntil: "networkidle" });
+  const projectContextPanel = page.locator(".cockpit-context");
+  await projectContextPanel
+    .getByRole("tab", { name: "共享记忆" })
+    .focus();
+  await page.keyboard.press("End");
+  const projectAuditTab = projectContextPanel.getByRole("tab", {
+    name: "审计",
+  });
+  projectAuditEqual(
+    await projectAuditTab.getAttribute("aria-selected"),
+    "true",
+    "End key must select the audit tab",
+  );
+  projectAuditOk(
+    await projectAuditTab.evaluate(
+      (node) => document.activeElement === node,
+    ),
+    "End key must move focus to the audit tab",
+  );
+  const projectAuditList = projectContextPanel.getByRole("list", {
+    name: "审计事件",
+  });
+  await projectAuditList.waitFor();
+  await projectContextPanel.getByText("已追平", { exact: true }).waitFor();
+  await page.waitForFunction(
+    (expected) =>
+      document.querySelectorAll(".audit-event-list > li").length === expected,
+    projectAuditEvents.length,
+  );
+  const projectAuditRows = projectAuditList.getByRole("listitem");
+  const firstProjectRow = projectAuditRows.first();
+  await firstProjectRow
+    .getByRole("heading", { name: "验证政策已变更" })
+    .waitFor();
+  projectAuditEqual(
+    await firstProjectRow.locator(".audit-event-excerpt").innerText(),
+    `修订 #${projectAuditSeed.revisionNo} · 1 项`,
+    "policy row must render the revision/entry-count summary",
+  );
+  projectAuditOk(
+    await firstProjectRow
+      .getByText("项目", { exact: true })
+      .evaluate(
+        (node) =>
+          node.classList.contains("status-label")
+          && node.classList.length === 1,
+      ),
+    "project domain badge must use the bare neutral status-label",
+  );
+  projectAuditEqual(
+    await projectAuditList.locator(".status-label.status-completed").count(),
+    projectAuditEvents.length - projectDomainEvents.length,
+    "mission-work rows must keep the completed status variant",
+  );
+  projectAuditEqual(
+    await projectAuditList
+      .locator(".status-label:not(.status-queued):not(.status-running):not(.status-completed):not(.status-failed)")
+      .count(),
+    projectDomainEvents.length,
+    "every project row must carry the neutral project badge",
+  );
+  const projectCreatedRow = projectAuditRows.nth(
+    projectAuditEvents.indexOf(projectCreatedEvent),
+  );
+  projectAuditEqual(
+    await projectCreatedRow.locator(".audit-event-excerpt").innerText(),
+    "Context Smoke Project",
+    "project creation row must render the verbatim project name",
+  );
+  const reboundRow = projectAuditRows.nth(
+    projectAuditEvents.indexOf(reboundEvent),
+  );
+  projectAuditEqual(
+    await reboundRow.locator(".audit-event-excerpt").innerText(),
+    "real-workspace → rebound-real-workspace",
+    "rebound row must render redacted basenames only",
+  );
+  const removedRow = projectAuditRows.nth(
+    projectAuditEvents.indexOf(removedEvents[0]),
+  );
+  await removedRow.getByRole("heading", { name: "成员已移除" }).waitFor();
+  projectAuditEqual(
+    await removedRow.locator(".audit-event-excerpt").innerText(),
+    "Audit Temp Agent",
+    "member removal row must render the display name",
+  );
+  const projectLocateLinks = projectAuditList.getByRole("link", {
+    name: "定位来源项目",
+  });
+  projectAuditEqual(
+    await projectLocateLinks.count(),
+    projectDomainEvents.length,
+    "every project row must render the project locate link",
+  );
+  const projectLocateLink = projectCreatedRow.getByRole("link", {
+    name: "定位来源项目",
+  });
+  projectAuditEqual(
+    await projectLocateLink.getAttribute("href"),
+    `/projects/${missionState.projectId}`,
+    "project locate link must land on the canonical project identity route",
+  );
+  const projectAuditTabBox = await projectAuditTab.boundingBox();
+  projectAuditOk(
+    projectAuditTabBox
+      && projectAuditTabBox.height >= 44
+      && projectAuditTabBox.width >= 44,
+    "audit tab must be at least 44x44",
+  );
+  const projectLocateBox = await projectLocateLink.boundingBox();
+  projectAuditOk(
+    projectLocateBox && projectLocateBox.height >= 44 && projectLocateBox.width >= 44,
+    "project locate link must be at least 44x44",
+  );
+  await projectLocateLink.focus();
+  projectAuditOk(
+    (await projectLocateLink.evaluate((node) => getComputedStyle(node).boxShadow))
+      !== "none",
+    "focused locate link must show a visible focus ring",
+  );
+  await axeProjectWorkspaceAudit("desktop light project-workspace audit panel");
+  projectWorkspaceAuditAcceptance.matrix.push("desktop-light");
+  await page.screenshot({
+    fullPage: true,
+    path: projectAuditDesktopScreenshot,
+  });
+  const projectAuditFacingText = await page.locator("html").innerText();
+  await setCockpitTheme(page, "dark");
+  await projectContextPanel.getByText("已追平", { exact: true }).waitFor();
+  await projectAuditRows
+    .first()
+    .getByRole("heading", { name: "验证政策已变更" })
+    .waitFor();
+  await axeProjectWorkspaceAudit("desktop dark project-workspace audit panel");
+  projectWorkspaceAuditAcceptance.matrix.push("desktop-dark");
+  await page.screenshot({
+    fullPage: true,
+    path: projectAuditDarkScreenshot,
+  });
+  await setCockpitTheme(page, "light");
+  console.log(
+    "PROJECT-WORKSPACE AUDIT DESKTOP PASS: keyboard End, neutral badge/copy/excerpts, locate hrefs, 44px, focus ring, axe light+dark",
+  );
+
+  await page.setViewportSize({ height: 844, width: 390 });
+  await page.reload({ waitUntil: "networkidle" });
+  const projectContextOpener = page.getByRole("button", {
+    name: "打开当前任务上下文",
+  });
+  await projectContextOpener.focus();
+  await page.keyboard.press("Enter");
+  const projectContextDrawer = page.getByRole("dialog", {
+    name: "当前任务上下文",
+  });
+  const narrowProjectAuditTab = projectContextDrawer.getByRole("tab", {
+    name: "审计",
+  });
+  await narrowProjectAuditTab.focus();
+  await page.keyboard.press("Enter");
+  projectAuditEqual(
+    await narrowProjectAuditTab.getAttribute("aria-selected"),
+    "true",
+    "Enter must select the narrow audit tab",
+  );
+  const narrowProjectAuditList = projectContextDrawer.getByRole("list", {
+    name: "审计事件",
+  });
+  await narrowProjectAuditList.waitFor();
+  await projectContextDrawer.getByText("已追平", { exact: true }).waitFor();
+  await page.waitForFunction(
+    (expected) =>
+      document.querySelectorAll(".audit-event-list > li").length === expected,
+    projectAuditEvents.length,
+  );
+  const narrowProjectRows = narrowProjectAuditList.getByRole("listitem");
+  await narrowProjectRows
+    .first()
+    .getByRole("heading", { name: "验证政策已变更" })
+    .waitFor();
+  projectAuditEqual(
+    await narrowProjectRows
+      .first()
+      .locator(".audit-event-excerpt")
+      .innerText(),
+    `修订 #${projectAuditSeed.revisionNo} · 1 项`,
+    "narrow drawer must keep the policy summary",
+  );
+  const narrowProjectLocate = narrowProjectRows
+    .nth(projectAuditEvents.indexOf(projectCreatedEvent))
+    .getByRole("link", { name: "定位来源项目" });
+  projectAuditEqual(
+    await narrowProjectLocate.getAttribute("href"),
+    `/projects/${missionState.projectId}`,
+  );
+  const narrowProjectLocateBox = await narrowProjectLocate.boundingBox();
+  projectAuditOk(
+    narrowProjectLocateBox
+      && narrowProjectLocateBox.height >= 44
+      && narrowProjectLocateBox.width >= 44,
+    "narrow locate link must be at least 44x44",
+  );
+  const narrowProjectTabBox = await narrowProjectAuditTab.boundingBox();
+  projectAuditOk(
+    narrowProjectTabBox
+      && narrowProjectTabBox.height >= 44
+      && narrowProjectTabBox.width >= 44,
+    "narrow audit tab must be at least 44x44",
+  );
+  await axeProjectWorkspaceAudit("narrow light project-workspace audit drawer");
+  projectWorkspaceAuditAcceptance.matrix.push("narrow-light");
+  await page.screenshot({
+    fullPage: true,
+    path: projectAuditNarrowScreenshot,
+  });
+  const narrowProjectAuditFacingText = await page.locator("html").innerText();
+  await page.keyboard.press("Escape");
+  await projectContextDrawer.waitFor({ state: "detached" });
+  projectAuditOk(
+    await projectContextOpener.evaluate(
+      (node) => document.activeElement === node,
+    ),
+    "Escape must return focus to the context drawer opener",
+  );
+  console.log(
+    "PROJECT-WORKSPACE AUDIT NARROW PASS: drawer presentation kept, locate href, 44px, axe",
+  );
+
+  // Secret scan: facing text is captured on the project page, which
+  // legitimately renders the allowlisted workspace path, so facing text is
+  // scanned for fixture secrets only; screenshot bytes are also scanned for
+  // host paths (compressed pixels cannot contain page text).
+  const projectAuditScreenshotBytes = [
+    projectAuditDarkScreenshot,
+    projectAuditDesktopScreenshot,
+    projectAuditNarrowScreenshot,
+  ]
+    .map((path) => readFileSync(path).toString("latin1"))
+    .join("\n");
+  for (const surface of [
+    projectAuditFacingText,
+    narrowProjectAuditFacingText,
+    projectAuditScreenshotBytes,
+  ]) {
+    for (const secret of [
+      testApiKey,
+      masterKey,
+      `Bearer ${testApiKey}`,
+      validationToken,
+      providerBaseUrl,
+    ]) {
+      projectAuditOk(
+        !surface.includes(secret),
+        "project-workspace audit surface leaked a fixture secret",
+      );
+    }
+  }
+  for (const hostPath of [
+    temporaryDirectory,
+    workspaceDirectory,
+    boundWorkspacePath,
+    reboundWorkspaceDirectory,
+    reboundWorkspacePath,
+  ]) {
+    projectAuditOk(
+      !projectAuditScreenshotBytes.includes(hostPath),
+      "project-workspace audit screenshot bytes leaked a host path",
+    );
+  }
+  writeFileSync(
+    projectAuditResultsPath,
+    `${JSON.stringify(
+      {
+        assertions: projectWorkspaceAuditAcceptance.assertions,
+        axe: projectWorkspaceAuditAcceptance.axe,
+        events: projectAuditEvents.length,
+        matrix: projectWorkspaceAuditAcceptance.matrix,
+        projectEvents: projectDomainEvents.length,
+      },
+      null,
+      2,
+    )}\n`,
+    "utf8",
+  );
+  console.log(
+    `PROJECT-WORKSPACE AUDIT ACCEPTANCE PASS: assertions=${projectWorkspaceAuditAcceptance.assertions} axeStates=${projectWorkspaceAuditAcceptance.axe.length} matrix=${projectWorkspaceAuditAcceptance.matrix.join(",")}`,
   );
 
   console.log("BROWSER PASS: full S-3 desktop and narrow acceptance completed");

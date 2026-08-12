@@ -32,7 +32,7 @@ Capability ID 是稳定治理标识；owner 是唯一逻辑子系统，不等于
 
 - `CAP-PWS-01` Project / Workspace Binding Core — owner: Project & Workspace — 状态: 已交付核心 — 证据/建立切片: S-3；`src/adapters/outbound/sqlite/project-workspace/projects.ts`、`tests/modules/project-workspace/projects.service.test.ts`
 - `CAP-PWS-02` Verified Workspace Browse — owner: Project & Workspace — 状态: 已交付核心（单绑定根浏览/预览；多根管理与 diff 预览未覆盖）— 证据/建立切片: S-22 [`progress.md`](../features/027-workspace-readonly-browser/progress.md)
-- `CAP-PWS-03` Public Project Events — owner: Project & Workspace — 状态: 规划中 — 建立路径: S-23 的 Project & Workspace 审计纵切；该片复用已交付 `CAP-OPS-01/02`，以 owner 可查询脱敏 Project 事件并精确导航为独立结果
+- `CAP-PWS-03` Public Project Events — owner: Project & Workspace — 状态: 已交付核心 — 证据/建立切片: S-23 AUD-PWS（分配实现片号 S-52）[`progress.md`](../features/036-project-workspace-audit-events/progress.md)（6 类事件同事务 outbox、宿主路径脱敏 fail-closed、审计中心可查询并规范身份导航，复用已交付 `CAP-OPS-01/02`）
 
 ### Mission & Work
 

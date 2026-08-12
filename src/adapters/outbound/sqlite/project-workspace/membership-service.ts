@@ -3,6 +3,7 @@ import type { DatabaseSync } from "node:sqlite";
 import { MembershipError } from "@/src/modules/project-workspace";
 import { hasActiveCollaborationForProject } from "@/src/adapters/outbound/sqlite/public-collaboration/active-run-guards";
 import { openDatabase } from "@/src/adapters/outbound/sqlite/connection";
+import { appendMemberChangeAuditOutboxRow } from "@/src/adapters/outbound/sqlite/project-workspace/audit-event-outbox";
 import type {
   MembershipState,
   ProjectMember,
@@ -247,6 +248,42 @@ export function replaceMembers(
     );
     for (const agentId of input.agentIds) {
       insert.run(projectId, agentId, joinedAt);
+    }
+    // One audit row per member change, removals (agentId asc) before joins
+    // (agentId asc) so the feed order is deterministic for equal rosters.
+    const existingSet = new Set(existingIds);
+    const removedSorted = [...removedIds].sort();
+    const addedSorted = input.agentIds
+      .filter((agentId) => !existingSet.has(agentId))
+      .sort();
+    const changedIds = [...removedSorted, ...addedSorted];
+    if (changedIds.length > 0) {
+      const placeholders = changedIds.map(() => "?").join(", ");
+      const displayNames = new Map(
+        (
+          database
+            .prepare(`SELECT id, name FROM agents WHERE id IN (${placeholders})`)
+            .all(...changedIds) as Array<{ id: string; name: string }>
+        ).map((row) => [row.id, row.name] as const),
+      );
+      for (const agentId of removedSorted) {
+        appendMemberChangeAuditOutboxRow(database, {
+          agentDisplayName: displayNames.get(agentId) ?? agentId,
+          agentId,
+          eventType: "member_removed",
+          occurredAt: joinedAt,
+          projectId,
+        });
+      }
+      for (const agentId of addedSorted) {
+        appendMemberChangeAuditOutboxRow(database, {
+          agentDisplayName: displayNames.get(agentId) ?? agentId,
+          agentId,
+          eventType: "member_joined",
+          occurredAt: joinedAt,
+          projectId,
+        });
+      }
     }
     database
       .prepare("UPDATE projects SET version = version + 1 WHERE id = ?")

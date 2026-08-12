@@ -45,22 +45,27 @@ afterEach(() => {
 });
 
 describe("mission-work audit outbox schema", () => {
-  it("bootstraps identity 21 and accepts the mission_work outbox source", () => {
-    expect(database.prepare("PRAGMA user_version").get()).toEqual({ user_version: 21 });
+  it("bootstraps identity 22 and accepts the mission_work outbox source", () => {
+    expect(database.prepare("PRAGMA user_version").get()).toEqual({ user_version: 22 });
     const project = createProject("MissionWorkAudit", databasePath);
+    // createProject writes a project_workspace outbox row since feature 036,
+    // so manual rows take the next shared outbox_seq values.
+    const firstSeq = (database.prepare(
+      "SELECT COALESCE(MAX(outbox_seq),0)+1 AS nextSeq FROM audit_event_outbox",
+    ).get() as { nextSeq: number }).nextSeq;
     database.prepare(`
       INSERT INTO audit_event_outbox (
         id,project_id,source,event_type,payload_json,occurred_at,outbox_seq
-      ) VALUES ('mwk-event-1',?,'mission_work','task_created','{}',?,1)
-    `).run(project.id, NOW);
+      ) VALUES ('mwk-event-1',?,'mission_work','task_created','{}',?,?)
+    `).run(project.id, NOW, firstSeq);
     expect(database.prepare(
       "SELECT source FROM audit_event_outbox WHERE id='mwk-event-1'",
     ).get()).toEqual({ source: "mission_work" });
     expect(() => database.prepare(`
       INSERT INTO audit_event_outbox (
         id,project_id,source,event_type,payload_json,occurred_at,outbox_seq
-      ) VALUES ('mwk-event-2',?,'mission-work','task_created','{}',?,2)
-    `).run(project.id, NOW)).toThrow();
+      ) VALUES ('mwk-event-2',?,'mission-work','task_created','{}',?,?)
+    `).run(project.id, NOW, firstSeq + 1)).toThrow();
   });
 });
 
@@ -74,13 +79,16 @@ type OutboxRow = {
   source: string;
 };
 
+// This suite's subject is the mission-work writer seam; since feature 036 the
+// shared outbox also carries project_workspace rows (project creation precedes
+// every mission-work write), so the reader scopes to this source.
 function outboxRows(path: string = databasePath): OutboxRow[] {
   const reader = openDatabase(path);
   try {
     return reader.prepare(`
       SELECT id,project_id AS projectId,source,event_type AS eventType,
              payload_json AS payloadJson,occurred_at AS occurredAt,outbox_seq AS seq
-      FROM audit_event_outbox ORDER BY outbox_seq
+      FROM audit_event_outbox WHERE source='mission_work' ORDER BY outbox_seq
     `).all() as OutboxRow[];
   } finally {
     reader.close();
@@ -112,7 +120,7 @@ describe("mission-work audit outbox task lifecycle", () => {
       "task_started",
       "task_completed",
     ]);
-    expect(rows.map((row) => row.seq)).toEqual([1, 2, 3]);
+    expect(rows.map((row) => row.seq)).toEqual([2, 3, 4]);
     expect(new Set(rows.map((row) => row.source))).toEqual(new Set(["mission_work"]));
     expect(new Set(rows.map((row) => row.projectId))).toEqual(new Set([project.id]));
     expect(new Set(rows.map((row) => row.occurredAt))).toEqual(new Set([NOW]));
@@ -215,7 +223,7 @@ describe("mission-work audit outbox mission creation", () => {
       eventType: "mission_created",
       occurredAt: NOW,
       projectId,
-      seq: 1,
+      seq: 2,
       source: "mission_work",
     });
     expect(JSON.parse(rows[0]!.payloadJson)).toEqual({
@@ -272,7 +280,7 @@ describe("mission-work audit outbox work items", () => {
       "work_item_status_changed",
       "work_item_status_changed",
     ]);
-    expect(rows.map((row) => row.seq)).toEqual([1, 2, 3, 4, 5]);
+    expect(rows.map((row) => row.seq)).toEqual([2, 3, 4, 5, 6]);
     expect(new Set(rows.map((row) => row.projectId))).toEqual(new Set([projectId]));
 
     expect(JSON.parse(rows[1]!.payloadJson)).toEqual({
@@ -347,7 +355,7 @@ describe("mission-work audit outbox work items", () => {
       "work_item_created",
       "work_item_created",
     ]);
-    expect(rows.map((row) => row.seq)).toEqual([1, 2, 3]);
+    expect(rows.map((row) => row.seq)).toEqual([2, 3, 4]);
     expect(JSON.parse(rows[1]!.payloadJson)).toEqual({
       actorId: null,
       actorType: "owner",
@@ -441,7 +449,7 @@ describe("mission-work audit outbox discipline", () => {
     database.close();
     database = openDatabase(databasePath);
 
-    expect(database.prepare("PRAGMA user_version").get()).toEqual({ user_version: 21 });
+    expect(database.prepare("PRAGMA user_version").get()).toEqual({ user_version: 22 });
     expect(outboxRows()).toEqual(before);
   });
 
@@ -454,6 +462,6 @@ describe("mission-work audit outbox discipline", () => {
 
     const rows = outboxRows();
     expect(rows.map((row) => row.eventType)).toEqual(["task_created", "task_started"]);
-    expect(rows.map((row) => row.seq)).toEqual([1, 2]);
+    expect(rows.map((row) => row.seq)).toEqual([2, 3]);
   });
 });

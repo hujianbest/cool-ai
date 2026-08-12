@@ -4,6 +4,7 @@ import type { DatabaseSync } from "node:sqlite";
 
 import { canonicalRequestHash } from "@/src/adapters/outbound/sqlite/public-collaboration/operation-receipts";
 import { openDatabase } from "@/src/adapters/outbound/sqlite/connection";
+import { appendValidationPolicyChangedAuditOutboxRow } from "@/src/adapters/outbound/sqlite/project-workspace/audit-event-outbox";
 import { ValidationPolicyError } from "@/src/modules/project-workspace";
 import type {
   ValidationPolicy,
@@ -341,8 +342,10 @@ function persistCompletedOperation(
 function appendAudit(
   database: DatabaseSync,
   input: {
+    afterEntryCount: number | null;
     afterPolicyHash: string | null;
     afterRevisionId: string | null;
+    afterRevisionNo: number | null;
     before: ValidationPolicy;
     operationId: string;
     outcome: "rejected" | "saved";
@@ -361,6 +364,7 @@ function appendAudit(
     classifierVersion: CLASSIFIER_VERSION,
     outcome: input.outcome,
   });
+  const auditId = randomUUID();
   database.prepare(
     `INSERT INTO project_validation_policy_audits (
        id,project_id,operation_id,sequence,actor_type,outcome,before_revision_id,
@@ -368,7 +372,7 @@ function appendAudit(
        warning_accepted,created_at
      ) VALUES (?, ?, ?, ?, 'owner', ?, ?, ?, ?, ?, ?, ?, ?)`,
   ).run(
-    randomUUID(),
+    auditId,
     input.projectId,
     input.operationId,
     sequence,
@@ -381,6 +385,25 @@ function appendAudit(
     input.warningAccepted ? 1 : 0,
     input.timestamp,
   );
+  // The audits table stays the domain fact; only saved changes are mirrored
+  // into the shared audit feed (rejected attempts change nothing and stay
+  // out of the MVP selection).
+  if (
+    input.outcome === "saved"
+    && input.afterPolicyHash !== null
+    && input.afterRevisionNo !== null
+    && input.afterEntryCount !== null
+  ) {
+    appendValidationPolicyChangedAuditOutboxRow(database, {
+      auditId,
+      entryCount: input.afterEntryCount,
+      occurredAt: input.timestamp,
+      policyHash: input.afterPolicyHash,
+      projectId: input.projectId,
+      revisionNo: input.afterRevisionNo,
+      warningAccepted: input.warningAccepted,
+    });
+  }
 }
 
 export function saveValidationPolicy(
@@ -465,8 +488,10 @@ export function saveValidationPolicy(
           timestamp,
         );
         appendAudit(database, {
+          afterEntryCount: null,
           afterPolicyHash: null,
           afterRevisionId: null,
+          afterRevisionNo: null,
           before,
           operationId: input.operationId,
           outcome: "rejected",
@@ -541,8 +566,10 @@ export function saveValidationPolicy(
          WHERE project_id=? AND id=?`,
       ).run(JSON.stringify(result), timestamp, projectId, input.operationId);
       appendAudit(database, {
+        afterEntryCount: normalized!.entries.length,
         afterPolicyHash: saved.policyHash,
         afterRevisionId: saved.revisionId,
+        afterRevisionNo: revisionNo,
         before,
         operationId: input.operationId,
         outcome: "saved",
