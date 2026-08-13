@@ -46,7 +46,7 @@ afterEach(() => {
 
 describe("mission-work audit outbox schema", () => {
   it("bootstraps identity 22 and accepts the mission_work outbox source", () => {
-    expect(database.prepare("PRAGMA user_version").get()).toEqual({ user_version: 22 });
+    expect(database.prepare("PRAGMA user_version").get()).toEqual({ user_version: 23 });
     const project = createProject("MissionWorkAudit", databasePath);
     // createProject writes a project_workspace outbox row since feature 036,
     // so manual rows take the next shared outbox_seq values.
@@ -449,7 +449,7 @@ describe("mission-work audit outbox discipline", () => {
     database.close();
     database = openDatabase(databasePath);
 
-    expect(database.prepare("PRAGMA user_version").get()).toEqual({ user_version: 22 });
+    expect(database.prepare("PRAGMA user_version").get()).toEqual({ user_version: 23 });
     expect(outboxRows()).toEqual(before);
   });
 

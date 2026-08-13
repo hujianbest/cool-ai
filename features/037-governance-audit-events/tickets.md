@@ -1,0 +1,5 @@
+# 037 AUD-GOV 任务票
+
+- [x] T-01 治理域 outbox + schema 22→23：`current-schema.ts` identity 23、`audit_event_outbox.source` CHECK 加 `'governance'`；新增 `governance/audit-event-outbox.ts` 白名单工具；approval-store 11 个写入点全接线（5 类事件，批量 expire 按调用点一行）；同波次迁移全部 identity 断言（22→23）、unsupported-schema 夹具 legacy 并集扩至 22、rejection 套件 future 23→24、write-ownership manifest；新聚焦套件 `tests/modules/governance/governance-audit-outbox.test.ts`（同事务原子性、白名单、截断、凭据分类、seq 连续、reopen 幂等、跨 source 过滤读取适配既有套件）。RED→GREEN。
+- [ ] T-02 审计 UI 治理域呈现与定位：audit-panel 增加 `GOVERNANCE_EVENT_TYPE_COPY`（审批已请求/已批准/已驳回/已过期/已消费）兼作域分类器；域徽标复用既有语义类或裸 `.status-label`；定位=执行审查面规范路由（锚定 payload 中可严格校验的 executionId/approvalId 或面板 prop，畸形不渲染）；摘要按白名单键呈现（kind/decision/scope），畸形不渲染。新聚焦 UI 测试 RED→GREEN + `tests/browser/project-context` 聚焦回归。
+- [ ] T-03 浏览器验收 + ship：smoke 落点择定（优先 smoke:execution 复用其审批驱动产生真实 approval 事实，再访审计 trail 面板断言；若不可行则 smoke:context 内以 API 造数）；验收段=API（五类齐备/单页/outbox==projection==API/foreign 404/跨项目隔离）+桌面明暗 UI+窄屏+axe 0 serious/critical+秘密扫描零泄漏；全量套件 + tsc + build 绿；backlog CAP-GOV-03 勾选、product/progress 与假设台账更新、commit+push。
