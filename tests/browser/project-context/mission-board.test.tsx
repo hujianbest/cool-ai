@@ -458,3 +458,15 @@ describe("Mission Board", () => {
     );
   });
 });
+
+describe("mission board chrome", () => {
+  it("renders task cards on pearl surfaces with case radius", () => {
+    const css = readFileSync(join(process.cwd(), "app", "cockpit.css"), "utf8");
+    expect(css).toMatch(
+      /\.mission-board \.task-summary\s*\{[^}]*background:\s*var\(--surface-card\)[^}]*border-radius:\s*var\(--rounded-md\)/s,
+    );
+    expect(css).toMatch(
+      /\.mission-status\s*\{[^}]*background:\s*var\(--surface-card\)[^}]*border-radius:\s*var\(--rounded-md\)/s,
+    );
+  });
+});

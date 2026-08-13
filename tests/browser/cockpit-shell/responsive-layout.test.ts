@@ -40,7 +40,7 @@ describe("narrow cockpit layout guard", () => {
 
   it("lays out the cockpit as a four-column grid on wide screens", () => {
     expect(cockpit).toMatch(
-      /\.collaboration-cockpit\s*\{[^}]*grid-template-columns:\s*var\(--activity-bar-width\)\s+var\(--sidebar-width\)\s+minmax\(var\(--content-min\),\s*1fr\)\s+var\(--context-width\)/s,
+      /\.collaboration-cockpit\s*\{[^}]*grid-template-columns:\s*var\(--activity-bar-width\)\s+var\(--sidebar-width\)\s+minmax\(0,\s*1fr\)\s+var\(--context-width\)/s,
     );
   });
 

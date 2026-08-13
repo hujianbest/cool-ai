@@ -1,11 +1,12 @@
 <!DOCTYPE html>
-<html lang="en">
+<html lang="zh-CN" data-theme="dark">
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Cool AI Design System - Dark Theme</title>
-  <link rel="stylesheet" href="tokens.css">
+  <title>Cool AI Design System — 暖陶 Dark Theme</title>
   <style>
+    @import "../app/tokens.css";
+
     body {
       margin: 0;
       padding: 0;
@@ -16,7 +17,7 @@
     }
 
     .preview-container {
-      max-width: 1200px;
+      max-width: calc(var(--space-section) * 15);
       margin: 0 auto;
       padding: var(--space-xxl) var(--space-lg);
     }
@@ -43,7 +44,7 @@
 
     .color-grid {
       display: grid;
-      grid-template-columns: repeat(auto-fill, minmax(200px, 1fr));
+      grid-template-columns: repeat(auto-fill, minmax(var(--sidebar-width), 1fr));
       gap: var(--space-md);
       margin-bottom: var(--space-lg);
     }
@@ -51,11 +52,11 @@
     .color-swatch {
       border-radius: var(--rounded-sm);
       overflow: hidden;
-      border: 1px solid var(--color-hairline);
+      border: var(--border-width) solid var(--color-hairline);
     }
 
     .color-sample {
-      height: 120px;
+      height: calc(var(--space-section) * 1.5);
       width: 100%;
     }
 
@@ -78,14 +79,14 @@
 
     .token-list {
       display: grid;
-      grid-template-columns: repeat(auto-fill, minmax(300px, 1fr));
+      grid-template-columns: repeat(auto-fill, minmax(var(--context-width), 1fr));
       gap: var(--space-md);
     }
 
     .token-item {
       padding: var(--space-md);
       background: var(--color-surface-tile-2);
-      border: 1px solid var(--color-hairline);
+      border: var(--border-width) solid var(--color-hairline);
       border-radius: var(--rounded-sm);
       font-family: var(--font-mono);
       font-size: var(--text-caption);
@@ -111,7 +112,7 @@
 
     .component-item {
       flex: 1;
-      min-width: 200px;
+      min-width: var(--sidebar-width);
     }
 
     button {
@@ -126,13 +127,13 @@
 
     .button-primary {
       background: var(--color-primary-on-dark);
-      color: var(--color-canvas);
+      color: var(--color-on-primary);
     }
 
     .button-secondary {
       background: var(--color-surface-tile-3);
       color: var(--color-primary-on-dark);
-      border: 1px solid var(--color-primary-on-dark);
+      border: var(--border-width) solid var(--color-primary-on-dark);
     }
 
     .button-ghost {
@@ -147,7 +148,7 @@
       font-size: var(--text-fine-print);
       font-weight: 600;
       text-transform: uppercase;
-      border: 1px solid currentColor;
+      border: var(--border-width) solid currentColor;
     }
 
     .status-queued {
@@ -181,7 +182,7 @@
     .panel {
       padding: var(--space-lg);
       background: var(--color-surface-tile-2);
-      border: 1px solid var(--color-hairline);
+      border: var(--border-width) solid var(--color-hairline);
       border-radius: var(--rounded-md);
       box-shadow: var(--shadow-panel);
       color: var(--color-ink);
@@ -196,8 +197,8 @@
 <body>
   <div class="preview-container">
     <header class="preview-section">
-      <h1 class="preview-title">Cool AI Design System — Dark Theme</h1>
-      <p class="preview-subtitle">Based on Apple DESIGN.md design tokens</p>
+      <h1 class="preview-title">Cool AI 暖陶 Design System — Dark Theme</h1>
+      <p class="preview-subtitle">Based on product/ui/DESIGN.md — Cool-AI-warm-terracotta</p>
     </header>
 
     <section class="preview-section">
@@ -206,57 +207,57 @@
         <div class="color-swatch">
           <div class="color-sample" style="background: var(--color-primary-on-dark)"></div>
           <div class="color-info">
-            <div class="color-name">Sky Link Blue (Primary Dark)</div>
-            <div class="color-value">#2997ff</div>
+            <div class="color-name">Sage on dark (color-primary-on-dark)</div>
+            <div class="color-value">#82B8A5</div>
           </div>
         </div>
         <div class="color-swatch">
-          <div class="color-sample" style="background: var(--color-ink)"></div>
+          <div class="color-sample" style="background: var(--color-rail)"></div>
           <div class="color-info">
-            <div class="color-name">Ink (White on Dark)</div>
-            <div class="color-value">#ffffff</div>
+            <div class="color-name">Rail (color-rail)</div>
+            <div class="color-value">#0D0B08</div>
           </div>
         </div>
         <div class="color-swatch">
           <div class="color-sample" style="background: var(--color-canvas)"></div>
           <div class="color-info">
-            <div class="color-name">Canvas (Black)</div>
-            <div class="color-value">#000000</div>
+            <div class="color-name">Canvas</div>
+            <div class="color-value">#15110D</div>
           </div>
         </div>
         <div class="color-swatch">
           <div class="color-sample" style="background: var(--color-canvas-parchment)"></div>
           <div class="color-info">
-            <div class="color-name">Parchment (Dark)</div>
-            <div class="color-value">#1c1c1e</div>
+            <div class="color-name">Panel parchment</div>
+            <div class="color-value">#1C1712</div>
           </div>
         </div>
         <div class="color-swatch">
           <div class="color-sample" style="background: var(--color-surface-tile-1)"></div>
           <div class="color-info">
-            <div class="color-name">Tile 1</div>
-            <div class="color-value">#272729</div>
+            <div class="color-name">Tile 1 (color-surface-tile-1)</div>
+            <div class="color-value">#15110D</div>
           </div>
         </div>
         <div class="color-swatch">
           <div class="color-sample" style="background: var(--color-surface-tile-2)"></div>
           <div class="color-info">
-            <div class="color-name">Tile 2</div>
-            <div class="color-value">#2a2a2c</div>
+            <div class="color-name">Tile 2 (color-surface-tile-2)</div>
+            <div class="color-value">#1C1712</div>
           </div>
         </div>
         <div class="color-swatch">
           <div class="color-sample" style="background: var(--color-surface-tile-3)"></div>
           <div class="color-info">
-            <div class="color-name">Tile 3</div>
-            <div class="color-value">#252527</div>
+            <div class="color-name">Tile 3 (color-surface-tile-3)</div>
+            <div class="color-value">#251F18</div>
           </div>
         </div>
         <div class="color-swatch">
-          <div class="color-sample" style="background: var(--color-body-muted)"></div>
+          <div class="color-sample" style="background: var(--color-ink)"></div>
           <div class="color-info">
-            <div class="color-name">Body Muted</div>
-            <div class="color-value">#cccccc</div>
+            <div class="color-name">Ink</div>
+            <div class="color-value">#EDE5D8</div>
           </div>
         </div>
       </div>
@@ -301,7 +302,7 @@
     </section>
 
     <footer class="preview-section">
-      <p>Design System based on Apple DESIGN.md • Cool AI Project</p>
+      <p>Design System based on DESIGN.md • Cool AI 暖陶 • Dark Theme</p>
     </footer>
   </div>
 </body>

@@ -1,4 +1,5 @@
 // @vitest-environment jsdom
+import { readFileSync } from "node:fs";
 import { render, screen } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { describe, expect, it } from "vitest";
@@ -83,5 +84,21 @@ describe("ActivityBar", () => {
     await user.tab();
     const team = screen.getByRole("link", { name: /团队/ });
     expect(team).toHaveFocus();
+  });
+});
+
+describe("ActivityBar warm-terracotta rail chrome", () => {
+  it("paints the rail with rail tokens and fills the current item with accent", () => {
+    const cockpit = readFileSync("app/cockpit.css", "utf8");
+
+    expect(cockpit).toMatch(
+      /\.activity-bar\s*\{[^}]*background:\s*var\(--color-rail\)[^}]*color:\s*var\(--color-rail-ink\)/s,
+    );
+    expect(cockpit).toMatch(
+      /\.activity-bar \.activity-bar-item\s*\{[^}]*min-height:\s*var\(--control-min\)[^}]*min-width:\s*var\(--control-min\)[^}]*color:\s*var\(--color-rail-ink\)/s,
+    );
+    expect(cockpit).toMatch(
+      /\.activity-bar \.activity-bar-item\[aria-current="page"\]\s*\{[^}]*background:\s*var\(--interactive-primary\)[^}]*color:\s*var\(--color-on-primary\)/s,
+    );
   });
 });

@@ -162,5 +162,8 @@ describe("context navigation accessibility", () => {
     expect(css).toMatch(
       /\.project-context-tabs\s*\{[^}]*gap:\s*var\(--space-2\)/s,
     );
+    expect(css).toMatch(
+      /\.project-context-tabs button\[aria-selected="true"\]\s*\{[^}]*background:\s*var\(--interactive-accent-soft\)[^}]*color:\s*var\(--text-primary\)/s,
+    );
   });
 });

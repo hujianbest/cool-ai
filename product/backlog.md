@@ -104,7 +104,7 @@ S-9～S-12 的 `依赖: S-*` 是原历史文字，只说明当时切片记录；
 
 ## 当前在途
 
-（无；S-21 已于 2026-08-12 ship，见已交付记录）
+（无；S-54 已于 2026-08-14 ship，见主题簇九）
 
 ## 主题簇一：公开协作
 
@@ -225,6 +225,10 @@ S-9～S-12 的 `依赖: S-*` 是原历史文字，只说明当时切片记录；
 - [x] S-51 整体 UI 改版：DESIGN.md 设计基座与应用壳层 — 主子系统: 不适用；主领域 Capability: 不适用（只建立设计令牌单一事实源并改变入站 UI Adapter，不新增领域事实）；主要架构单元: DESIGN.md（设计令牌/组件规范单一事实源）+ 入站 UI Adapter；消费 Capability: 已交付的 `CAP-PWS-01`、`CAP-MWK-01`、`CAP-COL-01/02/03/04/05`、`CAP-EXE-01`、`CAP-REV-01`、`CAP-GOV-02` 等 UI 呈现面；票据: [`features/035-design-md-ui-redesign/tickets.md`](../features/035-design-md-ui-redesign/tickets.md)；Ship: 2026-08-12，DESIGN.md 落为产品级设计契约、tokens.css 全映射 + 扩展 token、明暗 preview 页面与应用壳层收敛、视觉回归 29/29、typecheck/build 通过；演示判据: owner 能打开 DESIGN.md 配套的 preview/preview-dark 页面看到统一设计语言，应用壳层与公共组件与 token 单一事实源一致，亮暗主题、键盘操作与 axe 关键路径不回归；约束: 工作区=不适用，verified-handle=不适用，sandbox=不适用，凭据=不适用，审批=不适用，独立复核=交付必需（项目级 review 豁免按 AGENTS.md 记录于 progress），审计=不适用；不复制 Clowder 品牌、源码或资产
   - 排期: 2026-08-12 用户指示追加到既有在途切片之后（A-242），同日又指示立即自动完成（A-244 覆盖排队语义）；注：S-51 片号与同日并行交付的 AUD-MWK 审计实现片双占（双 035 特性号同理），见 A-256。
   - 准入: 已交付前置: 既有在途切片完成后解锁（共享 `app/tokens.css`/组件面，避免并行写冲突）；本片建立: DESIGN.md、tokens.css 对齐、preview.html 与应用壳层/公共组件收敛（规划中；grill 收尾后进入 to-spec）。
+
+- [x] S-54 暖陶工作台驾驶舱（左对话 / 中群聊 / 右看板） — 主子系统: 不适用；主领域 Capability: 不适用（只改变设计令牌与入站 UI Adapter，不新增领域事实）；主要架构单元: 入站 UI Adapter；消费 Capability: 已交付的 `CAP-PWS-01`、`CAP-MWK-01`、`CAP-COL-01/02/03/04/05`、`CAP-EXE-01`、`CAP-GOV-02`、`CAP-KNW-01` 等 UI 呈现面；票据: [`features/038-warm-terracotta-cockpit/tickets.md`](../features/038-warm-terracotta-cockpit/tickets.md)；Ship: 2026-08-14，case 暖陶色板替换 Apple 蓝、`DESIGN.md` 重写并归档 Apple 原文、桌面栅格 `56/236/1fr/304`、三栏 chrome 对齐 case、preview 暖陶目录、`npm test` 2577 / build 绿、smoke:context 与 cockpit smoke 绿、smoke:threads 57 断言 / 39 axe；演示判据: owner 打开项目驾驶舱时看到与 `product/ui/cool-ai-design-md-case.html` 一致的暖陶四列——左 Thread 对话目录、中项目群聊、右使命看板/审批/记忆状态——亮暗主题、键盘与 axe 关键路径不回归；约束: 工作区=不适用，verified-handle=不适用，sandbox=不适用，凭据=不适用，审批=不适用，独立复核=交付必需（项目级 review 豁免按 AGENTS.md 记录于 progress），审计=不适用；不复制 Clowder 品牌、源码或资产
+  - 排期: 2026-08-14 用户指示以 case 为布局与颜色约束立即调整 UI；同日指示自动完成并 commit/push（A-263）；037/S-53 AUD-GOV 暂停于 T-02。
+  - 准入: 已交付前置: 035/S-51 设计基座与壳层 token；本片建立: case 暖陶色板投影、桌面四列栅格与三栏视觉对齐（已交付）。
 
 - 2026-08-10 [发现] tests/browser 下 review-browser-full-chain 存在既有不稳定选择器（记忆标题同现于复核与上下文两面板，strict-mode 冲突，复跑即过）；建议按面板 scope 收敛选择器。来源：017 T-05 全量验证。
 - 2026-08-10 [发现] run-start 路径（POST /runs）不接受 replyToMessageId，启动新一轮时无法携带回复链接（composer 已给中性字段错误兜底）。来源：023 T-03。

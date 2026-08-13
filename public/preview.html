@@ -1,9 +1,9 @@
 <!DOCTYPE html>
-<html lang="en">
+<html lang="zh-CN">
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Cool AI Design System - Light Theme</title>
+  <title>Cool AI Design System — 暖陶 Light</title>
   <style>
     @import "../app/tokens.css";
 
@@ -17,7 +17,7 @@
     }
 
     .preview-container {
-      max-width: 1200px;
+      max-width: calc(var(--space-section) * 15);
       margin: 0 auto;
       padding: var(--space-xxl) var(--space-lg);
     }
@@ -44,7 +44,7 @@
 
     .color-grid {
       display: grid;
-      grid-template-columns: repeat(auto-fill, minmax(200px, 1fr));
+      grid-template-columns: repeat(auto-fill, minmax(var(--sidebar-width), 1fr));
       gap: var(--space-md);
       margin-bottom: var(--space-lg);
     }
@@ -52,17 +52,17 @@
     .color-swatch {
       border-radius: var(--rounded-sm);
       overflow: hidden;
-      border: 1px solid var(--color-hairline);
+      border: var(--border-width) solid var(--color-hairline);
     }
 
     .color-sample {
-      height: 120px;
+      height: calc(var(--space-section) * 1.5);
       width: 100%;
     }
 
     .color-info {
       padding: var(--space-sm);
-      background: var(--color-canvas);
+      background: var(--color-canvas-parchment);
       font-size: var(--text-caption);
       font-family: var(--font-mono);
     }
@@ -78,14 +78,14 @@
 
     .token-list {
       display: grid;
-      grid-template-columns: repeat(auto-fill, minmax(300px, 1fr));
+      grid-template-columns: repeat(auto-fill, minmax(var(--context-width), 1fr));
       gap: var(--space-md);
     }
 
     .token-item {
       padding: var(--space-md);
       background: var(--color-canvas);
-      border: 1px solid var(--color-hairline);
+      border: var(--border-width) solid var(--color-hairline);
       border-radius: var(--rounded-sm);
       font-family: var(--font-mono);
       font-size: var(--text-caption);
@@ -110,7 +110,7 @@
 
     .component-item {
       flex: 1;
-      min-width: 200px;
+      min-width: var(--sidebar-width);
     }
 
     button {
@@ -125,7 +125,7 @@
 
     .button-primary {
       background: var(--color-primary);
-      color: var(--color-canvas);
+      color: var(--color-on-primary);
     }
 
     .button-primary:hover {
@@ -133,9 +133,9 @@
     }
 
     .button-secondary {
-      background: var(--color-canvas);
+      background: var(--color-canvas-parchment);
       color: var(--color-primary);
-      border: 1px solid var(--color-primary);
+      border: var(--border-width) solid var(--color-primary);
     }
 
     .button-ghost {
@@ -150,7 +150,7 @@
       font-size: var(--text-fine-print);
       font-weight: 600;
       text-transform: uppercase;
-      border: 1px solid currentColor;
+      border: var(--border-width) solid currentColor;
     }
 
     .status-queued {
@@ -183,8 +183,8 @@
 
     .panel {
       padding: var(--space-lg);
-      background: var(--color-canvas);
-      border: 1px solid var(--color-hairline);
+      background: var(--color-canvas-parchment);
+      border: var(--border-width) solid var(--color-hairline);
       border-radius: var(--rounded-md);
       box-shadow: var(--shadow-panel);
     }
@@ -193,8 +193,8 @@
 <body>
   <div class="preview-container">
     <header class="preview-section">
-      <h1 class="preview-title">Cool AI Design System</h1>
-      <p class="preview-subtitle">Based on Apple DESIGN.md design tokens</p>
+      <h1 class="preview-title">Cool AI 暖陶 Design System</h1>
+      <p class="preview-subtitle">Based on product/ui/DESIGN.md — Cool-AI-warm-terracotta</p>
     </header>
 
     <section class="preview-section">
@@ -203,57 +203,57 @@
         <div class="color-swatch">
           <div class="color-sample" style="background: var(--color-primary)"></div>
           <div class="color-info">
-            <div class="color-name">Action Blue (Primary)</div>
-            <div class="color-value">#0066cc</div>
+            <div class="color-name">Sage accent (color-primary)</div>
+            <div class="color-value">#3E6B5E</div>
           </div>
         </div>
         <div class="color-swatch">
           <div class="color-sample" style="background: var(--color-primary-focus)"></div>
           <div class="color-info">
-            <div class="color-name">Focus Blue</div>
-            <div class="color-value">#0071e3</div>
+            <div class="color-name">Sage focus</div>
+            <div class="color-value">#2F5A4E</div>
+          </div>
+        </div>
+        <div class="color-swatch">
+          <div class="color-sample" style="background: var(--color-rail)"></div>
+          <div class="color-info">
+            <div class="color-name">Rail (color-rail)</div>
+            <div class="color-value">#241F18</div>
+          </div>
+        </div>
+        <div class="color-swatch">
+          <div class="color-sample" style="background: var(--color-canvas)"></div>
+          <div class="color-info">
+            <div class="color-name">Canvas</div>
+            <div class="color-value">#F4EFE5</div>
+          </div>
+        </div>
+        <div class="color-swatch">
+          <div class="color-sample" style="background: var(--color-canvas-parchment)"></div>
+          <div class="color-info">
+            <div class="color-name">Panel parchment (color-canvas-parchment)</div>
+            <div class="color-value">#FBF7EE</div>
+          </div>
+        </div>
+        <div class="color-swatch">
+          <div class="color-sample" style="background: var(--color-surface-pearl)"></div>
+          <div class="color-info">
+            <div class="color-name">Pearl card</div>
+            <div class="color-value">#FFFCF4</div>
           </div>
         </div>
         <div class="color-swatch">
           <div class="color-sample" style="background: var(--color-ink)"></div>
           <div class="color-info">
             <div class="color-name">Ink</div>
-            <div class="color-value">#1d1d1f</div>
+            <div class="color-value">#2B251F</div>
           </div>
         </div>
         <div class="color-swatch">
-          <div class="color-sample" style="background: var(--color-canvas)"></div>
+          <div class="color-sample" style="background: var(--color-rail-ink)"></div>
           <div class="color-info">
-            <div class="color-name">Canvas (White)</div>
-            <div class="color-value">#ffffff</div>
-          </div>
-        </div>
-        <div class="color-swatch">
-          <div class="color-sample" style="background: var(--color-canvas-parchment)"></div>
-          <div class="color-info">
-            <div class="color-name">Parchment</div>
-            <div class="color-value">#f5f5f7</div>
-          </div>
-        </div>
-        <div class="color-swatch">
-          <div class="color-sample" style="background: var(--color-surface-pearl)"></div>
-          <div class="color-info">
-            <div class="color-name">Pearl</div>
-            <div class="color-value">#fafafc</div>
-          </div>
-        </div>
-        <div class="color-swatch">
-          <div class="color-sample" style="background: var(--color-surface-black)"></div>
-          <div class="color-info">
-            <div class="color-name">Black</div>
-            <div class="color-value">#000000</div>
-          </div>
-        </div>
-        <div class="color-swatch">
-          <div class="color-sample" style="background: var(--color-body-muted)"></div>
-          <div class="color-info">
-            <div class="color-name">Body Muted</div>
-            <div class="color-value">#cccccc</div>
+            <div class="color-name">Rail ink</div>
+            <div class="color-value">#EDE5D8</div>
           </div>
         </div>
       </div>
@@ -322,11 +322,11 @@
         </div>
         <div class="token-item">
           <div class="token-name">--rounded-md</div>
-          <div class="token-value">11px</div>
+          <div class="token-value">12px</div>
         </div>
         <div class="token-item">
           <div class="token-name">--rounded-lg</div>
-          <div class="token-value">18px</div>
+          <div class="token-value">16px</div>
         </div>
         <div class="token-item">
           <div class="token-name">--rounded-pill</div>
@@ -361,7 +361,7 @@
 
     <footer class="preview-section">
       <p style="color: var(--color-ink-muted-48); font-size: var(--text-caption);">
-        Design System based on Apple DESIGN.md • Cool AI Project
+        Design System based on DESIGN.md • Cool AI 暖陶
       </p>
     </footer>
   </div>

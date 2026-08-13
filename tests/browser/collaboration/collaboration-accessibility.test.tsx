@@ -329,4 +329,25 @@ describe("narrow collaboration cockpit accessibility", () => {
     ).toBeGreaterThanOrEqual(4.5);
     expect(cockpit).not.toMatch(/\.collaboration-mobile-tabs[^}]*#[0-9A-Fa-f]{3,8}/);
   });
+
+  it("floats the composer on overlay shadows and keeps chat chrome on tokens", () => {
+    const tokens = readFileSync("app/tokens.css", "utf8");
+    const cockpit = readFileSync("app/cockpit.css", "utf8");
+
+    expect(tokens).toContain("--accent: var(--color-primary)");
+    expect(tokens).toContain("--surface: var(--color-on-primary)");
+    expect(tokens).toContain("--text-muted: var(--text-subtle)");
+    expect(cockpit).toMatch(
+      /\.composer\s*\{[^}]*background:\s*var\(--color-card-strong\)[^}]*border-radius:\s*var\(--rounded-lg\)[^}]*box-shadow:\s*var\(--shadow-1\),\s*var\(--shadow-2\)/s,
+    );
+    expect(cockpit).toMatch(
+      /\.cockpit-flow \.panel-heading\s*\{[^}]*background:\s*var\(--surface-panel\)[^}]*border-bottom:[^;]*var\(--border-subtle\)/s,
+    );
+    expect(cockpit).toMatch(
+      /\.collaboration-timeline\s*\{[^}]*flex:\s*1[^}]*min-height:\s*0/s,
+    );
+    expect(cockpit).toMatch(
+      /\.structured-block\s*\{[^}]*background:\s*var\(--surface-card\)[^}]*border-radius:\s*var\(--rounded-md\)/s,
+    );
+  });
 });

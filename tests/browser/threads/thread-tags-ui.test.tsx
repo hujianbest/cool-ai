@@ -1089,3 +1089,18 @@ describe("tag styling contract", () => {
     }
   });
 });
+
+describe("thread catalog chrome", () => {
+  it("styles search as a pill and current thread rows with accent-soft", () => {
+    const cockpit = readFileSync("app/cockpit.css", "utf8");
+    const tokens = readFileSync("app/tokens.css", "utf8");
+
+    expect(tokens).toMatch(/--interactive-accent-soft\s*:/);
+    expect(cockpit).toMatch(
+      /\.thread-search input\s*\{[^}]*border-radius:\s*var\(--rounded-pill\)[^}]*min-height:\s*var\(--control-min\)/s,
+    );
+    expect(cockpit).toMatch(
+      /\.thread-list-entry\[aria-current\]\s*\{[^}]*background:\s*var\(--interactive-accent-soft\)[^}]*color:\s*var\(--text-primary\)/s,
+    );
+  });
+});

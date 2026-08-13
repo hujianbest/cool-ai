@@ -2,24 +2,28 @@
   color-scheme: light;
 
   /* DESIGN.md Core Color Tokens */
-  --color-primary: #0066cc;
-  --color-primary-focus: #0071e3;
-  --color-primary-on-dark: #2997ff;
-  --color-ink: #1d1d1f;
-  --color-body: #1d1d1f;
-  --color-body-on-dark: #ffffff;
-  --color-body-muted: #cccccc;
-  --color-ink-muted-80: #333333;
-  --color-ink-muted-48: #7a7a7a;
-  --color-divider-soft: #f0f0f0;
-  --color-hairline: #e0e0e0;
-  --color-canvas: #ffffff;
-  --color-canvas-parchment: #f5f5f7;
-  --color-surface-pearl: #fafafc;
-  --color-surface-tile-1: #272729;
-  --color-surface-tile-2: #2a2a2c;
-  --color-surface-tile-3: #252527;
-  --color-surface-black: #000000;
+  --color-primary: #3E6B5E;
+  --color-primary-focus: #2F5A4E;
+  --color-primary-on-dark: #82B8A5;
+  --color-ink: #2B251F;
+  --color-body: #2B251F;
+  --color-body-on-dark: #EDE5D8;
+  --color-body-muted: #A99D8C;
+  --color-ink-muted-80: #6F665A;
+  --color-ink-muted-48: #9C9182;
+  --color-divider-soft: #DEDAD1;
+  --color-hairline: #BDB8B0;
+  --color-canvas: #F4EFE5;
+  --color-canvas-parchment: #FBF7EE;
+  --color-surface-pearl: #FFFCF4;
+  --color-surface-tile-1: #15110D;
+  --color-surface-tile-2: #1C1712;
+  --color-surface-tile-3: #251F18;
+  --color-surface-black: #0D0B08;
+  --color-on-primary: #FFFFFF;
+  --color-rail: #241F18;
+  --color-rail-ink: #EDE5D8;
+  --color-card-strong: #FFFFFF;
 
   /* DESIGN.md Typography Tokens */
   --font-display: "SF Pro Display", system-ui, -apple-system, sans-serif;
@@ -81,8 +85,8 @@
   --rounded-none: 0px;
   --rounded-xs: 5px;
   --rounded-sm: 8px;
-  --rounded-md: 11px;
-  --rounded-lg: 18px;
+  --rounded-md: 12px;
+  --rounded-lg: 16px;
   --rounded-pill: 9999px;
   --rounded-full: 9999px;
 
@@ -108,12 +112,12 @@
   --execution-review-facts-columns: minmax(0, 1fr) minmax(0, 2fr);
 
   /* Semantic Status Colors */
-  --status-queued-surface: #FAF3E0;
+  --status-queued-surface: #FFF8E8;
   --status-running-surface: #E1ECE8;
   --status-success-surface: #E2EDE4;
   --status-danger-surface: #F4E3DC;
-  --status-queued-color: #86662F;
-  --status-running-color: #3F675F;
+  --status-queued-color: #96691C;
+  --status-running-color: #3E6B5E;
   --status-success-color: #3F6A4D;
   --status-danger-color: #A0443F;
 
@@ -136,20 +140,26 @@
   --surface-sunken: var(--color-canvas-parchment);
   --surface-panel: var(--color-canvas-parchment);
   --surface-main: var(--color-canvas);
-  --surface-card: var(--color-canvas);
+  --surface-card: var(--color-surface-pearl);
+  --surface-muted: var(--color-canvas-parchment);
   --text-primary: var(--color-ink);
   --text-secondary: var(--color-ink-muted-80);
-  /* DESIGN.md reserves ink-muted-48 for disabled/fine-print; continuous
-     secondary text needs an AA-compliant tone (4.5+ on canvas & parchment). */
-  --text-subtle: #666666;
+  /* DESIGN.md faint (#9C9182) fails WCAG AA 4.5:1 on parchment/canvas as UI
+     labels; map subtle text to muted-80 without changing surfaces. */
+  --text-subtle: var(--color-ink-muted-80);
+  --border: var(--color-hairline);
   --border-subtle: var(--color-divider-soft);
   --border-strong: var(--color-ink-muted-80);
   --interactive-primary: var(--color-primary);
   --interactive-primary-hover: var(--color-primary-focus);
   --interactive-soft: var(--color-canvas-parchment);
-  --interactive-soft-hover: #E8E8E8;
+  --interactive-soft-hover: #EFEAE2;
+  --interactive-accent-soft: color-mix(in srgb, var(--color-primary) 13%, var(--color-canvas-parchment));
 
   /* Legacy Aliases */
+  --accent: var(--color-primary);
+  --surface: var(--color-on-primary);
+  --text-muted: var(--text-subtle);
   --success: var(--status-success-color);
   --warning: var(--status-queued-color);
   --danger: var(--status-danger-color);
@@ -185,9 +195,9 @@
   --focus-ring: 0 0 0 2px var(--color-primary-focus);
 
   /* Layout Tokens */
-  --activity-bar-width: 3rem;
-  --sidebar-width: 15.5rem;
-  --context-width: 20rem;
+  --activity-bar-width: 3.5rem;
+  --sidebar-width: 14.75rem;
+  --context-width: 19rem;
   --content-min: 30rem;
   --control-min: 2.75rem;
   --breakpoint-cockpit: 56.25rem;
@@ -204,36 +214,40 @@
   color-scheme: dark;
 
   /* DESIGN.md Dark Theme Core Color Tokens */
-  --color-primary: #0066cc;
-  --color-primary-focus: #0071e3;
-  --color-primary-on-dark: #2997ff;
-  --color-ink: #ffffff;
-  --color-body: #ffffff;
-  --color-body-on-dark: #ffffff;
-  --color-body-muted: #cccccc;
-  --color-ink-muted-80: #cccccc;
-  --color-ink-muted-48: #7a7a7a;
-  --color-divider-soft: #2a2a2c;
-  --color-hairline: #3a3a3c;
-  --color-canvas: #000000;
-  --color-canvas-parchment: #1c1c1e;
-  --color-surface-pearl: #2c2c2e;
-  --color-surface-tile-1: #272729;
-  --color-surface-tile-2: #2a2a2c;
-  --color-surface-tile-3: #252527;
-  --color-surface-black: #000000;
+  --color-primary: #82B8A5;
+  --color-primary-focus: #9ACBBA;
+  --color-primary-on-dark: #82B8A5;
+  --color-ink: #EDE5D8;
+  --color-body: #EDE5D8;
+  --color-body-on-dark: #EDE5D8;
+  --color-body-muted: #A99D8C;
+  --color-ink-muted-80: #A99D8C;
+  --color-ink-muted-48: #786E60;
+  --color-divider-soft: #39342E;
+  --color-hairline: #5B554D;
+  --color-canvas: #15110D;
+  --color-canvas-parchment: #1C1712;
+  --color-surface-pearl: #251F18;
+  --color-surface-tile-1: #15110D;
+  --color-surface-tile-2: #1C1712;
+  --color-surface-tile-3: #251F18;
+  --color-surface-black: #0D0B08;
+  --color-on-primary: #10100C;
+  --color-rail: #0D0B08;
+  --color-rail-ink: #EDE5D8;
+  --color-card-strong: #2B241B;
 
   /* Dark Theme Status Surfaces */
   --status-queued-surface: #3B3322;
   --status-running-surface: #1a2f29;
   --status-success-surface: #253A2C;
-  --status-danger-surface: #402925;
+  --status-danger-surface: #3F2824;
 
   /* Dark Theme Status Colors */
-  --status-queued-color: #D4B66F;
-  --status-running-color: #83B3A8;
-  --status-success-color: #8FC69E;
-  --status-danger-color: #E79288;
+  --status-queued-color: #D9A94F;
+  --status-running-color: #82B8A5;
+  --status-success-color: #86B98F;
+  --status-danger-color: #D08075;
 
   /* Dark Theme Agent Colors */
   --agent-warm: #D88B72;
@@ -250,23 +264,25 @@
   --agent-olive-fg: #C5CF8A;
   --agent-olive-bg: #343822;
 
-  /* Dark Theme Semantic Surface Mapping */
-  --surface-sunken: var(--color-surface-tile-1);
-  --surface-panel: var(--color-surface-tile-2);
-  --surface-main: var(--color-surface-tile-1);
-  --surface-card: var(--color-surface-tile-3);
+  /* Dark Theme Semantic Surface Mapping
+     Core colors above already remap canvas/parchment/pearl; keep the same
+     aliases so sidebar/context = panel and flow = canvas. */
+  --surface-sunken: var(--color-canvas-parchment);
+  --surface-panel: var(--color-canvas-parchment);
+  --surface-main: var(--color-canvas);
+  --surface-card: var(--color-surface-pearl);
+  --surface-muted: var(--color-canvas-parchment);
   --text-primary: var(--color-ink);
   --text-secondary: var(--color-ink-muted-80);
-  /* Dark counterpart of the light AA override for secondary text. */
-  --text-subtle: #98989d;
+  --text-subtle: var(--color-ink-muted-80);
+  --border: var(--color-hairline);
   --border-subtle: var(--color-divider-soft);
   --border-strong: var(--color-ink-muted-80);
-  --interactive-primary: var(--color-primary-on-dark);
-  --interactive-primary-hover: #4da6ff;
-  /* AA: #2997ff text on the previous green tints (#2C403B/#365149) reached only
-     ~3.7:1; neutral tile tones keep selected/hover labels at 4.5+. */
-  --interactive-soft: #272729;
-  --interactive-soft-hover: #3a3a3c;
+  --interactive-primary: var(--color-primary);
+  --interactive-primary-hover: var(--color-primary-focus);
+  --interactive-soft: var(--color-canvas-parchment);
+  --interactive-soft-hover: #2B241B;
+  --interactive-accent-soft: color-mix(in srgb, var(--color-primary) 18%, var(--color-canvas-parchment));
 
   /* Dark Theme Legacy Aliases */
   --success: var(--status-success-color);
@@ -279,8 +295,8 @@
   --shadow-panel: rgba(255, 255, 255, 0.08) 0px 1px 0px;
 
   /* Dark Theme Focus Ring */
-  --focus-ring-color: #9AC6BC;
-  --focus-ring: 0 0 0 2px #9AC6BC;
+  --focus-ring-color: #9ACBBA;
+  --focus-ring: 0 0 0 2px var(--color-primary-focus);
 }
 
 /* responsive-cockpit */

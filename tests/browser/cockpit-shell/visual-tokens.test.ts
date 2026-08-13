@@ -28,6 +28,10 @@ const coreColorTokens = [
   "color-surface-tile-2",
   "color-surface-tile-3",
   "color-surface-black",
+  "color-on-primary",
+  "color-rail",
+  "color-rail-ink",
+  "color-card-strong",
 ] as const;
 
 const typographyTokens = [
@@ -214,20 +218,63 @@ describe("DESIGN.md token contract", () => {
   });
 
   it("keeps DESIGN.md color values synchronized", () => {
-    // Action Blue from DESIGN.md
-    expect(light.get("color-primary")).toBe("#0066cc");
-    expect(dark.get("color-primary")).toBe("#0066cc");
-    expect(light.get("color-primary-focus")).toBe("#0071e3");
-    expect(dark.get("color-primary-focus")).toBe("#0071e3");
-    expect(light.get("color-primary-on-dark")).toBe("#2997ff");
-    expect(dark.get("color-primary-on-dark")).toBe("#2997ff");
+    expect(designMd).toContain('primary: "#3E6B5E"');
+    expect(designMd).toContain('primary-focus: "#2F5A4E"');
+    expect(designMd).toContain('primary-on-dark: "#82B8A5"');
+    expect(designMd).toContain('ink: "#2B251F"');
+    expect(designMd).toContain('canvas: "#F4EFE5"');
+    expect(designMd).toContain('canvas-parchment: "#FBF7EE"');
+    expect(designMd).toContain('surface-pearl: "#FFFCF4"');
+    expect(designMd).toContain('rail: "#241F18"');
+    expect(designMd).toContain('rail-ink: "#EDE5D8"');
+    expect(designMd).toMatch(/^rounded:/m);
+    expect(designMd).toMatch(/md:\s*12px/);
 
-    // Core surface colors from DESIGN.md
-    expect(light.get("color-ink")).toBe("#1d1d1f");
-    expect(light.get("color-canvas")).toBe("#ffffff");
-    expect(light.get("color-canvas-parchment")).toBe("#f5f5f7");
-    expect(light.get("color-surface-pearl")).toBe("#fafafc");
-    expect(light.get("color-surface-black")).toBe("#000000");
+    expect(light.get("color-primary")).toBe("#3E6B5E");
+    expect(dark.get("color-primary")).toBe("#82B8A5");
+    expect(light.get("color-primary-focus")).toBe("#2F5A4E");
+    expect(dark.get("color-primary-focus")).toBe("#9ACBBA");
+    expect(light.get("color-primary-on-dark")).toBe("#82B8A5");
+    expect(dark.get("color-primary-on-dark")).toBe("#82B8A5");
+
+    expect(light.get("color-ink")).toBe("#2B251F");
+    expect(light.get("color-body")).toBe("#2B251F");
+    expect(light.get("color-body-on-dark")).toBe("#EDE5D8");
+    expect(light.get("color-ink-muted-80")).toBe("#6F665A");
+    expect(light.get("color-ink-muted-48")).toBe("#9C9182");
+    expect(light.get("color-canvas")).toBe("#F4EFE5");
+    expect(light.get("color-canvas-parchment")).toBe("#FBF7EE");
+    expect(light.get("color-surface-pearl")).toBe("#FFFCF4");
+    expect(light.get("color-on-primary")).toBe("#FFFFFF");
+    expect(light.get("color-rail")).toBe("#241F18");
+    expect(light.get("color-rail-ink")).toBe("#EDE5D8");
+    expect(light.get("color-card-strong")).toBe("#FFFFFF");
+    expect(light.get("color-surface-black")).toBe("#0D0B08");
+    expect(light.get("color-surface-tile-1")).toBe("#15110D");
+    expect(light.get("color-surface-tile-2")).toBe("#1C1712");
+    expect(light.get("color-surface-tile-3")).toBe("#251F18");
+
+    expect(dark.get("color-ink")).toBe("#EDE5D8");
+    expect(dark.get("color-canvas")).toBe("#15110D");
+    expect(dark.get("color-canvas-parchment")).toBe("#1C1712");
+    expect(dark.get("color-surface-pearl")).toBe("#251F18");
+    expect(dark.get("color-card-strong")).toBe("#2B241B");
+    expect(dark.get("color-on-primary")).toBe("#10100C");
+    expect(dark.get("color-rail")).toBe("#0D0B08");
+    expect(dark.get("color-rail-ink")).toBe("#EDE5D8");
+    expect(dark.get("color-ink-muted-80")).toBe("#A99D8C");
+    expect(dark.get("color-ink-muted-48")).toBe("#786E60");
+  });
+
+  it("projects warm-terracotta layout widths and radius", () => {
+    expect(light.get("activity-bar-width")).toBe("3.5rem");
+    expect(light.get("sidebar-width")).toBe("14.75rem");
+    expect(light.get("context-width")).toBe("19rem");
+    expect(light.get("control-min")).toBe("2.75rem");
+    expect(light.get("rounded-sm")).toBe("8px");
+    expect(light.get("rounded-md")).toBe("12px");
+    expect(light.get("rounded-lg")).toBe("16px");
+    expect(light.get("rounded-pill")).toBe("9999px");
   });
 
   it("keeps color literals confined to tokens.css", () => {
@@ -251,9 +298,11 @@ describe("light and dark theme tokens", () => {
       "surface-panel",
       "surface-main",
       "surface-card",
+      "surface-muted",
       "text-primary",
       "text-secondary",
       "text-subtle",
+      "border",
       "border-subtle",
       "border-strong",
       "interactive-primary",
@@ -287,7 +336,7 @@ describe("light and dark theme tokens", () => {
       /body\s*\{[^}]*background:\s*var\(--surface-sunken\)[^}]*color:\s*var\(--text-primary\)/s,
       /(?:button,\s*input,\s*select,\s*textarea)\s*\{[^}]*border:[^;]*var\(--border-subtle\)[^}]*background:\s*var\(--surface-card\)[^}]*color:\s*var\(--text-primary\)/s,
       /\.button-primary\s*\{[^}]*background:\s*var\(--interactive-primary\)[^}]*color:\s*var\(--surface-card\)/s,
-      /\.activity-bar\s*\{[^}]*background:\s*var\(--surface-panel\)[^}]*border-right:[^;]*var\(--border-subtle\)/s,
+      /\.activity-bar\s*\{[^}]*background:\s*var\(--color-rail\)[^}]*color:\s*var\(--color-rail-ink\)/s,
       /:focus-visible[\s\S]*?\{[^}]*box-shadow:\s*var\(--focus-ring\)/,
       /\.status-label\.status-queued\s*\{[^}]*color:\s*var\(--warning\)[^}]*background:\s*var\(--status-queued-surface\)/s,
       /\.status-label\.status-running\s*\{[^}]*color:\s*var\(--interactive-primary\)[^}]*background:\s*var\(--status-running-surface\)/s,
@@ -301,10 +350,15 @@ describe("light and dark theme tokens", () => {
       ["body text", "text-primary", "surface-sunken", 4.5],
       ["card text", "text-primary", "surface-card", 4.5],
       ["panel secondary text", "text-secondary", "surface-panel", 4.5],
-      ["panel subtle text", "text-subtle", "surface-panel", 3.0],
+      ["panel subtle text", "text-subtle", "surface-panel", 4.5],
+      ["canvas subtle text", "text-subtle", "surface-main", 4.5],
+      ["card subtle text", "text-subtle", "surface-card", 4.5],
       ["primary button", "surface-card", "interactive-primary", 4.5],
       ["primary button hover", "surface-card", "interactive-primary-hover", 4.5],
-      ["focus on card", "focus-ring-color", "surface-card", 3],
+      ["selected row", "interactive-primary", "interactive-soft", 4.5],
+      ["selected row hover", "interactive-primary", "interactive-soft-hover", 4.5],
+      ["rail text", "color-rail-ink", "color-rail", 4.5],
+      ["rail current item", "color-on-primary", "interactive-primary", 4.5],
       ["focus on panel", "focus-ring-color", "surface-panel", 3],
       ["queued status", "warning", "status-queued-surface", 4.5],
       ["running status", "interactive-primary", "status-running-surface", 4.5],

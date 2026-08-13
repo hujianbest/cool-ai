@@ -208,8 +208,8 @@ describe("real browser theme hydration", () => {
         ),
       )
       .toMatchObject({
-        // DESIGN.md dark surface: --surface-main → --color-surface-tile-1
-        surfaceMain: "#272729",
+        // DESIGN.md dark surface: --surface-main → --color-canvas
+        surfaceMain: "#15110D",
         theme: "dark",
       });
     const themeAtFirstContentfulPaint = await page.evaluate(

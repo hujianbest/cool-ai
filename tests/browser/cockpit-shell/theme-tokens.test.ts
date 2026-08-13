@@ -16,26 +16,34 @@ describe("DESIGN.md visual token discipline", () => {
 
     // DESIGN.md color tokens should be present
     for (const declaration of [
-      "--color-primary: #0066cc",
-      "--color-primary-focus: #0071e3",
-      "--color-primary-on-dark: #2997ff",
-      "--color-ink: #1d1d1f",
-      "--color-body: #1d1d1f",
-      "--color-canvas: #ffffff",
-      "--color-canvas-parchment: #f5f5f7",
-      "--color-surface-pearl: #fafafc",
-      "--color-surface-black: #000000",
-      "--color-body-muted: #cccccc",
-      "--color-divider-soft: #f0f0f0",
-      "--color-hairline: #e0e0e0",
+      "--color-primary: #3E6B5E",
+      "--color-primary-focus: #2F5A4E",
+      "--color-primary-on-dark: #82B8A5",
+      "--color-ink: #2B251F",
+      "--color-body: #2B251F",
+      "--color-canvas: #F4EFE5",
+      "--color-canvas-parchment: #FBF7EE",
+      "--color-surface-pearl: #FFFCF4",
+      "--color-surface-black: #0D0B08",
+      "--color-on-primary: #FFFFFF",
+      "--color-rail: #241F18",
+      "--color-rail-ink: #EDE5D8",
+      "--color-card-strong: #FFFFFF",
+      "--color-ink-muted-80: #6F665A",
+      "--color-ink-muted-48: #9C9182",
     ]) {
       expect(tokens).toContain(declaration);
     }
 
     // DESIGN.md should contain the source values
-    expect(designMd).toContain("primary: \"#0066cc\"");
-    expect(designMd).toContain("ink: \"#1d1d1f\"");
-    expect(designMd).toContain("canvas: \"#ffffff\"");
+    expect(designMd).toContain("primary: \"#3E6B5E\"");
+    expect(designMd).toContain("ink: \"#2B251F\"");
+    expect(designMd).toContain("canvas: \"#F4EFE5\"");
+    expect(designMd).toContain("rail: \"#241F18\"");
+    expect(designMd).toContain("amber: \"#96691C\"");
+    expect(designMd).toContain("green: \"#3F6A4D\"");
+    expect(designMd).toContain("terra: \"#A0443F\"");
+    expect(designMd).toContain("blue: \"#41607F\"");
   });
 
   it("defines DESIGN.md typography scale", () => {
@@ -87,8 +95,8 @@ describe("DESIGN.md visual token discipline", () => {
       "--rounded-none: 0px",
       "--rounded-xs: 5px",
       "--rounded-sm: 8px",
-      "--rounded-md: 11px",
-      "--rounded-lg: 18px",
+      "--rounded-md: 12px",
+      "--rounded-lg: 16px",
       "--rounded-pill: 9999px",
     ]) {
       expect(tokens).toContain(declaration);
@@ -113,17 +121,23 @@ describe("legacy cockpit token compatibility", () => {
       "--surface-sunken: var(--color-canvas-parchment)",
       "--surface-panel: var(--color-canvas-parchment)",
       "--surface-main: var(--color-canvas)",
-      "--surface-card: var(--color-canvas)",
+      "--surface-card: var(--color-surface-pearl)",
+      "--surface-muted: var(--color-canvas-parchment)",
       "--text-primary: var(--color-ink)",
       "--text-secondary: var(--color-ink-muted-80)",
-      // AA override: DESIGN.md ink-muted-48 (#7a7a7a) is for disabled/fine-print
-      // and fails 4.5:1 on light surfaces, so --text-subtle uses a darker tone.
-      "--text-subtle: #666666",
+      // AA: DESIGN.md faint (#9C9182 / #786E60) fails 4.5:1 on canvas/panel
+      // as UI labels; --text-subtle maps to muted-80 without changing surfaces.
+      "--text-subtle: var(--color-ink-muted-80)",
+      "--border: var(--color-hairline)",
       "--border-subtle: var(--color-divider-soft)",
       "--border-strong: var(--color-ink-muted-80)",
       "--interactive-primary: var(--color-primary)",
       "--interactive-primary-hover: var(--color-primary-focus)",
       "--interactive-soft: var(--color-canvas-parchment)",
+      "--activity-bar-width: 3.5rem",
+      "--sidebar-width: 14.75rem",
+      "--context-width: 19rem",
+      "--control-min: 2.75rem",
     ]) {
       expect(tokens).toContain(declaration);
     }
@@ -222,7 +236,7 @@ describe("visual token discipline", () => {
     const css = existsSync(cockpitPath) ? readFileSync(cockpitPath, "utf8") : "";
 
     expect(css).toMatch(
-      /grid-template-columns:\s*var\(--activity-bar-width\)\s+var\(--sidebar-width\)\s+minmax\(var\(--content-min\),\s*1fr\)\s+var\(--context-width\)/,
+      /grid-template-columns:\s*var\(--activity-bar-width\)\s+var\(--sidebar-width\)\s+minmax\(0,\s*1fr\)\s+var\(--context-width\)/,
     );
     expect(css).toMatch(
       /(?:button|input)[^{]*\{[^}]*min-height:\s*var\(--control-min\)/s,

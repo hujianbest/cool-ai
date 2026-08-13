@@ -1,4 +1,5 @@
 // @vitest-environment jsdom
+import { readFileSync } from "node:fs";
 import { act, render, screen, waitFor, within } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { afterEach, describe, expect, it, vi } from "vitest";
@@ -468,5 +469,14 @@ describe("Approval center panel", () => {
     });
     expect(await screen.findByText("没有待裁决的请求。")).toBeInTheDocument();
     expect(screen.queryByText("node -v")).toBeNull();
+  });
+});
+
+describe("approval center chrome", () => {
+  it("elevates approval cards with overlay shadows", () => {
+    const css = readFileSync("app/cockpit.css", "utf8");
+    expect(css).toMatch(
+      /\.approval-center-list \.task-summary\s*\{[^}]*background:\s*var\(--color-card-strong\)[^}]*border-radius:\s*var\(--rounded-lg\)[^}]*box-shadow:\s*var\(--shadow-1\),\s*var\(--shadow-2\)/s,
+    );
   });
 });

@@ -1,4 +1,5 @@
 // @vitest-environment jsdom
+import { readFileSync } from "node:fs";
 import { act, render, screen, waitFor, within } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { afterEach, describe, expect, it, vi } from "vitest";
@@ -159,5 +160,14 @@ describe("Shared Memory panel", () => {
     const history = await screen.findByRole("list", { name: "共享记忆历史" });
     expect(within(history).getByText("Old goal")).toBeInTheDocument();
     expect(within(history).getByText("已失效")).toBeInTheDocument();
+  });
+});
+
+describe("memory panel chrome", () => {
+  it("renders memory cards on pearl surfaces with case radius", () => {
+    const css = readFileSync("app/cockpit.css", "utf8");
+    expect(css).toMatch(
+      /\.memory-list \.task-summary\s*\{[^}]*background:\s*var\(--surface-card\)[^}]*border-radius:\s*var\(--rounded-md\)/s,
+    );
   });
 });

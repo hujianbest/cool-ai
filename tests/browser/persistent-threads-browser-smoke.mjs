@@ -636,7 +636,8 @@ try {
   assert.equal(persisted.body.threads.length, 1);
   assert.equal(persisted.body.threads[0].title, "历史协作");
   const legacyThreadId = persisted.body.threads[0].id;
-  assert.equal(inspectDatabase().version, 20);
+  // A-237 same-wave pin: current canonical schema identity is userVersion 23.
+  assert.equal(inspectDatabase().version, 23);
   pass("current-persistent-default-thread", { legacyThreadId });
   await axe(page, "current persistent project");
 
@@ -2140,8 +2141,33 @@ try {
     run_retried: "运行已重试",
     run_started: "运行已开始",
     run_stopped: "运行已停止",
+    thread_deleted: "线程已移入回收站",
+    thread_purged: "线程已永久删除",
+    thread_restored: "线程已恢复",
     task_claimed: "任务已认领",
     tasks_created: "任务已创建",
+  };
+  const PROJECT_WORKSPACE_AUDIT_EVENT_TYPE_COPY = {
+    member_joined: "成员已加入",
+    member_removed: "成员已移除",
+    project_created: "项目已创建",
+    validation_policy_changed: "验证政策已变更",
+    workspace_bound: "工作区已绑定",
+    workspace_rebound: "工作区已改绑",
+  };
+  const MISSION_WORK_AUDIT_EVENT_TYPE_COPY = {
+    mission_created: "使命已创建",
+    task_completed: "任务已完成",
+    task_created: "任务已创建",
+    task_failed: "任务已失败",
+    task_started: "任务已开始",
+    work_item_created: "看板任务已创建",
+    work_item_status_changed: "看板任务状态已变更",
+  };
+  const AUDIT_EVENT_TYPE_COPY = {
+    ...COLLABORATION_AUDIT_EVENT_TYPE_COPY,
+    ...PROJECT_WORKSPACE_AUDIT_EVENT_TYPE_COPY,
+    ...MISSION_WORK_AUDIT_EVENT_TYPE_COPY,
   };
   const auditApi = await page.evaluate(async (projectId) => {
     const pages = [];
@@ -2173,16 +2199,18 @@ try {
       "audit events must be globally descending by outbox_seq",
     );
   }
-  // This smoke runs no safe-execution work, so every projected event is
-  // collaboration-sourced and carries the thread identity; owner messages
-  // posted outside a run start keep runId null.
+  // After 036/035 source-owner outbox, this smoke also projects project and
+  // mission events (member_removed, mission_created, …). Collaboration
+  // thread-identity assertions apply only to collaboration-typed rows.
+  const collaborationEvents = auditEvents.filter((event) =>
+    Object.hasOwn(COLLABORATION_AUDIT_EVENT_TYPE_COPY, event.eventType),
+  );
+  assert.ok(collaborationEvents.length > 0, "collaboration events must be present");
   for (const event of auditEvents) {
-    assert.ok(
-      Object.hasOwn(COLLABORATION_AUDIT_EVENT_TYPE_COPY, event.eventType),
-      `unexpected non-collaboration event type ${event.eventType}`,
-    );
-    assert.equal(event.executionId, null);
-    assert.equal(typeof event.payload.threadId, "string");
+    if (Object.hasOwn(COLLABORATION_AUDIT_EVENT_TYPE_COPY, event.eventType)) {
+      assert.equal(event.executionId, null);
+      assert.equal(typeof event.payload.threadId, "string");
+    }
   }
   const auditEventTypes = new Set(auditEvents.map((event) => event.eventType));
   for (const required of [
@@ -2257,7 +2285,11 @@ try {
     }
   })();
   assert.equal(auditDatabaseCounts.outbox, auditEvents.length, "API must expose every outbox event");
-  assert.equal(auditDatabaseCounts.collaboration, auditEvents.length);
+  assert.equal(
+    auditDatabaseCounts.collaboration,
+    collaborationEvents.length,
+    "collaboration outbox rows must match collaboration-typed API events",
+  );
   assert.equal(auditDatabaseCounts.projection, auditDatabaseCounts.outbox, "read path must catch up the projection");
   assert.equal(auditDatabaseCounts.checkpoint, auditDatabaseCounts.maxSeq, "checkpoint must be caught up");
   assert.equal(auditDatabaseCounts.noise, 0, "noise event types must never enter the audit trail");
@@ -2291,13 +2323,16 @@ try {
   );
   const firstRowText = await auditRows.first().innerText();
   assert.ok(
-    firstRowText.includes(COLLABORATION_AUDIT_EVENT_TYPE_COPY[auditEvents[0].eventType]),
+    firstRowText.includes(
+      AUDIT_EVENT_TYPE_COPY[auditEvents[0].eventType] ?? auditEvents[0].eventType,
+    ),
     `first audit row must show readable type copy: ${firstRowText}`,
   );
   const lastFirstPageRowText = await auditRows.nth(firstPageRows - 1).innerText();
   assert.ok(
     lastFirstPageRowText.includes(
-      COLLABORATION_AUDIT_EVENT_TYPE_COPY[auditEvents[firstPageRows - 1].eventType],
+      AUDIT_EVENT_TYPE_COPY[auditEvents[firstPageRows - 1].eventType]
+        ?? auditEvents[firstPageRows - 1].eventType,
     ),
     `last first-page audit row must keep descending order: ${lastFirstPageRowText}`,
   );
@@ -2318,8 +2353,8 @@ try {
   );
   assert.equal(
     await auditList.locator(".status-label.status-queued").count(),
-    auditEvents.length,
-    "every rendered row must carry the collaboration domain badge",
+    collaborationEvents.length,
+    "collaboration rows must carry the collaboration domain badge",
   );
   const excerptRow = auditRows.nth(auditEvents.indexOf(attachOwnerMessage));
   assert.equal(
@@ -2391,8 +2426,10 @@ try {
   await auditContextPanel.getByText("已追平", { exact: true }).waitFor();
   const darkFirstRowText = await auditRows.first().innerText();
   assert.ok(
-    darkFirstRowText.includes(COLLABORATION_AUDIT_EVENT_TYPE_COPY[auditEvents[0].eventType]),
-    "dark theme must keep the collaboration audit presentation",
+    darkFirstRowText.includes(
+      AUDIT_EVENT_TYPE_COPY[auditEvents[0].eventType] ?? auditEvents[0].eventType,
+    ),
+    "dark theme must keep the audit presentation",
   );
   await axe(page, "desktop dark collaboration audit panel");
   await page.screenshot({ fullPage: true, path: evidence.auditDark });
@@ -2420,8 +2457,10 @@ try {
   const narrowRows = narrowAuditList.getByRole("listitem");
   const narrowFirstRowText = await narrowRows.first().innerText();
   assert.ok(
-    narrowFirstRowText.includes(COLLABORATION_AUDIT_EVENT_TYPE_COPY[auditEvents[0].eventType]),
-    "narrow drawer must keep the collaboration audit presentation",
+    narrowFirstRowText.includes(
+      AUDIT_EVENT_TYPE_COPY[auditEvents[0].eventType] ?? auditEvents[0].eventType,
+    ),
+    "narrow drawer must keep the audit presentation",
   );
   assert.equal(
     await narrowRows.nth(auditEvents.indexOf(attachOwnerMessage))

@@ -1,4 +1,5 @@
 // @vitest-environment jsdom
+import { readFileSync } from "node:fs";
 import { render, screen, within } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { afterEach, describe, expect, it, vi } from "vitest";
@@ -148,5 +149,29 @@ describe("desktop collaboration cockpit", () => {
     });
     expect(within(sidebar).queryByRole("link", { name: "工作" })).toBeNull();
     expect(within(sidebar).queryByRole("link", { name: "团队" })).toBeNull();
+  });
+});
+
+describe("desktop warm-terracotta shell grid", () => {
+  it("uses case column tracks 56 / 236 / flexible flow / 304 via named tokens", () => {
+    const cockpit = readFileSync("app/cockpit.css", "utf8");
+
+    expect(cockpit).toMatch(
+      /\.collaboration-cockpit\s*\{[^}]*grid-template-columns:\s*var\(--activity-bar-width\)\s+var\(--sidebar-width\)\s+minmax\(0,\s*1fr\)\s+var\(--context-width\)/s,
+    );
+    expect(cockpit).toMatch(
+      /\.cockpit-sidebar,\s*\.cockpit-context\s*\{[^}]*background:\s*var\(--surface-panel\)/s,
+    );
+    expect(cockpit).toMatch(
+      /\.cockpit-flow\s*\{[^}]*background:\s*var\(--surface-main\)/s,
+    );
+  });
+
+  it("styles the sidebar project switcher like a card-strong row", () => {
+    const cockpit = readFileSync("app/cockpit.css", "utf8");
+
+    expect(cockpit).toMatch(
+      /\.cockpit-sidebar \.project-list \.nav-item\s*\{[^}]*background:\s*var\(--color-card-strong\)[^}]*min-height:\s*var\(--control-min\)[^}]*border-radius:\s*var\(--rounded-md\)/s,
+    );
   });
 });

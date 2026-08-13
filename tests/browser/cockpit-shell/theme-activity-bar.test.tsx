@@ -99,6 +99,17 @@ describe("ActivityBar theme toggle", () => {
     );
   });
 
+  it("styles the activity rail as a dark track with an accent current item", () => {
+    const cockpit = readFileSync("app/cockpit.css", "utf8");
+
+    expect(cockpit).toMatch(
+      /\.activity-bar\s*\{[^}]*background:\s*var\(--color-rail\)[^}]*color:\s*var\(--color-rail-ink\)/s,
+    );
+    expect(cockpit).toMatch(
+      /\.activity-bar \.activity-bar-item\[aria-current="page"\]\s*\{[^}]*background:\s*var\(--interactive-primary\)[^}]*color:\s*var\(--color-on-primary\)/s,
+    );
+  });
+
   it("renders a non-claiming disabled loading control before hydration", () => {
     const html = renderToString(<ActivityBar activePath="/" />);
 

@@ -103,11 +103,10 @@ describe("Team visual tokens", () => {
       ).toBeGreaterThanOrEqual(4.5);
     }
 
-    // Allow lower contrast for subtle text
     expect(
       contrast(hexToken(tokens, "text-subtle"), hexToken(tokens, "surface-panel")),
       "text-subtle on surface-panel",
-    ).toBeGreaterThanOrEqual(3.0);
+    ).toBeGreaterThanOrEqual(4.5);
 
     // For button text on primary background, test white on primary
     const interactivePrimary = hexToken(tokens, "interactive-primary");

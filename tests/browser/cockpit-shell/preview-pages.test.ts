@@ -11,12 +11,12 @@ describe("DESIGN.md preview pages", () => {
     expect(existsSync(previewPath)).toBe(true);
     const preview = existsSync(previewPath) ? readFileSync(previewPath, "utf8") : "";
 
-    // Check for key DESIGN.md tokens
     for (const token of [
       "color-primary",
       "color-ink",
       "color-canvas",
       "color-canvas-parchment",
+      "color-rail",
       "text-display-lg",
       "text-body",
       "space-md",
@@ -25,33 +25,38 @@ describe("DESIGN.md preview pages", () => {
       expect(preview).toContain(`var(--${token})`);
     }
 
-    // Check for component examples
     expect(preview).toContain("button-primary");
     expect(preview).toContain("status-label");
-    expect(preview).toContain("Action Blue");
     expect(preview).toContain("DESIGN.md");
+    expect(preview).toContain("Sage");
+    expect(preview).toContain("暖陶");
+    expect(preview).toContain("#3E6B5E");
+    expect(preview).not.toContain("Action Blue");
+    expect(preview).not.toMatch(/#0066cc/i);
   });
 
   it("creates preview-dark.html with dark theme tokens", () => {
     expect(existsSync(previewDarkPath)).toBe(true);
-    const previewDark = existsSync(previewDarkPath) ? readFileSync(previewDarkPath, "utf8") : "";
+    const previewDark = existsSync(previewDarkPath)
+      ? readFileSync(previewDarkPath, "utf8")
+      : "";
 
-    // Check for dark theme specific tokens
     expect(previewDark).toContain("Dark Theme");
     expect(previewDark).toContain("color-primary-on-dark");
+    expect(previewDark).toContain("color-rail");
     expect(previewDark).toContain("color-surface-tile-1");
     expect(previewDark).toContain("color-surface-tile-2");
     expect(previewDark).toContain("color-surface-tile-3");
-
-    // Check for component examples in dark theme
     expect(previewDark).toContain("button-primary");
     expect(previewDark).toContain("status-label");
+    expect(previewDark).toContain("暖陶");
+    expect(previewDark).not.toContain("Action Blue");
+    expect(previewDark).not.toMatch(/#0066cc/i);
   });
 
   it("includes typography scale from DESIGN.md", () => {
     const preview = readFileSync(previewPath, "utf8");
 
-    // Check for DESIGN.md typography scale
     expect(preview).toContain("Hero Display");
     expect(preview).toContain("56px");
     expect(preview).toContain("Display Large");
@@ -63,7 +68,6 @@ describe("DESIGN.md preview pages", () => {
   it("includes rounded and spacing scales from DESIGN.md", () => {
     const preview = readFileSync(previewPath, "utf8");
 
-    // Check for DESIGN.md spacing scale in the token list section
     expect(preview).toContain("Spacing & Rounded Scale");
     expect(preview).toContain("--space-xxs");
     expect(preview).toContain("4px");
@@ -74,7 +78,6 @@ describe("DESIGN.md preview pages", () => {
     expect(preview).toContain("--space-section");
     expect(preview).toContain("80px");
 
-    // Check for DESIGN.md rounded scale
     expect(preview).toContain("--rounded-none");
     expect(preview).toContain("0px");
     expect(preview).toContain("--rounded-sm");
