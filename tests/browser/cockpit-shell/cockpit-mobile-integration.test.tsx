@@ -69,6 +69,10 @@ function stubCockpitRequests(workspacePath?: string): void {
           members: [],
           projectVersion: 1,
         },
+        "/api/projects/project-1/capability-insight": {
+          portraits: [],
+          suggestions: [],
+        },
         "/api/projects/project-1/thread-tags?limit=100": { tags: [] },
         "/api/agents": { agents: [] },
       };

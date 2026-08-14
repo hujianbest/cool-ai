@@ -240,6 +240,11 @@ export function cockpitFetch(responses: QueuedResponse[]) {
         Response.json({ mission: null, workItems: [] }),
       );
     }
+    if (/\/api\/projects\/[^/]+\/capability-insight$/.test(url)) {
+      return Promise.resolve(
+        Response.json({ portraits: [], suggestions: [] }),
+      );
+    }
     if (/\/api\/projects\/[^/]+\/thread-tags\?limit=100$/.test(url)) {
       return Promise.resolve(Response.json({ tags: [] }));
     }

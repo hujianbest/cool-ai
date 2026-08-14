@@ -11,6 +11,10 @@ import type { ApiError } from "@/src/shared/contracts";
 import { MissionDependencyInsightPanel } from "@/components/project-context/mission-dependency-insight";
 import { SopStatePanel } from "@/components/project-context/sop-state-panel";
 import { MissionDeliverySurface } from "@/components/review/review-product-surface";
+import {
+  capabilityInsightSchema,
+  type CapabilityInsight,
+} from "@/src/shared/capability-insight-contracts";
 import type {
   MembershipState,
   Mission,
@@ -229,6 +233,13 @@ export function MissionBoard({
   const workItemHeadingRefs = useRef(new Map<string, HTMLHeadingElement>());
   const [focusMission, setFocusMission] = useState(false);
   const [focusWorkItemId, setFocusWorkItemId] = useState<string | null>(null);
+  const [insight, setInsight] = useState<CapabilityInsight | null>(null);
+  const [insightLoading, setInsightLoading] = useState(true);
+  const [insightError, setInsightError] = useState(false);
+  const [insightReloadKey, setInsightReloadKey] = useState(0);
+  const [ignoredSuggestions, setIgnoredSuggestions] = useState<Set<string>>(
+    () => new Set(),
+  );
 
   useEffect(() => {
     let active = true;
@@ -275,6 +286,41 @@ export function MissionBoard({
       active = false;
     };
   }, [projectId, reloadKey]);
+
+  useEffect(() => {
+    setIgnoredSuggestions(new Set());
+  }, [projectId]);
+
+  useEffect(() => {
+    let active = true;
+    setInsightLoading(true);
+    setInsightError(false);
+    void (async () => {
+      try {
+        const response = await fetch(
+          `/api/projects/${projectId}/capability-insight`,
+        );
+        const parsed = capabilityInsightSchema.safeParse(await response.json());
+        if (!active) return;
+        if (!response.ok || !parsed.success) {
+          setInsight(null);
+          setInsightError(true);
+          return;
+        }
+        setInsight(parsed.data);
+      } catch {
+        if (active) {
+          setInsight(null);
+          setInsightError(true);
+        }
+      } finally {
+        if (active) setInsightLoading(false);
+      }
+    })();
+    return () => {
+      active = false;
+    };
+  }, [projectId, insightReloadKey]);
 
   useEffect(() => {
     if (!focusMission) return;
@@ -560,6 +606,79 @@ export function MissionBoard({
     });
     queueMicrotask(() => editTitleRef.current?.focus());
   }
+
+  function acceptSuggestion(item: WorkItem, agentId: string) {
+    resetOperationState();
+    setEditingWorkItemId(item.id);
+    setEditDraft({
+      title: item.title,
+      description: item.description,
+      assigneeAgentId: agentId,
+      dependencyIds: item.dependencyIds,
+    });
+    queueMicrotask(() => editTitleRef.current?.focus());
+  }
+
+  function ignoreSuggestion(workItemId: string, agentId: string) {
+    setIgnoredSuggestions((current) => {
+      const next = new Set(current);
+      next.add(`${workItemId}:${agentId}`);
+      return next;
+    });
+  }
+
+  function visibleSuggestions(workItemId: string) {
+    return (insight?.suggestions ?? []).filter(
+      (row) =>
+        row.workItemId === workItemId &&
+        !ignoredSuggestions.has(`${row.workItemId}:${row.agentId}`),
+    );
+  }
+
+  const insightPanel = (
+    <section
+      aria-labelledby={`capability-insight-title-${projectId}`}
+      className="stack mission-capability-insight"
+    >
+      <h3 id={`capability-insight-title-${projectId}`}>能力画像</h3>
+      {insightLoading ? (
+        <p aria-busy="true" className="state-message">
+          正在加载能力画像…
+        </p>
+      ) : insightError ? (
+        <div className="state-message stack">
+          <p
+            aria-label="无法加载能力画像"
+            className="error-text"
+            role="alert"
+          >
+            无法加载能力画像
+          </p>
+          <button
+            onClick={() => setInsightReloadKey((current) => current + 1)}
+            type="button"
+          >
+            重试加载能力画像
+          </button>
+        </div>
+      ) : !insight || insight.portraits.length === 0 ? (
+        <p className="state-message">暂无项目成员能力画像。</p>
+      ) : (
+        <ul aria-label="成员能力画像" className="stack mission-capability-portraits">
+          {insight.portraits.map((portrait) => (
+            <li className="stack" key={portrait.agentId}>
+              <p>{portrait.name}</p>
+              {portrait.skillNames.length > 0 ? (
+                <p>{portrait.skillNames.join("、")}</p>
+              ) : (
+                <p className="muted">未配置技能</p>
+              )}
+            </li>
+          ))}
+        </ul>
+      )}
+    </section>
+  );
 
   async function saveWorkItem(
     event: FormEvent<HTMLFormElement>,
@@ -848,6 +967,7 @@ export function MissionBoard({
             </button>
           </header>
           {editingMission ? missionForm : null}
+          {insightPanel}
 
           <section
             aria-labelledby={`new-work-item-${projectId}`}
@@ -938,6 +1058,50 @@ export function MissionBoard({
                         </h4>
                         <p>{item.description || "暂无说明。"}</p>
                         <p>负责人：{memberName(members, item.assigneeAgentId)}</p>
+                        {item.status === "todo" &&
+                        !item.assigneeAgentId &&
+                        visibleSuggestions(item.id).length > 0 ? (
+                          <section
+                            aria-label="路由建议"
+                            className="stack"
+                          >
+                            <h5>路由建议</h5>
+                            <ul className="stack mission-routing-suggestions">
+                              {visibleSuggestions(item.id).map((suggestion) => (
+                                <li className="stack" key={suggestion.agentId}>
+                                  <p>
+                                    {memberName(members, suggestion.agentId)}
+                                    {` · ${suggestion.score}`}
+                                  </p>
+                                  {suggestion.reasons.map((reason) => (
+                                    <p key={reason}>{reason}</p>
+                                  ))}
+                                  <div className="form-row">
+                                    <button
+                                      onClick={() =>
+                                        acceptSuggestion(item, suggestion.agentId)
+                                      }
+                                      type="button"
+                                    >
+                                      接受
+                                    </button>
+                                    <button
+                                      onClick={() =>
+                                        ignoreSuggestion(
+                                          suggestion.workItemId,
+                                          suggestion.agentId,
+                                        )
+                                      }
+                                      type="button"
+                                    >
+                                      忽略
+                                    </button>
+                                  </div>
+                                </li>
+                              ))}
+                            </ul>
+                          </section>
+                        ) : null}
                         {item.status === "in_progress" && item.lease ? (
                           <div
                             aria-label={`${item.title} 租约`}

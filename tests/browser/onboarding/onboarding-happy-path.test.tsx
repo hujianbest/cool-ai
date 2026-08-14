@@ -1989,6 +1989,9 @@ describe("progressive onboarding T-9 formal goal intake", () => {
         if (url.endsWith("/members")) {
           return Response.json({ members: [], projectVersion: 1 });
         }
+        if (url.endsWith("/capability-insight") && method === "GET") {
+          return Response.json({ portraits: [], suggestions: [] });
+        }
         if (url.endsWith("/mission") && method === "GET") {
           missionGets += 1;
           return Response.json({
@@ -2042,6 +2045,9 @@ describe("progressive onboarding T-9 formal goal intake", () => {
         const url = String(input);
         if (url.endsWith("/members")) {
           return Response.json({ members: [], projectVersion: 1 });
+        }
+        if (url.endsWith("/capability-insight") && !init?.method) {
+          return Response.json({ portraits: [], suggestions: [] });
         }
         if (url.endsWith("/mission") && init?.method === "POST") {
           postCount += 1;
@@ -2321,6 +2327,9 @@ describe("progressive onboarding T-14 unknown-write reconciliation", () => {
         if (url.endsWith("/members")) {
           return Response.json({ members: [], projectVersion: 1 });
         }
+        if (url.endsWith("/capability-insight") && !init?.method) {
+          return Response.json({ portraits: [], suggestions: [] });
+        }
         if (url.endsWith("/mission") && !init?.method) {
           missionGetCount += 1;
           return Response.json({ mission: currentMission, workItems: [] });
@@ -2381,6 +2390,9 @@ describe("progressive onboarding T-14 unknown-write reconciliation", () => {
         const url = String(input);
         if (url.endsWith("/members")) {
           return Response.json({ members: [], projectVersion: 1 });
+        }
+        if (url.endsWith("/capability-insight") && !init?.method) {
+          return Response.json({ portraits: [], suggestions: [] });
         }
         if (url.endsWith("/mission") && !init?.method) {
           return Response.json({ mission: currentMission, workItems: [] });

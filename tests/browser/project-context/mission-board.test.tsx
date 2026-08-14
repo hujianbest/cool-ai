@@ -6,6 +6,7 @@ import userEvent from "@testing-library/user-event";
 import { afterEach, describe, expect, it, vi } from "vitest";
 import type { ComponentType } from "react";
 
+import type { CapabilityInsight } from "@/src/shared/capability-insight-contracts";
 import type {
   Mission,
   ProjectMember,
@@ -89,6 +90,49 @@ const items = [
   workItem("item-4", "Ship", "done", ["item-3"]),
 ];
 
+const unassignedTodo: WorkItem = {
+  ...workItem("item-open", "Plan the file review", "todo"),
+  assigneeAgentId: null,
+  description: "edit and test the command",
+};
+
+const emptyInsight: CapabilityInsight = { portraits: [], suggestions: [] };
+
+const insightPayload = {
+  portraits: [
+    {
+      agentId: "agent-a",
+      evidence: ["skill:Plan", "tool:readFiles", "model"],
+      model: "model-a",
+      name: "Alpha",
+      reviewCapable: false,
+      skillNames: ["Plan"],
+      tools: { readFiles: true, runCommands: false, writeFiles: false },
+    },
+    {
+      agentId: "agent-b",
+      evidence: ["skill:Build", "tool:writeFiles", "model"],
+      model: "model-b",
+      name: "Beta",
+      reviewCapable: false,
+      skillNames: ["Build"],
+      tools: { readFiles: true, runCommands: true, writeFiles: true },
+    },
+  ],
+  suggestions: [
+    {
+      agentId: "agent-a",
+      reasons: ["技能 Plan 匹配任务标题"],
+      score: 3,
+      workItemId: "item-open",
+    },
+  ],
+};
+
+function insightResponse(payload = emptyInsight) {
+  return Response.json(payload);
+}
+
 function deferred<T>() {
   let resolve!: (value: T) => void;
   const promise = new Promise<T>((resolver) => {
@@ -122,6 +166,9 @@ describe("Mission Board", () => {
           return Promise.resolve(
             Response.json({ members, projectVersion: 3 }),
           );
+        }
+        if (url.endsWith("/capability-insight")) {
+          return Promise.resolve(insightResponse());
         }
         if (url.endsWith("/mission")) {
           missionCalls += 1;
@@ -167,6 +214,9 @@ describe("Mission Board", () => {
         const url = String(input);
         if (url.endsWith("/members")) {
           return Response.json({ members, projectVersion: 3 });
+        }
+        if (url.endsWith("/capability-insight") && !init?.method) {
+          return insightResponse();
         }
         if (url.endsWith("/mission") && !init?.method) {
           return Response.json({ mission: currentMission, workItems: [] });
@@ -273,6 +323,9 @@ describe("Mission Board", () => {
         if (url.endsWith("/members")) {
           return Response.json({ members, projectVersion: 3 });
         }
+        if (url.endsWith("/capability-insight") && !init?.method) {
+          return insightResponse();
+        }
         if (url.endsWith("/mission") && !init?.method) {
           return Response.json({ mission, workItems: items });
         }
@@ -366,6 +419,9 @@ describe("Mission Board", () => {
         const url = String(input);
         if (url.endsWith("/members")) {
           return Response.json({ members, projectVersion: 3 });
+        }
+        if (url.endsWith("/capability-insight") && !init?.method) {
+          return insightResponse();
         }
         if (url.endsWith("/mission") && !init?.method) {
           return Response.json({ mission, workItems: items });
@@ -505,6 +561,9 @@ function boardFetch(
     if (url.endsWith("/members")) {
       return Response.json({ members, projectVersion: 3 });
     }
+    if (url.endsWith("/capability-insight") && !init?.method) {
+      return insightResponse();
+    }
     if (url.endsWith("/mission") && !init?.method) {
       return Response.json({ mission, workItems });
     }
@@ -596,6 +655,159 @@ describe("mission board chrome", () => {
     );
     expect(css).toMatch(
       /\.mission-status\s*\{[^}]*background:\s*var\(--surface-card\)[^}]*border-radius:\s*var\(--rounded-md\)/s,
+    );
+  });
+});
+
+describe("mission board capability insight", () => {
+  it("distinguishes insight loading, empty and error states", async () => {
+    const MissionBoard = await board();
+    const firstInsight = deferred<Response>();
+    let insightCalls = 0;
+    vi.stubGlobal(
+      "fetch",
+      vi.fn((input: RequestInfo | URL, init?: RequestInit) => {
+        const url = String(input);
+        if (url.endsWith("/members")) {
+          return Promise.resolve(Response.json({ members, projectVersion: 3 }));
+        }
+        if (url.endsWith("/capability-insight") && !init?.method) {
+          insightCalls += 1;
+          return insightCalls === 1
+            ? firstInsight.promise
+            : Promise.resolve(insightResponse());
+        }
+        if (url.endsWith("/mission") && !init?.method) {
+          return Promise.resolve(Response.json({ mission, workItems: items }));
+        }
+        if (url.endsWith("/dependencies") && !init?.method) {
+          return Promise.resolve(
+            Response.json({
+              nodes: [],
+              edges: [],
+              cycles: [],
+              hasDependencies: false,
+            }),
+          );
+        }
+        if (url.endsWith("/sop-state") && !init?.method) {
+          return Promise.resolve(
+            Response.json({
+              workspaceBound: true,
+              readAt: "2026-08-15T00:00:00.000Z",
+              items: [],
+            }),
+          );
+        }
+        throw new Error(`Unexpected request: ${url}`);
+      }),
+    );
+    render(<MissionBoard projectId="project-1" />);
+
+    expect(await screen.findByText("正在加载能力画像…")).toHaveAttribute(
+      "aria-busy",
+      "true",
+    );
+    await act(async () => {
+      firstInsight.resolve(
+        Response.json(
+          { error: { code: "STORAGE_UNAVAILABLE", message: "unavailable" } },
+          { status: 503 },
+        ),
+      );
+    });
+    const insightAlert = await screen.findByRole("alert", {
+      name: "无法加载能力画像",
+    });
+    expect(insightAlert).toHaveTextContent("无法加载能力画像");
+    await userEvent.setup().click(
+      screen.getByRole("button", { name: "重试加载能力画像" }),
+    );
+    expect(await screen.findByText("暂无项目成员能力画像。")).toBeInTheDocument();
+    expect(screen.queryByText("正在加载能力画像…")).toBeNull();
+  });
+
+  it("shows portraits and lets accept prefill the card assignee without saving", async () => {
+    const MissionBoard = await board();
+    const fetchMock = boardFetch([unassignedTodo, ...items], undefined);
+    fetchMock.mockImplementation(async (input: RequestInfo | URL, init?: RequestInit) => {
+      const url = String(input);
+      if (url.endsWith("/capability-insight") && !init?.method) {
+        return insightResponse(insightPayload);
+      }
+      if (url.endsWith("/members")) {
+        return Response.json({ members, projectVersion: 3 });
+      }
+      if (url.endsWith("/mission") && !init?.method) {
+        return Response.json({
+          mission,
+          workItems: [unassignedTodo, ...items],
+        });
+      }
+      if (url.endsWith("/dependencies") && !init?.method) {
+        return Response.json({
+          nodes: [],
+          edges: [],
+          cycles: [],
+          hasDependencies: false,
+        });
+      }
+      if (url.endsWith("/sop-state") && !init?.method) {
+        return Response.json({
+          workspaceBound: true,
+          readAt: "2026-08-15T00:00:00.000Z",
+          items: [],
+        });
+      }
+      throw new Error(`Unexpected request: ${url}`);
+    });
+    vi.stubGlobal("fetch", fetchMock);
+    const user = userEvent.setup();
+    render(<MissionBoard projectId="project-1" />);
+
+    const portraits = await screen.findByRole("region", { name: "能力画像" });
+    expect(within(portraits).getByText("Alpha")).toBeInTheDocument();
+    expect(within(portraits).getByText("Plan")).toBeInTheDocument();
+    expect(within(portraits).getByText("Beta")).toBeInTheDocument();
+    expect(within(portraits).getByText("Build")).toBeInTheDocument();
+
+    const openCard = screen.getByRole("heading", {
+      name: "Plan the file review",
+    }).closest("li");
+    expect(openCard).not.toBeNull();
+    const suggestions = within(openCard!).getByRole("region", {
+      name: "路由建议",
+    });
+    expect(within(suggestions).getByText("技能 Plan 匹配任务标题")).toBeInTheDocument();
+
+    await user.click(within(suggestions).getByRole("button", { name: "接受" }));
+    expect(
+      screen.getByLabelText("编辑任务负责人 Plan the file review"),
+    ).toHaveValue("agent-a");
+    expect(
+      fetchMock.mock.calls.some(
+        ([input, init]) =>
+          String(input).includes("/work-items/") && init?.method === "PATCH",
+      ),
+    ).toBe(false);
+    expect(
+      fetchMock.mock.calls.some(
+        ([input, init]) =>
+          String(input).includes("/agents") && Boolean(init?.method),
+      ),
+    ).toBe(false);
+
+    await user.click(within(suggestions).getByRole("button", { name: "忽略" }));
+    expect(
+      within(openCard!).queryByRole("region", { name: "路由建议" }),
+    ).toBeNull();
+
+    const cockpitCss = readFileSync(join(process.cwd(), "app", "cockpit.css"), "utf8");
+    expect(cockpitCss).toMatch(
+      /\.mission-capability-insight\s*\{[^}]*background:\s*var\(--surface-card\)[^}]*border:\s*var\(--border-width\)\s*solid\s*var\(--border-subtle\)/s,
+    );
+    expect(cockpitCss).toMatch(
+      /button(?:\s*,\s*(?:input|select|textarea))*\s*\{[^}]*min-height:\s*var\(--control-min\)/s,
     );
   });
 });

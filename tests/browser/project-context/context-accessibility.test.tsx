@@ -129,6 +129,10 @@ describe("context navigation accessibility", () => {
             members: [],
             projectVersion: 1,
           },
+          "/api/projects/project-1/capability-insight": {
+            portraits: [],
+            suggestions: [],
+          },
           "/api/projects/project-1/mission": {
             mission: null,
             workItems: [],

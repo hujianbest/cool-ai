@@ -128,6 +128,10 @@ function installFetch(status: CollaborationRun["status"] = "paused") {
         "/api/agents": { agents: [] },
         "/api/projects": { projects: [project] },
         "/api/projects/project-1/members": members,
+        "/api/projects/project-1/capability-insight": {
+          portraits: [],
+          suggestions: [],
+        },
         "/api/projects/project-1/threads?limit=100":
           threadListPayload(project.id),
         [`/api/projects/project-1/threads/${TEST_THREAD_ID}?run=${TEST_RUN_ID}`]:

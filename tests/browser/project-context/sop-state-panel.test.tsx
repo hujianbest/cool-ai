@@ -149,6 +149,9 @@ function stubBoardFetch(sopState: () => Promise<Response> | Response) {
       if (url.endsWith("/members")) {
         return Promise.resolve(Response.json({ members, projectVersion: 3 }));
       }
+      if (url.endsWith("/capability-insight") && !init?.method) {
+        return Promise.resolve(Response.json({ portraits: [], suggestions: [] }));
+      }
       if (url.endsWith("/mission") && !init?.method) {
         return Promise.resolve(Response.json({ mission, workItems: items }));
       }

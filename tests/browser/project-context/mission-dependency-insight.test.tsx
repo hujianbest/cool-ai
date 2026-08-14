@@ -162,6 +162,9 @@ function stubBoardFetch(
           Response.json({ members, projectVersion: 3 }),
         );
       }
+      if (url.endsWith("/capability-insight") && !init?.method) {
+        return Promise.resolve(Response.json({ portraits: [], suggestions: [] }));
+      }
       if (url.endsWith("/mission") && !init?.method) {
         return Promise.resolve(
           Response.json({
@@ -331,6 +334,9 @@ describe("Mission dependency insight", () => {
             Response.json({ members, projectVersion: 3 }),
           );
         }
+        if (url.endsWith("/capability-insight") && !init?.method) {
+          return Promise.resolve(Response.json({ portraits: [], suggestions: [] }));
+        }
         if (url === "/api/projects/project-1/mission" && !init?.method) {
           return Promise.resolve(
             Response.json({ mission, workItems: items }),
@@ -418,6 +424,9 @@ describe("Mission dependency insight", () => {
           return Promise.resolve(
             Response.json({ members, projectVersion: 3 }),
           );
+        }
+        if (url.endsWith("/capability-insight") && !init?.method) {
+          return Promise.resolve(Response.json({ portraits: [], suggestions: [] }));
         }
         if (url.endsWith("/mission") && !init?.method) {
           return Promise.resolve(

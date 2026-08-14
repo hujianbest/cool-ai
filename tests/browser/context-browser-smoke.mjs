@@ -1282,6 +1282,34 @@ try {
     `SOP STATE ACCEPTANCE PASS: assertions=${sopAcceptance.assertions}`,
   );
 
+  const capabilityAcceptance = { assertions: 0 };
+  function capOk(value, message) {
+    capabilityAcceptance.assertions += 1;
+    assert.ok(value, message);
+  }
+  const capabilityRegion = page.getByRole("region", { name: "能力画像" });
+  await capabilityRegion.waitFor();
+  capOk(await capabilityRegion.isVisible(), "能力画像 must be visible");
+  const capabilityText = await capabilityRegion.innerText();
+  capOk(
+    capabilityText.includes("Context Planner")
+      || capabilityText.includes("Context Builder"),
+    "能力画像 must show Context Planner and/or Context Builder",
+  );
+  capOk(
+    !capabilityText.includes(testApiKey)
+      && !capabilityText.includes(masterKey)
+      && !capabilityText.includes("COCKPIT_MASTER_KEY"),
+    "能力画像 must not leak smoke API key or master key",
+  );
+  capOk(
+    (await page.getByRole("region", { name: "路由建议" }).count()) === 0,
+    "assigned work items have no 路由建议 (explainable empty)",
+  );
+  console.log(
+    `CAPABILITY INSIGHT ACCEPTANCE PASS: assertions=${capabilityAcceptance.assertions}`,
+  );
+
   await axeDependencies(page, "desktop light mission dependency insight");
   dependencyAcceptance.matrix.push("desktop-light");
   await page.screenshot({ fullPage: true, path: dependencyDesktopLightScreenshot });

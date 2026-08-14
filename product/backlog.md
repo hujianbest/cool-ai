@@ -26,7 +26,7 @@ Capability ID 是稳定治理标识；owner 是唯一逻辑子系统，不等于
 ### Identity & Capability
 
 - `CAP-IDC-01` Provider / Agent / Skill Core — owner: Identity & Capability — 状态: 已交付核心 — 证据/建立切片: S-2；`src/adapters/outbound/sqlite/identity-capability/provider-service.ts`、`src/adapters/outbound/sqlite/identity-capability/agent-service.ts`、`tests/modules/identity-capability/providers.service.test.ts`
-- `CAP-IDC-03` Capability & Rule Insight — owner: Identity & Capability — 状态: 规划中 — 建立切片: S-33、S-34
+- `CAP-IDC-03` Capability & Rule Insight — owner: Identity & Capability — 状态: 部分可用（可解释能力画像与只读路由建议已交付；规则/注入检查未覆盖）— 证据/建立切片: S-33 [`progress.md`](../features/046-capability-insight/progress.md)；规则扩展 S-34
 
 ### Project & Workspace
 
@@ -113,7 +113,7 @@ S-9～S-12 的 `依赖: S-*` 是原历史文字，只说明当时切片记录；
 
 ## 当前在途
 
-（无；045/S-28 记忆检索已于 2026-08-15 ship。）
+（无；046/S-33 能力画像已于 2026-08-15 ship。）
 
 ## 主题簇一：公开协作
 
@@ -180,8 +180,8 @@ S-9～S-12 的 `依赖: S-*` 是原历史文字，只说明当时切片记录；
 
 主子系统为 Operations Projection 或 Identity & Capability；洞察不得反向改写 Agent 角色、权限或业务终态。
 
-- [ ] S-33 可解释 Agent 能力画像与路由建议（CI-6.3） — 主子系统: Identity & Capability；主 Capability: `CAP-IDC-03`；票据: 未创建；演示判据: owner 能查看基于实际配置/结果的能力画像与路由理由，接受或忽略建议；推断绝不自动改写 Agent 角色、权限或 owner 配置；约束: 工作区=项目上下文隔离，verified-handle=不适用，sandbox=工具建议不授予权限，凭据=画像不含密钥，审批=权限变化仍需确认，独立复核=交付必需，审计=建议依据可追溯；不复制 Clowder 品牌、源码或资产
-  - 准入: 已交付前置: `CAP-IDC-01`、`CAP-RUN-01`、`CAP-REV-01`（已交付）；阻塞: `CAP-OPS-01`（S-23 的 `AUD-MVP` 纵切）规划中；本片建立: `CAP-IDC-03` 的可解释能力画像与只读路由建议（规划中）。
+- [x] S-33 可解释 Agent 能力画像与路由建议（CI-6.3） — 主子系统: Identity & Capability；主 Capability: `CAP-IDC-03`；票据: [`features/046-capability-insight/tickets.md`](../features/046-capability-insight/tickets.md)；Ship: 2026-08-15（零 schema：GET `/capability-insight` + 看板画像/建议；接受只预填负责人；`smoke:context` 4 断言；hf-code-review 豁免）；演示判据: owner 能查看基于实际配置的能力画像与路由理由，接受或忽略建议；推断绝不自动改写 Agent 角色、权限或 owner 配置；约束: 工作区=项目上下文隔离，verified-handle=不适用，sandbox=工具建议不授予权限，凭据=画像不含密钥，审批=权限变化仍需确认，独立复核=交付必需（轻量级豁免记录于 progress），审计=建议依据为配置证据标签；不复制 Clowder 品牌、源码或资产
+  - 准入: 已交付前置: `CAP-IDC-01`、`CAP-RUN-01`、`CAP-REV-01`、`CAP-OPS-01`（A-322）；本片建立: `CAP-IDC-03` 的可解释能力画像与只读路由建议（已交付）。
 - [ ] S-34 可审计系统规则与提示注入检查（CI-6.5） — 主子系统: Identity & Capability；主 Capability: `CAP-IDC-03`；票据: 未创建；演示判据: owner 能查看规则生效范围、冲突和注入风险预览，项目规则不能越权覆盖安全边界且拒绝原因清晰；约束: 工作区=规则按项目隔离，verified-handle=读取规则文件必需，sandbox=规则不扩权，凭据=检查结果脱敏，审批=全局规则变更需确认，独立复核=交付必需，审计=规则版本与来源可追溯；不复制 Clowder 品牌、源码或资产
   - 准入: 已交付前置: `CAP-IDC-01`、`CAP-PWS-01`（已交付）；阻塞: `CAP-PWS-02`（S-22）、`CAP-OPS-01`（S-23 拆分片）与 `CAP-GOV-02` 的全局规则变更治理（S-24）规划中；本片建立: `CAP-IDC-03` 的规则作用域、冲突和注入风险检查（规划中）。
 - [ ] S-35 服务健康与可观察性中心（CI-6.6） — 主子系统: Operations Projection；主 Capability: `CAP-OPS-03`；票据: 未创建；演示判据: owner 能在统一视图看到应用、Provider、索引和执行服务的真实健康、失败原因与恢复入口，未知状态不伪造成成功；约束: 工作区=项目指标隔离，verified-handle=工作区检查时必需，sandbox=执行指标不开放控制，凭据=日志脱敏，审批=恢复动作按风险确认，独立复核=交付必需，审计=指标口径和来源明确；不复制 Clowder 品牌、源码或资产
@@ -189,7 +189,7 @@ S-9～S-12 的 `依赖: S-*` 是原历史文字，只说明当时切片记录；
 - [ ] S-36 用量与配额看板（CI-6.11） — 主子系统: Operations Projection；主 Capability: `CAP-OPS-03`；票据: 未创建；演示判据: owner 能按项目、Run 和 Provider 查看基础用量、预算与轮次边界，估算值显式标注且不会被误解为账单；约束: 工作区=项目隔离，verified-handle=不适用，sandbox=不适用，凭据=账户信息脱敏，审批=预算变更需确认，独立复核=交付必需，审计=计量来源可追溯；不复制 Clowder 品牌、源码或资产
   - 准入: 已交付前置: `CAP-COL-01`、`CAP-RUN-01`（已交付可见用量与 Provider 调用事实）；阻塞: `CAP-OPS-01`（S-23 的 `AUD-MVP` 纵切）与健康投影（S-35）规划中；本片建立: `CAP-OPS-03` 的项目/Run/Provider 计量口径和估算标识（规划中）。
 - [ ] S-37 平等协作贡献视图（CI-6.13） — 主子系统: Operations Projection；主 Capability: `CAP-OPS-03`；票据: 未创建；演示判据: owner 能按角色职责查看带上下文的任务结果、复核质量和贡献证据，而非无上下文活跃度竞赛；指标不改变平等角色、派发权限或独立复核门槛；约束: 工作区=项目隔离，verified-handle=不适用，sandbox=不适用，凭据=不适用，审批=不适用，独立复核=指标定义必需，审计=指标来源可追溯；不复制 Clowder 品牌、源码或资产
-  - 准入: 已交付前置: `CAP-IDC-01`、`CAP-REV-01`、`CAP-MWK-01`（已交付）；阻塞: 能力画像（S-33）与用量投影（S-36）规划中；本片建立: `CAP-OPS-03` 的带上下文贡献和复核质量证据（规划中）。
+  - 准入: 已交付前置: `CAP-IDC-01`、`CAP-REV-01`、`CAP-MWK-01`、`CAP-IDC-03` 画像（S-33）；阻塞: 用量投影（S-36）规划中；本片建立: `CAP-OPS-03` 的带上下文贡献和复核质量证据（规划中）。
 - [ ] S-44 领域化运维命令与救援（CI-6.12）【高风险安全切片】 — 主子系统: Safe Execution；主 Capability: `CAP-EXE-04`；票据: 未创建；演示判据: owner 能从明确故障选择精确许可的恢复动作、预览影响并执行/撤销可恢复步骤，任意命令输入和未知救援路径被拒绝；约束: 工作区=按故障目标限制，verified-handle=文件动作必需，sandbox=强制，凭据=不回显且最小注入，审批=高权限动作必需，独立复核=恢复结果必需，审计=动作前后状态完整；不复制 Clowder 品牌、源码或资产
   - 准入: 已交付前置: `CAP-EXE-01`、`CAP-REV-01`（已交付）与 `CAP-GOV-01`（仅同一冻结 Safe Execution 恢复动作路径部分可用）；阻塞: `CAP-OPS-03` 健康（S-35）与 `CAP-EXE-03` 进程控制（S-43）规划中；本片建立: `CAP-EXE-04` 的 allowlist 救援、影响预览和可恢复撤销（规划中）。
 

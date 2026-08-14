@@ -42,7 +42,7 @@ Cool AI 保持一个本地优先、单进程、单 SQLite 的**领域模块化�
 
 - Project 成员关系、Thread 成员策略、Mission 分工或运行中的持棒者。
 - 某次执行获得的实际授权、Approval 裁决或工作区路径。
-- 用量投影和“哪个 Agent 更适合”的派生结论。
+- 用量投影。只读路由建议不得写成指派或权限事实（Mission 仍拥有负责人；S-33 建议只预填 UI）。
 
 ### Project & Workspace
 
