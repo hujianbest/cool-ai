@@ -26,3 +26,5 @@
 - 2026-08-15 037/S-53 Governance 审计事件纵切（AUD-GOV）完成 implement 与 ship：schema identity 23、Governance 五类 Approval 生命周期同事务脱敏 outbox、审计面板治理徽标/摘要/规范 approval 定位；`smoke:execution` 31 断言 + axe 3 态 0 serious/critical（真实 requested/approved/consumed/expired，rejected 由 T-01 证明）、全量 284 文件/2602 用例、tsc/build 全绿；演示 auto-approved。`CAP-GOV-03` 已交付核心；S-23 仍待 AUD-RUN 与 AUD-UI。
 - 2026-08-15 041/S-57 Runtime 审计事件纵切（AUD-RUN）完成 implement 与 ship：schema identity 24、`callOpenAiChat` 成败同事务脱敏 outbox、审计面板运行时徽标/摘要/规范定位；独立 hf-code-review 初审需修改后复审通过；`smoke:execution` Runtime 20 断言 + axe 2 态；全量 285 文件/2617 用例 127.52s；`CAP-RUN-07` 已交付核心。S-23 仍待 AUD-UI。
 - 2026-08-15 042/S-58 统一审计浏览器按域筛选（AUD-UI）完成 implement 与 ship：审计面板「全部/执行/协作/任务/项目/治理/运行时」客户端筛选；轻量级纯 UI，hf-code-review 豁免；`smoke:execution` Runtime 23 断言 + axe 2 态；S-23 子片全部交付并汇总勾选。时间轴仍待 S-39。
+- 2026-08-15 043/S-26 SOP 状态投影立项并进入 implement（A-302～A-308）；阻塞项已交付。
+- 2026-08-15 043/S-26 可审计 SOP 与流程状态完成 implement 与 ship：零 schema 来源化投影、GET `/sop-state`、看板「流程状态」；`smoke:context` SOP 8 断言；hf-code-review 复审 PASS；`CAP-MWK-03` 已交付核心。

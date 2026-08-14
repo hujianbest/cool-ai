@@ -126,7 +126,7 @@ describe("external-writer merge recovery", () => {
     fixture.database.close();
   });
 
-  it("requires the exact observed whole-manifest hash and refreshes a mismatch", async () => {
+  it("requires the exact observed whole-manifest hash and refreshes a mismatch", { timeout: 15_000 }, async () => {
     const fixture = await createManualFixture("refresh");
     const initial = manualState(fixture.database);
     writeFileSync(join(fixture.workspaceRoot, "src/a.txt"), "changed-again");

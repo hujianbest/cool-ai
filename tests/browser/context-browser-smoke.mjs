@@ -72,6 +72,12 @@ const browsePngBytes = Buffer.from(
 mkdirSync(join(workspaceDirectory, "docs", "inner"), { recursive: true });
 mkdirSync(join(workspaceDirectory, "assets"));
 writeFileSync(join(workspaceDirectory, "docs", "guide.md"), browseTextContent, "utf8");
+mkdirSync(join(workspaceDirectory, "features", "demo-sop"), { recursive: true });
+writeFileSync(
+  join(workspaceDirectory, "features", "demo-sop", "progress.md"),
+  ["- 特性: 演示 SOP", "- 当前阶段: implement", ""].join("\n"),
+  "utf8",
+);
 writeFileSync(join(workspaceDirectory, "docs", "inner", "deep.txt"), "深层嵌套文件。\n", "utf8");
 writeFileSync(join(workspaceDirectory, "assets", "logo.png"), browsePngBytes);
 writeFileSync(join(workspaceDirectory, "notes.txt"), "根目录笔记。\n", "utf8");
@@ -371,6 +377,24 @@ function undersizedButtons(scope) {
   );
 }
 
+// --- 043 T-03：SOP 状态投影验收助手 ---
+const sopAcceptance = { assertions: 0 };
+
+function sopOk(value, message) {
+  sopAcceptance.assertions += 1;
+  assert.ok(value, message);
+}
+
+function sopEqual(actual, expected, message) {
+  sopAcceptance.assertions += 1;
+  assert.equal(actual, expected, message);
+}
+
+function sopDeepEqual(actual, expected, message) {
+  sopAcceptance.assertions += 1;
+  assert.deepEqual(actual, expected, message);
+}
+
 async function createTeamPrerequisites(page) {
   await page.goto(`${baseUrl}/team`, { waitUntil: "networkidle" });
   await page.getByRole("tab", { name: "模型服务" }).click();
@@ -527,7 +551,7 @@ try {
   await workspaceTree.waitFor();
   browseDeepEqual(
     await workspaceTree.locator(".workspace-tree-name").allTextContents(),
-    ["assets", "docs", ".env", "app.bin", "large.txt", "notes.txt"],
+    ["assets", "docs", "features", ".env", "app.bin", "large.txt", "notes.txt"],
     "root listing must sort directories first, then files by case-insensitive name",
   );
   browseEqual(
@@ -559,7 +583,7 @@ try {
   await guideItem.waitFor();
   browseDeepEqual(
     await workspaceTree.locator(".workspace-tree-name").allTextContents(),
-    ["assets", "docs", "inner", "guide.md", ".env", "app.bin", "large.txt", "notes.txt"],
+    ["assets", "docs", "inner", "guide.md", "features", ".env", "app.bin", "large.txt", "notes.txt"],
     "expanded docs must list the nested directory before files",
   );
 
@@ -1160,6 +1184,67 @@ try {
     [],
     "dependency panel buttons must be at least 44x44px",
   );
+
+  // --- 043 T-03：SOP 状态投影（既有绑定工作区 + 既有 mission 页；复用随后 axe） ---
+  const sopRegion = page.getByRole("region", { name: "流程状态" });
+  await sopRegion.waitFor();
+  sopOk(await sopRegion.isVisible(), "SOP region 流程状态 must be visible");
+  await sopRegion
+    .getByText("features/demo-sop/progress.md", { exact: true })
+    .waitFor();
+  sopEqual(
+    await sopRegion
+      .getByText("features/demo-sop/progress.md", { exact: true })
+      .count(),
+    1,
+    "SOP source must be the workspace-relative progress path",
+  );
+  sopEqual(
+    await sopRegion.getByText("implement", { exact: true }).count(),
+    1,
+    "SOP declared stage must be implement",
+  );
+  sopEqual(
+    await sopRegion.getByText("未发现流程文件。", { exact: true }).count(),
+    0,
+    "bound project must not show SOP empty copy",
+  );
+  sopEqual(
+    await sopRegion
+      .getByText("未绑定工作区，无法读取流程文件。", { exact: true })
+      .count(),
+    0,
+    "bound project must not show SOP unbound copy",
+  );
+  const sopText = await sopRegion.innerText();
+  sopOk(
+    !sopText.includes(workspaceDirectory)
+      && !sopText.includes(canonicalWorkspace)
+      && !sopText.includes(boundWorkspacePath),
+    "SOP region must not leak host workspace paths",
+  );
+  const sopHeadingBox = await sopRegion
+    .getByRole("heading", { name: "流程状态" })
+    .boundingBox();
+  const sopRegionBox = await sopRegion.boundingBox();
+  sopOk(
+    (sopHeadingBox
+      && sopHeadingBox.height >= 44
+      && sopHeadingBox.width >= 44)
+      || (sopRegionBox
+        && sopRegionBox.height >= 44
+        && sopRegionBox.width >= 44),
+    "SOP heading or region must be at least 44x44",
+  );
+  sopDeepEqual(
+    await undersizedButtons(sopRegion),
+    [],
+    "SOP controls must be at least 44x44px",
+  );
+  console.log(
+    `SOP STATE ACCEPTANCE PASS: assertions=${sopAcceptance.assertions}`,
+  );
+
   await axeDependencies(page, "desktop light mission dependency insight");
   dependencyAcceptance.matrix.push("desktop-light");
   await page.screenshot({ fullPage: true, path: dependencyDesktopLightScreenshot });
@@ -2230,6 +2315,9 @@ try {
     "realpath",
     "stat",
     "access",
+    "realpath",
+    "stat",
+    "access",
   ]);
   const operationAudit = {
     access: auditOperations.filter((operation) => operation === "access")
@@ -2243,12 +2331,12 @@ try {
     write: 0,
   };
   assert.deepEqual(operationAudit, {
-    access: 2,
+    access: 3,
     contentRead: 0,
     enumerate: 0,
     exec: 0,
-    realpath: 2,
-    stat: 2,
+    realpath: 3,
+    stat: 3,
     write: 0,
   });
   console.log(
@@ -2315,8 +2403,8 @@ try {
     agents: 2,
     memory_entries: 5,
     missions: 2,
-    project_memberships: 2,
-    projects: 2,
+    project_memberships: 3,
+    projects: 3,
     providers: 1,
     work_items: 4,
   });

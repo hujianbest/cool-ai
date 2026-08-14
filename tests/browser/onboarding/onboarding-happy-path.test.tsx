@@ -367,6 +367,13 @@ function installHappyPathFetch() {
           run: { ...collaborationState(true).selectedRun, status: "failed" },
         });
       }
+      if (url.endsWith("/sop-state")) {
+        return Response.json({
+          items: [],
+          readAt: "2026-08-08T00:00:00.000Z",
+          workspaceBound: true,
+        });
+      }
       throw new Error(`Unexpected request: ${url}`);
     },
   );
@@ -539,6 +546,13 @@ describe("progressive onboarding T-1", () => {
           : null;
         if (threadRead) return threadRead;
         if (url.endsWith("/executions")) return Response.json({ executions: [] });
+        if (url.endsWith("/sop-state")) {
+          return Response.json({
+            items: [],
+            readAt: "2026-08-08T00:00:00.000Z",
+            workspaceBound: true,
+          });
+        }
         throw new Error(`Unexpected request: ${url}`);
       }),
     );
@@ -1007,6 +1021,13 @@ describe("progressive onboarding T-6 explicit project selection", () => {
     if (url.endsWith("/mission")) {
       return Response.json({ mission: null, workItems: [] });
     }
+    if (url.endsWith("/sop-state")) {
+      return Response.json({
+        items: [],
+        readAt: "2026-08-08T00:00:00.000Z",
+        workspaceBound: true,
+      });
+    }
     const threadRead = threadReadResponse(url, false);
     if (threadRead) return threadRead;
     if (url.endsWith("/executions")) {
@@ -1298,6 +1319,13 @@ describe("progressive onboarding T-7 workspace binding", () => {
     }
     if (url.endsWith("/mission")) {
       return Response.json({ mission: null, workItems: [] });
+    }
+    if (url.endsWith("/sop-state")) {
+      return Response.json({
+        items: [],
+        readAt: "2026-08-08T00:00:00.000Z",
+        workspaceBound: true,
+      });
     }
     const threadRead = threadReadResponse(url, false);
     if (threadRead) return threadRead;
@@ -1835,6 +1863,13 @@ describe("progressive onboarding T-8 member readiness", () => {
           getCount += 1;
           return Response.json({ members: currentMembers, projectVersion: version });
         }
+        if (url.endsWith("/sop-state")) {
+          return Response.json({
+            items: [],
+            readAt: "2026-08-08T00:00:00.000Z",
+            workspaceBound: true,
+          });
+        }
         throw new Error(`Unexpected request: ${url}`);
       }),
     );
@@ -1972,6 +2007,13 @@ describe("progressive onboarding T-9 formal goal intake", () => {
             hasDependencies: false,
           });
         }
+        if (url.endsWith("/sop-state")) {
+          return Response.json({
+            items: [],
+            readAt: "2026-08-08T00:00:00.000Z",
+            workspaceBound: true,
+          });
+        }
         throw new Error(`Unexpected request: ${method} ${url}`);
       }),
     );
@@ -2019,6 +2061,13 @@ describe("progressive onboarding T-9 formal goal intake", () => {
             edges: [],
             cycles: [],
             hasDependencies: false,
+          });
+        }
+        if (url.endsWith("/sop-state")) {
+          return Response.json({
+            items: [],
+            readAt: "2026-08-08T00:00:00.000Z",
+            workspaceBound: true,
           });
         }
         throw new Error(`Unexpected request: ${url}`);
@@ -2086,6 +2135,13 @@ describe("progressive onboarding T-9 formal goal intake", () => {
           advancePosts += 1;
           return Response.json({ run: collaborationState(true).selectedRun });
         }
+        if (url.endsWith("/sop-state")) {
+          return Response.json({
+            items: [],
+            readAt: "2026-08-08T00:00:00.000Z",
+            workspaceBound: true,
+          });
+        }
         throw new Error(`Unexpected request: ${url}`);
       }),
     );
@@ -2147,6 +2203,13 @@ describe("progressive onboarding T-9 formal goal intake", () => {
             (JSON.parse(String(init.body)) as { operationId: string }).operationId,
           );
           throw new TypeError("network result unknown");
+        }
+        if (url.endsWith("/sop-state")) {
+          return Response.json({
+            items: [],
+            readAt: "2026-08-08T00:00:00.000Z",
+            workspaceBound: true,
+          });
         }
         throw new Error(`Unexpected request: ${url}`);
       }),
@@ -2281,6 +2344,13 @@ describe("progressive onboarding T-14 unknown-write reconciliation", () => {
             hasDependencies: false,
           });
         }
+        if (url.endsWith("/sop-state")) {
+          return Response.json({
+            items: [],
+            readAt: "2026-08-08T00:00:00.000Z",
+            workspaceBound: true,
+          });
+        }
         throw new Error(`Unexpected request: ${url}`);
       }),
     );
@@ -2332,6 +2402,13 @@ describe("progressive onboarding T-14 unknown-write reconciliation", () => {
             edges: [],
             cycles: [],
             hasDependencies: false,
+          });
+        }
+        if (url.endsWith("/sop-state")) {
+          return Response.json({
+            items: [],
+            readAt: "2026-08-08T00:00:00.000Z",
+            workspaceBound: true,
           });
         }
         throw new Error(`Unexpected request: ${url}`);
@@ -2421,6 +2498,13 @@ describe("progressive onboarding T-14 unknown-write reconciliation", () => {
         if (url.endsWith("/members")) {
           return Response.json({ members: [], projectVersion: 1 });
         }
+        if (url.endsWith("/sop-state")) {
+          return Response.json({
+            items: [],
+            readAt: "2026-08-08T00:00:00.000Z",
+            workspaceBound: true,
+          });
+        }
         throw new Error(`Unexpected request: ${url}`);
       }),
     );
@@ -2498,6 +2582,13 @@ describe("progressive onboarding T-14 unknown-write reconciliation", () => {
         if (url.endsWith("/members")) {
           return Response.json({ members: [], projectVersion: 1 });
         }
+        if (url.endsWith("/sop-state")) {
+          return Response.json({
+            items: [],
+            readAt: "2026-08-08T00:00:00.000Z",
+            workspaceBound: true,
+          });
+        }
         throw new Error(`Unexpected request: ${url}`);
       }),
     );
@@ -2568,6 +2659,13 @@ describe("progressive onboarding T-14 unknown-write reconciliation", () => {
           persisted = true;
           failReconciliationGet = true;
           throw new TypeError("response lost after commit");
+        }
+        if (url.endsWith("/sop-state")) {
+          return Response.json({
+            items: [],
+            readAt: "2026-08-08T00:00:00.000Z",
+            workspaceBound: true,
+          });
         }
         throw new Error(`Unexpected request: ${url}`);
       }),

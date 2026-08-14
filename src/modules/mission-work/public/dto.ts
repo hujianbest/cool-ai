@@ -95,6 +95,31 @@ export type MissionDependencyInsight = {
   hasDependencies: boolean;
 };
 
+export type SopFreshness = "current" | "stale";
+
+export type SopStaleReason = "source_unreadable" | "declared_stage_diverges";
+
+export type SopMatchedWorkItem = {
+  workItemId: string;
+  title: string;
+  status: WorkItemStatus;
+};
+
+export type SopStateItem = {
+  relativePath: string;
+  title: string;
+  declaredStage: string;
+  freshness: SopFreshness;
+  staleReason: SopStaleReason | null;
+  workItems: SopMatchedWorkItem[];
+};
+
+export type SopStateProjection = {
+  workspaceBound: boolean;
+  readAt: string;
+  items: SopStateItem[];
+};
+
 export type TaskExecutor = (goal: string) => string;
 
 /**

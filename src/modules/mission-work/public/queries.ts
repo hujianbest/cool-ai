@@ -1,6 +1,7 @@
 import type {
   MissionDependencyInsight,
   MissionState,
+  SopStateProjection,
   TaskEvent,
   TaskRun,
 } from "./dto";
@@ -12,6 +13,10 @@ export interface MissionWorkQueries {
     projectId: string,
     missionId: string,
   ) => MissionDependencyInsight;
+  getSopStateProjection: (
+    databasePath: string,
+    projectId: string,
+  ) => Promise<SopStateProjection>;
   listProjectTasks: (
     projectId: string,
     databasePath: string,

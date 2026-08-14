@@ -173,6 +173,15 @@ function stubBoardFetch(
       if (url.endsWith("/dependencies") && !init?.method) {
         return Promise.resolve(dependencies());
       }
+      if (url.endsWith("/sop-state") && !init?.method) {
+        return Promise.resolve(
+          Response.json({
+            workspaceBound: true,
+            readAt: "2026-08-15T00:00:00.000Z",
+            items: [],
+          }),
+        );
+      }
       throw new Error(`Unexpected request: ${url}`);
     },
   );
@@ -349,6 +358,15 @@ describe("Mission dependency insight", () => {
             } satisfies MissionDependencyInsight),
           );
         }
+        if (url.endsWith("/sop-state") && !init?.method) {
+          return Promise.resolve(
+            Response.json({
+              workspaceBound: true,
+              readAt: "2026-08-15T00:00:00.000Z",
+              items: [],
+            }),
+          );
+        }
         throw new Error(`Unexpected request: ${url}`);
       },
     );
@@ -409,6 +427,15 @@ describe("Mission dependency insight", () => {
         if (url.endsWith("/dependencies") && !init?.method) {
           dependencyCalls += 1;
           return Promise.resolve(Response.json(insight));
+        }
+        if (url.endsWith("/sop-state") && !init?.method) {
+          return Promise.resolve(
+            Response.json({
+              workspaceBound: true,
+              readAt: "2026-08-15T00:00:00.000Z",
+              items: [],
+            }),
+          );
         }
         if (
           url === "/api/work-items/item-1/transition" &&

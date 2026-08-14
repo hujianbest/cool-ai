@@ -38,7 +38,7 @@ Capability ID 是稳定治理标识；owner 是唯一逻辑子系统，不等于
 
 - `CAP-MWK-01` Mission / Work Core — owner: Mission & Work — 状态: 已交付核心 — 证据/建立切片: S-3～S-6；`src/adapters/outbound/sqlite/mission-work/mission-service.ts`、`tests/modules/mission-work/mission-crud.test.ts`
 - `CAP-MWK-02` Mission Dependency Insight — owner: Mission & Work — 状态: 已交付核心 — 证据/建立切片: S-25 [`progress.md`](../features/026-mission-dependency-insight/progress.md)
-- `CAP-MWK-03` SOP State Projection — owner: Mission & Work — 状态: 规划中 — 建立切片: S-26
+- `CAP-MWK-03` SOP State Projection — owner: Mission & Work — 状态: 已交付核心 — 证据/建立切片: S-26 [`progress.md`](../features/043-sop-state-projection/progress.md)
 - `CAP-MWK-04` Dispatch Lease Control — owner: Mission & Work — 状态: 规划中 — 建立切片: S-27
 - `CAP-MWK-05` Public Mission / Work Events — owner: Mission & Work — 状态: 已交付核心 — 证据/建立切片: S-23 AUD-MWK（实现片号 S-51，与同日并行交付的整体 UI 改版片号双占，见 A-256）[`progress.md`](../features/035-mission-work-audit-events/progress.md)（7 类事件同事务 outbox、审计中心可查询并规范身份导航，复用已交付 `CAP-OPS-01/02`）
 
@@ -113,7 +113,7 @@ S-9～S-12 的 `依赖: S-*` 是原历史文字，只说明当时切片记录；
 
 ## 当前在途
 
-（无；042/S-58 AUD-UI 已于 2026-08-15 ship，S-23 子片全部交付。）
+（无；043/S-26 SOP 状态投影已于 2026-08-15 ship。）
 
 ## 主题簇一：公开协作
 
@@ -156,8 +156,8 @@ S-9～S-12 的 `依赖: S-*` 是原历史文字，只说明当时切片记录；
 
 - [x] S-25 Mission 依赖与阻塞全景（CI-4.4） — 主子系统: Mission & Work；主 Capability: `CAP-MWK-02`；票据: [`features/026.../tickets.md`](../features/026-mission-dependency-insight/tickets.md)；Ship: 2026-08-10（零 schema 变更纯派生读模型：getMissionDependencyInsight + GET dependencies 路由；Tarjan 循环检测、悬空依赖 missing 分类、阻塞原因派生；MissionBoard 只读依赖全景区 + 焦点缝导航；smoke:context 35 断言 / 4 axe 状态 0 违规；全量 246 文件/2111 用例 117.1s）；演示判据: owner 能查看复杂 Mission 的只读依赖图、循环与阻塞原因，并从节点定位现有任务而不产生第二套任务事实源；约束: 工作区=项目隔离，verified-handle=不适用，sandbox=不适用，凭据=不适用，审批=不适用，独立复核=交付必需（review 豁免记录于 progress），审计=图数据来源可追溯；不复制 Clowder 品牌、源码或资产
   - 准入: 已交付前置: `CAP-MWK-01`（已交付核心，mission service/tests）；本片建立: `CAP-MWK-02` 的只读依赖、循环与阻塞查询（规划中）。
-- [ ] S-26 可审计 SOP 与流程状态（CI-4.6） — 主子系统: Mission & Work；主 Capability: `CAP-MWK-03`；票据: 未创建；演示判据: owner 能看到仓库真实流程/SOP 的当前状态、来源和陈旧提示，刷新后与事实源一致且不建立第二状态机；约束: 工作区=只读绑定项目事实，verified-handle=读取流程文件必需，sandbox=不执行流程命令，凭据=不显示环境秘密，审批=不适用，独立复核=交付必需，审计=状态来源和时间可追溯；不复制 Clowder 品牌、源码或资产
-  - 准入: 已交付前置: `CAP-MWK-01`（已交付）；阻塞: `CAP-PWS-02`（S-22）、`CAP-OPS-01`（S-23 的 `AUD-MVP` 纵切）、`CAP-MWK-02`（S-25）均规划中；本片建立: `CAP-MWK-03` 的来源化 SOP 状态与 freshness（规划中）。
+- [x] S-26 可审计 SOP 与流程状态（CI-4.6） — 主子系统: Mission & Work；主 Capability: `CAP-MWK-03`；票据: [`features/043-sop-state-projection/tickets.md`](../features/043-sop-state-projection/tickets.md)；Ship: 2026-08-15（零 schema：发现 `features/*/progress.md`、声明阶段对照 work item、陈旧提示、GET `/sop-state`、看板「流程状态」；`smoke:context` SOP 8 断言；hf-code-review PASS）；演示判据: owner 能看到仓库真实流程/SOP 的当前状态、来源和陈旧提示，刷新后与事实源一致且不建立第二状态机；约束: 工作区=只读绑定项目事实，verified-handle=读取流程文件必需，sandbox=不执行流程命令，凭据=不显示环境秘密，审批=不适用，独立复核=交付必需（hf-code-review 记录于 reviews），审计=状态来源和时间可追溯；不复制 Clowder 品牌、源码或资产
+  - 准入: 已交付前置: `CAP-MWK-01`、`CAP-PWS-02`、`CAP-OPS-01`、`CAP-MWK-02`；本片建立: `CAP-MWK-03` 的来源化 SOP 状态与 freshness（已交付）。
 - [ ] S-27 任务租约与派发控制面（CI-4.7） — 主子系统: Mission & Work；主 Capability: `CAP-MWK-04`；票据: 未创建；演示判据: owner 能查看任务自领、心跳、释放、过期与回收，重复领取和并发派发按 operation/version/lease 确定性失败；约束: 工作区=项目隔离，verified-handle=不适用，sandbox=执行仍按任务隔离，凭据=不适用，审批=回收高风险运行需确认，独立复核=交付必需，审计=完整租约时间线；不复制 Clowder 品牌、源码或资产
   - 准入: 已交付前置: `CAP-MWK-01`、`CAP-EXE-01`（已交付）；阻塞: `CAP-MWK-02`（S-25）与 `CAP-GOV-02` 的非执行域回收治理（S-24）规划中；本片建立: `CAP-MWK-04` 的领取、心跳、释放、过期和回收控制（规划中）。
 

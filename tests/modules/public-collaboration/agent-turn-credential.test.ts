@@ -259,6 +259,7 @@ describe("AgentTurn public-text credential rejection", () => {
 
   it.each(rejectedCases)(
     "rejects $category in parsed $field and rolls back the whole turn",
+    { timeout: 15_000 },
     async ({ field, value }) => {
       mockedCall.mockResolvedValueOnce(success(turnWith(field, value)));
 

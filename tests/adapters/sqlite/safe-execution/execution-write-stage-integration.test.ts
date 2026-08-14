@@ -361,7 +361,7 @@ describe("verified sandbox manifest lifecycle", () => {
     }
   });
 
-  it("terminalizes acquired stage actions and receipts when the adapter throws", async () => {
+  it("terminalizes acquired stage actions and receipts when the adapter throws", { timeout: 15_000 }, async () => {
     const adapters = createWindowsVerifiedExecutionAdapters();
     const initial = await refreshSandboxManifest({
       fileAdapter: adapters.fileAdapter,

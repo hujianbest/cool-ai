@@ -179,6 +179,13 @@ describe("Mission Board", () => {
             hasDependencies: false,
           });
         }
+        if (url.endsWith("/sop-state") && !init?.method) {
+          return Response.json({
+            workspaceBound: true,
+            readAt: "2026-08-15T00:00:00.000Z",
+            items: [],
+          });
+        }
         if (url.endsWith("/mission") && init?.method === "POST") {
           currentMission = mission;
           return Response.json({ mission }, { status: 201 });
@@ -277,6 +284,13 @@ describe("Mission Board", () => {
             hasDependencies: false,
           });
         }
+        if (url.endsWith("/sop-state") && !init?.method) {
+          return Response.json({
+            workspaceBound: true,
+            readAt: "2026-08-15T00:00:00.000Z",
+            items: [],
+          });
+        }
         if (
           url === "/api/missions/mission-1/work-items" &&
           init?.method === "POST"
@@ -362,6 +376,13 @@ describe("Mission Board", () => {
             edges: [],
             cycles: [],
             hasDependencies: false,
+          });
+        }
+        if (url.endsWith("/sop-state") && !init?.method) {
+          return Response.json({
+            workspaceBound: true,
+            readAt: "2026-08-15T00:00:00.000Z",
+            items: [],
           });
         }
         if (url === "/api/work-items/item-1" && init?.method === "PATCH") {

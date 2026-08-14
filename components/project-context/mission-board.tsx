@@ -9,6 +9,7 @@ import {
 
 import type { ApiError } from "@/src/shared/contracts";
 import { MissionDependencyInsightPanel } from "@/components/project-context/mission-dependency-insight";
+import { SopStatePanel } from "@/components/project-context/sop-state-panel";
 import { MissionDeliverySurface } from "@/components/review/review-product-surface";
 import type {
   MembershipState,
@@ -1000,6 +1001,11 @@ export function MissionBoard({
               </section>
             ))}
           </div>
+          <SopStatePanel
+            onLocateWorkItem={locateWorkItem}
+            projectId={projectId}
+            refreshSignal={workItems}
+          />
           <MissionDependencyInsightPanel
             missionId={mission.id}
             onLocateWorkItem={locateWorkItem}
