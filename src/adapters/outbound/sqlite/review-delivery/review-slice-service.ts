@@ -18,6 +18,7 @@ import {
   buildReviewProviderRequest,
   reviewOutputContainsSensitiveText,
 } from "@/src/adapters/outbound/sqlite/review-delivery/review-schema";
+import { appendRuntimeAuditOutboxRow } from "@/src/adapters/outbound/sqlite/runtime/audit-event-outbox";
 import {
   reviewOutputSchema,
   startReviewInputSchema,
@@ -745,6 +746,7 @@ export async function startReview(
     const callId = randomUUID();
     if (call.status !== "succeeded" || !call.content || !call.usage) {
       transaction(database, () => {
+        const finishedAt = new Date().toISOString();
         database.prepare(`
           INSERT INTO review_model_calls (
             id,attempt_id,kind,call_index,status,prompt_hash,
@@ -759,11 +761,25 @@ export async function startReview(
           call.usage?.totalTokens ?? null,
           call.error?.code ?? "provider_failed",
           callStartedAt,
-          new Date().toISOString(),
+          finishedAt,
         );
+        const runtimeSucceeded = call.status === "succeeded";
+        appendRuntimeAuditOutboxRow(database, {
+          eventType: runtimeSucceeded ? "runtime_call_succeeded" : "runtime_call_failed",
+          occurredAt: finishedAt,
+          projectId: acquired.projectId,
+          sourcePayload: {
+            ...(runtimeSucceeded
+              ? {}
+              : { errorCategory: call.error?.category ?? "provider_response_invalid" }),
+            model: provider.model,
+            reviewAttemptId: attemptId,
+            surface: "review",
+          },
+        });
         database.prepare(
           "UPDATE review_attempts SET status='failed',finished_at=? WHERE id=?",
-        ).run(new Date().toISOString(), attemptId);
+        ).run(finishedAt, attemptId);
         database.prepare(`
           UPDATE work_item_review_heads
           SET state='pending_review',current_attempt_id=?,version=version+1,updated_at=?
@@ -785,6 +801,7 @@ export async function startReview(
     }
     if (reviewOutputContainsSensitiveText(reviewed.data, [apiKey])) {
       transaction(database, () => {
+        const finishedAt = new Date().toISOString();
         database.prepare(`
           INSERT INTO review_model_calls (
             id,attempt_id,kind,call_index,status,prompt_hash,
@@ -798,13 +815,23 @@ export async function startReview(
           reportedUsage.completionTokens,
           reportedUsage.totalTokens,
           callStartedAt,
-          new Date().toISOString(),
+          finishedAt,
         );
+        appendRuntimeAuditOutboxRow(database, {
+          eventType: "runtime_call_succeeded",
+          occurredAt: finishedAt,
+          projectId: acquired.projectId,
+          sourcePayload: {
+            model: provider.model,
+            reviewAttemptId: attemptId,
+            surface: "review",
+          },
+        });
         database.prepare(`
           UPDATE review_attempts
           SET status='failed',error_category='redaction',finished_at=?
           WHERE id=? AND status='calling'
-        `).run(new Date().toISOString(), attemptId);
+        `).run(finishedAt, attemptId);
         database.prepare(`
           UPDATE work_item_review_heads
           SET state='pending_review',current_attempt_id=NULL,version=version+1,updated_at=?
@@ -855,6 +882,7 @@ export async function startReview(
       }
     }
     transaction(database, () => {
+      const finishedAt = new Date().toISOString();
       database.prepare(`
         INSERT INTO review_model_calls (
           id,attempt_id,kind,call_index,status,prompt_hash,
@@ -868,8 +896,18 @@ export async function startReview(
         reportedUsage.completionTokens,
         reportedUsage.totalTokens,
         callStartedAt,
-        new Date().toISOString(),
+        finishedAt,
       );
+      appendRuntimeAuditOutboxRow(database, {
+        eventType: "runtime_call_succeeded",
+        occurredAt: finishedAt,
+        projectId: acquired.projectId,
+        sourcePayload: {
+          model: provider.model,
+          reviewAttemptId: attemptId,
+          surface: "review",
+        },
+      });
       database.prepare(`
         INSERT INTO review_decisions (
           id,attempt_id,result_id,reviewer_agent_id,choice,public_summary,

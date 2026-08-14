@@ -15,6 +15,7 @@ import {
   acquireAdvance,
   finalizeAdvance,
 } from "@/src/adapters/outbound/sqlite/public-collaboration/turn-orchestrator";
+import { executeAdvance } from "@/src/adapters/outbound/sqlite/public-collaboration/advance-executor";
 import type { StructuredTurnResult } from "@/src/modules/public-collaboration";
 import { seedCurrentAdvanceFixture } from "@/tests/fixtures/collaboration/current-advance";
 import { createCredentialVault } from "@/src/modules/identity-capability/internal/credential-vault";
@@ -53,6 +54,7 @@ afterEach(() => {
     // The connection may already be closed by reopen exercises.
   }
   delete process.env.COCKPIT_MASTER_KEY;
+  vi.unstubAllGlobals();
   vi.useRealTimers();
 });
 
@@ -144,9 +146,17 @@ function outboxRows(path: string = databasePath): OutboxRow[] {
   }
 }
 
+function runtimeOutboxRows(): OutboxRow[] {
+  return database.prepare(`
+    SELECT id,project_id AS projectId,source,event_type AS eventType,
+           payload_json AS payloadJson,occurred_at AS occurredAt,outbox_seq AS seq
+    FROM audit_event_outbox WHERE source='runtime' ORDER BY outbox_seq
+  `).all() as OutboxRow[];
+}
+
 describe("collaboration audit outbox schema", () => {
   it("bootstraps identity 17 and accepts the public_collaboration outbox source", () => {
-    expect(database.prepare("PRAGMA user_version").get()).toEqual({ user_version: 23 });
+    expect(database.prepare("PRAGMA user_version").get()).toEqual({ user_version: 24 });
     seedProjectOnly();
     database.prepare(`
       INSERT INTO audit_event_outbox (
@@ -325,7 +335,7 @@ describe("collaboration audit outbox write seam", () => {
     database.close();
     database = openDatabase(databasePath);
 
-    expect(database.prepare("PRAGMA user_version").get()).toEqual({ user_version: 23 });
+    expect(database.prepare("PRAGMA user_version").get()).toEqual({ user_version: 24 });
     expect(outboxRows()).toEqual(before);
   });
 
@@ -477,6 +487,59 @@ describe("collaboration audit outbox event selection", () => {
     );
     expect(response.status).toBe(200);
   }
+
+  it("audits the model frozen into the HTTP request even if the Agent changes", async () => {
+    const threadId = seedAdvanceThread();
+    let requestedModel = "";
+    vi.stubGlobal("fetch", vi.fn(async (_url: string, init: RequestInit) => {
+      requestedModel = (JSON.parse(String(init.body)) as { model: string }).model;
+      database.prepare("UPDATE agents SET model='changed-after-request' WHERE id=?").run(AGENT_A);
+      return new Response(JSON.stringify({
+        choices: [{ message: { content: JSON.stringify(handoffTurn()) } }],
+        usage: { completion_tokens: 3, prompt_tokens: 7, total_tokens: 10 },
+      }), { headers: { "content-type": "application/json" }, status: 200 });
+    }));
+
+    const response = await executeAdvance(
+      databasePath,
+      { projectId: ADVANCE_PROJECT, runId: ADVANCE_RUN, threadId },
+      { operationId: operationId() },
+    );
+
+    expect(response.status).toBe(200);
+    expect(requestedModel).toBe("model");
+    const runtimePayload = JSON.parse(runtimeOutboxRows()[0]!.payloadJson) as {
+      model: string;
+    };
+    expect(runtimePayload.model).toBe(requestedModel);
+  });
+
+  it("audits successful HTTP calls as succeeded when structured validation fails", async () => {
+    const threadId = seedAdvanceThread();
+    const fetch = vi.fn(async () => new Response(JSON.stringify({
+      choices: [{ message: { content: '{"unexpected":true}' } }],
+      usage: { completion_tokens: 3, prompt_tokens: 7, total_tokens: 10 },
+    }), { headers: { "content-type": "application/json" }, status: 200 }));
+    vi.stubGlobal("fetch", fetch);
+
+    await executeAdvance(
+      databasePath,
+      { projectId: ADVANCE_PROJECT, runId: ADVANCE_RUN, threadId },
+      { operationId: operationId() },
+    );
+
+    expect(fetch).toHaveBeenCalledTimes(2);
+    expect(runtimeOutboxRows().map((row) => row.eventType)).toEqual([
+      "runtime_call_succeeded",
+      "runtime_call_succeeded",
+    ]);
+    expect(database.prepare(`
+      SELECT status FROM collaboration_model_calls ORDER BY call_index
+    `).all()).toEqual([
+      { status: "response_invalid" },
+      { status: "response_invalid" },
+    ]);
+  });
 
   it("mirrors every selected turn event type with a monotonic outbox_seq", () => {
     const threadId = seedAdvanceThread();

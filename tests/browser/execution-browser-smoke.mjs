@@ -51,10 +51,14 @@ const approvalCenterNarrowScreenshot = join(approvalCenterEvidenceDirectory, "ap
 const approvalCenterResultsPath = join(approvalCenterEvidenceDirectory, "approval-center-acceptance-results.json");
 const governanceAuditEvidenceDirectory = resolve("features", "037-governance-audit-events", "evidence");
 const governanceAuditScreenshot = join(governanceAuditEvidenceDirectory, "governance-audit-desktop-light.png");
+const runtimeAuditEvidenceDirectory = resolve("features", "041-runtime-audit-events", "evidence");
+const runtimeAuditScreenshot = join(runtimeAuditEvidenceDirectory, "runtime-audit-desktop-light.png");
+const runtimeAuditResultsPath = join(runtimeAuditEvidenceDirectory, "runtime-audit-acceptance-results.json");
 mkdirSync(evidenceDirectory, { recursive: true });
 mkdirSync(auditEvidenceDirectory, { recursive: true });
 mkdirSync(approvalCenterEvidenceDirectory, { recursive: true });
 mkdirSync(governanceAuditEvidenceDirectory, { recursive: true });
+mkdirSync(runtimeAuditEvidenceDirectory, { recursive: true });
 
 const browserExecutable = [
   process.env.PLAYWRIGHT_CHROMIUM_EXECUTABLE,
@@ -905,6 +909,8 @@ const AUDIT_EVENT_TYPE_COPY = {
   control_applied: "控制操作已应用",
   execution_created: "执行已创建",
   merged: "执行已合入",
+  runtime_call_failed: "运行时调用已失败",
+  runtime_call_succeeded: "运行时调用已成功",
   stale_detected: "检测到上下文过期",
   status_changed: "状态已变更",
   tool_failed: "工具调用失败",
@@ -2164,6 +2170,172 @@ process.exit(2);`,
       .getByRole("heading", { name: "审批已驳回" })
       .waitFor();
   }
+
+  // ---- RUNTIME AUDIT ACCEPTANCE (feature 041 T-03) ----
+  // This runner exercises real callOpenAiChat successes. It has no provider
+  // fault injection; runtime_call_failed remains covered at the T-01 outbox
+  // seam instead of adding another full Agent execution solely to force one.
+  const runtimeAuditAcceptance = { assertions: 0, axeStates: 0 };
+  const runtimeAuditOk = (value, message) => {
+    runtimeAuditAcceptance.assertions += 1;
+    assert.ok(value, message);
+  };
+  const runtimeAuditEqual = (actual, expected, message) => {
+    runtimeAuditAcceptance.assertions += 1;
+    assert.equal(actual, expected, message);
+  };
+  const runtimeEventTypes = new Set([
+    "runtime_call_failed",
+    "runtime_call_succeeded",
+  ]);
+  const runtimeEvents = auditEvents.filter((event) => (
+    runtimeEventTypes.has(event.eventType)
+  ));
+  const observedRuntimeTypes = new Set(
+    runtimeEvents.map((event) => event.eventType),
+  );
+  const requiredRuntimeTypes = observedRuntimeTypes.has("runtime_call_failed")
+    ? [...runtimeEventTypes]
+    : ["runtime_call_succeeded"];
+  for (const eventType of requiredRuntimeTypes) {
+    runtimeAuditOk(
+      runtimeEvents.some((event) => event.eventType === eventType),
+      `real model paths must produce ${eventType}`,
+    );
+  }
+  const runtimeAuditApiText = JSON.stringify(runtimeEvents);
+  for (const value of [
+    apiKey,
+    masterKey,
+    baseUrl,
+    providerBaseUrl,
+    canonicalWorkspace,
+    realpathSync(executionRoot),
+    temporaryDirectory,
+  ]) {
+    runtimeAuditOk(
+      !runtimeAuditApiText.includes(value),
+      "runtime payloads must not expose credentials, base URLs, or host paths",
+    );
+  }
+  runtimeAuditOk(
+    runtimeEvents.every((event) => (
+      !Object.hasOwn(event.payload, "apiKey")
+      && !Object.hasOwn(event.payload, "baseUrl")
+    )),
+    "runtime payloads must not expose apiKey/baseUrl fields",
+  );
+  runtimeAuditEqual(
+    governanceForeignAudit.status,
+    404,
+    "foreign project runtime audit read must 404",
+  );
+  runtimeAuditOk(
+    !JSON.stringify(governanceForeignAudit.body).includes(temporaryDirectory),
+    "foreign project runtime 404 envelope must not expose host paths",
+  );
+  const runtimeAuditCounts = (() => {
+    const database = new DatabaseSync(databasePath, { readOnly: true });
+    try {
+      const count = (sql, ...params) =>
+        Number(database.prepare(sql).get(...params).value);
+      return {
+        checkpoint: count(
+          "SELECT last_outbox_seq AS value FROM audit_projection_checkpoints"
+            + " WHERE consumer_id='audit-event-projection'",
+        ),
+        maxSeq: count(
+          "SELECT COALESCE(MAX(outbox_seq),0) AS value FROM audit_event_outbox",
+        ),
+        outbox: count(
+          "SELECT COUNT(*) AS value FROM audit_event_outbox WHERE project_id=?",
+          context.projectId,
+        ),
+        runtime: count(
+          "SELECT COUNT(*) AS value FROM audit_event_outbox"
+            + " WHERE source='runtime' AND project_id=?",
+          context.projectId,
+        ),
+      };
+    } finally {
+      database.close();
+    }
+  })();
+  runtimeAuditEqual(
+    runtimeAuditCounts.runtime,
+    runtimeEvents.length,
+    "runtime outbox count must match filtered API events",
+  );
+  runtimeAuditEqual(
+    runtimeAuditCounts.outbox,
+    auditEvents.length,
+    "project outbox count must match the cursor-complete API trail",
+  );
+  runtimeAuditEqual(
+    runtimeAuditCounts.checkpoint,
+    runtimeAuditCounts.maxSeq,
+    "global projection checkpoint must reach max outbox sequence",
+  );
+  const runtimeDisplayEvent = runtimeEvents.find((event) => (
+    event.payload.surface === "execution"
+    && typeof event.payload.executionId === "string"
+    && event.payload.executionId !== ""
+    && typeof event.payload.model === "string"
+    && event.payload.model !== ""
+  ));
+  runtimeAuditOk(
+    runtimeDisplayEvent,
+    "the audit trail must contain a renderable execution runtime row",
+  );
+  const expectedRuntimeHref =
+    `/projects/${encodeURIComponent(context.projectId)}`
+    + `/executions/${encodeURIComponent(runtimeDisplayEvent.payload.executionId)}`;
+  const runtimeHeading = AUDIT_EVENT_TYPE_COPY[runtimeDisplayEvent.eventType];
+  const runtimeRow = auditRows
+    .filter({ has: page.locator(`a[href="${expectedRuntimeHref}"]`) })
+    .filter({ has: page.getByRole("heading", { name: runtimeHeading }) })
+    .first();
+  await runtimeRow.waitFor();
+  const runtimeLocate = runtimeRow.getByRole("link", {
+    name: "定位来源运行时",
+  });
+  runtimeAuditOk(
+    await runtimeRow.getByText("运行时", { exact: true }).evaluate(
+      (node) => node.classList.contains("status-label")
+        && !node.classList.contains("status-failed")
+        && node.classList.length === 1,
+    ),
+    "runtime badge must use the bare neutral status-label",
+  );
+  const expectedRuntimeExcerpt = runtimeDisplayEvent.eventType === "runtime_call_failed"
+    && typeof runtimeDisplayEvent.payload.errorCategory === "string"
+    && runtimeDisplayEvent.payload.errorCategory !== ""
+    ? `${runtimeDisplayEvent.payload.model} · ${runtimeDisplayEvent.payload.errorCategory}`
+    : runtimeDisplayEvent.payload.model;
+  runtimeAuditEqual(
+    await runtimeRow.locator(".audit-event-excerpt").innerText(),
+    expectedRuntimeExcerpt,
+    "runtime row must render its public model/error excerpt",
+  );
+  runtimeAuditEqual(
+    await runtimeLocate.innerText(),
+    "定位来源运行时",
+    "runtime source link must use the runtime label",
+  );
+  runtimeAuditEqual(
+    await runtimeLocate.getAttribute("href"),
+    expectedRuntimeHref,
+    "runtime locate link must use the canonical execution route",
+  );
+  const runtimeLocateBox = await runtimeLocate.boundingBox();
+  runtimeAuditOk(
+    runtimeLocateBox
+      && runtimeLocateBox.height >= 44
+      && runtimeLocateBox.width >= 44,
+    "runtime locate link must be at least 44x44",
+  );
+  await page.screenshot({ fullPage: true, path: runtimeAuditScreenshot });
+
   governanceAuditFacingText = await page.locator("html").innerText();
   await page.screenshot({ fullPage: true, path: governanceAuditScreenshot });
   const firstLocate = auditList.getByRole("button", { name: "定位来源执行" }).first();
@@ -2195,12 +2367,14 @@ process.exit(2);`,
   await contextPanel.getByText("已定位到来源执行。").waitFor();
   await axeScan("desktop light audit panel");
   governanceAuditAcceptance.axeStates += 1;
+  runtimeAuditAcceptance.axeStates += 1;
   await page.screenshot({ fullPage: true, path: auditDesktopScreenshot });
   await page.getByRole("button", { name: /切换到暗色主题/ }).click();
   await page.getByRole("button", { name: /切换到明色主题/ }).waitFor();
   await contextPanel.getByText("已追平", { exact: true }).waitFor();
   await axeScan("desktop dark audit panel");
   governanceAuditAcceptance.axeStates += 1;
+  runtimeAuditAcceptance.axeStates += 1;
   await page.getByRole("button", { name: /切换到明色主题/ }).click();
   await page.getByRole("button", { name: /切换到暗色主题/ }).waitFor();
   console.log("AUDIT DESKTOP PASS: list+freshness+paging+locate+keyboard+44px+light/dark axe");
@@ -2367,7 +2541,7 @@ process.exit(2);`,
     }
   })();
   const surfaces = {
-    api: `${apiBodies.join("\n")}\n${governanceAuditApiText}`,
+    api: `${apiBodies.join("\n")}\n${governanceAuditApiText}\n${runtimeAuditApiText}`,
     database: databaseText(),
     dom: `${desktopFacingText}\n${narrowFacingText}\n${narrowAuditFacingText}\n${
       approvalCenterFacingText
@@ -2384,7 +2558,8 @@ process.exit(2);`,
     }\n${readFileSync(approvalCenterLapsedScreenshot).toString("latin1")
     }\n${readFileSync(approvalCenterLapsedDarkScreenshot).toString("latin1")
     }\n${readFileSync(approvalCenterNarrowScreenshot).toString("latin1")
-    }\n${readFileSync(governanceAuditScreenshot).toString("latin1")}`,
+    }\n${readFileSync(governanceAuditScreenshot).toString("latin1")
+    }\n${readFileSync(runtimeAuditScreenshot).toString("latin1")}`,
   };
   const forbidden = [
     apiKey,
@@ -2423,6 +2598,19 @@ process.exit(2);`,
     `GOVERNANCE AUDIT ACCEPTANCE PASS: assertions=${governanceAuditAcceptance.assertions} `
     + `axeStates=${governanceAuditAcceptance.axeStates}`,
   );
+  writeFileSync(
+    runtimeAuditResultsPath,
+    `${JSON.stringify({
+      ...runtimeAuditAcceptance,
+      eventTypes: [...observedRuntimeTypes].sort(),
+      events: runtimeEvents.length,
+    }, null, 2)}\n`,
+  );
+  console.log(
+    `RUNTIME AUDIT ACCEPTANCE PASS: assertions=${runtimeAuditAcceptance.assertions} `
+    + `axeStates=${runtimeAuditAcceptance.axeStates}`,
+  );
+  console.log(`RUNTIME AUDIT RESULTS: ${runtimeAuditResultsPath}`);
   writeFileSync(
     approvalCenterResultsPath,
     `${JSON.stringify(approvalCenterAcceptance, null, 2)}\n`,

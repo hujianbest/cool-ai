@@ -42,6 +42,11 @@ function database(): DatabaseSync {
       completion_tokens INTEGER,total_tokens INTEGER,error_category TEXT,
       started_at TEXT NOT NULL,finished_at TEXT,UNIQUE(attempt_id,call_index)
     );
+    CREATE TABLE audit_event_outbox(
+      id TEXT PRIMARY KEY,project_id TEXT NOT NULL,source TEXT NOT NULL,
+      event_type TEXT NOT NULL,payload_json TEXT NOT NULL,occurred_at TEXT NOT NULL,
+      outbox_seq INTEGER NOT NULL UNIQUE
+    );
     CREATE TABLE review_decisions(id TEXT PRIMARY KEY);
   `);
   return db;

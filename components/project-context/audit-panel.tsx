@@ -82,6 +82,14 @@ const GOVERNANCE_EVENT_TYPE_COPY: Record<string, string> = {
   approval_requested: "审批已请求",
 };
 
+// Runtime event types are disjoint from every existing source-owner set, so
+// this copy map also serves as the runtime-domain classifier without a
+// payload-shape tie-break.
+const RUNTIME_EVENT_TYPE_COPY: Record<string, string> = {
+  runtime_call_failed: "运行时调用已失败",
+  runtime_call_succeeded: "运行时调用已成功",
+};
+
 // Readable copy for the audit event types, centralized so any future type not
 // yet mapped degrades to its raw contract value (never blank).
 const EVENT_TYPE_COPY: Record<string, string> = {
@@ -104,6 +112,7 @@ const EVENT_TYPE_COPY: Record<string, string> = {
   ...GOVERNANCE_EVENT_TYPE_COPY,
   ...MISSION_WORK_EVENT_TYPE_COPY,
   ...PROJECT_WORKSPACE_EVENT_TYPE_COPY,
+  ...RUNTIME_EVENT_TYPE_COPY,
 };
 
 const ACTOR_TYPE_COPY: Record<string, string> = {
@@ -117,7 +126,8 @@ type AuditEventDomain =
   | "execution"
   | "governance"
   | "mission"
-  | "project";
+  | "project"
+  | "runtime";
 
 const DOMAIN_COPY: Record<AuditEventDomain, string> = {
   collaboration: "协作",
@@ -125,6 +135,7 @@ const DOMAIN_COPY: Record<AuditEventDomain, string> = {
   governance: "治理",
   mission: "任务",
   project: "项目",
+  runtime: "运行时",
 };
 
 // All variants are existing .status-label colors (approval-center precedent):
@@ -139,6 +150,7 @@ const DOMAIN_VARIANT: Record<AuditEventDomain, string> = {
   governance: "",
   mission: "status-completed",
   project: "",
+  runtime: "",
 };
 
 // Most outbox sources write disjoint closed event-type sets. The sole
@@ -152,7 +164,8 @@ function eventDomain(event: AuditEventListItemDto): AuditEventDomain {
   if (eventType === "approval_requested") {
     return Object.hasOwn(payload, "attemptNo") ? "execution" : "governance";
   }
-  return eventType in GOVERNANCE_EVENT_TYPE_COPY ? "governance" : "execution";
+  if (eventType in GOVERNANCE_EVENT_TYPE_COPY) return "governance";
+  return eventType in RUNTIME_EVENT_TYPE_COPY ? "runtime" : "execution";
 }
 
 const MESSAGE_EVENT_TYPES: ReadonlySet<string> = new Set([
@@ -344,6 +357,44 @@ function governanceSourceHref(
   }
   if (approvalId !== null) {
     return `/projects/${project}/approvals/${encodeURIComponent(approvalId)}`;
+  }
+  return null;
+}
+
+function runtimeSummary(event: AuditEventListItemDto): string | null {
+  const model = publicText(event.payload.model);
+  if (model === null) return null;
+  if (event.eventType !== "runtime_call_failed") return model;
+  const errorCategory = publicText(event.payload.errorCategory);
+  return errorCategory === null ? model : `${model} · ${errorCategory}`;
+}
+
+function runtimeSourceHref(
+  projectId: string,
+  payload: Record<string, unknown>,
+): string | null {
+  if (projectId === "") return null;
+  const project = encodeURIComponent(projectId);
+  if (payload.surface === "execution") {
+    const executionId = publicText(payload.executionId);
+    return executionId === null
+      ? null
+      : `/projects/${project}/executions/${encodeURIComponent(executionId)}`;
+  }
+  if (payload.surface === "review") {
+    const reviewAttemptId = publicText(payload.reviewAttemptId);
+    return reviewAttemptId === null
+      ? null
+      : `/projects/${project}/reviews/${encodeURIComponent(reviewAttemptId)}`;
+  }
+  if (payload.surface === "collaboration") {
+    const threadId = publicText(payload.threadId);
+    if (threadId === null) return null;
+    const query = new URLSearchParams();
+    query.set("thread", threadId);
+    const runId = publicText(payload.runId);
+    if (runId !== null) query.set("run", runId);
+    return `/projects/${project}?${query.toString()}`;
   }
   return null;
 }
@@ -586,7 +637,9 @@ export function AuditPanel({ projectId }: { projectId: string }) {
                   ? projectWorkspaceSummary(event)
                   : domain === "governance"
                     ? governanceSummary(event)
-                    : messageExcerpt(event);
+                    : domain === "runtime"
+                      ? runtimeSummary(event)
+                      : messageExcerpt(event);
               const sourceHref = domain === "collaboration"
                 ? collaborationSourceHref(projectId, event.payload)
                 : null;
@@ -598,6 +651,9 @@ export function AuditPanel({ projectId }: { projectId: string }) {
                 : null;
               const governanceSource = domain === "governance"
                 ? governanceSourceHref(projectId, event.payload)
+                : null;
+              const runtimeSource = domain === "runtime"
+                ? runtimeSourceHref(projectId, event.payload)
                 : null;
               const domainVariant = DOMAIN_VARIANT[domain];
               return (
@@ -636,6 +692,9 @@ export function AuditPanel({ projectId }: { projectId: string }) {
                     : null}
                   {governanceSource
                     ? <a href={governanceSource}>定位来源审批</a>
+                    : null}
+                  {runtimeSource
+                    ? <a href={runtimeSource}>定位来源运行时</a>
                     : null}
                 </li>
               );

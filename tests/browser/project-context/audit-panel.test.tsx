@@ -1312,3 +1312,336 @@ describe("Audit panel governance events", () => {
     expect(screen.queryByText("secret-hash")).toBeNull();
   });
 });
+
+describe("Audit panel runtime events", () => {
+  it("renders runtime types with readable copy and a neutral badge in a mixed six-domain list", async () => {
+    const AuditPanel = await auditPanel();
+    const events = [
+      auditEvent({
+        actorType: "owner",
+        eventType: "runtime_call_succeeded",
+        id: "event-130",
+        outboxSeq: 130,
+        payload: {
+          executionId: "exec-runtime",
+          model: "gpt-runtime",
+          surface: "execution",
+        },
+      }),
+      auditEvent({
+        actorType: "owner",
+        eventType: "runtime_call_failed",
+        executionId: "exec-bait",
+        id: "event-129",
+        outboxSeq: 129,
+        payload: {
+          errorCategory: "provider_error",
+          model: "gpt-runtime",
+          reviewAttemptId: "review-runtime",
+          surface: "review",
+        },
+      }),
+      auditEvent({
+        eventType: "execution_created",
+        executionId: "exec-1",
+        id: "event-128",
+        outboxSeq: 128,
+      }),
+      auditEvent({
+        actorType: "agent",
+        eventType: "run_started",
+        id: "event-127",
+        outboxSeq: 127,
+        payload: { runId: "run-1", threadId: "thread-1" },
+      }),
+      auditEvent({
+        actorType: "owner",
+        eventType: "work_item_created",
+        id: "event-126",
+        outboxSeq: 126,
+        payload: { missionId: "mission-1", title: "看板样例", workItemId: "work-1" },
+      }),
+      auditEvent({
+        actorType: "owner",
+        eventType: "project_created",
+        id: "event-125",
+        outboxSeq: 125,
+        payload: { projectName: "项目样例" },
+      }),
+      auditEvent({
+        actorType: "owner",
+        eventType: "approval_approved",
+        id: "event-124",
+        outboxSeq: 124,
+        payload: { approvalId: "approval-1", kind: "command" },
+      }),
+    ];
+    vi.stubGlobal(
+      "fetch",
+      vi.fn(() => Promise.resolve(Response.json(page(events)))),
+    );
+    render(<AuditPanel projectId="project-1" />);
+
+    const list = await screen.findByRole("list", { name: "审计事件" });
+    const rows = within(list).getAllByRole("listitem");
+    expect(rows).toHaveLength(7);
+    expect(within(rows[0]!).getByRole("heading", { name: "运行时调用已成功" }))
+      .toBeInTheDocument();
+    expect(within(rows[1]!).getByRole("heading", { name: "运行时调用已失败" }))
+      .toBeInTheDocument();
+    for (const row of rows.slice(0, 2)) {
+      expect(within(row).getByText("运行时", { selector: "span" }))
+        .toHaveClass("status-label", { exact: true });
+      expect(within(row).queryByRole("button", { name: "定位来源执行" }))
+        .toBeNull();
+    }
+    expect(within(rows[2]!).getByText("执行")).toHaveClass("status-running");
+    expect(within(rows[3]!).getByText("协作")).toHaveClass("status-queued");
+    expect(within(rows[4]!).getByText("任务")).toHaveClass("status-completed");
+    expect(within(rows[5]!).getByText("项目"))
+      .toHaveClass("status-label", { exact: true });
+    expect(within(rows[6]!).getByText("治理"))
+      .toHaveClass("status-label", { exact: true });
+    expect(within(list).queryByRole("textbox")).toBeNull();
+    expect(within(list).queryByRole("checkbox")).toBeNull();
+    expect(within(list).queryByRole("button", { name: /编辑|删除|修改/ }))
+      .toBeNull();
+  });
+
+  it("links runtime events to canonical execution, review, and collaboration identities", async () => {
+    const AuditPanel = await auditPanel();
+    const events = [
+      auditEvent({
+        actorType: "owner",
+        eventType: "runtime_call_succeeded",
+        id: "event-120",
+        outboxSeq: 120,
+        payload: {
+          executionId: "exec/one",
+          model: "gpt-runtime",
+          surface: "execution",
+        },
+      }),
+      auditEvent({
+        actorType: "owner",
+        eventType: "runtime_call_failed",
+        id: "event-119",
+        outboxSeq: 119,
+        payload: {
+          errorCategory: "provider_error",
+          model: "gpt-runtime",
+          reviewAttemptId: "review one",
+          surface: "review",
+        },
+      }),
+      auditEvent({
+        actorType: "owner",
+        eventType: "runtime_call_succeeded",
+        id: "event-118",
+        outboxSeq: 118,
+        payload: {
+          model: "gpt-runtime",
+          runId: "run/one",
+          surface: "collaboration",
+          threadId: "thread one",
+        },
+      }),
+      auditEvent({
+        actorType: "owner",
+        eventType: "runtime_call_succeeded",
+        id: "event-117",
+        outboxSeq: 117,
+        payload: {
+          model: "gpt-runtime",
+          surface: "collaboration",
+          threadId: "thread-two",
+        },
+      }),
+    ];
+    vi.stubGlobal(
+      "fetch",
+      vi.fn(() => Promise.resolve(Response.json(page(events)))),
+    );
+    render(<AuditPanel projectId="project-1" />);
+
+    const list = await screen.findByRole("list", { name: "审计事件" });
+    const rows = within(list).getAllByRole("listitem");
+    expect(within(rows[0]!).getByRole("link", { name: "定位来源运行时" }))
+      .toHaveAttribute(
+        "href",
+        "/projects/project-1/executions/exec%2Fone",
+      );
+    expect(within(rows[1]!).getByRole("link", { name: "定位来源运行时" }))
+      .toHaveAttribute(
+        "href",
+        "/projects/project-1/reviews/review%20one",
+      );
+    expect(within(rows[2]!).getByRole("link", { name: "定位来源运行时" }))
+      .toHaveAttribute(
+        "href",
+        "/projects/project-1?thread=thread+one&run=run%2Fone",
+      );
+    expect(within(rows[3]!).getByRole("link", { name: "定位来源运行时" }))
+      .toHaveAttribute(
+        "href",
+        "/projects/project-1?thread=thread-two",
+      );
+  });
+
+  it("renders no runtime locate link for malformed ids or an empty project identity", async () => {
+    const AuditPanel = await auditPanel();
+    vi.stubGlobal(
+      "fetch",
+      vi.fn(() => Promise.resolve(Response.json(page([
+        auditEvent({
+          actorType: "owner",
+          eventType: "runtime_call_succeeded",
+          id: "event-110",
+          outboxSeq: 110,
+          payload: { executionId: "", model: "gpt-runtime", surface: "execution" },
+        }),
+        auditEvent({
+          actorType: "owner",
+          eventType: "runtime_call_failed",
+          id: "event-109",
+          outboxSeq: 109,
+          payload: {
+            errorCategory: "provider_error",
+            model: "gpt-runtime",
+            reviewAttemptId: 42,
+            surface: "review",
+          },
+        }),
+        auditEvent({
+          actorType: "owner",
+          eventType: "runtime_call_succeeded",
+          id: "event-108",
+          outboxSeq: 108,
+          payload: {
+            model: "gpt-runtime",
+            runId: "run-1",
+            surface: "collaboration",
+            threadId: null,
+          },
+        }),
+        auditEvent({
+          actorType: "owner",
+          eventType: "runtime_call_succeeded",
+          id: "event-107",
+          outboxSeq: 107,
+          payload: {
+            executionId: "exec-ignored",
+            model: "gpt-runtime",
+            surface: "unknown",
+          },
+        }),
+      ])))),
+    );
+    const firstRender = render(<AuditPanel projectId="project-1" />);
+
+    let list = await screen.findByRole("list", { name: "审计事件" });
+    for (const row of within(list).getAllByRole("listitem")) {
+      expect(within(row).queryByRole("link")).toBeNull();
+    }
+
+    firstRender.unmount();
+    vi.stubGlobal(
+      "fetch",
+      vi.fn(() => Promise.resolve(Response.json(page([
+        auditEvent({
+          actorType: "owner",
+          eventType: "runtime_call_succeeded",
+          id: "event-106",
+          outboxSeq: 106,
+          payload: {
+            executionId: "exec-valid",
+            model: "gpt-runtime",
+            surface: "execution",
+          },
+        }),
+      ])))),
+    );
+    render(<AuditPanel projectId="" />);
+
+    list = await screen.findByRole("list", { name: "审计事件" });
+    expect(within(list).queryByRole("link")).toBeNull();
+  });
+
+  it("shows only public runtime excerpts and omits malformed or foreign fields", async () => {
+    const AuditPanel = await auditPanel();
+    const events = [
+      auditEvent({
+        actorType: "owner",
+        eventType: "runtime_call_succeeded",
+        id: "event-100",
+        outboxSeq: 100,
+        payload: {
+          apiKey: "secret-key",
+          errorCategory: "foreign_category",
+          model: "gpt-runtime",
+          surface: "execution",
+        },
+      }),
+      auditEvent({
+        actorType: "owner",
+        eventType: "runtime_call_failed",
+        id: "event-99",
+        outboxSeq: 99,
+        payload: {
+          baseUrl: "https://private.example",
+          errorCategory: "provider_error",
+          model: "gpt-runtime",
+          surface: "review",
+        },
+      }),
+      auditEvent({
+        actorType: "owner",
+        eventType: "runtime_call_failed",
+        id: "event-98",
+        outboxSeq: 98,
+        payload: {
+          errorCategory: "provider_error",
+          model: "",
+          surface: "collaboration",
+        },
+      }),
+      auditEvent({
+        actorType: "owner",
+        eventType: "runtime_call_succeeded",
+        id: "event-97",
+        outboxSeq: 97,
+        payload: { model: 42, surface: "execution" },
+      }),
+      auditEvent({
+        eventType: "execution_created",
+        executionId: "exec-1",
+        id: "event-96",
+        outboxSeq: 96,
+        payload: {
+          errorCategory: "不应显示的类别",
+          model: "不应显示的模型",
+        },
+      }),
+    ];
+    vi.stubGlobal(
+      "fetch",
+      vi.fn(() => Promise.resolve(Response.json(page(events)))),
+    );
+    render(<AuditPanel projectId="project-1" />);
+
+    const list = await screen.findByRole("list", { name: "审计事件" });
+    const rows = within(list).getAllByRole("listitem");
+    expect(within(rows[0]!).getByText("gpt-runtime"))
+      .toHaveClass("audit-event-excerpt");
+    expect(within(rows[1]!).getByText("gpt-runtime · provider_error"))
+      .toHaveClass("audit-event-excerpt");
+    for (const row of rows.slice(2)) {
+      expect(row.querySelector(".audit-event-excerpt")).toBeNull();
+    }
+    expect(screen.queryByText("secret-key")).toBeNull();
+    expect(screen.queryByText("https://private.example")).toBeNull();
+    expect(screen.queryByText("foreign_category")).toBeNull();
+    expect(screen.queryByText("不应显示的模型")).toBeNull();
+    expect(screen.queryByText("不应显示的类别")).toBeNull();
+  });
+});

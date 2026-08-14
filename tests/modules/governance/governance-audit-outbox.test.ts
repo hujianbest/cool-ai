@@ -218,8 +218,8 @@ function insertStagedMergeApproval(input: {
 }
 
 describe("governance audit outbox schema", () => {
-  it("bootstraps identity 23 and accepts the governance outbox source", () => {
-    expect(database.prepare("PRAGMA user_version").get()).toEqual({ user_version: 23 });
+  it("bootstraps identity 24 and accepts the governance outbox source", () => {
+    expect(database.prepare("PRAGMA user_version").get()).toEqual({ user_version: 24 });
     database.prepare(`
       INSERT INTO audit_event_outbox (
         id,project_id,source,event_type,payload_json,occurred_at,outbox_seq

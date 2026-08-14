@@ -3,6 +3,7 @@ import type { DatabaseSync } from "node:sqlite";
 
 import { commitAgentTaskActionsTx } from "@/src/adapters/outbound/sqlite/public-collaboration/action-committer";
 import { appendCollaborationAuditOutboxRow } from "@/src/adapters/outbound/sqlite/public-collaboration/audit-event-outbox";
+import { appendRuntimeAuditOutboxRow } from "@/src/adapters/outbound/sqlite/runtime/audit-event-outbox";
 import {
   collaborationErrorBody,
   CollaborationError,
@@ -461,6 +462,7 @@ function persistCallAudit(
   dependencies: FinalizeDependencies,
   attempt: FinalizeAttemptRow,
   result: StructuredTurnResult,
+  runtimeModel: string | null,
   timestamp: string,
 ): void {
   result.calls.forEach((call, index) => {
@@ -495,6 +497,23 @@ function persistCallAudit(
         "Model call audit could not be persisted.",
         { category: "internal_failure" },
       );
+    }
+    if (runtimeModel !== null) {
+      const runtimeSucceeded = call.result.status === "succeeded";
+      appendRuntimeAuditOutboxRow(database, {
+        eventType: runtimeSucceeded ? "runtime_call_succeeded" : "runtime_call_failed",
+        occurredAt: timestamp,
+        projectId: attempt.projectId,
+        sourcePayload: {
+          ...(runtimeSucceeded
+            ? {}
+            : { errorCategory: call.result.error?.category ?? call.result.status }),
+          model: runtimeModel,
+          runId: attempt.runId,
+          surface: "collaboration",
+          threadId: attempt.threadId,
+        },
+      });
     }
     appendEvent(
       database,
@@ -834,12 +853,13 @@ function markFailure(
   attempt: FinalizeAttemptRow,
   result: StructuredTurnResult,
   error: CollaborationError,
+  runtimeModel: string | null,
   timestamp: string,
   callsPersisted = false,
   runStatus: "paused" | "failed" = "paused",
 ): FinalizeAdvanceResponse {
   if (!callsPersisted) {
-    persistCallAudit(database, dependencies, attempt, result, timestamp);
+    persistCallAudit(database, dependencies, attempt, result, runtimeModel, timestamp);
   }
   const provider = database
     .prepare(
@@ -1014,6 +1034,7 @@ export function finalizeAdvance(
     leaseToken: string;
     preflightError?: CollaborationError;
     result: StructuredTurnResult;
+    runtimeModel?: string;
   },
   dependencies: FinalizeDependencies,
 ): FinalizeAdvanceResponse {
@@ -1059,7 +1080,14 @@ export function finalizeAdvance(
           leaseLive && run.status === "running" && executionMatches && contextMatches;
 
         if (!acceptsBusiness) {
-          persistCallAudit(database, dependencies, attempt, input.result, timestamp);
+          persistCallAudit(
+            database,
+            dependencies,
+            attempt,
+            input.result,
+            input.runtimeModel ?? null,
+            timestamp,
+          );
           const update = database
             .prepare(
               `UPDATE collaboration_attempts
@@ -1099,7 +1127,14 @@ export function finalizeAdvance(
           return { affectedRows: 1, body, status: 200 };
         }
 
-        persistCallAudit(database, dependencies, attempt, input.result, timestamp);
+        persistCallAudit(
+          database,
+          dependencies,
+          attempt,
+          input.result,
+          input.runtimeModel ?? null,
+          timestamp,
+        );
         const tokenBoundary = crossedTokenBoundary(database, attempt);
         if (tokenBoundary) {
           return discardAtTokenBoundary(
@@ -1119,6 +1154,7 @@ export function finalizeAdvance(
             attempt,
             input.result,
             publicError,
+            input.runtimeModel ?? null,
             timestamp,
             true,
           );
@@ -1208,6 +1244,7 @@ export function finalizeAdvance(
           current,
           input.result,
           durableError,
+          input.runtimeModel ?? null,
           dependencies.clock().toISOString(),
           false,
           error instanceof CollaborationError ? "paused" : "failed",

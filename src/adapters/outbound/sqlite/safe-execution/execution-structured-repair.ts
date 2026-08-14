@@ -21,6 +21,7 @@ import {
   commitPostCallTokenBoundary,
   recordUsageEvent,
 } from "@/src/adapters/outbound/sqlite/safe-execution/execution-usage-budget";
+import { appendRuntimeAuditOutboxRow } from "@/src/adapters/outbound/sqlite/runtime/audit-event-outbox";
 
 const DB_NOW = "strftime('%Y-%m-%dT%H:%M:%fZ','now')";
 const MODEL_CALL_TIMEOUT_SECONDS = 90;
@@ -174,12 +175,17 @@ function persistedStatus(
 function finishCallingFact(
   database: DatabaseSync,
   callId: string,
+  executionId: string,
+  projectId: string,
+  model: string,
   result: ModelCallResult,
   parsed: ExecutionActionParseResult | null,
   faultInjector?: (point: ExecutionStructuredFaultPoint) => void,
 ): void {
   const status = persistedStatus(result, parsed);
   const usage = result.usage;
+  const errorCategory =
+    result.error?.category ?? (status === "response_invalid" ? "structured_output_invalid" : null);
   faultInjector?.("before_call_terminal_update");
   transaction(database, () => {
     const updated = database.prepare(`
@@ -192,13 +198,26 @@ function finishCallingFact(
       usage?.promptTokens ?? null,
       usage?.completionTokens ?? null,
       usage?.totalTokens ?? null,
-      result.error?.category ?? (status === "response_invalid" ? "structured_output_invalid" : null),
+      errorCategory,
       callId,
     );
     if (updated.changes !== 1) {
       throw new Error("MODEL_CALL_STATE_CONFLICT");
     }
     recordUsageEvent(database, callId, usage);
+    const runtimeSucceeded = result.status === "succeeded";
+    appendRuntimeAuditOutboxRow(database, {
+      eventType: runtimeSucceeded ? "runtime_call_succeeded" : "runtime_call_failed",
+      projectId,
+      sourcePayload: {
+        ...(runtimeSucceeded
+          ? {}
+          : { errorCategory: errorCategory ?? status }),
+        executionId,
+        model,
+        surface: "execution",
+      },
+    });
     faultInjector?.("after_call_terminal_update");
   });
   faultInjector?.("after_call_terminal_commit");
@@ -230,7 +249,16 @@ async function executeCall(
   const parsed = content === null
     ? null
     : parseExecutionActionContent(content, input.permissions);
-  finishCallingFact(database, inserted.callId, result, parsed, input.modelFaultInjector);
+  finishCallingFact(
+    database,
+    inserted.callId,
+    inserted.identity.executionId,
+    input.projectId,
+    input.request.model,
+    result,
+    parsed,
+    input.modelFaultInjector,
+  );
   return {
     stored: { id: inserted.callId, result },
     parsed,

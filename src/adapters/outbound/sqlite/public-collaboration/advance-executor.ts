@@ -145,13 +145,16 @@ export async function executeAdvance(
   const correlationId = randomUUID();
   let result: StructuredTurnResult;
   let preflightError: CollaborationError | undefined;
+  let runtimeModel: string | undefined;
   try {
     const connection = providerConnection(databasePath, acquired.prompt.agentId);
+    const request = {
+      ...connection,
+      messages: acquired.prompt.messages,
+    };
+    runtimeModel = request.model;
     result = await executeStructuredTurn(
-      {
-        ...connection,
-        messages: acquired.prompt.messages,
-      },
+      request,
       {
         attemptId: acquired.attempt.id,
         correlationId,
@@ -173,6 +176,7 @@ export async function executeAdvance(
       leaseToken: acquired.attempt.leaseToken,
       preflightError,
       result,
+      runtimeModel,
     },
     dependencies,
   );

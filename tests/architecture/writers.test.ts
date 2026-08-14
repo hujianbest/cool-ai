@@ -41,6 +41,7 @@ const OWNER_WRITER_DIRS: Record<string, RegExp[]> = {
     /^src\/adapters\/outbound\/workspace\//u,
   ],
   governance: [/^src\/adapters\/outbound\/sqlite\/governance\//u],
+  runtime: [/^src\/adapters\/outbound\/sqlite\/runtime\//u],
   "review-delivery": [/^src\/adapters\/outbound\/sqlite\/review-delivery\//u],
   "knowledge-provenance": [/^src\/adapters\/outbound\/sqlite\/knowledge-provenance\//u],
   "operations-projection": [/^src\/adapters\/outbound\/sqlite\/operations-projection\//u],

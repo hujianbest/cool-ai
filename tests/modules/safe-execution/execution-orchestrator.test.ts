@@ -333,7 +333,9 @@ function modelFacts() {
 function outboxAuditFacts(): Array<{ eventId: string; seq: number }> {
   return database.prepare(`
     SELECT id AS eventId,outbox_seq AS seq
-    FROM audit_event_outbox ORDER BY outbox_seq
+    FROM audit_event_outbox
+    WHERE source='safe_execution'
+    ORDER BY outbox_seq
   `).all() as Array<{ eventId: string; seq: number }>;
 }
 
@@ -436,6 +438,18 @@ describe("client-driven execution advance orchestration", () => {
         SELECT count(*) AS count FROM execution_model_calls WHERE status='calling'
       `).get()).toEqual({ count: 0 });
       expect(provider.requestCount()).toBe(failure === "provider" ? 2 : 3);
+      expect(database.prepare(`
+        SELECT event_type AS eventType,COUNT(*) AS count
+        FROM audit_event_outbox
+        WHERE source='runtime'
+        GROUP BY event_type
+        ORDER BY event_type
+      `).all()).toEqual(failure === "provider"
+        ? [
+            { count: 1, eventType: "runtime_call_failed" },
+            { count: 1, eventType: "runtime_call_succeeded" },
+          ]
+        : [{ count: 3, eventType: "runtime_call_succeeded" }]);
     },
     10_000,
   );
@@ -545,11 +559,13 @@ describe("client-driven execution advance orchestration", () => {
       expect(database.prepare(`
         SELECT count(*) AS count FROM execution_model_calls WHERE status='calling'
       `).get()).toEqual({ count: 0 });
-      // End to end: every committed execution event has exactly one audit
-      // outbox row, in order, with a dense monotonic sequence.
-      expect(outboxAuditFacts().map(({ eventId }) => eventId)).toEqual(committedEventIds());
-      expect(outboxAuditFacts().map(({ seq }) => seq)).toEqual(
-        committedEventIds().map((_, index) => index + 1),
+      // End to end: every committed execution event has exactly one
+      // safe-execution outbox row in order. The shared global sequence may
+      // contain Runtime rows between those owner events.
+      const executionAuditFacts = outboxAuditFacts();
+      expect(executionAuditFacts.map(({ eventId }) => eventId)).toEqual(committedEventIds());
+      expect(executionAuditFacts.map(({ seq }) => seq)).toEqual(
+        executionAuditFacts.map(({ seq }) => seq).toSorted((left, right) => left - right),
       );
     },
     10_000,

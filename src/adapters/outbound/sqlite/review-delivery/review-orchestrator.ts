@@ -19,6 +19,7 @@ import {
   finalizeCheckpointedReview,
   type ReviewFinalizeStep,
 } from "@/src/adapters/outbound/sqlite/review-delivery/review-finalizer";
+import { appendRuntimeAuditOutboxRow } from "@/src/adapters/outbound/sqlite/runtime/audit-event-outbox";
 import type { ModelCallResult, ModelCallUsage } from "@/src/shared/collaboration-contracts";
 import {
   reviewOperationResponseSchema,
@@ -417,6 +418,20 @@ function terminalCall(
     if (updated.changes !== 1) {
       throw new ReviewOrchestratorError("REVIEW_CALL_CONFLICT", 409, "Review call changed.");
     }
+    const runtimeSucceeded = result.status === "succeeded";
+    appendRuntimeAuditOutboxRow(database, {
+      eventType: runtimeSucceeded ? "runtime_call_succeeded" : "runtime_call_failed",
+      occurredAt: now.toISOString(),
+      projectId: input.projectId,
+      sourcePayload: {
+        ...(runtimeSucceeded
+          ? {}
+          : { errorCategory: errorCategory ?? "provider_response_invalid" }),
+        model: input.model,
+        reviewAttemptId: input.attemptId,
+        surface: "review",
+      },
+    });
   });
 }
 
@@ -593,6 +608,16 @@ function checkpoint(
         "Review output checkpoint lost its lease or call CAS.",
       );
     }
+    appendRuntimeAuditOutboxRow(database, {
+      eventType: "runtime_call_succeeded",
+      occurredAt: now.toISOString(),
+      projectId: input.projectId,
+      sourcePayload: {
+        model: input.model,
+        reviewAttemptId: input.attemptId,
+        surface: "review",
+      },
+    });
   });
   return finalizingResponse({
     errorCategory: null,

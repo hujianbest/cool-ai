@@ -12,6 +12,7 @@
     "audit_outbox_mission_work": "feature 035: mission-work joins the audit_event_outbox shared append seam — task lifecycle (task_events mirror in tasks.ts), mission creation (sqlite-mission-command-capability.ts), and work-item board facts (mission-service.ts, work-item-status-effects.ts) append source='mission_work' rows atomically inside their own transactions; whitelist extraction is centralized in mission-work/audit-event-outbox.ts",
     "audit_outbox_project_workspace": "feature 036: project-workspace joins the audit_event_outbox shared append seam — project creation (projects.ts), workspace bind/rebind (workspace-service.ts, host absolute paths redacted to directory basenames), membership join/remove (membership-service.ts), and saved validation-policy changes (validation-policy-service.ts mirrors the project_validation_policy_audits row; the audits table stays the domain fact) append source='project_workspace' rows atomically inside their own transactions; whitelist extraction is centralized in project-workspace/audit-event-outbox.ts",
     "audit_outbox_governance": "feature 037: governance joins the audit_event_outbox shared append seam — all 11 approval lifecycle write points in approval-store.ts (request inserts, verdict, single/execution/project-scope expires as one row per call site, consumes) append source='governance' rows atomically inside the caller's transaction; payloads carry only whitelisted enum/identity keys (approvalId/executionId as navigation anchors), centralized in governance/audit-event-outbox.ts",
+    "audit_outbox_runtime": "feature 041: runtime joins the audit_event_outbox shared append seam — collaboration, execution, and review model-call terminal writes append source='runtime' rows in the same transaction; per-domain *_model_calls ownership remains unchanged and payload extraction is centralized in runtime/audit-event-outbox.ts",
     "thread_search_index": "feature 031: derived search projection (thread titles + persisted public message bodies) owned by the operations-projection consumer (thread-search-index); no FKs by design (A-140 projection semantics), index⊆fact-source enforced by reopen data invariants",
     "thread_tags": "feature 032: project-scoped thread tag facts (thread_tags), assignment edges (thread_tag_edges), and versioned batch receipts (thread_tag_operations) owned by public-collaboration; tag delete clears edges explicitly in the same transaction (FK CASCADE is only the thread-cascade backstop), edges⊆threads/tags enforced by reopen data invariants; the T-03 batch command writes receipts through the insertThreadTagOperationReceiptTx anchor registered in thread-tag-service.ts",
     "thread_purge_markers": "feature 033: transaction-local purge exemption markers (inserted at purge start, deleted before commit) owned by public-collaboration; no FK to collaboration_threads by design (the row is about to disappear), projects CASCADE is the only lifecycle backstop, empty-table enforced by reopen data invariants",
@@ -23,7 +24,8 @@
       "public-collaboration",
       "mission-work",
       "project-workspace",
-      "governance"
+      "governance",
+      "runtime"
     ]
   },
   "owners": {

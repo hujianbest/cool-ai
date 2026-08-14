@@ -4,7 +4,7 @@ import { openDatabase } from "@/src/adapters/outbound/sqlite/connection";
 import { CURRENT_SCHEMA } from "@/src/adapters/outbound/sqlite/current-schema";
 
 export type UnsupportedSchemaInput =
-  | { readonly kind: "legacy-identity"; readonly userVersion: 1 | 2 | 3 | 4 | 5 | 6 | 7 | 8 | 9 | 10 | 11 | 12 | 13 | 14 | 15 | 16 | 17 | 18 | 19 | 20 | 21 | 22 }
+  | { readonly kind: "legacy-identity"; readonly userVersion: 1 | 2 | 3 | 4 | 5 | 6 | 7 | 8 | 9 | 10 | 11 | 12 | 13 | 14 | 15 | 16 | 17 | 18 | 19 | 20 | 21 | 22 | 23 }
   | { readonly kind: "non-empty-v0" }
   | { readonly kind: "partial-current" }
   | { readonly kind: "unsupported-identity"; readonly userVersion: number }
