@@ -8,7 +8,7 @@ A local-first collaboration cockpit where one product owner assembles configurab
 
 Building with multiple Agents often turns the owner into a human router: copying context, assigning the next step, reconciling scattered outputs, and checking whether anyone actually verified the result. Cool AI keeps the owner in control without making them relay every message. The team works from one mission board, shared memory, visible handoffs, bounded execution, and an auditable delivery trail.
 
-[Cool AI collaboration cockpit overview](./openwiki/ui/index.md) · [Project context](./openwiki/ui/project-context.md)
+[Cool AI collaboration cockpit overview](./product/ui/cool-ai-design-md-case.html) · [Design system](./product/ui/DESIGN.md)
 
 ## What it does
 
@@ -31,25 +31,25 @@ Building with multiple Agents often turns the owner into a human router: copying
 <details>
 <summary>See team configuration</summary>
 
-[Two Agents with distinct roles, skills, permissions, and independent-review capability](./openwiki/ui/team-settings.md)
+[Two Agents with distinct roles, skills, permissions, and independent-review capability](./product/ui/cool-ai-design-md-case.html)
 </details>
 
 <details>
 <summary>See real Agent collaboration</summary>
 
-[Multi-Agent collaboration and explicit handoff](./openwiki/ui/collaboration.md)
+[Multi-Agent collaboration and explicit handoff](./product/ui/cool-ai-design-md-case.html)
 </details>
 
 <details>
 <summary>See safe execution</summary>
 
-[Two-Agent execution with validation and one-shot approval](./openwiki/ui/execution.md)
+[Two-Agent execution with validation and one-shot approval](./product/ui/cool-ai-design-md-case.html)
 </details>
 
 <details>
 <summary>See review and delivery</summary>
 
-[Independent reviewer, pass verdict, and final delivery summary](./openwiki/ui/review-delivery.md)
+[Independent reviewer, pass verdict, and final delivery summary](./product/ui/cool-ai-design-md-case.html)
 </details>
 
 ## Platform and security boundaries
