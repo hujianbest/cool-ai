@@ -25,6 +25,7 @@ import {
 } from "@/src/shared/approval-center-contracts";
 import { seedCurrentAdvanceFixture } from "@/tests/fixtures/collaboration/current-advance";
 import { memoryDatabasePath } from "@/tests/fixtures/sqlite/memory-database";
+import { workItemLeaseBind } from "@/tests/fixtures/sqlite/work-item-lease-columns";
 
 const NOW = "2026-08-10T04:00:00.000Z";
 const PROJECT_ID = "project-ac-continuation";
@@ -184,9 +185,20 @@ function seedCommandApprovalWaiting(): void {
   const publicRequest = commandPublicRequest();
   database.prepare(
     `INSERT INTO work_items(
-       id,mission_id,title,description,status,assignee_agent_id,version,created_at,updated_at
-     ) VALUES (?,?,'Work','', 'in_progress',?,1,?,?)`,
-  ).run("work-ac-continuation", MISSION_ID, AGENT_ID, NOW, NOW);
+       id,mission_id,title,description,status,assignee_agent_id,version,created_at,updated_at,
+       lease_token,lease_expires_at,last_heartbeat_at
+     ) VALUES (?,?,'Work','', 'in_progress',?,1,?,?,?,?,?)`,
+  ).run(
+    "work-ac-continuation",
+    MISSION_ID,
+    AGENT_ID,
+    NOW,
+    NOW,
+    ...workItemLeaseBind("in_progress", AGENT_ID, {
+      at: NOW,
+      token: "work-ac-continuation-lease",
+    }),
+  );
   database.prepare(
     `INSERT INTO project_validation_policy_revisions(
        id,project_id,created_operation_id,created_actor_type,revision_no,policy_hash,

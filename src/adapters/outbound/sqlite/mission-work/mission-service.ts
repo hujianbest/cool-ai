@@ -30,9 +30,13 @@ import type {
 export { MissionError } from "@/src/modules/mission-work";
 
 type MissionRow = Omit<Mission, "projectId"> & { projectId: string };
-type WorkItemRow = Omit<WorkItem, "dependencyIds" | "status"> & {
+type WorkItemRow = Omit<WorkItem, "dependencyIds" | "status" | "lease"> & {
   status: WorkItemStatus;
+  leaseExpiresAt: string | null;
+  leaseToken: string | null;
+  lastHeartbeatAt: string | null;
 };
+const WORK_ITEM_LEASE_TTL_MS = 15 * 60 * 1000;
 type FieldError = { field: string; code: string };
 
 type UpdateMissionInput = {
@@ -222,38 +226,83 @@ function dependencyIdsFor(database: DatabaseSync, workItemId: string): string[] 
   ).map(({ dependencyId }) => dependencyId);
 }
 
-function workItemById(database: DatabaseSync, workItemId: string): WorkItem | undefined {
-  const row = database
-    .prepare(
-      `SELECT
+function workItemLeaseExpiry(now: Date): string {
+  return new Date(now.getTime() + WORK_ITEM_LEASE_TTL_MS).toISOString();
+}
+
+function mapWorkItemLease(
+  row: WorkItemRow,
+  now: Date,
+): WorkItem["lease"] {
+  if (
+    row.leaseToken === null
+    || row.leaseExpiresAt === null
+    || row.lastHeartbeatAt === null
+    || row.assigneeAgentId === null
+  ) {
+    return null;
+  }
+  return {
+    expired: row.leaseExpiresAt < now.toISOString(),
+    expiresAt: row.leaseExpiresAt,
+    holderAgentId: row.assigneeAgentId,
+    lastHeartbeatAt: row.lastHeartbeatAt,
+    token: row.leaseToken,
+  };
+}
+
+function toWorkItem(
+  database: DatabaseSync,
+  row: WorkItemRow,
+  now: Date,
+): WorkItem {
+  const { leaseExpiresAt, leaseToken, lastHeartbeatAt, ...item } = row;
+  return {
+    ...item,
+    dependencyIds: dependencyIdsFor(database, row.id),
+    lease: mapWorkItemLease(
+      { ...item, leaseExpiresAt, leaseToken, lastHeartbeatAt },
+      now,
+    ),
+  };
+}
+
+const WORK_ITEM_SELECT = `
          id, mission_id AS missionId, title, description, status,
          assignee_agent_id AS assigneeAgentId, version,
-         created_at AS createdAt, updated_at AS updatedAt
+         created_at AS createdAt, updated_at AS updatedAt,
+         lease_token AS leaseToken, lease_expires_at AS leaseExpiresAt,
+         last_heartbeat_at AS lastHeartbeatAt`;
+
+function workItemById(
+  database: DatabaseSync,
+  workItemId: string,
+  now: Date = new Date(),
+): WorkItem | undefined {
+  const row = database
+    .prepare(
+      `SELECT ${WORK_ITEM_SELECT}
        FROM work_items
        WHERE id = ?`,
     )
     .get(workItemId) as WorkItemRow | undefined;
-  return row
-    ? { ...row, dependencyIds: dependencyIdsFor(database, workItemId) }
-    : undefined;
+  return row ? toWorkItem(database, row, now) : undefined;
 }
 
-function workItemsForMission(database: DatabaseSync, missionId: string): WorkItem[] {
+function workItemsForMission(
+  database: DatabaseSync,
+  missionId: string,
+  now: Date = new Date(),
+): WorkItem[] {
   const rows = database
     .prepare(
-      `SELECT
-         id, mission_id AS missionId, title, description, status,
-         assignee_agent_id AS assigneeAgentId, version,
-         created_at AS createdAt, updated_at AS updatedAt
+      `SELECT ${WORK_ITEM_SELECT}
        FROM work_items
        WHERE mission_id = ?
        ORDER BY created_at ASC, id ASC`,
     )
     .all(missionId) as WorkItemRow[];
-  return rows.map((row) => ({
-    ...row,
-    dependencyIds: dependencyIdsFor(database, row.id),
-  }));
+  return rows.map((row) => toWorkItem(database, row, now));
 }
 
 function ensureProject(database: DatabaseSync, projectId: string): void {
@@ -646,11 +695,13 @@ export function claimWorkItemTx(
   }
   if (current.version !== version) throw actionConflict(current.version);
 
-  const timestamp = new Date().toISOString();
+  const now = new Date();
+  const timestamp = now.toISOString();
   const updated = database
     .prepare(
       `UPDATE work_items
        SET assignee_agent_id = ?, status = 'in_progress',
+           lease_token = ?, lease_expires_at = ?, last_heartbeat_at = ?,
            version = version + 1, updated_at = ?
        WHERE id = ?
          AND version = ?
@@ -670,9 +721,17 @@ export function claimWorkItemTx(
              )
          )`,
     )
-    .run(agentId, timestamp, workItemId, version);
+    .run(
+      agentId,
+      randomUUID(),
+      workItemLeaseExpiry(now),
+      timestamp,
+      timestamp,
+      workItemId,
+      version,
+    );
   if (updated.changes !== 1) {
-    throw actionConflict(workItemById(database, workItemId)?.version);
+    throw actionConflict(workItemById(database, workItemId, now)?.version);
   }
   appendWorkItemStatusAuditOutboxRow(database, {
     actorId: agentId,
@@ -682,7 +741,294 @@ export function claimWorkItemTx(
     toStatus: "in_progress",
     workItemId,
   });
-  return workItemById(database, workItemId)!;
+  return workItemById(database, workItemId, now)!;
+}
+
+function leaseCommandContext(
+  database: DatabaseSync,
+  projectId: string,
+  workItemId: string,
+  actor: MissionWriteActor,
+  expectedWorkItemVersion: number,
+  now: Date,
+): WorkItem {
+  const version = expectedVersion(expectedWorkItemVersion);
+  const current = workItemById(database, workItemId, now);
+  const mission = current ? missionById(database, current.missionId) : undefined;
+  if (!current || mission?.projectId !== projectId) {
+    throw actionConflict(current?.version);
+  }
+  if (actor.type === "agent") {
+    const isMember = database
+      .prepare(
+        `SELECT 1 FROM project_memberships
+         WHERE project_id = ? AND agent_id = ?`,
+      )
+      .get(projectId, actor.agentId);
+    if (!isMember) throw actionConflict(current.version);
+  }
+  if (current.version !== version) throw actionConflict(current.version);
+  return current;
+}
+
+function returnWorkItemToTodoTx(
+  database: DatabaseSync,
+  current: WorkItem,
+  actor: MissionWriteActor,
+  now: Date,
+): WorkItem {
+  const timestamp = now.toISOString();
+  const updated = database
+    .prepare(
+      `UPDATE work_items
+       SET status = 'todo',
+           assignee_agent_id = NULL,
+           lease_token = NULL,
+           lease_expires_at = NULL,
+           last_heartbeat_at = NULL,
+           version = version + 1,
+           updated_at = ?
+       WHERE id = ?
+         AND version = ?
+         AND status = 'in_progress'`,
+    )
+    .run(timestamp, current.id, current.version);
+  if (updated.changes !== 1) {
+    throw actionConflict(workItemById(database, current.id, now)?.version);
+  }
+  appendWorkItemStatusAuditOutboxRow(database, {
+    actorId: actor.type === "agent" ? actor.agentId : null,
+    actorType: actor.type,
+    fromStatus: "in_progress",
+    occurredAt: timestamp,
+    toStatus: "todo",
+    workItemId: current.id,
+  });
+  return workItemById(database, current.id, now)!;
+}
+
+function withWorkItemLeaseWrite(
+  databasePath: string,
+  projectId: string,
+  request: unknown,
+  operationId: string | undefined,
+  operate: (database: DatabaseSync) => WorkItem,
+): WorkItem {
+  const database = openDatabase(databasePath);
+  try {
+    ensureProject(database, projectId);
+    const requestHash = canonicalRequestHash(request);
+    if (operationId) {
+      const prior = readControlOperationPrior(database, projectId, operationId);
+      if (prior) {
+        if (prior.kind !== "control" || prior.requestHash !== requestHash) {
+          throw new MissionError(
+            "OPERATION_CONFLICT",
+            409,
+            "Operation id was already used for different input.",
+          );
+        }
+        const receipt = JSON.parse(prior.responseJson) as TransitionReceipt;
+        if (!receipt.ok) receiptError(receipt);
+        return receipt.workItem;
+      }
+    }
+    try {
+      return transaction(database, () => {
+        const workItem = operate(database);
+        if (operationId) {
+          insertTransitionReceipt(database, {
+            operationId,
+            projectId,
+            receipt: { ok: true, workItem },
+            requestHash,
+          });
+        }
+        return workItem;
+      });
+    } catch (error) {
+      if (operationId && error instanceof MissionError) {
+        const receipt: TransitionReceipt = {
+          error: {
+            code: error.code,
+            ...(error.currentVersion !== undefined
+              ? { currentVersion: error.currentVersion }
+              : {}),
+            message: error.message,
+            status: error.httpStatus,
+          },
+          ok: false,
+        };
+        transaction(database, () => insertTransitionReceipt(database, {
+          operationId,
+          projectId,
+          receipt,
+          requestHash,
+        }));
+      }
+      throw error;
+    }
+  } finally {
+    database.close();
+  }
+}
+
+export function heartbeatWorkItem(
+  databasePath: string,
+  projectId: string,
+  workItemId: string,
+  agentId: string,
+  expectedVersion: number,
+  now: Date = new Date(),
+  operationId?: string,
+): WorkItem {
+  const request = {
+    agentId,
+    expectedVersion,
+    kind: "heartbeat",
+    operationId,
+    workItemId,
+  };
+  return withWorkItemLeaseWrite(databasePath, projectId, request, operationId, (database) => {
+    const current = leaseCommandContext(
+      database,
+      projectId,
+      workItemId,
+      { agentId, type: "agent" },
+      expectedVersion,
+      now,
+    );
+    if (
+      current.status !== "in_progress"
+      || current.assigneeAgentId !== agentId
+      || current.lease === null
+      || current.lease === undefined
+      || current.lease.expired
+    ) {
+      throw actionConflict(current.version);
+    }
+    const timestamp = now.toISOString();
+    const updated = database
+      .prepare(
+        `UPDATE work_items
+         SET last_heartbeat_at = ?,
+             lease_expires_at = ?,
+             version = version + 1,
+             updated_at = ?
+         WHERE id = ?
+           AND version = ?
+           AND status = 'in_progress'
+           AND assignee_agent_id = ?
+           AND lease_token IS NOT NULL`,
+      )
+      .run(
+        timestamp,
+        workItemLeaseExpiry(now),
+        timestamp,
+        workItemId,
+        current.version,
+        agentId,
+      );
+    if (updated.changes !== 1) {
+      throw actionConflict(workItemById(database, workItemId, now)?.version);
+    }
+    return workItemById(database, workItemId, now)!;
+  });
+}
+
+export function releaseWorkItem(
+  databasePath: string,
+  projectId: string,
+  workItemId: string,
+  agentId: string,
+  expectedVersion: number,
+  now: Date = new Date(),
+  operationId?: string,
+): WorkItem {
+  const request = {
+    agentId,
+    expectedVersion,
+    kind: "release",
+    operationId,
+    workItemId,
+  };
+  return withWorkItemLeaseWrite(databasePath, projectId, request, operationId, (database) => {
+    const current = leaseCommandContext(
+      database,
+      projectId,
+      workItemId,
+      { agentId, type: "agent" },
+      expectedVersion,
+      now,
+    );
+    if (
+      current.status !== "in_progress"
+      || current.lease == null
+      || current.assigneeAgentId !== agentId
+    ) {
+      throw actionConflict(current.version);
+    }
+    return returnWorkItemToTodoTx(database, current, { agentId, type: "agent" }, now);
+  });
+}
+
+export function reclaimExpiredWorkItem(
+  databasePath: string,
+  projectId: string,
+  workItemId: string,
+  actor: MissionWriteActor,
+  expectedVersion: number,
+  now: Date = new Date(),
+  operationId?: string,
+): WorkItem {
+  const request = {
+    actor,
+    expectedVersion,
+    kind: "reclaim",
+    operationId,
+    workItemId,
+  };
+  return withWorkItemLeaseWrite(databasePath, projectId, request, operationId, (database) => {
+    const current = leaseCommandContext(
+      database,
+      projectId,
+      workItemId,
+      actor,
+      expectedVersion,
+      now,
+    );
+    if (current.status !== "in_progress" || current.lease == null) {
+      throw actionConflict(current.version);
+    }
+    if (!current.lease.expired) {
+      throw new MissionError(
+        "INVALID_INPUT",
+        422,
+        "Work item lease has not expired.",
+      );
+    }
+    return returnWorkItemToTodoTx(database, current, actor, now);
+  });
+}
+
+export function workItemProjectId(
+  databasePath: string,
+  workItemId: string,
+): string {
+  const database = openDatabase(databasePath);
+  try {
+    const current = workItemById(database, workItemId);
+    if (!current) {
+      throw new MissionError("WORK_ITEM_NOT_FOUND", 404, "Work item was not found.");
+    }
+    const mission = missionById(database, current.missionId);
+    if (!mission) {
+      throw new MissionError("MISSION_NOT_FOUND", 404, "Mission was not found.");
+    }
+    return mission.projectId;
+  } finally {
+    database.close();
+  }
 }
 
 export function getMissionState(
@@ -884,13 +1230,19 @@ export function transitionWorkItemTx(
     ensureDependenciesDone(database, current.dependencyIds);
   }
   const occurredAt = new Date().toISOString();
+  const needsLease =
+    input.toStatus === "in_progress" && current.assigneeAgentId !== null;
   const updated = database.prepare(`
     UPDATE work_items
-    SET status=?,version=version+1,updated_at=?
+    SET status=?,version=version+1,updated_at=?,
+        lease_token=?,lease_expires_at=?,last_heartbeat_at=?
     WHERE id=? AND version=? AND status=?
   `).run(
     input.toStatus,
     occurredAt,
+    needsLease ? randomUUID() : null,
+    needsLease ? workItemLeaseExpiry(new Date(occurredAt)) : null,
+    needsLease ? occurredAt : null,
     input.workItemId,
     input.expectedVersion,
     current.status,

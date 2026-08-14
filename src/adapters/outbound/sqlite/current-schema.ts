@@ -12,7 +12,7 @@ export type CurrentSchemaManifest = {
 
 const CURRENT_SCHEMA_DEFINITION = {
   "identity": {
-    "userVersion": 24
+    "userVersion": 25
   },
   "objects": [
     {
@@ -72,7 +72,7 @@ const CURRENT_SCHEMA_DEFINITION = {
     {
       "kind": "table",
       "name": "work_items",
-      "createSql": "CREATE TABLE work_items (\n    id TEXT PRIMARY KEY,\n    mission_id TEXT NOT NULL REFERENCES missions(id) ON DELETE CASCADE,\n    title TEXT NOT NULL,\n    description TEXT NOT NULL,\n    status TEXT NOT NULL CHECK(status IN ('todo','in_progress','blocked','done')),\n    assignee_agent_id TEXT REFERENCES agents(id),\n    version INTEGER NOT NULL,\n    created_at TEXT NOT NULL,\n    updated_at TEXT NOT NULL\n  )",
+      "createSql": "CREATE TABLE work_items (\n    id TEXT PRIMARY KEY,\n    mission_id TEXT NOT NULL REFERENCES missions(id) ON DELETE CASCADE,\n    title TEXT NOT NULL,\n    description TEXT NOT NULL,\n    status TEXT NOT NULL CHECK(status IN ('todo','in_progress','blocked','done')),\n    assignee_agent_id TEXT REFERENCES agents(id),\n    version INTEGER NOT NULL,\n    created_at TEXT NOT NULL,\n    updated_at TEXT NOT NULL,\n    lease_token TEXT UNIQUE,\n    lease_expires_at TEXT CHECK(lease_expires_at IS NULL OR lease_expires_at GLOB '????-??-??T??:??:??.???Z'),\n    last_heartbeat_at TEXT CHECK(last_heartbeat_at IS NULL OR last_heartbeat_at GLOB '????-??-??T??:??:??.???Z'),\n    CHECK(\n      (\n        status = 'in_progress' AND assignee_agent_id IS NOT NULL\n        AND lease_token IS NOT NULL\n        AND lease_expires_at IS NOT NULL\n        AND last_heartbeat_at IS NOT NULL\n      )\n      OR\n      (\n        NOT (status = 'in_progress' AND assignee_agent_id IS NOT NULL)\n        AND lease_token IS NULL\n        AND lease_expires_at IS NULL\n        AND last_heartbeat_at IS NULL\n      )\n    )\n  )",
       "dependsOn": []
     },
     {

@@ -28,3 +28,4 @@
 - 2026-08-15 042/S-58 统一审计浏览器按域筛选（AUD-UI）完成 implement 与 ship：审计面板「全部/执行/协作/任务/项目/治理/运行时」客户端筛选；轻量级纯 UI，hf-code-review 豁免；`smoke:execution` Runtime 23 断言 + axe 2 态；S-23 子片全部交付并汇总勾选。时间轴仍待 S-39。
 - 2026-08-15 043/S-26 SOP 状态投影立项并进入 implement（A-302～A-308）；阻塞项已交付。
 - 2026-08-15 043/S-26 可审计 SOP 与流程状态完成 implement 与 ship：零 schema 来源化投影、GET `/sop-state`、看板「流程状态」；`smoke:context` SOP 8 断言；hf-code-review 复审 PASS；`CAP-MWK-03` 已交付核心。
+- 2026-08-15 044/S-27 任务租约与派发控制面完成 implement 与 ship：schema identity 24→25，claim/heartbeat/release/reclaim 与看板租约；`smoke:context` 5 断言；hf-code-review 复审 PASS；全量 289/2652 126.51s；`CAP-MWK-04` 已交付核心。

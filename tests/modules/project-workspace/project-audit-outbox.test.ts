@@ -51,7 +51,7 @@ function nextOutboxSeq(): number {
 
 describe("project-workspace audit outbox schema", () => {
   it("bootstraps identity 22 and accepts the project_workspace outbox source", () => {
-    expect(database.prepare("PRAGMA user_version").get()).toEqual({ user_version: 24 });
+    expect(database.prepare("PRAGMA user_version").get()).toEqual({ user_version: 25 });
     const project = createProject("ProjectWorkspaceAudit", databasePath);
     database.prepare(`
       INSERT INTO audit_event_outbox (
@@ -389,7 +389,7 @@ describe("project-workspace audit outbox discipline", () => {
     database.close();
     database = openDatabase(databasePath);
 
-    expect(database.prepare("PRAGMA user_version").get()).toEqual({ user_version: 24 });
+    expect(database.prepare("PRAGMA user_version").get()).toEqual({ user_version: 25 });
     expect(outboxRows()).toEqual(before);
   });
 

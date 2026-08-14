@@ -10,6 +10,7 @@ import {
   type ReviewFinalizeStep,
 } from "@/src/adapters/outbound/sqlite/review-delivery/review-finalizer";
 import { memoryDatabasePath } from "@/tests/fixtures/sqlite/memory-database";
+import { workItemLeaseBind } from "@/tests/fixtures/sqlite/work-item-lease-columns";
 
 const NOW = "2026-08-01T10:00:00.000Z";
 let databasePath: string;
@@ -149,9 +150,19 @@ function seedAttempt(index: number, candidate: Candidate): string {
   database.exec("PRAGMA foreign_keys=OFF");
   database.prepare(`
     INSERT INTO work_items(
-      id,mission_id,title,description,status,assignee_agent_id,version,created_at,updated_at
-    ) VALUES (?, 'mission', ?, '', 'in_progress', 'executor', 1, ?, ?)
-  `).run(workItemId, workItemId, NOW, NOW);
+      id,mission_id,title,description,status,assignee_agent_id,version,created_at,updated_at,
+      lease_token,lease_expires_at,last_heartbeat_at
+    ) VALUES (?, 'mission', ?, '', 'in_progress', 'executor', 1, ?, ?, ?, ?, ?)
+  `).run(
+    workItemId,
+    workItemId,
+    NOW,
+    NOW,
+    ...workItemLeaseBind("in_progress", "executor", {
+      at: NOW,
+      token: `${workItemId}-lease`,
+    }),
+  );
   database.prepare(`
     INSERT INTO work_item_result_versions(
       id,project_id,mission_id,work_item_id,version,execution_id,staged_result_id,

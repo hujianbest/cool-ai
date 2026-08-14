@@ -41,6 +41,14 @@ export type Mission = {
 
 export type WorkItemStatus = "todo" | "in_progress" | "blocked" | "done";
 
+export type WorkItemLease = {
+  token: string;
+  holderAgentId: string;
+  expiresAt: string;
+  lastHeartbeatAt: string;
+  expired: boolean;
+};
+
 export type WorkItem = {
   id: string;
   missionId: string;
@@ -52,6 +60,7 @@ export type WorkItem = {
   version: number;
   createdAt: string;
   updatedAt: string;
+  lease?: WorkItemLease | null;
 };
 
 export type MissionState = {

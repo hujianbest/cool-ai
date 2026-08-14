@@ -112,9 +112,11 @@ function seedDatabase(path: string): DatabaseSync {
   const seeded = openDatabase(path);
   seeded.exec(`
     INSERT INTO work_items (
-      id,mission_id,title,description,status,assignee_agent_id,version,created_at,updated_at
+      id,mission_id,title,description,status,assignee_agent_id,version,created_at,updated_at,
+      lease_token,lease_expires_at,last_heartbeat_at
     ) VALUES ('work','mission','Work','','in_progress','agent',1,
-      strftime('%Y-%m-%dT%H:%M:%fZ','now'),strftime('%Y-%m-%dT%H:%M:%fZ','now'));
+      strftime('%Y-%m-%dT%H:%M:%fZ','now'),strftime('%Y-%m-%dT%H:%M:%fZ','now'),
+      'work-lease','2099-01-01T00:00:00.000Z',strftime('%Y-%m-%dT%H:%M:%fZ','now'));
     UPDATE collaboration_runs
     SET status='planned',round_count=1
     WHERE project_id='${PROJECT_ID}' AND id='run';

@@ -105,6 +105,6 @@ _Avoid_：Inline Decision、确认按钮、建议
 ## 首次发布前数据库生命周期
 
 - 用户确认: 2026-08-09 项目首次正式发布前不承诺历史 SQLite schema 或本地开发数据兼容。
-- `openDatabase` 只接受空库 bootstrap 或 identity 9 current exact schema reopen；legacy、partial、drift、unsupported 或数据不变量非法的数据库均失败关闭。
+- `openDatabase` 只接受空库 bootstrap 或 current exact schema reopen（identity 25）；legacy、partial、drift、unsupported 或数据不变量非法的数据库均失败关闭。
 - `CURRENT_SCHEMA` 是唯一 DDL source of truth；仓库不保留版本间 migration、legacy adoption/backfill 或可重放旧 schema fixture。
 - 本地开发数据库只能由开发者显式删除并重建，应用绝不静默删除、覆盖或自动重建非空数据库。

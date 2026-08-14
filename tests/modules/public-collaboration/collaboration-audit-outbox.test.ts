@@ -156,7 +156,7 @@ function runtimeOutboxRows(): OutboxRow[] {
 
 describe("collaboration audit outbox schema", () => {
   it("bootstraps identity 17 and accepts the public_collaboration outbox source", () => {
-    expect(database.prepare("PRAGMA user_version").get()).toEqual({ user_version: 24 });
+    expect(database.prepare("PRAGMA user_version").get()).toEqual({ user_version: 25 });
     seedProjectOnly();
     database.prepare(`
       INSERT INTO audit_event_outbox (
@@ -335,7 +335,7 @@ describe("collaboration audit outbox write seam", () => {
     database.close();
     database = openDatabase(databasePath);
 
-    expect(database.prepare("PRAGMA user_version").get()).toEqual({ user_version: 24 });
+    expect(database.prepare("PRAGMA user_version").get()).toEqual({ user_version: 25 });
     expect(outboxRows()).toEqual(before);
   });
 

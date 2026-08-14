@@ -81,9 +81,10 @@ function seed(path: string): DatabaseSync {
     INSERT INTO missions(id,project_id,title,goal,version,created_at,updated_at)
     VALUES ('mission','project','Mission','Goal',1,'${NOW.toISOString()}','${NOW.toISOString()}');
     INSERT INTO work_items(
-      id,mission_id,title,description,status,assignee_agent_id,version,created_at,updated_at
+      id,mission_id,title,description,status,assignee_agent_id,version,created_at,updated_at,
+      lease_token,lease_expires_at,last_heartbeat_at
     ) VALUES ('work','mission','Work','','in_progress','executor',1,
-      '${NOW.toISOString()}','${NOW.toISOString()}');
+      '${NOW.toISOString()}','${NOW.toISOString()}','work-lease','2099-01-01T00:00:00.000Z','${NOW.toISOString()}');
     INSERT INTO executions(
       id,project_id,source_collaboration_thread_id,source_collaboration_run_id,
       mission_id,work_item_id,agent_id,current_policy_revision_id,status,resume_target,

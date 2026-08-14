@@ -915,6 +915,43 @@ try {
     .getByRole("button", { name: "完成任务 Plan task" })
     .waitFor();
 
+  const leaseAcceptance = { assertions: 0 };
+  function leaseOk(value, message) {
+    leaseAcceptance.assertions += 1;
+    assert.ok(value, message);
+  }
+  const planLeaseCard = page.getByRole("region", { name: "进行中" }).locator("li").filter({
+    has: page.getByRole("heading", { exact: true, name: "Plan task" }),
+  });
+  await planLeaseCard.getByText("租约持有者").waitFor();
+  leaseOk(
+    (await planLeaseCard.getByText("租约持有者").count()) > 0,
+    "in-progress Plan task must show 租约持有者",
+  );
+  const releaseLease = planLeaseCard.getByRole("button", { name: "释放租约" });
+  leaseOk(await releaseLease.isEnabled(), "释放租约 must be enabled");
+  const releaseLeaseBox = await releaseLease.boundingBox();
+  leaseOk(
+    releaseLeaseBox !== null
+      && releaseLeaseBox.height >= 44
+      && releaseLeaseBox.width >= 44,
+    "释放租约 must be at least 44x44",
+  );
+  leaseOk(
+    await planLeaseCard.getByRole("button", { name: "回收过期租约" }).isDisabled(),
+    "回收过期租约 must stay disabled while the lease is live",
+  );
+  const planLeaseText = await planLeaseCard.innerText();
+  leaseOk(
+    !planLeaseText.includes(workspaceDirectory)
+      && !planLeaseText.includes(canonicalWorkspace)
+      && !planLeaseText.includes(boundWorkspacePath),
+    "lease copy must not leak host workspace paths",
+  );
+  console.log(
+    `WORK ITEM LEASE ACCEPTANCE PASS: assertions=${leaseAcceptance.assertions}`,
+  );
+
   const missionState = await page.evaluate(async () => {
     const projectId = new URL(window.location.href).pathname.split("/").at(-1);
     const state = await (

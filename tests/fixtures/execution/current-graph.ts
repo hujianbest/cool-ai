@@ -3,6 +3,7 @@ import type { DatabaseSync } from "node:sqlite";
 import { createThread } from "@/src/adapters/outbound/sqlite/public-collaboration/thread-service";
 import { validateCurrentDataInvariants } from "@/src/adapters/outbound/sqlite/current-data-invariants";
 import { seedMissionInitialization } from "@/tests/fixtures/review/mission-initialization";
+import { rewriteWorkItemLease } from "@/tests/fixtures/sqlite/rewrite-work-item-lease";
 
 const NOW = "2026-07-30T00:00:00.000Z";
 
@@ -375,12 +376,12 @@ export function execV7Fixture(
   sql: string,
   options: { validate?: boolean } = {},
 ): Map<string, string> {
-  const statements = splitStatements(sql);
+  const statements = splitStatements(sql).map(rewriteWorkItemLease);
   const firstTuple = statements.findIndex((statement) =>
     /\bINSERT\s+INTO\s+collaboration_runs\b/iu.test(statement)
   );
   if (firstTuple < 0) {
-    database.exec(sql);
+    database.exec(statements.join(""));
     return new Map();
   }
   database.exec(statements.slice(0, firstTuple).join(""));
@@ -433,7 +434,7 @@ export function execV7TupleStatements(
   database: DatabaseSync,
   sql: string,
 ): void {
-  database.exec(splitStatements(sql).map(rewriteV7Tuples).join(""));
+  database.exec(splitStatements(sql).map(rewriteWorkItemLease).map(rewriteV7Tuples).join(""));
   linkFixtureRuns(database);
   linkFixtureChildren(database);
   const validation = validateFixtureDatabase(database);

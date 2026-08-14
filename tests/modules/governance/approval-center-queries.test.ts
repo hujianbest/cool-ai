@@ -8,6 +8,7 @@ import { decideInline } from "@/src/adapters/outbound/sqlite/public-collaboratio
 import { appendStructuredMessage } from "@/src/adapters/outbound/sqlite/public-collaboration/structured-message-store";
 import { seedCurrentAdvanceFixture } from "@/tests/fixtures/collaboration/current-advance";
 import { memoryDatabasePath } from "@/tests/fixtures/sqlite/memory-database";
+import { workItemLeaseBind } from "@/tests/fixtures/sqlite/work-item-lease-columns";
 
 type ApprovalCenterItem = {
   approvalId: string;
@@ -78,9 +79,20 @@ function seedExecutionGraph(input: {
 }): void {
   database.prepare(
     `INSERT INTO work_items(
-       id,mission_id,title,description,status,assignee_agent_id,version,created_at,updated_at
-     ) VALUES (?,?,'Work','', 'in_progress',?,1,?,?)`,
-  ).run(input.workItemId, input.missionId, input.agentId, NOW, NOW);
+       id,mission_id,title,description,status,assignee_agent_id,version,created_at,updated_at,
+       lease_token,lease_expires_at,last_heartbeat_at
+     ) VALUES (?,?,'Work','', 'in_progress',?,1,?,?,?,?,?)`,
+  ).run(
+    input.workItemId,
+    input.missionId,
+    input.agentId,
+    NOW,
+    NOW,
+    ...workItemLeaseBind("in_progress", input.agentId, {
+      at: NOW,
+      token: `${input.workItemId}-lease`,
+    }),
+  );
   database.prepare(
     `INSERT INTO project_validation_policy_revisions(
        id,project_id,created_operation_id,created_actor_type,revision_no,policy_hash,
@@ -138,9 +150,20 @@ function seedAdditionalExecution(
 ): void {
   database.prepare(
     `INSERT INTO work_items(
-       id,mission_id,title,description,status,assignee_agent_id,version,created_at,updated_at
-     ) VALUES (?,?,'Work','', 'in_progress',?,1,?,?)`,
-  ).run(`work-${executionId}`, MISSION_ID, agentId, NOW, NOW);
+       id,mission_id,title,description,status,assignee_agent_id,version,created_at,updated_at,
+       lease_token,lease_expires_at,last_heartbeat_at
+     ) VALUES (?,?,'Work','', 'in_progress',?,1,?,?,?,?,?)`,
+  ).run(
+    `work-${executionId}`,
+    MISSION_ID,
+    agentId,
+    NOW,
+    NOW,
+    ...workItemLeaseBind("in_progress", agentId, {
+      at: NOW,
+      token: `work-${executionId}-lease`,
+    }),
+  );
   database.prepare(
     `INSERT INTO executions(
        id,project_id,source_collaboration_thread_id,source_collaboration_run_id,

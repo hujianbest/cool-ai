@@ -18,6 +18,7 @@ import {
 import { createCredentialVault } from "@/src/modules/identity-capability/internal/credential-vault";
 import { seedCurrentAdvanceFixture } from "@/tests/fixtures/collaboration/current-advance";
 import { memoryDatabasePath } from "@/tests/fixtures/sqlite/memory-database";
+import { workItemLeaseBind } from "@/tests/fixtures/sqlite/work-item-lease-columns";
 
 const NOW = "2026-08-13T03:00:00.000Z";
 const MASTER_KEY = Buffer.alloc(32, 13).toString("base64url");
@@ -113,9 +114,20 @@ function seedExecution(input: {
 }): void {
   database.prepare(
     `INSERT INTO work_items(
-       id,mission_id,title,description,status,assignee_agent_id,version,created_at,updated_at
-     ) VALUES (?,?,'Work','','in_progress',?,1,?,?)`,
-  ).run(`work-${input.executionId}`, MISSION_ID, input.agentId, NOW, NOW);
+       id,mission_id,title,description,status,assignee_agent_id,version,created_at,updated_at,
+       lease_token,lease_expires_at,last_heartbeat_at
+     ) VALUES (?,?,'Work','','in_progress',?,1,?,?,?,?,?)`,
+  ).run(
+    `work-${input.executionId}`,
+    MISSION_ID,
+    input.agentId,
+    NOW,
+    NOW,
+    ...workItemLeaseBind("in_progress", input.agentId, {
+      at: NOW,
+      token: `work-${input.executionId}-lease`,
+    }),
+  );
   database.prepare(
     `INSERT INTO executions(
        id,project_id,source_collaboration_thread_id,source_collaboration_run_id,
@@ -218,8 +230,8 @@ function insertStagedMergeApproval(input: {
 }
 
 describe("governance audit outbox schema", () => {
-  it("bootstraps identity 24 and accepts the governance outbox source", () => {
-    expect(database.prepare("PRAGMA user_version").get()).toEqual({ user_version: 24 });
+  it("bootstraps identity 25 and accepts the governance outbox source", () => {
+    expect(database.prepare("PRAGMA user_version").get()).toEqual({ user_version: 25 });
     database.prepare(`
       INSERT INTO audit_event_outbox (
         id,project_id,source,event_type,payload_json,occurred_at,outbox_seq

@@ -125,8 +125,9 @@ function seed(
       'mission_review_initialized','system',NULL,
       '{"contextVersion":1,"headVersion":1,"missionId":"mission"}','${NOW}');
     INSERT INTO work_items (
-      id,mission_id,title,description,status,assignee_agent_id,version,created_at,updated_at
-    ) VALUES ('work','mission','Fresh work item','Change a file','in_progress','executor',1,'${NOW}','${NOW}');
+      id,mission_id,title,description,status,assignee_agent_id,version,created_at,updated_at,
+      lease_token,lease_expires_at,last_heartbeat_at
+    ) VALUES ('work','mission','Fresh work item','Change a file','in_progress','executor',1,'${NOW}','${NOW}','work-lease','2099-01-01T00:00:00.000Z','${NOW}');
   `);
   database.close();
   const threadId = createThread(databasePath, "project", {

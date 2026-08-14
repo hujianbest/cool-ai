@@ -24,6 +24,7 @@ import { startPublicReview } from "@/src/adapters/outbound/sqlite/review-deliver
 import { parseWorkspaceGuideEnvelope } from "@/src/shared/onboarding-guide-machine";
 import type { ModelCallResult } from "@/src/shared/collaboration-contracts";
 import { memoryDatabasePath } from "@/tests/fixtures/sqlite/memory-database";
+import { workItemLeaseBind } from "@/tests/fixtures/sqlite/work-item-lease-columns";
 
 const PROJECT_ID = "onboarding-governance-project";
 const EXECUTOR_ID = "onboarding-executor";
@@ -208,9 +209,20 @@ function planClaimedWork(
     `).run(NOW, runId);
     database.prepare(`
       INSERT INTO work_items(
-        id,mission_id,title,description,status,assignee_agent_id,version,created_at,updated_at
-      ) VALUES (?,?,'Governed work','Execute safely','in_progress',?,1,?,?)
-    `).run(workItemId, missionId, EXECUTOR_ID, NOW, NOW);
+        id,mission_id,title,description,status,assignee_agent_id,version,created_at,updated_at,
+        lease_token,lease_expires_at,last_heartbeat_at
+      ) VALUES (?,?,'Governed work','Execute safely','in_progress',?,1,?,?,?,?,?)
+    `).run(
+      workItemId,
+      missionId,
+      EXECUTOR_ID,
+      NOW,
+      NOW,
+      ...workItemLeaseBind("in_progress", EXECUTOR_ID, {
+        at: NOW,
+        token: `${workItemId}-lease`,
+      }),
+    );
     database.prepare(`
       INSERT INTO collaboration_attempts(
         id,project_id,thread_id,run_id,agent_id,operation_id,status,lease_token,lease_expires_at,

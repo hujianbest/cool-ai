@@ -88,6 +88,7 @@ const TRANSITIONS: Record<
 
 function apiMessage(payload: ErrorPayload): string {
   switch (payload.error?.code) {
+    case "ACTION_CONFLICT":
     case "RESOURCE_CONFLICT":
       return "数据已更新，请刷新后重试。";
     case "DEPENDENCY_NOT_READY":
@@ -109,6 +110,9 @@ function apiMessage(payload: ErrorPayload): string {
       if (field === "description") return "任务说明格式无效，请检查长度。";
       if (field === "assigneeAgentId") return "负责人选择无效。";
       if (field === "dependencyIds") return "前置依赖选择无效。";
+      if (payload.error.message === "Work item lease has not expired.") {
+        return "租约尚未过期，无法回收。";
+      }
       return "表单内容无效，请检查后重试。";
     }
     default:
@@ -117,7 +121,10 @@ function apiMessage(payload: ErrorPayload): string {
 }
 
 function isConflict(payload: ErrorPayload): boolean {
-  return payload.error?.code === "RESOURCE_CONFLICT";
+  return (
+    payload.error?.code === "RESOURCE_CONFLICT"
+    || payload.error?.code === "ACTION_CONFLICT"
+  );
 }
 
 function memberName(members: ProjectMember[], agentId: string | null): string {
@@ -600,6 +607,46 @@ export function MissionBoard({
     }
   }
 
+  async function postWorkItemLease(
+    item: WorkItem,
+    kind: "reclaim" | "release",
+  ) {
+    if (!item.lease || isSaving) return;
+    if (kind === "release" && !item.lease.holderAgentId) return;
+    resetOperationState();
+    setIsSaving(true);
+    try {
+      const response = await fetch(`/api/work-items/${item.id}/${kind}`, {
+        body: JSON.stringify({
+          ...(kind === "release"
+            ? { agentId: item.lease.holderAgentId }
+            : { actorType: "owner" }),
+          expectedVersion: item.version,
+          operationId: crypto.randomUUID(),
+        }),
+        headers: JSON_HEADERS,
+        method: "POST",
+      });
+      const payload = (await response.json()) as { workItem?: WorkItem } &
+        ErrorPayload;
+      if (!response.ok || !payload.workItem) {
+        setConflict(isConflict(payload));
+        throw new Error(apiMessage(payload));
+      }
+      setWorkItems((current) =>
+        current.map((candidate) =>
+          candidate.id === item.id ? payload.workItem! : candidate,
+        ),
+      );
+      setSuccess(kind === "release" ? "租约已释放。" : "过期租约已回收。");
+      setFocusWorkItemId(item.id);
+    } catch (cause) {
+      setError(cause instanceof Error ? cause.message : "操作失败，请重试。");
+    } finally {
+      setIsSaving(false);
+    }
+  }
+
   async function transitionWorkItem(
     item: WorkItem,
     toStatus: WorkItemStatus,
@@ -891,6 +938,49 @@ export function MissionBoard({
                         </h4>
                         <p>{item.description || "暂无说明。"}</p>
                         <p>负责人：{memberName(members, item.assigneeAgentId)}</p>
+                        {item.status === "in_progress" && item.lease ? (
+                          <div
+                            aria-label={`${item.title} 租约`}
+                            className="stack"
+                          >
+                            <p>
+                              {`租约持有者：${memberName(members, item.lease.holderAgentId)}`}
+                            </p>
+                            <p>到期 {item.lease.expiresAt}</p>
+                            <p>上次心跳 {item.lease.lastHeartbeatAt}</p>
+                            {item.lease.expired ? (
+                              <span className="status-label status-queued">
+                                已过期
+                              </span>
+                            ) : null}
+                            <div
+                              aria-label={`${item.title} 租约操作`}
+                              className="form-row"
+                              role="group"
+                            >
+                              <button
+                                disabled={isSaving}
+                                onClick={() =>
+                                  void postWorkItemLease(item, "release")
+                                }
+                                type="button"
+                              >
+                                {isSaving ? "正在释放租约…" : "释放租约"}
+                              </button>
+                              <button
+                                disabled={isSaving || !item.lease.expired}
+                                onClick={() =>
+                                  void postWorkItemLease(item, "reclaim")
+                                }
+                                type="button"
+                              >
+                                {isSaving
+                                  ? "正在回收过期租约…"
+                                  : "回收过期租约"}
+                              </button>
+                            </div>
+                          </div>
+                        ) : null}
                         {item.dependencyIds.length > 0 ? (
                           <p>
                             等待:{" "}

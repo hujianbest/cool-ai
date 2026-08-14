@@ -84,7 +84,7 @@ describe("thread recycle bin schema seam", () => {
   it("bootstraps current identity with deleted_at, the recycle-bin partial index and thread_purge_markers", () => {
     const raw = new DatabaseSync(databasePath);
     try {
-      expect(raw.prepare("PRAGMA user_version").get()).toEqual({ user_version: 24 });
+      expect(raw.prepare("PRAGMA user_version").get()).toEqual({ user_version: 25 });
       const objects = raw
         .prepare(
           `SELECT type,name FROM sqlite_master
@@ -277,7 +277,7 @@ describe("thread recycle bin schema seam", () => {
       const database = openDatabase(databasePath);
       try {
         expect(database.prepare("PRAGMA user_version").get()).toEqual({
-          user_version: 24,
+          user_version: 25,
         });
         expect(
           database

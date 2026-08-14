@@ -113,10 +113,12 @@ function seed(): void {
     VALUES ('mission','${PROJECT_ID}','Mission','Ship',1,
       strftime('%Y-%m-%dT%H:%M:%fZ','now'),strftime('%Y-%m-%dT%H:%M:%fZ','now'));
     INSERT INTO work_items (
-      id,mission_id,title,description,status,assignee_agent_id,version,created_at,updated_at
+      id,mission_id,title,description,status,assignee_agent_id,version,created_at,updated_at,
+      lease_token,lease_expires_at,last_heartbeat_at
     ) VALUES (
       'work','mission','Original title','Original description','in_progress','agent',1,
-      strftime('%Y-%m-%dT%H:%M:%fZ','now'),strftime('%Y-%m-%dT%H:%M:%fZ','now')
+      strftime('%Y-%m-%dT%H:%M:%fZ','now'),strftime('%Y-%m-%dT%H:%M:%fZ','now'),
+      'work-lease','2099-01-01T00:00:00.000Z',strftime('%Y-%m-%dT%H:%M:%fZ','now')
     );
   `);
   initializeMissionDeliveryTx(database, {

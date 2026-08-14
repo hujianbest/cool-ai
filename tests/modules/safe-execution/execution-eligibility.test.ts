@@ -22,6 +22,7 @@ function openDatabase(path: string): DatabaseSync {
 }
 import { startExecution } from "@/src/adapters/outbound/sqlite/safe-execution/execution-service";
 import { memoryDatabasePath } from "@/tests/fixtures/sqlite/memory-database";
+import { workItemLeaseBind } from "@/tests/fixtures/sqlite/work-item-lease-columns";
 
 const PROJECT_ID = "eligibility-project";
 const THREAD_ID = "eligibility-thread";
@@ -179,9 +180,20 @@ function addTask(
   try {
     database.prepare(
       `INSERT INTO work_items (
-         id,mission_id,title,description,status,assignee_agent_id,version,created_at,updated_at
-       ) VALUES (?,?,?,?,?,?,1,?,?)`,
-    ).run(id, "mission", id, "", status, agentId, NOW, NOW);
+         id,mission_id,title,description,status,assignee_agent_id,version,created_at,updated_at,
+         lease_token,lease_expires_at,last_heartbeat_at
+       ) VALUES (?,?,?,?,?,?,1,?,?,?,?,?)`,
+    ).run(
+      id,
+      "mission",
+      id,
+      "",
+      status,
+      agentId,
+      NOW,
+      NOW,
+      ...workItemLeaseBind(status, agentId, { at: NOW, token: `${id}-lease` }),
+    );
     for (const dependencyId of dependencies) {
       database.prepare(
         "INSERT INTO work_item_dependencies (work_item_id,depends_on_id) VALUES (?,?)",

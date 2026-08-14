@@ -209,7 +209,7 @@ describe("Structured Message Source Public Read frozen File Reference projection
 
     const reopened = openDatabase(setup.path);
     try {
-      expect(reopened.prepare("PRAGMA user_version").get()).toEqual({ user_version: 24 });
+      expect(reopened.prepare("PRAGMA user_version").get()).toEqual({ user_version: 25 });
     } finally {
       reopened.close();
     }

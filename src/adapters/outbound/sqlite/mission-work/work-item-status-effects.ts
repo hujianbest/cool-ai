@@ -1,3 +1,4 @@
+import { randomUUID } from "node:crypto";
 import type { DatabaseSync } from "node:sqlite";
 
 import { appendWorkItemStatusAuditOutboxRow } from "@/src/adapters/outbound/sqlite/mission-work/audit-event-outbox";
@@ -23,7 +24,8 @@ export function markWorkItemDoneTx(
   input: MarkWorkItemDoneInput,
 ): WorkItemStatusWriteResult {
   const updated = database.prepare(`
-    UPDATE work_items SET status='done',version=version+1,updated_at=?
+    UPDATE work_items SET status='done',version=version+1,updated_at=?,
+      lease_token=NULL,lease_expires_at=NULL,last_heartbeat_at=NULL
     WHERE id=? AND version=? AND status='in_progress'
   `).run(input.occurredAt, input.workItemId, input.expectedVersion);
   if (updated.changes === 1) {
@@ -44,7 +46,8 @@ export function markReviewedWorkItemDoneTx(
   input: MarkReviewedWorkItemDoneInput,
 ): WorkItemStatusWriteResult {
   const updated = database.prepare(`
-        UPDATE work_items SET status='done',version=version+1,updated_at=?
+        UPDATE work_items SET status='done',version=version+1,updated_at=?,
+          lease_token=NULL,lease_expires_at=NULL,last_heartbeat_at=NULL
         WHERE id=? AND mission_id=? AND status='in_progress'
       `).run(input.occurredAt, input.workItemId, input.missionId);
   if (updated.changes === 1) {
@@ -64,10 +67,22 @@ export function markWorkItemInProgressTx(
   database: DatabaseSync,
   input: MarkWorkItemInProgressInput,
 ): WorkItemStatusWriteResult {
+  const leaseExpiresAt = new Date(
+    Date.parse(input.occurredAt) + 15 * 60 * 1000,
+  ).toISOString();
   const updated = database.prepare(`
-      UPDATE work_items SET status='in_progress',version=version+1,updated_at=?
+      UPDATE work_items SET status='in_progress',version=version+1,updated_at=?,
+        lease_token=CASE WHEN assignee_agent_id IS NOT NULL THEN ? ELSE NULL END,
+        lease_expires_at=CASE WHEN assignee_agent_id IS NOT NULL THEN ? ELSE NULL END,
+        last_heartbeat_at=CASE WHEN assignee_agent_id IS NOT NULL THEN ? ELSE NULL END
       WHERE id=? AND status='done'
-    `).run(input.occurredAt, input.workItemId);
+    `).run(
+    input.occurredAt,
+    randomUUID(),
+    leaseExpiresAt,
+    input.occurredAt,
+    input.workItemId,
+  );
   if (updated.changes === 1) {
     appendWorkItemStatusAuditOutboxRow(database, {
       actorId: null,

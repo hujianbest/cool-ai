@@ -480,6 +480,114 @@ describe("Mission Board", () => {
   });
 });
 
+function leasedItem(
+  expired: boolean,
+  expiresAt = "2026-08-15T00:15:00.000Z",
+): WorkItem {
+  return {
+    ...workItem("item-2", "Build", "in_progress", ["item-1"]),
+    lease: {
+      expired,
+      expiresAt,
+      holderAgentId: "agent-a",
+      lastHeartbeatAt: "2026-08-15T00:00:00.000Z",
+      token: "lease-token-1",
+    },
+  };
+}
+
+function boardFetch(
+  workItems: WorkItem[],
+  extra?: (url: string, init?: RequestInit) => Response | undefined,
+) {
+  return vi.fn(async (input: RequestInfo | URL, init?: RequestInit) => {
+    const url = String(input);
+    if (url.endsWith("/members")) {
+      return Response.json({ members, projectVersion: 3 });
+    }
+    if (url.endsWith("/mission") && !init?.method) {
+      return Response.json({ mission, workItems });
+    }
+    if (url.endsWith("/dependencies") && !init?.method) {
+      return Response.json({
+        nodes: [],
+        edges: [],
+        cycles: [],
+        hasDependencies: false,
+      });
+    }
+    if (url.endsWith("/sop-state") && !init?.method) {
+      return Response.json({
+        workspaceBound: true,
+        readAt: "2026-08-15T00:00:00.000Z",
+        items: [],
+      });
+    }
+    const extraResponse = extra?.(url, init);
+    if (extraResponse) return extraResponse;
+    throw new Error(`Unexpected request: ${url}`);
+  });
+}
+
+describe("mission board work-item lease", () => {
+  it("shows holder, expiry, and disables reclaim until the lease expires", async () => {
+    const MissionBoard = await board();
+    vi.stubGlobal("fetch", boardFetch([items[0]!, leasedItem(false), items[2]!, items[3]!]));
+    render(<MissionBoard projectId="project-1" />);
+
+    await screen.findByRole("heading", { name: "Build" });
+    expect(screen.getByText("租约持有者：Alpha")).toBeInTheDocument();
+    expect(screen.getByText("到期 2026-08-15T00:15:00.000Z")).toBeInTheDocument();
+    expect(screen.getByText("上次心跳 2026-08-15T00:00:00.000Z")).toBeInTheDocument();
+    expect(screen.queryByText("已过期")).toBeNull();
+    expect(screen.getByRole("button", { name: "释放租约" })).toBeEnabled();
+    expect(screen.getByRole("button", { name: "回收过期租约" })).toBeDisabled();
+  });
+
+  it("shows an expired badge, enables reclaim, and posts release", async () => {
+    const MissionBoard = await board();
+    const released = {
+      ...workItem("item-2", "Build", "todo"),
+      assigneeAgentId: null,
+      lease: null,
+      version: 2,
+    };
+    const fetchMock = boardFetch(
+      [items[0]!, leasedItem(true, "2020-01-01T00:00:00.000Z"), items[2]!, items[3]!],
+      (url, init) => {
+        if (url === "/api/work-items/item-2/release" && init?.method === "POST") {
+          return Response.json({ workItem: released });
+        }
+        return undefined;
+      },
+    );
+    vi.stubGlobal("fetch", fetchMock);
+    const user = userEvent.setup();
+    render(<MissionBoard projectId="project-1" />);
+
+    await screen.findByRole("heading", { name: "Build" });
+    expect(screen.getByText("已过期")).toBeInTheDocument();
+    expect(screen.getByRole("button", { name: "回收过期租约" })).toBeEnabled();
+
+    await user.click(screen.getByRole("button", { name: "释放租约" }));
+    const releaseCall = fetchMock.mock.calls.find(
+      ([input, init]) =>
+        String(input) === "/api/work-items/item-2/release" && init?.method === "POST",
+    );
+    expect(releaseCall).toBeDefined();
+    expect(JSON.parse(String(releaseCall?.[1]?.body))).toEqual({
+      agentId: "agent-a",
+      expectedVersion: 1,
+      operationId: expect.stringMatching(
+        /^[0-9a-f]{8}-[0-9a-f]{4}-4[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/iu,
+      ),
+    });
+    expect(await screen.findByRole("status", { name: "保存结果" })).toHaveTextContent(
+      "租约已释放。",
+    );
+  });
+});
+
 describe("mission board chrome", () => {
   it("renders task cards on pearl surfaces with case radius", () => {
     const css = readFileSync(join(process.cwd(), "app", "cockpit.css"), "utf8");

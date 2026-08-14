@@ -65,10 +65,11 @@ function seed(): void {
       ('mission','${PROJECT_ID}','Mission','Goal',1,'${NOW}','${NOW}'),
       ('other-mission','${OTHER_PROJECT_ID}','Other','Goal',1,'${NOW}','${NOW}');
     INSERT INTO work_items (
-      id,mission_id,title,description,status,assignee_agent_id,version,created_at,updated_at
+      id,mission_id,title,description,status,assignee_agent_id,version,created_at,updated_at,
+      lease_token,lease_expires_at,last_heartbeat_at
     ) VALUES
-      ('work','mission','Work','','in_progress','agent',1,'${NOW}','${NOW}'),
-      ('other-work','other-mission','Other work','','in_progress','other-agent',1,'${NOW}','${NOW}');
+      ('work','mission','Work','','in_progress','agent',1,'${NOW}','${NOW}','work-lease','2099-01-01T00:00:00.000Z','${NOW}'),
+      ('other-work','other-mission','Other work','','in_progress','other-agent',1,'${NOW}','${NOW}','other-work-lease','2099-01-01T00:00:00.000Z','${NOW}');
     INSERT INTO collaboration_operations (
       id,project_id,thread_id,run_id,kind,request_hash,status,http_status,
       response_json,response_schema_version,created_at,updated_at
@@ -332,7 +333,9 @@ describe("execution lifecycle controls", () => {
 
   it("rejects retry when current eligibility, workspace, context, or budget preconditions fail", async () => {
     const version = setExecution("failed", null, "PROCESS_TERMINATION_UNCONFIRMED");
-    database.prepare("UPDATE work_items SET assignee_agent_id=NULL WHERE id='work'").run();
+    database.prepare(
+      "UPDATE work_items SET assignee_agent_id=NULL,lease_token=NULL,lease_expires_at=NULL,last_heartbeat_at=NULL WHERE id='work'",
+    ).run();
     await expect(controlExecution(databasePath, EXECUTION_ID, {
       action: "retry",
       expectedVersion: version,

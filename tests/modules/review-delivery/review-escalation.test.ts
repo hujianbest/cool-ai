@@ -69,8 +69,9 @@ function seed(): string {
     INSERT INTO missions(id,project_id,title,goal,version,created_at,updated_at)
     VALUES ('mission','project','Mission','Goal',1,'${NOW}','${NOW}');
     INSERT INTO work_items(
-      id,mission_id,title,description,status,assignee_agent_id,version,created_at,updated_at
-    ) VALUES ('work','mission','Work','','in_progress','executor',4,'${NOW}','${NOW}');
+      id,mission_id,title,description,status,assignee_agent_id,version,created_at,updated_at,
+      lease_token,lease_expires_at,last_heartbeat_at
+    ) VALUES ('work','mission','Work','','in_progress','executor',4,'${NOW}','${NOW}','work-lease','2099-01-01T00:00:00.000Z','${NOW}');
     INSERT INTO work_item_result_versions(
       id,project_id,mission_id,work_item_id,version,execution_id,staged_result_id,
       merge_journal_id,supersedes_result_id,executor_agent_id,created_at

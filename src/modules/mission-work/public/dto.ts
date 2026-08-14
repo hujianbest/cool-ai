@@ -7,6 +7,7 @@ export type {
   Mission,
   MissionState,
   WorkItem,
+  WorkItemLease,
   WorkItemStatus,
 } from "@/src/shared/project-context-contracts";
 export type {

@@ -79,8 +79,9 @@ function seed(database: DatabaseSync): void {
     INSERT INTO missions(id,project_id,title,goal,version,created_at,updated_at)
     VALUES ('mission','project','Mission','Goal',1,'${NOW}','${NOW}');
     INSERT INTO work_items(
-      id,mission_id,title,description,status,assignee_agent_id,version,created_at,updated_at
-    ) VALUES ('work','mission','Work','','in_progress','executor',1,'${NOW}','${NOW}');
+      id,mission_id,title,description,status,assignee_agent_id,version,created_at,updated_at,
+      lease_token,lease_expires_at,last_heartbeat_at
+    ) VALUES ('work','mission','Work','','in_progress','executor',1,'${NOW}','${NOW}','work-lease','2099-01-01T00:00:00.000Z','${NOW}');
     INSERT INTO mission_delivery_heads(
       mission_id,project_id,context_version,state,current_delivery_id,current_operation_id,
       generation_lease_token,generation_lease_expires_at,last_error_code,

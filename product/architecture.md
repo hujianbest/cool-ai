@@ -68,7 +68,7 @@ Cool AI 保持一个本地优先、单进程、单 SQLite 的**领域模块化�
 
 - Mission 目标、状态与完成门槛。
 - Work Item、负责人、依赖 DAG、阻塞原因、状态、版本和唯一有效任务事实。
-- 任务领取资格和与任务生命周期直接相关的派发意图。
+- 任务领取资格和与任务生命周期直接相关的派发意图；进行中任务的跨时占有使用 dispatch lease（token / expiry / heartbeat），过期回收不经 Governance。
 
 不拥有：
 
