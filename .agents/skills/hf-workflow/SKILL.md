@@ -63,6 +63,16 @@ hf-workflow
 - 探索产物禁止直接晋升。
 - 用户若要求跳过评审等纪律，在 `progress.md` 记录豁免后再继续。
 
+## 评审策略（当前开发阶段）
+
+- 评审豁免策略以根 `AGENTS.md`「当前开发阶段的评审策略」为准（2026-08-14 选择性评审）：默认豁免 spec/architecture/`hf-review`；命中 schema 变更、安全边界、跨 owner 写/共享 outbox/投影写入点、或 >8 票的切片，`implement` 完成后必须执行 `hf-code-review`（至少 Standards 轴）。未命中条件的纯 UI/机械/文档切片继续豁免。
+- 无论豁免与否，不得伪造评审结论、确认行或评审文件；豁免须在 `progress.md` 记录日期与理由。
+
+## 轻量级切片路径
+
+- 满足 `AGENTS.md`「轻量级切片」全部条件的切片（票 ≤3、无 schema/安全/跨 owner 写、单一模块/接缝）可合并 to-spec 与 to-architecture 为一页 `architecture.md`（含规格要点与测试缝），跳过 to-tickets，任务票直接列于 `progress.md` 或 `tickets.md` 简表；验收门禁不缩减。
+- 存量热修沿用「仅架构地图」先例，不强制完整产品层。
+
 ## 扩展
 
 进入阶段前扫描 `skills/ext-*/`，读取 `description` 中的绑定阶段与触发条件；匹配则加载。扩展只收紧流程建议，不放松评审/TDD 纪律。合法绑定阶段见 `references/extension-authoring.md`。

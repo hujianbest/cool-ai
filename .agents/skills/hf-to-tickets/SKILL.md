@@ -12,7 +12,8 @@ description: 把已评审的规格和架构拆成带阻塞边的垂直切片任�
 1. 宜在规格与特性架构评审通过后拆票；更新 `progress.md` 为 `to-tickets`。
 2. 默认发布到 `features/<id>/tickets.md`（机器可读的 `- [ ] T-NN` 行）；若已配置任务跟踪器，则按其配置发布，并在特性目录保留索引副本便于进度阅读。
 3. 首张可执行票应为最薄端到端路径(行走骨架判据),除非架构已声明存量无需。
-4. 更新 `progress.md`；下一步进入 `hf-implement`。
+4. **轻量级路径**：满足 `AGENTS.md`「轻量级切片」条件的切片跳过本阶段——任务票直接列于 `progress.md` 或 `tickets.md` 简表（仍带阻塞边与 RED/GREEN 要求），不单独拆票文档。
+5. 更新 `progress.md`；下一步进入 `hf-implement`。
 
 ## 流程
 

@@ -11,9 +11,9 @@ description: 按任务票/规格实现工作，内驱 hf-tdd，完成后执行 h
 
 1. 更新 `progress.md` 为 `implement`。
 2. 同一时间只做一张**前沿票**(blockers 均已勾选)。
-3. 建造模式:每个行为变更走 `hf-tdd`(红→绿→重构);实现任务派 **subagent**,主会话编排。
+3. 建造模式:每个行为变更走 `hf-tdd`(红→绿→重构);实现任务派 **subagent**,主会话编排。机械性改动（identity/断言号同步、夹具补字段、纯配置/文档、无行为变化的迁移编辑）按 `hf-tdd`「机械性改动豁免」执行，不强制行为性 RED。
 4. 票完成后勾选 `tickets.md` 对应 `- [x] T-NN`。
-5. 全部任务票勾选后：`hf-review` → `hf-code-review` → `reviews/code-review.md` + 确认。
+5. 全部任务票勾选后：按 `AGENTS.md` 评审策略（选择性评审）判断本切片是否命中强制 `hf-code-review` 条件（schema 变更、安全边界、跨 owner 写/共享 outbox/投影写入点、>8 票）；命中则执行 `hf-code-review` → `reviews/code-review.md` + 确认；未命中则记录豁免。
 6. 用户可感知：准备演示证据与体验路径，供进入 `ship` 阶段前验收。
 7. 下一步进入 `hf-ship`。
 

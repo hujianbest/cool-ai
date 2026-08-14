@@ -11,6 +11,7 @@ description: 基于已确认的规格产出特性级架构设计（模块边界�
 
 1. 冷读 `spec.md`、`product/architecture.md`（若有）、`CONTEXT.md`(若有)、相关 ADR,以及 `product/` 假设台账。更新 `progress.md` 为 `to-architecture`。
 2. 加载 `hf-codebase-design`;大雾/多会话决策可参考 `hf-wayfinder` 的决策票思路,但本阶段产出仍落在本特性目录。
+3. **轻量级路径**（满足 `AGENTS.md`「轻量级切片」条件）：本阶段直接产出合并页 `architecture.md`（含规格要点 + 本片模块与缝 + 关键流程 + 测试缝 + Out of Scope），不另写 `spec.md`，不进入 `hf-to-tickets`。
 
 ## 流程
 

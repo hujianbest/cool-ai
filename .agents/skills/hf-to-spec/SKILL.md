@@ -11,8 +11,9 @@ description: 把当前会话综合为规格并写入特性目录/任务跟踪器
 
 1. 更新 `progress.md` 当前阶段为 `to-spec`。
 2. 未配置任务跟踪器时，默认把规格写入 `features/<id>/spec.md`；若已运行 `hf-setup-skills`，则按其任务跟踪器配置发布。
-3. 写完后执行 `hf-review`（规格检查清单）→ `reviews/spec-review.md` + 用户确认/`auto-approved`。
-4. 评审通过后进入 `hf-to-architecture`。
+3. **轻量级路径**（满足 `AGENTS.md`「轻量级切片」条件：票 ≤3、无 schema/安全/跨 owner 写、单一模块/接缝）：不单独写 `spec.md`，规格要点（Problem/Solution/User Stories/测试缝/Out of Scope）直接并入一页 `architecture.md`，下一步进入 implement，跳过 to-tickets。验收门禁不缩减。
+4. 写完后执行 `hf-review`（规格检查清单）→ `reviews/spec-review.md` + 用户确认/`auto-approved`。命中选择性评审条件的切片虽豁免 spec review，仍按 `AGENTS.md` 评审策略记录豁免。
+5. 评审通过后进入 `hf-to-architecture`。
 
 ## 流程
 

@@ -9,7 +9,7 @@ description: 特性收尾：确认 code-review 与（用户可感知时）演示
 
 ## 前置
 
-1. 宜确认任务票已勾选、`code-review` 已通过并确认；用户可感知特性还宜有 `reviews/demo-acceptance.md`（结论「接受」且已确认）。
+1. 宜确认任务票已勾选；`code-review` 按 `AGENTS.md` 选择性评审策略完成（命中强制条件的切片已通过 `hf-code-review` 并确认；未命中条件的切片已记录豁免）。用户可感知特性还宜有 `reviews/demo-acceptance.md`（结论「接受」且已确认）。
 2. 探索模式不应进入本阶段。
 
 ## 流程
