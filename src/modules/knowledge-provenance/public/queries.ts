@@ -1,8 +1,10 @@
 import type { TransactionContext } from "@/src/application/transaction-context";
 import type {
   MemoryEntryV6,
+  MemorySearchHit,
   ResolvedMemorySource,
   ResolveMemorySourceInput,
+  SearchMemoriesOptions,
 } from "./dto";
 
 export interface KnowledgeProvenanceQueries {
@@ -20,4 +22,9 @@ export interface KnowledgeProvenanceQueries {
     transaction: TransactionContext,
     input: ResolveMemorySourceInput,
   ) => ResolvedMemorySource;
+  searchMemories: (
+    databasePath: string,
+    projectId: string,
+    options: SearchMemoriesOptions,
+  ) => MemorySearchHit[];
 }

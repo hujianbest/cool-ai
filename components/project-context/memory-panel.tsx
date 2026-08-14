@@ -128,6 +128,16 @@ export function MemoryPanel({ projectId }: { projectId: string }) {
   const sourceRef = useRef<HTMLInputElement>(null);
   const headingRefs = useRef(new Map<string, HTMLHeadingElement>());
   const [focusMemoryId, setFocusMemoryId] = useState<string | null>(null);
+  const [searchQuery, setSearchQuery] = useState("");
+  const [searchType, setSearchType] = useState("");
+  const [searchSourceType, setSearchSourceType] = useState("");
+  const [searchVersion, setSearchVersion] = useState("");
+  const [searchHits, setSearchHits] = useState<Array<{
+    memory: MemoryEntryV6;
+    snippet: string;
+  }> | null>(null);
+  const [isSearching, setIsSearching] = useState(false);
+  const [searchError, setSearchError] = useState<string | null>(null);
 
   useEffect(() => {
     let active = true;
@@ -226,6 +236,43 @@ export function MemoryPanel({ projectId }: { projectId: string }) {
     } finally {
       setIsSaving(false);
     }
+  }
+
+  async function submitSearch(event: FormEvent<HTMLFormElement>) {
+    event.preventDefault();
+    const query = searchQuery.trim();
+    if (!query) return;
+    setIsSearching(true);
+    setSearchError(null);
+    const params = new URLSearchParams({ q: query });
+    if (searchType) params.set("type", searchType);
+    if (searchSourceType) params.set("sourceType", searchSourceType);
+    if (searchVersion.trim()) params.set("version", searchVersion.trim());
+    try {
+      const response = await fetch(
+        `/api/projects/${projectId}/memories/search?${params.toString()}`,
+      );
+      const payload = (await response.json()) as {
+        results?: Array<{ memory: MemoryEntryV6; snippet: string }>;
+      } & MemoryPayload;
+      if (!response.ok || !Array.isArray(payload.results)) {
+        throw new Error("search");
+      }
+      setSearchHits(payload.results);
+    } catch {
+      setSearchError("无法检索记忆，请稍后重试。");
+      setSearchHits(null);
+    } finally {
+      setIsSearching(false);
+    }
+  }
+
+  function locateMemory(memoryId: string) {
+    const card = document.getElementById(`memory-${memoryId}`);
+    if (card && typeof card.scrollIntoView === "function") {
+      card.scrollIntoView({ block: "nearest" });
+    }
+    setFocusMemoryId(memoryId);
   }
 
   const supersedeOptions = memories.filter(
@@ -375,6 +422,100 @@ export function MemoryPanel({ projectId }: { projectId: string }) {
           {success}
         </p>
       ) : null}
+      <section
+        aria-labelledby={`knowledge-feed-${projectId}`}
+        className="stack memory-form"
+      >
+        <h3 id={`knowledge-feed-${projectId}`}>知识动态</h3>
+        <form className="stack" onSubmit={submitSearch}>
+          <div className="form-field">
+            <label htmlFor={`memory-search-${projectId}`}>检索记忆</label>
+            <input
+              id={`memory-search-${projectId}`}
+              onChange={(event) => setSearchQuery(event.target.value)}
+              placeholder="例如：当前目标"
+              value={searchQuery}
+            />
+          </div>
+          <div className="form-row">
+            <div className="form-field">
+              <label htmlFor={`memory-search-type-${projectId}`}>检索类型</label>
+              <select
+                id={`memory-search-type-${projectId}`}
+                onChange={(event) => setSearchType(event.target.value)}
+                value={searchType}
+              >
+                <option value="">全部类型</option>
+                {MEMORY_TYPES.map((type) => (
+                  <option key={type.value} value={type.value}>
+                    {type.label}
+                  </option>
+                ))}
+              </select>
+            </div>
+            <div className="form-field">
+              <label htmlFor={`memory-search-source-${projectId}`}>检索来源</label>
+              <select
+                id={`memory-search-source-${projectId}`}
+                onChange={(event) => setSearchSourceType(event.target.value)}
+                value={searchSourceType}
+              >
+                <option value="">全部来源</option>
+                {Object.entries(SOURCE_LABELS).map(([value, label]) => (
+                  <option key={value} value={value}>
+                    {label}
+                  </option>
+                ))}
+              </select>
+            </div>
+            <div className="form-field">
+              <label htmlFor={`memory-search-version-${projectId}`}>检索版本</label>
+              <input
+                id={`memory-search-version-${projectId}`}
+                inputMode="numeric"
+                onChange={(event) => setSearchVersion(event.target.value)}
+                placeholder="例如：2"
+                value={searchVersion}
+              />
+            </div>
+          </div>
+          <button disabled={isSearching || !searchQuery.trim()} type="submit">
+            {isSearching ? "正在检索…" : "检索"}
+          </button>
+        </form>
+        {isSearching ? (
+          <p aria-busy="true" className="state-message">
+            正在检索记忆…
+          </p>
+        ) : null}
+        {searchError ? (
+          <p
+            className="error-text"
+            id={`memory-search-error-${projectId}`}
+            role="alert"
+          >
+            {searchError}
+          </p>
+        ) : null}
+        {!isSearching && searchHits && searchHits.length === 0 && !searchError ? (
+          <p className="state-message">没有匹配的记忆。</p>
+        ) : null}
+        {searchHits && searchHits.length > 0 ? (
+          <ul aria-label="记忆检索结果" className="stack">
+            {searchHits.map((hit) => (
+              <li key={hit.memory.id}>
+                <button
+                  aria-label={`定位记忆 ${hit.memory.content}`}
+                  onClick={() => locateMemory(hit.memory.id)}
+                  type="button"
+                >
+                  {hit.snippet}
+                </button>
+              </li>
+            ))}
+          </ul>
+        ) : null}
+      </section>
       <button
         disabled={isLoading}
         onClick={() => setIncludeHistory((current) => !current)}

@@ -7,9 +7,13 @@ import {
   MemoryError,
   MemorySourceResolutionError,
   type CreateMemoryInput,
+  type MemorySearchHit,
+  type SearchMemoriesOptions,
 } from "@/src/modules/knowledge-provenance";
 import {
   memoryEntryV6Schema,
+  memorySourceTypeSchema,
+  memoryTypeSchema,
   type MemoryEntryV6,
   type MemoryType,
 } from "@/src/shared/memory-contracts";
@@ -56,10 +60,102 @@ const sourceTypes: readonly SourceType[] = [
   "work_item",
   "artifact_path",
 ];
+const MEMORY_SEARCH_DEFAULT_LIMIT = 20;
+const MEMORY_SEARCH_MAX_LIMIT = 50;
+const MEMORY_SEARCH_QUERY_MAX_GRAPHEMES = 200;
+const MEMORY_SEARCH_SNIPPET_CONTEXT_GRAPHEMES = 60;
 const segmenter = new Intl.Segmenter("zh-CN", { granularity: "grapheme" });
 
 function graphemeLength(value: string): number {
   return Array.from(segmenter.segment(value)).length;
+}
+
+function graphemes(value: string): string[] {
+  return Array.from(segmenter.segment(value), (part) => part.segment);
+}
+
+function asciiFold(value: string): string {
+  return value.replace(/[A-Z]/g, (char) => char.toLowerCase());
+}
+
+function buildMemorySnippet(content: string, query: string): string {
+  const parts = graphemes(content);
+  const matchStart = asciiFold(content).indexOf(asciiFold(query));
+  if (matchStart === -1) {
+    const head = parts.slice(0, MEMORY_SEARCH_SNIPPET_CONTEXT_GRAPHEMES * 2).join("");
+    return parts.length > MEMORY_SEARCH_SNIPPET_CONTEXT_GRAPHEMES * 2
+      ? `${head}…`
+      : content;
+  }
+  const matchEnd = matchStart + asciiFold(query).length;
+  let offset = 0;
+  let startGrapheme = 0;
+  let endGrapheme = parts.length - 1;
+  for (let index = 0; index < parts.length; index += 1) {
+    const next = offset + parts[index].length;
+    if (offset <= matchStart && matchStart < next) startGrapheme = index;
+    if (offset < matchEnd && matchEnd <= next) endGrapheme = index;
+    offset = next;
+  }
+  const windowStart = Math.max(
+    0,
+    startGrapheme - MEMORY_SEARCH_SNIPPET_CONTEXT_GRAPHEMES,
+  );
+  const windowEnd = Math.min(
+    parts.length,
+    endGrapheme + 1 + MEMORY_SEARCH_SNIPPET_CONTEXT_GRAPHEMES,
+  );
+  const body = parts.slice(windowStart, windowEnd).join("");
+  return `${windowStart > 0 ? "…" : ""}${body}${windowEnd < parts.length ? "…" : ""}`;
+}
+
+function requireSearchOptions(options: SearchMemoriesOptions): {
+  limit: number;
+  query: string;
+  sourceType?: SearchMemoriesOptions["sourceType"];
+  type?: SearchMemoriesOptions["type"];
+  version?: number;
+} {
+  if (options === null || typeof options !== "object") {
+    invalidInput([{ field: "q", code: "invalid_format" }]);
+  }
+  const query = typeof options.q === "string" ? options.q.trim() : "";
+  if (
+    query.length === 0
+    || graphemeLength(query) > MEMORY_SEARCH_QUERY_MAX_GRAPHEMES
+  ) {
+    invalidInput([{ field: "q", code: query.length === 0 ? "required" : "too_long" }]);
+  }
+  const limit = options.limit ?? MEMORY_SEARCH_DEFAULT_LIMIT;
+  if (
+    !Number.isSafeInteger(limit)
+    || limit < 1
+    || limit > MEMORY_SEARCH_MAX_LIMIT
+  ) {
+    invalidInput([{ field: "limit", code: "invalid_range" }]);
+  }
+  if (options.type !== undefined && !memoryTypeSchema.safeParse(options.type).success) {
+    invalidInput([{ field: "type", code: "invalid_format" }]);
+  }
+  if (
+    options.sourceType !== undefined
+    && !memorySourceTypeSchema.safeParse(options.sourceType).success
+  ) {
+    invalidInput([{ field: "sourceType", code: "invalid_format" }]);
+  }
+  if (
+    options.version !== undefined
+    && (!Number.isSafeInteger(options.version) || options.version < 1)
+  ) {
+    invalidInput([{ field: "version", code: "invalid_range" }]);
+  }
+  return {
+    limit,
+    query,
+    ...(options.sourceType === undefined ? {} : { sourceType: options.sourceType }),
+    ...(options.type === undefined ? {} : { type: options.type }),
+    ...(options.version === undefined ? {} : { version: options.version }),
+  };
 }
 
 function invalidInput(fields: FieldError[]): never {
@@ -456,4 +552,82 @@ export function listMemoriesInDatabase(
     )
     .all(projectId, Number(includeInactive)) as MemoryRow[];
   return rows.map((row) => toMemory(database, row));
+}
+
+const MEMORY_SEARCH_SELECT = `
+  SELECT
+    entry.id,
+    entry.project_id AS projectId,
+    entry.chain_id AS chainId,
+    entry.version,
+    entry.type,
+    entry.content,
+    entry.source_type AS sourceType,
+    entry.source_id AS sourceId,
+    entry.source_version AS sourceVersion,
+    entry.proposer_actor_type AS proposerActorType,
+    entry.proposer_actor_id AS proposerActorId,
+    proposer.name AS proposerAgentName,
+    proposer.avatar_text AS proposerAvatarText,
+    proposer.accent_token AS accentToken,
+    entry.confirming_review_attempt_id AS confirmingReviewAttemptId,
+    decision.id AS decisionId,
+    decision.choice AS confirmerChoice,
+    decision.reviewer_agent_id AS confirmerReviewerAgentId,
+    entry.persistence_actor AS persistenceActor,
+    entry.supersedes_id AS supersedesId,
+    entry.created_at AS createdAt,
+    CASE WHEN EXISTS (
+      SELECT 1 FROM memory_entries child WHERE child.supersedes_id = entry.id
+    ) THEN 0 ELSE 1 END AS active
+  FROM memory_entries entry
+  LEFT JOIN agents proposer ON proposer.id=entry.proposer_actor_id
+  LEFT JOIN review_decisions decision
+    ON decision.attempt_id=entry.confirming_review_attempt_id
+`;
+
+export function searchMemories(
+  databasePath: string,
+  projectId: string,
+  options: SearchMemoriesOptions,
+): MemorySearchHit[] {
+  const parsed = requireSearchOptions(options);
+  const database = openDatabase(databasePath);
+  try {
+    ensureProject(database, projectId);
+    const filters: string[] = [
+      "entry.project_id = ?",
+      `NOT EXISTS (
+         SELECT 1 FROM memory_entries child WHERE child.supersedes_id = entry.id
+       )`,
+      "instr(lower(entry.content), lower(?)) > 0",
+    ];
+    const params: Array<string | number> = [projectId, parsed.query];
+    if (parsed.type !== undefined) {
+      filters.push("entry.type = ?");
+      params.push(parsed.type);
+    }
+    if (parsed.sourceType !== undefined) {
+      filters.push("entry.source_type = ?");
+      params.push(parsed.sourceType);
+    }
+    if (parsed.version !== undefined) {
+      filters.push("entry.version = ?");
+      params.push(parsed.version);
+    }
+    const rows = database
+      .prepare(
+        `${MEMORY_SEARCH_SELECT}
+         WHERE ${filters.join(" AND ")}
+         ORDER BY entry.created_at DESC, entry.id ASC
+         LIMIT ?`,
+      )
+      .all(...params, parsed.limit) as MemoryRow[];
+    return rows.map((row) => ({
+      memory: toMemory(database, row),
+      snippet: buildMemorySnippet(row.content, parsed.query),
+    }));
+  } finally {
+    database.close();
+  }
 }

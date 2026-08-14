@@ -66,7 +66,7 @@ Capability ID 是稳定治理标识；owner 是唯一逻辑子系统，不等于
 
 - `CAP-REV-01` Independent Review & Delivery Core — owner: Review & Delivery — 状态: 已交付核心 — 证据/建立切片: S-6；`src/adapters/outbound/sqlite/review-delivery/review-application-service.ts`、`src/adapters/outbound/sqlite/review-delivery/delivery-service.ts`、`tests/modules/review-delivery/review-production-application.test.ts`
 - `CAP-KNW-01` Provenance Memory Core — owner: Knowledge & Provenance — 状态: 已交付核心 — 证据/建立切片: S-3、S-6；`src/adapters/outbound/sqlite/knowledge-provenance/memory-service.ts`、`tests/modules/knowledge-provenance/memory-source-navigation.test.ts`
-- `CAP-KNW-02` Knowledge Search & Index Lifecycle — owner: Knowledge & Provenance — 状态: 规划中 — 建立切片: S-28；健康扩展 S-29
+- `CAP-KNW-02` Knowledge Search & Index Lifecycle — owner: Knowledge & Provenance — 状态: 部分可用（项目隔离记忆检索与证据定位已交付；专用 FTS 索引/checkpoint/健康诊断未覆盖）— 证据/建立切片: S-28 [`progress.md`](../features/045-knowledge-search/progress.md)；健康扩展 S-29
 - `CAP-KNW-03` Collections & Provenance Graph — owner: Knowledge & Provenance — 状态: 规划中 — 建立切片: S-30、S-31
 - `CAP-KNW-04` Agent Curation — owner: Knowledge & Provenance — 状态: 规划中 — 建立切片: S-32
 - `CAP-RUN-01` OpenAI Runtime Core — owner: Runtime — 状态: 已交付核心 — 证据/建立切片: S-2、S-4；`src/adapters/outbound/model-runtime/provider-verifier.ts`、`tests/adapters/model-runtime/provider-verifier.test.ts`
@@ -113,7 +113,7 @@ S-9～S-12 的 `依赖: S-*` 是原历史文字，只说明当时切片记录；
 
 ## 当前在途
 
-（无；044/S-27 任务租约已于 2026-08-15 ship。）
+（无；045/S-28 记忆检索已于 2026-08-15 ship。）
 
 ## 主题簇一：公开协作
 
@@ -165,12 +165,12 @@ S-9～S-12 的 `依赖: S-*` 是原历史文字，只说明当时切片记录；
 
 主子系统为 Knowledge & Provenance；检索与图形视图是可重建投影，来源、版本和 supersedes 链仍由知识 owner 维护。
 
-- [ ] S-28 项目知识动态与记忆检索（CI-5.1） — 主子系统: Knowledge & Provenance；主 Capability: `CAP-KNW-02`；票据: 未创建；演示判据: owner 能按正文、类型、来源和版本在当前项目搜索记忆，并从知识动态定位精确证据；搜索结果不跨项目且不含被替代事实的误导性展示；约束: 工作区=项目隔离，verified-handle=文件证据跳转必需，sandbox=不适用，凭据=索引强制排除，审批=不适用，独立复核=交付必需，审计=检索来源可追溯；不复制 Clowder 品牌、源码或资产
-  - 准入: 已交付前置: `CAP-KNW-01`（已交付核心，memory service/source tests）；阻塞: `CAP-PWS-02`（S-22）、`CAP-OPS-01`（S-23 的 `AUD-MVP` 纵切）规划中；本片建立: `CAP-KNW-02` 的项目隔离记忆索引、检索和证据定位（规划中）。
+- [x] S-28 项目知识动态与记忆检索（CI-5.1） — 主子系统: Knowledge & Provenance；主 Capability: `CAP-KNW-02`；票据: [`features/045-knowledge-search/tickets.md`](../features/045-knowledge-search/tickets.md)；Ship: 2026-08-15（零 schema：`searchMemories` + GET `/memories/search` + 共享记忆检索 UI；`smoke:context` 3 断言；hf-code-review 豁免）；演示判据: owner 能按正文、类型、来源和版本在当前项目搜索记忆，并从知识动态定位精确证据；搜索结果不跨项目且不含被替代事实的误导性展示；约束: 工作区=项目隔离，verified-handle=文件证据跳转复用已有 href（A-318），sandbox=不适用，凭据=不索引/不落查询日志，审批=不适用，独立复核=交付必需（轻量级豁免记录于 progress），审计=结果带来源身份；不复制 Clowder 品牌、源码或资产
+  - 准入: 已交付前置: `CAP-KNW-01`、`CAP-PWS-02`、`CAP-OPS-01`（A-318）；本片建立: `CAP-KNW-02` 的项目隔离记忆检索和证据定位（已交付）；专用索引生命周期见 S-29。
 - [ ] S-29 记忆索引状态与健康诊断（CI-5.2） — 主子系统: Operations Projection；主 Capability: `CAP-OPS-03`；票据: 未创建；演示判据: owner 能看到项目索引进度、失败、召回健康与安全修复动作，诊断降级时仍可访问原始可引用记忆；约束: 工作区=项目隔离，verified-handle=重建文件索引时必需，sandbox=修复任务隔离，凭据=诊断脱敏，审批=破坏性重建需确认，独立复核=交付必需，审计=修复动作可追溯；不复制 Clowder 品牌、源码或资产
-  - 准入: 已交付前置: `CAP-KNW-01`（已交付）；阻塞: `CAP-KNW-02`（S-28）、`CAP-OPS-01`（S-23 拆分片）与 `CAP-GOV-02` 的非执行域破坏性修复治理（S-24）规划中；本片建立: `CAP-OPS-03` 的索引 checkpoint、健康、降级和修复投影（规划中）。
+  - 准入: 已交付前置: `CAP-KNW-01`、`CAP-KNW-02` 检索（S-28）、`CAP-OPS-01`、`CAP-GOV-02`；本片建立: `CAP-OPS-03` 的索引 checkpoint、健康、降级和修复投影（规划中）。
 - [ ] S-30 项目知识目录与集合（CI-5.4） — 主子系统: Knowledge & Provenance；主 Capability: `CAP-KNW-03`；票据: 未创建；演示判据: owner 能在项目内创建集合、移动/移除记忆并查看集合目录，删除集合不会静默删除来源事实且不能跨项目聚合；约束: 工作区=项目隔离，verified-handle=文件来源跳转必需，sandbox=不适用，凭据=集合不得收录秘密，审批=破坏性删除确认，独立复核=交付必需，审计=集合变更版本化；不复制 Clowder 品牌、源码或资产
-  - 准入: 已交付前置: `CAP-KNW-01`（已交付）；阻塞: `CAP-KNW-02` 检索（S-28）与 `CAP-GOV-02` 的非执行域破坏性删除治理（S-24）规划中；本片建立: `CAP-KNW-03` 的集合、移动/移除和来源保留（规划中）。
+  - 准入: 已交付前置: `CAP-KNW-01`、`CAP-KNW-02` 检索（S-28）、`CAP-GOV-02`；本片建立: `CAP-KNW-03` 的集合、移动/移除和来源保留（规划中）。
 - [ ] S-31 来源可追溯知识图谱（CI-5.5） — 主子系统: Knowledge & Provenance；主 Capability: `CAP-KNW-03`；票据: 未创建；演示判据: owner 能从项目知识图谱查看有证据的关系、定位来源并使用可访问的列表替代视图，缺少来源的推断不会显示为事实；约束: 工作区=项目隔离，verified-handle=文件证据跳转必需，sandbox=不适用，凭据=关系数据脱敏，审批=不适用，独立复核=交付必需，审计=边与来源不可分离；不复制 Clowder 品牌、源码或资产
   - 准入: 已交付前置: `CAP-KNW-01`（已交付）；阻塞: `CAP-KNW-02`（S-28）与 `CAP-KNW-03` 集合部分（S-30）规划中；本片建立: `CAP-KNW-03` 的证据边、图查询和可访问列表替代（规划中）。
 - [ ] S-32 Agent 署名的记忆提炼与发布（CI-5.6） — 主子系统: Knowledge & Provenance；主 Capability: `CAP-KNW-04`；票据: 未创建；演示判据: 真实 Agent 能基于精确来源提出提炼/反思结果，owner 能看到署名、差异和 supersedes 链，未经来源校验的内容不能发布为共享记忆；约束: 工作区=项目隔离，verified-handle=文件证据必需，sandbox=提炼工具隔离，凭据=输入输出脱敏，审批=发布按现有治理确认，独立复核=发布前必需，审计=模型、来源和版本可追溯；不复制 Clowder 品牌、源码或资产

@@ -1390,6 +1390,44 @@ try {
   });
   await rightPanel.getByText("仅引用，尚未读取", { exact: true }).waitFor();
 
+  const knowledgeRegion = rightPanel.getByRole("region", { name: "知识动态" });
+  await knowledgeRegion.waitFor();
+  let memorySearchAssertions = 0;
+  await knowledgeRegion.getByLabel("检索记忆").fill("Current context goal");
+  await knowledgeRegion.getByRole("button", { name: "检索" }).click();
+  const searchResults = knowledgeRegion.getByRole("list", { name: "记忆检索结果" });
+  await searchResults.waitFor();
+  memorySearchAssertions += 1;
+  assert.equal(
+    await searchResults.getByText("Current context goal").count(),
+    1,
+    "search results must show Current context goal",
+  );
+  memorySearchAssertions += 1;
+  assert.equal(
+    await searchResults.getByText("Initial context goal").count(),
+    0,
+    "search results must not show superseded Initial context goal",
+  );
+  await searchResults
+    .getByRole("button", { name: "定位记忆 Current context goal" })
+    .click();
+  const currentGoalHeading = rightPanel.getByRole("heading", {
+    name: "Current context goal",
+  });
+  memorySearchAssertions += 1;
+  assert.ok(
+    await currentGoalHeading.evaluate((element) => {
+      if (document.activeElement === element) return true;
+      const box = element.getBoundingClientRect();
+      return box.top < window.innerHeight && box.bottom > 0;
+    }),
+    "located memory heading must be focused or in view",
+  );
+  console.log(
+    `MEMORY SEARCH ACCEPTANCE PASS: assertions=${memorySearchAssertions}`,
+  );
+
   await rightPanel.getByRole("tab", { name: "上下文预览" }).click();
   const memberSelect = rightPanel.getByLabel("预览成员");
   await selectOptionContaining(memberSelect, "Context Planner");

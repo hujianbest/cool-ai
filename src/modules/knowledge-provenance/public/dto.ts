@@ -1,5 +1,7 @@
 import type {
+  MemoryEntryV6,
   MemorySource,
+  MemorySourceType,
   MemoryType,
 } from "@/src/shared/memory-contracts";
 
@@ -53,3 +55,16 @@ export type ResolveMemorySourceInput = {
 };
 
 export type ResolvedMemorySource = MemorySource & { href: string; version: string };
+
+export type SearchMemoriesOptions = {
+  q: string;
+  limit?: number;
+  sourceType?: MemorySourceType;
+  type?: MemoryType;
+  version?: number;
+};
+
+export type MemorySearchHit = {
+  memory: MemoryEntryV6;
+  snippet: string;
+};

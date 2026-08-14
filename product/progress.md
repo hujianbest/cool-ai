@@ -29,3 +29,4 @@
 - 2026-08-15 043/S-26 SOP 状态投影立项并进入 implement（A-302～A-308）；阻塞项已交付。
 - 2026-08-15 043/S-26 可审计 SOP 与流程状态完成 implement 与 ship：零 schema 来源化投影、GET `/sop-state`、看板「流程状态」；`smoke:context` SOP 8 断言；hf-code-review 复审 PASS；`CAP-MWK-03` 已交付核心。
 - 2026-08-15 044/S-27 任务租约与派发控制面完成 implement 与 ship：schema identity 24→25，claim/heartbeat/release/reclaim 与看板租约；`smoke:context` 5 断言；hf-code-review 复审 PASS；全量 289/2652 126.51s；`CAP-MWK-04` 已交付核心。
+- 2026-08-15 045/S-28 项目知识动态与记忆检索完成 implement 与 ship：零 schema `searchMemories` + GET `/memories/search` + 共享记忆检索 UI；`smoke:context` 3 断言；全量 291/2685 122.39s；hf-code-review 豁免；`CAP-KNW-02` 检索核心已交付。

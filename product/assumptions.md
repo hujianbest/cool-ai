@@ -321,3 +321,12 @@ agent 替用户做的默认选择。遇到欠定点的标准动作: 提出带默
 - A-309 2026-08-15 [生效] 044/S-27 work item 租约 TTL 默认 15 分钟；心跳将 `lease_expires_at` 设为 now+TTL。默认理由: 与现有 execution/review lease 同量级，避免过短导致误回收。
 - A-310 2026-08-15 [生效] 044 仅允许回收已过期租约；未过期拒绝。过期回收不走审批中心。默认理由: backlog「回收高风险运行需确认」针对执行合入；work item 过期回收只把任务退回 todo，不是破坏性 Git。
 - A-311 2026-08-15 [生效] 044 不新增 audit outbox 类型；释放/回收复用既有 work item 状态变更事件。默认理由: 不建第二事件源；AUD-MWK 已覆盖 status_changed。
+- A-312 2026-08-15 [生效] 045/S-28 记忆检索直接查询 `memory_entries`，不新增 schema/索引表。默认理由: 记忆已是项目隔离不可变事实；独立 FTS 索引与 checkpoint 是 S-29 的用户结果，本片只交付「搜到并定位」。
+- A-313 2026-08-15 [生效] 记忆搜索默认只返回 active（无 superseding child）；不提供 search 的 includeInactive。默认理由: 演示判据禁止被替代事实的误导性展示。
+- A-314 2026-08-15 [生效] 匹配用 `instr(lower(content), lower(q))` ASCII 折叠 contains，不用 LIKE 通配。默认理由: 与线程搜索一致，避免 `%`/`_` 注入；中文子串可接受。
+- A-315 2026-08-15 [生效] GET `/api/projects/:projectId/memories/search` 必填 `q`（1～200 grapheme），可选 type/sourceType/version/limit；未知 key 拒绝；默认 limit 20、最大 50。默认理由: 对齐线程搜索校验纪律。
+- A-316 2026-08-15 [生效] 「知识动态」即共享记忆列表；检索 UI 放在该 tab，命中滚动到既有 `#memory-{id}`，来源用已有 href。默认理由: 不建第二动态时间线。
+- A-317 2026-08-15 [生效] 045 浏览器验收落在 `smoke:context` 既有 5 条记忆上，不新开 Agent 执行。默认理由: 验收时长护栏。
+- A-318 2026-08-15 [生效] S-28 原 backlog 阻塞 `CAP-PWS-02`/`CAP-OPS-01` 已交付；本片不新写 verified-handle，文件证据跳转复用已有 source href。默认理由: 准入以 Capability 现状为准，不沿用过期「规划中」字样。
+- A-319 2026-08-15 [生效] 专用记忆 FTS 索引、checkpoint、健康诊断与重建留给 S-29。默认理由: 切片规模护栏，单一用户结果。
+- A-320 2026-08-15 [生效] 045 走轻量级路径（3 票、零 schema、无跨 owner 写）。默认理由: 命中 AGENTS 轻量级全部条件。

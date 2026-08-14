@@ -163,6 +163,128 @@ describe("Shared Memory panel", () => {
   });
 });
 
+describe("memory panel search", () => {
+  it("keeps the feed, searches on 检索, and locates the memory card", async () => {
+    const MemoryPanel = await memoryPanel();
+    const search = deferred<Response>();
+    const fetchMock = vi.fn(
+      async (input: RequestInfo | URL, init?: RequestInit) => {
+        const url = String(input);
+        if (url.includes("/memories/search")) return search.promise;
+        if (init?.method === "POST") {
+          return Response.json({ memory: activeGoal }, { status: 201 });
+        }
+        return Response.json({ memories: [activeGoal] });
+      },
+    );
+    vi.stubGlobal("fetch", fetchMock);
+    const user = userEvent.setup();
+    render(<MemoryPanel projectId="project-1" />);
+    await screen.findByRole("heading", { name: "Current goal" });
+
+    const knowledge = screen.getByRole("region", { name: "知识动态" });
+    expect(within(knowledge).getByLabelText("检索记忆")).toBeInTheDocument();
+    expect(within(knowledge).getByLabelText("检索类型")).toBeInTheDocument();
+    expect(within(knowledge).getByLabelText("检索来源")).toBeInTheDocument();
+    expect(within(knowledge).getByLabelText("检索版本")).toBeInTheDocument();
+
+    await user.type(within(knowledge).getByLabelText("检索记忆"), "Current");
+    await user.selectOptions(within(knowledge).getByLabelText("检索类型"), "goal");
+    await user.click(within(knowledge).getByRole("button", { name: "检索" }));
+
+    expect(await screen.findByText("正在检索记忆…")).toHaveAttribute(
+      "aria-busy",
+      "true",
+    );
+    expect(screen.getByRole("list", { name: "Active 共享记忆" })).toBeInTheDocument();
+    expect(fetchMock).toHaveBeenCalledWith(
+      "/api/projects/project-1/memories/search?q=Current&type=goal",
+    );
+
+    await act(async () => {
+      search.resolve(
+        Response.json({
+          results: [
+            {
+              memory: {
+                active: true,
+                actor: {
+                  confirmer: null,
+                  persistedBy: "platform",
+                  proposerAgent: null,
+                  proposerType: "owner",
+                },
+                chainId: "memory-active",
+                content: "Current goal",
+                createdAt: activeGoal.createdAt,
+                id: activeGoal.id,
+                projectId: "project-1",
+                source: {
+                  href: null,
+                  id: "Owner",
+                  type: "owner_input",
+                  version: null,
+                },
+                supersedesId: "memory-old",
+                type: "goal",
+                version: 2,
+              },
+              snippet: "Current goal",
+            },
+          ],
+        }),
+      );
+    });
+
+    const results = await screen.findByRole("list", { name: "记忆检索结果" });
+    expect(within(results).getByText("Current goal")).toBeInTheDocument();
+    expect(within(results).queryByText("Old goal")).toBeNull();
+    expect(screen.getByRole("list", { name: "Active 共享记忆" })).toBeInTheDocument();
+
+    await user.click(within(results).getByRole("button", { name: "定位记忆 Current goal" }));
+    expect(screen.getByRole("heading", { name: "Current goal" })).toHaveFocus();
+  });
+
+  it("shows search empty and error states without replacing the feed", async () => {
+    const MemoryPanel = await memoryPanel();
+    const firstSearch = deferred<Response>();
+    let searchCalls = 0;
+    vi.stubGlobal(
+      "fetch",
+      vi.fn(async (input: RequestInfo | URL) => {
+        const url = String(input);
+        if (url.includes("/memories/search")) {
+          searchCalls += 1;
+          return searchCalls === 1
+            ? firstSearch.promise
+            : Promise.resolve(Response.json({ results: [] }));
+        }
+        return Response.json({ memories: [activeGoal] });
+      }),
+    );
+    const user = userEvent.setup();
+    render(<MemoryPanel projectId="project-1" />);
+    await screen.findByRole("heading", { name: "Current goal" });
+
+    await user.type(screen.getByLabelText("检索记忆"), "missing");
+    await user.click(screen.getByRole("button", { name: "检索" }));
+    await act(async () => {
+      firstSearch.resolve(
+        Response.json(
+          { error: { code: "STORAGE_UNAVAILABLE", message: "unavailable" } },
+          { status: 503 },
+        ),
+      );
+    });
+    expect(await screen.findByRole("alert")).toHaveTextContent("无法检索记忆");
+    expect(screen.getByRole("list", { name: "Active 共享记忆" })).toBeInTheDocument();
+
+    await user.click(screen.getByRole("button", { name: "检索" }));
+    expect(await screen.findByText("没有匹配的记忆。")).toBeInTheDocument();
+    expect(screen.getByRole("heading", { name: "Current goal" })).toBeInTheDocument();
+  });
+});
+
 describe("memory panel chrome", () => {
   it("renders memory cards on pearl surfaces with case radius", () => {
     const css = readFileSync("app/cockpit.css", "utf8");

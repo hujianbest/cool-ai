@@ -124,6 +124,15 @@ export const memoryCreateResponseSchema = z.object({
   memory: memoryEntryV6Schema,
 }).strict();
 
+export const memorySearchHitSchema = z.object({
+  memory: memoryEntryV6Schema,
+  snippet: z.string().min(1),
+}).strict();
+
+export const memorySearchResponseSchema = z.object({
+  results: z.array(memorySearchHitSchema),
+}).strict();
+
 export type MemoryEntryV6 = z.infer<typeof memoryEntryV6Schema>;
 export type MemorySource = z.infer<typeof memorySourceSchema>;
 export type MemorySourceType = z.infer<typeof memorySourceTypeSchema>;
