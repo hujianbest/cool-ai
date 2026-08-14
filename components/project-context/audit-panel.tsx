@@ -12,6 +12,8 @@ import type {
   AuditProjectionFreshness,
   AuditProjectionFreshnessStatus,
   ProjectAuditEventsPageDto,
+  ProjectTimelinePageDto,
+  TimelineEventItemDto,
 } from "@/src/shared/audit-contracts";
 import type { ApiError } from "@/src/shared/contracts";
 
@@ -429,6 +431,8 @@ const FRESHNESS_VARIANT: Record<AuditProjectionFreshnessStatus, string> = {
 const LOAD_ERROR = "无法加载审计事件，请稍后重试。";
 const LOAD_MORE_ERROR = "无法加载更多审计事件，请稍后重试。";
 const INVALID_PAGE = "审计事件响应无效，请刷新后重试。";
+const LOAD_TIMELINE_ERROR = "无法加载时间轴，请稍后重试。";
+const INVALID_TIMELINE_PAGE = "时间轴响应无效，请刷新后重试。";
 
 export function auditEventTypeCopy(eventType: string): string {
   return EVENT_TYPE_COPY[eventType] ?? eventType;
@@ -491,6 +495,23 @@ function parseFreshness(value: unknown): AuditProjectionFreshness {
   return { lag: value.lag, status: value.status };
 }
 
+function parseTimelineItem(value: unknown): TimelineEventItemDto {
+  if (!isRecord(value) || typeof value.sourceMissing !== "boolean") {
+    throw new ApiDisplayError(INVALID_TIMELINE_PAGE);
+  }
+  return { ...parseAuditEvent(value), sourceMissing: value.sourceMissing };
+}
+
+function parseTimelinePage(payload: unknown): ProjectTimelinePageDto {
+  if (!isRecord(payload) || !Array.isArray(payload.items)) {
+    throw new ApiDisplayError(INVALID_TIMELINE_PAGE);
+  }
+  return {
+    freshness: parseFreshness(payload.freshness),
+    items: payload.items.map(parseTimelineItem),
+  };
+}
+
 function parsePage(payload: unknown): ProjectAuditEventsPageDto {
   if (
     !isRecord(payload)
@@ -508,10 +529,66 @@ function parsePage(payload: unknown): ProjectAuditEventsPageDto {
   };
 }
 
+function EventSourceControls({
+  event,
+  onLocateExecution,
+  projectId,
+}: {
+  event: AuditEventListItemDto;
+  onLocateExecution: (executionId: string) => void;
+  projectId: string;
+}) {
+  const domain = eventDomain(event);
+  const executionId = event.executionId;
+  const sourceHref = domain === "collaboration"
+    ? collaborationSourceHref(projectId, event.payload)
+    : null;
+  const missionSource = domain === "mission"
+    ? missionWorkSourceHref(projectId, event.payload)
+    : null;
+  const projectSource = domain === "project"
+    ? projectSourceHref(projectId)
+    : null;
+  const governanceSource = domain === "governance"
+    ? governanceSourceHref(projectId, event.payload)
+    : null;
+  const runtimeSource = domain === "runtime"
+    ? runtimeSourceHref(projectId, event.payload)
+    : null;
+  return (
+    <>
+      {domain === "execution" && executionId ? (
+        <button
+          onClick={() => onLocateExecution(executionId)}
+          type="button"
+        >
+          定位来源执行
+        </button>
+      ) : null}
+      {sourceHref ? <a href={sourceHref}>定位来源线程</a> : null}
+      {missionSource
+        ? <a href={missionSource.href}>{missionSource.label}</a>
+        : null}
+      {projectSource
+        ? <a href={projectSource}>定位来源项目</a>
+        : null}
+      {governanceSource
+        ? <a href={governanceSource}>定位来源审批</a>
+        : null}
+      {runtimeSource
+        ? <a href={runtimeSource}>定位来源运行时</a>
+        : null}
+    </>
+  );
+}
+
+type AuditPanelView = "list" | "timeline";
+
 export function AuditPanel({ projectId }: { projectId: string }) {
   const [events, setEvents] = useState<AuditEventListItemDto[]>([]);
   const [activeDomain, setActiveDomain] =
     useState<AuditEventDomainFilter>("all");
+  const [view, setView] = useState<AuditPanelView>("list");
   const [freshness, setFreshness] = useState<AuditProjectionFreshness | null>(null);
   const [nextBeforeSeq, setNextBeforeSeq] = useState<number | null>(null);
   const [isLoading, setIsLoading] = useState(true);
@@ -520,10 +597,21 @@ export function AuditPanel({ projectId }: { projectId: string }) {
   const [loadMoreError, setLoadMoreError] = useState<string | null>(null);
   const [locateMessage, setLocateMessage] = useState<string | null>(null);
   const [reloadKey, setReloadKey] = useState(0);
+  const [timelineItems, setTimelineItems] = useState<TimelineEventItemDto[]>([]);
+  const [timelineFreshness, setTimelineFreshness] =
+    useState<AuditProjectionFreshness | null>(null);
+  const [isTimelineLoading, setIsTimelineLoading] = useState(false);
+  const [timelineError, setTimelineError] = useState<string | null>(null);
+  const [timelineReloadKey, setTimelineReloadKey] = useState(0);
   const epochRef = useRef(0);
+  const timelineEpochRef = useRef(0);
 
   useEffect(() => {
     setActiveDomain("all");
+    setView("list");
+    setTimelineItems([]);
+    setTimelineFreshness(null);
+    setTimelineError(null);
   }, [projectId]);
 
   useEffect(() => {
@@ -562,6 +650,43 @@ export function AuditPanel({ projectId }: { projectId: string }) {
       });
     return () => controller.abort();
   }, [projectId, reloadKey]);
+
+  useEffect(() => {
+    if (view !== "timeline") return;
+    const epoch = ++timelineEpochRef.current;
+    const controller = new AbortController();
+    setIsTimelineLoading(true);
+    setTimelineError(null);
+    void fetch(`/api/projects/${projectId}/timeline`, {
+      signal: controller.signal,
+    })
+      .then(async (response) => {
+        const payload: unknown = await response.json();
+        if (!response.ok) {
+          throw new ApiDisplayError(
+            apiErrorCopy(payload as Partial<ApiError>, LOAD_TIMELINE_ERROR),
+          );
+        }
+        return parseTimelinePage(payload);
+      })
+      .then((page) => {
+        if (timelineEpochRef.current !== epoch) return;
+        setTimelineItems(page.items);
+        setTimelineFreshness(page.freshness);
+      })
+      .catch((cause: unknown) => {
+        if (controller.signal.aborted || timelineEpochRef.current !== epoch) {
+          return;
+        }
+        setTimelineItems([]);
+        setTimelineFreshness(null);
+        setTimelineError(caughtApiErrorCopy(cause, LOAD_TIMELINE_ERROR));
+      })
+      .finally(() => {
+        if (timelineEpochRef.current === epoch) setIsTimelineLoading(false);
+      });
+    return () => controller.abort();
+  }, [projectId, timelineReloadKey, view]);
 
   async function loadMore() {
     if (nextBeforeSeq === null || isLoadingMore) return;
@@ -613,22 +738,126 @@ export function AuditPanel({ projectId }: { projectId: string }) {
     ? events
     : events.filter((event) => eventDomain(event) === activeDomain);
 
+  const shownFreshness = view === "timeline" ? timelineFreshness : freshness;
+  const showFreshness = view === "timeline"
+    ? shownFreshness !== null && !isTimelineLoading && timelineError === null
+    : shownFreshness !== null && !isLoading && error === null;
+
   return (
     <section
       aria-labelledby={`audit-title-${projectId}`}
       className="stack audit-panel"
     >
       <h2 id={`audit-title-${projectId}`}>审计</h2>
-      {freshness && !isLoading && !error ? (
+      <div
+        aria-label="审计视图"
+        className="audit-domain-filters"
+        role="group"
+      >
+        <button
+          aria-pressed={view === "list"}
+          className={
+            view === "list"
+              ? "audit-view-toggle active"
+              : "audit-view-toggle"
+          }
+          onClick={() => setView("list")}
+          type="button"
+        >
+          列表
+        </button>
+        <button
+          aria-pressed={view === "timeline"}
+          className={
+            view === "timeline"
+              ? "audit-view-toggle active"
+              : "audit-view-toggle"
+          }
+          onClick={() => setView("timeline")}
+          type="button"
+        >
+          时间轴
+        </button>
+      </div>
+      {showFreshness && shownFreshness ? (
         <p className="audit-freshness">
           <span
-            className={`status-label ${FRESHNESS_VARIANT[freshness.status]}`}
+            className={`status-label ${FRESHNESS_VARIANT[shownFreshness.status]}`}
           >
-            {freshnessCopy(freshness)}
+            {freshnessCopy(shownFreshness)}
           </span>
         </p>
       ) : null}
-      {isLoading ? (
+      {view === "timeline" ? (
+        isTimelineLoading ? (
+          <p aria-busy="true" className="state-message">
+            正在加载时间轴…
+          </p>
+        ) : timelineError ? (
+          <div className="state-message stack">
+            <p className="error-text" role="alert">
+              {timelineError}
+            </p>
+            <button
+              onClick={() => setTimelineReloadKey((current) => current + 1)}
+              type="button"
+            >
+              重试加载时间轴
+            </button>
+          </div>
+        ) : timelineItems.length === 0 ? (
+          <p className="state-message">尚无运行轨迹。</p>
+        ) : (
+          <ol
+            aria-label="运行轨迹"
+            className="stack audit-event-list"
+          >
+            {timelineItems.map((event) => {
+              const domain = eventDomain(event);
+              const excerpt = domain === "mission"
+                ? missionWorkExcerpt(event)
+                : domain === "project"
+                  ? projectWorkspaceSummary(event)
+                  : domain === "governance"
+                    ? governanceSummary(event)
+                    : domain === "runtime"
+                      ? runtimeSummary(event)
+                      : messageExcerpt(event);
+              const domainVariant = DOMAIN_VARIANT[domain];
+              return (
+                <li className="task-summary stack" key={event.id}>
+                  <h3>{auditEventTypeCopy(event.eventType)}</h3>
+                  <p>
+                    <span
+                      className={domainVariant
+                        ? `status-label ${domainVariant}`
+                        : "status-label"}
+                    >
+                      {DOMAIN_COPY[domain]}
+                    </span>
+                    {" "}
+                    {actorCopy(event.actorType)}
+                    {" · "}
+                    <time dateTime={event.occurredAt}>{event.occurredAt}</time>
+                  </p>
+                  {excerpt ? (
+                    <p className="audit-event-excerpt">{excerpt}</p>
+                  ) : null}
+                  {event.sourceMissing ? (
+                    <p className="muted">来源缺失</p>
+                  ) : (
+                    <EventSourceControls
+                      event={event}
+                      onLocateExecution={locateExecution}
+                      projectId={projectId}
+                    />
+                  )}
+                </li>
+              );
+            })}
+          </ol>
+        )
+      ) : isLoading ? (
         <p aria-busy="true" className="state-message">
           正在加载审计事件…
         </p>
@@ -679,7 +908,6 @@ export function AuditPanel({ projectId }: { projectId: string }) {
             >
               {visibleEvents.map((event) => {
                 const domain = eventDomain(event);
-                const executionId = event.executionId;
                 const excerpt = domain === "mission"
                   ? missionWorkExcerpt(event)
                   : domain === "project"
@@ -689,21 +917,6 @@ export function AuditPanel({ projectId }: { projectId: string }) {
                       : domain === "runtime"
                         ? runtimeSummary(event)
                         : messageExcerpt(event);
-                const sourceHref = domain === "collaboration"
-                  ? collaborationSourceHref(projectId, event.payload)
-                  : null;
-                const missionSource = domain === "mission"
-                  ? missionWorkSourceHref(projectId, event.payload)
-                  : null;
-                const projectSource = domain === "project"
-                  ? projectSourceHref(projectId)
-                  : null;
-                const governanceSource = domain === "governance"
-                  ? governanceSourceHref(projectId, event.payload)
-                  : null;
-                const runtimeSource = domain === "runtime"
-                  ? runtimeSourceHref(projectId, event.payload)
-                  : null;
                 const domainVariant = DOMAIN_VARIANT[domain];
                 return (
                   <li className="task-summary stack" key={event.id}>
@@ -724,27 +937,11 @@ export function AuditPanel({ projectId }: { projectId: string }) {
                     {excerpt ? (
                       <p className="audit-event-excerpt">{excerpt}</p>
                     ) : null}
-                    {domain === "execution" && executionId ? (
-                      <button
-                        onClick={() => locateExecution(executionId)}
-                        type="button"
-                      >
-                        定位来源执行
-                      </button>
-                    ) : null}
-                    {sourceHref ? <a href={sourceHref}>定位来源线程</a> : null}
-                    {missionSource
-                      ? <a href={missionSource.href}>{missionSource.label}</a>
-                      : null}
-                    {projectSource
-                      ? <a href={projectSource}>定位来源项目</a>
-                      : null}
-                    {governanceSource
-                      ? <a href={governanceSource}>定位来源审批</a>
-                      : null}
-                    {runtimeSource
-                      ? <a href={runtimeSource}>定位来源运行时</a>
-                      : null}
+                    <EventSourceControls
+                      event={event}
+                      onLocateExecution={locateExecution}
+                      projectId={projectId}
+                    />
                   </li>
                 );
               })}

@@ -2,6 +2,7 @@ import type {
   AuditProjectionFreshness,
   ProjectAuditEventsPageDto,
   ProjectThreadSearchPageDto,
+  ProjectTimelinePageDto,
 } from "./dto";
 
 export interface ListProjectAuditEventsOptions {
@@ -9,6 +10,13 @@ export interface ListProjectAuditEventsOptions {
   beforeSeq?: number;
   /** Page size; defaults to 50, capped at 100. */
   limit?: number;
+}
+
+export interface ListProjectTimelineOptions {
+  /** Page size; defaults to 50, capped at 100. First page only (A-333). */
+  limit?: number;
+  /** Exact payload.missionId match; events without the field are excluded. */
+  missionId?: string;
 }
 
 export interface SearchProjectThreadsOptions {
@@ -48,4 +56,13 @@ export interface OperationsProjectionQueries {
     projectId: string,
     options: SearchProjectThreadsOptions,
   ) => ProjectThreadSearchPageDto;
+  /**
+   * Oldest-first run timeline for one project (feature 047). Same catch-up
+   * protocol as listProjectAuditEvents. First page + limit only (A-333).
+   */
+  listProjectTimeline: (
+    databasePath: string,
+    projectId: string,
+    options?: ListProjectTimelineOptions,
+  ) => ProjectTimelinePageDto;
 }

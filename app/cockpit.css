@@ -1348,6 +1348,16 @@ ol {
   background: var(--surface-muted);
 }
 
+.audit-view-toggle {
+  min-height: var(--control-min);
+  min-width: var(--control-min);
+}
+
+.audit-view-toggle.active {
+  border-color: var(--border-strong);
+  background: var(--surface-muted);
+}
+
 .audit-event-list a {
   display: inline-flex;
   min-height: var(--control-min);

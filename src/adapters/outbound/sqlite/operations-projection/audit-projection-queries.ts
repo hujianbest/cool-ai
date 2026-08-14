@@ -4,7 +4,9 @@ import { openDatabase } from "@/src/adapters/outbound/sqlite/connection";
 import {
   OperationsProjectionError,
   type ListProjectAuditEventsOptions,
+  type ListProjectTimelineOptions,
   type ProjectAuditEventsPageDto,
+  type ProjectTimelinePageDto,
 } from "@/src/modules/operations-projection";
 import {
   catchUpAuditProjection,
@@ -64,6 +66,51 @@ function requireValidOptions(options: ListProjectAuditEventsOptions): {
   return { beforeSeq, limit };
 }
 
+function requireValidTimelineOptions(options: ListProjectTimelineOptions): {
+  limit: number;
+  missionId: string | null;
+} {
+  const limit = options.limit ?? AUDIT_EVENTS_DEFAULT_LIMIT;
+  const missionId = options.missionId ?? null;
+  if (!Number.isSafeInteger(limit) || limit < 1 || limit > AUDIT_EVENTS_MAX_LIMIT) {
+    throw new OperationsProjectionError(
+      "INVALID_INPUT",
+      "Timeline query is invalid.",
+    );
+  }
+  if (missionId !== null && (typeof missionId !== "string" || missionId === "")) {
+    throw new OperationsProjectionError(
+      "INVALID_INPUT",
+      "Timeline query is invalid.",
+    );
+  }
+  return { limit, missionId };
+}
+
+function isLocatableIdentity(value: unknown): boolean {
+  return typeof value === "string" && value !== "";
+}
+
+// Mirrors the audit-panel href helpers: a payload is locatable when it carries
+// a non-empty workItemId/missionId/taskId/threadId/executionId/approvalId/
+// runId/reviewAttemptId (A-330). Project identity alone is not fabricated.
+function isSourceMissing(
+  executionId: string | null,
+  payload: Record<string, unknown>,
+): boolean {
+  return !(
+    isLocatableIdentity(executionId)
+    || isLocatableIdentity(payload.workItemId)
+    || isLocatableIdentity(payload.missionId)
+    || isLocatableIdentity(payload.taskId)
+    || isLocatableIdentity(payload.threadId)
+    || isLocatableIdentity(payload.executionId)
+    || isLocatableIdentity(payload.approvalId)
+    || isLocatableIdentity(payload.runId)
+    || isLocatableIdentity(payload.reviewAttemptId)
+  );
+}
+
 export function listProjectAuditEvents(
   databasePath: string,
   projectId: string,
@@ -114,6 +161,81 @@ export function listProjectAuditEvents(
         ? events[events.length - 1].outboxSeq
         : null;
       return { events, freshness, nextBeforeSeq };
+    } catch (error) {
+      if (database.isTransaction) database.exec("ROLLBACK");
+      throw error;
+    }
+  } finally {
+    database.close();
+  }
+}
+
+export function listProjectTimeline(
+  databasePath: string,
+  projectId: string,
+  options: ListProjectTimelineOptions = {},
+): ProjectTimelinePageDto {
+  const { limit, missionId } = requireValidTimelineOptions(options);
+  const guard = openDatabase(databasePath);
+  try {
+    ensureProject(guard, projectId);
+  } finally {
+    guard.close();
+  }
+  catchUpAuditProjection(databasePath);
+  const database = openDatabase(databasePath);
+  try {
+    database.exec("BEGIN");
+    try {
+      const rows = database.prepare(`
+        WITH ranked AS (
+          SELECT outbox_seq AS outboxSeq, id, event_type AS eventType,
+                 actor_type AS actorType, occurred_at AS occurredAt,
+                 execution_id AS executionId, payload_json AS payloadJson,
+                 ROW_NUMBER() OVER (
+                   PARTITION BY
+                     event_type,
+                     occurred_at,
+                     ifnull(execution_id, ''),
+                     ifnull(json_extract(payload_json, '$.workItemId'), ''),
+                     ifnull(json_extract(payload_json, '$.threadId'), ''),
+                     ifnull(json_extract(payload_json, '$.approvalId'), '')
+                   ORDER BY outbox_seq ASC
+                 ) AS rn
+          FROM audit_event_projection
+          WHERE project_id=?
+            AND (? IS NULL OR json_extract(payload_json, '$.missionId') = ?)
+        )
+        SELECT outboxSeq, id, eventType, actorType, occurredAt,
+               executionId, payloadJson
+        FROM ranked
+        WHERE rn = 1
+        ORDER BY occurredAt ASC, outboxSeq ASC
+        LIMIT ?
+      `).all(
+        projectId,
+        missionId,
+        missionId,
+        limit,
+      ) as unknown as ProjectionEventRow[];
+      const freshness = readAuditProjectionFreshness(database);
+      database.exec("COMMIT");
+      return {
+        freshness,
+        items: rows.map((row) => {
+          const payload = parsePayload(row.payloadJson);
+          return {
+            actorType: row.actorType,
+            eventType: row.eventType,
+            executionId: row.executionId,
+            id: row.id,
+            occurredAt: row.occurredAt,
+            outboxSeq: row.outboxSeq,
+            payload,
+            sourceMissing: isSourceMissing(row.executionId, payload),
+          };
+        }),
+      };
     } catch (error) {
       if (database.isTransaction) database.exec("ROLLBACK");
       throw error;

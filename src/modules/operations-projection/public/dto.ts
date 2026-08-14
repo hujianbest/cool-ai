@@ -3,6 +3,8 @@ export type {
   AuditProjectionFreshness,
   AuditProjectionFreshnessStatus,
   ProjectAuditEventsPageDto,
+  ProjectTimelinePageDto,
+  TimelineEventItemDto,
 } from "@/src/shared/audit-contracts";
 
 export type {

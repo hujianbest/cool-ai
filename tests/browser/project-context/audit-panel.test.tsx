@@ -8,6 +8,8 @@ import type {
   AuditEventListItemDto,
   AuditProjectionFreshness,
   ProjectAuditEventsPageDto,
+  ProjectTimelinePageDto,
+  TimelineEventItemDto,
 } from "@/src/shared/audit-contracts";
 
 type AuditPanelModule = {
@@ -53,6 +55,26 @@ function page(
     events,
     freshness: { lag: 0, status: "caught_up", ...freshness },
     nextBeforeSeq,
+  };
+}
+
+function timelineItem(
+  overrides: Partial<TimelineEventItemDto>,
+): TimelineEventItemDto {
+  return {
+    ...auditEvent(overrides),
+    sourceMissing: false,
+    ...overrides,
+  };
+}
+
+function timelinePage(
+  items: TimelineEventItemDto[],
+  freshness: Partial<AuditProjectionFreshness> = {},
+): ProjectTimelinePageDto {
+  return {
+    freshness: { lag: 0, status: "caught_up", ...freshness },
+    items,
   };
 }
 
@@ -1791,3 +1813,188 @@ describe("Audit panel runtime events", () => {
     expect(screen.queryByText("不应显示的类别")).toBeNull();
   });
 });
+
+describe("Audit panel timeline view", () => {
+  it("switches to 时间轴, fetches the timeline, and renders chronological items", async () => {
+    const AuditPanel = await auditPanel();
+    const requests: string[] = [];
+    vi.stubGlobal(
+      "fetch",
+      vi.fn((input: RequestInfo | URL) => {
+        const url = String(input);
+        requests.push(url);
+        if (url.includes("/timeline")) {
+          return Promise.resolve(Response.json(timelinePage([
+            timelineItem({
+              eventType: "attempt_started",
+              executionId: "exec-1",
+              id: "timeline-1",
+              occurredAt: "2026-08-15T01:00:00.000Z",
+              outboxSeq: 2,
+            }),
+            timelineItem({
+              eventType: "execution_created",
+              executionId: "exec-1",
+              id: "timeline-2",
+              occurredAt: "2026-08-15T02:00:00.000Z",
+              outboxSeq: 1,
+            }),
+          ])));
+        }
+        return Promise.resolve(Response.json(page([
+          auditEvent({
+            eventType: "execution_created",
+            executionId: "exec-1",
+            id: "event-9",
+            outboxSeq: 9,
+          }),
+        ])));
+      }),
+    );
+    const user = userEvent.setup();
+    render(<AuditPanel projectId="project-1" />);
+
+    const auditList = await screen.findByRole("list", { name: "审计事件" });
+    expect(within(auditList).getByRole("heading", { name: "执行已创建" }))
+      .toBeInTheDocument();
+    expect(requests).toEqual(["/api/projects/project-1/audit-events"]);
+
+    const timelineToggle = screen.getByRole("button", { name: "时间轴" });
+    expect(timelineToggle).toHaveClass("audit-view-toggle");
+    expect(timelineToggle).toHaveAttribute("aria-pressed", "false");
+    await user.click(timelineToggle);
+
+    expect(timelineToggle).toHaveAttribute("aria-pressed", "true");
+    const timelineList = await screen.findByRole("list", { name: "运行轨迹" });
+    const rows = within(timelineList).getAllByRole("listitem");
+    expect(rows).toHaveLength(2);
+    expect(within(rows[0]!).getByRole("heading", { name: "尝试已开始" }))
+      .toBeInTheDocument();
+    expect(within(rows[0]!).getByText("2026-08-15T01:00:00.000Z").tagName)
+      .toBe("TIME");
+    expect(within(rows[1]!).getByRole("heading", { name: "执行已创建" }))
+      .toBeInTheDocument();
+    expect(screen.queryByRole("list", { name: "审计事件" })).toBeNull();
+    expect(screen.queryByRole("group", { name: "按域筛选审计事件" })).toBeNull();
+    expect(requests).toEqual([
+      "/api/projects/project-1/audit-events",
+      "/api/projects/project-1/timeline",
+    ]);
+  });
+
+  it("shows 来源缺失 when sourceMissing and reuses locate links otherwise", async () => {
+    const AuditPanel = await auditPanel();
+    vi.stubGlobal(
+      "fetch",
+      vi.fn((input: RequestInfo | URL) => {
+        const url = String(input);
+        if (url.includes("/timeline")) {
+          return Promise.resolve(Response.json(timelinePage([
+            timelineItem({
+              eventType: "project_created",
+              id: "missing",
+              outboxSeq: 1,
+              payload: { projectName: "审计项目" },
+              sourceMissing: true,
+            }),
+            timelineItem({
+              actorType: "owner",
+              eventType: "owner_message",
+              id: "located",
+              outboxSeq: 2,
+              payload: { threadId: "thread-1" },
+              sourceMissing: false,
+            }),
+          ])));
+        }
+        return Promise.resolve(Response.json(page([
+          auditEvent({
+            eventType: "execution_created",
+            executionId: "exec-1",
+            id: "event-1",
+            outboxSeq: 1,
+          }),
+        ])));
+      }),
+    );
+    const user = userEvent.setup();
+    render(<AuditPanel projectId="project-1" />);
+    await screen.findByRole("list", { name: "审计事件" });
+    await user.click(screen.getByRole("button", { name: "时间轴" }));
+
+    const list = await screen.findByRole("list", { name: "运行轨迹" });
+    const rows = within(list).getAllByRole("listitem");
+    expect(within(rows[0]!).getByText("来源缺失")).toBeInTheDocument();
+    expect(within(rows[0]!).queryByRole("link")).toBeNull();
+    expect(within(rows[1]!).getByRole("link", { name: "定位来源线程" }))
+      .toHaveAttribute("href", "/projects/project-1?thread=thread-1");
+    expect(within(rows[1]!).queryByText("来源缺失")).toBeNull();
+  });
+
+  it("shows timeline loading, empty, and retryable error states", async () => {
+    const AuditPanel = await auditPanel();
+    const firstTimeline = deferred<Response>();
+    const requests: string[] = [];
+    vi.stubGlobal(
+      "fetch",
+      vi.fn((input: RequestInfo | URL) => {
+        const url = String(input);
+        requests.push(url);
+        if (!url.includes("/timeline")) {
+          return Promise.resolve(Response.json(page([
+            auditEvent({
+              eventType: "execution_created",
+              executionId: "exec-1",
+              id: "event-1",
+              outboxSeq: 1,
+            }),
+          ])));
+        }
+        if (requests.filter((entry) => entry.includes("/timeline")).length === 1) {
+          return firstTimeline.promise;
+        }
+        if (requests.filter((entry) => entry.includes("/timeline")).length === 2) {
+          return Promise.resolve(Response.json(
+            { error: { code: "INTERNAL_ERROR", message: "boom" } },
+            { status: 500 },
+          ));
+        }
+        return Promise.resolve(Response.json(timelinePage([])));
+      }),
+    );
+    const user = userEvent.setup();
+    render(<AuditPanel projectId="project-1" />);
+    await screen.findByRole("list", { name: "审计事件" });
+    await user.click(screen.getByRole("button", { name: "时间轴" }));
+
+    expect(screen.getByText("正在加载时间轴…")).toHaveAttribute(
+      "aria-busy",
+      "true",
+    );
+
+    await act(async () => {
+      firstTimeline.resolve(Response.json(
+        {
+          error: {
+            code: "PROJECTION_REBUILD_IN_PROGRESS",
+            message: "rebuild claimed",
+          },
+        },
+        { status: 409 },
+      ));
+    });
+    expect(await screen.findByRole("alert")).toHaveTextContent(
+      "审计投影正在重建，请稍后重试。",
+    );
+
+    await user.click(screen.getByRole("button", { name: "重试加载时间轴" }));
+    expect(await screen.findByRole("alert")).toHaveTextContent(
+      "服务暂时出现问题，请稍后重试。",
+    );
+
+    await user.click(screen.getByRole("button", { name: "重试加载时间轴" }));
+    expect(await screen.findByText("尚无运行轨迹。")).toBeInTheDocument();
+    expect(screen.queryByRole("list", { name: "运行轨迹" })).toBeNull();
+  });
+});
+

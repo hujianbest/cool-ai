@@ -31,3 +31,17 @@ export type ProjectAuditEventsPageDto = {
   /** Exclusive cursor for the next (older) page; null when no more events. */
   nextBeforeSeq: number | null;
 };
+
+export type TimelineEventItemDto = AuditEventListItemDto & {
+  /**
+   * True when the payload has no locatable identity the audit panel would
+   * link (A-330). The timeline must not fabricate an href.
+   */
+  sourceMissing: boolean;
+};
+
+export type ProjectTimelinePageDto = {
+  /** Embedded so the UI learns freshness without a second round-trip. */
+  freshness: AuditProjectionFreshness;
+  items: TimelineEventItemDto[];
+};

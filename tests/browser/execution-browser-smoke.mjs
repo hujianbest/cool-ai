@@ -2417,6 +2417,87 @@ process.exit(2);`,
   await page.getByRole("button", { name: /切换到暗色主题/ }).waitFor();
   console.log("AUDIT DESKTOP PASS: list+freshness+paging+locate+keyboard+44px+light/dark axe");
 
+  // ---- RUN TIMELINE ACCEPTANCE (feature 047 T-03) ----
+  const runTimelineAcceptance = { assertions: 0 };
+  const timelineOk = (value, message) => {
+    runTimelineAcceptance.assertions += 1;
+    assert.ok(value, message);
+  };
+  const timelineEqual = (actual, expected, message) => {
+    runTimelineAcceptance.assertions += 1;
+    assert.equal(actual, expected, message);
+  };
+  const timelineApi = await page.evaluate(async (projectId) => {
+    const response = await fetch(`/api/projects/${projectId}/timeline`, {
+      cache: "no-store",
+    });
+    return { body: await response.json(), status: response.status };
+  }, context.projectId);
+  timelineEqual(timelineApi.status, 200, JSON.stringify(timelineApi.body));
+  const timelineItems = Array.isArray(timelineApi.body.items)
+    ? timelineApi.body.items
+    : [];
+  timelineOk(timelineItems.length > 0, "timeline must expose at least one item");
+  for (let index = 1; index < timelineItems.length; index += 1) {
+    timelineOk(
+      timelineItems[index - 1].occurredAt <= timelineItems[index].occurredAt,
+      "timeline items must be non-decreasing by occurredAt",
+    );
+  }
+  const timelineApiText = JSON.stringify(timelineApi.body);
+  for (const value of [
+    apiKey,
+    masterKey,
+    `Bearer ${apiKey}`,
+    rawProviderMarker,
+    chainOfThoughtMarker,
+    environmentMarker,
+    "Authorization:",
+  ]) {
+    timelineOk(!timelineApiText.includes(value), "timeline API leaked a forbidden marker");
+  }
+  const timelineToggle = contextPanel.getByRole("button", { name: "时间轴" });
+  const timelineToggleBox = await timelineToggle.boundingBox();
+  timelineOk(
+    timelineToggleBox
+      && timelineToggleBox.height >= 44
+      && timelineToggleBox.width >= 44,
+    "timeline toggle must be at least 44x44",
+  );
+  await timelineToggle.click();
+  timelineEqual(
+    await timelineToggle.getAttribute("aria-pressed"),
+    "true",
+    "timeline toggle must expose its selected state",
+  );
+  const timelineList = contextPanel.getByRole("list", { name: "运行轨迹" });
+  await timelineList.waitFor();
+  const timelineRows = timelineList.getByRole("listitem");
+  const timelineRowCount = await timelineRows.count();
+  timelineOk(timelineRowCount > 0, "timeline view must render at least one item");
+  if (timelineRowCount > 1) {
+    const occurredAts = await timelineList.locator("time").evaluateAll(
+      (nodes) => nodes.map((node) => node.dateTime || node.textContent || ""),
+    );
+    for (let index = 1; index < occurredAts.length; index += 1) {
+      timelineOk(
+        occurredAts[index - 1] <= occurredAts[index],
+        "rendered timeline must stay non-decreasing by occurredAt",
+      );
+    }
+  }
+  for (let index = 0; index < timelineRowCount; index += 1) {
+    const row = timelineRows.nth(index);
+    const locateCount = await row.getByRole("link", { name: /定位来源/ }).count()
+      + await row.getByRole("button", { name: /定位来源/ }).count();
+    const missingCount = await row.getByText("来源缺失", { exact: true }).count();
+    timelineOk(
+      locateCount > 0 || missingCount > 0,
+      "each timeline row must offer a locate control or 来源缺失",
+    );
+  }
+  console.log(`RUN TIMELINE ACCEPTANCE PASS: assertions=${runTimelineAcceptance.assertions}`);
+
   desktopFacingText = await page.locator("html").innerText();
   await page.screenshot({ fullPage: true, path: desktopScreenshot });
 
@@ -2579,7 +2660,7 @@ process.exit(2);`,
     }
   })();
   const surfaces = {
-    api: `${apiBodies.join("\n")}\n${governanceAuditApiText}\n${runtimeAuditApiText}`,
+    api: `${apiBodies.join("\n")}\n${governanceAuditApiText}\n${runtimeAuditApiText}\n${timelineApiText}`,
     database: databaseText(),
     dom: `${desktopFacingText}\n${narrowFacingText}\n${narrowAuditFacingText}\n${
       approvalCenterFacingText

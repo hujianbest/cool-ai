@@ -77,7 +77,7 @@ Capability ID 是稳定治理标识；owner 是唯一逻辑子系统，不等于
 - `CAP-RUN-06` Voice Adapter — owner: Runtime — 状态: 规划中 — 建立切片: S-50
 - `CAP-RUN-07` Public Runtime Events — owner: Runtime — 状态: 已交付核心 — 证据/建立切片: S-23 AUD-RUN（分配实现片号 S-57）[`progress.md`](../features/041-runtime-audit-events/progress.md)（`callOpenAiChat` 成败同事务脱敏 outbox、审计中心可查询并按 surface 规范导航，复用已交付 `CAP-OPS-01/02`）
 - `CAP-OPS-01` Projection Consumer Foundation — owner: Operations Projection — 状态: 已交付核心（outbox/checkpoint/rebuild/freshness 基座）— 证据/建立切片: S-23 AUD-MVP [`progress.md`](../features/028-audit-projection-mvp/progress.md)；只消费 source owner 已提交事件，不拥有 producer
-- `CAP-OPS-02` Audit / Search / Timeline Projection — owner: Operations Projection — 状态: 部分可用（Safe Execution 审计最薄只读查询/展示、项目隔离线程搜索索引与消息定位、统一审计按域筛选已交付；时间轴未建）— 证据/建立切片: S-23 AUD-MVP [`progress.md`](../features/028-audit-projection-mvp/progress.md)、S-17 [`progress.md`](../features/031-thread-search/progress.md)、S-58 AUD-UI [`progress.md`](../features/042-audit-browser-filters/progress.md)；后续各 source-owner 纵切复用并扩充可查询事件，最终统一审计浏览器只组合已交付查询；S-39 在其用户结果内扩展时间轴
+- `CAP-OPS-02` Audit / Search / Timeline Projection — owner: Operations Projection — 状态: 已交付核心（Safe Execution 审计最薄只读查询/展示、项目隔离线程搜索、统一审计按域筛选、跨任务去重时间轴已交付）— 证据/建立切片: S-23 AUD-MVP [`progress.md`](../features/028-audit-projection-mvp/progress.md)、S-17 [`progress.md`](../features/031-thread-search/progress.md)、S-58 AUD-UI [`progress.md`](../features/042-audit-browser-filters/progress.md)、S-39 [`progress.md`](../features/047-run-timeline/progress.md)
 - `CAP-OPS-03` Health / Usage / Contribution Insight — owner: Operations Projection — 状态: 规划中 — 建立切片: S-29、S-35～S-37
 - `CAP-OPS-04` Redacted Export & Delivery Replay — owner: Operations Projection — 状态: 规划中 — 建立切片: S-38、S-40
 
@@ -113,7 +113,7 @@ S-9～S-12 的 `依赖: S-*` 是原历史文字，只说明当时切片记录；
 
 ## 当前在途
 
-（无；046/S-33 能力画像已于 2026-08-15 ship。）
+（无；047/S-39 运行轨迹时间轴已于 2026-08-15 ship。）
 
 ## 主题簇一：公开协作
 
@@ -199,10 +199,10 @@ S-9～S-12 的 `依赖: S-*` 是原历史文字，只说明当时切片记录；
 
 - [ ] S-38 脱敏对话与项目数据导出（CI-8.1） — 主子系统: Operations Projection；主 Capability: `CAP-OPS-04`；票据: 未创建；演示判据: owner 能选择项目/线程范围导出用户可见消息、事件与元数据，导出包有版本和范围说明且不含凭据、隐藏思维链或原始 provider 响应；约束: 工作区=仅当前项目数据，verified-handle=导出目标选择必需，sandbox=打包隔离，凭据=强制脱敏，审批=大范围导出确认，独立复核=交付必需，审计=导出者、范围和 hash 可追溯；不复制 Clowder 品牌、源码或资产
   - 准入: 已交付前置: `CAP-COL-01`、`CAP-KNW-01`、`CAP-REV-01`（已交付）；阻塞: `CAP-OPS-01`（S-23 拆分片）、知识检索（S-28）与 `CAP-GOV-02` 的非执行域大范围导出治理（S-24）规划中；本片建立: `CAP-OPS-04` 的范围化脱敏导出、包版本和 hash（规划中）。
-- [ ] S-39 跨任务运行轨迹时间轴（CI-8.2） — 主子系统: Operations Projection；主 Capability: `CAP-OPS-02`；票据: 未创建；演示判据: owner 能按项目和 Mission 检索公开运行轨迹、去重排序并跳回线程/任务/证据，缺失来源明确显示而不补造事件；约束: 工作区=项目隔离，verified-handle=文件事件跳转必需，sandbox=只读，凭据=轨迹脱敏，审批=不适用，独立复核=交付必需，审计=事件来源不可变；不复制 Clowder 品牌、源码或资产
-  - 准入: 已交付前置: `CAP-COL-01`、`CAP-MWK-01`、`CAP-EXE-01`（已交付）；阻塞: 所需 source producer 与 `CAP-OPS-01`（S-23 单 owner 拆分片）、`CAP-MWK-02`（S-25）规划中；本片建立: `CAP-OPS-02` 的跨任务去重时间轴和 Frozen Source 导航（规划中）。
+- [x] S-39 跨任务运行轨迹时间轴（CI-8.2） — 主子系统: Operations Projection；主 Capability: `CAP-OPS-02`；票据: [`features/047-run-timeline/tickets.md`](../features/047-run-timeline/tickets.md)；Ship: 2026-08-15（零 schema：GET `/timeline` 正序去重、来源缺失占位、审计面板时间轴视图；`smoke:execution` 160 断言；hf-code-review 豁免）；演示判据: owner 能按项目和 Mission 检索公开运行轨迹、去重排序并跳回线程/任务/证据，缺失来源明确显示而不补造事件；约束: 工作区=项目隔离，verified-handle=文件事件跳转复用已有 href，sandbox=只读，凭据=轨迹脱敏，审批=不适用，独立复核=交付必需（轻量级豁免记录于 progress），审计=事件来源不可变；不复制 Clowder 品牌、源码或资产
+  - 准入: 已交付前置: `CAP-COL-01`、`CAP-MWK-01`、`CAP-EXE-01`、`CAP-OPS-01`、`CAP-MWK-02`、各 source event Capability（A-332）；本片建立: `CAP-OPS-02` 的跨任务去重时间轴和 Frozen Source 导航（已交付）。
 - [ ] S-40 本地只读交付回放（CI-8.4） — 主子系统: Operations Projection；主 Capability: `CAP-OPS-04`；票据: 未创建；演示判据: owner 能打开某次已交付运行的不可变本地回放，按时间查看公开消息、动作、验证和结果并跳回来源，刷新后顺序一致；约束: 工作区=项目隔离，verified-handle=文件证据跳转必需，sandbox=只读且不重放动作，凭据=回放脱敏，审批=不适用，独立复核=交付必需，审计=回放版本与来源固定；不复制 Clowder 品牌、源码、故事包装或资产
-  - 准入: 已交付前置: `CAP-REV-01`、`CAP-COL-01`、`CAP-EXE-01`（已交付）；阻塞: `CAP-OPS-02` 时间轴（S-39）规划中；本片建立: `CAP-OPS-04` 的冻结交付只读回放和稳定顺序（规划中）。
+  - 准入: 已交付前置: `CAP-REV-01`、`CAP-COL-01`、`CAP-EXE-01`、`CAP-OPS-02` 时间轴（S-39）；本片建立: `CAP-OPS-04` 的冻结交付只读回放和稳定顺序（规划中）。
 
 ## 主题簇七：通知 / 多模态
 
