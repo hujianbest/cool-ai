@@ -8,7 +8,7 @@
 
 同时使用多个 Agent 时，owner 往往成了“人肉路由器”：反复复制上下文、指定下一棒、拼接分散产物，还要逐一确认结果是否真正验证。Cool AI 让 owner 保持最终控制权，但不必亲自转发每一条消息。团队围绕同一使命看板、共享记忆、显式交棒、受限执行和可审计交付链工作。
 
-[Cool AI 协作驾驶舱总览](./product/ui/cool-ai-design-md-case.html) · [设计规范](./product/ui/DESIGN.md)
+![Cool AI 协作驾驶舱总览](docs/images/cool-ai-cockpit-overview.png)
 
 ## 核心能力
 
@@ -31,25 +31,25 @@
 <details>
 <summary>查看团队配置</summary>
 
-[两名 Agent 的不同职责、技能、权限与独立复核能力](./product/ui/cool-ai-design-md-case.html)
+![两名 Agent 的不同职责、技能、权限与独立复核能力](docs/images/cool-ai-team-configuration.png)
 </details>
 
 <details>
 <summary>查看真实 Agent 协作</summary>
 
-[多 Agent 协作与显式交棒](./product/ui/cool-ai-design-md-case.html)
+![多 Agent 协作与显式交棒](docs/images/cool-ai-collaboration-run.png)
 </details>
 
 <details>
 <summary>查看安全执行</summary>
 
-[双 Agent 执行中的验证与一次性审批](./product/ui/cool-ai-design-md-case.html)
+![双 Agent 执行中的验证与一次性审批](docs/images/cool-ai-safe-execution.png)
 </details>
 
 <details>
 <summary>查看复核与交付</summary>
 
-[独立复核者、pass 裁决与最终交付摘要](./product/ui/cool-ai-design-md-case.html)
+![独立复核者、pass 裁决与最终交付摘要](docs/images/cool-ai-review-delivery.png)
 </details>
 
 ## 平台与安全边界
