@@ -30,7 +30,7 @@ describe("settings navigation browser smoke contract", () => {
       "settings-navigation-results.json",
       "AxeBuilder",
       "critical",
-      "创建项目",
+      "打开文件夹",
       "搜索设置分区",
       "打开固定设置：Agent",
       "固定历史",

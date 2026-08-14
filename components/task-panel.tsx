@@ -1,5 +1,6 @@
 "use client";
 
+import Link from "next/link";
 import {
   useEffect,
   useRef,
@@ -27,6 +28,10 @@ import type {
   TaskRun,
   TaskStateResponse,
 } from "@/src/shared/contracts";
+import {
+  parseHomeState,
+  type HomeState,
+} from "@/src/shared/home-contracts";
 
 type TaskCollection = {
   tasks: TaskRun[];
@@ -67,6 +72,7 @@ type TaskPanelProps = {
   contextSurfaceRef: RefObject<HTMLElement | null>;
   contextCloseRef: RefObject<HTMLButtonElement | null>;
   onSelectProject: () => void;
+  onHomeStateChange?: (state: HomeState | null) => void;
   onboarding?: {
     onCreateProject: () => void;
     onSkip?: () => void;
@@ -94,6 +100,7 @@ export function TaskPanel({
   contextSurfaceRef,
   contextCloseRef,
   onSelectProject,
+  onHomeStateChange,
   onboarding,
   legacyTasksEnabled = true,
   threadListState = null,
@@ -111,6 +118,10 @@ export function TaskPanel({
     "chat" | "board" | "run"
   >("chat");
   const [nestedModalOpen, setNestedModalOpen] = useState(false);
+  const [homeState, setHomeState] = useState<HomeState | null>(null);
+  const [homeError, setHomeError] = useState<string | null>(null);
+  const [homeLoading, setHomeLoading] = useState(false);
+  const [homeReloadKey, setHomeReloadKey] = useState(0);
   const [executionSource, setExecutionSource] = useState<{
     projectId: string;
     runId: string;
@@ -141,6 +152,8 @@ export function TaskPanel({
   });
   const collaborationTabRefs = useRef(new Map<string, HTMLButtonElement>());
   const taskGoalInputRef = useRef<HTMLInputElement>(null);
+  const collaborationProjectId =
+    projectId ?? (homeState?.kind === "ready" ? homeState.project.id : null);
 
   useEffect(() => {
     const updateLocation = () => setLocationVersion((current) => current + 1);
@@ -149,7 +162,7 @@ export function TaskPanel({
   }, []);
 
   useEffect(() => {
-    if (!projectId || typeof window === "undefined") {
+    if (!collaborationProjectId || typeof window === "undefined") {
       setExecutionSource(null);
       setCollaborationTarget(null);
       return;
@@ -173,13 +186,14 @@ export function TaskPanel({
         : null,
     );
     setExecutionSource(
+      projectId &&
       validThread
       && runIds.length === 1
       && runIds[0]!.length > 0
         ? { projectId, runId: runIds[0]!, threadId: threadIds[0]! }
         : null,
     );
-  }, [locationVersion, projectId]);
+  }, [collaborationProjectId, locationVersion, projectId]);
 
   useEffect(() => {
     let active = true;
@@ -221,6 +235,55 @@ export function TaskPanel({
       active = false;
     };
   }, [legacyTasksEnabled, projectId, reloadKey]);
+
+  useEffect(() => {
+    if (projectId || projectLoading || projectError) {
+      setHomeState(null);
+      setHomeError(null);
+      setHomeLoading(false);
+      onHomeStateChange?.(null);
+      return;
+    }
+
+    const controller = new AbortController();
+    setHomeLoading(true);
+    setHomeError(null);
+    setHomeState(null);
+    onHomeStateChange?.(null);
+    void fetch("/api/home", { signal: controller.signal })
+      .then(async (response) => {
+        const payload: unknown = await response.json();
+        if (!response.ok) {
+          throw new ApiDisplayError("无法加载个人对话，请稍后重试。");
+        }
+        const parsed = parseHomeState(payload);
+        if (!parsed) {
+          throw new ApiDisplayError("个人对话响应无效，请稍后重试。");
+        }
+        return parsed;
+      })
+      .then((parsed) => {
+        if (controller.signal.aborted) return;
+        setHomeState(parsed);
+        onHomeStateChange?.(parsed);
+      })
+      .catch((cause: unknown) => {
+        if (controller.signal.aborted) return;
+        setHomeError(caughtApiErrorCopy(cause, "无法加载个人对话，请稍后重试。"));
+        onHomeStateChange?.(null);
+      })
+      .finally(() => {
+        if (!controller.signal.aborted) setHomeLoading(false);
+      });
+
+    return () => controller.abort();
+  }, [
+    homeReloadKey,
+    onHomeStateChange,
+    projectError,
+    projectId,
+    projectLoading,
+  ]);
 
   function applyState(response: TaskStateResponse) {
     setTasks((current) => {
@@ -361,17 +424,20 @@ export function TaskPanel({
         </button>
         <div className="panel-heading">
           <span aria-hidden="true" className="agent-mark">
-            A
+            {homeState?.kind === "ready" ? homeState.agent.avatarText : "A"}
           </span>
           <div>
-            <p className="eyebrow">确定性示例 Agent</p>
+            <p className="eyebrow">
+              {homeState?.kind === "ready" ? "1:1 对话" : "确定性示例 Agent"}
+            </p>
             <h2
               className="surface-heading"
               id="tasks-title"
               ref={currentProjectTitleRef}
               tabIndex={currentProjectName ? -1 : undefined}
             >
-              {currentProjectName ?? "任务活动"}
+              {currentProjectName ??
+                (homeState?.kind === "ready" ? homeState.agent.name : "任务活动")}
             </h2>
           </div>
         </div>
@@ -441,12 +507,45 @@ export function TaskPanel({
         ) : projectError ? (
           <p className="state-message">{projectError}</p>
         ) : !projectId ? (
-          <div className="empty-guide state-message">
-            <p>请先创建或选择项目，再运行任务。</p>
-            <button className="button-primary" onClick={onSelectProject} type="button">
-              选择项目以运行任务
-            </button>
-          </div>
+          homeLoading || homeState === null && homeError === null ? (
+            <p aria-busy="true" className="state-message">
+              正在加载对话…
+            </p>
+          ) : homeError ? (
+            <div className="state-message">
+              <p className="error-text" role="alert">
+                {homeError}
+              </p>
+              <button
+                className="button-secondary"
+                onClick={() => setHomeReloadKey((current) => current + 1)}
+                type="button"
+              >
+                重试加载对话
+              </button>
+            </div>
+          ) : homeState?.kind === "needs_agent" ? (
+            <div className="empty-guide state-message">
+              <p>先配置一个 Agent，即可开始个人对话。</p>
+              <Link
+                className="button-primary"
+                href="/team?section=agents&returnTo=/"
+              >
+                配置 Agent
+              </Link>
+            </div>
+          ) : homeState?.kind === "ready" ? (
+            <CollaborationPanel
+              directAgentName={homeState.agent.name}
+              modalBackgroundRef={editorSurfaceRef}
+              onNestedModalChange={setNestedModalOpen}
+              projectId={homeState.project.id}
+              requestedMessageId={collaborationTarget?.messageId}
+              selectedRunId={collaborationTarget?.selectedRunId}
+              surface="chat"
+              threadId={collaborationTarget?.threadId}
+            />
+          ) : null
         ) : (
           <>
             {narrow ? (
@@ -699,13 +798,14 @@ export function TaskPanel({
               }
             />
           </>
-        ) : (
-          <div className="empty-guide state-message">
-            <p>请先选择项目。</p>
-            <button className="button-primary" onClick={onSelectProject} type="button">
-              选择项目
-            </button>
+        ) : homeState?.kind === "ready" ? (
+          <div className="context-body">
+            <p className="context-label">1:1 对话</p>
+            <p>{homeState.agent.avatarText} · {homeState.agent.name}</p>
+            <p className="muted">{homeState.agent.role}</p>
           </div>
+        ) : (
+          <p className="state-message">1:1 对话将在配置 Agent 后可用。</p>
         )}
       </aside>
     </>

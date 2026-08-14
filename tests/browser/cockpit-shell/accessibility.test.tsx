@@ -125,6 +125,7 @@ describe("narrow-screen and keyboard accessibility", () => {
   });
 
   it("announces the restored task status through a polite status region", async () => {
+    window.history.replaceState(null, "", "/projects/project-1");
     vi.stubGlobal(
       "fetch",
       cockpitFetch([

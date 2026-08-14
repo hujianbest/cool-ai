@@ -251,6 +251,21 @@ describe("collaboration chat composer", () => {
     expect(screen.getByText("请输入 1 至 10000 个字符。")).toBeInTheDocument();
   });
 
+  it("labels a direct composer for its Agent and hides the member picker", async () => {
+    installFetch();
+
+    render(createElement(CollaborationPanel, {
+      directAgentName: "Alpha",
+      projectId: "project-1",
+      threadId: TEST_THREAD_ID,
+    }));
+
+    expect(await screen.findByLabelText("发送给 Alpha")).toBeInTheDocument();
+    expect(
+      screen.queryByRole("combobox", { name: "@成员" }),
+    ).not.toBeInTheDocument();
+  });
+
   it("preserves the draft while sending and on sanitized API failure", async () => {
     let finishSend!: (response: Response) => void;
     const pendingSend = new Promise<Response>((resolve) => {

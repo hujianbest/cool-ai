@@ -25,6 +25,7 @@ import {
   caughtApiErrorCopy,
 } from "@/src/shared/api-error-copy";
 import type { ApiError, Project } from "@/src/shared/contracts";
+import type { HomeState } from "@/src/shared/home-contracts";
 import {
   guideHref,
   parseGuideUrl,
@@ -51,7 +52,7 @@ export function ProjectPanel({
   const [guideActive, setGuideActive] = useState(false);
   const [projects, setProjects] = useState<Project[]>([]);
   const [currentProjectId, setCurrentProjectId] = useState<string | null>(null);
-  const [name, setName] = useState("");
+  const [folderPath, setFolderPath] = useState("");
   const [projectLoadError, setProjectLoadError] = useState<string | null>(null);
   const [routeProjectError, setRouteProjectError] = useState<string | null>(null);
   const [formError, setFormError] = useState<string | null>(null);
@@ -71,6 +72,7 @@ export function ProjectPanel({
   const [threadListState, setThreadListState] = useState<
     "loading" | "empty" | "ready" | "error" | null
   >(null);
+  const [homeState, setHomeState] = useState<HomeState | null>(null);
   const [settingsReturnTo, setSettingsReturnTo] = useState<ProjectReturnTo>(
     () =>
       returnTo ??
@@ -93,7 +95,7 @@ export function ProjectPanel({
   const contextToggleRef = useRef<HTMLButtonElement>(null);
   const contextCloseRef = useRef<HTMLButtonElement>(null);
   const currentProjectTitleRef = useRef<HTMLHeadingElement>(null);
-  const projectNameInputRef = useRef<HTMLInputElement>(null);
+  const projectFolderPathInputRef = useRef<HTMLInputElement>(null);
   const closeMobileSurface = useCallback(() => setMobileSurface(null), []);
   const projectModal = useMemo(
     () => ({
@@ -149,6 +151,9 @@ export function ProjectPanel({
 
   const updateSettingsReturnTo = useCallback((href: string) => {
     setSettingsReturnTo(parseReturnTo(href));
+  }, []);
+  const updateHomeState = useCallback((state: HomeState | null) => {
+    setHomeState(state);
   }, []);
 
   useEffect(() => {
@@ -206,7 +211,9 @@ export function ProjectPanel({
         if (parsed.kind !== "success") {
           throw new ApiDisplayError("项目响应无效，已停止自动选择。");
         }
-        const loadedProjects = parsed.projects;
+        const loadedProjects = parsed.projects.filter(
+          (project) => project.name !== "个人对话",
+        );
         setProjects(loadedProjects);
 
         // 从 URL 解析 projectId，如果存在且在列表中，则选中它
@@ -225,12 +232,12 @@ export function ProjectPanel({
             }
           } else {
             setRouteProjectError(null);
-            setCurrentProjectId(loadedProjects[0]?.id ?? null);
+            setCurrentProjectId(null);
           }
         } else {
-          // SSR 首帧 pathname 为空，跳过路由同步，使用默认选中首个
+          // SSR 首帧 pathname 为空，跳过路由同步并保留 home。
           setRouteProjectError(null);
-          setCurrentProjectId(loadedProjects[0]?.id ?? null);
+          setCurrentProjectId(null);
         }
       })
       .catch((cause: unknown) => {
@@ -262,7 +269,7 @@ export function ProjectPanel({
       setCurrentProjectId(null);
     } else {
       setRouteProjectError(null);
-      setCurrentProjectId(projects[0]?.id ?? null);
+      setCurrentProjectId(null);
     }
   }, [pathname, projects]);
 
@@ -278,8 +285,8 @@ export function ProjectPanel({
     setFormError(null);
     setProjectCreateNotice(null);
 
-    if (!name.trim()) {
-      setFormError("请输入项目名称。");
+    if (!folderPath.trim()) {
+      setFormError("请输入本地文件夹路径。");
       return;
     }
 
@@ -298,9 +305,9 @@ export function ProjectPanel({
         return [...withoutDuplicate, createdProject];
       });
       setCurrentProjectId(createdProject.id);
-      setName("");
+      setFolderPath("");
       if (reconciled) {
-        setProjectCreateNotice("已通过事实核对确认项目已创建。");
+        setProjectCreateNotice("已通过事实核对确认项目已打开。");
       }
       if (guideCreate) {
         setGuideStep(null);
@@ -319,25 +326,30 @@ export function ProjectPanel({
         const payload: unknown = await response.json();
         const parsed = parseProjectGuideEnvelope(payload);
         if (parsed.kind !== "success") throw new Error("invalid");
-        setProjects(parsed.projects);
-        const reconciled = uniquelyReconciledProject(previousProjectIds, payload);
+        const folderProjects = parsed.projects.filter(
+          (project) => project.name !== "个人对话",
+        );
+        setProjects(folderProjects);
+        const reconciled = uniquelyReconciledProject(previousProjectIds, {
+          projects: folderProjects,
+        });
         if (!reconciled) {
           setFormError(
-            "无法唯一确认项目是否已创建。请核对项目列表后再决定是否重试；不会自动重发。",
+            "无法唯一确认文件夹项目是否已打开。请核对项目列表后再决定是否重试；不会自动重发。",
           );
           return;
         }
         finishCreatedProject(reconciled, true);
       } catch {
         setFormError(
-          "项目创建结果未知，且事实核对失败。请稍后核对项目列表；不会自动重发。",
+          "打开文件夹结果未知，且事实核对失败。请稍后核对项目列表；不会自动重发。",
         );
       }
     };
 
     try {
       const response = await fetch("/api/projects", {
-        body: JSON.stringify({ name }),
+        body: JSON.stringify({ path: folderPath }),
         headers: { "content-type": "application/json" },
         method: "POST",
       });
@@ -353,7 +365,7 @@ export function ProjectPanel({
       finishCreatedProject(createdProject, false);
     } catch (cause) {
       if (cause instanceof ApiDisplayError) {
-        setFormError(caughtApiErrorCopy(cause, "无法创建项目，请稍后重试。"));
+        setFormError(caughtApiErrorCopy(cause, "无法打开文件夹，请稍后重试。"));
       } else {
         await reconcileUnknownCreate();
       }
@@ -373,10 +385,10 @@ export function ProjectPanel({
   function guideToProjectSelection() {
     if (narrow) {
       setMobileSurface("projects");
-      window.setTimeout(() => projectNameInputRef.current?.focus(), 0);
+      window.setTimeout(() => projectFolderPathInputRef.current?.focus(), 0);
       return;
     }
-    projectNameInputRef.current?.focus();
+    projectFolderPathInputRef.current?.focus();
   }
 
   function projectRecovery() {
@@ -551,24 +563,24 @@ export function ProjectPanel({
           <h2 className="surface-heading" id="projects-title">项目</h2>
           <form className="stack" onSubmit={handleSubmit}>
             <div className="form-field">
-              <label htmlFor="project-name">项目名称</label>
+              <label htmlFor="project-folder-path">文件夹路径</label>
               <input
-                aria-describedby={formError ? "project-name-error" : undefined}
+                aria-describedby={formError ? "project-folder-path-error" : undefined}
                 aria-invalid={formError ? "true" : undefined}
-                id="project-name"
-                name="name"
-                onChange={(event) => setName(event.target.value)}
-                placeholder="例如：官网改版"
-                ref={projectNameInputRef}
-                value={name}
+                id="project-folder-path"
+                name="path"
+                onChange={(event) => setFolderPath(event.target.value)}
+                placeholder="例如：D:\work\my-app"
+                ref={projectFolderPathInputRef}
+                value={folderPath}
               />
             </div>
             <button className="button-primary" disabled={isSubmitting} type="submit">
-              {isSubmitting ? "正在创建项目…" : "创建项目"}
+              {isSubmitting ? "正在打开…" : "打开文件夹"}
             </button>
           </form>
           {formError ? (
-            <p className="error-text" id="project-name-error" role="alert">
+            <p className="error-text" id="project-folder-path-error" role="alert">
               {formError}
             </p>
           ) : null}
@@ -592,13 +604,15 @@ export function ProjectPanel({
             </div>
           ) : projects.length === 0 ? (
             <div className="empty-guide state-message">
-              <p>暂无项目。创建项目开始使用协作驾驶舱。</p>
+              <p>
+                暂无文件夹项目。打开本地文件夹开始协作，也可直接在中间与 Agent 对话。
+              </p>
               <button
                 className="button-primary"
-                onClick={() => projectNameInputRef.current?.focus()}
+                onClick={() => projectFolderPathInputRef.current?.focus()}
                 type="button"
               >
-                创建项目
+                打开文件夹
               </button>
             </div>
           ) : (
@@ -650,6 +664,15 @@ export function ProjectPanel({
             onNavigate={updateSettingsReturnTo}
             onStateChange={setThreadListState}
             projectId={currentProject.id}
+          />
+        ) : pathname === "/" && homeState?.kind === "ready" ? (
+          <ProjectThreadNavigation
+            backgroundRef={cockpitRef}
+            directMode
+            onDialogChange={setThreadDialogOpen}
+            onNavigate={updateSettingsReturnTo}
+            onStateChange={setThreadListState}
+            projectId={homeState.project.id}
           />
         ) : null}
         {currentProject ? (
@@ -710,6 +733,7 @@ export function ProjectPanel({
         }
         onCloseContext={closeTaskContext}
         onCloseEditor={closeMobileSurface}
+        onHomeStateChange={updateHomeState}
         onSelectProject={guideToProjectSelection}
         projectError={projectLoadError ?? routeProjectError}
         projectId={currentProjectId}

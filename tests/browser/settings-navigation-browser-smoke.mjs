@@ -23,6 +23,7 @@ const temporaryDirectory = mkdtempSync(
   join(tmpdir(), "cool-ai-settings-smoke-"),
 );
 const databasePath = join(temporaryDirectory, "settings-smoke.sqlite");
+const workspaceDirectory = join(temporaryDirectory, "project");
 const smokeDistDirectory = `.next-settings-smoke-${process.pid}`;
 const evidenceDirectory = resolve(
   "features",
@@ -52,6 +53,7 @@ const browserExecutable = [
 ].find((candidate) => candidate && existsSync(candidate));
 
 mkdirSync(evidenceDirectory, { recursive: true });
+mkdirSync(workspaceDirectory);
 for (const stablePath of [desktopScreenshot, narrowScreenshot, resultsPath]) {
   rmSync(stablePath, { force: true });
 }
@@ -184,21 +186,18 @@ try {
   page.setDefaultTimeout(60_000);
 
   await page.goto(baseUrl, { waitUntil: "networkidle" });
-  await page.locator('button[type="button"]').getByText("创建项目", {
-    exact: true,
-  }).click();
-  await page.getByLabel("项目名称").fill("Settings Smoke Project");
+  await page.getByLabel("文件夹路径").fill(workspaceDirectory);
   await page
     .locator("form")
-    .filter({ has: page.getByLabel("项目名称") })
-    .getByRole("button", { name: "创建项目" })
+    .filter({ has: page.getByLabel("文件夹路径") })
+    .getByRole("button", { name: "打开文件夹" })
     .click();
   await page.waitForURL(/\/projects\/[A-Za-z0-9_-]+$/u);
   const projectPath = new URL(page.url()).pathname;
   const projectId = projectPath.split("/").at(-1);
   assert.ok(projectId);
   await page
-    .getByRole("heading", { name: "Settings Smoke Project" })
+    .getByRole("heading", { name: "project" })
     .waitFor();
   await assertAxeCriticalFree(page, "desktop project");
   recordStep("created-real-project", { projectPath });
@@ -241,7 +240,7 @@ try {
   await page.getByRole("link", { name: "返回原位置" }).click();
   await page.waitForURL(`${baseUrl}${projectPath}`);
   await page
-    .getByRole("heading", { name: "Settings Smoke Project" })
+    .getByRole("heading", { name: "project" })
     .waitFor();
   recordStep("returned-to-same-project");
 

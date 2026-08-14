@@ -29,8 +29,15 @@ const temporaryDirectory = mkdtempSync(join(tmpdir(), "cool-ai-onboarding-"));
 const databasePath = join(temporaryDirectory, "onboarding.sqlite");
 const workspaceDirectory = join(temporaryDirectory, "workspace");
 const reboundWorkspaceDirectory = join(temporaryDirectory, "workspace-rebound");
+const secondWorkspaceDirectory = join(temporaryDirectory, "workspace-second");
+const reconciledWorkspaceDirectory = join(
+  temporaryDirectory,
+  "workspace-reconciled",
+);
 mkdirSync(workspaceDirectory);
 mkdirSync(reboundWorkspaceDirectory);
+mkdirSync(secondWorkspaceDirectory);
+mkdirSync(reconciledWorkspaceDirectory);
 const workspacePath = realpathSync(workspaceDirectory);
 const reboundWorkspacePath = realpathSync(reboundWorkspaceDirectory);
 const projectId = "project-onboarding";
@@ -654,26 +661,27 @@ try {
     name: "首次使用引导",
   });
   await emptyProjectGuide
-    .getByText("尚无可选项目。请先使用现有项目表面创建项目。", {
-      exact: true,
-    })
+    .getByText(
+      "尚无可选文件夹项目。请先打开本地文件夹，或直接在中间开始个人对话。",
+      { exact: true },
+    )
     .waitFor();
   await emptyProjectGuide
-    .getByRole("button", { name: "使用现有表面创建项目" })
+    .getByRole("button", { name: "使用现有表面打开文件夹" })
     .click();
-  const projectNameInput = page.getByLabel("项目名称");
+  const folderPathInput = page.getByLabel("文件夹路径");
   assert.equal(
-    await projectNameInput.evaluate((node) => document.activeElement === node),
+    await folderPathInput.evaluate((node) => document.activeElement === node),
     true,
   );
 
   await page.setViewportSize({ height: 844, width: 390 });
   await page.reload({ waitUntil: "networkidle" });
   await emptyProjectGuide
-    .getByRole("button", { name: "使用现有表面创建项目" })
+    .getByRole("button", { name: "使用现有表面打开文件夹" })
     .click();
   assert.equal(
-    await projectNameInput.evaluate((node) => document.activeElement === node),
+    await folderPathInput.evaluate((node) => document.activeElement === node),
     true,
   );
 
@@ -853,7 +861,7 @@ try {
   assert.equal(page.url(), `${baseUrl}/?guide=project-select`);
 
   const secondProjectResponse = await page.request.post(`${baseUrl}/api/projects`, {
-    data: { name: "Second Browser Project" },
+    data: { path: secondWorkspaceDirectory },
   });
   assert.equal(secondProjectResponse.ok(), true);
   await page.reload({ waitUntil: "networkidle" });
@@ -861,7 +869,7 @@ try {
     name: "可访问项目",
   });
   await multipleProjectChoices
-    .getByRole("button", { name: "Second Browser Project" })
+    .getByRole("button", { name: "workspace-second" })
     .waitFor();
   assert.equal(await multipleProjectChoices.getByRole("button").count(), 2);
   assert.equal(page.url(), `${baseUrl}/?guide=project-select`);
@@ -1528,9 +1536,10 @@ try {
   await page.goto(`${baseUrl}/?guide=project-select`, {
     waitUntil: "networkidle",
   });
-  await page.getByLabel("项目名称").fill("Reconciled Browser Project");
-  await page.getByRole("button", { name: "创建项目", exact: true }).click();
-  await page.waitForURL(/\/projects\/[^/]+\?guide=workspace$/);
+  await page.getByLabel("文件夹路径").fill(reconciledWorkspaceDirectory);
+  await page.getByRole("button", { name: "打开文件夹", exact: true }).click();
+  await page.waitForURL(/\/projects\/[^/]+/);
+  await page.getByRole("heading", { name: "workspace-reconciled" }).waitFor();
   assert.equal(uncertainProjectPosts, 1);
   assert.equal(reconciliationGets >= 1, true);
   await page.unroute("**/api/projects");

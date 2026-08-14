@@ -19,6 +19,7 @@ const port = 4100 + (process.pid % 500);
 const baseUrl = `http://${host}:${port}`;
 const temporaryDirectory = mkdtempSync(join(tmpdir(), "cool-ai-smoke-"));
 const databasePath = join(temporaryDirectory, "smoke.sqlite");
+const workspaceDirectory = join(temporaryDirectory, "real-workspace");
 const smokeDistDirectory = `.next-smoke-${process.pid}`;
 const generatedConfigSnapshots = ["next-env.d.ts", "tsconfig.json"].map((path) => ({
   content: readFileSync(resolve(path), "utf8"),
@@ -53,6 +54,7 @@ const browserExecutable = [
 
 mkdirSync(evidenceDirectory, { recursive: true });
 mkdirSync(currentEvidenceDirectory, { recursive: true });
+mkdirSync(workspaceDirectory);
 
 const serverCommand =
   process.platform === "win32"
@@ -145,27 +147,40 @@ try {
   assert.equal(await page.locator("html").getAttribute("lang"), "zh-CN");
   const emptyProjectGuide = page.locator(".empty-guide");
   await emptyProjectGuide
-    .getByText("暂无项目。创建项目开始使用协作驾驶舱。", { exact: true })
+    .getByText(
+      "暂无文件夹项目。打开本地文件夹开始协作，也可直接在中间与 Agent 对话。",
+      { exact: true },
+    )
     .waitFor();
+  await page
+    .getByText("先配置一个 Agent，即可开始个人对话。", { exact: true })
+    .waitFor();
+  assert.equal(
+    await page
+      .getByRole("link", { name: "配置 Agent" })
+      .getAttribute("href"),
+    "/team?section=agents&returnTo=/",
+  );
   const workbenchHeading = page.getByRole("heading", { level: 1, name: "协作工作台" });
   assert.equal(await workbenchHeading.count(), 1);
   assert.equal(await workbenchHeading.isVisible(), true);
   await assertAxeCriticalFree(page, "/");
-  await emptyProjectGuide.getByRole("button", { name: "创建项目" }).click();
-  const projectNameInput = page.getByLabel("项目名称");
+  await emptyProjectGuide.getByRole("button", { name: "打开文件夹" }).click();
+  const folderPathInput = page.getByLabel("文件夹路径");
   assert.equal(
-    await projectNameInput.evaluate((element) => document.activeElement === element),
+    await folderPathInput.evaluate((element) => document.activeElement === element),
     true,
   );
 
-  await projectNameInput.fill("Smoke project");
+  await folderPathInput.fill(workspaceDirectory);
   await page
     .locator("form")
-    .filter({ has: page.getByLabel("项目名称") })
-    .getByRole("button", { name: "创建项目" })
+    .filter({ has: page.getByLabel("文件夹路径") })
+    .getByRole("button", { name: "打开文件夹" })
     .click();
   await page.waitForURL(/\/projects\/[^/]+$/);
-  const currentProject = page.getByRole("button", { name: "Smoke project" });
+  await page.getByRole("heading", { name: "real-workspace" }).waitFor();
+  const currentProject = page.getByRole("button", { name: "real-workspace" });
   await currentProject.waitFor();
   assert.equal(
     await currentProject.getAttribute("aria-current"),
@@ -190,7 +205,7 @@ try {
   await page.screenshot({ path: currentDesktopScreenshot, fullPage: true });
 
   await page.reload({ waitUntil: "networkidle" });
-  await page.getByRole("button", { name: "Smoke project" }).waitFor();
+  await page.getByRole("button", { name: "real-workspace" }).waitFor();
   await page.getByText("任务已完成。", { exact: true }).waitFor();
   await page.getByRole("tab", { name: "骨架运行" }).click();
   await taskResult.scrollIntoViewIfNeeded();

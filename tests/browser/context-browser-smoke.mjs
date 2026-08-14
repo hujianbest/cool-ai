@@ -30,6 +30,11 @@ const workspaceDirectory = join(temporaryDirectory, "real-workspace");
 mkdirSync(workspaceDirectory);
 const canonicalWorkspace = realpathSync(workspaceDirectory);
 let boundWorkspacePath = canonicalWorkspace;
+const emptyWorkspaceDirectory = join(
+  temporaryDirectory,
+  "context-empty-workspace",
+);
+mkdirSync(emptyWorkspaceDirectory);
 const reboundWorkspaceDirectory = join(
   temporaryDirectory,
   "rebound-real-workspace",
@@ -492,20 +497,17 @@ try {
   assert.ok(validationToken);
 
   await page.goto(baseUrl, { waitUntil: "networkidle" });
-  await page.getByLabel("项目名称").fill("Context Smoke Project");
+  await page.getByLabel("文件夹路径").fill(workspaceDirectory);
   await page
     .locator("form")
-    .filter({ has: page.getByLabel("项目名称") })
-    .getByRole("button", { name: "创建项目" })
+    .filter({ has: page.getByLabel("文件夹路径") })
+    .getByRole("button", { name: "打开文件夹" })
     .click();
   await page.waitForURL(/\/projects\/[^/]+$/);
   await page
-    .getByRole("heading", { name: "Context Smoke Project" })
+    .getByRole("heading", { name: "real-workspace" })
     .waitFor();
 
-  await page.getByLabel("本地工作区路径").fill(workspaceDirectory);
-  await page.getByRole("button", { name: "绑定工作区" }).click();
-  await page.getByText("工作区已保存。", { exact: true }).waitFor();
   boundWorkspacePath =
     (await page.getByLabel("工作区绑定状态").locator("code").textContent()) ??
     canonicalWorkspace;
@@ -757,8 +759,7 @@ try {
 
   // 越界/逃逸路径直调 API：稳定脱敏拒绝，零宿主路径与零 canary 泄漏
   const escapeProbes = await page.evaluate(async () => {
-    const projects = await (await fetch("/api/projects")).json();
-    const projectId = projects.projects[0].id;
+    const projectId = new URL(window.location.href).pathname.split("/").at(-1);
     const probes = [
       ["files?path=..%2F", 400, "INVALID_INPUT"],
       ["files?path=..%2F..%2F", 400, "INVALID_INPUT"],
@@ -891,8 +892,7 @@ try {
     .waitFor();
 
   const missionState = await page.evaluate(async () => {
-    const projects = await (await fetch("/api/projects")).json();
-    const projectId = projects.projects[0].id;
+    const projectId = new URL(window.location.href).pathname.split("/").at(-1);
     const state = await (
       await fetch(`/api/projects/${projectId}/mission`)
     ).json();
@@ -1061,8 +1061,7 @@ try {
   );
 
   const dependencyApi = await page.evaluate(async () => {
-    const projects = await (await fetch("/api/projects")).json();
-    const projectId = projects.projects[0].id;
+    const projectId = new URL(window.location.href).pathname.split("/").at(-1);
     const state = await (
       await fetch(`/api/projects/${projectId}/mission`)
     ).json();
@@ -1181,15 +1180,15 @@ try {
 
   // 无依赖 Mission 的 empty 态（第二项目隔离造数，不污染主项目事实）
   await page.goto(baseUrl, { waitUntil: "networkidle" });
-  await page.getByLabel("项目名称").fill("Context Empty Project");
+  await page.getByLabel("文件夹路径").fill(emptyWorkspaceDirectory);
   await page
     .locator("form")
-    .filter({ has: page.getByLabel("项目名称") })
-    .getByRole("button", { name: "创建项目" })
+    .filter({ has: page.getByLabel("文件夹路径") })
+    .getByRole("button", { name: "打开文件夹" })
     .click();
   await page.waitForURL(/\/projects\/[^/]+$/);
   await page
-    .getByRole("heading", { name: "Context Empty Project" })
+    .getByRole("heading", { name: "context-empty-workspace" })
     .waitFor();
   await page.getByLabel("使命标题").fill("Empty Mission");
   await page.getByLabel("使命目标").fill("No dependencies at all");
@@ -1838,7 +1837,7 @@ try {
   );
   missionWorkAuditOk(
     !auditEvents.some(
-      (event) => event.payload.projectName === "Context Empty Project",
+      (event) => event.payload.projectName === "context-empty-workspace",
     ),
     "cross-project project events must stay isolated",
   );
@@ -2565,7 +2564,7 @@ try {
   );
   projectAuditEqual(
     projectCreatedEvent.payload.projectName,
-    "Context Smoke Project",
+    "real-workspace",
     "project creation excerpt must be verbatim",
   );
   const boundEvents = projectDomainEvents.filter(
@@ -2634,7 +2633,7 @@ try {
   }
   projectAuditOk(
     !projectAuditEvents.some(
-      (event) => event.payload.projectName === "Context Empty Project",
+      (event) => event.payload.projectName === "context-empty-workspace",
     ),
     "cross-project project events must stay isolated",
   );
@@ -2679,7 +2678,7 @@ try {
     const projects = await (await fetch("/api/projects", { cache: "no-store" }))
       .json();
     const empty = projects.projects.find(
-      (project) => project.name === "Context Empty Project",
+      (project) => project.name === "context-empty-workspace",
     );
     const response = await fetch(
       `/api/projects/${empty.id}/audit-events`,
@@ -2691,11 +2690,14 @@ try {
   projectAuditDeepEqual(
     emptyProjectAudit.body.events.map((event) => [
       event.eventType,
-      event.payload.projectName ?? event.payload.title,
+      event.payload.projectName
+        ?? event.payload.title
+        ?? event.payload.workspaceName,
     ]),
     [
       ["mission_created", "Empty Mission"],
-      ["project_created", "Context Empty Project"],
+      ["workspace_bound", "context-empty-workspace"],
+      ["project_created", "context-empty-workspace"],
     ],
     "the second project trail must hold only its own facts",
   );
@@ -2827,7 +2829,7 @@ try {
   );
   projectAuditEqual(
     await projectCreatedRow.locator(".audit-event-excerpt").innerText(),
-    "Context Smoke Project",
+    "real-workspace",
     "project creation row must render the verbatim project name",
   );
   const reboundRow = projectAuditRows.nth(

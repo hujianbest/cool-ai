@@ -38,6 +38,11 @@ const errorCopy: Record<string, string> = {
   TASK_EXECUTION_FAILED: "任务执行失败，请稍后重试。",
   TASK_NOT_FOUND: "未找到该任务。",
   TURN_IN_PROGRESS: "当前已有 Agent 轮次正在处理中。",
+  WORKSPACE_ALREADY_BOUND: "该文件夹已绑定到其他项目。",
+  WORKSPACE_INVALID: "请输入有效的本地文件夹绝对路径。",
+  WORKSPACE_NOT_DIRECTORY: "所选路径不是文件夹。",
+  WORKSPACE_NOT_FOUND: "未找到该文件夹，请检查路径后重试。",
+  WORKSPACE_NOT_READABLE: "无法读取该文件夹，请检查权限后重试。",
 };
 
 export class ApiDisplayError extends Error {}

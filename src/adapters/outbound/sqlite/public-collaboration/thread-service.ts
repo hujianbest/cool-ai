@@ -340,7 +340,7 @@ function parseCreateInput(rawInput: unknown): CreateInput {
     : [];
   if (!Array.isArray(rawMembers) || memberAgentIds.length !== rawMembers.length) {
     fields.memberAgentIds = "invalid_format";
-  } else if (memberAgentIds.length < 2 || memberAgentIds.length > 100) {
+  } else if (memberAgentIds.length < 1 || memberAgentIds.length > 100) {
     fields.memberAgentIds = "invalid_range";
   } else if (
     memberAgentIds.some((memberId) => !RESOURCE_ID.test(memberId))
@@ -778,6 +778,41 @@ function ensureProject(database: DatabaseSync, projectId: string): void {
   if (!database.prepare("SELECT 1 FROM projects WHERE id=?").get(projectId)) {
     throw new CollaborationError("PROJECT_NOT_FOUND", 404, "Project was not found.");
   }
+}
+
+function allowsSingleMemberThread(
+  database: DatabaseSync,
+  projectId: string,
+  agentId: string,
+): boolean {
+  const project = database
+    .prepare(
+      `SELECT
+         projects.workspace_path AS workspacePath,
+         projects.workspace_key AS workspaceKey,
+         count(project_memberships.agent_id) AS memberCount,
+         min(project_memberships.agent_id) AS onlyAgentId
+       FROM projects
+       LEFT JOIN project_memberships
+         ON project_memberships.project_id = projects.id
+       WHERE projects.id = ?
+       GROUP BY projects.id`,
+    )
+    .get(projectId) as
+      | {
+          memberCount: number;
+          onlyAgentId: string | null;
+          workspaceKey: string | null;
+          workspacePath: string | null;
+        }
+      | undefined;
+  return Boolean(
+    project &&
+      project.workspacePath === null &&
+      project.workspaceKey === null &&
+      project.memberCount === 1 &&
+      project.onlyAgentId === agentId,
+  );
 }
 
 function missingProjectFactsFromDatabase(
@@ -1346,6 +1381,15 @@ export function createThread(
         requestHash,
       );
       if (prior) return prior as { body: ThreadCreateResponse; status: 201 };
+      const onlyMember = input.memberAgentIds.at(0);
+      if (
+        input.memberAgentIds.length === 1 &&
+        (!onlyMember || !allowsSingleMemberThread(database, projectId, onlyMember))
+      ) {
+        invalidInput("Thread input is invalid.", {
+          memberAgentIds: "invalid_range",
+        });
+      }
 
       const members = currentMembers(database, projectId, input.memberAgentIds);
       const timestamp = new Date().toISOString();

@@ -20,10 +20,22 @@ export interface ProjectWorkspaceCommands {
   ) => Promise<WorkspaceState>;
   createNodeWorkspaceFs: (record?: (operation: WorkspaceOperation) => void) => WorkspaceFs;
   createProject: (name: string, databasePath: string) => Project;
+  ensureDirectProject: (databasePath: string) => Project;
+  openWorkspaceAsProject: (
+    databasePath: string,
+    path: string,
+    workspaceFs?: WorkspaceFs,
+  ) => Promise<{ created: boolean; project: Project }>;
   replaceMembers: (
     databasePath: string,
     projectId: string,
     input: ReplaceMembersInput,
+  ) => MembershipState;
+  setDirectChatAgent: (
+    databasePath: string,
+    projectId: string,
+    agentId: string,
+    expectedVersion: number,
   ) => MembershipState;
   saveValidationPolicy: (
     databasePath: string,

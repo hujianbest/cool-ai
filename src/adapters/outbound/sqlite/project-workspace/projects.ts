@@ -57,6 +57,25 @@ export function createProject(name: string, databasePath: string): Project {
   }
 }
 
+export function ensureDirectProject(databasePath: string): Project {
+  const database = openDatabase(databasePath);
+  try {
+    const existing = database
+      .prepare(
+        `SELECT id, name, created_at AS createdAt
+         FROM projects
+         WHERE name = '个人对话' AND workspace_path IS NULL
+         ORDER BY created_at ASC, id ASC
+         LIMIT 1`,
+      )
+      .get() as ProjectRow | undefined;
+    if (existing) return toProject(existing);
+  } finally {
+    database.close();
+  }
+  return createProject("个人对话", databasePath);
+}
+
 export function listProjects(databasePath: string): Project[] {
   const database = openDatabase(databasePath);
 

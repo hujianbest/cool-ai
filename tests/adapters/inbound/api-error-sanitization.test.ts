@@ -6,10 +6,19 @@ const { sentinel } = vi.hoisted(() => ({
 }));
 
 vi.mock("@/src/adapters/outbound/sqlite/project-workspace/projects", () => ({
-  createProject: () => {
+  listProjects: () => {
     throw new Error(sentinel);
   },
-  listProjects: () => {
+}));
+
+vi.mock("@/src/adapters/outbound/sqlite/project-workspace/workspace-service", () => ({
+  openWorkspaceAsProject: () => {
+    throw new Error(sentinel);
+  },
+}));
+
+vi.mock("@/src/adapters/outbound/sqlite/identity-capability/agent-service", () => ({
+  listAgents: () => {
     throw new Error(sentinel);
   },
 }));
@@ -35,6 +44,7 @@ vi.mock("@/src/adapters/outbound/sqlite/mission-work/tasks", () => {
 });
 
 import * as projectRoute from "@/app/api/projects/route";
+import * as homeRoute from "@/app/api/home/route";
 import {
   createTaskResponse,
   executeTaskResponse,
@@ -46,16 +56,17 @@ afterEach(() => {
   vi.restoreAllMocks();
 });
 
-describe("sanitized project and task fallback errors", () => {
-  it("never returns or logs raw unknown project failures", async () => {
+describe("sanitized project, home, and task fallback errors", () => {
+  it("never returns or logs raw unknown project or home failures", async () => {
     const logged: unknown[] = [];
     vi.spyOn(console, "error").mockImplementation((value) => logged.push(value));
 
     const responses = [
+      await homeRoute.GET(),
       await projectRoute.GET(),
       await projectRoute.POST(
         new Request("http://localhost/api/projects", {
-          body: JSON.stringify({ name: sentinel }),
+          body: JSON.stringify({ path: sentinel }),
           headers: { "content-type": "application/json" },
           method: "POST",
         }),
@@ -66,7 +77,7 @@ describe("sanitized project and task fallback errors", () => {
       expect(response.status).toBe(500);
       expect(await response.text()).not.toContain(sentinel);
     }
-    expect(logged).toHaveLength(2);
+    expect(logged).toHaveLength(3);
     for (const entry of logged) {
       expect(JSON.stringify(entry)).not.toContain(sentinel);
       expect(Object.keys(entry as object).sort()).toEqual([
@@ -77,6 +88,7 @@ describe("sanitized project and task fallback errors", () => {
     }
     expect(logged).toEqual(
       expect.arrayContaining([
+        expect.objectContaining({ route: "GET /api/home" }),
         expect.objectContaining({ route: "GET /api/projects" }),
         expect.objectContaining({ route: "POST /api/projects" }),
       ]),

@@ -1199,14 +1199,14 @@ export function OnboardingGuide({
           ) : (
             <>
               <p aria-live="assertive" className="state-message" role="alert">
-                尚无可选项目。请先使用现有项目表面创建项目。
+                尚无可选文件夹项目。请先打开本地文件夹，或直接在中间开始个人对话。
               </p>
               <button
                 className="button-primary"
                 onClick={onCreateProject}
                 type="button"
               >
-                使用现有表面创建项目
+                使用现有表面打开文件夹
               </button>
             </>
           )}

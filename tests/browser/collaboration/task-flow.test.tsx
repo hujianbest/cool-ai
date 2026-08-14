@@ -15,6 +15,10 @@ vi.mock("next/navigation", () => ({
   useRouter: () => ({ push: pushMock, replace: vi.fn(), back: vi.fn() }),
 }));
 
+vi.mock("@/components/project-thread-navigation", () => ({
+  ProjectThreadNavigation: () => null,
+}));
+
 const project = {
   id: "project-1",
   name: "Launch plan",
@@ -96,6 +100,10 @@ beforeEach(() => {
 });
 
 describe("task event flow", () => {
+  beforeEach(() => {
+    pathnameValue = "/projects/project-1";
+  });
+
   it("shows loading, then restores persisted task events and result", async () => {
     const loaded = deferred<Response>();
     vi.stubGlobal(
@@ -144,26 +152,34 @@ describe("task event flow", () => {
     expect(screen.getByRole("button", { name: "运行任务" })).toBeDisabled();
   });
 
-  it("guides an unselected project state back to project selection", async () => {
+  it("keeps folder opening reachable while home guides Agent setup", async () => {
+    pathnameValue = "/";
     vi.stubGlobal(
       "fetch",
-      cockpitFetch([Response.json({ projects: [] })]),
+      cockpitFetch([
+        Response.json({ projects: [] }),
+        Response.json({ kind: "needs_agent" }),
+      ]),
     );
     const user = userEvent.setup();
 
     render(<ProjectPanel />);
 
     const projectRegion = await screen.findByRole("region", { name: "项目" });
-    const createProjectActions = within(projectRegion).getAllByRole("button", {
-      name: "创建项目",
+    const openFolderActions = within(projectRegion).getAllByRole("button", {
+      name: "打开文件夹",
     });
-    await user.click(createProjectActions.at(-1)!);
-    expect(screen.getByLabelText("项目名称")).toHaveFocus();
+    await user.click(openFolderActions.at(-1)!);
+    expect(screen.getByLabelText("文件夹路径")).toHaveFocus();
 
-    expect(await screen.findByText("请先选择项目。")).toBeInTheDocument();
+    expect(
+      await screen.findByText("1:1 对话将在配置 Agent 后可用。"),
+    ).toBeInTheDocument();
     const context = screen.getByRole("complementary", { name: "当前任务上下文" });
-    await user.click(within(context).getByRole("button", { name: "选择项目" }));
-    expect(screen.getByLabelText("项目名称")).toHaveFocus();
+    expect(
+      within(context).queryByRole("button", { name: "选择项目" }),
+    ).not.toBeInTheDocument();
+    expect(screen.getByRole("link", { name: "配置 Agent" })).toBeInTheDocument();
   });
 
   it("calls create, start, and execute in order while rendering each persisted state", async () => {

@@ -460,17 +460,14 @@ async function createTeam(page) {
 
 async function createProject(page) {
   await page.goto(baseUrl, { waitUntil: "networkidle" });
-  await page.getByLabel("项目名称").fill("Execution Smoke Project");
+  await page.getByLabel("文件夹路径").fill(workspaceDirectory);
   await page
     .locator("form")
-    .filter({ has: page.getByLabel("项目名称") })
-    .getByRole("button", { name: "创建项目" })
+    .filter({ has: page.getByLabel("文件夹路径") })
+    .getByRole("button", { name: "打开文件夹" })
     .click();
   await page.waitForURL(/\/projects\/[^/]+$/);
-  await page.getByRole("heading", { name: "Execution Smoke Project" }).waitFor();
-  await page.getByLabel("本地工作区路径").fill(workspaceDirectory);
-  await page.getByRole("button", { name: "绑定工作区" }).click();
-  await page.getByText("工作区已保存。", { exact: true }).waitFor();
+  await page.getByRole("heading", { name: "workspace" }).waitFor();
   const members = page.getByRole("group", { name: "平等项目成员" });
   await members.getByRole("checkbox", { name: /Execution Alpha/ }).check();
   await members.getByRole("checkbox", { name: /Execution Beta/ }).check();
@@ -481,7 +478,10 @@ async function createProject(page) {
   await page.getByRole("button", { name: "创建使命" }).click();
   await page.getByRole("heading", { name: "Execution Smoke Mission" }).waitFor();
   return page.evaluate(async () => {
-    const project = (await (await fetch("/api/projects")).json()).projects[0];
+    const projectId = new URL(window.location.href).pathname.split("/").at(-1);
+    const projects = (await (await fetch("/api/projects")).json()).projects;
+    const project = projects.find(({ id }) => id === projectId);
+    if (!project) throw new Error(`Opened project ${projectId} was not listed.`);
     const mission = (await (await fetch(`/api/projects/${project.id}/mission`)).json()).mission;
     const agents = (await (await fetch("/api/agents")).json()).agents;
     const threadResponse = await fetch(`/api/projects/${project.id}/threads`, {
@@ -1584,7 +1584,10 @@ process.exit(2);`,
   assert.ok(recoveryFiles.body.items.some(({ status }) => status === "temp_ready"));
   console.log("RECOVERY FILE PASS: public pagination preserved the durable temp_ready state");
   await restartAppServer();
-  await page.goto(`${baseUrl}/?manual-restart=${Date.now()}`, { waitUntil: "networkidle" });
+  await page.goto(
+    `${baseUrl}/projects/${context.projectId}?manual-restart=${Date.now()}`,
+    { waitUntil: "networkidle" },
+  );
   await page.getByRole("heading", { name: "Execution Smoke Mission" }).waitFor();
   const persistedRecovery = await page.evaluate(async (executionId) => {
     const response = await fetch(`/api/executions/${executionId}`, { cache: "no-store" });
@@ -1609,7 +1612,10 @@ process.exit(2);`,
   await openRunTab(page);
   await page.getByText("已过期").waitFor();
   await restartAppServer();
-  await page.goto(`${baseUrl}/?restart=${Date.now()}`, { waitUntil: "networkidle" });
+  await page.goto(
+    `${baseUrl}/projects/${context.projectId}?restart=${Date.now()}`,
+    { waitUntil: "networkidle" },
+  );
   await page.getByRole("heading", { name: "Execution Smoke Mission" }).waitFor();
   await openRunTab(page);
   await page.getByText("已过期").waitFor();

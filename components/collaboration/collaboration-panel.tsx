@@ -50,6 +50,7 @@ import type {
 import { reduceTranscript, type TranscriptReplyReference } from "@/src/shared/transcript-model";
 
 type CollaborationPanelProps = {
+  directAgentName?: string;
   projectId: string;
   requestedMessageId?: string | null;
   selectedRunId?: string | null;
@@ -780,11 +781,14 @@ function canonicalRunHref(
   projectId: string,
   threadId: string,
   runId: string | null,
+  directMode = false,
 ): string {
   const query = new URLSearchParams();
   query.set("thread", threadId);
   if (runId) query.set("run", runId);
-  return `/projects/${encodeURIComponent(projectId)}?${query.toString()}`;
+  return directMode
+    ? `/?${query.toString()}`
+    : `/projects/${encodeURIComponent(projectId)}?${query.toString()}`;
 }
 
 function runChoiceLabel(run: ThreadRunDto): string {
@@ -1184,6 +1188,7 @@ function RunControls({
 }
 
 export function CollaborationPanel({
+  directAgentName,
   modalBackgroundRef,
   onGoalFactChanged,
   onNestedModalChange,
@@ -1436,7 +1441,12 @@ export function CollaborationPanel({
         && expectedEpoch === targetEpochRef.current
         && request.isCurrent()
       ) {
-        const href = canonicalRunHref(projectId, threadId, null);
+        const href = canonicalRunHref(
+          projectId,
+          threadId,
+          null,
+          Boolean(directAgentName),
+        );
         onboardingSelectedRunIdRef.current = null;
         setRunSelectionNotice("所选运行无效或已失效，已清除选择。");
         setRunNavigationPending(false);
@@ -1463,6 +1473,7 @@ export function CollaborationPanel({
     }
   }, [
     applyRead,
+    directAgentName,
     projectId,
     targetKey,
     threadId,
@@ -2810,7 +2821,12 @@ export function CollaborationPanel({
       : null;
 
   function navigateToRun(nextThreadId: string, nextRunId: string | null) {
-    const href = canonicalRunHref(projectId, nextThreadId, nextRunId);
+    const href = canonicalRunHref(
+      projectId,
+      nextThreadId,
+      nextRunId,
+      Boolean(directAgentName),
+    );
     setRunNavigationPending(true);
     setRunSelectionNotice("正在切换运行…");
     if (nextRunId) setFocusRunId(nextRunId);
@@ -2936,7 +2952,9 @@ export function CollaborationPanel({
   }, [queueExpanded, queueItems, targetKey]);
 
   function returnToThreadList() {
-    const href = `/projects/${encodeURIComponent(projectId)}`;
+    const href = directAgentName
+      ? "/"
+      : `/projects/${encodeURIComponent(projectId)}`;
     window.history.replaceState(window.history.state, "", href);
     window.dispatchEvent(new PopStateEvent("popstate"));
   }
@@ -2945,8 +2963,12 @@ export function CollaborationPanel({
     <section aria-labelledby="collaboration-title" className="stack">
       <div className="panel-heading">
         <div>
-          <p className="eyebrow">平等协作</p>
-          <h3 id="collaboration-title">项目群聊</h3>
+          <p className="eyebrow">
+            {directAgentName ? "个人对话" : "平等协作"}
+          </p>
+          <h3 id="collaboration-title">
+            {directAgentName ?? "项目群聊"}
+          </h3>
         </div>
         {state?.run ? (
           <div
@@ -3065,6 +3087,7 @@ export function CollaborationPanel({
                       projectId,
                       runSelection.activeRun.threadId,
                       runSelection.activeRun.runId,
+                      Boolean(directAgentName),
                     )}
                     onClick={(event) => {
                       event.preventDefault();
@@ -3521,7 +3544,9 @@ export function CollaborationPanel({
           {showChat ? (
           <form className="composer" onSubmit={handleSubmit}>
             <div className="form-field">
-              <label htmlFor={`collaboration-message-${projectId}`}>发送给项目群聊</label>
+              <label htmlFor={`collaboration-message-${projectId}`}>
+                {directAgentName ? `发送给 ${directAgentName}` : "发送给项目群聊"}
+              </label>
               <textarea
                 aria-describedby={fieldError ? fieldErrorId : undefined}
                 aria-invalid={fieldError ? "true" : undefined}
@@ -3649,6 +3674,8 @@ export function CollaborationPanel({
               >
                 输入历史
               </button>
+              {!directAgentName ? (
+                <>
               <button
                 aria-activedescendant={
                   mentionOpen && members?.[activeMemberIndex]
@@ -3711,6 +3738,8 @@ export function CollaborationPanel({
                     <p className="muted">尚无可提及的项目成员。</p>
                   )}
                 </div>
+              ) : null}
+                </>
               ) : null}
             </div>
             <button

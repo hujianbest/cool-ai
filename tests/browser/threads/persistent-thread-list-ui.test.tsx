@@ -114,6 +114,19 @@ function ThreadHarness() {
   );
 }
 
+function DirectThreadHarness() {
+  const backgroundRef = useRef<HTMLElement>(null);
+  return (
+    <main data-testid="thread-background" ref={backgroundRef}>
+      <ProjectThreadNavigation
+        backgroundRef={backgroundRef}
+        directMode
+        projectId={project.id}
+      />
+    </main>
+  );
+}
+
 function stubListAndMembers(threads: ReturnType<typeof thread>[]) {
   return vi.fn(async (input: RequestInfo | URL) => {
     const url = String(input);
@@ -475,6 +488,66 @@ describe("persistent project thread list and creation", () => {
     });
     await waitFor(() => expect(createdEntry).toHaveFocus());
     expect(window.location.search).toBe(`?thread=${created.thread.id}`);
+  });
+
+  it("creates a home conversation with its sole Agent and no policy picker", async () => {
+    const created = createdThread("direct-thread", "Personal chat");
+    const directCreated = {
+      ...created,
+      thread: {
+        ...created.thread,
+        policy: {
+          ...created.thread.policy,
+          members: created.thread.policy.members.slice(0, 1),
+        },
+      },
+    };
+    const fetchMock = vi.fn(
+      async (input: RequestInfo | URL, init?: RequestInit) => {
+        const url = String(input);
+        if (url.endsWith("/threads?limit=100")) {
+          return Response.json(list([]));
+        }
+        if (url.endsWith("/thread-tags?limit=100")) {
+          return Response.json({ tags: [] });
+        }
+        if (url.endsWith("/members")) {
+          return Response.json({
+            members: [memberOne],
+            projectVersion: 2,
+          });
+        }
+        if (url.endsWith("/threads") && init?.method === "POST") {
+          return Response.json(directCreated, { status: 201 });
+        }
+        throw new Error(`Unexpected request: ${url}`);
+      },
+    );
+    vi.stubGlobal("fetch", fetchMock);
+    vi.spyOn(crypto, "randomUUID").mockReturnValue(operationId);
+    window.history.replaceState(null, "", "/");
+    const user = userEvent.setup();
+
+    render(<DirectThreadHarness />);
+
+    await screen.findByText("暂无线程。创建线程后开始协作。");
+    await user.click(screen.getByRole("button", { name: "创建线程" }));
+    const dialog = screen.getByRole("dialog", { name: "创建线程" });
+    expect(await within(dialog).findByText(memberOne.name)).toBeInTheDocument();
+    expect(within(dialog).queryByRole("checkbox")).not.toBeInTheDocument();
+    await user.type(within(dialog).getByLabelText("线程标题"), "Personal chat");
+    await user.click(within(dialog).getByRole("button", { name: "创建线程" }));
+
+    await screen.findByRole("button", { name: "Personal chat" });
+    const createCall = fetchMock.mock.calls.find(
+      ([url, init]) =>
+        String(url).endsWith("/threads") && init?.method === "POST",
+    );
+    expect(createCall).toBeDefined();
+    expect(JSON.parse(String(createCall?.[1]?.body))).toMatchObject({
+      memberAgentIds: [memberOne.agentId],
+      title: "Personal chat",
+    });
   });
 
   it("reconciles an unknown create by operation without resending", async () => {

@@ -96,7 +96,8 @@ describe("owner-controlled cockpit mobile surfaces", () => {
           { status: 503 },
         ),
       )
-      .mockResolvedValueOnce(Response.json({ projects: [] }));
+      .mockResolvedValueOnce(Response.json({ projects: [] }))
+      .mockResolvedValueOnce(Response.json({ kind: "needs_agent" }));
     vi.stubGlobal("fetch", fetchMock);
     const user = userEvent.setup();
 
@@ -113,7 +114,7 @@ describe("owner-controlled cockpit mobile surfaces", () => {
     expect(retry).toHaveFocus();
     await user.keyboard("{Enter}");
 
-    await waitFor(() => expect(fetchMock).toHaveBeenCalledTimes(2));
+    await waitFor(() => expect(fetchMock).toHaveBeenCalledTimes(3));
     await waitFor(() => expect(screen.queryByRole("alert")).not.toBeInTheDocument());
   });
 

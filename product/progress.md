@@ -19,3 +19,6 @@
 - 2026-08-12 036/S-52 Project&Workspace 审计事件纵切（AUD-PWS）完成 implement 与 ship：schema identity 21→22、`audit_event_outbox.source` 加 `'project_workspace'`，projects/workspace/membership/validation-policy 四处写入点同事务 outbox，宿主路径末段目录名 + 凭据分类双闸 fail-closed 脱敏，审计 UI 项目域徽标/文案/「定位来源项目」，smoke:context 验收 104 断言 + axe 3 态 0 serious/critical，全量 277 文件 2542 用例全绿、build 绿；推送集成时发现与并行 UI 改版切片 035/S-51 双占，按 A-256 改号假设并在 backlog 双侧消歧。
 - 2026-08-14 用户指示继续 `product/ui` 并以 case 为布局/颜色目标；立项 038/S-54 暖陶工作台驾驶舱（grill-with-docs）。037/S-53 AUD-GOV 暂停于 T-02。
 - 2026-08-14 038/S-54 完成 implement 与 ship：暖陶 DESIGN.md 替换 Apple 蓝、桌面四列 56/236/1fr/304、左对话/中群聊/右看板 chrome 对齐 case、preview 暖陶目录；`npm test` 2577、build、smoke:context 与 cockpit smoke 绿；演示 auto-approved（A-263）。037/S-53 仍暂停于 T-02。
+- 2026-08-14 用户指示打开本地文件夹即项目（对齐 Codex/Cursor），立项 039/S-55；037 继续暂停。
+- 2026-08-14 用户改口：未选项目时中间默认单 Agent 聊天。039 暂停于 T-01；立项 040/S-56。
+- 2026-08-15 用户澄清两条路径都要：打开本地文件夹作为项目，同时支持不选项目直接 1:1 聊天（A-285）。039/S-55 与 040/S-56 均已 ship；`npx vitest run` 284/2598、`npm run smoke`、`smoke:onboarding`、build 绿。037 仍暂停于 T-02。

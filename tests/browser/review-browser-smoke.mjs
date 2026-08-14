@@ -55,6 +55,7 @@ let reviewCallCount = 0;
 let providerSawReviewBody = false;
 let serverOutput = "";
 let appServer;
+let projectPath = "";
 
 function jsonResponse(response, value, status = 200) {
   response.writeHead(status, { "content-type": "application/json" });
@@ -361,17 +362,15 @@ async function createTeam(page) {
 
 async function createProject(page) {
   await page.goto(baseUrl, { waitUntil: "networkidle" });
-  await page.getByLabel("项目名称").fill("Review Smoke Project");
+  await page.getByLabel("文件夹路径").fill(workspaceDirectory);
   await page
     .locator("form")
-    .filter({ has: page.getByLabel("项目名称") })
-    .getByRole("button", { name: "创建项目" })
+    .filter({ has: page.getByLabel("文件夹路径") })
+    .getByRole("button", { name: "打开文件夹" })
     .click();
   await page.waitForURL(/\/projects\/[^/]+$/);
-  await page.getByRole("heading", { name: "Review Smoke Project" }).waitFor();
-  await page.getByLabel("本地工作区路径").fill(workspaceDirectory);
-  await page.getByRole("button", { name: "绑定工作区" }).click();
-  await page.getByText("工作区已保存。", { exact: true }).waitFor();
+  projectPath = new URL(page.url()).pathname;
+  await page.getByRole("heading", { name: "workspace" }).waitFor();
   const members = page.getByRole("group", { name: "平等项目成员" });
   await members.getByRole("checkbox", { name: /Review Executor/ }).check();
   await members.getByRole("checkbox", { name: /Review Verifier/ }).check();
@@ -382,7 +381,10 @@ async function createProject(page) {
   await page.getByRole("button", { name: "创建使命" }).click();
   await page.getByRole("heading", { name: "Review Smoke Mission" }).waitFor();
   return page.evaluate(async () => {
-    const project = (await (await fetch("/api/projects")).json()).projects[0];
+    const projectId = new URL(window.location.href).pathname.split("/").at(-1);
+    const projects = (await (await fetch("/api/projects")).json()).projects;
+    const project = projects.find(({ id }) => id === projectId);
+    if (!project) throw new Error(`Opened project ${projectId} was not listed.`);
     const missionState = await (await fetch(`/api/projects/${project.id}/mission`)).json();
     const agents = (await (await fetch("/api/agents")).json()).agents;
     const memberAgentIds = agents
@@ -604,7 +606,7 @@ async function openRunTab(page) {
 }
 
 async function openReviewThroughKeyboard(page) {
-  await page.goto(baseUrl, { waitUntil: "networkidle" });
+  await page.goto(`${baseUrl}${projectPath}`, { waitUntil: "networkidle" });
   await openRunTab(page);
   const openReview = page.getByRole("button", { name: "打开复核闭环" }).last();
   await openReview.focus();
@@ -816,7 +818,7 @@ try {
   assert.equal(recoveredDelivery.currentDeliveryId, delivery.currentDeliveryId);
 
   await page.setViewportSize({ height: 844, width: 390 });
-  await page.goto(baseUrl, { waitUntil: "networkidle" });
+  await page.goto(`${baseUrl}${projectPath}`, { waitUntil: "networkidle" });
   await openRunTab(page);
   const executionSwitcher = page.getByRole("list", { name: "执行摘要切换" });
   const openExecution = executionSwitcher

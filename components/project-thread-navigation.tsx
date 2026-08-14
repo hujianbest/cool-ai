@@ -51,6 +51,7 @@ type UrlThreadSelection =
 
 type ProjectThreadNavigationProps = {
   backgroundRef: RefObject<HTMLElement | null>;
+  directMode?: boolean;
   onDialogChange?: (open: boolean) => void;
   onNavigate?: (href: string) => void;
   onStateChange?: (state: ThreadListState) => void;
@@ -75,7 +76,7 @@ const policySchema = z
   .object({
     availability,
     createdAt: z.string().min(1),
-    members: z.array(policyMemberSchema).min(2).max(100),
+    members: z.array(policyMemberSchema).min(1).max(100),
     revisionId: resourceId,
     unavailableMemberIds: z.array(resourceId),
     version: positiveInteger,
@@ -258,16 +259,23 @@ type BatchRequest = {
 const SEARCH_DEBOUNCE_MS = 300;
 const THREAD_TAG_NAME_MAX_GRAPHEMES = 40;
 
-function canonicalThreadHref(projectId: string, threadId: string): string {
-  return `/projects/${encodeURIComponent(projectId)}?thread=${encodeURIComponent(threadId)}`;
+function canonicalThreadHref(
+  projectId: string,
+  threadId: string,
+  directMode = false,
+): string {
+  return directMode
+    ? `/?thread=${encodeURIComponent(threadId)}`
+    : `/projects/${encodeURIComponent(projectId)}?thread=${encodeURIComponent(threadId)}`;
 }
 
 function canonicalMessageHref(
   projectId: string,
   threadId: string,
   messageId: string | null,
+  directMode = false,
 ): string {
-  const base = canonicalThreadHref(projectId, threadId);
+  const base = canonicalThreadHref(projectId, threadId, directMode);
   return messageId ? `${base}&message=${encodeURIComponent(messageId)}` : base;
 }
 
@@ -281,8 +289,19 @@ function readableTime(timestamp: string): string {
   }).format(new Date(timestamp));
 }
 
-function threadSelectionFromUrl(projectId: string): UrlThreadSelection {
+function threadSelectionFromUrl(
+  projectId: string,
+  directMode = false,
+): UrlThreadSelection {
   const current = new URL(window.location.href);
+  if (directMode) {
+    const threadIds = current.searchParams.getAll("thread");
+    return threadIds.length === 0
+      ? { kind: "none", threadId: null }
+      : threadIds.length === 1 && threadIds[0]?.length
+        ? { kind: "selected", threadId: threadIds[0] }
+        : { kind: "invalid", threadId: null };
+  }
   if (
     current.searchParams.getAll("guide").length === 1 &&
     current.searchParams.get("guide") === "goal"
@@ -300,8 +319,11 @@ function threadSelectionFromUrl(projectId: string): UrlThreadSelection {
     : { kind: "none", threadId: null };
 }
 
-function selectedThreadFromUrl(projectId: string): string | null {
-  return threadSelectionFromUrl(projectId).threadId;
+function selectedThreadFromUrl(
+  projectId: string,
+  directMode = false,
+): string | null {
+  return threadSelectionFromUrl(projectId, directMode).threadId;
 }
 
 function compareThreads(left: ThreadSummary, right: ThreadSummary): number {
@@ -448,6 +470,7 @@ function StarIcon({ filled }: { filled: boolean }) {
 
 export function ProjectThreadNavigation({
   backgroundRef,
+  directMode = false,
   onDialogChange,
   onNavigate,
   onStateChange,
@@ -810,9 +833,9 @@ export function ProjectThreadNavigation({
         setThreads(loaded);
         setListState(loaded.length === 0 ? "empty" : "ready");
         if (view !== "all" || activeTagId) return;
-        const selection = threadSelectionFromUrl(projectId);
+        const selection = threadSelectionFromUrl(projectId, directMode);
         if (loaded.length > 0 && selection.kind === "none") {
-          const href = canonicalThreadHref(projectId, loaded[0]!.id);
+          const href = canonicalThreadHref(projectId, loaded[0]!.id, directMode);
           onNavigate?.(href);
           routerRef.current.replace(href);
         } else if (
@@ -837,7 +860,16 @@ export function ProjectThreadNavigation({
           ),
         );
       });
-  }, [activeTagId, loadThreads, onNavigate, projectId, reloadKey, targetGuard, view]);
+  }, [
+    activeTagId,
+    directMode,
+    loadThreads,
+    onNavigate,
+    projectId,
+    reloadKey,
+    targetGuard,
+    view,
+  ]);
 
   useEffect(() => {
     if (view !== "recycle_bin") return;
@@ -1087,7 +1119,12 @@ export function ProjectThreadNavigation({
   }
 
   function activateSearchResult(item: ThreadSearchResultItemDto) {
-    const href = canonicalMessageHref(projectId, item.threadId, item.messageId);
+    const href = canonicalMessageHref(
+      projectId,
+      item.threadId,
+      item.messageId,
+      directMode,
+    );
     onNavigate?.(href);
     window.history.pushState(window.history.state, "", href);
     window.dispatchEvent(new PopStateEvent("popstate"));
@@ -1122,19 +1159,19 @@ export function ProjectThreadNavigation({
 
   useEffect(() => {
     if (!focusThreadId) return;
-    const selected = selectedThreadFromUrl(projectId);
+    const selected = selectedThreadFromUrl(projectId, directMode);
     if (selected !== focusThreadId) return;
     threadButtonRefs.current.get(focusThreadId)?.focus();
     setFocusThreadId(null);
-  }, [focusThreadId, locationVersion, projectId, threads]);
+  }, [directMode, focusThreadId, locationVersion, projectId, threads]);
 
   useEffect(() => {
     if (view !== "all" || activeTagId) return;
     if (listState !== "ready" || threads.length === 0) return;
-    const selection = threadSelectionFromUrl(projectId);
+    const selection = threadSelectionFromUrl(projectId, directMode);
     if (selection.kind === "none") {
       setSelectionError(null);
-      const href = canonicalThreadHref(projectId, threads[0]!.id);
+      const href = canonicalThreadHref(projectId, threads[0]!.id, directMode);
       onNavigate?.(href);
       routerRef.current.replace(href);
     } else if (
@@ -1147,7 +1184,16 @@ export function ProjectThreadNavigation({
     } else {
       setSelectionError(null);
     }
-  }, [activeTagId, listState, locationVersion, onNavigate, projectId, threads, view]);
+  }, [
+    activeTagId,
+    directMode,
+    listState,
+    locationVersion,
+    onNavigate,
+    projectId,
+    threads,
+    view,
+  ]);
 
   useEffect(() => {
     if (!dialogOpen) return;
@@ -1164,7 +1210,12 @@ export function ProjectThreadNavigation({
         return currentMembers(await response.json());
       })
       .then((loaded) => {
-        if (request.isCurrent()) setMembers(loaded);
+        if (!request.isCurrent()) return;
+        setMembers(loaded);
+        const onlyMember = loaded.length === 1 ? loaded.at(0) : undefined;
+        if (directMode && onlyMember) {
+          setSelectedMemberIds([onlyMember.agentId]);
+        }
       })
       .catch((cause: unknown) => {
         if (request.isCurrent()) {
@@ -1176,7 +1227,7 @@ export function ProjectThreadNavigation({
       .finally(() => {
         if (request.isCurrent()) setMembersLoading(false);
       });
-  }, [dialogOpen, membersReloadKey, projectId, targetGuard]);
+  }, [dialogOpen, directMode, membersReloadKey, projectId, targetGuard]);
 
   function openDialog() {
     setTitle("");
@@ -1190,7 +1241,7 @@ export function ProjectThreadNavigation({
     setCreateNotice(null);
     setSelectionError(null);
     setFocusThreadId(threadId);
-    const href = canonicalThreadHref(projectId, threadId);
+    const href = canonicalThreadHref(projectId, threadId, directMode);
     onNavigate?.(href);
     routerRef.current.push(href);
   }
@@ -1312,9 +1363,9 @@ export function ProjectThreadNavigation({
       setRecycleReloadKey((current) => current + 1);
       void refreshThreadsSilently(request);
       void refreshRecycleBinSilently(request);
-      const selected = selectedThreadFromUrl(projectId);
+      const selected = selectedThreadFromUrl(projectId, directMode);
       if (selected === target.id) {
-        const href = `/projects/${encodeURIComponent(projectId)}`;
+        const href = directMode ? "/" : `/projects/${encodeURIComponent(projectId)}`;
         onNavigate?.(href);
         routerRef.current.push(href);
       }
@@ -1454,7 +1505,11 @@ export function ProjectThreadNavigation({
         : `线程“${created.thread.title}”已创建。`,
     );
     setFocusThreadId(created.thread.id);
-    const href = canonicalThreadHref(projectId, created.thread.id);
+    const href = canonicalThreadHref(
+      projectId,
+      created.thread.id,
+      directMode,
+    );
     onNavigate?.(href);
     routerRef.current.push(href);
   }
@@ -1521,7 +1576,11 @@ export function ProjectThreadNavigation({
           : null;
     const uniqueMemberIds = Array.from(new Set(selectedMemberIds));
     const nextMemberError =
-      uniqueMemberIds.length < 2 ? "请明确选择至少 2 名当前项目成员。" : null;
+      uniqueMemberIds.length < (directMode ? 1 : 2)
+        ? directMode
+          ? "个人对话 Agent 尚未就绪。"
+          : "请明确选择至少 2 名当前项目成员。"
+        : null;
     setTitleError(nextTitleError);
     setMemberError(nextMemberError);
     setCreateError(null);
@@ -1777,13 +1836,17 @@ export function ProjectThreadNavigation({
   }
 
   const selectedThreadId =
-    typeof window === "undefined" ? null : selectedThreadFromUrl(projectId);
+    typeof window === "undefined"
+      ? null
+      : selectedThreadFromUrl(projectId, directMode);
   const submitReason = membersLoading
     ? "正在加载当前项目成员。"
     : membersError
       ? "当前项目成员加载失败，请先重试。"
-      : selectedMemberIds.length < 2
-        ? "至少选择 2 名当前项目成员后才能创建。"
+      : selectedMemberIds.length < (directMode ? 1 : 2)
+        ? directMode
+          ? "个人对话 Agent 尚未就绪。"
+          : "至少选择 2 名当前项目成员后才能创建。"
         : isSubmitting
           ? "创建请求处理中，表单暂不可用。"
           : null;
@@ -2418,7 +2481,7 @@ export function ProjectThreadNavigation({
                   className="stack"
                   disabled={isSubmitting || membersLoading}
                 >
-                  <legend>当前策略成员</legend>
+                  <legend>{directMode ? "对话 Agent" : "当前策略成员"}</legend>
                   {membersLoading ? (
                     <p className="muted" role="status">
                       正在加载当前项目成员…
@@ -2440,6 +2503,8 @@ export function ProjectThreadNavigation({
                     </div>
                   ) : members.length === 0 ? (
                     <p className="muted">当前项目没有可选成员。</p>
+                  ) : directMode ? (
+                    <p>{members.at(0)?.name ?? "个人对话 Agent"}</p>
                   ) : (
                     members.map((member) => (
                       <label className="check-row" key={member.agentId}>

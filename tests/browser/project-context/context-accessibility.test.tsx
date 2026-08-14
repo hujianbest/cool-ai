@@ -105,6 +105,7 @@ describe("context navigation accessibility", () => {
 
   it("integrates tabs in the single narrow context modal without exposing background interaction", async () => {
     stubMobile();
+    window.history.replaceState(null, "", "/projects/project-1");
     vi.stubGlobal(
       "fetch",
       vi.fn(async (input: RequestInfo | URL) => {

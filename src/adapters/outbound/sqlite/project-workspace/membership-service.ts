@@ -13,6 +13,11 @@ type ProjectVersionRow = {
   version: number;
 };
 
+type ProjectBindingRow = {
+  workspaceKey: string | null;
+  workspacePath: string | null;
+};
+
 type MemberRow = {
   agentId: string;
   joinedAt: string;
@@ -40,7 +45,7 @@ function invalidInput(code: string): MembershipError {
   );
 }
 
-function validateInput(input: ReplaceMembersInput): void {
+function validateInput(input: ReplaceMembersInput, directChat = false): void {
   if (
     !input ||
     !Array.isArray(input.agentIds) ||
@@ -50,7 +55,12 @@ function validateInput(input: ReplaceMembersInput): void {
   ) {
     throw invalidInput("invalid_format");
   }
-  if (input.agentIds.length < 2) throw invalidInput("too_small");
+  if (input.agentIds.length < (directChat ? 1 : 2)) {
+    throw invalidInput("too_small");
+  }
+  if (directChat && input.agentIds.length !== 1) {
+    throw invalidInput("invalid_size");
+  }
   if (new Set(input.agentIds).size !== input.agentIds.length) {
     throw invalidInput("duplicate");
   }
@@ -182,16 +192,29 @@ export function getMembers(databasePath: string, projectId: string): MembershipS
   }
 }
 
-export function replaceMembers(
+function replaceRoster(
   databasePath: string,
   projectId: string,
   input: ReplaceMembersInput,
+  directChat: boolean,
 ): MembershipState {
-  validateInput(input);
+  validateInput(input, directChat);
   const database = openDatabase(databasePath);
   database.exec("BEGIN IMMEDIATE");
   try {
     const currentVersion = projectVersion(database, projectId);
+    if (directChat) {
+      const binding = database
+        .prepare(
+          `SELECT workspace_path AS workspacePath, workspace_key AS workspaceKey
+           FROM projects
+           WHERE id = ?`,
+        )
+        .get(projectId) as ProjectBindingRow;
+      if (binding.workspacePath !== null || binding.workspaceKey !== null) {
+        throw invalidInput("workspace_bound");
+      }
+    }
     if (currentVersion !== input.expectedProjectVersion) {
       throw new MembershipError(
         "RESOURCE_CONFLICT",
@@ -300,4 +323,29 @@ export function replaceMembers(
   } finally {
     database.close();
   }
+}
+
+export function replaceMembers(
+  databasePath: string,
+  projectId: string,
+  input: ReplaceMembersInput,
+): MembershipState {
+  return replaceRoster(databasePath, projectId, input, false);
+}
+
+export function setDirectChatAgent(
+  databasePath: string,
+  projectId: string,
+  agentId: string,
+  expectedVersion: number,
+): MembershipState {
+  return replaceRoster(
+    databasePath,
+    projectId,
+    {
+      agentIds: [agentId],
+      expectedProjectVersion: expectedVersion,
+    },
+    true,
+  );
 }

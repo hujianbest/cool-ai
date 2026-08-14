@@ -4,16 +4,22 @@ import {
   stat as nodeStat,
 } from "node:fs/promises";
 import { appendFileSync, constants } from "node:fs";
-import { isAbsolute } from "node:path";
+import { randomUUID } from "node:crypto";
+import { basename, isAbsolute } from "node:path";
 import type { DatabaseSync } from "node:sqlite";
 
 import { openDatabase } from "@/src/adapters/outbound/sqlite/connection";
-import { appendWorkspaceBindingAuditOutboxRow } from "@/src/adapters/outbound/sqlite/project-workspace/audit-event-outbox";
+import {
+  appendProjectCreatedAuditOutboxRow,
+  appendWorkspaceBindingAuditOutboxRow,
+} from "@/src/adapters/outbound/sqlite/project-workspace/audit-event-outbox";
+import { initializeValidationPolicy } from "@/src/adapters/outbound/sqlite/project-workspace/validation-policy-service";
 import { WorkspaceError } from "@/src/modules/project-workspace";
 import type {
   WorkspaceFs,
   WorkspaceOperation,
 } from "@/src/modules/project-workspace";
+import type { Project } from "@/src/shared/contracts";
 import type { WorkspaceState } from "@/src/shared/project-context-contracts";
 
 type ProjectWorkspaceRow = {
@@ -126,6 +132,82 @@ function rollback(database: DatabaseSync): void {
     database.exec("ROLLBACK");
   } catch {
     // Preserve the typed binding error.
+  }
+}
+
+type ProjectRow = {
+  createdAt: string;
+  id: string;
+  name: string;
+};
+
+export async function openWorkspaceAsProject(
+  databasePath: string,
+  path: string,
+  workspaceFs: WorkspaceFs = createNodeWorkspaceFs(),
+): Promise<{ created: boolean; project: Project }> {
+  const canonicalPath = await canonicalDirectory(path, workspaceFs);
+  const canonicalKey = workspaceKey(canonicalPath);
+  const database = openDatabase(databasePath);
+
+  try {
+    database.exec("BEGIN IMMEDIATE");
+    try {
+      const existing = database
+        .prepare(
+          `SELECT id, name, created_at AS createdAt
+           FROM projects
+           WHERE workspace_key = ?
+             AND NOT (name = '个人对话' AND workspace_path IS NULL)
+           LIMIT 1`,
+        )
+        .get(canonicalKey) as ProjectRow | undefined;
+      if (existing) {
+        database.exec("COMMIT");
+        return { created: false, project: existing };
+      }
+
+      const timestamp = new Date().toISOString();
+      const trimmedPath = canonicalPath.trim();
+      const project: Project = {
+        createdAt: timestamp,
+        id: randomUUID(),
+        name:
+          basename(canonicalPath) ||
+          trimmedPath.replace(/[\\/]+$/u, "") ||
+          trimmedPath,
+      };
+      database
+        .prepare("INSERT INTO projects (id, name, created_at) VALUES (?, ?, ?)")
+        .run(project.id, project.name, project.createdAt);
+      initializeValidationPolicy(database, project.id, timestamp);
+      appendProjectCreatedAuditOutboxRow(database, {
+        occurredAt: timestamp,
+        projectId: project.id,
+        projectName: project.name,
+      });
+      database
+        .prepare(
+          `UPDATE projects
+           SET workspace_path = ?, workspace_key = ?, version = version + 1
+           WHERE id = ?`,
+        )
+        .run(canonicalPath, canonicalKey, project.id);
+      appendWorkspaceBindingAuditOutboxRow(database, {
+        eventType: "workspace_bound",
+        occurredAt: timestamp,
+        previousWorkspacePath: null,
+        projectId: project.id,
+        workspacePath: canonicalPath,
+      });
+      database.exec("COMMIT");
+      return { created: true, project };
+    } catch (error) {
+      rollback(database);
+      throw error;
+    }
+  } finally {
+    database.close();
   }
 }
 

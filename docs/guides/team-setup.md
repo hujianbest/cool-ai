@@ -41,4 +41,4 @@
 
 ![Provider、技能与 Agent 配置](../images/cool-ai-team-configuration.png)
 
-下一步：[创建项目与使命](./project-workflow.md)。
+下一步：[直接对话或打开文件夹项目](./project-workflow.md)。

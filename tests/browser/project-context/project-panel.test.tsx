@@ -18,7 +18,7 @@ describe("ProjectPanel", () => {
           Response.json({
             projects: [{ id: "project-1", name: "Existing project", createdAt: "2026-07-29T00:00:00.000Z" }],
           }),
-          Response.json({ tasks: [], events: [] }),
+          Response.json({ kind: "needs_agent" }),
         ]),
     );
 
@@ -28,9 +28,10 @@ describe("ProjectPanel", () => {
     expect(await screen.findByRole("button", { name: "Existing project" })).toBeInTheDocument();
   });
 
-  it("creates and displays a project", async () => {
+  it("opens and displays a folder project", async () => {
     const fetchMock = cockpitFetch([
       Response.json({ projects: [] }),
+      Response.json({ kind: "needs_agent" }),
         Response.json(
           {
             project: { id: "project-1", name: "Launch plan", createdAt: "2026-07-29T00:00:00.000Z" },
@@ -43,17 +44,19 @@ describe("ProjectPanel", () => {
     const user = userEvent.setup();
 
     render(<ProjectPanel />);
-    await screen.findByText("暂无项目。创建项目开始使用协作驾驶舱。");
-    await user.type(screen.getByLabelText("项目名称"), "Launch plan");
-    const projectForm = screen.getByLabelText("项目名称").closest("form");
+    await screen.findByText(
+      "暂无文件夹项目。打开本地文件夹开始协作，也可直接在中间与 Agent 对话。",
+    );
+    await user.type(screen.getByLabelText("文件夹路径"), "D:\\work\\launch-plan");
+    const projectForm = screen.getByLabelText("文件夹路径").closest("form");
     expect(projectForm).not.toBeNull();
-    await user.click(within(projectForm!).getByRole("button", { name: "创建项目" }));
+    await user.click(within(projectForm!).getByRole("button", { name: "打开文件夹" }));
 
     expect(await screen.findByRole("heading", { level: 2, name: "Launch plan" })).toBeInTheDocument();
     expect(fetchMock).toHaveBeenCalledWith(
       "/api/projects",
       expect.objectContaining({
-        body: JSON.stringify({ name: "Launch plan" }),
+        body: JSON.stringify({ path: "D:\\work\\launch-plan" }),
         method: "POST",
       }),
     );
@@ -62,27 +65,30 @@ describe("ProjectPanel", () => {
   it("shows validation and request errors while preserving input", async () => {
     const fetchMock = cockpitFetch([
       Response.json({ projects: [] }),
+      Response.json({ kind: "needs_agent" }),
         Response.json(
-          { error: { code: "UNEXPECTED_UPSTREAM", message: "Could not create project." } },
-          { status: 500 },
+          { error: { code: "WORKSPACE_NOT_FOUND", message: "Workspace directory was not found." } },
+          { status: 400 },
         ),
     ]);
     vi.stubGlobal("fetch", fetchMock);
     const user = userEvent.setup();
 
     render(<ProjectPanel />);
-    await screen.findByText("暂无项目。创建项目开始使用协作驾驶舱。");
-    const projectForm = screen.getByLabelText("项目名称").closest("form");
+    await screen.findByText(
+      "暂无文件夹项目。打开本地文件夹开始协作，也可直接在中间与 Agent 对话。",
+    );
+    const projectForm = screen.getByLabelText("文件夹路径").closest("form");
     expect(projectForm).not.toBeNull();
-    await user.click(within(projectForm!).getByRole("button", { name: "创建项目" }));
-    expect(screen.getByRole("alert")).toHaveTextContent("请输入项目名称。");
+    await user.click(within(projectForm!).getByRole("button", { name: "打开文件夹" }));
+    expect(screen.getByRole("alert")).toHaveTextContent("请输入本地文件夹路径。");
 
-    await user.type(screen.getByLabelText("项目名称"), "Launch plan");
-    await user.click(within(projectForm!).getByRole("button", { name: "创建项目" }));
+    await user.type(screen.getByLabelText("文件夹路径"), "D:\\missing\\launch-plan");
+    await user.click(within(projectForm!).getByRole("button", { name: "打开文件夹" }));
 
     await waitFor(() =>
-      expect(screen.getByRole("alert")).toHaveTextContent("请求失败，请稍后重试。"),
+      expect(screen.getByRole("alert")).toHaveTextContent("未找到该文件夹，请检查路径后重试。"),
     );
-    expect(screen.getByLabelText("项目名称")).toHaveValue("Launch plan");
+    expect(screen.getByLabelText("文件夹路径")).toHaveValue("D:\\missing\\launch-plan");
   });
 });

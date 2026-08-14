@@ -24,6 +24,11 @@ const project = {
   id: "project-onboarding",
   name: "Onboarding Project",
 };
+const directProject = {
+  createdAt: "2026-08-08T00:00:00.000Z",
+  id: "project-direct",
+  name: "个人对话",
+};
 const threadId = "thread-onboarding";
 
 function collaborationState(started = false) {
@@ -1017,7 +1022,7 @@ describe("progressive onboarding T-6 explicit project selection", () => {
   }
 
   it.each([false, true])(
-    "keeps the zero-project create CTA on the existing form at %s narrow",
+    "keeps the zero-project open-folder CTA on the existing form at %s narrow",
     async (narrow) => {
       stubViewport(narrow);
       vi.stubGlobal(
@@ -1030,12 +1035,12 @@ describe("progressive onboarding T-6 explicit project selection", () => {
       render(<ProjectPanel />);
 
       const guide = await screen.findByRole("region", { name: "首次使用引导" });
-      expect(within(guide).getByRole("alert")).toHaveTextContent("尚无可选项目");
+      expect(within(guide).getByRole("alert")).toHaveTextContent("尚无可选文件夹项目");
       await user.click(
-        within(guide).getByRole("button", { name: "使用现有表面创建项目" }),
+        within(guide).getByRole("button", { name: "使用现有表面打开文件夹" }),
       );
-      expect(screen.getByLabelText("项目名称")).toHaveFocus();
-      expect(within(guide).queryByLabelText("项目名称")).toBeNull();
+      expect(screen.getByLabelText("文件夹路径")).toHaveFocus();
+      expect(within(guide).queryByLabelText("文件夹路径")).toBeNull();
     },
   );
 
@@ -1075,7 +1080,7 @@ describe("progressive onboarding T-6 explicit project selection", () => {
     },
   );
 
-  it("uses the existing project form and navigates only from a strict POST project ID", async () => {
+  it("uses the folder form and navigates only from a strict POST project ID", async () => {
     const calls: Array<{ method: string; url: string }> = [];
     vi.stubGlobal(
       "fetch",
@@ -1095,12 +1100,12 @@ describe("progressive onboarding T-6 explicit project selection", () => {
     render(<ProjectPanel />);
     const guide = await screen.findByRole("region", { name: "首次使用引导" });
     await user.click(
-      within(guide).getByRole("button", { name: "使用现有表面创建项目" }),
+      within(guide).getByRole("button", { name: "使用现有表面打开文件夹" }),
     );
-    await user.type(screen.getByLabelText("项目名称"), project.name);
-    const projectForm = screen.getByLabelText("项目名称").closest("form");
+    await user.type(screen.getByLabelText("文件夹路径"), "D:\\work\\project-alpha");
+    const projectForm = screen.getByLabelText("文件夹路径").closest("form");
     await user.click(
-      within(projectForm!).getByRole("button", { name: "创建项目" }),
+      within(projectForm!).getByRole("button", { name: "打开文件夹" }),
     );
 
     await waitFor(() =>
@@ -1128,7 +1133,11 @@ describe("progressive onboarding T-6 explicit project selection", () => {
         if (resource) return resource;
         if (url === "/api/projects") {
           getCount += 1;
-          return Response.json({ projects: created ? [project] : [] });
+          return Response.json({
+            projects: created
+              ? [directProject, project]
+              : [directProject],
+          });
         }
         if (url === "/api/providers") return Response.json({ providers: [] });
         if (url === "/api/agents") return Response.json({ agents: [] });
@@ -1139,11 +1148,13 @@ describe("progressive onboarding T-6 explicit project selection", () => {
     window.history.replaceState(null, "", "/?guide=project-select");
 
     render(<ProjectPanel />);
-    await screen.findByText("尚无可选项目。请先使用现有项目表面创建项目。");
-    await user.type(screen.getByLabelText("项目名称"), project.name);
-    const projectForm = screen.getByLabelText("项目名称").closest("form");
+    await screen.findByText(
+      "尚无可选文件夹项目。请先打开本地文件夹，或直接在中间开始个人对话。",
+    );
+    await user.type(screen.getByLabelText("文件夹路径"), "D:\\work\\project-alpha");
+    const projectForm = screen.getByLabelText("文件夹路径").closest("form");
     await user.click(
-      within(projectForm!).getByRole("button", { name: "创建项目" }),
+      within(projectForm!).getByRole("button", { name: "打开文件夹" }),
     );
 
     await waitFor(() =>
@@ -1151,7 +1162,7 @@ describe("progressive onboarding T-6 explicit project selection", () => {
         `/projects/${project.id}?guide=workspace`,
       ),
     );
-    expect(screen.getByText("已通过事实核对确认项目已创建。")).toBeInTheDocument();
+    expect(screen.getByText("已通过事实核对确认项目已打开。")).toBeInTheDocument();
     expect(postCount).toBe(1);
     expect(getCount).toBe(2);
   });
@@ -1184,15 +1195,17 @@ describe("progressive onboarding T-6 explicit project selection", () => {
     window.history.replaceState(null, "", "/?guide=project-select");
 
     render(<ProjectPanel />);
-    await screen.findByText("尚无可选项目。请先使用现有项目表面创建项目。");
-    await user.type(screen.getByLabelText("项目名称"), project.name);
-    const projectForm = screen.getByLabelText("项目名称").closest("form");
+    await screen.findByText(
+      "尚无可选文件夹项目。请先打开本地文件夹，或直接在中间开始个人对话。",
+    );
+    await user.type(screen.getByLabelText("文件夹路径"), "D:\\work\\project-alpha");
+    const projectForm = screen.getByLabelText("文件夹路径").closest("form");
     await user.click(
-      within(projectForm!).getByRole("button", { name: "创建项目" }),
+      within(projectForm!).getByRole("button", { name: "打开文件夹" }),
     );
 
     expect(
-      await screen.findByText(/无法唯一确认项目是否已创建/, {
+      await screen.findByText(/无法唯一确认文件夹项目是否已打开/, {
         selector: '[role="alert"]',
       }),
     ).toBeInTheDocument();

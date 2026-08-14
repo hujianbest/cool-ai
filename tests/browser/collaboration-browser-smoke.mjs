@@ -390,20 +390,16 @@ async function createTeam(page) {
 
 async function createProjectContext(page) {
   await page.goto(baseUrl, { waitUntil: "networkidle" });
-  await page.getByLabel("项目名称").fill("Collaboration Smoke Project");
+  await page.getByLabel("文件夹路径").fill(workspaceDirectory);
   await page
     .locator("form")
-    .filter({ has: page.getByLabel("项目名称") })
-    .getByRole("button", { name: "创建项目" })
+    .filter({ has: page.getByLabel("文件夹路径") })
+    .getByRole("button", { name: "打开文件夹" })
     .click();
   await page.waitForURL(/\/projects\/[^/]+$/);
   await page
-    .getByRole("heading", { name: "Collaboration Smoke Project" })
+    .getByRole("heading", { name: "workspace" })
     .waitFor();
-
-  await page.getByLabel("本地工作区路径").fill(workspaceDirectory);
-  await page.getByRole("button", { name: "绑定工作区" }).click();
-  await page.getByText("工作区已保存。", { exact: true }).waitFor();
 
   const members = page.getByRole("group", { name: "平等项目成员" });
   await members
@@ -424,10 +420,8 @@ async function createProjectContext(page) {
     .getByRole("heading", { name: "Collaboration Smoke Mission" })
     .waitFor();
 
-  const project = await page.evaluate(async () => {
-    return (await (await fetch("/api/projects")).json()).projects[0];
-  });
-  return project.id;
+  return page.evaluate(() =>
+    new URL(window.location.href).pathname.split("/").at(-1));
 }
 
 async function createThread(page, title, memberNames) {

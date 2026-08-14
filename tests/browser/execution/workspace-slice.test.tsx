@@ -92,6 +92,7 @@ describe("workspace binding vertical slice", () => {
   it("validates a real directory, persists its canonical path, and reloads it", async () => {
     const databasePath = process.env.COCKPIT_DB_PATH!;
     const project = createProject("Workspace project", databasePath);
+    window.history.replaceState(null, "", `/projects/${project.id}`);
     const workspacePath = mkdtempSync(join(rootDirectory, "bound-"));
     const canonicalPath = await realpath(workspacePath);
     const fetchMock = installAppFetch(project.id);

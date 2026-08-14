@@ -22,7 +22,13 @@ afterEach(() => {
 describe("code review fixes", () => {
   it("propagates project loading to the center and current context", async () => {
     const projects = deferred<Response>();
-    vi.stubGlobal("fetch", cockpitFetch([projects.promise]));
+    vi.stubGlobal(
+      "fetch",
+      cockpitFetch([
+        projects.promise,
+        Response.json({ kind: "needs_agent" }),
+      ]),
+    );
 
     render(<ProjectPanel />);
 
@@ -36,7 +42,9 @@ describe("code review fixes", () => {
 
     projects.resolve(Response.json({ projects: [] }));
     expect(
-      await screen.findByText("暂无项目。创建项目开始使用协作驾驶舱。"),
+      await screen.findByText(
+        "暂无文件夹项目。打开本地文件夹开始协作，也可直接在中间与 Agent 对话。",
+      ),
     ).toBeInTheDocument();
   });
 
@@ -47,6 +55,7 @@ describe("code review fixes", () => {
           { status: 503 },
         ),
       Response.json({ projects: [] }),
+      Response.json({ kind: "needs_agent" }),
     ]);
     vi.stubGlobal("fetch", fetchMock);
     const user = userEvent.setup();
@@ -59,9 +68,11 @@ describe("code review fixes", () => {
     expect(screen.getAllByRole("alert")).toHaveLength(1);
     await user.click(retry);
 
-    expect(fetchMock).toHaveBeenCalledTimes(2);
+    expect(fetchMock).toHaveBeenCalledTimes(3);
     expect(
-      await screen.findByText("暂无项目。创建项目开始使用协作驾驶舱。"),
+      await screen.findByText(
+        "暂无文件夹项目。打开本地文件夹开始协作，也可直接在中间与 Agent 对话。",
+      ),
     ).toBeInTheDocument();
   });
 
@@ -70,6 +81,7 @@ describe("code review fixes", () => {
       "fetch",
       cockpitFetch([
         Response.json({ projects: [] }),
+        Response.json({ kind: "needs_agent" }),
           Response.json(
             {
               project: {
@@ -86,11 +98,13 @@ describe("code review fixes", () => {
     const user = userEvent.setup();
 
     render(<ProjectPanel />);
-    await screen.findByText("暂无项目。创建项目开始使用协作驾驶舱。");
-    await user.type(screen.getByLabelText("项目名称"), "新项目");
-    const projectForm = screen.getByLabelText("项目名称").closest("form");
+    await screen.findByText(
+      "暂无文件夹项目。打开本地文件夹开始协作，也可直接在中间与 Agent 对话。",
+    );
+    await user.type(screen.getByLabelText("文件夹路径"), "D:\\work\\新项目");
+    const projectForm = screen.getByLabelText("文件夹路径").closest("form");
     expect(projectForm).not.toBeNull();
-    await user.click(within(projectForm!).getByRole("button", { name: "创建项目" }));
+    await user.click(within(projectForm!).getByRole("button", { name: "打开文件夹" }));
 
     const title = await screen.findByRole("heading", { level: 2, name: "新项目" });
     expect(title).toHaveAttribute("tabindex", "-1");
@@ -100,16 +114,24 @@ describe("code review fixes", () => {
   it("declares Simplified Chinese and renders Chinese built-in copy", async () => {
     const layout = RootLayout({ children: null });
     expect(layout.props.lang).toBe("zh-CN");
-    vi.stubGlobal("fetch", cockpitFetch([Response.json({ projects: [] })]));
+    vi.stubGlobal(
+      "fetch",
+      cockpitFetch([
+        Response.json({ projects: [] }),
+        Response.json({ kind: "needs_agent" }),
+      ]),
+    );
 
     render(<ProjectPanel />);
 
-    expect(screen.getByLabelText("项目名称")).toBeInTheDocument();
-    const projectForm = screen.getByLabelText("项目名称").closest("form");
+    expect(screen.getByLabelText("文件夹路径")).toBeInTheDocument();
+    const projectForm = screen.getByLabelText("文件夹路径").closest("form");
     expect(projectForm).not.toBeNull();
-    expect(within(projectForm!).getByRole("button", { name: "创建项目" })).toBeInTheDocument();
+    expect(within(projectForm!).getByRole("button", { name: "打开文件夹" })).toBeInTheDocument();
     expect(
-      await screen.findByText("暂无项目。创建项目开始使用协作驾驶舱。"),
+      await screen.findByText(
+        "暂无文件夹项目。打开本地文件夹开始协作，也可直接在中间与 Agent 对话。",
+      ),
     ).toBeInTheDocument();
   });
 });

@@ -2,10 +2,25 @@
 import { readFileSync } from "node:fs";
 import { render, screen, within } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
-import { afterEach, describe, expect, it, vi } from "vitest";
+import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
 import { ProjectPanel } from "@/components/project-panel";
 import { cockpitFetch } from "@/tests/cockpit-test-fetch";
+
+let pathnameValue = "/projects/project-1";
+
+vi.mock("next/navigation", () => ({
+  usePathname: () => pathnameValue,
+  useRouter: () => ({ back: vi.fn(), push: vi.fn(), replace: vi.fn() }),
+}));
+
+vi.mock("@/components/project-thread-navigation", () => ({
+  ProjectThreadNavigation: () => null,
+}));
+
+beforeEach(() => {
+  pathnameValue = "/projects/project-1";
+});
 
 afterEach(() => {
   vi.unstubAllGlobals();
@@ -90,7 +105,7 @@ describe("desktop collaboration cockpit", () => {
     expect(within(navigation).getByRole("heading", { name: "项目" })).toHaveClass(
       "surface-heading",
     );
-    expect(within(navigation).getByRole("button", { name: "创建项目" })).toHaveClass(
+    expect(within(navigation).getByRole("button", { name: "打开文件夹" })).toHaveClass(
       "button-primary",
     );
     expect(within(navigation).getByRole("button", { name: "关闭项目导航" })).toHaveClass(
@@ -126,11 +141,12 @@ describe("desktop collaboration cockpit", () => {
   });
 
   it("renders the ActivityBar navigation rail and drops the in-sidebar text nav", async () => {
+    pathnameValue = "/";
     vi.stubGlobal(
       "fetch",
       cockpitFetch([
         Response.json({ projects: [] }),
-        Response.json({ tasks: [], events: [] }),
+        Response.json({ kind: "needs_agent" }),
       ]),
     );
     render(<ProjectPanel />);

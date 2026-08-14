@@ -88,6 +88,12 @@ S-9～S-12 的 `依赖: S-*` 是原历史文字，只说明当时切片记录；
 - [x] S-1 行走骨架 — 主子系统: Project & Workspace；主 Capability: `CAP-PWS-01`；票据: 未建立（[feature 状态](../features/001-walking-skeleton/progress.md)，目录无 `tickets.md`）；演示判据: owner 能按 README 一条命令启动应用，在温暖浅色的协作驾驶舱中创建示例项目并提交任务；左侧导航、中间事件流、右侧上下文形成真实端到端路径，确定性示例 Agent 的排队、运行、完成状态可见，刷新或重启后记录仍在
 - [x] S-2 配置有技能的第一支 Agent 小队 — 主子系统: Identity & Capability；主 Capability: `CAP-IDC-01`；票据: 未建立（[feature 状态](../features/002-agent-team-configuration/progress.md)，目录无 `tickets.md`）；演示判据: owner 能添加并验证 OpenAI-compatible 服务，创建可复用文本技能，基于可编辑模板创建至少两个具有不同头像与强调色的角色 Agent，并配置模型、技能、工具权限与预算，刷新后配置仍在
 - [x] S-3 创建项目、组队并建立共享上下文 — 主子系统: Project & Workspace；主 Capability: `CAP-PWS-01`；票据: 未建立（[feature 状态](../features/003-project-team-context/progress.md)，目录无 `tickets.md`）；演示判据: owner 能绑定本地产品工作区、选择角色 Agent 入组，并在项目页看到平等成员、使命看板，以及所有组员可读取且带来源的目标、决策、事实与产物记忆
+- [x] S-55 打开本地文件夹即进入/恢复 Project — 主子系统: Project & Workspace；主 Capability: `CAP-PWS-01`；票据: [`features/039-folder-is-project/tickets.md`](../features/039-folder-is-project/tickets.md)；演示判据: owner 打开本机文件夹即进入该协作项目（显示名为目录名、工作区已绑定），再打开同一路径恢复而非复制；约束: 工作区=打开的目录即唯一绑定根，verified-handle=打开时必需，sandbox=打开不授予执行，凭据=错误脱敏，审批=不适用，独立复核=交付必需（项目级 review 豁免按 AGENTS.md 记录于 progress），审计=project_created 与 workspace_bound 同事务；不复制 Clowder 品牌、源码或资产
+  - 排期: 2026-08-14 用户要求对齐 Codex/Cursor「打开的文件夹就是项目」，不再先填项目名称。
+  - 准入: 已交付前置: `CAP-PWS-01` 名称创建与 bind、`CAP-PWS-02` 单根浏览；本片建立: owner 打开文件夹 create-or-resume（已交付）。
+- [x] S-56 未选项目时单 Agent 聊天 — 主子系统: Project & Workspace；主 Capability: `CAP-PWS-01`；票据: [`features/040-home-direct-chat/tickets.md`](../features/040-home-direct-chat/tickets.md)；Ship: 2026-08-15；演示判据: owner 打开 `/` 未选文件夹项目时中栏是与一名 Agent 的聊天窗（有 Agent 则可发送；无 Agent 则引导配置）；不能在此态开展多 Agent 群聊或使命看板；打开文件夹项目后既有群聊不回归
+  - 排期: 2026-08-14 对照 pi-agent 等 WebUI；2026-08-15 与 S-55 一并验证（A-285）。
+  - 准入: 已交付前置: `CAP-PWS-01`、`CAP-COL-01`、`CAP-IDC-01`；本片建立: 个人对话容器 1 成员与 home 聊天列（已交付）。
 - [x] S-4 在群聊发起使命并观察自主编排 — 主子系统: Public Collaboration；主 Capability: `CAP-COL-01`；票据: 未建立（[feature 状态](../features/004-collaboration-orchestration/progress.md)，目录无 `tickets.md`）；演示判据: owner 在项目群聊提交真实目标后，至少两个 Agent 通过真实模型调用拆分带依赖的子任务、领取任务并结构化交棒；owner 可发言、@Agent、回答决策请求，并看到当前持棒者、用量和完整时间线
 - [x] S-5 并行且安全地执行项目工作 — 主子系统: Safe Execution；主 Capability: `CAP-EXE-01`；票据: 未建立（[feature 状态](../features/005-safe-parallel-execution/progress.md)，目录无 `tickets.md`）；演示判据: 两名 Agent 能并行处理独立子任务，在绑定工作区产出隔离变更并按需运行验证；平台阻止重复接力、失效结果、预算越限和未合并冲突，越界或高风险动作只有 owner 批准后才能继续
 - [x] S-6 同伴复核、沉淀记忆并交付结果 — 主子系统: Review & Delivery；主 Capability: `CAP-REV-01`；票据: 未建立（[feature 状态](../features/006-peer-review-memory-delivery/progress.md)，目录无 `tickets.md`）；演示判据: 非执行者 Agent 能复核各子任务并决定退回、升级或通过；通过后关键决策、事实、产物和经验进入共享记忆，owner 获得最终摘要与证据，应用重启后仍可追溯完整历史
@@ -104,7 +110,7 @@ S-9～S-12 的 `依赖: S-*` 是原历史文字，只说明当时切片记录；
 
 ## 当前在途
 
-（无；S-54 已于 2026-08-14 ship，见主题簇九）
+（无；S-55 / S-56 已于 2026-08-15 ship，见主题簇二与 S-3 之后的交付记录）
 
 ## 主题簇一：公开协作
 

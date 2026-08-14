@@ -22,7 +22,7 @@ Building with multiple Agents often turns the owner into a human router: copying
 ## From Provider to delivery
 
 1. Add and verify a Provider, then create skills and at least two distinct Agents.
-2. Create a project, bind its local workspace, and add the Agents as equal members.
+2. Chat 1:1 with an Agent without selecting a folder project, or open a local folder to create or resume its collaboration project, then add Agents as equal members.
 3. Define a mission and its task DAG; submit the goal in the project conversation.
 4. Let Agents propose, claim, discuss, and hand off work while the owner can speak, mention an Agent, answer a decision request, pause, or redirect.
 5. Start execution only for dependency-ready tasks. Each execution works in an isolated area and exposes file actions, command approvals, validation, and staged changes before merge.
