@@ -40,4 +40,4 @@ Cool AI 是面向单个产品 owner 的本地优先 Web 多 Agent 协作平台�
 - [`features/`](../features/) 是各切片的规格、设计、进度、评审与机器证据历史；它不是日常用户指南，也不应把某次验收数据写成永久产品承诺。
 - 当前源码与测试是实现行为的最高优先级。文档与实现冲突时，应先按实现保护数据与安全，再修正文档或明确启动新的行为变更切片。
 
-![协作驾驶舱总览](./images/cool-ai-cockpit-overview.png)
+[协作驾驶舱总览](../openwiki/ui/index.md) · [项目上下文](../openwiki/ui/project-context.md)
