@@ -63,6 +63,152 @@ afterEach(() => {
 });
 
 describe("Audit panel", () => {
+  it("filters a mixed six-domain list and restores every row with 全部", async () => {
+    const AuditPanel = await auditPanel();
+    const events = [
+      auditEvent({
+        eventType: "execution_created",
+        executionId: "exec-1",
+        id: "event-60",
+        outboxSeq: 60,
+      }),
+      auditEvent({
+        actorType: "owner",
+        eventType: "owner_message",
+        id: "event-59",
+        outboxSeq: 59,
+        payload: { threadId: "thread-1" },
+      }),
+      auditEvent({
+        actorType: "owner",
+        eventType: "work_item_created",
+        id: "event-58",
+        outboxSeq: 58,
+        payload: { title: "任务筛选样例", workItemId: "work-1" },
+      }),
+      auditEvent({
+        actorType: "owner",
+        eventType: "project_created",
+        id: "event-57",
+        outboxSeq: 57,
+        payload: { projectName: "项目筛选样例" },
+      }),
+      auditEvent({
+        actorType: "owner",
+        eventType: "approval_approved",
+        id: "event-56",
+        outboxSeq: 56,
+        payload: { approvalId: "approval-1" },
+      }),
+      auditEvent({
+        eventType: "runtime_call_succeeded",
+        id: "event-55",
+        outboxSeq: 55,
+        payload: { model: "gpt-runtime", surface: "execution" },
+      }),
+    ];
+    vi.stubGlobal(
+      "fetch",
+      vi.fn(() => Promise.resolve(Response.json(page(events)))),
+    );
+    const user = userEvent.setup();
+    render(<AuditPanel projectId="project-1" />);
+
+    const list = await screen.findByRole("list", { name: "审计事件" });
+    const filters = screen.getByRole("group", { name: "按域筛选审计事件" });
+    const allFilter = within(filters).getByRole("button", { name: "全部" });
+    expect(allFilter).toHaveAttribute("aria-pressed", "true");
+    expect(within(list).getAllByRole("listitem")).toHaveLength(6);
+
+    for (const [domain, heading] of [
+      ["执行", "执行已创建"],
+      ["协作", "Owner 消息"],
+      ["任务", "看板任务已创建"],
+      ["项目", "项目已创建"],
+      ["治理", "审批已批准"],
+      ["运行时", "运行时调用已成功"],
+    ] as const) {
+      const filter = within(filters).getByRole("button", { name: domain });
+      if (domain === "执行") {
+        filter.focus();
+        await user.keyboard("{Enter}");
+      } else {
+        await user.click(filter);
+      }
+      expect(filter).toHaveAttribute("aria-pressed", "true");
+      expect(allFilter).toHaveAttribute("aria-pressed", "false");
+      const rows = within(list).getAllByRole("listitem");
+      expect(rows).toHaveLength(1);
+      expect(within(rows[0]!).getByRole("heading", { name: heading }))
+        .toBeInTheDocument();
+    }
+
+    await user.click(allFilter);
+    expect(allFilter).toHaveAttribute("aria-pressed", "true");
+    expect(within(list).getAllByRole("listitem")).toHaveLength(6);
+  });
+
+  it("shows the filtered empty state and re-filters events appended by load more", async () => {
+    const AuditPanel = await auditPanel();
+    let calls = 0;
+    vi.stubGlobal(
+      "fetch",
+      vi.fn(() => {
+        calls += 1;
+        return Promise.resolve(Response.json(
+          calls === 1
+            ? page([
+              auditEvent({
+                eventType: "execution_created",
+                executionId: "exec-1",
+                id: "event-3",
+                outboxSeq: 3,
+              }),
+            ], {}, 3)
+            : page([
+              auditEvent({
+                eventType: "owner_message",
+                id: "event-2",
+                outboxSeq: 2,
+                payload: { threadId: "thread-1" },
+              }),
+              auditEvent({
+                eventType: "runtime_call_succeeded",
+                id: "event-1",
+                outboxSeq: 1,
+                payload: { model: "gpt-runtime", surface: "execution" },
+              }),
+            ]),
+        ));
+      }),
+    );
+    const user = userEvent.setup();
+    render(<AuditPanel projectId="project-1" />);
+
+    const filters = await screen.findByRole("group", {
+      name: "按域筛选审计事件",
+    });
+    await user.click(
+      within(filters).getByRole("button", { name: "运行时" }),
+    );
+    expect(screen.getByText("该筛选下尚无审计事件。")).toBeInTheDocument();
+    expect(screen.queryByRole("list", { name: "审计事件" })).toBeNull();
+
+    await user.click(
+      screen.getByRole("button", { name: "加载更多审计事件" }),
+    );
+    const list = await screen.findByRole("list", { name: "审计事件" });
+    const rows = within(list).getAllByRole("listitem");
+    expect(rows).toHaveLength(1);
+    expect(within(rows[0]!).getByRole("heading", {
+      name: "运行时调用已成功",
+    })).toBeInTheDocument();
+    expect(screen.queryByRole("heading", { name: "Owner 消息" })).toBeNull();
+
+    await user.click(within(filters).getByRole("button", { name: "全部" }));
+    expect(within(list).getAllByRole("listitem")).toHaveLength(3);
+  });
+
   it("shows loading, rebuilding conflict, generic load error with retry, and the empty state", async () => {
     const AuditPanel = await auditPanel();
     const first = deferred<Response>();

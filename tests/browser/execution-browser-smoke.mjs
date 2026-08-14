@@ -2334,7 +2334,45 @@ process.exit(2);`,
       && runtimeLocateBox.width >= 44,
     "runtime locate link must be at least 44x44",
   );
+  const collaborationRow = auditRows
+    .filter({ has: page.getByText("协作", { exact: true }) })
+    .first();
+  await collaborationRow.waitFor();
+  const collaborationHeading = await collaborationRow.getByRole("heading").innerText();
+  const auditDomainFilters = contextPanel.getByRole("group", {
+    name: "按域筛选审计事件",
+  });
+  const runtimeFilter = auditDomainFilters.getByRole("button", {
+    name: "运行时",
+  });
+  const runtimeFilterBox = await runtimeFilter.boundingBox();
+  runtimeAuditOk(
+    runtimeFilterBox
+      && runtimeFilterBox.height >= 44
+      && runtimeFilterBox.width >= 44,
+    "runtime audit filter must be at least 44x44",
+  );
+  await runtimeFilter.click();
+  runtimeAuditEqual(
+    await runtimeFilter.getAttribute("aria-pressed"),
+    "true",
+    "runtime audit filter must expose its selected state",
+  );
+  await runtimeRow.waitFor();
+  runtimeAuditEqual(
+    await auditList.getByRole("heading", {
+      exact: true,
+      name: collaborationHeading,
+    }).count(),
+    0,
+    "runtime audit filter must hide collaboration rows",
+  );
   await page.screenshot({ fullPage: true, path: runtimeAuditScreenshot });
+  await auditDomainFilters.getByRole("button", { name: "全部" }).click();
+  await page.waitForFunction(
+    (expected) => document.querySelectorAll(".audit-event-list > li").length === expected,
+    auditEvents.length,
+  );
 
   governanceAuditFacingText = await page.locator("html").innerText();
   await page.screenshot({ fullPage: true, path: governanceAuditScreenshot });

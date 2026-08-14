@@ -1302,6 +1302,24 @@ ol {
   white-space: nowrap;
 }
 
+.audit-domain-filters {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--space-2);
+}
+
+.status-label.audit-domain-filter {
+  min-height: var(--control-min);
+  display: inline-flex;
+  align-items: center;
+  cursor: pointer;
+}
+
+.status-label.audit-domain-filter.active {
+  border-color: var(--border-strong);
+  background: var(--surface-muted);
+}
+
 .audit-event-list a {
   display: inline-flex;
   min-height: var(--control-min);

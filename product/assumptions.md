@@ -309,3 +309,5 @@ agent 替用户做的默认选择。遇到欠定点的标准动作: 提出带默
 - A-297 2026-08-15 [生效] 041 三张票（outbox+schema → UI → smoke+code-review）；auto grill 默认；spec/architecture 豁免；因 schema 与共享 outbox 必须 hf-code-review。默认理由: 对齐 037 纵切模板且遵守 A-286 选择性代码门。
 - A-298 2026-08-15 [生效] 041 T-03 浏览器验收落点继续使用 `smoke:execution` 的既有真实 `callOpenAiChat` 成功路径；该 runner 不注入 Provider/model fault，因此浏览器段必须断言 `runtime_call_succeeded`、source=`runtime` 数量与项目/全局投影边界，并在未来自然出现失败行时同时断言两类；本片不为制造 `runtime_call_failed` 新增第四轮完整 Agent execution，失败事件继续由 T-01 `runtime-audit-outbox.test.ts` 的同事务成功/失败、白名单与秘密脱敏用例证明。默认理由: 保持真实调用路径并遵守验收时长护栏，避免只为覆盖字面事件类型重复昂贵执行。
 - A-299 2026-08-15 [生效] 041 code-review 对 Review slice 未持久化调用路径的裁决：没有同事务持久化 `review_model_calls` 领域调用行，就不追加 Runtime outbox；本次不为这些路径新增领域调用行，也不从 HTTP helper 或后续事务旁路写审计。默认理由：Runtime outbox 必须与既有领域 call 事实同事务提交，不能为了补审计覆盖而建立第二套调用事实或制造无法原子回滚的孤立审计行；维持 A-295 的所有权与事务纪律。
+- A-300 2026-08-15 [生效] 042/S-58 AUD-UI 只在审计面板内按域做客户端筛选，不改审计 API、不加 URL 查询参数、不做时间轴/导出。默认理由: S-23 最终组合片的独立结果是「筛选已交付来源」；查询协议已能返回全部来源，筛选是 UI 状态。
+- A-301 2026-08-15 [生效] 042 T-02 浏览器验收落在 `smoke:execution` 既有运行时审计段：断言「运行时」筛选 44px、选中态、运行时行保留与协作行隐藏；不为筛选再开一轮完整 Agent execution。默认理由: 遵守验收时长护栏，筛选是已加载列表上的 UI 状态。

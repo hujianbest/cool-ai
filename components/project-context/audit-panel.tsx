@@ -129,6 +129,8 @@ type AuditEventDomain =
   | "project"
   | "runtime";
 
+type AuditEventDomainFilter = AuditEventDomain | "all";
+
 const DOMAIN_COPY: Record<AuditEventDomain, string> = {
   collaboration: "协作",
   execution: "执行",
@@ -137,6 +139,19 @@ const DOMAIN_COPY: Record<AuditEventDomain, string> = {
   project: "项目",
   runtime: "运行时",
 };
+
+const DOMAIN_FILTERS: ReadonlyArray<{
+  label: string;
+  value: AuditEventDomainFilter;
+}> = [
+  { label: "全部", value: "all" },
+  { label: "执行", value: "execution" },
+  { label: "协作", value: "collaboration" },
+  { label: "任务", value: "mission" },
+  { label: "项目", value: "project" },
+  { label: "治理", value: "governance" },
+  { label: "运行时", value: "runtime" },
+];
 
 // All variants are existing .status-label colors (approval-center precedent):
 // no new visual language for the domain badge. 030 took queued (协作),
@@ -495,6 +510,8 @@ function parsePage(payload: unknown): ProjectAuditEventsPageDto {
 
 export function AuditPanel({ projectId }: { projectId: string }) {
   const [events, setEvents] = useState<AuditEventListItemDto[]>([]);
+  const [activeDomain, setActiveDomain] =
+    useState<AuditEventDomainFilter>("all");
   const [freshness, setFreshness] = useState<AuditProjectionFreshness | null>(null);
   const [nextBeforeSeq, setNextBeforeSeq] = useState<number | null>(null);
   const [isLoading, setIsLoading] = useState(true);
@@ -504,6 +521,10 @@ export function AuditPanel({ projectId }: { projectId: string }) {
   const [locateMessage, setLocateMessage] = useState<string | null>(null);
   const [reloadKey, setReloadKey] = useState(0);
   const epochRef = useRef(0);
+
+  useEffect(() => {
+    setActiveDomain("all");
+  }, [projectId]);
 
   useEffect(() => {
     const epoch = ++epochRef.current;
@@ -588,6 +609,10 @@ export function AuditPanel({ projectId }: { projectId: string }) {
     );
   }
 
+  const visibleEvents = activeDomain === "all"
+    ? events
+    : events.filter((event) => eventDomain(event) === activeDomain);
+
   return (
     <section
       aria-labelledby={`audit-title-${projectId}`}
@@ -623,83 +648,108 @@ export function AuditPanel({ projectId }: { projectId: string }) {
         <p className="state-message">尚无审计事件。</p>
       ) : (
         <>
-          <ol
-            aria-busy={isLoadingMore || undefined}
-            aria-label="审计事件"
-            className="stack audit-event-list"
+          <div
+            aria-label="按域筛选审计事件"
+            className="audit-domain-filters"
+            role="group"
           >
-            {events.map((event) => {
-              const domain = eventDomain(event);
-              const executionId = event.executionId;
-              const excerpt = domain === "mission"
-                ? missionWorkExcerpt(event)
-                : domain === "project"
-                  ? projectWorkspaceSummary(event)
-                  : domain === "governance"
-                    ? governanceSummary(event)
-                    : domain === "runtime"
-                      ? runtimeSummary(event)
-                      : messageExcerpt(event);
-              const sourceHref = domain === "collaboration"
-                ? collaborationSourceHref(projectId, event.payload)
-                : null;
-              const missionSource = domain === "mission"
-                ? missionWorkSourceHref(projectId, event.payload)
-                : null;
-              const projectSource = domain === "project"
-                ? projectSourceHref(projectId)
-                : null;
-              const governanceSource = domain === "governance"
-                ? governanceSourceHref(projectId, event.payload)
-                : null;
-              const runtimeSource = domain === "runtime"
-                ? runtimeSourceHref(projectId, event.payload)
-                : null;
-              const domainVariant = DOMAIN_VARIANT[domain];
-              return (
-                <li className="task-summary stack" key={event.id}>
-                  <h3>{auditEventTypeCopy(event.eventType)}</h3>
-                  <p>
-                    <span
-                      className={domainVariant
-                        ? `status-label ${domainVariant}`
-                        : "status-label"}
-                    >
-                      {DOMAIN_COPY[domain]}
-                    </span>
-                    {" "}
-                    {actorCopy(event.actorType)}
-                    {" · "}
-                    <time dateTime={event.occurredAt}>{event.occurredAt}</time>
-                  </p>
-                  {excerpt ? (
-                    <p className="audit-event-excerpt">{excerpt}</p>
-                  ) : null}
-                  {domain === "execution" && executionId ? (
-                    <button
-                      onClick={() => locateExecution(executionId)}
-                      type="button"
-                    >
-                      定位来源执行
-                    </button>
-                  ) : null}
-                  {sourceHref ? <a href={sourceHref}>定位来源线程</a> : null}
-                  {missionSource
-                    ? <a href={missionSource.href}>{missionSource.label}</a>
-                    : null}
-                  {projectSource
-                    ? <a href={projectSource}>定位来源项目</a>
-                    : null}
-                  {governanceSource
-                    ? <a href={governanceSource}>定位来源审批</a>
-                    : null}
-                  {runtimeSource
-                    ? <a href={runtimeSource}>定位来源运行时</a>
-                    : null}
-                </li>
-              );
-            })}
-          </ol>
+            {DOMAIN_FILTERS.map((filter) => (
+              <button
+                aria-pressed={activeDomain === filter.value}
+                className={
+                  activeDomain === filter.value
+                    ? "status-label audit-domain-filter active"
+                    : "status-label audit-domain-filter"
+                }
+                key={filter.value}
+                onClick={() => setActiveDomain(filter.value)}
+                type="button"
+              >
+                {filter.label}
+              </button>
+            ))}
+          </div>
+          {visibleEvents.length === 0 ? (
+            <p className="state-message">该筛选下尚无审计事件。</p>
+          ) : (
+            <ol
+              aria-busy={isLoadingMore || undefined}
+              aria-label="审计事件"
+              className="stack audit-event-list"
+            >
+              {visibleEvents.map((event) => {
+                const domain = eventDomain(event);
+                const executionId = event.executionId;
+                const excerpt = domain === "mission"
+                  ? missionWorkExcerpt(event)
+                  : domain === "project"
+                    ? projectWorkspaceSummary(event)
+                    : domain === "governance"
+                      ? governanceSummary(event)
+                      : domain === "runtime"
+                        ? runtimeSummary(event)
+                        : messageExcerpt(event);
+                const sourceHref = domain === "collaboration"
+                  ? collaborationSourceHref(projectId, event.payload)
+                  : null;
+                const missionSource = domain === "mission"
+                  ? missionWorkSourceHref(projectId, event.payload)
+                  : null;
+                const projectSource = domain === "project"
+                  ? projectSourceHref(projectId)
+                  : null;
+                const governanceSource = domain === "governance"
+                  ? governanceSourceHref(projectId, event.payload)
+                  : null;
+                const runtimeSource = domain === "runtime"
+                  ? runtimeSourceHref(projectId, event.payload)
+                  : null;
+                const domainVariant = DOMAIN_VARIANT[domain];
+                return (
+                  <li className="task-summary stack" key={event.id}>
+                    <h3>{auditEventTypeCopy(event.eventType)}</h3>
+                    <p>
+                      <span
+                        className={domainVariant
+                          ? `status-label ${domainVariant}`
+                          : "status-label"}
+                      >
+                        {DOMAIN_COPY[domain]}
+                      </span>
+                      {" "}
+                      {actorCopy(event.actorType)}
+                      {" · "}
+                      <time dateTime={event.occurredAt}>{event.occurredAt}</time>
+                    </p>
+                    {excerpt ? (
+                      <p className="audit-event-excerpt">{excerpt}</p>
+                    ) : null}
+                    {domain === "execution" && executionId ? (
+                      <button
+                        onClick={() => locateExecution(executionId)}
+                        type="button"
+                      >
+                        定位来源执行
+                      </button>
+                    ) : null}
+                    {sourceHref ? <a href={sourceHref}>定位来源线程</a> : null}
+                    {missionSource
+                      ? <a href={missionSource.href}>{missionSource.label}</a>
+                      : null}
+                    {projectSource
+                      ? <a href={projectSource}>定位来源项目</a>
+                      : null}
+                    {governanceSource
+                      ? <a href={governanceSource}>定位来源审批</a>
+                      : null}
+                    {runtimeSource
+                      ? <a href={runtimeSource}>定位来源运行时</a>
+                      : null}
+                  </li>
+                );
+              })}
+            </ol>
+          )}
           {loadMoreError ? (
             <p className="error-text" role="alert">
               {loadMoreError}

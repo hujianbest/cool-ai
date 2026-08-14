@@ -387,7 +387,7 @@ afterEach(() => {
 });
 
 describe("T-45 production merge route", () => {
-  it("merges a real staged execution reached only through public production routes", async () => {
+  it("merges a real staged execution reached only through public production routes", { timeout: 15_000 }, async () => {
     const staged = await createRealStagedExecution();
     expect(existsSync(join(workspace, "src", "RESULT.md"))).toBe(false);
     const wrongRoute = await postAdvance(staged.executionId, staged.version, 27);

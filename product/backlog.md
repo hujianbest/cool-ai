@@ -77,7 +77,7 @@ Capability ID 是稳定治理标识；owner 是唯一逻辑子系统，不等于
 - `CAP-RUN-06` Voice Adapter — owner: Runtime — 状态: 规划中 — 建立切片: S-50
 - `CAP-RUN-07` Public Runtime Events — owner: Runtime — 状态: 已交付核心 — 证据/建立切片: S-23 AUD-RUN（分配实现片号 S-57）[`progress.md`](../features/041-runtime-audit-events/progress.md)（`callOpenAiChat` 成败同事务脱敏 outbox、审计中心可查询并按 surface 规范导航，复用已交付 `CAP-OPS-01/02`）
 - `CAP-OPS-01` Projection Consumer Foundation — owner: Operations Projection — 状态: 已交付核心（outbox/checkpoint/rebuild/freshness 基座）— 证据/建立切片: S-23 AUD-MVP [`progress.md`](../features/028-audit-projection-mvp/progress.md)；只消费 source owner 已提交事件，不拥有 producer
-- `CAP-OPS-02` Audit / Search / Timeline Projection — owner: Operations Projection — 状态: 部分可用（Safe Execution 审计最薄只读查询/展示、项目隔离线程搜索索引与消息定位已交付；时间轴未建）— 证据/建立切片: S-23 AUD-MVP [`progress.md`](../features/028-audit-projection-mvp/progress.md)、S-17 [`progress.md`](../features/031-thread-search/progress.md)；后续各 source-owner 纵切复用并扩充可查询事件，最终统一审计浏览器只组合已交付查询；S-39 在其用户结果内扩展
+- `CAP-OPS-02` Audit / Search / Timeline Projection — owner: Operations Projection — 状态: 部分可用（Safe Execution 审计最薄只读查询/展示、项目隔离线程搜索索引与消息定位、统一审计按域筛选已交付；时间轴未建）— 证据/建立切片: S-23 AUD-MVP [`progress.md`](../features/028-audit-projection-mvp/progress.md)、S-17 [`progress.md`](../features/031-thread-search/progress.md)、S-58 AUD-UI [`progress.md`](../features/042-audit-browser-filters/progress.md)；后续各 source-owner 纵切复用并扩充可查询事件，最终统一审计浏览器只组合已交付查询；S-39 在其用户结果内扩展时间轴
 - `CAP-OPS-03` Health / Usage / Contribution Insight — owner: Operations Projection — 状态: 规划中 — 建立切片: S-29、S-35～S-37
 - `CAP-OPS-04` Redacted Export & Delivery Replay — owner: Operations Projection — 状态: 规划中 — 建立切片: S-38、S-40
 
@@ -94,6 +94,9 @@ S-9～S-12 的 `依赖: S-*` 是原历史文字，只说明当时切片记录；
 - [x] S-56 未选项目时单 Agent 聊天 — 主子系统: Project & Workspace；主 Capability: `CAP-PWS-01`；票据: [`features/040-home-direct-chat/tickets.md`](../features/040-home-direct-chat/tickets.md)；Ship: 2026-08-15；演示判据: owner 打开 `/` 未选文件夹项目时中栏是与一名 Agent 的聊天窗（有 Agent 则可发送；无 Agent 则引导配置）；不能在此态开展多 Agent 群聊或使命看板；打开文件夹项目后既有群聊不回归
   - 排期: 2026-08-14 对照 pi-agent 等 WebUI；2026-08-15 与 S-55 一并验证（A-285）。
   - 准入: 已交付前置: `CAP-PWS-01`、`CAP-COL-01`、`CAP-IDC-01`；本片建立: 个人对话容器 1 成员与 home 聊天列（已交付）。
+- [x] S-58 统一审计浏览器按域筛选（S-23 AUD-UI） — 主子系统: 不适用；主领域 Capability: 不适用（只改变入站 UI Adapter，不新增领域事实）；主要架构单元: 入站 UI Adapter；消费 Capability: `CAP-EXE-05`、`CAP-PWS-03`、`CAP-COL-07`、`CAP-MWK-05`、`CAP-GOV-03`、`CAP-RUN-07`、`CAP-OPS-01`、`CAP-OPS-02`；票据: [`features/042-audit-browser-filters/architecture.md`](../features/042-audit-browser-filters/architecture.md)；Ship: 2026-08-15（客户端按域筛选，`smoke:execution` Runtime 23 断言 / axe 2 态 0 serious/critical）；演示判据: owner 能按执行/协作/任务/项目/治理/运行时筛选已交付审计来源并跳回精确来源；约束: 工作区=项目隔离，verified-handle=不适用，sandbox=只读，凭据=强制脱敏，审批=不适用，独立复核=交付必需（轻量级纯 UI，hf-code-review 豁免记录于 progress），审计=不新增写事实；不复制 Clowder 品牌、源码或资产
+  - 排期: 2026-08-15 作为 S-23 最终组合纵切自动交付。
+  - 准入: 已交付前置: 各 source event Capability 与 `CAP-OPS-01/02`；本片建立: 统一审计按域筛选（已交付）。
 - [x] S-4 在群聊发起使命并观察自主编排 — 主子系统: Public Collaboration；主 Capability: `CAP-COL-01`；票据: 未建立（[feature 状态](../features/004-collaboration-orchestration/progress.md)，目录无 `tickets.md`）；演示判据: owner 在项目群聊提交真实目标后，至少两个 Agent 通过真实模型调用拆分带依赖的子任务、领取任务并结构化交棒；owner 可发言、@Agent、回答决策请求，并看到当前持棒者、用量和完整时间线
 - [x] S-5 并行且安全地执行项目工作 — 主子系统: Safe Execution；主 Capability: `CAP-EXE-01`；票据: 未建立（[feature 状态](../features/005-safe-parallel-execution/progress.md)，目录无 `tickets.md`）；演示判据: 两名 Agent 能并行处理独立子任务，在绑定工作区产出隔离变更并按需运行验证；平台阻止重复接力、失效结果、预算越限和未合并冲突，越界或高风险动作只有 owner 批准后才能继续
 - [x] S-6 同伴复核、沉淀记忆并交付结果 — 主子系统: Review & Delivery；主 Capability: `CAP-REV-01`；票据: 未建立（[feature 状态](../features/006-peer-review-memory-delivery/progress.md)，目录无 `tickets.md`）；演示判据: 非执行者 Agent 能复核各子任务并决定退回、升级或通过；通过后关键决策、事实、产物和经验进入共享记忆，owner 获得最终摘要与证据，应用重启后仍可追溯完整历史
@@ -110,7 +113,7 @@ S-9～S-12 的 `依赖: S-*` 是原历史文字，只说明当时切片记录；
 
 ## 当前在途
 
-（无；041/S-57 AUD-RUN 已于 2026-08-15 ship。S-23 仍待最终 AUD-UI。）
+（无；042/S-58 AUD-UI 已于 2026-08-15 ship，S-23 子片全部交付。）
 
 ## 主题簇一：公开协作
 
@@ -133,9 +136,9 @@ S-9～S-12 的 `依赖: S-*` 是原历史文字，只说明当时切片记录；
 
 - [x] S-22 绑定工作区只读浏览与预览（CI-3.2） — 主子系统: Project & Workspace；主 Capability: `CAP-PWS-02`；票据: [`features/027.../tickets.md`](../features/027-workspace-readonly-browser/tickets.md)；Ship: 2026-08-10（verified-handle 全程浏览/预览、越界与链接逃逸 fail-closed、512KiB 截断、四格式图片 dataUrl、敏感文件 mask-first 零内容探测、canary 泄漏扫描 0；smoke:context 71 断言 / 4 axe 状态 0 违规；全量 250 文件/2167 用例 116.6s）；演示判据: owner 能浏览已绑定根目录并只读预览文本、代码和支持的资产，越界、二进制和大文件得到明确拒绝或降级（diff 预览移交 S-42，多根管理随多绑定义务另行立项）；约束: 工作区=严格限定绑定范围，verified-handle=所有路径访问必需，sandbox=预览解析隔离，凭据=敏感文件默认遮蔽，审批=不适用，独立复核=交付必需（review 豁免记录于 progress），审计=读取来源可追溯；不复制 Clowder 品牌、源码或资产
   - 准入: 已交付前置: `CAP-PWS-01`、`CAP-EXE-01`（已交付核心，含 Windows verified-handle 证据）；本片建立: `CAP-PWS-02` 的多绑定根只读浏览、预览与敏感文件降级（规划中）。
-- [ ] S-23 脱敏统一审计浏览器（CI-3.8） — 主子系统: 不适用；主领域 Capability: 不适用（保留的产品追踪别名/发布结果，跨多个 source owner，本身不得进入 implement）；主要架构单元: 发布结果；消费 Capability: `CAP-EXE-05`、`CAP-PWS-03`、`CAP-COL-07`、`CAP-MWK-05`、`CAP-GOV-03`、`CAP-RUN-07`、`CAP-OPS-01`、`CAP-OPS-02`；票据: 未创建；演示判据: owner 能按项目、线程、任务和会话筛选公开事件并跳回精确来源，凭据、隐藏思维链和原始 provider 响应始终不可见；约束: 工作区=项目隔离，verified-handle=文件来源跳转必需，sandbox=执行事件只读，凭据=强制脱敏，审批=不适用，独立复核=交付必需，审计=来源、保留期和导出边界明确；不复制 Clowder 品牌、源码或资产
+- [x] S-23 脱敏统一审计浏览器（CI-3.8） — 主子系统: 不适用；主领域 Capability: 不适用（保留的产品追踪别名/发布结果，跨多个 source owner，本身不得进入 implement）；主要架构单元: 发布结果；消费 Capability: `CAP-EXE-05`、`CAP-PWS-03`、`CAP-COL-07`、`CAP-MWK-05`、`CAP-GOV-03`、`CAP-RUN-07`、`CAP-OPS-01`、`CAP-OPS-02`；票据: 未创建；Ship: 2026-08-15（子片 AUD-MVP/PWS/COL/MWK/GOV/RUN/UI 全部 ship 后汇总勾选；AUD-UI 实现片号 S-58）；演示判据: owner 能按已交付来源域筛选公开事件并跳回精确来源，凭据、隐藏思维链和原始 provider 响应始终不可见；约束: 工作区=项目隔离，verified-handle=文件来源跳转必需，sandbox=执行事件只读，凭据=强制脱敏，审批=不适用，独立复核=交付必需，审计=来源、保留期和导出边界明确；不复制 Clowder 品牌、源码或资产
   - 准入: 已交付前置: `CAP-EXE-01`、`CAP-PWS-01`、`CAP-COL-01`、`CAP-MWK-01`（仅证明源事实存在，不证明公开 producer 已存在）；阻塞: 以下实现片尚未建立和 gate；本片建立: 不适用，S-23 只在子片全部 ship 后汇总发布验收。
-  - 已交付子片: 2026-08-15 AUD-GOV / S-53 已 ship，建立 `CAP-GOV-03`；AUD-RUN / S-57 已 ship，建立 `CAP-RUN-07`（Runtime HTTP session 成败脱敏入列 + 审计查询/规范定位），证据见 [`041 progress`](../features/041-runtime-audit-events/progress.md)。S-23 仍待最终 AUD-UI，保持未勾选。
+  - 已交付子片: AUD-MVP、AUD-PWS/S-52、AUD-COL、AUD-MWK/S-51、AUD-GOV/S-53、AUD-RUN/S-57、AUD-UI/S-58 均已 ship。2026-08-15 AUD-UI [`042 progress`](../features/042-audit-browser-filters/progress.md) 交付统一审计按域筛选（全部/执行/协作/任务/项目/治理/运行时），客户端过滤已加载页，不改 API。S-23 作为发布别名汇总勾选。时间轴仍由 S-39 建立。
   - 纵切 MVP `AUD-MVP`：分类为领域纵切；actor 是 owner；独立用户结果是“owner 能在最薄只读展示中查询脱敏 Safe Execution 事件并跳到精确 execution 来源”。主子系统: Operations Projection；主 Capability: `CAP-OPS-02`；协作子系统/Capability: Safe Execution / `CAP-EXE-05`，producer 随既有 Safe Execution 命令事务原子提交 event envelope；同片建立其基础依赖 `CAP-OPS-01`，由它独立幂等消费已提交事件并维护 checkpoint/rebuild/freshness；入站 Adapter 直接通过 Operations Projection Query 查询 `CAP-OPS-02`，展示 freshness 与精确来源，只读路径不发起命令、不驱动消费。该片只涉及两个子系统，未达到跨 3 子系统拆分阈值，且全部工作服务同一个查询/导航用户结果；禁止先 ship 不可观察 producer；票据目标: 3–8。
   - source-owner 扩展纵切：Project & Workspace、Public Collaboration、Mission & Work、Governance、Runtime 分别建立独立 `AUD-PWS`、`AUD-COL`、`AUD-MWK`、`AUD-GOV`、`AUD-RUN` 草案。每片 actor 均为 owner，主要架构单元是对应 source owner 的领域 Capability，分别建立 `CAP-PWS-03`、`CAP-COL-07`、`CAP-MWK-05`、`CAP-GOV-03`、`CAP-RUN-07`；每片必须复用已 ship 的 `CAP-OPS-01/02`，以“owner 能查询该领域脱敏事件并精确导航”为独立可演示结果，各 3–8 票，禁止交付不可观察 producer 或合并多个 source owner。
   - 最终组合纵切 `AUD-UI`：actor 是 owner；独立用户结果是“owner 能在统一审计浏览器筛选所有已交付来源并精确导航”。主领域 Capability: 不适用（不新增领域写事实）；主要架构单元: 入站 UI Adapter；消费 Capability: 已 ship 的 `CAP-EXE-05`、各 source event Capability、`CAP-OPS-01/02`；只做查询组合、状态与导航，各 producer 缺失时不进入该发布片；票据目标: 3–8。
