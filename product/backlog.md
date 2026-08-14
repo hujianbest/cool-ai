@@ -73,7 +73,7 @@ Capability ID 是稳定治理标识；owner 是唯一逻辑子系统，不等于
 - `CAP-RUN-02` External Runtime Host — owner: Runtime — 状态: 规划中 — 建立切片: S-45、S-46
 - `CAP-RUN-03` MCP Host — owner: Runtime — 状态: 规划中 — 建立切片: S-47
 - `CAP-RUN-04` Extension Lifecycle & Catalog — owner: Runtime — 状态: 规划中 — 建立切片: S-48、S-49
-- `CAP-RUN-05` Browser Notification — owner: Runtime — 状态: 规划中 — 建立切片: S-41
+- `CAP-RUN-05` Browser Notification — owner: Runtime — 状态: 已交付核心（本机 Notification、按类型授权、去重、拒绝降级、可安装 manifest；无 Web Push）— 证据/建立切片: S-41 [`progress.md`](../features/048-browser-notifications/progress.md)
 - `CAP-RUN-06` Voice Adapter — owner: Runtime — 状态: 规划中 — 建立切片: S-50
 - `CAP-RUN-07` Public Runtime Events — owner: Runtime — 状态: 已交付核心 — 证据/建立切片: S-23 AUD-RUN（分配实现片号 S-57）[`progress.md`](../features/041-runtime-audit-events/progress.md)（`callOpenAiChat` 成败同事务脱敏 outbox、审计中心可查询并按 surface 规范导航，复用已交付 `CAP-OPS-01/02`）
 - `CAP-OPS-01` Projection Consumer Foundation — owner: Operations Projection — 状态: 已交付核心（outbox/checkpoint/rebuild/freshness 基座）— 证据/建立切片: S-23 AUD-MVP [`progress.md`](../features/028-audit-projection-mvp/progress.md)；只消费 source owner 已提交事件，不拥有 producer
@@ -113,7 +113,7 @@ S-9～S-12 的 `依赖: S-*` 是原历史文字，只说明当时切片记录；
 
 ## 当前在途
 
-（无；047/S-39 运行轨迹时间轴已于 2026-08-15 ship。）
+（无；048/S-41 浏览器通知已于 2026-08-15 ship。）
 
 ## 主题簇一：公开协作
 
@@ -208,10 +208,10 @@ S-9～S-12 的 `依赖: S-*` 是原历史文字，只说明当时切片记录；
 
 主子系统为 Runtime 或 Public Collaboration；通知和媒体 Adapter 不获得业务写权，也不替代 owner Approval。
 
-- [ ] S-41 最小权限浏览器通知与 PWA（CI-7.1） — 主子系统: Runtime；主 Capability: `CAP-RUN-05`；票据: 未创建；演示判据: owner 能按事件类型授权浏览器通知、收到去重提醒并从通知返回对应审批/任务，拒绝权限或离线时有清晰降级且不会无人值守执行动作；约束: 工作区=通知不泄漏项目正文，verified-handle=不适用，sandbox=不适用，凭据=订阅密钥受保护，审批=通知不能代替审批，独立复核=交付必需，审计=订阅与发送结果可追溯；不复制 Clowder 品牌、源码或资产
-  - 准入: 已交付前置: `CAP-COL-01`（已交付）；阻塞: `CAP-OPS-01`（S-23 拆分片）与 `CAP-GOV-02` 的跨域 Approval 来源（S-24）规划中；本片建立: `CAP-RUN-05` 的最小内容通知 Adapter、去重、权限拒绝和离线降级（规划中）。
+- [x] S-41 最小权限浏览器通知与 PWA（CI-7.1） — 主子系统: Runtime；主 Capability: `CAP-RUN-05`；票据: [`features/048-browser-notifications/tickets.md`](../features/048-browser-notifications/tickets.md)；Ship: 2026-08-15（本机 Notification、无 Web Push；`smoke:settings` 18 steps；hf-code-review PASS）；演示判据: owner 能按事件类型授权浏览器通知、收到去重提醒并从通知返回对应审批/任务，拒绝权限或离线时有清晰降级且不会无人值守执行动作；约束: 工作区=通知不泄漏项目正文，verified-handle=不适用，sandbox=不适用，凭据=无订阅密钥（A-334），审批=通知不能代替审批，独立复核=交付必需，审计=不写 outbox（A-339）；不复制 Clowder 品牌、源码或资产
+  - 准入: 已交付前置: `CAP-COL-01`、`CAP-OPS-01`、`CAP-GOV-02`；本片建立: `CAP-RUN-05` 的最小内容通知 Adapter、去重、权限拒绝和离线降级（已交付）。
 - [ ] S-50 隐私安全的语音输入、输出与伴随模式（CI-6.7）【高风险安全切片】 — 主子系统: Runtime；主 Capability: `CAP-RUN-06`；票据: 未创建；演示判据: owner 能显式启用语音输入/输出、查看录音与第三方处理边界、停止播放并删除本地音频；默认关闭、权限拒绝和服务失败均安静降级；约束: 工作区=语音只进入当前项目线程，verified-handle=本地音频文件必需，sandbox=音频解析隔离，凭据=TTS/STT 密钥受保护，审批=首次上传/第三方处理必需，独立复核=隐私与可访问性必需，审计=同意、上传和删除结果可追溯；不复制 Clowder 品牌、源码、声音或资产
-  - 准入: 已交付前置: `CAP-RUN-01`、`CAP-COL-01`、`CAP-EXE-01`（已交付）；阻塞: `CAP-GOV-02` 的第三方处理同意（S-24）、规则检查（S-34）、健康投影（S-35）、`CAP-RUN-05`（S-41）规划中；本片建立: `CAP-RUN-06` 的受控音频 Adapter、显式同意、删除和安静降级（规划中）。
+  - 准入: 已交付前置: `CAP-RUN-01`、`CAP-COL-01`、`CAP-EXE-01`、`CAP-RUN-05`（S-41）；阻塞: `CAP-GOV-02` 的第三方处理同意、规则检查（S-34）、健康投影（S-35）规划中；本片建立: `CAP-RUN-06` 的受控音频 Adapter、显式同意、删除和安静降级（规划中）。
 
 ## 主题簇八：外部运行时与扩展生态
 

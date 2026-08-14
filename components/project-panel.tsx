@@ -12,6 +12,7 @@ import { usePathname, useRouter } from "next/navigation";
 
 import { useModalSurface, useNarrowMode } from "@/components/mobile-dialog";
 import { ActivityBar } from "@/components/activity-bar";
+import { ProjectNotificationPoller } from "@/components/notifications/project-notification-poller";
 import { ProjectThreadNavigation } from "@/components/project-thread-navigation";
 import {
   parseReturnTo,
@@ -425,6 +426,7 @@ export function ProjectPanel({
       ref={cockpitRef}
     >
       <h1 className="sr-only">协作工作台</h1>
+      <ProjectNotificationPoller projectId={currentProjectId} />
       <ActivityBar activePath={pathname ?? "/"} returnTo={settingsReturnTo} />
       <header className="mobile-toolbar">
         <div

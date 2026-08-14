@@ -207,6 +207,22 @@ try {
   await page.goto(`${baseUrl}/team`, { waitUntil: "networkidle" });
   assert.equal(await page.locator("html").getAttribute("lang"), "zh-CN");
 
+  const notificationRegion = page.getByRole("region", { name: "通知" });
+  await notificationRegion.waitFor();
+  const approvalSwitch = notificationRegion.getByRole("switch", { name: "审批通知" });
+  const missionSwitch = notificationRegion.getByRole("switch", { name: "任务通知" });
+  assert.equal(await approvalSwitch.getAttribute("aria-checked"), "false");
+  assert.equal(await missionSwitch.getAttribute("aria-checked"), "false");
+  await approvalSwitch.click();
+  assert.equal(await approvalSwitch.getAttribute("aria-checked"), "true");
+  await notificationRegion
+    .getByText("浏览器未授权系统通知，驾驶舱不会弹出提醒。")
+    .waitFor();
+  assert.equal(
+    await page.locator('link[rel="manifest"]').getAttribute("href"),
+    "/manifest.webmanifest",
+  );
+
   await page.getByRole("tab", { name: "模型服务" }).click();
   await page.getByText("暂无模型服务。", { exact: true }).waitFor();
 

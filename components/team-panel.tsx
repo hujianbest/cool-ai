@@ -26,6 +26,7 @@ import {
   unpinSettingsSection,
   useSettingsPreferences,
 } from "@/components/settings-preferences-store";
+import { NotificationSettingsRegion } from "@/components/notifications/notification-settings-region";
 import { SkillPanel } from "@/components/skill-panel";
 
 const resources: SettingsSectionId[] = ["skills", "providers", "agents"];
@@ -310,6 +311,7 @@ export function TeamPanel({
             <p className="muted">固定分区后，变更记录会显示在这里。</p>
           )}
         </section>
+        <NotificationSettingsRegion />
         <div
           aria-label="团队资源"
           className="resource-tabs"

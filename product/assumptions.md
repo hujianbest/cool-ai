@@ -343,3 +343,10 @@ agent 替用户做的默认选择。遇到欠定点的标准动作: 提出带默
 - A-331 2026-08-15 [生效] 047 浏览器验收落在 `smoke:execution` 既有审计段。默认理由: 该 runner 已有真实审计行；避免再开 Agent 执行。
 - A-332 2026-08-15 [生效] S-39 原 backlog 阻塞（source producer、OPS-01、MWK-02）已交付。默认理由: 以 Capability 现状为准。
 - A-333 2026-08-15 [生效] 047 时间轴 GET 仅首页 + limit（默认 50、最大 100），不实现 beforeSeq 正序游标。默认理由: 去重后按 outbox_seq 分页易错；本片验收只需一页正序轨迹，避免发明损坏分页。
+- A-334 2026-08-15 [生效] 048/S-41 只用当前 Origin 的 Notification API，不接 Web Push、不保存订阅密钥。默认理由: 本地优先单 owner，避免第三推送方与密钥面。
+- A-335 2026-08-15 [生效] 通知开关存 localStorage，不进 SQLite。默认理由: 与设置固定入口同类本机非领域偏好。
+- A-336 2026-08-15 [生效] 仅 `document.visibilityState==='visible'` 时轮询审计，间隔 ≥15s。默认理由: 不在后台打满 API，也不做无人值守动作。
+- A-337 2026-08-15 [生效] PWA 只提供可安装 manifest，不 cache 业务 API/数据库。默认理由: 离线缓存会把项目事实带出当前会话边界。
+- A-338 2026-08-15 [生效] 048 浏览器验收 stub Notification，不新开 Agent 执行。默认理由: 时长护栏。
+- A-339 2026-08-15 [生效] 048 不写 audit outbox。默认理由: Runtime 通知 Adapter 不是事件 producer。
+- A-340 2026-08-15 [生效] 通知开关放在 `/team` 设置页独立 region「通知」，不新增 SETTINGS_SECTIONS id。默认理由: 避免 pinned-settings 契约与大量机械迁移；本片用户结果是授权与提醒，不是新设置分区检索。

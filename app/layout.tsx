@@ -14,6 +14,8 @@ export default function RootLayout({ children }: Readonly<{ children: ReactNode 
       <head>
         <script src="/theme-prepaint.js" />
         <title>Cool AI 协作驾驶舱</title>
+        <link href="/manifest.webmanifest" rel="manifest" />
+        <meta content="#7B3F31" name="theme-color" />
       </head>
       <body>{children}</body>
     </html>

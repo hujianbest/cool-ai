@@ -164,6 +164,7 @@ Cool AI 保持一个本地优先、单进程、单 SQLite 的**领域模块化�
 拥有：
 
 - 受控 Runtime/Adapter 实例、会话、能力协商、版本、健康握手和生命周期。
+- 本机浏览器通知偏好与展示（不替代 Approval，不持有业务写权）。
 - Provider 调用、CLI/ACP 会话、MCP transport/tool 调用等外部交互的脱敏请求元数据与确定结果引用。
 - 基于冻结配置权限、项目范围、风险政策与 Approval 来源版本计算或缓存的 effective grant 运行时投影及其撤销/失效状态；该投影不是授权事实源。
 

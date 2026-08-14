@@ -1,0 +1,16 @@
+{
+  "name": "Cool AI 协作驾驶舱",
+  "short_name": "Cool AI",
+  "start_url": "/",
+  "display": "standalone",
+  "background_color": "#F4EFE5",
+  "theme_color": "#7B3F31",
+  "icons": [
+    {
+      "src": "/cool-ai-mark.svg",
+      "sizes": "any",
+      "type": "image/svg+xml",
+      "purpose": "any"
+    }
+  ]
+}

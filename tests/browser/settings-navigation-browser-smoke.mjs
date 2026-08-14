@@ -208,8 +208,28 @@ try {
     && url.searchParams.get("section") === "skills"
     && url.searchParams.get("returnTo") === projectPath);
   await page.getByRole("search").waitFor();
+  const notificationRegion = page.getByRole("region", { name: "通知" });
+  await notificationRegion.waitFor();
+  const approvalSwitch = notificationRegion.getByRole("switch", {
+    name: "审批通知",
+  });
+  const missionSwitch = notificationRegion.getByRole("switch", {
+    name: "任务通知",
+  });
+  assert.equal(await approvalSwitch.getAttribute("aria-checked"), "false");
+  assert.equal(await missionSwitch.getAttribute("aria-checked"), "false");
+  await approvalSwitch.click();
+  assert.equal(await approvalSwitch.getAttribute("aria-checked"), "true");
+  await notificationRegion
+    .getByText("浏览器未授权系统通知，驾驶舱不会弹出提醒。")
+    .waitFor();
+  assert.equal(
+    await page.locator('link[rel="manifest"]').getAttribute("href"),
+    "/manifest.webmanifest",
+  );
   await assertAxeCriticalFree(page, "desktop settings default");
   recordStep("entered-settings-from-project-activity-bar");
+  recordStep("notification-region-toggle-and-manifest");
 
   await assertSearchOpens(page, "  模型  ", "打开模型服务设置", "providers");
   await page.getByRole("heading", { exact: true, name: "模型服务" }).waitFor();

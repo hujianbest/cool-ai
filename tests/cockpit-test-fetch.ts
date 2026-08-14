@@ -313,6 +313,15 @@ export function cockpitFetch(responses: QueuedResponse[]) {
     if (/\/api\/projects\/[^/]+\/executions$/.test(url)) {
       return Promise.resolve(Response.json({ executions: [] }));
     }
+    if (/\/api\/projects\/[^/]+\/audit-events(?:\?|$)/.test(url)) {
+      return Promise.resolve(
+        Response.json({
+          events: [],
+          freshness: { lag: 0, status: "caught_up" },
+          nextBeforeSeq: null,
+        }),
+      );
+    }
     const response = responses[index++];
     if (!response) {
       return Promise.reject(new Error(`Unexpected cockpit test request: ${url}`));

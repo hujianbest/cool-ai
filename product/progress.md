@@ -34,3 +34,5 @@
 - 2026-08-15 046/S-33 可解释 Agent 能力画像与路由建议完成 implement 与 ship：只读 GET + 看板画像/建议；`smoke:context` 4 断言；全量 293/2693 124.66s；hf-code-review 豁免；`CAP-IDC-03` 画像核心已交付。
 - 2026-08-15 047/S-39 跨任务运行轨迹时间轴进入 implement（轻量级零 schema；A-327～A-332）。
 - 2026-08-15 047/S-39 跨任务运行轨迹时间轴完成 implement 与 ship：GET `/timeline` + 审计面板时间轴；`smoke:execution` 160 断言；全量 295/2722 125.45s；hf-code-review 豁免；`CAP-OPS-02` 时间轴已交付。
+- 2026-08-15 048/S-41 最小权限浏览器通知与 PWA 进入 implement（A-334～A-339）。
+- 2026-08-15 048/S-41 最小权限浏览器通知与 PWA 完成 implement 与 ship：本机 Notification + PWA manifest；hf-code-review 复审 PASS；全量 298/2736 131.14s；`CAP-RUN-05` 已交付核心。
