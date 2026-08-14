@@ -49,9 +49,12 @@ const approvalCenterLapsedScreenshot = join(approvalCenterEvidenceDirectory, "ap
 const approvalCenterLapsedDarkScreenshot = join(approvalCenterEvidenceDirectory, "approval-center-lapsed-desktop-dark.png");
 const approvalCenterNarrowScreenshot = join(approvalCenterEvidenceDirectory, "approval-center-narrow-light.png");
 const approvalCenterResultsPath = join(approvalCenterEvidenceDirectory, "approval-center-acceptance-results.json");
+const governanceAuditEvidenceDirectory = resolve("features", "037-governance-audit-events", "evidence");
+const governanceAuditScreenshot = join(governanceAuditEvidenceDirectory, "governance-audit-desktop-light.png");
 mkdirSync(evidenceDirectory, { recursive: true });
 mkdirSync(auditEvidenceDirectory, { recursive: true });
 mkdirSync(approvalCenterEvidenceDirectory, { recursive: true });
+mkdirSync(governanceAuditEvidenceDirectory, { recursive: true });
 
 const browserExecutable = [
   process.env.PLAYWRIGHT_CHROMIUM_EXECUTABLE,
@@ -891,7 +894,11 @@ async function axeApprovalCenter(state) {
 const AUDIT_EVENT_TYPE_COPY = {
   action_finished: "动作已完成",
   action_queued: "动作已排队",
+  approval_approved: "审批已批准",
+  approval_consumed: "审批已消费",
   approval_decided: "审批已决定",
+  approval_expired: "审批已过期",
+  approval_rejected: "审批已驳回",
   approval_requested: "审批已请求",
   attempt_started: "尝试已开始",
   conflict_detected: "检测到冲突",
@@ -1876,8 +1883,16 @@ process.exit(2);`,
           WHERE consumer_id='audit-event-projection'
         `).get().value),
         maxSeq: Number(scalar(database, "SELECT COALESCE(MAX(outbox_seq),0) AS value FROM audit_event_outbox")),
-        outbox: Number(scalar(database, "SELECT COUNT(*) AS value FROM audit_event_outbox")),
-        projection: Number(scalar(database, "SELECT COUNT(*) AS value FROM audit_event_projection")),
+        outbox: Number(scalar(
+          database,
+          "SELECT COUNT(*) AS value FROM audit_event_outbox WHERE project_id=?",
+          context.projectId,
+        )),
+        projection: Number(scalar(
+          database,
+          "SELECT COUNT(*) AS value FROM audit_event_projection WHERE project_id=?",
+          context.projectId,
+        )),
       };
     } finally {
       database.close();
@@ -1887,6 +1902,181 @@ process.exit(2);`,
   assert.equal(auditDatabaseCounts.projection, auditDatabaseCounts.outbox, "read path must catch up the projection");
   assert.equal(auditDatabaseCounts.checkpoint, auditDatabaseCounts.maxSeq, "checkpoint must be caught up");
   console.log(`AUDIT API PASS: events=${auditEvents.length} freshness=caught_up pages=${auditApi.pages.length}`);
+
+  // ---- GOVERNANCE AUDIT ACCEPTANCE (feature 037 T-03) ----
+  // Landing spot: smoke:execution already creates real requested/approved/
+  // consumed/expired command approvals through the 029 paths above. It never
+  // creates a governance rejection: the only rejected item is an inline
+  // proposal owned by public collaboration. T-01 proves approval_rejected at
+  // the governance outbox seam; this smoke still verifies its presentation if
+  // a rejected governance row is present in a future fixture.
+  const governanceAuditAcceptance = { assertions: 0, axeStates: 0 };
+  const governanceAuditOk = (value, message) => {
+    governanceAuditAcceptance.assertions += 1;
+    assert.ok(value, message);
+  };
+  const governanceAuditEqual = (actual, expected, message) => {
+    governanceAuditAcceptance.assertions += 1;
+    assert.equal(actual, expected, message);
+  };
+  const governanceEventTypes = new Set([
+    "approval_approved",
+    "approval_consumed",
+    "approval_expired",
+    "approval_rejected",
+    "approval_requested",
+  ]);
+  const governanceEvents = auditEvents.filter((event) => (
+    governanceEventTypes.has(event.eventType)
+    && !(event.eventType === "approval_requested"
+      && Object.hasOwn(event.payload, "attemptNo"))
+  ));
+  const requiredSmokeGovernanceTypes = [
+    "approval_approved",
+    "approval_consumed",
+    "approval_expired",
+    "approval_requested",
+  ];
+  governanceAuditEqual(
+    auditApi.pages.at(-1)?.nextBeforeSeq,
+    null,
+    "cursor-complete audit read must end with a null cursor",
+  );
+  for (const eventType of requiredSmokeGovernanceTypes) {
+    governanceAuditOk(
+      governanceEvents.some((event) => event.eventType === eventType),
+      `real approval paths must produce ${eventType}`,
+    );
+  }
+  const rejectedGovernanceEvents = governanceEvents.filter(
+    (event) => event.eventType === "approval_rejected",
+  );
+  if (rejectedGovernanceEvents.length > 0) {
+    governanceAuditOk(
+      rejectedGovernanceEvents.every((event) => event.payload.decision === "rejected"),
+      "any governance rejection must retain the rejected decision excerpt fact",
+    );
+  }
+  const governanceAuditApiText = JSON.stringify(governanceEvents);
+  const governanceForeignAudit = await page.evaluate(async () => {
+    const response = await fetch("/api/projects/foreign-project/audit-events", {
+      cache: "no-store",
+    });
+    return { body: await response.json(), status: response.status };
+  });
+  governanceAuditEqual(
+    governanceForeignAudit.status,
+    404,
+    "foreign project audit read must 404",
+  );
+  governanceAuditOk(
+    !JSON.stringify(governanceForeignAudit.body).includes(temporaryDirectory),
+    "foreign project 404 envelope must not expose host paths",
+  );
+  const crossProjectGovernanceAudit = await page.evaluate(
+    async ({ approvalIds, projectId }) => {
+      const projects = (await (
+        await fetch("/api/projects", { cache: "no-store" })
+      ).json()).projects;
+      const other = projects.find((project) => project.id !== projectId);
+      if (!other) return { checked: false };
+      const response = await fetch(`/api/projects/${other.id}/audit-events`, {
+        cache: "no-store",
+      });
+      const body = await response.json();
+      return {
+        checked: true,
+        containsCurrentApproval: body.events?.some(
+          (event) => approvalIds.includes(event.payload.approvalId),
+        ) ?? false,
+        status: response.status,
+      };
+    },
+    {
+      approvalIds: governanceEvents
+        .map((event) => event.payload.approvalId)
+        .filter((value) => typeof value === "string"),
+      projectId: context.projectId,
+    },
+  );
+  if (crossProjectGovernanceAudit.checked) {
+    governanceAuditEqual(crossProjectGovernanceAudit.status, 200);
+    governanceAuditEqual(
+      crossProjectGovernanceAudit.containsCurrentApproval,
+      false,
+      "another project trail must not contain this project's approval ids",
+    );
+  }
+  const governanceAuditCounts = (() => {
+    const database = new DatabaseSync(databasePath, { readOnly: true });
+    try {
+      const count = (sql, ...params) =>
+        Number(database.prepare(sql).get(...params).value);
+      return {
+        checkpoint: count(
+          "SELECT last_outbox_seq AS value FROM audit_projection_checkpoints"
+            + " WHERE consumer_id='audit-event-projection'",
+        ),
+        governance: count(
+          "SELECT COUNT(*) AS value FROM audit_event_outbox"
+            + " WHERE source='governance' AND project_id=?",
+          context.projectId,
+        ),
+        maxSeq: count(
+          "SELECT COALESCE(MAX(outbox_seq),0) AS value FROM audit_event_outbox",
+        ),
+        outbox: count(
+          "SELECT COUNT(*) AS value FROM audit_event_outbox WHERE project_id=?",
+          context.projectId,
+        ),
+        projection: count(
+          "SELECT COUNT(*) AS value FROM audit_event_projection WHERE project_id=?",
+          context.projectId,
+        ),
+      };
+    } finally {
+      database.close();
+    }
+  })();
+  governanceAuditEqual(
+    governanceAuditCounts.governance,
+    governanceEvents.length,
+    "governance outbox count must match filtered API events",
+  );
+  governanceAuditEqual(
+    governanceAuditCounts.outbox,
+    auditEvents.length,
+    "project outbox count must match the cursor-complete API trail",
+  );
+  governanceAuditEqual(
+    governanceAuditCounts.projection,
+    governanceAuditCounts.outbox,
+    "project projection must catch up every outbox event",
+  );
+  governanceAuditEqual(
+    governanceAuditCounts.checkpoint,
+    governanceAuditCounts.maxSeq,
+    "global projection checkpoint must reach max outbox sequence",
+  );
+  const governanceDisplayEvent = governanceEvents.find((event) => {
+    const { approvalId, executionId, kind, scope } = event.payload;
+    return auditEvents.indexOf(event) < Math.min(auditEvents.length, 50)
+      && event.eventType === "approval_expired"
+      && typeof approvalId === "string"
+      && typeof executionId === "string"
+      && kind === "command"
+      && scope === "execution";
+  });
+  governanceAuditOk(
+    governanceDisplayEvent,
+    "the first audit page must contain a renderable governance row",
+  );
+  const expectedGovernanceHref =
+    `/projects/${encodeURIComponent(context.projectId)}`
+    + `/executions/${encodeURIComponent(governanceDisplayEvent.payload.executionId)}`
+    + `/approvals/${encodeURIComponent(governanceDisplayEvent.payload.approvalId)}`;
+  let governanceAuditFacingText = "";
+  let narrowGovernanceAuditFacingText = "";
 
   const contextPanel = page.locator(".cockpit-context");
   const memoryTab = contextPanel.getByRole("tab", { name: "共享记忆" });
@@ -1929,6 +2119,53 @@ process.exit(2);`,
     auditEvents.length,
     "audit list must render every projected event after cursor paging",
   );
+  const governanceHeading = AUDIT_EVENT_TYPE_COPY[governanceDisplayEvent.eventType];
+  const governanceRow = auditRows
+    .filter({ has: page.locator(`a[href="${expectedGovernanceHref}"]`) })
+    .filter({ has: page.getByRole("heading", { name: governanceHeading }) })
+    .first();
+  await governanceRow.waitFor();
+  const governanceLocate = governanceRow.getByRole("link", {
+    name: "定位来源审批",
+  });
+  governanceAuditOk(
+    await governanceRow.getByText("治理", { exact: true }).evaluate(
+      (node) => node.classList.contains("status-label")
+        && !node.classList.contains("status-failed")
+        && node.classList.length === 1,
+    ),
+    "governance badge must use the bare neutral status-label",
+  );
+  governanceAuditEqual(
+    await governanceRow.locator(".audit-event-excerpt").innerText(),
+    "命令 · 执行",
+    "governance row must render its kind/decision/scope excerpt",
+  );
+  governanceAuditEqual(
+    await governanceLocate.innerText(),
+    "定位来源审批",
+    "governance source link must use the approval label",
+  );
+  governanceAuditEqual(
+    await governanceLocate.getAttribute("href"),
+    expectedGovernanceHref,
+    "governance locate link must use the canonical approval identity route",
+  );
+  const governanceLocateBox = await governanceLocate.boundingBox();
+  governanceAuditOk(
+    governanceLocateBox
+      && governanceLocateBox.height >= 44
+      && governanceLocateBox.width >= 44,
+    "governance locate link must be at least 44x44",
+  );
+  if (rejectedGovernanceEvents.length > 0) {
+    const rejectedIndex = auditEvents.indexOf(rejectedGovernanceEvents[0]);
+    await auditRows.nth(rejectedIndex)
+      .getByRole("heading", { name: "审批已驳回" })
+      .waitFor();
+  }
+  governanceAuditFacingText = await page.locator("html").innerText();
+  await page.screenshot({ fullPage: true, path: governanceAuditScreenshot });
   const firstLocate = auditList.getByRole("button", { name: "定位来源执行" }).first();
   const locateBox = await firstLocate.boundingBox();
   assert.ok(locateBox && locateBox.height >= 44 && locateBox.width >= 44, "locate button must be at least 44x44");
@@ -1941,7 +2178,10 @@ process.exit(2);`,
   const locateTarget = renderedExecutionIds
     .map((executionId) => ({
       executionId,
-      index: auditEvents.findIndex((event) => event.executionId === executionId),
+      index: auditEvents.findIndex((event) => (
+        event.executionId === executionId
+        && Object.hasOwn(event.payload, "attemptNo")
+      )),
     }))
     .find(({ index }) => index >= 0);
   assert.ok(locateTarget, "a rendered execution card must have audit events");
@@ -1954,11 +2194,13 @@ process.exit(2);`,
   );
   await contextPanel.getByText("已定位到来源执行。").waitFor();
   await axeScan("desktop light audit panel");
+  governanceAuditAcceptance.axeStates += 1;
   await page.screenshot({ fullPage: true, path: auditDesktopScreenshot });
   await page.getByRole("button", { name: /切换到暗色主题/ }).click();
   await page.getByRole("button", { name: /切换到明色主题/ }).waitFor();
   await contextPanel.getByText("已追平", { exact: true }).waitFor();
   await axeScan("desktop dark audit panel");
+  governanceAuditAcceptance.axeStates += 1;
   await page.getByRole("button", { name: /切换到明色主题/ }).click();
   await page.getByRole("button", { name: /切换到暗色主题/ }).waitFor();
   console.log("AUDIT DESKTOP PASS: list+freshness+paging+locate+keyboard+44px+light/dark axe");
@@ -2066,6 +2308,23 @@ process.exit(2);`,
   const narrowAuditList = contextDrawer.getByRole("list", { name: "审计事件" });
   await narrowAuditList.waitFor();
   await contextDrawer.getByText("已追平", { exact: true }).waitFor();
+  const narrowGovernanceRow = narrowAuditList.getByRole("listitem")
+    .filter({ has: page.locator(`a[href="${expectedGovernanceHref}"]`) })
+    .filter({ has: page.getByRole("heading", { name: governanceHeading }) })
+    .first();
+  await narrowGovernanceRow.waitFor();
+  const narrowGovernanceLocate = narrowGovernanceRow.getByRole("link", {
+    name: "定位来源审批",
+  });
+  governanceAuditEqual(
+    await narrowGovernanceLocate.getAttribute("href"),
+    expectedGovernanceHref,
+    "narrow governance link must keep the canonical approval route",
+  );
+  governanceAuditOk(
+    await narrowGovernanceLocate.isVisible(),
+    "narrow governance locate link must remain visible",
+  );
   const narrowLocate = narrowAuditList.getByRole("button", { name: "定位来源执行" }).first();
   await narrowLocate.focus();
   const narrowLocateBox = await narrowLocate.boundingBox();
@@ -2085,8 +2344,10 @@ process.exit(2);`,
     .getByText("该执行未显示在运行详情列表中（仅展示最近的执行）。")
     .waitFor();
   await axeScan("narrow audit drawer");
+  governanceAuditAcceptance.axeStates += 1;
   await page.screenshot({ fullPage: true, path: auditNarrowScreenshot });
   narrowAuditFacingText = await page.locator("html").innerText();
+  narrowGovernanceAuditFacingText = narrowAuditFacingText;
   await page.keyboard.press("Escape");
   await contextDrawer.waitFor({ state: "detached" });
   assert.equal(await contextOpener.evaluate((element) => document.activeElement === element), true);
@@ -2106,9 +2367,11 @@ process.exit(2);`,
     }
   })();
   const surfaces = {
-    api: apiBodies.join("\n"),
+    api: `${apiBodies.join("\n")}\n${governanceAuditApiText}`,
     database: databaseText(),
-    dom: `${desktopFacingText}\n${narrowFacingText}\n${narrowAuditFacingText}\n${approvalCenterFacingText}`,
+    dom: `${desktopFacingText}\n${narrowFacingText}\n${narrowAuditFacingText}\n${
+      approvalCenterFacingText
+    }\n${governanceAuditFacingText}\n${narrowGovernanceAuditFacingText}`,
     logs: serverOutput,
     providerBodies: providerBodyText,
     screenshotFacingText: `${desktopFacingText}\n${narrowFacingText}\n${narrowAuditFacingText}\n${
@@ -2120,7 +2383,8 @@ process.exit(2);`,
     }\n${readFileSync(approvalCenterDesktopScreenshot).toString("latin1")
     }\n${readFileSync(approvalCenterLapsedScreenshot).toString("latin1")
     }\n${readFileSync(approvalCenterLapsedDarkScreenshot).toString("latin1")
-    }\n${readFileSync(approvalCenterNarrowScreenshot).toString("latin1")}`,
+    }\n${readFileSync(approvalCenterNarrowScreenshot).toString("latin1")
+    }\n${readFileSync(governanceAuditScreenshot).toString("latin1")}`,
   };
   const forbidden = [
     apiKey,
@@ -2154,6 +2418,10 @@ process.exit(2);`,
   console.log(
     "SECURITY SCAN PASS: key/master/cipher/Authorization/raw host paths/env/CoT occurrences=0 "
     + "across provider bodies, DB, product API, DOM, logs, and screenshot-facing surfaces",
+  );
+  console.log(
+    `GOVERNANCE AUDIT ACCEPTANCE PASS: assertions=${governanceAuditAcceptance.assertions} `
+    + `axeStates=${governanceAuditAcceptance.axeStates}`,
   );
   writeFileSync(
     approvalCenterResultsPath,

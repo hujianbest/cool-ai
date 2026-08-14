@@ -60,7 +60,7 @@ Capability ID 是稳定治理标识；owner 是唯一逻辑子系统，不等于
 - `CAP-EXE-05` Public Execution Events — owner: Safe Execution — 状态: 已交付核心（execution_events 15 写入点同事务白名单 outbox）— 证据/建立切片: S-23 AUD-MVP [`progress.md`](../features/028-audit-projection-mvp/progress.md)
 - `CAP-GOV-01` Safe Execution Approval & Operation — owner: Governance — 状态: 部分可用（只覆盖 Safe Execution 冻结 execution/staged-merge 路径，不是通用 Governance）— 证据/建立切片: S-5；`src/adapters/outbound/sqlite/safe-execution/execution-approval-service.ts`、`tests/modules/safe-execution/execution-approvals.test.ts`
 - `CAP-GOV-02` Unified Governance — owner: Governance — 状态: 已交付核心（执行+内联决策两域聚合/裁决分派/失效呈现）— 证据/建立切片: S-24 [`progress.md`](../features/029-unified-approval-center/progress.md)
-- `CAP-GOV-03` Public Governance Events — owner: Governance — 状态: 规划中 — 建立路径: S-23 的 Governance 审计纵切；该片复用已交付 `CAP-OPS-01/02`，以 owner 可查询脱敏 Approval 事件并精确导航为独立结果
+- `CAP-GOV-03` Public Governance Events — owner: Governance — 状态: 已交付核心 — 证据/建立切片: S-23 AUD-GOV（分配实现片号 S-53）[`progress.md`](../features/037-governance-audit-events/progress.md)（5 类 Approval 生命周期事件同事务 outbox、审计中心可查询并规范 approval 身份导航，复用已交付 `CAP-OPS-01/02`）
 
 ### Review、Knowledge、Runtime 与 Projection
 
@@ -135,6 +135,7 @@ S-9～S-12 的 `依赖: S-*` 是原历史文字，只说明当时切片记录；
   - 准入: 已交付前置: `CAP-PWS-01`、`CAP-EXE-01`（已交付核心，含 Windows verified-handle 证据）；本片建立: `CAP-PWS-02` 的多绑定根只读浏览、预览与敏感文件降级（规划中）。
 - [ ] S-23 脱敏统一审计浏览器（CI-3.8） — 主子系统: 不适用；主领域 Capability: 不适用（保留的产品追踪别名/发布结果，跨多个 source owner，本身不得进入 implement）；主要架构单元: 发布结果；消费 Capability: `CAP-EXE-05`、`CAP-PWS-03`、`CAP-COL-07`、`CAP-MWK-05`、`CAP-GOV-03`、`CAP-RUN-07`、`CAP-OPS-01`、`CAP-OPS-02`；票据: 未创建；演示判据: owner 能按项目、线程、任务和会话筛选公开事件并跳回精确来源，凭据、隐藏思维链和原始 provider 响应始终不可见；约束: 工作区=项目隔离，verified-handle=文件来源跳转必需，sandbox=执行事件只读，凭据=强制脱敏，审批=不适用，独立复核=交付必需，审计=来源、保留期和导出边界明确；不复制 Clowder 品牌、源码或资产
   - 准入: 已交付前置: `CAP-EXE-01`、`CAP-PWS-01`、`CAP-COL-01`、`CAP-MWK-01`（仅证明源事实存在，不证明公开 producer 已存在）；阻塞: 以下实现片尚未建立和 gate；本片建立: 不适用，S-23 只在子片全部 ship 后汇总发布验收。
+  - 已交付子片: 2026-08-15 AUD-GOV / S-53 已 ship，建立 `CAP-GOV-03`（五类脱敏 Approval 生命周期事件 + 审计查询/规范定位），证据见 [`037 progress`](../features/037-governance-audit-events/progress.md)；S-23 仍待 AUD-RUN 与最终 AUD-UI，故保持未勾选。
   - 纵切 MVP `AUD-MVP`：分类为领域纵切；actor 是 owner；独立用户结果是“owner 能在最薄只读展示中查询脱敏 Safe Execution 事件并跳到精确 execution 来源”。主子系统: Operations Projection；主 Capability: `CAP-OPS-02`；协作子系统/Capability: Safe Execution / `CAP-EXE-05`，producer 随既有 Safe Execution 命令事务原子提交 event envelope；同片建立其基础依赖 `CAP-OPS-01`，由它独立幂等消费已提交事件并维护 checkpoint/rebuild/freshness；入站 Adapter 直接通过 Operations Projection Query 查询 `CAP-OPS-02`，展示 freshness 与精确来源，只读路径不发起命令、不驱动消费。该片只涉及两个子系统，未达到跨 3 子系统拆分阈值，且全部工作服务同一个查询/导航用户结果；禁止先 ship 不可观察 producer；票据目标: 3–8。
   - source-owner 扩展纵切：Project & Workspace、Public Collaboration、Mission & Work、Governance、Runtime 分别建立独立 `AUD-PWS`、`AUD-COL`、`AUD-MWK`、`AUD-GOV`、`AUD-RUN` 草案。每片 actor 均为 owner，主要架构单元是对应 source owner 的领域 Capability，分别建立 `CAP-PWS-03`、`CAP-COL-07`、`CAP-MWK-05`、`CAP-GOV-03`、`CAP-RUN-07`；每片必须复用已 ship 的 `CAP-OPS-01/02`，以“owner 能查询该领域脱敏事件并精确导航”为独立可演示结果，各 3–8 票，禁止交付不可观察 producer 或合并多个 source owner。
   - 最终组合纵切 `AUD-UI`：actor 是 owner；独立用户结果是“owner 能在统一审计浏览器筛选所有已交付来源并精确导航”。主领域 Capability: 不适用（不新增领域写事实）；主要架构单元: 入站 UI Adapter；消费 Capability: 已 ship 的 `CAP-EXE-05`、各 source event Capability、`CAP-OPS-01/02`；只做查询组合、状态与导航，各 producer 缺失时不进入该发布片；票据目标: 3–8。

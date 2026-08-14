@@ -7,6 +7,8 @@ node_modules/
 playwright-report/
 test-results/
 features/**/evidence/
+openwiki/
+knowledge/
 .env
 .env.local
 .env.*.local

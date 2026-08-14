@@ -70,6 +70,18 @@ const PROJECT_WORKSPACE_EVENT_TYPE_COPY: Record<string, string> = {
   workspace_rebound: "工作区已改绑",
 };
 
+// Governance and safe-execution both emit approval_requested. Execution
+// payloads always carry attemptNo while governance payloads never do, so that
+// one collision is classified by payload shape; the remaining types are
+// governance-only.
+const GOVERNANCE_EVENT_TYPE_COPY: Record<string, string> = {
+  approval_approved: "审批已批准",
+  approval_consumed: "审批已消费",
+  approval_expired: "审批已过期",
+  approval_rejected: "审批已驳回",
+  approval_requested: "审批已请求",
+};
+
 // Readable copy for the audit event types, centralized so any future type not
 // yet mapped degrades to its raw contract value (never blank).
 const EVENT_TYPE_COPY: Record<string, string> = {
@@ -89,6 +101,7 @@ const EVENT_TYPE_COPY: Record<string, string> = {
   tool_succeeded: "工具调用成功",
   usage_recorded: "用量已记录",
   ...COLLABORATION_EVENT_TYPE_COPY,
+  ...GOVERNANCE_EVENT_TYPE_COPY,
   ...MISSION_WORK_EVENT_TYPE_COPY,
   ...PROJECT_WORKSPACE_EVENT_TYPE_COPY,
 };
@@ -99,11 +112,17 @@ const ACTOR_TYPE_COPY: Record<string, string> = {
   system: "系统",
 };
 
-type AuditEventDomain = "collaboration" | "execution" | "mission" | "project";
+type AuditEventDomain =
+  | "collaboration"
+  | "execution"
+  | "governance"
+  | "mission"
+  | "project";
 
 const DOMAIN_COPY: Record<AuditEventDomain, string> = {
   collaboration: "协作",
   execution: "执行",
+  governance: "治理",
   mission: "任务",
   project: "项目",
 };
@@ -117,17 +136,23 @@ const DOMAIN_COPY: Record<AuditEventDomain, string> = {
 const DOMAIN_VARIANT: Record<AuditEventDomain, string> = {
   collaboration: "status-queued",
   execution: "status-running",
+  governance: "",
   mission: "status-completed",
   project: "",
 };
 
-// The outbox sources write disjoint event-type sets (each selection is a
-// closed server-side constant), so the type classifies the domain exactly; an
-// unlisted future type conservatively shows 执行.
-function eventDomain(eventType: string): AuditEventDomain {
+// Most outbox sources write disjoint closed event-type sets. The sole
+// collision is approval_requested: safe-execution always includes attemptNo,
+// while governance never does. Unlisted future types conservatively show 执行.
+function eventDomain(event: AuditEventListItemDto): AuditEventDomain {
+  const { eventType, payload } = event;
   if (eventType in COLLABORATION_EVENT_TYPE_COPY) return "collaboration";
   if (eventType in PROJECT_WORKSPACE_EVENT_TYPE_COPY) return "project";
-  return eventType in MISSION_WORK_EVENT_TYPE_COPY ? "mission" : "execution";
+  if (eventType in MISSION_WORK_EVENT_TYPE_COPY) return "mission";
+  if (eventType === "approval_requested") {
+    return Object.hasOwn(payload, "attemptNo") ? "execution" : "governance";
+  }
+  return eventType in GOVERNANCE_EVENT_TYPE_COPY ? "governance" : "execution";
 }
 
 const MESSAGE_EVENT_TYPES: ReadonlySet<string> = new Set([
@@ -253,6 +278,42 @@ function projectWorkspaceSummary(event: AuditEventListItemDto): string | null {
   }
 }
 
+const GOVERNANCE_KIND_COPY: Record<string, string> = {
+  command: "命令",
+  staged_merge: "Staged 合入",
+};
+
+const GOVERNANCE_DECISION_COPY: Record<string, string> = {
+  approved: "已批准",
+  rejected: "已驳回",
+};
+
+const GOVERNANCE_SCOPE_COPY: Record<string, string> = {
+  execution: "执行",
+  project: "项目",
+  single: "单项",
+};
+
+// Governance summaries expose only validated enum values. Missing fields are
+// skipped, while a present malformed/unknown field fails the whole summary
+// closed so it cannot be mistaken for a complete approval description.
+function governanceSummary(event: AuditEventListItemDto): string | null {
+  const parts: string[] = [];
+  for (const [key, copy] of [
+    ["kind", GOVERNANCE_KIND_COPY],
+    ["decision", GOVERNANCE_DECISION_COPY],
+    ["scope", GOVERNANCE_SCOPE_COPY],
+  ] as const) {
+    if (!Object.hasOwn(event.payload, key)) continue;
+    const value = event.payload[key];
+    if (typeof value !== "string") return null;
+    const label = copy[value];
+    if (typeof label !== "string") return null;
+    parts.push(label);
+  }
+  return parts.length > 0 ? parts.join(" · ") : null;
+}
+
 // Project-workspace locate lands on the canonical project identity route
 // (/projects/{projectId} renders the real ProjectPanel): the workspace,
 // member, and policy surfaces are project-panel internal seams with no URL
@@ -262,6 +323,29 @@ function projectWorkspaceSummary(event: AuditEventListItemDto): string | null {
 function projectSourceHref(projectId: string): string | null {
   if (projectId === "") return null;
   return `/projects/${encodeURIComponent(projectId)}`;
+}
+
+// Governance locate lands on canonical execution/approval identity routes.
+// References are validated independently so the most specific valid shape
+// wins, with malformed values skipped rather than coerced.
+function governanceSourceHref(
+  projectId: string,
+  payload: Record<string, unknown>,
+): string | null {
+  if (projectId === "") return null;
+  const project = encodeURIComponent(projectId);
+  const executionId = publicText(payload.executionId);
+  const approvalId = publicText(payload.approvalId);
+  if (executionId !== null && approvalId !== null) {
+    return `/projects/${project}/executions/${encodeURIComponent(executionId)}/approvals/${encodeURIComponent(approvalId)}`;
+  }
+  if (executionId !== null) {
+    return `/projects/${project}/executions/${encodeURIComponent(executionId)}`;
+  }
+  if (approvalId !== null) {
+    return `/projects/${project}/approvals/${encodeURIComponent(approvalId)}`;
+  }
+  return null;
 }
 
 const FRESHNESS_COPY: Record<AuditProjectionFreshnessStatus, string> = {
@@ -494,13 +578,15 @@ export function AuditPanel({ projectId }: { projectId: string }) {
             className="stack audit-event-list"
           >
             {events.map((event) => {
-              const domain = eventDomain(event.eventType);
+              const domain = eventDomain(event);
               const executionId = event.executionId;
               const excerpt = domain === "mission"
                 ? missionWorkExcerpt(event)
                 : domain === "project"
                   ? projectWorkspaceSummary(event)
-                  : messageExcerpt(event);
+                  : domain === "governance"
+                    ? governanceSummary(event)
+                    : messageExcerpt(event);
               const sourceHref = domain === "collaboration"
                 ? collaborationSourceHref(projectId, event.payload)
                 : null;
@@ -509,6 +595,9 @@ export function AuditPanel({ projectId }: { projectId: string }) {
                 : null;
               const projectSource = domain === "project"
                 ? projectSourceHref(projectId)
+                : null;
+              const governanceSource = domain === "governance"
+                ? governanceSourceHref(projectId, event.payload)
                 : null;
               const domainVariant = DOMAIN_VARIANT[domain];
               return (
@@ -530,7 +619,7 @@ export function AuditPanel({ projectId }: { projectId: string }) {
                   {excerpt ? (
                     <p className="audit-event-excerpt">{excerpt}</p>
                   ) : null}
-                  {executionId ? (
+                  {domain === "execution" && executionId ? (
                     <button
                       onClick={() => locateExecution(executionId)}
                       type="button"
@@ -544,6 +633,9 @@ export function AuditPanel({ projectId }: { projectId: string }) {
                     : null}
                   {projectSource
                     ? <a href={projectSource}>定位来源项目</a>
+                    : null}
+                  {governanceSource
+                    ? <a href={governanceSource}>定位来源审批</a>
                     : null}
                 </li>
               );

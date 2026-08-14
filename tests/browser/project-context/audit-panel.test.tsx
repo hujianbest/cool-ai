@@ -1043,3 +1043,272 @@ describe("Audit panel project-workspace events", () => {
       .toHaveClass("audit-event-excerpt");
   });
 });
+
+describe("Audit panel governance events", () => {
+  it("renders governance types with readable copy and the neutral governance badge in a mixed five-domain list", async () => {
+    const AuditPanel = await auditPanel();
+    const governanceCopy: ReadonlyArray<readonly [string, string]> = [
+      ["approval_approved", "审批已批准"],
+      ["approval_consumed", "审批已消费"],
+      ["approval_expired", "审批已过期"],
+      ["approval_rejected", "审批已驳回"],
+      ["approval_requested", "审批已请求"],
+    ];
+    const events = governanceCopy.map(([eventType], index) =>
+      auditEvent({
+        actorType: "owner",
+        eventType,
+        id: `event-${120 - index}`,
+        outboxSeq: 120 - index,
+        payload: {
+          approvalId: `approval-${index}`,
+          executionId: `exec-governance-${index}`,
+          kind: "command",
+        },
+      }),
+    );
+    events.push(auditEvent({
+      actorType: "agent",
+      eventType: "approval_requested",
+      executionId: "exec-safe",
+      id: "event-110",
+      outboxSeq: 110,
+      payload: { approvalId: "approval-safe", attemptNo: 2, kind: "command" },
+    }));
+    events.push(auditEvent({
+      actorType: "agent",
+      eventType: "run_started",
+      id: "event-109",
+      outboxSeq: 109,
+      payload: { runId: "run-1", threadId: "thread-1" },
+    }));
+    events.push(auditEvent({
+      actorType: "owner",
+      eventType: "work_item_created",
+      id: "event-108",
+      outboxSeq: 108,
+      payload: { missionId: "mission-1", title: "看板样例", workItemId: "work-1" },
+    }));
+    events.push(auditEvent({
+      actorType: "owner",
+      eventType: "project_created",
+      id: "event-107",
+      outboxSeq: 107,
+      payload: { projectName: "项目样例" },
+    }));
+    vi.stubGlobal(
+      "fetch",
+      vi.fn(() => Promise.resolve(Response.json(page(events)))),
+    );
+    render(<AuditPanel projectId="project-1" />);
+
+    const list = await screen.findByRole("list", { name: "审计事件" });
+    const rows = within(list).getAllByRole("listitem");
+    expect(rows).toHaveLength(9);
+    for (const [index, [, copy]] of governanceCopy.entries()) {
+      expect(within(rows[index]!).getByRole("heading", { name: copy }))
+        .toBeInTheDocument();
+      const badge = within(rows[index]!).getByText("治理", { selector: "span" });
+      expect(badge).toHaveClass("status-label", { exact: true });
+    }
+    expect(within(rows[5]!).getByRole("heading", { name: "审批已请求" }))
+      .toBeInTheDocument();
+    expect(within(rows[5]!).getByText("执行")).toHaveClass("status-running");
+    expect(within(rows[6]!).getByText("协作")).toHaveClass("status-queued");
+    expect(within(rows[7]!).getByText("任务")).toHaveClass("status-completed");
+    expect(within(rows[8]!).getByText("项目"))
+      .toHaveClass("status-label", { exact: true });
+    expect(within(list).queryByRole("textbox")).toBeNull();
+    expect(within(list).queryByRole("checkbox")).toBeNull();
+    expect(within(list).queryByRole("button", { name: /编辑|删除|修改/ }))
+      .toBeNull();
+  });
+
+  it("links governance events to canonical execution and approval identities", async () => {
+    const AuditPanel = await auditPanel();
+    const events = [
+      auditEvent({
+        actorType: "owner",
+        eventType: "approval_approved",
+        executionId: "exec/one",
+        id: "event-90",
+        outboxSeq: 90,
+        payload: { approvalId: "approval one", executionId: "exec/one" },
+      }),
+      auditEvent({
+        actorType: "owner",
+        eventType: "approval_expired",
+        executionId: "exec-two",
+        id: "event-89",
+        outboxSeq: 89,
+        payload: { executionId: "exec-two" },
+      }),
+      auditEvent({
+        actorType: "owner",
+        eventType: "approval_rejected",
+        id: "event-88",
+        outboxSeq: 88,
+        payload: { approvalId: "approval-three" },
+      }),
+    ];
+    vi.stubGlobal(
+      "fetch",
+      vi.fn(() => Promise.resolve(Response.json(page(events)))),
+    );
+    render(<AuditPanel projectId="project-1" />);
+
+    const list = await screen.findByRole("list", { name: "审计事件" });
+    const rows = within(list).getAllByRole("listitem");
+    expect(rows).toHaveLength(3);
+    expect(within(rows[0]!).getByRole("link", { name: "定位来源审批" }))
+      .toHaveAttribute(
+        "href",
+        "/projects/project-1/executions/exec%2Fone/approvals/approval%20one",
+      );
+    expect(within(rows[1]!).getByRole("link", { name: "定位来源审批" }))
+      .toHaveAttribute("href", "/projects/project-1/executions/exec-two");
+    expect(within(rows[2]!).getByRole("link", { name: "定位来源审批" }))
+      .toHaveAttribute("href", "/projects/project-1/approvals/approval-three");
+    expect(within(list).queryByRole("button", { name: "定位来源执行" }))
+      .toBeNull();
+  });
+
+  it("renders no governance locate link for malformed ids or an empty project identity", async () => {
+    const AuditPanel = await auditPanel();
+    vi.stubGlobal(
+      "fetch",
+      vi.fn(() => Promise.resolve(Response.json(page([
+        auditEvent({
+          actorType: "owner",
+          eventType: "approval_consumed",
+          id: "event-80",
+          outboxSeq: 80,
+          payload: { approvalId: "", executionId: 42 },
+        }),
+        auditEvent({
+          actorType: "owner",
+          eventType: "approval_expired",
+          id: "event-79",
+          outboxSeq: 79,
+          payload: {},
+        }),
+      ])))),
+    );
+    const firstRender = render(<AuditPanel projectId="project-1" />);
+
+    let list = await screen.findByRole("list", { name: "审计事件" });
+    for (const row of within(list).getAllByRole("listitem")) {
+      expect(within(row).queryByRole("link")).toBeNull();
+    }
+
+    firstRender.unmount();
+    vi.stubGlobal(
+      "fetch",
+      vi.fn(() => Promise.resolve(Response.json(page([
+        auditEvent({
+          actorType: "owner",
+          eventType: "approval_approved",
+          executionId: "exec-valid",
+          id: "event-78",
+          outboxSeq: 78,
+          payload: {
+            approvalId: "approval-valid",
+            executionId: "exec-valid",
+          },
+        }),
+      ])))),
+    );
+    render(<AuditPanel projectId="" />);
+
+    list = await screen.findByRole("list", { name: "审计事件" });
+    expect(within(list).queryByRole("link")).toBeNull();
+  });
+
+  it("shows only validated governance summary fields and omits malformed or foreign excerpts", async () => {
+    const AuditPanel = await auditPanel();
+    const events = [
+      auditEvent({
+        actorType: "owner",
+        eventType: "approval_expired",
+        id: "event-70",
+        outboxSeq: 70,
+        payload: {
+          commandText: "不应显示的命令",
+          decision: "approved",
+          hostPath: "C:\\private\\workspace",
+          kind: "command",
+          requestHash: "不应显示的哈希",
+          scope: "project",
+        },
+      }),
+      auditEvent({
+        actorType: "owner",
+        eventType: "approval_rejected",
+        id: "event-69",
+        outboxSeq: 69,
+        payload: {
+          decision: "rejected",
+          kind: "staged_merge",
+          scope: "single",
+        },
+      }),
+      auditEvent({
+        actorType: "owner",
+        eventType: "approval_consumed",
+        id: "event-68",
+        outboxSeq: 68,
+        payload: { decision: "approved", kind: "proposal" },
+      }),
+      auditEvent({
+        actorType: "owner",
+        eventType: "approval_approved",
+        id: "event-67",
+        outboxSeq: 67,
+        payload: { decision: "later" },
+      }),
+      auditEvent({
+        actorType: "owner",
+        eventType: "approval_expired",
+        id: "event-66",
+        outboxSeq: 66,
+        payload: { scope: 1 },
+      }),
+      auditEvent({
+        actorType: "owner",
+        eventType: "approval_requested",
+        id: "event-65",
+        outboxSeq: 65,
+        payload: { commandText: "不应显示的正文", requestHash: "secret-hash" },
+      }),
+      auditEvent({
+        actorType: "agent",
+        eventType: "approval_requested",
+        executionId: "exec-safe",
+        id: "event-64",
+        outboxSeq: 64,
+        payload: { attemptNo: 1, kind: "command" },
+      }),
+    ];
+    vi.stubGlobal(
+      "fetch",
+      vi.fn(() => Promise.resolve(Response.json(page(events)))),
+    );
+    render(<AuditPanel projectId="project-1" />);
+
+    const list = await screen.findByRole("list", { name: "审计事件" });
+    const rows = within(list).getAllByRole("listitem");
+    expect(rows).toHaveLength(7);
+    expect(within(rows[0]!).getByText("命令 · 已批准 · 项目"))
+      .toHaveClass("audit-event-excerpt");
+    expect(within(rows[1]!).getByText("Staged 合入 · 已驳回 · 单项"))
+      .toHaveClass("audit-event-excerpt");
+    for (const row of rows.slice(2)) {
+      expect(row.querySelector(".audit-event-excerpt")).toBeNull();
+    }
+    expect(screen.queryByText("不应显示的命令")).toBeNull();
+    expect(screen.queryByText("C:\\private\\workspace")).toBeNull();
+    expect(screen.queryByText("不应显示的哈希")).toBeNull();
+    expect(screen.queryByText("不应显示的正文")).toBeNull();
+    expect(screen.queryByText("secret-hash")).toBeNull();
+  });
+});
