@@ -8,11 +8,14 @@ import {
   type FormEvent,
 } from "react";
 
+import { Plus } from "@phosphor-icons/react";
+
 import {
   trapModalFocus,
   useModalSurface,
   useNarrowMode,
 } from "@/components/mobile-dialog";
+import { IconButton } from "@/components/ui/icon-button";
 import type { Skill } from "@/src/shared/team-contracts";
 
 type FieldName = "description" | "instructions" | "name";
@@ -64,7 +67,7 @@ export function SkillPanel() {
   const openerRef = useRef<HTMLElement | null>(null);
   const narrow = useNarrowMode();
 
-  useModalSurface(narrow && editorActivated, dialogRef, SKILL_EDITOR_INERT);
+  useModalSurface(editorActivated, dialogRef, SKILL_EDITOR_INERT);
 
   const loadSkills = useCallback(async () => {
     setIsLoading(true);
@@ -198,12 +201,17 @@ export function SkillPanel() {
         id="skill-resource-panel"
         role="tabpanel"
       >
-        <header className="stack">
-          <p className="eyebrow">团队资源</p>
-          <h2>技能</h2>
-          <button onClick={startCreate} type="button">
-            创建新技能
-          </button>
+        <header className="panel-heading">
+          <div className="stack">
+            <p className="eyebrow">团队资源</p>
+            <h2>技能</h2>
+          </div>
+          <IconButton
+            className="button-primary"
+            icon={<Plus size={20} weight="regular" />}
+            label="创建新技能"
+            onClick={startCreate}
+          />
         </header>
         {isLoading ? (
           <p aria-busy="true" className="muted">
@@ -252,17 +260,22 @@ export function SkillPanel() {
             ))}
           </ul>
         )}
+        {success ? (
+          <p aria-live="polite" role="status">
+            {success}
+          </p>
+        ) : null}
       </main>
 
-      {(!narrow || editorActivated) ? (
+      {editorActivated ? (
       <aside
         aria-labelledby="skill-editor-title"
-        aria-modal={narrow ? true : undefined}
+        aria-modal="true"
         className="cockpit-context"
-        data-open={narrow && editorActivated ? "true" : undefined}
-        onKeyDown={narrow ? (event) => trapModalFocus(event, closeEditor) : undefined}
+        data-open="true"
+        onKeyDown={(event) => trapModalFocus(event, closeEditor)}
         ref={dialogRef}
-        role={narrow ? "dialog" : undefined}
+        role="dialog"
       >
         <button
           aria-label="关闭技能编辑器"
@@ -334,7 +347,7 @@ export function SkillPanel() {
           <button disabled={isSubmitting} type="submit">
             {isSubmitting
               ? "正在保存技能…"
-              : editorActivated
+              : editingSkill
                 ? "保存技能"
                 : "创建技能"}
           </button>
@@ -348,7 +361,6 @@ export function SkillPanel() {
               {formError}
             </div>
           ) : null}
-          {success ? <p role="status">{success}</p> : null}
         </form>
       </aside>
       ) : null}

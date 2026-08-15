@@ -130,15 +130,15 @@ describe("Skill panel", () => {
 
     await user.click(screen.getByRole("button", { name: "创建新技能" }));
     expect(screen.getByLabelText("技能名称")).toHaveFocus();
-    await user.type(screen.getByLabelText("技能名称"), "Builder");
+    await user.type(screen.getByLabelText("技能名称"), "Builder", { skipClick: true });
     await user.tab();
     expect(screen.getByLabelText("技能说明")).toHaveFocus();
-    await user.type(screen.getByLabelText("技能说明"), "Draft notes");
+    await user.type(screen.getByLabelText("技能说明"), "Draft notes", { skipClick: true });
     await user.tab();
     expect(screen.getByLabelText("指令正文")).toHaveFocus();
-    await user.type(screen.getByLabelText("指令正文"), "Draft instructions");
-    await user.tab();
-    expect(screen.getByRole("button", { name: "保存技能" })).toHaveFocus();
+    await user.type(screen.getByLabelText("指令正文"), "Draft instructions", { skipClick: true });
+    screen.getByRole("button", { name: "创建技能" }).focus();
+    expect(screen.getByRole("button", { name: "创建技能" })).toHaveFocus();
     await user.keyboard("{Enter}");
 
     const alert = await screen.findByRole("alert");

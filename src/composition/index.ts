@@ -70,6 +70,7 @@ export * as sqliteConnection from "@/src/adapters/outbound/sqlite/connection";
 // workspace 技术 Adapter（不带 server-only 副作用的部分；
 // merge/windows verified-host 能力经 ./execution-host 独立入口装配，
 // 避免 server-only 标记模块进入本 barrel 的传递闭包）
+export * as directoryPicker from "@/src/adapters/outbound/workspace/directory-picker";
 export * as processRunner from "@/src/adapters/outbound/workspace/process-runner";
 export * as sandboxExecution from "@/src/adapters/outbound/workspace/sandbox-executor";
 
@@ -80,3 +81,4 @@ export { ProviderVerificationError } from "@/src/adapters/outbound/model-runtime
 export { createServerComposition } from "./server-composition";
 export type { ServerComposition } from "./server-composition";
 export { createMission } from "./mission-commands";
+export { openFolderAsProject } from "./open-folder-project";

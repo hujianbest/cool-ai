@@ -18,6 +18,7 @@ vi.mock("@/src/adapters/outbound/sqlite/project-workspace/workspace-service", ()
 }));
 
 vi.mock("@/src/adapters/outbound/sqlite/identity-capability/agent-service", () => ({
+  ensureStarterAgents: () => [],
   listAgents: () => {
     throw new Error(sentinel);
   },

@@ -77,6 +77,8 @@ const server = spawn(serverCommand.command, serverCommand.args, {
   env: {
     ...process.env,
     COCKPIT_DB_PATH: databasePath,
+    COCKPIT_ALLOW_SCRIPTED_PICKER: "1",
+    COCKPIT_SCRIPTED_DIRECTORY: workspaceDirectory,
     NEXT_DIST_DIR: smokeDistDirectory,
   },
   stdio: ["ignore", "pipe", "pipe"],
@@ -147,10 +149,7 @@ try {
   assert.equal(await page.locator("html").getAttribute("lang"), "zh-CN");
   const emptyProjectGuide = page.locator(".empty-guide");
   await emptyProjectGuide
-    .getByText(
-      "暂无文件夹项目。打开本地文件夹开始协作，也可直接在中间与 Agent 对话。",
-      { exact: true },
-    )
+    .getByText("暂无文件夹项目。", { exact: true })
     .waitFor();
   await page
     .getByText("先配置一个 Agent，即可开始个人对话。", { exact: true })
@@ -165,19 +164,7 @@ try {
   assert.equal(await workbenchHeading.count(), 1);
   assert.equal(await workbenchHeading.isVisible(), true);
   await assertAxeCriticalFree(page, "/");
-  await emptyProjectGuide.getByRole("button", { name: "打开文件夹" }).click();
-  const folderPathInput = page.getByLabel("文件夹路径");
-  assert.equal(
-    await folderPathInput.evaluate((element) => document.activeElement === element),
-    true,
-  );
-
-  await folderPathInput.fill(workspaceDirectory);
-  await page
-    .locator("form")
-    .filter({ has: page.getByLabel("文件夹路径") })
-    .getByRole("button", { name: "打开文件夹" })
-    .click();
+  await page.getByRole("button", { name: "打开文件夹" }).click();
   await page.waitForURL(/\/projects\/[^/]+$/);
   await page.getByRole("heading", { name: "real-workspace" }).waitFor();
   const currentProject = page.getByRole("button", { name: "real-workspace" });
@@ -199,7 +186,6 @@ try {
   }
   const statuses = await page.locator(".status-label").allTextContents();
   assert.deepEqual(statuses, ["排队中", "运行中", "已完成"]);
-  const taskResult = page.getByText(/示例 Agent 已完成骨架任务/);
 
   await page.screenshot({ path: smokeScreenshot, fullPage: true });
   await page.screenshot({ path: currentDesktopScreenshot, fullPage: true });
@@ -207,8 +193,6 @@ try {
   await page.reload({ waitUntil: "networkidle" });
   await page.getByRole("button", { name: "real-workspace" }).waitFor();
   await page.getByText("任务已完成。", { exact: true }).waitFor();
-  await page.getByRole("tab", { name: "骨架运行" }).click();
-  await taskResult.scrollIntoViewIfNeeded();
   assert.deepEqual(await page.locator(".status-label").allTextContents(), [
     "排队中",
     "运行中",
@@ -266,10 +250,7 @@ try {
   await page.keyboard.press("Tab");
   const editorToggle = page.getByRole("button", { name: "打开编辑" });
   assert.equal(await editorToggle.evaluate((element) => document.activeElement === element), true);
-  await page.keyboard.press("Tab");
-  const contextToggle = page.locator('[aria-controls="task-context-drawer"]');
-  assert.equal(await contextToggle.getAttribute("aria-label"), "打开当前任务上下文");
-  assert.equal(await contextToggle.evaluate((element) => document.activeElement === element), true);
+  assert.equal(await page.getByRole("button", { name: "打开当前任务上下文" }).count(), 0);
   await page.keyboard.press("Tab");
   const nextFocus = await page.evaluate(() => ({
     ariaLabel: document.activeElement?.getAttribute("aria-label"),
@@ -292,13 +273,6 @@ try {
   assert.equal(await closeProjects.evaluate((element) => document.activeElement === element), true);
   await closeProjects.click();
   assert.equal(await projectToggle.evaluate((element) => document.activeElement === element), true);
-
-  await contextToggle.click();
-  assert.equal(await contextToggle.getAttribute("aria-expanded"), "true");
-  const closeContext = page.getByRole("button", { name: "关闭当前任务上下文" });
-  assert.equal(await closeContext.evaluate((element) => document.activeElement === element), true);
-  await closeContext.click();
-  assert.equal(await contextToggle.evaluate((element) => document.activeElement === element), true);
 
   assert.equal(
     await page.evaluate(

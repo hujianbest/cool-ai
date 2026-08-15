@@ -74,6 +74,7 @@ describe("/team skill vertical slice", () => {
       ["returnTo", "/"],
     ]);
     expect(await screen.findByText("暂无技能。")).toBeInTheDocument();
+    await user.click(screen.getByRole("button", { name: "创建新技能" }));
     await user.type(screen.getByLabelText("技能名称"), "需求拆解");
     await user.type(screen.getByLabelText("技能说明"), "把目标拆成可验证步骤");
     await user.type(

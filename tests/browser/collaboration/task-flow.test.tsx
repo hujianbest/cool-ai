@@ -129,8 +129,7 @@ describe("task event flow", () => {
     );
 
     expect(await screen.findByText("任务已完成。")).toBeInTheDocument();
-    await userEvent.setup().click(screen.getByRole("tab", { name: "骨架运行" }));
-    expect(screen.getByText("Launch notes ready.")).toBeInTheDocument();
+    expect(screen.getByText("最新任务状态：已完成")).toBeInTheDocument();
     expect(screen.getByLabelText("任务目标")).toHaveValue("");
   });
 
@@ -154,13 +153,12 @@ describe("task event flow", () => {
 
   it("keeps folder opening reachable while home guides Agent setup", async () => {
     pathnameValue = "/";
-    vi.stubGlobal(
-      "fetch",
-      cockpitFetch([
-        Response.json({ projects: [] }),
-        Response.json({ kind: "needs_agent" }),
-      ]),
-    );
+    const fetchMock = cockpitFetch([
+      Response.json({ projects: [] }),
+      Response.json({ kind: "needs_agent" }),
+      Response.json({ cancelled: true }),
+    ]);
+    vi.stubGlobal("fetch", fetchMock);
     const user = userEvent.setup();
 
     render(<ProjectPanel />);
@@ -170,15 +168,12 @@ describe("task event flow", () => {
       name: "打开文件夹",
     });
     await user.click(openFolderActions.at(-1)!);
-    expect(screen.getByLabelText("文件夹路径")).toHaveFocus();
+    expect(screen.queryByLabelText("文件夹路径")).toBeNull();
 
     expect(
-      await screen.findByText("1:1 对话将在配置 Agent 后可用。"),
+      await screen.findByText("先配置一个 Agent，即可开始个人对话。"),
     ).toBeInTheDocument();
-    const context = screen.getByRole("complementary", { name: "当前任务上下文" });
-    expect(
-      within(context).queryByRole("button", { name: "选择项目" }),
-    ).not.toBeInTheDocument();
+    expect(screen.queryByRole("complementary", { name: "当前任务上下文" })).toBeNull();
     expect(screen.getByRole("link", { name: "配置 Agent" })).toBeInTheDocument();
   });
 
@@ -232,8 +227,7 @@ describe("task event flow", () => {
     });
 
     expect(await screen.findByText("任务已完成。")).toBeInTheDocument();
-    await user.click(screen.getByRole("tab", { name: "骨架运行" }));
-    expect(screen.getByText("Launch notes ready.")).toBeInTheDocument();
+    expect(screen.getByText("最新任务状态：已完成")).toBeInTheDocument();
     expect(screen.getByLabelText("任务目标")).toHaveValue("");
   });
 

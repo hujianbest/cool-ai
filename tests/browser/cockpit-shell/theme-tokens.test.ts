@@ -236,7 +236,7 @@ describe("visual token discipline", () => {
     const css = existsSync(cockpitPath) ? readFileSync(cockpitPath, "utf8") : "";
 
     expect(css).toMatch(
-      /grid-template-columns:\s*var\(--activity-bar-width\)\s+var\(--sidebar-width\)\s+minmax\(0,\s*1fr\)\s+var\(--context-width\)/,
+      /grid-template-columns:\s*var\(--activity-bar-width\)\s+var\(--sidebar-width\)\s+minmax\(0,\s*1fr\)/,
     );
     expect(css).toMatch(
       /(?:button|input)[^{]*\{[^}]*min-height:\s*var\(--control-min\)/s,

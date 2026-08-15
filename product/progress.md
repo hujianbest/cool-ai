@@ -36,3 +36,4 @@
 - 2026-08-15 047/S-39 跨任务运行轨迹时间轴完成 implement 与 ship：GET `/timeline` + 审计面板时间轴；`smoke:execution` 160 断言；全量 295/2722 125.45s；hf-code-review 豁免；`CAP-OPS-02` 时间轴已交付。
 - 2026-08-15 048/S-41 最小权限浏览器通知与 PWA 进入 implement（A-334～A-339）。
 - 2026-08-15 048/S-41 最小权限浏览器通知与 PWA 完成 implement 与 ship：本机 Notification + PWA manifest；hf-code-review 复审 PASS；全量 298/2736 131.14s；`CAP-RUN-05` 已交付核心。
+- 2026-08-15 用户否定 049 HelpTip/手输路径，要求按第一性原理分阶段上线并完成阶段 1（原生选夹、自带 Agent、聊天优先、使命/记忆不在前端）。049/S-59 superseded；立项 050/S-60（见 `product/phases.md`、D-49）。

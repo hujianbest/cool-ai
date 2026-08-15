@@ -8,6 +8,8 @@ import {
   type FormEvent,
 } from "react";
 
+import { Plus } from "@phosphor-icons/react";
+
 import {
   trapModalFocus,
   useModalSurface,
@@ -18,6 +20,8 @@ import {
   parseAgentGuideEnvelopes,
   type AgentGuideFacts,
 } from "@/components/onboarding-guide";
+import { HelpTip } from "@/components/ui/help-tip";
+import { IconButton } from "@/components/ui/icon-button";
 import type {
   AccentToken,
   AgentProfile,
@@ -266,7 +270,7 @@ export function AgentPanel({
     setFocusAgentId(null);
   }, [agents, focusAgentId]);
 
-  useModalSurface(mobile && editorOpen, dialogRef, AGENT_EDITOR_INERT);
+  useModalSurface(editorOpen, dialogRef, AGENT_EDITOR_INERT);
 
   const verifiedProviders = useMemo(
     () => providers.filter((provider) => provider.status === "verified"),
@@ -444,7 +448,7 @@ export function AgentPanel({
     setStatus(message);
     setEditing(saved);
     setFormError(null);
-    if (mobile) setEditorOpen(false);
+    setEditorOpen(false);
   }
 
   async function reconcileUncertainWrite(body: Record<string, unknown>) {
@@ -490,12 +494,12 @@ export function AgentPanel({
   const editor = (
     <aside
       aria-labelledby="agent-editor-title"
-      aria-modal={mobile ? true : undefined}
+      aria-modal="true"
       className="cockpit-context agent-editor"
-      data-open={mobile && editorOpen ? "true" : undefined}
-      onKeyDown={mobile ? (event) => trapModalFocus(event, closeEditor) : undefined}
+      data-open="true"
+      onKeyDown={(event) => trapModalFocus(event, closeEditor)}
       ref={dialogRef}
-      role={mobile ? "dialog" : undefined}
+      role="dialog"
     >
       <button
         aria-label="关闭 Agent 编辑器"
@@ -660,9 +664,9 @@ export function AgentPanel({
             />
             可独立复核结果
           </label>
-          <p className="muted" id="agent-review-capable-help">
+          <HelpTip id="agent-review-capable-help" label="独立复核说明">
             仅明确开启后，且 Agent 当前属于项目并非结果执行者时，才可成为复核候选。
-          </p>
+          </HelpTip>
         </fieldset>
         <fieldset
           aria-describedby={
@@ -744,9 +748,9 @@ export function AgentPanel({
             type="number"
             value={maxTokens}
           />
-          <p className="muted" id="agent-max-tokens-help">
+          <HelpTip id="agent-max-tokens-help" label="预算范围">
             每次运行 1–1000000 tokens。
-          </p>
+          </HelpTip>
           {fieldErrors.maxTokens ? (
             <p className="error-text" id="agent-max-tokens-error">
               {fieldErrors.maxTokens}
@@ -833,9 +837,13 @@ export function AgentPanel({
             <p className="eyebrow">团队资源</p>
             <h2>Agent</h2>
           </div>
-          <button onClick={startCreate} ref={createButtonRef} type="button">
-            创建 Agent
-          </button>
+          <IconButton
+            className="button-primary"
+            icon={<Plus size={20} weight="regular" />}
+            label="创建 Agent"
+            onClick={startCreate}
+            ref={createButtonRef}
+          />
         </header>
         {guide === "agent" ? (
           <AgentOnboardingGuide
@@ -932,7 +940,7 @@ export function AgentPanel({
           </p>
         ) : null}
       </main>
-      {(!mobile || editorOpen) && editor}
+      {editorOpen && editor}
     </>
   );
 }

@@ -130,14 +130,16 @@ describe("ActivityBar theme toggle", () => {
       name: "当前为明色主题，切换到暗色主题",
     });
     expect(toggle).toHaveClass("activity-bar-item");
-    expect(toggle).toHaveTextContent(/^夜$/);
+    expect(toggle.querySelector("svg")).not.toBeNull();
+    expect(toggle).not.toHaveTextContent("夜");
     expect(toggle).toHaveAttribute("aria-pressed", "false");
     expect(toggle).not.toBeDisabled();
     expect(toggle).not.toHaveAttribute("aria-busy");
     expect(document.documentElement).toHaveAttribute("data-theme", "light");
 
     await user.click(toggle);
-    expect(toggle).toHaveTextContent(/^日$/);
+    expect(toggle.querySelector("svg")).not.toBeNull();
+    expect(toggle).not.toHaveTextContent("日");
     expect(toggle).toHaveAttribute("aria-pressed", "true");
     expect(toggle).toHaveAccessibleName("当前为暗色主题，切换到明色主题");
     expect(document.documentElement).toHaveAttribute("data-theme", "dark");

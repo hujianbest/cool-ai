@@ -1,5 +1,6 @@
 import {
   useEffect,
+  useRef,
   useState,
   type KeyboardEvent,
   type RefObject,
@@ -80,11 +81,16 @@ export function useModalSurface(
       : optionsOrActive;
   const active = options?.active ?? optionsOrActive === true;
   const dialogRef = options?.dialogRef ?? legacyDialogRef!;
+  const activeRef = useRef(active);
+  activeRef.current = active;
+  const optionsRef = useRef(options);
+  optionsRef.current = options;
 
   useEffect(() => {
     if (!active) return;
-    const inertElements = options
-      ? options.inertRootRefs.flatMap((reference) =>
+    const currentOptions = optionsRef.current;
+    const inertElements = currentOptions
+      ? currentOptions.inertRootRefs.flatMap((reference) =>
           reference.current ? [reference.current] : [],
         )
       : legacyInertSelectors.flatMap((selector) =>
@@ -97,15 +103,19 @@ export function useModalSurface(
     }));
     inertElements.forEach((element) => {
       element.setAttribute("inert", "");
-      if (options?.hideBackground) element.setAttribute("aria-hidden", "true");
+      if (currentOptions?.hideBackground) {
+        element.setAttribute("aria-hidden", "true");
+      }
     });
     lockBodyOverflow();
 
     const dialog = dialogRef.current;
+    let cancelled = false;
     const handleKeyDown = (event: globalThis.KeyboardEvent) => {
-      if (event.key === "Escape" && options) {
+      const latest = optionsRef.current;
+      if (event.key === "Escape" && latest) {
         event.preventDefault();
-        options.onClose();
+        latest.onClose();
         return;
       }
       if (event.key !== "Tab" || !dialog) return;
@@ -123,29 +133,37 @@ export function useModalSurface(
     };
     dialog?.addEventListener("keydown", handleKeyDown);
     queueMicrotask(() => {
+      if (cancelled) return;
       const surface = dialogRef.current;
       // A resuming surface (e.g. the narrow drawer resuming after a layered
       // dialog closes) must not yank focus away from a control already inside
       // it — the closing dialog's own restore target wins.
       if (surface?.contains(document.activeElement)) return;
+      const latest = optionsRef.current;
       const initialFocus =
-        options?.initialFocusRef.current ??
+        latest?.initialFocusRef.current ??
         surface?.querySelector<HTMLElement>(
           '[data-dialog-close="true"]',
         );
       initialFocus?.focus();
     });
     return () => {
+      cancelled = true;
       dialog?.removeEventListener("keydown", handleKeyDown);
       previousAccessibility.forEach(({ ariaHidden, element, inert }) => {
         if (!inert) element.removeAttribute("inert");
-        if (options?.hideBackground) {
+        if (currentOptions?.hideBackground) {
           if (ariaHidden === null) element.removeAttribute("aria-hidden");
           else element.setAttribute("aria-hidden", ariaHidden);
         }
       });
       unlockBodyOverflow();
-      options?.restoreFocusRef.current?.focus();
+      // Restore only when the surface actually closes, using the options that
+      // were active while open. Latest options may already have a null restore
+      // target (e.g. execution overlay clears mobileExecutionId first).
+      if (!activeRef.current) {
+        currentOptions?.restoreFocusRef.current?.focus();
+      }
     };
   }, [active, dialogRef, legacyInertSelectors, options]);
 }

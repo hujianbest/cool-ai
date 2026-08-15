@@ -1,7 +1,6 @@
 // @vitest-environment jsdom
 import { readFileSync } from "node:fs";
 import { render, screen, within } from "@testing-library/react";
-import userEvent from "@testing-library/user-event";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
 import { ProjectPanel } from "@/components/project-panel";
@@ -27,8 +26,7 @@ afterEach(() => {
 });
 
 describe("desktop collaboration cockpit", () => {
-  it("presents project navigation, task flow, and current context from real data", async () => {
-    const user = userEvent.setup();
+  it("presents project navigation and task flow from real data", async () => {
     vi.stubGlobal(
       "fetch",
       cockpitFetch([
@@ -92,21 +90,16 @@ describe("desktop collaboration cockpit", () => {
       name: "项目导航",
     });
     const flow = within(cockpit).getByRole("region", { name: "任务事件流" });
-    const context = within(cockpit).getByRole("complementary", {
-      name: "当前任务上下文",
-    });
 
     for (const action of within(toolbar).getAllByRole("button")) {
       expect(action).toHaveClass("button-secondary");
     }
-    expect(within(navigation).getByText("Cool AI")).toHaveClass(
-      "surface-heading",
-    );
+    expect(within(navigation).getByText("Cool AI")).toHaveClass("sr-only");
     expect(within(navigation).getByRole("heading", { name: "项目" })).toHaveClass(
       "surface-heading",
     );
     expect(within(navigation).getByRole("button", { name: "打开文件夹" })).toHaveClass(
-      "button-primary",
+      "icon-button",
     );
     expect(within(navigation).getByRole("button", { name: "关闭项目导航" })).toHaveClass(
       "button-ghost",
@@ -126,18 +119,9 @@ describe("desktop collaboration cockpit", () => {
     expect(within(flow).getByRole("button", { name: "关闭任务编辑" })).toHaveClass(
       "button-ghost",
     );
-    expect(within(context).getByRole("heading", { name: "项目上下文" })).toHaveClass(
-      "surface-heading",
-    );
-    expect(within(context).getByRole("button", { name: "关闭当前任务上下文" })).toHaveClass(
-      "button-ghost",
-    );
+    expect(within(cockpit).queryByRole("complementary", { name: "当前任务上下文" })).toBeNull();
     expect(await within(flow).findByText("任务已完成。")).toBeInTheDocument();
     expect(within(flow).getByText("已完成", { selector: ".status-label" })).toBeInTheDocument();
-    await user.click(within(context).getByRole("tab", { name: "骨架运行" }));
-    expect(within(context).getByText("Prepare launch notes")).toBeInTheDocument();
-    expect(within(context).getByText("Launch notes ready.")).toBeInTheDocument();
-    expect(within(context).getByText("状态：已完成")).toBeInTheDocument();
   });
 
   it("renders the ActivityBar navigation rail and drops the in-sidebar text nav", async () => {
@@ -173,7 +157,7 @@ describe("desktop warm-terracotta shell grid", () => {
     const cockpit = readFileSync("app/cockpit.css", "utf8");
 
     expect(cockpit).toMatch(
-      /\.collaboration-cockpit\s*\{[^}]*grid-template-columns:\s*var\(--activity-bar-width\)\s+var\(--sidebar-width\)\s+minmax\(0,\s*1fr\)\s+var\(--context-width\)/s,
+      /\.collaboration-cockpit\s*\{[^}]*grid-template-columns:\s*var\(--activity-bar-width\)\s+var\(--sidebar-width\)\s+minmax\(0,\s*1fr\)/s,
     );
     expect(cockpit).toMatch(
       /\.cockpit-sidebar,\s*\.cockpit-context\s*\{[^}]*background:\s*var\(--surface-panel\)/s,

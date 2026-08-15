@@ -396,7 +396,7 @@ async function evaluateWithNavigationRetry(page, fn, arg) {
 
 async function createAgent(page, name, template, avatar, accent) {
   await page.getByRole("tab", { name: "Agent" }).click();
-  await page.getByRole("button", { name: "创建 Agent" }).click();
+  await page.getByRole("button", { name: "创建 Agent" }).click({ noWaitAfter: true });
   await page.getByLabel("创建方式").selectOption(template);
   await page.getByLabel("Agent 名称").fill(name);
   await page.getByLabel("模型服务", { exact: true }).selectOption({
@@ -438,7 +438,7 @@ async function createThread(page, title, memberNames) {
   await openers.first().click();
   const dialog = page.getByRole("dialog", { name: "创建线程" });
   await dialog.waitFor();
-  await dialog.getByLabel("线程标题").fill(title);
+  await dialog.getByRole("textbox", { name: "线程标题" }).fill(title);
   for (const name of memberNames) {
     let checked = false;
     for (let attempt = 0; attempt < 3; attempt += 1) {
@@ -620,9 +620,11 @@ try {
   assert.equal(providerCalls, 1);
   await page.goto(`${baseUrl}/projects/legacy-project`, { waitUntil: "networkidle" });
   await page.getByRole("heading", { name: "Persistent Threads Legacy" }).waitFor();
+  await page.getByRole("button", { name: "绑定工作区" }).click();
   await page.getByLabel("本地工作区路径").fill(workspaceDirectory);
   await page.getByRole("button", { name: "绑定工作区" }).click();
   await page.getByText("工作区已保存。", { exact: true }).waitFor();
+  await page.getByRole("button", { name: "创建使命" }).click();
   await page.getByLabel("使命标题").fill("Persistent Threads Mission");
   await page
     .getByLabel("使命目标")

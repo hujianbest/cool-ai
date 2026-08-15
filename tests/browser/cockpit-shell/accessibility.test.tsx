@@ -67,12 +67,10 @@ describe("narrow-screen and keyboard accessibility", () => {
     renderCockpitWithProject();
 
     const projects = screen.getByRole("button", { name: "打开项目导航" });
-    const context = screen.getByRole("button", { name: "打开当前任务上下文" });
 
     expect(projects).toHaveAttribute("aria-controls", "project-navigation-drawer");
     expect(projects).toHaveAttribute("aria-expanded", "false");
-    expect(context).toHaveAttribute("aria-controls", "task-context-drawer");
-    expect(context).toHaveAttribute("aria-expanded", "false");
+    expect(screen.queryByRole("button", { name: "打开当前任务上下文" })).toBeNull();
   });
 
   it("moves focus into each drawer and restores it to the opener", async () => {
@@ -87,15 +85,6 @@ describe("narrow-screen and keyboard accessibility", () => {
     await user.click(closeProjects);
     expect(projects).toHaveFocus();
     expect(projects).toHaveAttribute("aria-expanded", "false");
-
-    const context = screen.getByRole("button", { name: "打开当前任务上下文" });
-    await user.click(context);
-    const closeContext = screen.getByRole("button", { name: "关闭当前任务上下文" });
-    expect(context).toHaveAttribute("aria-expanded", "true");
-    expect(closeContext).toHaveFocus();
-    await user.click(closeContext);
-    expect(context).toHaveFocus();
-    expect(context).toHaveAttribute("aria-expanded", "false");
   });
 
   it("keeps closed surfaces out of the narrow keyboard order", async () => {
@@ -118,8 +107,6 @@ describe("narrow-screen and keyboard accessibility", () => {
     expect(screen.getByRole("button", { name: "打开项目导航" })).toHaveFocus();
     await user.tab();
     expect(screen.getByRole("button", { name: "打开编辑" })).toHaveFocus();
-    await user.tab();
-    expect(screen.getByRole("button", { name: "打开当前任务上下文" })).toHaveFocus();
     await user.tab();
     expect(document.body).toHaveFocus();
   });

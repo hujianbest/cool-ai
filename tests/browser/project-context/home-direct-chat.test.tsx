@@ -183,8 +183,8 @@ describe("home direct chat", () => {
     expect(screen.getByRole("button", { name: "Folder project" })).not.toHaveAttribute(
       "aria-current",
     );
-    expect(screen.getByText("A · Alpha")).toBeInTheDocument();
-    expect(screen.getByText("Plans")).toBeInTheDocument();
+    expect(screen.getByRole("heading", { name: "Alpha" })).toBeInTheDocument();
+    expect(screen.queryByText("A · Alpha")).toBeNull();
     expect(screen.queryByText("请先选择项目。")).not.toBeInTheDocument();
   });
 });

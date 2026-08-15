@@ -1,6 +1,12 @@
 "use client";
 
-import type { ReactElement } from "react";
+import {
+  BookOpen,
+  ChatCircle,
+  Moon,
+  Sun,
+  UsersThree,
+} from "@phosphor-icons/react";
 
 import {
   buildSettingsHref,
@@ -20,75 +26,17 @@ export type ActivityBarProps = {
 
 type NavItem = {
   href: string;
+  icon: typeof ChatCircle;
   label: string;
-  icon: ReactElement;
 };
 
-function ChatIcon() {
-  return (
-    <svg
-      aria-hidden="true"
-      fill="none"
-      height={20}
-      stroke="currentColor"
-      strokeLinecap="round"
-      strokeLinejoin="round"
-      strokeWidth={1.5}
-      viewBox="0 0 24 24"
-      width={20}
-    >
-      <path d="M4 6h16v10H8l-4 4V6Z" />
-    </svg>
-  );
-}
-
-function TeamIcon() {
-  return (
-    <svg
-      aria-hidden="true"
-      fill="none"
-      height={20}
-      stroke="currentColor"
-      strokeLinecap="round"
-      strokeLinejoin="round"
-      strokeWidth={1.5}
-      viewBox="0 0 24 24"
-      width={20}
-    >
-      <circle cx="9" cy="9" r="3" />
-      <path d="M3.5 18a5.5 5.5 0 0 1 11 0" />
-      <circle cx="17" cy="8" r="2.5" />
-      <path d="M15 18a4.5 4.5 0 0 1 6-4.2" />
-    </svg>
-  );
-}
-
-function GuideIcon() {
-  return (
-    <svg
-      aria-hidden="true"
-      fill="none"
-      height={20}
-      stroke="currentColor"
-      strokeLinecap="round"
-      strokeLinejoin="round"
-      strokeWidth={1.5}
-      viewBox="0 0 24 24"
-      width={20}
-    >
-      <path d="M5 5.5h14v13H5z" />
-      <path d="M8 9h8M8 12h5M8 15h7" />
-    </svg>
-  );
-}
-
 const NAV_ITEMS: readonly NavItem[] = [
-  { href: "/", label: "工作", icon: <ChatIcon /> },
-  { href: "/team", label: "团队", icon: <TeamIcon /> },
+  { href: "/", icon: ChatCircle, label: "工作" },
+  { href: "/team", icon: UsersThree, label: "团队" },
   {
     href: "/team?section=providers&guide=provider&returnTo=/",
+    icon: BookOpen,
     label: "首次使用引导",
-    icon: <GuideIcon />,
   },
 ];
 
@@ -122,24 +70,26 @@ export function ActivityBar({
           item.href === "/team"
             ? buildSettingsHref("skills", settingsReturnTo)
             : item.href;
+        const Icon = item.icon;
         return (
           <a
-            key={item.href}
             aria-current={isActive ? "page" : undefined}
+            aria-label={item.label}
             className="activity-bar-item"
             href={href}
+            key={item.href}
             title={item.label}
           >
-            {item.icon}
+            <Icon aria-hidden="true" size={20} weight="regular" />
           </a>
         );
       })}
       {pinnedSections.map((section) => (
         <a
-          key={`settings-${section.id}`}
           aria-label={`打开固定设置：${section.label}`}
           className="activity-bar-item"
           href={buildSettingsHref(section.id, settingsReturnTo)}
+          key={`settings-${section.id}`}
           title={`固定设置：${section.label}`}
         >
           <span aria-hidden="true">
@@ -177,11 +127,15 @@ export function ActivityBar({
         }
         type="button"
       >
-        {themePreference.hydrated
-          ? themePreference.theme === "light"
-            ? "夜"
-            : "日"
-          : "·"}
+        {themePreference.hydrated ? (
+          themePreference.theme === "light" ? (
+            <Moon aria-hidden="true" size={20} weight="regular" />
+          ) : (
+            <Sun aria-hidden="true" size={20} weight="regular" />
+          )
+        ) : (
+          <span aria-hidden="true">·</span>
+        )}
       </button>
       {themeStatus ? (
         <span className="activity-bar-status" role="status">

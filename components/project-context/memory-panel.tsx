@@ -6,6 +6,11 @@ import {
   useState,
   type FormEvent,
 } from "react";
+import { MagnifyingGlass, Plus } from "@phosphor-icons/react";
+
+import { ActionDialog } from "@/components/ui/action-dialog";
+import { HelpTip } from "@/components/ui/help-tip";
+import { IconButton } from "@/components/ui/icon-button";
 
 import type { ApiError } from "@/src/shared/contracts";
 import type {
@@ -132,6 +137,8 @@ export function MemoryPanel({ projectId }: { projectId: string }) {
   const [searchType, setSearchType] = useState("");
   const [searchSourceType, setSearchSourceType] = useState("");
   const [searchVersion, setSearchVersion] = useState("");
+  const [writeOpen, setWriteOpen] = useState(false);
+  const [searchOpen, setSearchOpen] = useState(false);
   const [searchHits, setSearchHits] = useState<Array<{
     memory: MemoryEntryV6;
     snippet: string;
@@ -224,6 +231,7 @@ export function MemoryPanel({ projectId }: { projectId: string }) {
         created,
       ]);
       setDraft(EMPTY_DRAFT);
+      setWriteOpen(false);
       setSuccess("共享记忆已保存。");
       setFocusMemoryId(created.id);
     } catch (cause) {
@@ -243,6 +251,7 @@ export function MemoryPanel({ projectId }: { projectId: string }) {
     const query = searchQuery.trim();
     if (!query) return;
     setIsSearching(true);
+    setSearchOpen(false);
     setSearchError(null);
     const params = new URLSearchParams({ q: query });
     if (searchType) params.set("type", searchType);
@@ -293,7 +302,34 @@ export function MemoryPanel({ projectId }: { projectId: string }) {
 
   return (
     <section aria-labelledby={`memory-title-${projectId}`} className="stack">
-      <h2 id={`memory-title-${projectId}`}>共享记忆</h2>
+      <header className="panel-heading">
+        <h2 id={`memory-title-${projectId}`}>共享记忆</h2>
+        <IconButton
+          className="button-primary"
+          icon={<Plus size={20} weight="regular" />}
+          label="添加记忆"
+          onClick={() => {
+            setWriteOpen(true);
+            queueMicrotask(() => contentRef.current?.focus());
+          }}
+        />
+        <IconButton
+          icon={<MagnifyingGlass size={20} weight="regular" />}
+          label="打开记忆检索"
+          onClick={() => setSearchOpen(true)}
+        />
+        <HelpTip label="共享记忆说明">
+          只收录带来源的目标、决策、事实与产物；原始聊天不会自动变成记忆。
+        </HelpTip>
+      </header>
+      <ActionDialog
+        closeLabel="关闭记忆编辑器"
+        initialFocusRef={contentRef}
+        onClose={() => setWriteOpen(false)}
+        open={writeOpen}
+        title="添加记忆"
+        titleId={`memory-write-title-${projectId}`}
+      >
       <form className="stack memory-form" onSubmit={saveMemory}>
         <fieldset>
           <legend>记忆类型</legend>
@@ -392,12 +428,22 @@ export function MemoryPanel({ projectId }: { projectId: string }) {
             ))}
           </select>
         </div>
+        {error && writeOpen ? (
+          <p
+            className="error-text"
+            id={`memory-error-${projectId}`}
+            role="alert"
+          >
+            {error}
+          </p>
+        ) : null}
         <button disabled={isLoading || isSaving} type="submit">
           {isSaving ? "正在保存记忆…" : "保存记忆"}
         </button>
       </form>
+      </ActionDialog>
 
-      {error ? (
+      {error && !writeOpen ? (
         <div className="state-message stack">
           <p
             className="error-text"
@@ -427,6 +473,13 @@ export function MemoryPanel({ projectId }: { projectId: string }) {
         className="stack memory-form"
       >
         <h3 id={`knowledge-feed-${projectId}`}>知识动态</h3>
+        <ActionDialog
+          closeLabel="关闭记忆检索"
+          onClose={() => setSearchOpen(false)}
+          open={searchOpen}
+          title="记忆检索"
+          titleId={`memory-search-title-${projectId}`}
+        >
         <form className="stack" onSubmit={submitSearch}>
           <div className="form-field">
             <label htmlFor={`memory-search-${projectId}`}>检索记忆</label>
@@ -483,6 +536,7 @@ export function MemoryPanel({ projectId }: { projectId: string }) {
             {isSearching ? "正在检索…" : "检索"}
           </button>
         </form>
+        </ActionDialog>
         {isSearching ? (
           <p aria-busy="true" className="state-message">
             正在检索记忆…

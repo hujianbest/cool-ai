@@ -193,8 +193,18 @@ function threadStateResponse(
   return null;
 }
 
-function installHappyPathFetch() {
-  let mission: null | Record<string, unknown> = null;
+function installHappyPathFetch(options: { missionReady?: boolean } = {}) {
+  let mission: null | Record<string, unknown> = options.missionReady
+    ? {
+        createdAt: "2026-08-08T00:00:00.000Z",
+        goal: "Prepare a release plan",
+        id: "mission-1",
+        projectId: project.id,
+        title: "Release mission",
+        updatedAt: "2026-08-08T00:00:00.000Z",
+        version: 1,
+      }
+    : null;
   let started = false;
   const requests: string[] = [];
   const fetchMock = vi.fn(
@@ -424,7 +434,7 @@ describe("progressive onboarding T-1", () => {
   });
 
   it("uses selected thread/run tuple routes without legacy collaboration, project-only, run-only, or tasks calls", async () => {
-    const { requests } = installHappyPathFetch();
+    const { requests } = installHappyPathFetch({ missionReady: true });
     const user = userEvent.setup();
     window.history.replaceState(null, "", "/?guide=project-select");
     render(<ProjectPanel />);
@@ -449,25 +459,15 @@ describe("progressive onboarding T-1", () => {
     });
     expect(
       await within(goalGuide).findByText(
-        "资源已就绪，可以创建使命并启动协作。",
+        "目标已受理。下一步可在项目群聊启动协作；尚未执行、复核或交付。",
       ),
     ).toBeInTheDocument();
 
     await user.click(
-      within(goalGuide).getByRole("button", { name: "创建使命目标" }),
+      within(goalGuide).getByRole("button", { name: "查看已受理使命" }),
     );
-    expect(screen.getByLabelText("使命标题")).toHaveFocus();
-    await user.type(screen.getByLabelText("使命标题"), "Release mission");
-    await user.type(screen.getByLabelText("使命目标"), "Prepare a release plan");
-    await user.click(screen.getByRole("button", { name: "创建使命" }));
-    expect(
-      await screen.findByRole("heading", { name: "Release mission" }),
-    ).toBeInTheDocument();
-    expect(
-      await within(goalGuide).findByText(
-        "目标已受理。下一步可在项目群聊启动协作；尚未执行、复核或交付。",
-      ),
-    ).toBeInTheDocument();
+    expect(screen.queryByLabelText("使命标题")).toBeNull();
+    expect(screen.queryByRole("heading", { name: "使命看板" })).toBeNull();
     expect(goalGuide).toHaveTextContent("verified handle");
     expect(goalGuide).toHaveTextContent("sandbox");
     expect(goalGuide).toHaveTextContent("审批");
@@ -1048,7 +1048,13 @@ describe("progressive onboarding T-6 explicit project selection", () => {
       stubViewport(narrow);
       vi.stubGlobal(
         "fetch",
-        vi.fn(async () => Response.json({ projects: [] })),
+        vi.fn(async (input: RequestInfo | URL, init?: RequestInit) => {
+          const url = String(input);
+          if (url === "/api/directory-picker") {
+            return Response.json({ cancelled: true });
+          }
+          return emptyResourceResponse(url) ?? Response.json({ projects: [] });
+        }),
       );
       const user = userEvent.setup();
       window.history.replaceState(null, "", "/?guide=project-select");
@@ -1060,7 +1066,7 @@ describe("progressive onboarding T-6 explicit project selection", () => {
       await user.click(
         within(guide).getByRole("button", { name: "使用现有表面打开文件夹" }),
       );
-      expect(screen.getByLabelText("文件夹路径")).toHaveFocus();
+      expect(screen.queryByLabelText("文件夹路径")).toBeNull();
       expect(within(guide).queryByLabelText("文件夹路径")).toBeNull();
     },
   );
@@ -1109,6 +1115,9 @@ describe("progressive onboarding T-6 explicit project selection", () => {
         const url = String(input);
         const method = init?.method ?? "GET";
         calls.push({ method, url });
+        if (url === "/api/directory-picker") {
+          return Response.json({ path: "D:\\work\\project-alpha" });
+        }
         if (method === "GET") {
           return emptyResourceResponse(url) ?? Response.json({ projects: [] });
         }
@@ -1123,18 +1132,15 @@ describe("progressive onboarding T-6 explicit project selection", () => {
     await user.click(
       within(guide).getByRole("button", { name: "使用现有表面打开文件夹" }),
     );
-    await user.type(screen.getByLabelText("文件夹路径"), "D:\\work\\project-alpha");
-    const projectForm = screen.getByLabelText("文件夹路径").closest("form");
-    await user.click(
-      within(projectForm!).getByRole("button", { name: "打开文件夹" }),
-    );
 
     await waitFor(() =>
       expect(window.location.pathname + window.location.search).toBe(
         `/projects/${project.id}?guide=workspace`,
       ),
     );
-    expect(calls.filter(({ method }) => method === "POST")).toHaveLength(1);
+    expect(
+      calls.filter(({ method, url }) => method === "POST" && url === "/api/projects"),
+    ).toHaveLength(1);
   });
 
   it("reconciles a lost POST response with one new GET fact and never resends", async () => {
@@ -1145,6 +1151,9 @@ describe("progressive onboarding T-6 explicit project selection", () => {
       "fetch",
       vi.fn(async (input: RequestInfo | URL, init?: RequestInit) => {
         const url = String(input);
+        if (url === "/api/directory-picker") {
+          return Response.json({ path: "D:\\work\\project-alpha" });
+        }
         if (init?.method === "POST") {
           postCount += 1;
           created = true;
@@ -1172,11 +1181,7 @@ describe("progressive onboarding T-6 explicit project selection", () => {
     await screen.findByText(
       "尚无可选文件夹项目。请先打开本地文件夹，或直接在中间开始个人对话。",
     );
-    await user.type(screen.getByLabelText("文件夹路径"), "D:\\work\\project-alpha");
-    const projectForm = screen.getByLabelText("文件夹路径").closest("form");
-    await user.click(
-      within(projectForm!).getByRole("button", { name: "打开文件夹" }),
-    );
+    await user.click(screen.getByRole("button", { name: "打开文件夹" }));
 
     await waitFor(() =>
       expect(window.location.pathname + window.location.search).toBe(
@@ -1195,6 +1200,9 @@ describe("progressive onboarding T-6 explicit project selection", () => {
       "fetch",
       vi.fn(async (input: RequestInfo | URL, init?: RequestInit) => {
         const url = String(input);
+        if (url === "/api/directory-picker") {
+          return Response.json({ path: "D:\\work\\project-alpha" });
+        }
         if (init?.method === "POST") {
           postCount += 1;
           throw new TypeError("network result unknown");
@@ -1219,11 +1227,7 @@ describe("progressive onboarding T-6 explicit project selection", () => {
     await screen.findByText(
       "尚无可选文件夹项目。请先打开本地文件夹，或直接在中间开始个人对话。",
     );
-    await user.type(screen.getByLabelText("文件夹路径"), "D:\\work\\project-alpha");
-    const projectForm = screen.getByLabelText("文件夹路径").closest("form");
-    await user.click(
-      within(projectForm!).getByRole("button", { name: "打开文件夹" }),
-    );
+    await user.click(screen.getByRole("button", { name: "打开文件夹" }));
 
     expect(
       await screen.findByText(/无法唯一确认文件夹项目是否已打开/, {
@@ -1457,7 +1461,7 @@ describe("progressive onboarding T-7 workspace binding", () => {
       "尚未绑定工作区",
     );
     expect(within(guide).queryByLabelText("本地工作区路径")).toBeNull();
-    await user.click(within(guide).getByRole("button", { name: "绑定工作区" }));
+    await user.click(within(guide).getByRole("button", { name: "使用现有表面绑定工作区" }));
     expect(screen.getByLabelText("本地工作区路径")).toHaveFocus();
     expect(calls.every(({ method }) => method === "GET")).toBe(true);
   });
@@ -1490,6 +1494,7 @@ describe("progressive onboarding T-7 workspace binding", () => {
 
     render(<WorkspaceSetup projectId={project.id} showGuide />);
     await screen.findByText("尚未绑定工作区。请使用现有 WorkspaceSetup 完成绑定。");
+    await user.click(screen.getByRole("button", { name: "绑定工作区" }));
     await user.type(
       screen.getByLabelText("本地工作区路径"),
       "D:\\private\\workspace",
@@ -1550,6 +1555,7 @@ describe("progressive onboarding T-7 workspace binding", () => {
 
     render(<WorkspaceSetup projectId={project.id} showGuide />);
     await screen.findByText("工作区已 bind ready：目录已规范化且当前可读。");
+    await user.click(screen.getByRole("button", { name: "保存工作区" }));
     await user.clear(screen.getByLabelText("本地工作区路径"));
     await user.type(screen.getByLabelText("本地工作区路径"), "D:\\new");
     await user.click(screen.getByRole("button", { name: "保存工作区" }));
@@ -1564,6 +1570,7 @@ describe("progressive onboarding T-7 workspace binding", () => {
     expect(putCount).toBe(1);
     expect(getCount).toBe(1);
 
+    await user.click(screen.getByRole("button", { name: "保存工作区" }));
     await user.clear(screen.getByLabelText("本地工作区路径"));
     await user.type(screen.getByLabelText("本地工作区路径"), "D:\\third");
     await user.click(screen.getByRole("button", { name: "保存工作区" }));
@@ -2024,8 +2031,11 @@ describe("progressive onboarding T-9 formal goal intake", () => {
 
     render(<MissionBoard projectId={project.id} />);
     await screen.findByText("尚未创建使命。");
-    await user.type(screen.getByLabelText("使命标题"), mission.title);
-    await user.type(screen.getByLabelText("使命目标"), mission.goal);
+    await user.click(screen.getByRole("button", { name: "创建使命" }));
+    await user.type(screen.getByLabelText("使命标题"), mission.title, { skipClick: true });
+    const privateGoal = screen.getByLabelText("使命目标");
+    privateGoal.focus();
+    await user.type(privateGoal, mission.goal, { skipClick: true });
     await user.click(screen.getByRole("button", { name: "创建使命" }));
 
     expect(
@@ -2083,8 +2093,11 @@ describe("progressive onboarding T-9 formal goal intake", () => {
 
     render(<MissionBoard projectId={project.id} />);
     await screen.findByText("尚未创建使命。");
-    await user.type(screen.getByLabelText("使命标题"), mission.title);
-    await user.type(screen.getByLabelText("使命目标"), mission.goal);
+    await user.click(screen.getByRole("button", { name: "创建使命" }));
+    await user.type(screen.getByLabelText("使命标题"), mission.title, { skipClick: true });
+    const retryGoal = screen.getByLabelText("使命目标");
+    retryGoal.focus();
+    await user.type(retryGoal, mission.goal, { skipClick: true });
     await user.click(screen.getByRole("button", { name: "创建使命" }));
 
     const receipt = await screen.findByRole("alert");
@@ -2368,10 +2381,18 @@ describe("progressive onboarding T-14 unknown-write reconciliation", () => {
     render(<MissionBoard projectId={project.id} />);
     await screen.findByRole("heading", { name: mission.title });
     await user.click(screen.getByRole("button", { name: "编辑使命" }));
-    await user.clear(screen.getByLabelText("使命标题"));
-    await user.type(screen.getByLabelText("使命标题"), "Updated mission");
-    await user.clear(screen.getByLabelText("使命目标"));
-    await user.type(screen.getByLabelText("使命目标"), "Updated private goal");
+    const privateEditTitle = screen.getByLabelText("使命标题");
+    await user.clear(privateEditTitle);
+    privateEditTitle.focus();
+    await user.type(privateEditTitle, "Updated mission", {
+      skipClick: true,
+    });
+    const privateEditGoal = screen.getByLabelText("使命目标");
+    await user.clear(privateEditGoal);
+    privateEditGoal.focus();
+    await user.type(privateEditGoal, "Updated private goal", {
+      skipClick: true,
+    });
     await user.click(screen.getByRole("button", { name: "保存使命" }));
 
     expect(
@@ -2431,11 +2452,12 @@ describe("progressive onboarding T-14 unknown-write reconciliation", () => {
     render(<MissionBoard projectId={project.id} />);
     await screen.findByRole("heading", { name: mission.title });
     await user.click(screen.getByRole("button", { name: "编辑使命" }));
-    await user.clear(screen.getByLabelText("使命标题"));
-    await user.type(
-      screen.getByLabelText("使命标题"),
-      "Explicitly resubmitted mission",
-    );
+    const resubmitTitle = screen.getByLabelText("使命标题");
+    await user.clear(resubmitTitle);
+    resubmitTitle.focus();
+    await user.type(resubmitTitle, "Explicitly resubmitted mission", {
+      skipClick: true,
+    });
     await user.click(screen.getByRole("button", { name: "保存使命" }));
 
     const receipt = await screen.findByRole("alert");

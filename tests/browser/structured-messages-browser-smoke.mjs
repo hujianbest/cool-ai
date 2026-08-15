@@ -193,6 +193,8 @@ function startApp() {
         ...process.env,
         COCKPIT_DB_PATH: databasePath,
         COCKPIT_MASTER_KEY: masterKey,
+        COCKPIT_ALLOW_SCRIPTED_PICKER: "1",
+        COCKPIT_SCRIPTED_DIRECTORY: workspaceDirectory,
         NEXT_DIST_DIR: `.next-structured-smoke-${process.pid}`,
       },
       stdio: ["ignore", "pipe", "pipe"],
@@ -315,32 +317,54 @@ async function provision(page) {
   assert.ok(alphaAgentId && betaAgentId);
 }
 
+async function openFolderProject(page, headingName) {
+  await page.getByRole("button", { name: "打开文件夹" }).first().click();
+  await page.waitForURL(/\/projects\/[^/]+$/);
+  await page.getByRole("heading", { name: headingName }).waitFor();
+}
+
+async function createMissionViaApi(page, title, goal) {
+  const payload = await page.evaluate(async ({ goalText, titleText }) => {
+    const projectId = new URL(window.location.href).pathname.split("/").at(-1);
+    const members = await (await fetch(`/api/projects/${projectId}/members`)).json();
+    const response = await fetch(`/api/projects/${projectId}/mission`, {
+      body: JSON.stringify({
+        expectedVersion: 0,
+        goal: goalText,
+        operationId: crypto.randomUUID(),
+        title: titleText,
+      }),
+      headers: { "content-type": "application/json" },
+      method: "POST",
+    });
+    const body = await response.json();
+    if (!response.ok) throw new Error(JSON.stringify(body));
+    return body;
+  }, { goalText: goal, titleText: title });
+  assert.equal(payload.mission.title, title);
+}
+
 async function createProject(page) {
   await page.goto(baseUrl, { waitUntil: "networkidle" });
-  await page.getByLabel("文件夹路径").fill(workspaceDirectory);
-  await page.locator("form")
-    .filter({ has: page.getByLabel("文件夹路径") })
-    .getByRole("button", { name: "打开文件夹" })
-    .click();
-  await page.waitForURL(/\/projects\/[^/]+$/);
-  await page.getByRole("heading", { name: "workspace" }).waitFor();
+  await openFolderProject(page, "workspace");
   const projectId = new URL(page.url()).pathname.split("/").at(-1);
   const members = page.getByRole("group", { name: "平等项目成员" });
   await members.getByRole("checkbox", { name: /Structured Alpha/ }).check();
   await members.getByRole("checkbox", { name: /Structured Beta/ }).check();
   await page.getByRole("button", { name: "保存成员" }).click();
   await page.getByText("项目成员已保存。", { exact: true }).waitFor();
-  await page.getByLabel("使命标题").fill("Structured Browser Mission");
-  await page.getByLabel("使命目标").fill("Verify immutable structured messages");
-  await page.getByRole("button", { name: "创建使命" }).click();
-  await page.getByRole("heading", { name: "Structured Browser Mission" }).waitFor();
+  await createMissionViaApi(
+    page,
+    "Structured Browser Mission",
+    "Verify immutable structured messages",
+  );
   return projectId;
 }
 
 async function createThread(page) {
   await page.getByRole("button", { name: "创建线程" }).first().click();
   const dialog = page.getByRole("dialog", { name: "创建线程" });
-  await dialog.getByLabel("线程标题").fill("Structured smoke thread");
+  await dialog.getByRole("textbox", { name: "线程标题" }).fill("Structured smoke thread");
   await dialog.getByLabel("Structured Alpha").check();
   await dialog.getByLabel("Structured Beta").check();
   await dialog.getByRole("button", { name: "创建线程", exact: true }).click();

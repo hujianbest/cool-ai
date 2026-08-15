@@ -151,6 +151,7 @@ describe("Agent panel", () => {
     expect(
       await screen.findAllByText("请先创建并验证模型服务。"),
     ).not.toHaveLength(0);
+    await user.click(screen.getByRole("button", { name: "创建 Agent" }));
     expect(screen.getByRole("button", { name: "保存 Agent" })).toBeDisabled();
   });
 
@@ -216,7 +217,7 @@ describe("Agent panel", () => {
     const heading = await screen.findByRole("heading", { name: "计划员" });
     expect(heading).toHaveFocus();
     expect(screen.getByRole("status")).toHaveTextContent("Agent 已保存。");
-    expect(screen.getByText("复核技能")).toBeInTheDocument();
+    expect(screen.getByText("规划技能 · 复核技能")).toBeInTheDocument();
   });
 
   it("edits with expectedVersion and preserves a failed draft with field errors", async () => {

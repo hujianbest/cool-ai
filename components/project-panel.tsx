@@ -1,12 +1,17 @@
 "use client";
 
 import {
+  Folder,
+  FolderPlus,
+  PencilSimple,
+  X,
+} from "@phosphor-icons/react";
+import {
   useCallback,
   useEffect,
   useMemo,
   useRef,
   useState,
-  type FormEvent,
 } from "react";
 import { usePathname, useRouter } from "next/navigation";
 
@@ -20,6 +25,7 @@ import {
 } from "@/components/settings-navigation";
 import { ProjectSetupPanel } from "@/components/project-context/project-setup-panel";
 import { TaskPanel } from "@/components/task-panel";
+import { IconButton } from "@/components/ui/icon-button";
 import {
   ApiDisplayError,
   apiErrorCopy,
@@ -40,6 +46,25 @@ async function errorMessage(response: Response): Promise<string> {
   return apiErrorCopy(payload);
 }
 
+function directoryPickerResult(
+  payload: unknown,
+): { kind: "picked"; path: string } | { kind: "cancelled" } | { kind: "invalid" } {
+  if (!payload || typeof payload !== "object" || Array.isArray(payload)) {
+    return { kind: "invalid" };
+  }
+  if ("cancelled" in payload && payload.cancelled === true) {
+    return { kind: "cancelled" };
+  }
+  if (
+    "path" in payload &&
+    typeof payload.path === "string" &&
+    payload.path.trim().length > 0
+  ) {
+    return { kind: "picked", path: payload.path };
+  }
+  return { kind: "invalid" };
+}
+
 export function ProjectPanel({
   returnTo,
 }: {
@@ -53,7 +78,6 @@ export function ProjectPanel({
   const [guideActive, setGuideActive] = useState(false);
   const [projects, setProjects] = useState<Project[]>([]);
   const [currentProjectId, setCurrentProjectId] = useState<string | null>(null);
-  const [folderPath, setFolderPath] = useState("");
   const [projectLoadError, setProjectLoadError] = useState<string | null>(null);
   const [routeProjectError, setRouteProjectError] = useState<string | null>(null);
   const [formError, setFormError] = useState<string | null>(null);
@@ -96,7 +120,6 @@ export function ProjectPanel({
   const contextToggleRef = useRef<HTMLButtonElement>(null);
   const contextCloseRef = useRef<HTMLButtonElement>(null);
   const currentProjectTitleRef = useRef<HTMLHeadingElement>(null);
-  const projectFolderPathInputRef = useRef<HTMLInputElement>(null);
   const closeMobileSurface = useCallback(() => setMobileSurface(null), []);
   const projectModal = useMemo(
     () => ({
@@ -281,17 +304,7 @@ export function ProjectPanel({
     }
   }, [currentProjectId, focusCreatedProjectId]);
 
-  async function handleSubmit(event: FormEvent<HTMLFormElement>) {
-    event.preventDefault();
-    setFormError(null);
-    setProjectCreateNotice(null);
-
-    if (!folderPath.trim()) {
-      setFormError("请输入本地文件夹路径。");
-      return;
-    }
-
-    setIsSubmitting(true);
+  async function openFolderWithPath(path: string) {
     const previousProjectIds = new Set(projects.map((project) => project.id));
     const guideCreate = guideStep === "project-select";
 
@@ -306,7 +319,6 @@ export function ProjectPanel({
         return [...withoutDuplicate, createdProject];
       });
       setCurrentProjectId(createdProject.id);
-      setFolderPath("");
       if (reconciled) {
         setProjectCreateNotice("已通过事实核对确认项目已打开。");
       }
@@ -350,7 +362,7 @@ export function ProjectPanel({
 
     try {
       const response = await fetch("/api/projects", {
-        body: JSON.stringify({ path: folderPath }),
+        body: JSON.stringify({ path }),
         headers: { "content-type": "application/json" },
         method: "POST",
       });
@@ -370,6 +382,30 @@ export function ProjectPanel({
       } else {
         await reconcileUnknownCreate();
       }
+    }
+  }
+
+  async function openFolderFromPicker() {
+    setFormError(null);
+    setProjectCreateNotice(null);
+    if (isSubmitting) return;
+    setIsSubmitting(true);
+    try {
+      const pickerResponse = await fetch("/api/directory-picker", {
+        method: "POST",
+      });
+      if (!pickerResponse.ok) {
+        throw new ApiDisplayError(await errorMessage(pickerResponse));
+      }
+      const picked = directoryPickerResult(await pickerResponse.json());
+      if (picked.kind === "cancelled") return;
+      if (picked.kind === "invalid") {
+        setFormError("无法打开文件夹，请稍后重试。");
+        return;
+      }
+      await openFolderWithPath(picked.path);
+    } catch (cause) {
+      setFormError(caughtApiErrorCopy(cause, "无法打开文件夹，请稍后重试。"));
     } finally {
       setIsSubmitting(false);
     }
@@ -386,10 +422,12 @@ export function ProjectPanel({
   function guideToProjectSelection() {
     if (narrow) {
       setMobileSurface("projects");
-      window.setTimeout(() => projectFolderPathInputRef.current?.focus(), 0);
+      window.setTimeout(() => {
+        void openFolderFromPicker();
+      }, 0);
       return;
     }
-    projectFolderPathInputRef.current?.focus();
+    void openFolderFromPicker();
   }
 
   function projectRecovery() {
@@ -441,7 +479,7 @@ export function ProjectPanel({
             aria-label={
               mobileSurface === "projects" ? "隐藏项目导航" : "打开项目导航"
             }
-            className="button-secondary"
+            className="button-secondary icon-button"
             onClick={() =>
               setMobileSurface((current) =>
                 current === "projects" ? null : "projects",
@@ -450,13 +488,14 @@ export function ProjectPanel({
             ref={projectToggleRef}
             type="button"
           >
-            项目
+            <Folder aria-hidden="true" size={20} weight="regular" />
+            <span className="sr-only">项目</span>
           </button>
           <button
             aria-controls="task-editor-surface"
             aria-expanded={mobileSurface === "editor"}
             aria-label={mobileSurface === "editor" ? "隐藏编辑" : "打开编辑"}
-            className="button-secondary"
+            className="button-secondary icon-button"
             onClick={() =>
               setMobileSurface((current) =>
                 current === "editor" ? null : "editor",
@@ -465,26 +504,8 @@ export function ProjectPanel({
             ref={editorToggleRef}
             type="button"
           >
-            编辑
-          </button>
-          <button
-            aria-controls="task-context-drawer"
-            aria-expanded={mobileSurface === "context"}
-            aria-label={
-              mobileSurface === "context"
-                ? "隐藏当前任务上下文"
-                : "打开当前任务上下文"
-            }
-            className="button-secondary"
-            onClick={() =>
-              setMobileSurface((current) =>
-                current === "context" ? null : "context",
-              )
-            }
-            ref={contextToggleRef}
-            type="button"
-          >
-            上下文
+            <PencilSimple aria-hidden="true" size={20} weight="regular" />
+            <span className="sr-only">编辑</span>
           </button>
           {routeProjectError && narrow ? (
             <button
@@ -543,44 +564,36 @@ export function ProjectPanel({
         </span>
         <button
           aria-label="关闭项目导航"
-          className="drawer-close button-ghost"
+          className="drawer-close button-ghost icon-button"
           onClick={closeProjectNavigation}
           ref={projectCloseRef}
           tabIndex={narrow && mobileSurface === "projects" ? 0 : -1}
           type="button"
         >
-          关闭
+          <X aria-hidden="true" size={20} weight="regular" />
         </button>
         <div className="product-identity">
           <span aria-hidden="true" className="product-mark">
             C
           </span>
-          <div>
-            <p className="eyebrow">协作驾驶舱</p>
-            <p className="surface-heading">Cool AI</p>
-          </div>
+          <span className="sr-only">Cool AI</span>
         </div>
 
         <section aria-labelledby="projects-title" className="stack">
-          <h2 className="surface-heading" id="projects-title">项目</h2>
-          <form className="stack" onSubmit={handleSubmit}>
-            <div className="form-field">
-              <label htmlFor="project-folder-path">文件夹路径</label>
-              <input
-                aria-describedby={formError ? "project-folder-path-error" : undefined}
-                aria-invalid={formError ? "true" : undefined}
-                id="project-folder-path"
-                name="path"
-                onChange={(event) => setFolderPath(event.target.value)}
-                placeholder="例如：D:\work\my-app"
-                ref={projectFolderPathInputRef}
-                value={folderPath}
-              />
-            </div>
-            <button className="button-primary" disabled={isSubmitting} type="submit">
-              {isSubmitting ? "正在打开…" : "打开文件夹"}
-            </button>
-          </form>
+          <header className="panel-heading">
+            <h2 className="surface-heading" id="projects-title">
+              项目
+            </h2>
+            <IconButton
+              className="button-primary"
+              disabled={isSubmitting}
+              icon={<FolderPlus size={20} weight="regular" />}
+              label="打开文件夹"
+              onClick={() => {
+                void openFolderFromPicker();
+              }}
+            />
+          </header>
           {formError ? (
             <p className="error-text" id="project-folder-path-error" role="alert">
               {formError}
@@ -606,16 +619,7 @@ export function ProjectPanel({
             </div>
           ) : projects.length === 0 ? (
             <div className="empty-guide state-message">
-              <p>
-                暂无文件夹项目。打开本地文件夹开始协作，也可直接在中间与 Agent 对话。
-              </p>
-              <button
-                className="button-primary"
-                onClick={() => projectFolderPathInputRef.current?.focus()}
-                type="button"
-              >
-                打开文件夹
-              </button>
+              <p>暂无文件夹项目。</p>
             </div>
           ) : (
             <>

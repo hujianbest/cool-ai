@@ -188,6 +188,68 @@
       color: var(--color-ink);
     }
 
+    .icon-button {
+      display: grid;
+      min-height: var(--control-min);
+      min-width: var(--control-min);
+      place-items: center;
+      padding: 0;
+      border-radius: var(--rounded-md);
+    }
+
+    .icon-button svg {
+      display: block;
+    }
+
+    .help-tip {
+      display: inline-flex;
+      position: relative;
+      align-items: center;
+    }
+
+    .help-tip [role="note"] {
+      position: absolute;
+      z-index: 1;
+      inset-block-start: var(--control-min);
+      inset-inline-start: 0;
+      width: max-content;
+      max-width: 16rem;
+      padding: var(--space-xs) var(--space-sm);
+      border: var(--border-width) solid var(--color-hairline);
+      border-radius: var(--rounded-md);
+      background: var(--color-surface-tile-3);
+      color: var(--color-ink);
+      box-shadow: var(--shadow-panel);
+    }
+
+    .action-dialog {
+      width: min(100%, 28rem);
+      padding: var(--space-lg);
+      background: var(--color-surface-tile-3);
+      color: var(--color-ink);
+      border-radius: var(--rounded-lg);
+      box-shadow: var(--shadow-panel);
+    }
+
+    .action-dialog-header {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: var(--space-sm);
+      margin-bottom: var(--space-md);
+    }
+
+    .action-dialog-header h2 {
+      margin: 0;
+      font-size: var(--text-body-strong);
+    }
+
+    .preview-field {
+      display: grid;
+      gap: var(--space-xxs);
+      margin-bottom: var(--space-sm);
+    }
+
     footer p {
       color: var(--color-ink-muted-48);
       font-size: var(--text-caption);
@@ -286,6 +348,43 @@
         <button class="button-secondary">Secondary Button</button>
         <button class="button-ghost">Ghost Button</button>
       </div>
+
+      <h3 style="font-size: var(--text-tagline); font-weight: 600; margin-bottom: var(--space-md);">Icon-first chrome</h3>
+      <div class="component-row">
+        <button aria-label="打开文件夹" class="icon-button button-primary" type="button">
+          <svg aria-hidden="true" fill="none" height="20" stroke="currentColor" stroke-width="1.6" viewBox="0 0 20 20" width="20">
+            <path d="M3 6.5h5l1.5 2H17v7.5H3z"></path>
+            <path d="M10 10v4M8 12h4"></path>
+          </svg>
+        </button>
+        <span class="help-tip">
+          <button aria-controls="preview-help" aria-expanded="true" aria-label="没有项目时还能做什么" class="icon-button button-ghost" type="button">
+            <svg aria-hidden="true" fill="none" height="20" stroke="currentColor" stroke-width="1.6" viewBox="0 0 20 20" width="20">
+              <circle cx="10" cy="10" r="7.5"></circle>
+              <path d="M8.2 8.1a1.8 1.8 0 1 1 2.5 1.7c-.6.3-.9.7-.9 1.4"></path>
+              <circle cx="10" cy="14.2" fill="currentColor" r="0.7" stroke="none"></circle>
+            </svg>
+          </button>
+          <span id="preview-help" role="note">打开本地文件夹开始协作，也可直接在中间与 Agent 对话。</span>
+        </span>
+      </div>
+
+      <h3 style="font-size: var(--text-tagline); font-weight: 600; margin-bottom: var(--space-md);">Action dialog</h3>
+      <section aria-labelledby="preview-dialog-title" class="action-dialog" role="dialog">
+        <header class="action-dialog-header">
+          <h2 id="preview-dialog-title">打开文件夹</h2>
+          <button aria-label="关闭打开文件夹" class="icon-button button-ghost" type="button">
+            <svg aria-hidden="true" fill="none" height="20" stroke="currentColor" stroke-width="1.6" viewBox="0 0 20 20" width="20">
+              <path d="M5 5l10 10M15 5 5 15"></path>
+            </svg>
+          </button>
+        </header>
+        <div class="preview-field">
+          <label for="preview-folder-path">文件夹路径</label>
+          <input id="preview-folder-path" value="D:\work\launch-plan">
+        </div>
+        <button class="button-primary" type="button">打开文件夹</button>
+      </section>
 
       <h3 style="font-size: var(--text-tagline); font-weight: 600; margin-bottom: var(--space-md);">Status Labels</h3>
       <div class="component-row">

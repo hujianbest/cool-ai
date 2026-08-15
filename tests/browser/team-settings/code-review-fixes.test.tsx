@@ -33,18 +33,12 @@ describe("code review fixes", () => {
     render(<ProjectPanel />);
 
     const flow = screen.getByRole("region", { name: "任务事件流" });
-    const context = screen.getByRole("complementary", { name: "当前任务上下文" });
     expect(within(flow).getByText("正在加载项目…")).toHaveAttribute("aria-busy", "true");
-    expect(within(context).getByText("正在加载项目上下文…")).toHaveAttribute(
-      "aria-busy",
-      "true",
-    );
+    expect(screen.queryByRole("complementary", { name: "当前任务上下文" })).toBeNull();
 
     projects.resolve(Response.json({ projects: [] }));
     expect(
-      await screen.findByText(
-        "暂无文件夹项目。打开本地文件夹开始协作，也可直接在中间与 Agent 对话。",
-      ),
+      await screen.findByText("暂无文件夹项目。"),
     ).toBeInTheDocument();
   });
 
@@ -70,9 +64,7 @@ describe("code review fixes", () => {
 
     expect(fetchMock).toHaveBeenCalledTimes(3);
     expect(
-      await screen.findByText(
-        "暂无文件夹项目。打开本地文件夹开始协作，也可直接在中间与 Agent 对话。",
-      ),
+      await screen.findByText("暂无文件夹项目。"),
     ).toBeInTheDocument();
   });
 
@@ -82,6 +74,7 @@ describe("code review fixes", () => {
       cockpitFetch([
         Response.json({ projects: [] }),
         Response.json({ kind: "needs_agent" }),
+          Response.json({ path: "D:\\work\\新项目" }),
           Response.json(
             {
               project: {
@@ -98,13 +91,8 @@ describe("code review fixes", () => {
     const user = userEvent.setup();
 
     render(<ProjectPanel />);
-    await screen.findByText(
-      "暂无文件夹项目。打开本地文件夹开始协作，也可直接在中间与 Agent 对话。",
-    );
-    await user.type(screen.getByLabelText("文件夹路径"), "D:\\work\\新项目");
-    const projectForm = screen.getByLabelText("文件夹路径").closest("form");
-    expect(projectForm).not.toBeNull();
-    await user.click(within(projectForm!).getByRole("button", { name: "打开文件夹" }));
+    await screen.findByText("暂无文件夹项目。");
+    await user.click(screen.getByRole("button", { name: "打开文件夹" }));
 
     const title = await screen.findByRole("heading", { level: 2, name: "新项目" });
     expect(title).toHaveAttribute("tabindex", "-1");
@@ -119,19 +107,17 @@ describe("code review fixes", () => {
       cockpitFetch([
         Response.json({ projects: [] }),
         Response.json({ kind: "needs_agent" }),
+        Response.json({ cancelled: true }),
       ]),
     );
 
     render(<ProjectPanel />);
+    const user = userEvent.setup();
 
-    expect(screen.getByLabelText("文件夹路径")).toBeInTheDocument();
-    const projectForm = screen.getByLabelText("文件夹路径").closest("form");
-    expect(projectForm).not.toBeNull();
-    expect(within(projectForm!).getByRole("button", { name: "打开文件夹" })).toBeInTheDocument();
+    await user.click(await screen.findByRole("button", { name: "打开文件夹" }));
+    expect(screen.queryByLabelText("文件夹路径")).toBeNull();
     expect(
-      await screen.findByText(
-        "暂无文件夹项目。打开本地文件夹开始协作，也可直接在中间与 Agent 对话。",
-      ),
+      await screen.findByText("暂无文件夹项目。"),
     ).toBeInTheDocument();
   });
 });

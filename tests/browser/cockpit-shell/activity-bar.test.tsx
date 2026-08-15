@@ -69,7 +69,11 @@ describe("ActivityBar", () => {
     const svgs = container.querySelectorAll("svg");
     expect(svgs.length).toBeGreaterThanOrEqual(2);
     svgs.forEach((svg) => {
-      expect(svg).toHaveAttribute("stroke", "currentColor");
+      expect(
+        svg.getAttribute("fill") === "currentColor" ||
+          svg.getAttribute("stroke") === "currentColor" ||
+          svg.getAttribute("color") === "currentColor",
+      ).toBe(true);
     });
   });
 
