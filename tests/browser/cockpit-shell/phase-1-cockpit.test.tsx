@@ -30,7 +30,7 @@ describe("phase-1 usable cockpit", () => {
     render(<ProjectPanel />);
 
     const cockpit = await screen.findByTestId("collaboration-cockpit");
-    expect(within(cockpit).getByRole("button", { name: "打开文件夹" })).toBeInTheDocument();
+    expect(within(cockpit).getAllByRole("button", { name: "打开文件夹" }).length).toBeGreaterThanOrEqual(1);
     expect(within(cockpit).queryByLabelText("文件夹路径")).toBeNull();
     expect(within(cockpit).queryByRole("button", { name: "如何打开项目" })).toBeNull();
     expect(within(cockpit).queryByRole("tab", { name: "共享记忆" })).toBeNull();

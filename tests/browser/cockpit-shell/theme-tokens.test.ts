@@ -16,34 +16,32 @@ describe("DESIGN.md visual token discipline", () => {
 
     // DESIGN.md color tokens should be present
     for (const declaration of [
-      "--color-primary: #3E6B5E",
-      "--color-primary-focus: #2F5A4E",
-      "--color-primary-on-dark: #82B8A5",
-      "--color-ink: #2B251F",
-      "--color-body: #2B251F",
-      "--color-canvas: #F4EFE5",
-      "--color-canvas-parchment: #FBF7EE",
-      "--color-surface-pearl: #FFFCF4",
-      "--color-surface-black: #0D0B08",
+      "--color-primary: #9A5F1A",
+      "--color-primary-focus: #794819",
+      "--color-primary-on-dark: #E4B066",
+      "--color-ink: #221E1C",
+      "--color-body: #221E1C",
+      "--color-canvas: #F4EFE7",
+      "--color-canvas-parchment: #FAF6F1",
+      "--color-surface-pearl: #FEFBF8",
+      "--color-surface-black: #0E0C09",
       "--color-on-primary: #FFFFFF",
-      "--color-rail: #241F18",
-      "--color-rail-ink: #EDE5D8",
+      "--color-rail: #EAE4DA",
+      "--color-rail-ink: #221E1C",
       "--color-card-strong: #FFFFFF",
-      "--color-ink-muted-80: #6F665A",
-      "--color-ink-muted-48: #9C9182",
+      "--color-ink-muted-80: #595451",
+      "--color-ink-muted-48: #847F7B",
     ]) {
       expect(tokens).toContain(declaration);
     }
 
     // DESIGN.md should contain the source values
-    expect(designMd).toContain("primary: \"#3E6B5E\"");
-    expect(designMd).toContain("ink: \"#2B251F\"");
-    expect(designMd).toContain("canvas: \"#F4EFE5\"");
-    expect(designMd).toContain("rail: \"#241F18\"");
-    expect(designMd).toContain("amber: \"#96691C\"");
-    expect(designMd).toContain("green: \"#3F6A4D\"");
-    expect(designMd).toContain("terra: \"#A0443F\"");
-    expect(designMd).toContain("blue: \"#41607F\"");
+    expect(designMd).toContain("#9A5F1A");
+    expect(designMd).toContain("#221E1C");
+    expect(designMd).toContain("#F4EFE7");
+    expect(designMd).toContain("#EAE4DA");
+    expect(designMd).toContain("暖金");
+    expect(designMd).toContain("暖米");
   });
 
   it("defines DESIGN.md typography scale", () => {
@@ -106,7 +104,7 @@ describe("DESIGN.md visual token discipline", () => {
   it("defines DESIGN.md shadow tokens", () => {
     const tokens = readFileSync(tokenPath, "utf8");
 
-    expect(tokens).toContain("--shadow-product: rgba(0, 0, 0, 0.22) 3px 5px 30px");
+    expect(tokens).toContain("--shadow-product: rgba(34, 30, 28, 0.10) 0 8px 24px");
     expect(tokens).toContain("--shadow-panel:");
   });
 });
@@ -134,8 +132,8 @@ describe("legacy cockpit token compatibility", () => {
       "--interactive-primary: var(--color-primary)",
       "--interactive-primary-hover: var(--color-primary-focus)",
       "--interactive-soft: var(--color-canvas-parchment)",
-      "--activity-bar-width: 3.5rem",
-      "--sidebar-width: 14.75rem",
+      "--activity-bar-width: 3.25rem",
+      "--sidebar-width: 15rem",
       "--context-width: 19rem",
       "--control-min: 2.75rem",
     ]) {

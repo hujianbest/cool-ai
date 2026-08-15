@@ -16,7 +16,10 @@ import {
 import { usePathname, useRouter } from "next/navigation";
 
 import { useModalSurface, useNarrowMode } from "@/components/mobile-dialog";
-import { ActivityBar } from "@/components/activity-bar";
+import {
+  ActivityBar,
+  type GovernanceView,
+} from "@/components/activity-bar";
 import { ProjectNotificationPoller } from "@/components/notifications/project-notification-poller";
 import { ProjectThreadNavigation } from "@/components/project-thread-navigation";
 import {
@@ -97,6 +100,9 @@ export function ProjectPanel({
   const [threadListState, setThreadListState] = useState<
     "loading" | "empty" | "ready" | "error" | null
   >(null);
+  const [governanceView, setGovernanceView] = useState<GovernanceView | null>(
+    null,
+  );
   const [homeState, setHomeState] = useState<HomeState | null>(null);
   const [settingsReturnTo, setSettingsReturnTo] = useState<ProjectReturnTo>(
     () =>
@@ -465,7 +471,38 @@ export function ProjectPanel({
     >
       <h1 className="sr-only">协作工作台</h1>
       <ProjectNotificationPoller projectId={currentProjectId} />
-      <ActivityBar activePath={pathname ?? "/"} returnTo={settingsReturnTo} />
+      <ActivityBar
+        activeGovernance={governanceView}
+        activePath={pathname ?? "/"}
+        onGovernance={setGovernanceView}
+        returnTo={settingsReturnTo}
+      />
+      {!narrow ? (
+        <header className="cockpit-header">
+          <div className="cockpit-header-identity">
+            <span aria-hidden="true" className="product-mark">
+              C
+            </span>
+            <span className="cockpit-header-title">Cool AI</span>
+          </div>
+          <div className="cockpit-header-context">
+            {currentProject?.name ??
+              (homeState?.kind === "ready" ? homeState.agent.name : "大厅")}
+          </div>
+          <button
+            aria-label="打开项目文件夹"
+            className="button-secondary"
+            disabled={isSubmitting}
+            onClick={() => {
+              void openFolderFromPicker();
+            }}
+            title="打开项目文件夹"
+            type="button"
+          >
+            打开项目文件夹
+          </button>
+        </header>
+      ) : null}
       <header className="mobile-toolbar">
         <div
           aria-label="驾驶舱面板"
@@ -711,6 +748,18 @@ export function ProjectPanel({
         editorCloseRef={editorCloseRef}
         editorOpen={mobileSurface === "editor"}
         editorSurfaceRef={editorSurfaceRef}
+        governance={
+          governanceView
+            ? {
+                onClose: () => setGovernanceView(null),
+                onOpenFolder: () => {
+                  void openFolderFromPicker();
+                },
+                projectId: currentProjectId,
+                view: governanceView,
+              }
+            : null
+        }
         narrow={narrow}
         onboarding={
           guideStep === "project-select" || guideStep === "goal"

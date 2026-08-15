@@ -1,481 +1,131 @@
 ---
 version: alpha
-name: Cool-AI-warm-terracotta
-description: A local-first multi-agent cockpit on warm parchment. Phase 1 uses three columns — dark rail, session directory, and project group chat — with one sage accent, terracotta-ink type, and paper surfaces. Mission/memory boards stay out of the phase-1 chrome. Elevation is reserved for the composer.
-
-colors:
-  primary: "#3E6B5E"
-  accent: "#3E6B5E"
-  primary-focus: "#2F5A4E"
-  primary-on-dark: "#82B8A5"
-  ink: "#2B251F"
-  body: "#2B251F"
-  body-on-dark: "#EDE5D8"
-  body-muted: "#A99D8C"
-  ink-muted-80: "#6F665A"
-  muted: "#6F665A"
-  ink-muted-48: "#9C9182"
-  faint: "#9C9182"
-  divider-soft: "#DEDAD1"
-  hairline: "#BDB8B0"
-  canvas: "#F4EFE5"
-  canvas-parchment: "#FBF7EE"
-  panel: "#FBF7EE"
-  surface-pearl: "#FFFCF4"
-  card: "#FFFCF4"
-  card-strong: "#FFFFFF"
-  surface-tile-1: "#15110D"
-  surface-tile-2: "#1C1712"
-  surface-tile-3: "#251F18"
-  surface-black: "#0D0B08"
-  surface-chip-translucent: "#DEDAD1"
-  on-primary: "#FFFFFF"
-  on-dark: "#EDE5D8"
-  rail: "#241F18"
-  rail-ink: "#EDE5D8"
-  amber: "#96691C"
-  green: "#3F6A4D"
-  terra: "#A0443F"
-  blue: "#41607F"
-
-typography:
-  hero-display:
-    fontFamily: "SF Pro Display, system-ui, -apple-system, sans-serif"
-    fontSize: 56px
-    fontWeight: 600
-    lineHeight: 1.07
-    letterSpacing: -0.28px
-  display-lg:
-    fontFamily: "SF Pro Display, system-ui, -apple-system, sans-serif"
-    fontSize: 40px
-    fontWeight: 600
-    lineHeight: 1.1
-    letterSpacing: 0
-  display-md:
-    fontFamily: "SF Pro Text, system-ui, -apple-system, sans-serif"
-    fontSize: 34px
-    fontWeight: 600
-    lineHeight: 1.47
-    letterSpacing: -0.374px
-  lead:
-    fontFamily: "SF Pro Display, system-ui, -apple-system, sans-serif"
-    fontSize: 28px
-    fontWeight: 400
-    lineHeight: 1.14
-    letterSpacing: 0.196px
-  lead-airy:
-    fontFamily: "SF Pro Text, system-ui, -apple-system, sans-serif"
-    fontSize: 24px
-    fontWeight: 300
-    lineHeight: 1.5
-    letterSpacing: 0
-  tagline:
-    fontFamily: "SF Pro Display, system-ui, -apple-system, sans-serif"
-    fontSize: 21px
-    fontWeight: 600
-    lineHeight: 1.19
-    letterSpacing: 0.231px
-  body-strong:
-    fontFamily: "SF Pro Text, system-ui, -apple-system, sans-serif"
-    fontSize: 17px
-    fontWeight: 600
-    lineHeight: 1.24
-    letterSpacing: -0.374px
-  body:
-    fontFamily: "SF Pro Text, system-ui, -apple-system, sans-serif"
-    fontSize: 17px
-    fontWeight: 400
-    lineHeight: 1.47
-    letterSpacing: -0.374px
-  dense-link:
-    fontFamily: "SF Pro Text, system-ui, -apple-system, sans-serif"
-    fontSize: 17px
-    fontWeight: 400
-    lineHeight: 2.41
-    letterSpacing: 0
-  caption:
-    fontFamily: "SF Pro Text, system-ui, -apple-system, sans-serif"
-    fontSize: 14px
-    fontWeight: 400
-    lineHeight: 1.43
-    letterSpacing: -0.224px
-  caption-strong:
-    fontFamily: "SF Pro Text, system-ui, -apple-system, sans-serif"
-    fontSize: 14px
-    fontWeight: 600
-    lineHeight: 1.29
-    letterSpacing: -0.224px
-  button-large:
-    fontFamily: "SF Pro Text, system-ui, -apple-system, sans-serif"
-    fontSize: 18px
-    fontWeight: 300
-    lineHeight: 1.0
-    letterSpacing: 0
-  button-utility:
-    fontFamily: "SF Pro Text, system-ui, -apple-system, sans-serif"
-    fontSize: 14px
-    fontWeight: 400
-    lineHeight: 1.29
-    letterSpacing: -0.224px
-  fine-print:
-    fontFamily: "SF Pro Text, system-ui, -apple-system, sans-serif"
-    fontSize: 12px
-    fontWeight: 400
-    lineHeight: 1.0
-    letterSpacing: -0.12px
-  micro-legal:
-    fontFamily: "SF Pro Text, system-ui, -apple-system, sans-serif"
-    fontSize: 10px
-    fontWeight: 400
-    lineHeight: 1.3
-    letterSpacing: -0.08px
-  nav-link:
-    fontFamily: "SF Pro Text, system-ui, -apple-system, sans-serif"
-    fontSize: 12px
-    fontWeight: 400
-    lineHeight: 1.0
-    letterSpacing: -0.12px
-  ui-xs:
-    fontFamily: "-apple-system, PingFang SC, Noto Sans SC, Segoe UI Variable, Microsoft YaHei UI, system-ui, sans-serif"
-    fontSize: 11px
-    fontWeight: 600
-    lineHeight: 1.3
-    letterSpacing: 0.06em
-  ui-sm:
-    fontFamily: "-apple-system, PingFang SC, Noto Sans SC, Segoe UI Variable, Microsoft YaHei UI, system-ui, sans-serif"
-    fontSize: 12.5px
-    fontWeight: 400
-    lineHeight: 1.35
-    letterSpacing: 0
-  ui-md:
-    fontFamily: "-apple-system, PingFang SC, Noto Sans SC, Segoe UI Variable, Microsoft YaHei UI, system-ui, sans-serif"
-    fontSize: 14px
-    fontWeight: 400
-    lineHeight: 1.4
-    letterSpacing: 0
-  ui-lg:
-    fontFamily: "-apple-system, PingFang SC, Noto Sans SC, Segoe UI Variable, Microsoft YaHei UI, system-ui, sans-serif"
-    fontSize: 17px
-    fontWeight: 600
-    lineHeight: 1.3
-    letterSpacing: -0.01em
-
-rounded:
-  none: 0px
-  xs: 5px
-  sm: 8px
-  md: 12px
-  lg: 16px
-  pill: 9999px
-  full: 9999px
-
-spacing:
-  xxs: 4px
-  xs: 8px
-  sm: 12px
-  md: 17px
-  lg: 24px
-  xl: 32px
-  xxl: 48px
-  section: 80px
-
-components:
-  button-primary:
-    backgroundColor: "{colors.primary}"
-    textColor: "{colors.on-primary}"
-    typography: "{typography.ui-md}"
-    rounded: "{rounded.md}"
-    padding: 11px 16px
-  button-primary-focus:
-    backgroundColor: "{colors.primary-focus}"
-    textColor: "{colors.on-primary}"
-    rounded: "{rounded.md}"
-  button-primary-active:
-    backgroundColor: "{colors.primary-focus}"
-    textColor: "{colors.on-primary}"
-    rounded: "{rounded.md}"
-  button-secondary-pill:
-    backgroundColor: "{colors.card-strong}"
-    textColor: "{colors.ink}"
-    typography: "{typography.ui-sm}"
-    rounded: "{rounded.pill}"
-    padding: 8px 14px
-  button-ghost:
-    backgroundColor: transparent
-    textColor: "{colors.muted}"
-    typography: "{typography.ui-sm}"
-    rounded: "{rounded.sm}"
-  activity-rail:
-    backgroundColor: "{colors.rail}"
-    textColor: "{colors.rail-ink}"
-    typography: "{typography.ui-xs}"
-    width: 56px
-  rail-item-current:
-    backgroundColor: "{colors.primary}"
-    textColor: "{colors.on-primary}"
-    rounded: "{rounded.sm}"
-  sidebar-panel:
-    backgroundColor: "{colors.panel}"
-    textColor: "{colors.ink}"
-    typography: "{typography.ui-sm}"
-    width: 236px
-  search-input:
-    backgroundColor: transparent
-    textColor: "{colors.faint}"
-    typography: "{typography.ui-sm}"
-    rounded: "{rounded.pill}"
-    height: 44px
-  thread-item:
-    backgroundColor: transparent
-    textColor: "{colors.muted}"
-    typography: "{typography.ui-sm}"
-    rounded: "{rounded.sm}"
-  thread-item-current:
-    backgroundColor: "{colors.primary}"
-    textColor: "{colors.ink}"
-    rounded: "{rounded.sm}"
-  flow-canvas:
-    backgroundColor: "{colors.canvas}"
-    textColor: "{colors.ink}"
-  thread-header:
-    backgroundColor: "{colors.panel}"
-    textColor: "{colors.ink}"
-    typography: "{typography.ui-lg}"
-  message-card:
-    backgroundColor: "{colors.card}"
-    textColor: "{colors.ink}"
-    rounded: "{rounded.md}"
-  composer:
-    backgroundColor: "{colors.card-strong}"
-    textColor: "{colors.ink}"
-    rounded: "{rounded.lg}"
-  context-panel:
-    backgroundColor: "{colors.panel}"
-    textColor: "{colors.ink}"
-    width: 304px
-  context-tab-selected:
-    backgroundColor: "{colors.primary}"
-    textColor: "{colors.ink}"
-    rounded: "{rounded.sm}"
-  mission-card:
-    backgroundColor: "{colors.card}"
-    textColor: "{colors.ink}"
-    rounded: "{rounded.md}"
-  approval-card:
-    backgroundColor: "{colors.card-strong}"
-    textColor: "{colors.ink}"
-    rounded: "{rounded.lg}"
-  memory-card:
-    backgroundColor: "{colors.card}"
-    textColor: "{colors.ink}"
-    rounded: "{rounded.md}"
-  status-queued:
-    backgroundColor: "{colors.amber}"
-    textColor: "{colors.amber}"
-  status-running:
-    backgroundColor: "{colors.primary}"
-    textColor: "{colors.primary}"
-  status-success:
-    backgroundColor: "{colors.green}"
-    textColor: "{colors.green}"
-  status-danger:
-    backgroundColor: "{colors.terra}"
-    textColor: "{colors.terra}"
-  text-link:
-    backgroundColor: transparent
-    textColor: "{colors.primary}"
-    typography: "{typography.ui-md}"
-  global-nav:
-    backgroundColor: "{colors.rail}"
-    textColor: "{colors.rail-ink}"
-    typography: "{typography.nav-link}"
-    height: 44px
+name: Cool-AI-warm-gold-cockpit
+description: A local-first multi-agent cockpit on warm beige with a warm-gold accent. Chat-first shell — 52px icon rail, 240px conversation sidebar, centered chat flow, floating composer. Governance (mission/memory/approval/audit) lives behind the icon rail. Token-driven, quiet, high-whitespace, WCAG AA in both themes.
+confirmed: 2026-08-15
 ---
 
-## Overview
+# Cool AI 暖金驾驶舱设计契约（DESIGN.md）
 
-Cool AI’s cockpit is a **warm terracotta workbench**, not a marketing gallery. The owner works in four columns: a dark activity rail, a parchment conversation directory, a canvas group-chat flow, and a parchment mission/approval/memory board. Surfaces are paper (canvas, panel, pearl card, white card-strong). The only interactive accent is sage green `{colors.primary}` (#3E6B5E). Status uses amber, green, terra, and blue as extensions — never as a second brand color.
+本文件是 Cool AI 界面视觉与信息架构的**单一事实源**：颜色、字体、间距、圆角、阴影与壳层组件都由此定义，并由 `app/tokens.css` 投影为运行时令牌。任何界面改动不得在组件内硬编码设计值。
 
-Density is cockpit-scale: 11 / 12.5 / 14 / 17px UI type. Display sizes remain in the token scale for preview and rare headings but are not the default reading size. Chrome is flat. Shadows appear only on the composer and approval overlays.
+## 0. 确认与参考
 
-**Key Characteristics:**
-- Warm paper stack: canvas `{colors.canvas}` → panel `{colors.canvas-parchment}` → pearl card `{colors.surface-pearl}` → card-strong `{colors.card-strong}`.
-- Single sage accent (`{colors.primary}` — #3E6B5E). Dark theme uses `{colors.primary-on-dark}` (#82B8A5).
-- Dark rail `{colors.rail}` with `{colors.rail-ink}` icons; the current rail item fills with accent.
-- Desktop grid 56 / 236 / 1fr / 304. Touch targets stay 44×44 (`--control-min: 2.75rem`).
-- No decorative gradients, glass, glow, or emoji icons.
+- 用户 2026-08-15 确认：(1) 整体换成暖米 + 暖金视觉方向（替换陶土绿 accent）；(2) 治理面板收进左侧图标轨，主路径只留会话；(3) 先产出本契约，再按「图标轨 → 会话栏 → 聊天主区 → 空状态」四步改壳层，最后逐页收敛。
+- 参考对象为用户指定的 Clowder AI 会话优先驾驶舱（localhost:3003）。只取信息架构与视觉方向，不复用其名称、猫角色、文案、商标或品牌资产。
 
-## Colors
+## 1. 设计原则
 
-> **Source:** `product/ui/cool-ai-design-md-case.html` `#cool-case` token block. Light values are the YAML source of truth. Dark values are the `light-dark()` second channel, projected in `app/tokens.css`.
+1. **会话优先**：主路径只有对话。治理（使命 / 记忆 / 审批 / 审计）收进 52px 图标轨，按需打开为视图，不占主界面。
+2. **安静工作台**：高留白、弱边框、极少阴影、无装饰动画；层次靠色彩明度与字重，不靠浮层堆叠。
+3. **令牌驱动**：所有颜色/间距/圆角/字号来自本契约与 tokens.css；禁止组件内硬编码。
+4. **无障碍底线**：正文对比 ≥4.5:1（亮/暗各自独立验证）；控件 ≥44px；图标按钮有可访问名称与 tooltip；焦点可见。
+5. **窄屏可退让**：桌面三区（轨/侧栏/主区）在窄屏退化为抽屉模型，图标轨常驻。
 
-### Brand & Accent
-- **Sage** (`{colors.primary}` — #3E6B5E): The only interactive color — primary buttons, current rail item, running status, selected-row text.
-- **Sage focus** (`{colors.primary-focus}` — #2F5A4E): Hover/focus of the accent; keyboard focus ring root in light theme.
-- **Sage on dark** (`{colors.primary-on-dark}` — #82B8A5): Dark-theme accent (and light-theme accent on the rail when needed).
-- **On primary** (`{colors.on-primary}` — #FFFFFF): Label on sage fills. Dark theme uses #10100C.
+## 2. 全局信息架构
 
-### Surface (light)
-- **Canvas** (`{colors.canvas}` — #F4EFE5): Group-chat flow.
-- **Parchment / panel** (`{colors.canvas-parchment}` — #FBF7EE): Sidebar and context board.
-- **Pearl / card** (`{colors.surface-pearl}` — #FFFCF4): Mission cards, memory cards, message blocks.
-- **Card-strong** (`{colors.card-strong}` — #FFFFFF): Composer, approval overlay, project switcher fill.
-- **Rail** (`{colors.rail}` — #241F18): Activity bar.
-- **Dark tiles** (`{colors.surface-tile-1/2/3}` — #15110D / #1C1712 / #251F18): Dark-theme canvas / panel / card.
-- **Void** (`{colors.surface-black}` — #0D0B08): Dark-theme rail.
+### 桌面布局
 
-### Text (light)
-- **Ink / body** (`{colors.ink}` — #2B251F): Headlines and body.
-- **Muted** (`{colors.ink-muted-80}` — #6F665A): Secondary labels. Meets 4.5:1 on parchment.
-- **Faint** (`{colors.ink-muted-48}` — #9C9182): Fine print, timestamps, section kicker. May fail AA as continuous text — `--text-subtle` uses a raised warm tone without changing this YAML value.
-- **Body on dark / rail ink** (`{colors.body-on-dark}` / `{colors.rail-ink}` — #EDE5D8).
-- **Body muted** (`{colors.body-muted}` — #A99D8C): Secondary copy on dark rail/tiles.
+```text
+┌────┬──────────┬────────────────────────────────────┐
+│ 图 │ 会话侧栏   │ header（产品名 · 项目/Thread 语境 · 动作） │
+│ 标 │ 240px    ├────────────────────────────────────┤
+│ 轨 │ 标题「对话」 │ 主区（居中聊天流，max 840px）             │
+│ 52 │ + 新对话  │                                    │
+│ px │ 过滤 tabs │  ┌──────────────────────────────┐  │
+│    │ 线程列表   │  │ composer（浮起，圆角 12px）        │  │
+│    │ 回收站    │  └──────────────────────────────┘  │
+└────┴──────────┴────────────────────────────────────┘
+```
 
-### Hairlines
-- **Divider soft** (`{colors.divider-soft}` — #DEDAD1): Solid equivalent of `rgba(43,37,31,.14)` composited on parchment. YAML and `--color-divider-soft` stay `#RRGGBB` so contrast tests can parse them.
-- **Hairline** (`{colors.hairline}` — #BDB8B0): Solid equivalent of `rgba(43,37,31,.30)` on parchment.
+- **图标轨 52px**：主项为 对话 / 任务 / 记忆 / 审批 / 审计；底部分隔后为 团队 / 设置 / 主题。纯图标 + tooltip，选中态为暖金。
+- **会话侧栏 240px**：标题「对话」+「+ 新对话」；过滤 tabs（全部 / 收藏 / 标签）；线程列表；底部「回收站」。
+- **header**：左产品名，中当前项目 + Thread 语境，右动作（打开文件夹、Needs Me 徽标）。
+- **主区**：聊天流宽度上限 840px 居中；无项目时显示 1:1 对话；治理视图打开时替代聊天流，带「返回对话」。
+- **composer**：浮于主区底部，圆角 12px、1px 弱边框，占位符说明 @ 与 / 命令；左「添加」（上下文/附件），右发送。
 
-### Status & extension
-- **Amber** (`{colors.amber}` — #96691C): queued / draft.
-- **Green** (`{colors.green}` — #3F6A4D): success / done.
-- **Terra** (`{colors.terra}` — #A0443F): danger / blocked.
-- **Blue** (`{colors.blue}` — #41607F): review / informational chips. Not an interactive accent.
+### 空状态
 
-Agent identity colors remain extension tokens in `tokens.css`; they must not replace sage as the primary action color.
+一句欢迎 + 一行可操作引导（例如「输入 @规划 让规划 Agent 开始」）+ 可选「第一次来？开始引导」卡片。不展示未接线的表单。
 
-### Dark theme (tokens.css)
+## 3. 色板（暖米 + 暖金）
 
-| Role | Hex |
+### 亮色主题
+
+| 令牌 | 值 | 用途 |
+|---|---|---|
+| `--color-canvas` | `#F4EFE7` | 应用底色 / 主区背景 |
+| `--color-canvas-parchment` | `#FAF6F1` | 侧栏 / 面板背景 |
+| `--color-surface-pearl` | `#FEFBF8` | 卡片 / 浮起表面 |
+| `--color-rail` | `#EAE4DA` | 图标轨背景 |
+| `--color-ink` | `#221E1C` | 主文字 |
+| `--color-ink-muted-80` | `#595451` | 次级文字（AA） |
+| `--color-ink-muted-48` | `#847F7B` | 弱化文字 / 占位 |
+| `--color-divider-soft` | `#E8E3DC` | 细分隔线 |
+| `--color-hairline` | `#B2ADA9` | 边框 |
+| `--color-primary` | `#9A5F1A` | 主按钮（暖金 600，白字 AA） |
+| `--color-primary-focus` | `#794819` | 主按钮 hover / 焦点 |
+| `--color-primary-on-dark` | `#E4B066` | 暗底上的暖金强调 |
+| `--color-on-primary` | `#FFFFFF` | 主按钮文字 |
+
+暖金阶（由 `--color-primary` 派生）：`#FFF3DF` / `#FCE4C4` / `#F4CD99` / `#E4B066` / `#CC9140` / `#B77B29` / `#9A5F1A` / `#794819` / `#593215` / `#3A1E0E`。
+
+状态色（亮）：queued `#8F5E12` / running `#9A5F1A` / success `#4F6B2E` / danger `#A34B32`，surface 对应 `#FDF3E0` / `#FBF3E6` / `#EFF5E6` / `#F9E9E2`。
+
+### 暗色主题
+
+| 令牌 | 值 |
 |---|---|
-| canvas | #15110D |
-| panel | #1C1712 |
-| card | #251F18 |
-| card-strong | #2B241B |
-| ink | #EDE5D8 |
-| muted | #A99D8C |
-| faint | #786E60 |
-| accent | #82B8A5 |
-| accent-ink | #10100C |
-| focus | #9ACBBA |
-| rail | #0D0B08 |
-| rail-ink | #EDE5D8 |
-| amber | #D9A94F |
-| green | #86B98F |
-| terra | #D08075 |
-| blue | #8FB0CC |
+| `--color-canvas` | `#1E1B17` |
+| `--color-canvas-parchment` | `#26221D` |
+| `--color-surface-pearl` | `#2E2923` |
+| `--color-rail` | `#16130F` |
+| `--color-ink` | `#F2EDE6` |
+| `--color-ink-muted-80` | `#A79F95` |
+| `--color-ink-muted-48` | `#847C72` |
+| `--color-divider-soft` | `#332F29` |
+| `--color-hairline` | `#4A453D` |
+| `--color-primary` | `#E4B066`（暖金 300，深字 AA） |
+| `--color-primary-focus` | `#F4CD99` |
+| `--color-on-primary` | `#3A1E0E` |
 
-### Brand Gradient
-**No decorative gradients.** Depth comes from the paper stack and the dark rail, not from CSS gradients or blur.
+## 4. 字体
 
-## Typography
+- 家族：`Inter, -apple-system, "PingFang SC", "Noto Sans SC", "Segoe UI Variable", "Microsoft YaHei UI", system-ui, sans-serif`。
+- 字号：基础 16px；标题 20/18px；辅助 14px；元信息 12px。
+- 行高：正文 1.5，标题 1.3，紧凑列表 1.35。
+- 字重：正文 400，标题/强调 600，状态徽标 600。
 
-### Font Family
-- **Cockpit UI**: `-apple-system, "PingFang SC", "Noto Sans SC", "Segoe UI Variable", "Microsoft YaHei UI", system-ui, sans-serif` (`--font-sans`).
-- **Display / body named tokens** keep the existing SF Pro stack names for compatibility with `tokens.css`.
+## 5. 间距 / 圆角 / 阴影
 
-### Hierarchy
+- 间距节奏 4/8px：`--space-xxs: 4px`、`--space-xs: 8px`、`--space-sm: 12px`、`--space-md: 16px`、`--space-lg: 24px`、`--space-xl: 32px`。
+- 圆角：小控件 8px（`--rounded-sm`）、输入/卡片 12px（`--rounded-md`）、浮层/对话 16px（`--rounded-lg`）、胶囊 9999px。
+- 阴影：极轻。卡片 `0 1px 2px rgba(34,30,28,0.05)`；浮起 composer `0 8px 24px rgba(34,30,28,0.10)`；抽屉 scrim 不变。
 
-| Token | Size | Use |
-|---|---|---|
-| `{typography.hero-display}` | 56px | Preview / rare display; not default cockpit chrome |
-| `{typography.display-lg}` | 40px | Preview headings |
-| `{typography.display-md}` | 34px | Preview headings |
-| `{typography.lead}` | 28px | Preview lead |
-| `{typography.ui-lg}` / `{typography.body}` | 17px | Thread title, primary cockpit reading |
-| `{typography.ui-md}` / `{typography.caption}` | 14px | Body in lists, buttons, cards |
-| `{typography.ui-sm}` | 12.5px | Thread rows, tabs, meta |
-| `{typography.ui-xs}` / `{typography.fine-print}` | 11–12px | Kickers, timestamps, rail labels |
-| `{typography.nav-link}` | 12px | Compact nav |
+## 6. 组件规范
 
-Cockpit density is **11 / 12.5 / 14 / 17**. Display sizes stay in the scale so preview pages and existing tokens do not break.
+- **activity-bar-item**：48×48 触区（图标 20px，线性 stroke 1.5）；选中态 = 暖金图标 + 4px 圆点指示或左侧圆角条；hover 背景 `color-mix(ink 6%, transparent)`；tooltip 用 `title` + `aria-label`。
+- **sidebar**：背景 `--color-canvas-parchment`；分组标题 12px 600；线程项 44px 高、hover 弱底色、选中态暖金左侧条 + 标题加重。
+- **filter tab**：胶囊按钮 32px 高，选中 = 暖金 soft 底（`--interactive-accent-soft`）。
+- **header**：48px 高，左产品名（16px 600），右动作按钮 44px。
+- **composer**：圆角 12px、1px `--color-hairline`、背景 `--color-surface-pearl`；聚焦 ring 暖金；占位符 `--color-ink-muted-48`；左附加按钮 44px，右主按钮 44px。
+- **empty-state**：居中，图标（Phosphor 线性 48px，`--color-ink-muted-48`）+ 标题（18px 600）+ 引导（14px muted）+ 主按钮。
+- **dialog**：16px 圆角、`--color-surface-pearl`、scrim `rgba(20,16,10,0.4)`、标题 18px 600。
+- **button**：主按钮 = 暖金 600 底 + 白字（hover 700）；次级 = parchment 底 + 边框；ghost = 无底。高度 ≥44px。
+- **badge / status-label**：12px 600，pill，语义 surface 底 + 语义色字，对比 ≥4.5:1。
+- **agent avatar**：36px 圆，名字首字 14px 600，暖金家族色对（fg/bg），聚焦可见。
 
-## Layout
+## 7. 壳层交付步骤
 
-### Spacing System
-- **Tokens:** `{spacing.xxs}` 4px · `{spacing.xs}` 8px · `{spacing.sm}` 12px · `{spacing.md}` 17px · `{spacing.lg}` 24px · `{spacing.xl}` 32px · `{spacing.xxl}` 48px · `{spacing.section}` 80px.
-- Cockpit chrome uses the smaller end of the scale (8–16px padding). `{spacing.section}` is for preview tiles, not the four-column shell.
+1. **图标轨**：52px、纯图标 + tooltip、治理入口（任务/记忆/审批/审计）接线到按需视图。
+2. **会话侧栏**：240px、标题「对话」+「+ 新对话」、过滤 tabs（全部/收藏/标签）、线程列表、底部「回收站」。
+3. **聊天主区**：header（产品名/语境/动作）、居中聊天流（max 840px）、浮起 composer。
+4. **空状态**：欢迎 + @Agent 引导 + 首次引导入口。
 
-### Grid
-- Desktop: activity rail **56px** (`3.5rem`) + sidebar **236px** (`14.75rem`) + flow `minmax(0, 1fr)` + context **304px** (`19rem`).
-- `--control-min` remains **2.75rem** (44×44). Visual chrome may look tighter; hit areas do not shrink.
-- Narrow: existing drawer model. Do not adopt the case’s 980px stack.
+每步验收：tsc 通过、聚焦测试绿、真实渲染截图对照（亮/暗）、axe 无 critical。
 
-## Elevation & Depth
+## 8. 反模式
 
-| Level | Treatment | Use |
-|---|---|---|
-| Flat | No shadow | Rail, sidebar, flow, context, cards at rest |
-| Soft hairline | 1px `{colors.divider-soft}` | Column rules, card outlines |
-| Overlay | `{shadow-1}` + `{shadow-2}` | Composer float, approval card |
-
-No glass, no backdrop-blur on chrome, no glow.
-
-## Shapes
-
-| Token | Value | Use |
-|---|---|---|
-| `{rounded.none}` | 0px | Full-bleed shell |
-| `{rounded.xs}` | 5px | Rare compact chips |
-| `{rounded.sm}` | 8px | Rail items, thread rows, tabs |
-| `{rounded.md}` | 12px | Cards, primary buttons, inputs |
-| `{rounded.lg}` | 16px | Composer, approval overlay |
-| `{rounded.pill}` | 9999px | Search field, status chips (documented as pill; 9999px keeps existing CSS) |
-
-## Components
-
-**`activity-rail`** — 56px dark column, `{colors.rail}` / `{colors.rail-ink}`. Current item `{component.rail-item-current}` sage fill.
-
-**`sidebar-panel`** — 236px parchment conversation directory: project switcher, search pill, thread rows, tags, footer.
-
-**`flow-canvas`** — Sage-warm canvas for the project group chat: thread header on parchment, transcript, composer overlay.
-
-**`context-panel`** — Reserved for later phases (memory, mission, audit). Phase 1 does not mount this column.
-
-**`button-primary`** — Sage fill, `{colors.on-primary}` label, `{rounded.md}`, 44px min height.
-
-**`search-input`** — Pill on the directory; 44px min height.
-
-## Interaction language (050 / phase 1)
-
-Chat-first cockpit, aligned with pi and DeepSeek Harness information architecture (not their assets). Persistent surfaces are **sessions**, **transcript**, and **composer**. Opening a folder uses the **OS directory picker**; the page never asks for a typed path.
-
-- **Native folder pick:** One control, Chinese accessible name 「打开文件夹」. Host opens the system folder dialog. Cancel is silent. Failure uses a stable redacted error. No path `<input>`.
-- **Starter team:** Planner / builder / reviewer exist as real Agents once a provider is verified. Empty-state copy may say to add a model service; no HelpTip bubble.
-- **Hidden in phase 1:** Mission board, shared memory, SOP, capability portraits, HelpTip, the 304px context rail.
-- **Composer exception:** Group-chat composer stays visible.
-- **Icon chrome:** Phosphor regular 20px may remain on the rail; icon-only controls still need a Chinese `aria-label`.
-- **Settings forms:** `/team` create/edit may still use a dialog with visible `<label>`s.
-
-049 HelpTip / overlay-everywhere language is superseded for the cockpit.
-
-## Do's and Don'ts
-
-### Do
-- Use `{colors.primary}` for every primary action and the current rail item.
-- Keep sidebar/context on parchment and the flow on canvas.
-- Keep 44×44 targets via `--control-min`.
-- Raise `--text-subtle` rather than darkening canvas/panel/accent/rail if faint fails AA.
-
-### Don't
-- Don't introduce a second interactive accent (no purple, no blue buttons).
-- Don't add gradients, glass, glow, or emoji icons.
-- Don't hardcode hex in `app/*.css` outside `tokens.css`.
-- Don't shrink `--control-min` to match the case’s 40px buttons.
-- Don't leave a folder-path text field in the cockpit.
-- Don't show HelpTip, mission, or memory chrome in phase 1.
-
-## Responsive Behavior
-
-| Name | Width | Key Changes |
-|---|---|---|
-| Narrow | ≤ 56.25rem | Existing drawers; rail stays 56px |
-| Desktop | > 56.25rem | Three columns 56 / 236 / 1fr (phase 1). Context width token remains for later phases. |
-
-Touch targets remain 44×44. Narrow drawers keep `--sidebar-width` and `--context-width`.
-
-## Iteration Guide
-
-1. Change color only in this file’s YAML and `app/tokens.css`. Components consume `var(--token)`.
-2. Never document hover as a second brand color; hover is `{colors.primary-focus}`.
-3. Status surfaces may be recalculated for WCAG AA; status *hues* stay in the amber/green/terra/sage families.
-4. Apple analysis lives at `product/ui/archive/apple-design-analysis.md` and is not the product contract.
+- 不再为单个面板引入新的常驻右栏或新的「信息百科」主路径。
+- 不再把使命/记忆/审批/审计的完整表单摊在栏内；治理入口只在图标轨。
+- 不复制 Clowder 品牌文案、猫角色与资产；不逐字拷贝其调色盘，只对齐暖米 + 暖金方向。

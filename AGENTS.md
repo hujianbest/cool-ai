@@ -23,7 +23,7 @@ Cool AI 是一个本地优先、单 owner 的多 Agent 协作驾驶舱。
 - `src/adapters/`：目标入站/出站 Adapter；`src/composition/`：唯一生产装配根。
 - `src/shared/`：无业务 owner 的最小跨边界基础类型。
 - `tests/`：目标上按 Module owner、Workflow、Adapter、browser、architecture 与 owner fixture 分治。
-- `product/`：产品定义、待办、假设与决策。
+- `product/`：产品定义、交付计划（`development-plan.md`，交付顺序单一事实源）、待办、假设与决策。
 - `features/`：特性规格、架构、任务票、评审与进度。
 - `.cursor/skills/`：当前 UI/UX 设计技能（`ui-ux-pro-max`）。
 
@@ -38,10 +38,11 @@ Cool AI 是一个本地优先、单 owner 的多 Agent 协作驾驶舱。
 
 ### 开始工作
 
-1. 读取各特性与 `product` 的 `progress.md` 恢复工作流状态，不靠聊天记忆。
-2. 只读取当前特性的 `progress.md`、`spec.md`、`architecture.md`、`tickets.md`、相关评审，以及存在时的 `CONTEXT.md`。
-3. 不得从聊天历史推断工作流状态；不得仅因旧工件早于当前工作流格式就重启历史特性。
-4. 设计、构建或评审界面时，按需加载 `.cursor/skills/ui-ux-pro-max` 技能，其设计系统/可访问性/交互/排版等指导与检索数据优先于本文件的通用表述。
+1. **从新上下文开始开发时，先读取 `product/development-plan.md`（产品开发计划）**，确认当前交付阶段、切片顺序与开发步骤规则；不靠聊天记忆推断工作流状态。
+2. 读取 `product/progress.md` 与当前阶段对应特性的 `progress.md` 恢复工作流状态。
+3. 只读取当前特性/阶段的 `progress.md`、`spec.md`、`architecture.md`、`tickets.md`、相关评审，以及存在时的 `CONTEXT.md`。
+4. 不得从聊天历史推断工作流状态；不得仅因旧工件早于当前工作流格式就重启历史特性。
+5. 设计、构建或评审界面时，按需加载 `.cursor/skills/ui-ux-pro-max` 技能，其设计系统/可访问性/交互/排版等指导与检索数据优先于本文件的通用表述。
 
 ### TDD 与测试
 

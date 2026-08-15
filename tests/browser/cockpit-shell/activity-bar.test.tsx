@@ -102,7 +102,7 @@ describe("ActivityBar warm-terracotta rail chrome", () => {
       /\.activity-bar \.activity-bar-item\s*\{[^}]*min-height:\s*var\(--control-min\)[^}]*min-width:\s*var\(--control-min\)[^}]*color:\s*var\(--color-rail-ink\)/s,
     );
     expect(cockpit).toMatch(
-      /\.activity-bar \.activity-bar-item\[aria-current="page"\]\s*\{[^}]*background:\s*var\(--interactive-primary\)[^}]*color:\s*var\(--color-on-primary\)/s,
+      /\.activity-bar \.activity-bar-item\[aria-current="page"\]\s*\{[^}]*color:\s*var\(--interactive-primary\)/s,
     );
   });
 });

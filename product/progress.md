@@ -4,7 +4,7 @@
 - 当前阶段: ready
 - 执行模式: interactive
 - 已加载扩展: 无
-- 下一步: 产品架构已确认且架构收敛完成（D-45），2026-08-10 补全的第 13、14 节与 4+1 视图标注已经用户确认；后续工作按特性走主链（to-spec → to-architecture → to-tickets → implement → ship），切片准入对齐 `product/architecture.md` 第 11 节关键场景与 backlog 四级治理。
+- 下一步: 交付顺序与开发方式已按用户确认重写（`product/development-plan.md` P0–P5 + `product/phases.md` 摘要 + `product/product.md` 开发与交付方式 + `AGENTS.md` 新上下文先读计划）；新上下文开发先读 `product/development-plan.md`，当前主切片为 P0 的 051/S-61 暖金壳层。
 
 ## 状态记录
 
@@ -37,3 +37,7 @@
 - 2026-08-15 048/S-41 最小权限浏览器通知与 PWA 进入 implement（A-334～A-339）。
 - 2026-08-15 048/S-41 最小权限浏览器通知与 PWA 完成 implement 与 ship：本机 Notification + PWA manifest；hf-code-review 复审 PASS；全量 298/2736 131.14s；`CAP-RUN-05` 已交付核心。
 - 2026-08-15 用户否定 049 HelpTip/手输路径，要求按第一性原理分阶段上线并完成阶段 1（原生选夹、自带 Agent、聊天优先、使命/记忆不在前端）。049/S-59 superseded；立项 050/S-60（见 `product/phases.md`、D-49）。
+- 2026-08-15 用户确认全局 UI 方向（暖米 + 暖金、治理收进图标轨、DESIGN.md 先行）并立项 051/S-61（见 `features/051-warm-gold-cockpit/progress.md`）。
+- 2026-08-15 用户指示基于最新交付顺序系统重写产品设计文档与交付计划：新建 `product/development-plan.md`（P0–P5 交付顺序单一事实源，含每切片前后端拆分与验收）；重写 `product/phases.md` 为发布阶段摘要；`product/product.md` 增补「开发与交付方式」（API 契约先行、先闭环再变厚、治理收轨）；`AGENTS.md` 新增「新上下文开始开发先读 product/development-plan.md」硬规则。051/S-61 暂停等待 P0 计划恢复。
+- 2026-08-15 按计划执行 P0（051/S-61）：52px 图标轨（治理入口 + 按需视图）、240px 会话侧栏、桌面 header 与居中聊天流、欢迎空态、亮/暗暖金令牌全部落地；`tsc`/`build`/聚焦测试/真实渲染验证通过，视觉契约 25/25。P1–P5 为既有 ship 切片，随 P0 壳层做表面集成与回归核对（见 `features/051-warm-gold-cockpit/progress.md`）。
+- 2026-08-15 P0–P5 按 `product/development-plan.md` 处理：P0 壳层实现完成（见 051）；P1–P5 逐阶段核对既有 ship 切片与壳层集成（治理收轨、聊天主路径、审计/记忆/审批/任务按需视图），浏览器目录 646/656 仅剩环境性失败；全量 2587/2719，失败全部归因为 macOS 平台不适用与沙箱端口限制，非本次改动回归。P0 收尾（目标环境全量绿 + 冒烟 + demo 验收）留待环境就绪。

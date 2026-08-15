@@ -99,14 +99,14 @@ describe("ActivityBar theme toggle", () => {
     );
   });
 
-  it("styles the activity rail as a dark track with an accent current item", () => {
+  it("styles the activity rail with rail tokens and a gold current item", () => {
     const cockpit = readFileSync("app/cockpit.css", "utf8");
 
     expect(cockpit).toMatch(
       /\.activity-bar\s*\{[^}]*background:\s*var\(--color-rail\)[^}]*color:\s*var\(--color-rail-ink\)/s,
     );
     expect(cockpit).toMatch(
-      /\.activity-bar \.activity-bar-item\[aria-current="page"\]\s*\{[^}]*background:\s*var\(--interactive-primary\)[^}]*color:\s*var\(--color-on-primary\)/s,
+      /\.activity-bar \.activity-bar-item\[aria-current="page"\]\s*\{[^}]*color:\s*var\(--interactive-primary\)/s,
     );
   });
 
@@ -119,7 +119,7 @@ describe("ActivityBar theme toggle", () => {
     expect(html).toContain("disabled");
     expect(html).toContain(">·<");
     expect(html).not.toMatch(/>[夜日]</);
-    expect(html).not.toContain("aria-pressed");
+    expect(html).not.toMatch(/aria-label="主题偏好加载中"[^>]*aria-pressed/);
   });
 
   it("switches immediately by pointer and keyboard while keeping root and ARIA synchronized", async () => {

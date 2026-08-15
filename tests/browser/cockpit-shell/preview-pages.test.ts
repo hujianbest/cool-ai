@@ -28,9 +28,9 @@ describe("DESIGN.md preview pages", () => {
     expect(preview).toContain("button-primary");
     expect(preview).toContain("status-label");
     expect(preview).toContain("DESIGN.md");
-    expect(preview).toContain("Sage");
-    expect(preview).toContain("暖陶");
-    expect(preview).toContain("#3E6B5E");
+    expect(preview).toContain("暖金");
+    expect(preview).toContain("暖米");
+    expect(preview).toContain("#9A5F1A");
     expect(preview).not.toContain("Action Blue");
     expect(preview).not.toMatch(/#0066cc/i);
   });
@@ -49,7 +49,7 @@ describe("DESIGN.md preview pages", () => {
     expect(previewDark).toContain("color-surface-tile-3");
     expect(previewDark).toContain("button-primary");
     expect(previewDark).toContain("status-label");
-    expect(previewDark).toContain("暖陶");
+    expect(previewDark).toContain("暖金");
     expect(previewDark).not.toContain("Action Blue");
     expect(previewDark).not.toMatch(/#0066cc/i);
   });

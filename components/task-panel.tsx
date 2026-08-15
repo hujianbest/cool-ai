@@ -11,6 +11,11 @@ import {
 } from "react";
 
 import { CollaborationPanel } from "@/components/collaboration/collaboration-panel";
+import type { GovernanceView } from "@/components/activity-bar";
+import { ApprovalCenterPanel } from "@/components/project-context/approval-center-panel";
+import { AuditPanel } from "@/components/project-context/audit-panel";
+import { MemoryPanel } from "@/components/project-context/memory-panel";
+import { MissionBoard } from "@/components/project-context/mission-board";
 import { OnboardingGuide } from "@/components/onboarding-guide";
 import {
   ApiDisplayError,
@@ -63,6 +68,12 @@ type TaskPanelProps = {
   onCloseEditor: () => void;
   editorSurfaceRef: RefObject<HTMLElement | null>;
   editorCloseRef: RefObject<HTMLButtonElement | null>;
+  governance?: {
+    onClose: () => void;
+    onOpenFolder: () => void;
+    projectId: string | null;
+    view: GovernanceView;
+  } | null;
   contextOpen: boolean;
   onCloseContext: () => void;
   contextSurfaceRef: RefObject<HTMLElement | null>;
@@ -80,6 +91,13 @@ type TaskPanelProps = {
   threadListState?: "loading" | "empty" | "ready" | "error" | null;
 };
 
+const GOVERNANCE_TITLES: Record<GovernanceView, string> = {
+  mission: "任务看板",
+  memory: "共享记忆",
+  approvals: "审批中心",
+  audit: "审计中心",
+};
+
 export function TaskPanel({
   projectId,
   currentProjectName,
@@ -91,6 +109,7 @@ export function TaskPanel({
   onCloseEditor,
   editorSurfaceRef,
   editorCloseRef,
+  governance,
   contextOpen,
   onCloseContext,
   contextSurfaceRef,
@@ -392,8 +411,10 @@ export function TaskPanel({
         aria-label={narrow ? undefined : "任务事件流"}
         aria-labelledby={narrow ? "task-editor-label" : undefined}
         aria-modal={narrow && editorOpen && !nestedModalOpen ? "true" : undefined}
-        className="cockpit-flow"
-        data-open={editorOpen || Boolean(onboarding)}
+        className={
+          governance ? "cockpit-flow cockpit-flow-governance" : "cockpit-flow"
+        }
+        data-open={editorOpen || Boolean(onboarding) || Boolean(governance)}
         data-testid="editor-surface"
         hidden={narrow && !editorOpen && !onboarding}
         id="task-editor-surface"
@@ -414,6 +435,50 @@ export function TaskPanel({
         >
           关闭
         </button>
+        {governance ? (
+          <div className="governance-view stack">
+            <div className="panel-heading">
+              <div>
+                <p className="eyebrow">治理视图</p>
+                <h2 className="surface-heading">
+                  {GOVERNANCE_TITLES[governance.view]}
+                </h2>
+              </div>
+              <button
+                className="button-secondary"
+                onClick={governance.onClose}
+                type="button"
+              >
+                返回对话
+              </button>
+            </div>
+            {governance.projectId ? (
+              governance.view === "mission" ? (
+                <MissionBoard projectId={governance.projectId} />
+              ) : governance.view === "memory" ? (
+                <MemoryPanel projectId={governance.projectId} />
+              ) : governance.view === "approvals" ? (
+                <ApprovalCenterPanel projectId={governance.projectId} />
+              ) : (
+                <AuditPanel projectId={governance.projectId} />
+              )
+            ) : (
+              <div className="empty-guide state-message">
+                <p>
+                  先打开一个文件夹进入项目，即可查看
+                  {GOVERNANCE_TITLES[governance.view]}。
+                </p>
+                <button
+                  className="button-primary"
+                  onClick={governance.onOpenFolder}
+                  type="button"
+                >
+                  打开文件夹
+                </button>
+              </div>
+            )}
+          </div>
+        ) : null}
         <div className="panel-heading">
           <span aria-hidden="true" className="agent-mark">
             {homeState?.kind === "ready" ? homeState.agent.avatarText : "A"}
@@ -504,7 +569,9 @@ export function TaskPanel({
             </div>
           ) : homeState?.kind === "needs_agent" ? (
             <div className="empty-guide state-message">
+              <p className="empty-guide-title">欢迎来到 Cool AI</p>
               <p>先配置一个 Agent，即可开始个人对话。</p>
+              <p className="muted">输入 @成员 可召唤一名 Agent 开始协作。</p>
               <Link
                 className="button-primary"
                 href="/team?section=agents&returnTo=/"
