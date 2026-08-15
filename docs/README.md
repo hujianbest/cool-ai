@@ -14,7 +14,7 @@ Cool AI 是面向单个产品 owner 的本地优先 Web 多 Agent 协作平台�
 ### 日常使用
 
 1. [项目工作流](./guides/project-workflow.md)：从工作区、成员和使命 DAG 开始。
-2. [协作与接力](./guides/collaboration.md)：群聊、@Agent、决策请求和暂停恢复。
+2. [协作与接力](./guides/collaboration.md)：对话、@Agent、决策请求和暂停恢复。
 3. [安全执行](./guides/safe-execution.md)：隔离变更、验证、审批与合并。
 4. [复核与交付](./guides/review-and-delivery.md)：独立复核、五类记忆和最终交付。
 5. [故障排查](./troubleshooting.md)：按症状定位常见问题。

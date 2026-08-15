@@ -79,7 +79,7 @@ class CollaborationResponseError extends ApiDisplayError {
 
 class ThreadDeletedError extends CollaborationResponseError {
   constructor() {
-    super("该线程已移入回收站。", 404, "thread_deleted");
+    super("该对话已移入回收站。", 404, "thread_deleted");
   }
 }
 
@@ -573,7 +573,7 @@ async function readOnboardingThread(
     fetch(detailUrl, { signal }).then((response) =>
       readApiResponse<Record<string, unknown>>(
         response,
-        "无法加载协作线程，请稍后重试。",
+        "无法加载协作对话，请稍后重试。",
       )
     ),
     readAllThreadPages<ThreadMessageDto>(
@@ -1400,7 +1400,7 @@ export function CollaborationPanel({
             );
           } else {
             setRunSelectionNotice((current) =>
-              current === "线程已恢复。"
+              current === "对话已恢复。"
                 ? current
                 : (
               current === "所选运行无效或已失效，已清除选择。"
@@ -1460,7 +1460,7 @@ export function CollaborationPanel({
         && expectedEpoch === targetEpochRef.current
         && request.isCurrent()
       ) {
-        setLoadError(caughtApiErrorCopy(cause, "无法加载项目群聊，请稍后重试。"));
+        setLoadError(caughtApiErrorCopy(cause, "无法加载项目对话，请稍后重试。"));
       }
     } finally {
       if (request.isCurrent()) refreshInFlightRef.current = false;
@@ -1505,7 +1505,7 @@ export function CollaborationPanel({
     setQueueThreadVersion(null);
     setQueuePendingKey(null);
     setNewEventCount(0);
-    setLoading(true);
+    setLoading(Boolean(threadId));
     setLoadError(null);
     setMentionOpen(false);
     setHistoryOpen(false);
@@ -1532,8 +1532,10 @@ export function CollaborationPanel({
     setRequestedMessageNotice(false);
     requestedMessageHandledRef.current = null;
     messageRefs.current.clear();
-    void loadCollaboration(true, epoch);
-  }, [loadCollaboration, reloadKey, targetKey]);
+    if (threadId) {
+      void loadCollaboration(true, epoch);
+    }
+  }, [loadCollaboration, reloadKey, targetKey, threadId]);
 
   useEffect(() => {
     cancelPendingDraftSave();
@@ -2815,9 +2817,9 @@ export function CollaborationPanel({
   const queuePendingItems = (queueItems ?? []).filter((item) => item.status === "pending");
   const queueSteerDisabled = !state?.readiness.ready || activeRunInOtherThread;
   const queueSteerHint = activeRunInOtherThread
-    ? "另一线程存在活动运行，当前禁止 steer。"
+    ? "另一对话存在活动运行，当前禁止 steer。"
     : !state?.readiness.ready
-      ? "线程尚未就绪，当前禁止 steer。"
+      ? "对话尚未就绪，当前禁止 steer。"
       : null;
 
   function navigateToRun(nextThreadId: string, nextRunId: string | null) {
@@ -2848,7 +2850,7 @@ export function CollaborationPanel({
         throw new Error(
           apiErrorCopy(
             payload as Partial<CollaborationApiError>,
-            "恢复线程失败，请稍后重试。",
+            "恢复对话失败，请稍后重试。",
           ),
         );
       }
@@ -2856,11 +2858,11 @@ export function CollaborationPanel({
         throw new Error("invalid thread restore response");
       }
       setThreadDeletedPlaceholder(false);
-      setThreadDeletedNotice("线程已恢复。");
-      setRunSelectionNotice("线程已恢复。");
+      setThreadDeletedNotice("对话已恢复。");
+      setRunSelectionNotice("对话已恢复。");
       setReloadKey((value) => value + 1);
     } catch (cause) {
-      setThreadDeletedError(caughtApiErrorCopy(cause, "恢复线程失败，请稍后重试。"));
+      setThreadDeletedError(caughtApiErrorCopy(cause, "恢复对话失败，请稍后重试。"));
     } finally {
       setThreadDeletedRestorePending(false);
     }
@@ -2901,7 +2903,7 @@ export function CollaborationPanel({
     input: Record<string, unknown>,
   ) {
     if (!threadId || queueThreadVersion === null) {
-      setQueueError("队列版本未就绪，请先刷新线程。");
+      setQueueError("队列版本未就绪，请先刷新对话。");
       return;
     }
     const request = targetGuard.capture();
@@ -2963,7 +2965,7 @@ export function CollaborationPanel({
     <section aria-labelledby="collaboration-title" className="stack chat-surface">
       {surface === "chat" ? (
         <h3 className="sr-only" id="collaboration-title">
-          {directAgentName ?? "项目群聊"}
+          {directAgentName ?? "项目对话"}
         </h3>
       ) : (
       <div className="panel-heading">
@@ -2972,7 +2974,7 @@ export function CollaborationPanel({
             {directAgentName ? "个人对话" : "平等协作"}
           </p>
           <h3 id="collaboration-title">
-            {directAgentName ?? "项目群聊"}
+            {directAgentName ?? "项目对话"}
           </h3>
         </div>
         {state?.run ? (
@@ -3026,7 +3028,7 @@ export function CollaborationPanel({
             <>
               <div className="form-field">
                 <label htmlFor={`thread-run-selection-${projectId}`}>
-                  选择线程运行
+                  选择对话运行
                 </label>
                 <select
                   disabled={runNavigationPending || runSelection.runs.length === 0}
@@ -3085,10 +3087,10 @@ export function CollaborationPanel({
               {activeRunInOtherThread && runSelection.activeRun ? (
                 <div className="state-message">
                   <p>
-                    项目活动运行属于另一线程；切换只查看该运行，不会暂停、停止或修改它。
+                    项目活动运行属于另一对话；切换只查看该运行，不会暂停、停止或修改它。
                   </p>
                   <a
-                    aria-label={`返回活动线程 ${runSelection.activeRun.runId}`}
+                    aria-label={`返回活动对话 ${runSelection.activeRun.runId}`}
                     href={canonicalRunHref(
                       projectId,
                       runSelection.activeRun.threadId,
@@ -3103,7 +3105,7 @@ export function CollaborationPanel({
                       );
                     }}
                   >
-                    返回活动线程
+                    返回活动对话
                   </a>
                 </div>
               ) : null}
@@ -3124,11 +3126,11 @@ export function CollaborationPanel({
       <div className="chat-body">
       {loading ? (
         <p aria-busy="true" className="state-message">
-          {surface === "chat" ? "正在加载对话…" : "正在加载项目群聊…"}
+          {surface === "chat" ? "正在加载对话…" : "正在加载项目对话…"}
         </p>
       ) : threadDeletedPlaceholder ? (
         <div className="state-message thread-deleted-placeholder">
-          <p>该线程已移入回收站。</p>
+          <p>该对话已移入回收站。</p>
           {threadDeletedError ? (
             <p className="error-text" role="alert">
               {threadDeletedError}
@@ -3140,14 +3142,14 @@ export function CollaborationPanel({
               onClick={() => void restoreDeletedThread()}
               type="button"
             >
-              {threadDeletedRestorePending ? "正在恢复…" : "恢复线程"}
+              {threadDeletedRestorePending ? "正在恢复…" : "恢复对话"}
             </button>
             <button
               disabled={threadDeletedRestorePending}
               onClick={returnToThreadList}
               type="button"
             >
-              返回线程列表
+              返回对话列表
             </button>
           </div>
         </div>
@@ -3157,7 +3159,7 @@ export function CollaborationPanel({
             {loadError}
           </p>
           <button onClick={() => setReloadKey((value) => value + 1)} type="button">
-            重试加载群聊
+            重试加载对话
           </button>
         </div>
       ) : (
@@ -3232,7 +3234,7 @@ export function CollaborationPanel({
                 ))}
               </div>
               <p className="muted">
-                请先明确选择此线程的一次运行；不会自动使用项目最新运行。
+                请先明确选择此对话的一次运行；不会自动使用项目最新运行。
               </p>
             </section>
           ) : null}
@@ -3570,7 +3572,7 @@ export function CollaborationPanel({
                 className={surface === "chat" ? "sr-only" : undefined}
                 htmlFor={`collaboration-message-${projectId}`}
               >
-                {directAgentName ? `发送给 ${directAgentName}` : "发送给项目群聊"}
+                {directAgentName ? `发送给 ${directAgentName}` : "发送给项目对话"}
               </label>
               <textarea
                 aria-describedby={fieldError ? fieldErrorId : undefined}
@@ -3805,7 +3807,7 @@ export function CollaborationPanel({
             {!loading && (!canSubmitMessage || activeRunInOtherThread) ? (
               <p className="muted">
                 {activeRunInOtherThread
-                  ? "另一线程有活动运行；可发送线程消息，但不能在此启动新一轮。"
+                  ? "另一对话有活动运行；可发送对话消息，但不能在此启动新一轮。"
                   : "请先选择历史运行，以继续查看或从已结束运行开始新一轮。"}
               </p>
             ) : null}

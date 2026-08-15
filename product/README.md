@@ -13,7 +13,7 @@
 | 特性分解清单 | [`backlog.md`](./backlog.md) | Capability、P0–P5 切片映射、已交付/在途/规划切片 |
 | 开发计划 | [`development-plan.md`](./development-plan.md) | **交付顺序单一事实源**：步骤规则、阶段目标、前后端拆分与验收 |
 | 开发进展 | [`progress.md`](./progress.md) | 产品层当前阶段、下一步与状态记录 |
-| UI 设计 | [`ui/UI设计.md`](./ui/UI设计.md) | UCD：人物、旅程、信息架构、交互与全态；视觉令牌见 [`ui/DESIGN.md`](./ui/DESIGN.md) |
+| UI 设计 | [`ui/UI设计.md`](./ui/UI设计.md) | UCD：人物、旅程、信息架构、交互、全态与前后端对应表；视觉令牌见 [`ui/DESIGN.md`](./ui/DESIGN.md) |
 
 ## 阅读顺序
 

@@ -199,7 +199,7 @@ describe("persistent project thread list and creation", () => {
     render(<ProjectPanel />);
 
     expect(
-      await screen.findByRole("navigation", { name: "项目线程" }),
+      await screen.findByRole("navigation", { name: "项目对话" }),
     ).toHaveAttribute("aria-busy", "true");
   });
 
@@ -249,15 +249,15 @@ describe("persistent project thread list and creation", () => {
     render(<ProjectPanel />);
 
     const threadNavigation = await screen.findByRole("navigation", {
-      name: "项目线程",
+      name: "项目对话",
     });
-    await within(threadNavigation).findByText("暂无线程。创建线程后开始协作。");
+    await within(threadNavigation).findByText("暂无对话。创建对话后开始协作。");
     expect(
-      within(threadNavigation).getAllByRole("button", { name: "创建线程" }),
+      within(threadNavigation).getAllByRole("button", { name: "创建对话" }),
     ).toHaveLength(1);
     await waitFor(() =>
       expect(
-        screen.queryByLabelText("发送给项目群聊"),
+        screen.queryByLabelText("发送给项目对话"),
       ).not.toBeInTheDocument(),
     );
   });
@@ -286,8 +286,8 @@ describe("persistent project thread list and creation", () => {
     expect(await screen.findByRole("alert")).toHaveTextContent(
       "服务暂时不可用",
     );
-    await user.click(screen.getByRole("button", { name: "重试加载线程" }));
-    await screen.findByText("暂无线程。创建线程后开始协作。");
+    await user.click(screen.getByRole("button", { name: "重试加载对话" }));
+    await screen.findByText("暂无对话。创建对话后开始协作。");
     expect(fetchMock).toHaveBeenCalledTimes(2);
   });
 
@@ -380,7 +380,7 @@ describe("persistent project thread list and creation", () => {
     window.dispatchEvent(new PopStateEvent("popstate"));
     await waitFor(() =>
       expect(screen.getByRole("alert")).toHaveTextContent(
-        "所选线程无效或不属于当前项目",
+        "所选对话无效或不属于当前项目",
       ),
     );
     expect(window.location.search).toBe("?thread=foreign-thread&run=foreign-run");
@@ -401,11 +401,11 @@ describe("persistent project thread list and creation", () => {
 
     render(<ThreadHarness />);
 
-    await screen.findByText("暂无线程。创建线程后开始协作。");
-    const opener = screen.getByRole("button", { name: "创建线程" });
+    await screen.findByText("暂无对话。创建对话后开始协作。");
+    const opener = screen.getByRole("button", { name: "创建对话" });
     await user.click(opener);
-    const dialog = screen.getByRole("dialog", { name: "创建线程" });
-    expect(within(dialog).getByLabelText("线程标题")).toHaveFocus();
+    const dialog = screen.getByRole("dialog", { name: "创建对话" });
+    expect(within(dialog).getByLabelText("对话标题")).toHaveFocus();
     expect(screen.getByTestId("thread-background")).toHaveAttribute("inert");
 
     within(dialog).getByRole("button", { name: "取消" }).focus();
@@ -414,7 +414,7 @@ describe("persistent project thread list and creation", () => {
       { key: "Tab" },
     );
     expect(
-      within(dialog).getByRole("button", { name: "关闭创建线程" }),
+      within(dialog).getByRole("button", { name: "关闭创建对话" }),
     ).toHaveFocus();
     await user.keyboard("{Escape}");
     expect(screen.queryByRole("dialog")).not.toBeInTheDocument();
@@ -422,17 +422,17 @@ describe("persistent project thread list and creation", () => {
 
     await user.click(opener);
     await screen.findByLabelText(memberOne.name);
-    expect(screen.getByRole("button", { name: "创建线程" })).toBeDisabled();
+    expect(screen.getByRole("button", { name: "创建对话" })).toBeDisabled();
     await user.click(screen.getByLabelText(memberOne.name));
     await user.click(screen.getByLabelText(memberTwo.name));
     await user.click(
-      within(screen.getByRole("dialog", { name: "创建线程" })).getByRole(
+      within(screen.getByRole("dialog", { name: "创建对话" })).getByRole(
         "button",
-        { name: "创建线程" },
+        { name: "创建对话" },
       ),
     );
-    expect(await screen.findByText("请输入线程标题。")).toBeInTheDocument();
-    expect(screen.getByLabelText("线程标题")).toHaveAttribute(
+    expect(await screen.findByText("请输入对话标题。")).toBeInTheDocument();
+    expect(screen.getByLabelText("对话标题")).toHaveAttribute(
       "aria-invalid",
       "true",
     );
@@ -465,24 +465,24 @@ describe("persistent project thread list and creation", () => {
 
     render(<ThreadHarness />);
 
-    await screen.findByText("暂无线程。创建线程后开始协作。");
-    await user.click(screen.getByRole("button", { name: "创建线程" }));
-    await user.type(screen.getByLabelText("线程标题"), created.thread.title);
+    await screen.findByText("暂无对话。创建对话后开始协作。");
+    await user.click(screen.getByRole("button", { name: "创建对话" }));
+    await user.type(screen.getByLabelText("对话标题"), created.thread.title);
     await user.click(await screen.findByLabelText(memberOne.name));
     await user.click(screen.getByLabelText(memberTwo.name));
     await user.click(
-      within(screen.getByRole("dialog", { name: "创建线程" })).getByRole(
+      within(screen.getByRole("dialog", { name: "创建对话" })).getByRole(
         "button",
-        { name: "创建线程" },
+        { name: "创建对话" },
       ),
     );
 
     expect(screen.getByText("创建请求处理中，表单暂不可用。")).toBeVisible();
-    expect(screen.getByLabelText("线程标题")).toBeDisabled();
+    expect(screen.getByLabelText("对话标题")).toBeDisabled();
     pending.resolve(Response.json(created, { status: 201 }));
 
     const status = await screen.findByRole("status");
-    expect(status).toHaveTextContent(`线程“${created.thread.title}”已创建`);
+    expect(status).toHaveTextContent(`对话“${created.thread.title}”已创建`);
     const createdEntry = screen.getByRole("button", {
       name: created.thread.title,
     });
@@ -530,13 +530,13 @@ describe("persistent project thread list and creation", () => {
 
     render(<DirectThreadHarness />);
 
-    await screen.findByText("暂无线程。创建线程后开始协作。");
-    await user.click(screen.getByRole("button", { name: "创建线程" }));
-    const dialog = screen.getByRole("dialog", { name: "创建线程" });
+    await screen.findByText("暂无对话。创建对话后开始协作。");
+    await user.click(screen.getByRole("button", { name: "创建对话" }));
+    const dialog = screen.getByRole("dialog", { name: "创建对话" });
     expect(await within(dialog).findByText(memberOne.name)).toBeInTheDocument();
     expect(within(dialog).queryByRole("checkbox")).not.toBeInTheDocument();
-    await user.type(within(dialog).getByLabelText("线程标题"), "Personal chat");
-    await user.click(within(dialog).getByRole("button", { name: "创建线程" }));
+    await user.type(within(dialog).getByLabelText("对话标题"), "Personal chat");
+    await user.click(within(dialog).getByRole("button", { name: "创建对话" }));
 
     await screen.findByRole("button", { name: "Personal chat" });
     const createCall = fetchMock.mock.calls.find(
@@ -596,20 +596,20 @@ describe("persistent project thread list and creation", () => {
 
     render(<ThreadHarness />);
 
-    await screen.findByText("暂无线程。创建线程后开始协作。");
-    await user.click(screen.getByRole("button", { name: "创建线程" }));
-    await user.type(screen.getByLabelText("线程标题"), created.thread.title);
+    await screen.findByText("暂无对话。创建对话后开始协作。");
+    await user.click(screen.getByRole("button", { name: "创建对话" }));
+    await user.type(screen.getByLabelText("对话标题"), created.thread.title);
     await user.click(await screen.findByLabelText(memberOne.name));
     await user.click(screen.getByLabelText(memberTwo.name));
     await user.click(
-      within(screen.getByRole("dialog", { name: "创建线程" })).getByRole(
+      within(screen.getByRole("dialog", { name: "创建对话" })).getByRole(
         "button",
-        { name: "创建线程" },
+        { name: "创建对话" },
       ),
     );
 
     expect(
-      await screen.findByText(/已通过操作核对确认线程/),
+      await screen.findByText(/已通过操作核对确认对话/),
     ).toBeInTheDocument();
     expect(
       fetchMock.mock.calls.filter(
@@ -641,7 +641,7 @@ describe("persistent project thread list and creation", () => {
     render(<ThreadHarness />);
 
     expect(await screen.findByRole("alert")).toHaveTextContent(
-      "无法加载项目线程",
+      "无法加载项目对话",
     );
     expect(window.location.search).toBe("?thread=thread-1");
     expect(screen.queryByRole("button", { name: "Foreign" })).not.toBeInTheDocument();
@@ -743,7 +743,7 @@ describe("thread favorites UI", () => {
 
     render(<ThreadHarness />);
 
-    const alphaStar = await screen.findByRole("button", { name: "收藏线程 Alpha" });
+    const alphaStar = await screen.findByRole("button", { name: "收藏对话 Alpha" });
     expect(alphaStar).toHaveAttribute("aria-pressed", "false");
     const betaStar = screen.getByRole("button", { name: "取消收藏 Beta" });
     expect(betaStar).toHaveAttribute("aria-pressed", "true");
@@ -763,7 +763,7 @@ describe("thread favorites UI", () => {
       expect(server.calls).toContainEqual({ favorite: false, threadId: "thread-beta" }),
     );
     expect(
-      await screen.findByRole("button", { name: "收藏线程 Beta" }),
+      await screen.findByRole("button", { name: "收藏对话 Beta" }),
     ).toHaveAttribute("aria-pressed", "false");
     expect(threadTitles()).toEqual(["Alpha", "Beta"]);
   });
@@ -783,21 +783,21 @@ describe("thread favorites UI", () => {
 
     render(<ThreadHarness />);
 
-    await user.click(await screen.findByRole("button", { name: "收藏线程 Alpha" }));
+    await user.click(await screen.findByRole("button", { name: "收藏对话 Alpha" }));
     expect(await screen.findByRole("alert")).toHaveTextContent("服务暂时不可用");
     expect(
-      screen.getByRole("button", { name: "收藏线程 Alpha" }),
+      screen.getByRole("button", { name: "收藏对话 Alpha" }),
     ).toHaveAttribute("aria-pressed", "false");
 
     server.setWriteHandler(() => {
       throw new TypeError("connection lost");
     });
-    await user.click(screen.getByRole("button", { name: "收藏线程 Alpha" }));
+    await user.click(screen.getByRole("button", { name: "收藏对话 Alpha" }));
     expect(await screen.findByRole("alert")).toHaveTextContent(
       "无法更新收藏状态，请重试。",
     );
     expect(
-      screen.getByRole("button", { name: "收藏线程 Alpha" }),
+      screen.getByRole("button", { name: "收藏对话 Alpha" }),
     ).toHaveAttribute("aria-pressed", "false");
   });
 
@@ -812,7 +812,7 @@ describe("thread favorites UI", () => {
 
     render(<ThreadHarness />);
 
-    await user.click(await screen.findByRole("button", { name: "收藏线程 Alpha" }));
+    await user.click(await screen.findByRole("button", { name: "收藏对话 Alpha" }));
     expect(screen.getByRole("button", { name: "取消收藏 Alpha" })).toBeDisabled();
 
     pending.resolve(
@@ -854,10 +854,10 @@ describe("thread favorites UI", () => {
 
     await user.click(screen.getByRole("button", { name: "取消收藏 Charlie" }));
     expect(
-      await screen.findByText(/暂无收藏线程/),
+      await screen.findByText(/暂无收藏对话/),
     ).toBeVisible();
 
-    await user.click(screen.getByRole("button", { name: "查看全部线程" }));
+    await user.click(screen.getByRole("button", { name: "查看全部对话" }));
     expect(await screen.findByRole("button", { name: "Beta" })).toBeVisible();
     expect(threadTitles()).toEqual(["Alpha", "Beta", "Charlie"]);
   });
@@ -946,7 +946,7 @@ describe("thread favorites UI", () => {
     const user = userEvent.setup();
 
     const first = render(<ThreadHarness />);
-    await user.click(await screen.findByRole("button", { name: "收藏线程 Alpha" }));
+    await user.click(await screen.findByRole("button", { name: "收藏对话 Alpha" }));
     await screen.findByRole("button", { name: "取消收藏 Alpha" });
     first.unmount();
 

@@ -271,8 +271,8 @@ describe("manage tags dialog", () => {
     const rows = within(dialog).getAllByRole("listitem");
     expect(rows).toHaveLength(2);
     expect(within(rows[0]!).getByText("发布")).toBeInTheDocument();
-    expect(within(rows[0]!).getByText("已分配 1 条线程")).toBeInTheDocument();
-    expect(within(rows[1]!).getByText("已分配 0 条线程")).toBeInTheDocument();
+    expect(within(rows[0]!).getByText("已分配 1 条对话")).toBeInTheDocument();
+    expect(within(rows[1]!).getByText("已分配 0 条对话")).toBeInTheDocument();
 
     await user.keyboard("{Escape}");
     expect(screen.queryByRole("dialog", { name: "管理标签" })).toBeNull();
@@ -323,7 +323,7 @@ describe("manage tags dialog", () => {
     expect(created).toEqual(["发布"]);
     expect(input).toHaveValue("");
     expect(
-      await within(dialog).findByText("已分配 0 条线程"),
+      await within(dialog).findByText("已分配 0 条对话"),
     ).toBeInTheDocument();
 
     await user.type(input, "长".repeat(41));
@@ -441,7 +441,7 @@ describe("manage tags dialog", () => {
     await user.click(
       within(manageDialog).getByRole("button", { name: "关闭管理标签" }),
     );
-    const filterGroup = await screen.findByRole("group", { name: "按标签筛选线程" });
+    const filterGroup = await screen.findByRole("group", { name: "按标签筛选对话" });
     expect(
       within(filterGroup).queryByRole("button", { name: "发布" }),
     ).toBeNull();
@@ -536,7 +536,7 @@ describe("manage tags dialog", () => {
     });
     await user.click(retries[0]!);
     expect(
-      await within(dialog).findByText("暂无标签。创建标签后开始整理线程。"),
+      await within(dialog).findByText("暂无标签。创建标签后开始整理对话。"),
     ).toBeInTheDocument();
   });
 });
@@ -570,7 +570,7 @@ describe("thread list tag chips and the filter chip bar", () => {
         .querySelectorAll(".thread-tag-chip"),
     ).toHaveLength(0);
 
-    const group = screen.getByRole("group", { name: "按标签筛选线程" });
+    const group = screen.getByRole("group", { name: "按标签筛选对话" });
     const releaseChip = within(group).getByRole("button", { name: "发布" });
     expect(releaseChip).toHaveAttribute("aria-pressed", "false");
 
@@ -597,7 +597,7 @@ describe("thread list tag chips and the filter chip bar", () => {
 
   it("keeps tag filtering and the favorites view mutually exclusive in both directions", async () => {
     const favorited = {
-      ...thread("thread-2", "已收藏线程", 1),
+      ...thread("thread-2", "已收藏对话", 1),
       favoritedAt: "2026-08-09T00:00:00.000Z",
       isFavorite: true,
     };
@@ -616,12 +616,12 @@ describe("thread list tag chips and the filter chip bar", () => {
     await screen.findByRole("button", { name: "发布计划" });
 
     await user.click(screen.getByRole("tab", { name: "已收藏" }));
-    await screen.findByRole("button", { name: "已收藏线程" });
+    await screen.findByRole("button", { name: "已收藏对话" });
     expect(
       server.requestedUrls.some((url) => url.includes("favorites=true")),
     ).toBe(true);
 
-    const group = screen.getByRole("group", { name: "按标签筛选线程" });
+    const group = screen.getByRole("group", { name: "按标签筛选对话" });
     await user.click(within(group).getByRole("button", { name: "发布" }));
     await waitFor(() =>
       expect(server.requestedUrls).toContain(
@@ -639,9 +639,9 @@ describe("thread list tag chips and the filter chip bar", () => {
     expect(await screen.findByRole("button", { name: "发布计划" })).toBeInTheDocument();
 
     await user.click(screen.getByRole("tab", { name: "已收藏" }));
-    await screen.findByRole("button", { name: "已收藏线程" });
+    await screen.findByRole("button", { name: "已收藏对话" });
     expect(
-      within(screen.getByRole("group", { name: "按标签筛选线程" })).getByRole(
+      within(screen.getByRole("group", { name: "按标签筛选对话" })).getByRole(
         "button",
         { name: "发布" },
       ),
@@ -663,11 +663,11 @@ describe("thread list tag chips and the filter chip bar", () => {
 
     render(<ThreadTagsHarness />);
     await screen.findByRole("button", { name: "闲聊" });
-    const group = screen.getByRole("group", { name: "按标签筛选线程" });
+    const group = screen.getByRole("group", { name: "按标签筛选对话" });
     await user.click(within(group).getByRole("button", { name: "发布" }));
 
     expect(
-      await screen.findByText("标签“发布”下暂无线程。"),
+      await screen.findByText("标签“发布”下暂无对话。"),
     ).toBeInTheDocument();
     await user.click(screen.getByRole("button", { name: "清除筛选" }));
     expect(await screen.findByRole("button", { name: "闲聊" })).toBeInTheDocument();
@@ -685,7 +685,7 @@ describe("thread list tag chips and the filter chip bar", () => {
         `/api/projects/${project.id}/thread-tags?limit=100`,
       )
     );
-    expect(screen.queryByRole("group", { name: "按标签筛选线程" })).toBeNull();
+    expect(screen.queryByRole("group", { name: "按标签筛选对话" })).toBeNull();
     expect(
       screen.getByRole("button", { name: "管理标签" }),
     ).toBeInTheDocument();
@@ -711,19 +711,19 @@ describe("organize mode and the batch bar", () => {
     render(<ThreadTagsHarness />);
     await screen.findByRole("button", { name: "发布计划" });
 
-    const organizeToggle = screen.getByRole("button", { name: "整理线程" });
+    const organizeToggle = screen.getByRole("button", { name: "整理对话" });
     expect(organizeToggle).toHaveAttribute("aria-pressed", "false");
     await user.click(organizeToggle);
     expect(organizeToggle).toHaveAttribute("aria-pressed", "true");
 
-    const bar = await screen.findByRole("region", { name: "批量整理线程" });
-    expect(within(bar).getByText("已选 0 条线程")).toBeInTheDocument();
+    const bar = await screen.findByRole("region", { name: "批量整理对话" });
+    expect(within(bar).getByText("已选 0 条对话")).toBeInTheDocument();
     const apply = within(bar).getByRole("button", { name: "应用更改" });
     expect(apply).toBeDisabled();
 
-    await user.click(screen.getByRole("checkbox", { name: "选择线程 发布计划" }));
-    await user.click(screen.getByRole("checkbox", { name: "选择线程 发布清单" }));
-    expect(within(bar).getByText("已选 2 条线程")).toBeInTheDocument();
+    await user.click(screen.getByRole("checkbox", { name: "选择对话 发布计划" }));
+    await user.click(screen.getByRole("checkbox", { name: "选择对话 发布清单" }));
+    expect(within(bar).getByText("已选 2 条对话")).toBeInTheDocument();
 
     const addGroup = within(bar).getByRole("group", { name: "添加标签" });
     const removeGroup = within(bar).getByRole("group", { name: "移除标签" });
@@ -737,9 +737,9 @@ describe("organize mode and the batch bar", () => {
     await user.click(apply);
     const confirm = await screen.findByRole("dialog", { name: "确认批量整理" });
     expect(confirm).toHaveTextContent(
-      "将为 2 条线程添加 1 个标签、移除 1 个标签。",
+      "将为 2 条对话添加 1 个标签、移除 1 个标签。",
     );
-    expect(confirm).toHaveTextContent("移除会立即解除这些线程上的标签分配。");
+    expect(confirm).toHaveTextContent("移除会立即解除这些对话上的标签分配。");
     await user.click(within(confirm).getByRole("button", { name: "确认应用" }));
 
     expect(server.batchCalls).toEqual([
@@ -751,10 +751,10 @@ describe("organize mode and the batch bar", () => {
       },
     ]);
     expect(await screen.findByRole("status")).toHaveTextContent(
-      "已为 2 条线程更新标签。",
+      "已为 2 条对话更新标签。",
     );
-    expect(screen.queryByRole("region", { name: "批量整理线程" })).toBeNull();
-    expect(screen.getByRole("button", { name: "整理线程" })).toHaveAttribute(
+    expect(screen.queryByRole("region", { name: "批量整理对话" })).toBeNull();
+    expect(screen.getByRole("button", { name: "整理对话" })).toHaveAttribute(
       "aria-pressed",
       "false",
     );
@@ -808,9 +808,9 @@ describe("organize mode and the batch bar", () => {
 
     render(<ThreadTagsHarness />);
     await screen.findByRole("button", { name: "发布计划" });
-    await user.click(screen.getByRole("button", { name: "整理线程" }));
-    const bar = await screen.findByRole("region", { name: "批量整理线程" });
-    await user.click(screen.getByRole("checkbox", { name: "选择线程 发布计划" }));
+    await user.click(screen.getByRole("button", { name: "整理对话" }));
+    const bar = await screen.findByRole("region", { name: "批量整理对话" });
+    await user.click(screen.getByRole("checkbox", { name: "选择对话 发布计划" }));
     await user.click(
       within(within(bar).getByRole("group", { name: "添加标签" })).getByRole(
         "button",
@@ -826,20 +826,20 @@ describe("organize mode and the batch bar", () => {
     );
 
     const alert = await within(
-      await screen.findByRole("region", { name: "批量整理线程" }),
+      await screen.findByRole("region", { name: "批量整理对话" }),
     ).findByRole("alert");
     expect(alert).toHaveTextContent("服务暂时不可用");
     expect(alert).not.toHaveTextContent("private detail");
-    expect(screen.getByRole("checkbox", { name: "选择线程 发布计划" })).toBeChecked();
+    expect(screen.getByRole("checkbox", { name: "选择对话 发布计划" })).toBeChecked();
 
     await user.click(
-      within(screen.getByRole("region", { name: "批量整理线程" })).getByRole(
+      within(screen.getByRole("region", { name: "批量整理对话" })).getByRole(
         "button",
         { name: "重试批量整理" },
       ),
     );
     expect(await screen.findByRole("status")).toHaveTextContent(
-      "已为 1 条线程更新标签。",
+      "已为 1 条对话更新标签。",
     );
     expect(attempted).toEqual([operationId, operationId]);
     expect(attempts).toBe(2);
@@ -860,18 +860,18 @@ describe("organize mode and the batch bar", () => {
     const enclosingKeydown = vi.fn();
     background.addEventListener("keydown", enclosingKeydown);
     try {
-      const toggle = screen.getByRole("button", { name: "整理线程" });
+      const toggle = screen.getByRole("button", { name: "整理对话" });
       await user.click(toggle);
-      await screen.findByRole("region", { name: "批量整理线程" });
+      await screen.findByRole("region", { name: "批量整理对话" });
       await user.click(
-        screen.getByRole("checkbox", { name: "选择线程 发布计划" }),
+        screen.getByRole("checkbox", { name: "选择对话 发布计划" }),
       );
 
       await user.keyboard("{Escape}");
       expect(enclosingKeydown).not.toHaveBeenCalled();
-      expect(screen.queryByRole("region", { name: "批量整理线程" })).toBeNull();
+      expect(screen.queryByRole("region", { name: "批量整理对话" })).toBeNull();
       expect(
-        screen.queryByRole("checkbox", { name: "选择线程 发布计划" }),
+        screen.queryByRole("checkbox", { name: "选择对话 发布计划" }),
       ).toBeNull();
       expect(toggle).toHaveFocus();
 
@@ -893,8 +893,8 @@ describe("organize mode and the batch bar", () => {
 
     render(<ThreadTagsHarness />);
     await screen.findByRole("button", { name: "发布计划" });
-    await user.click(screen.getByRole("button", { name: "整理线程" }));
-    const bar = await screen.findByRole("region", { name: "批量整理线程" });
+    await user.click(screen.getByRole("button", { name: "整理对话" }));
+    const bar = await screen.findByRole("region", { name: "批量整理对话" });
     const addGroup = within(bar).getByRole("group", { name: "添加标签" });
     const removeGroup = within(bar).getByRole("group", { name: "移除标签" });
 
@@ -913,9 +913,9 @@ describe("organize mode and the batch bar", () => {
     ).toHaveAttribute("aria-pressed", "false");
 
     await user.click(within(bar).getByRole("button", { name: "取消整理" }));
-    expect(screen.queryByRole("region", { name: "批量整理线程" })).toBeNull();
+    expect(screen.queryByRole("region", { name: "批量整理对话" })).toBeNull();
     expect(
-      screen.getByRole("button", { name: "整理线程" }),
+      screen.getByRole("button", { name: "整理对话" }),
     ).toHaveFocus();
   });
 });
@@ -940,7 +940,7 @@ describe("target switching and staleness guards", () => {
           Response.json({
             nextCursor: null,
             threads: [
-              { ...thread("thread-9", "其他项目线程", 1), projectId: otherProject },
+              { ...thread("thread-9", "其他项目对话", 1), projectId: otherProject },
             ],
           }),
         );
@@ -973,20 +973,20 @@ describe("target switching and staleness guards", () => {
     const view = render(<ThreadTagsHarness />);
     await screen.findByRole("button", { name: "发布计划" });
 
-    await user.click(screen.getByRole("button", { name: "整理线程" }));
-    await screen.findByRole("region", { name: "批量整理线程" });
-    await user.click(screen.getByRole("checkbox", { name: "选择线程 发布计划" }));
+    await user.click(screen.getByRole("button", { name: "整理对话" }));
+    await screen.findByRole("region", { name: "批量整理对话" });
+    await user.click(screen.getByRole("checkbox", { name: "选择对话 发布计划" }));
 
     window.history.replaceState(null, "", `/projects/${otherProject}?thread=thread-9`);
     view.rerender(<ThreadTagsHarness projectId={otherProject} />);
 
     expect(
-      await screen.findByRole("button", { name: "其他项目线程" }),
+      await screen.findByRole("button", { name: "其他项目对话" }),
     ).toBeInTheDocument();
-    expect(screen.queryByRole("region", { name: "批量整理线程" })).toBeNull();
+    expect(screen.queryByRole("region", { name: "批量整理对话" })).toBeNull();
     expect(
       await within(
-        await screen.findByRole("group", { name: "按标签筛选线程" }),
+        await screen.findByRole("group", { name: "按标签筛选对话" }),
       ).findByRole("button", { name: "其他项目标签" }),
     ).toBeInTheDocument();
     expect(tagSignals.length).toBeGreaterThan(0);
@@ -1024,7 +1024,7 @@ describe("target switching and staleness guards", () => {
           Response.json({
             nextCursor: null,
             threads: [
-              { ...thread("thread-9", "其他项目线程", 1), projectId: otherProject },
+              { ...thread("thread-9", "其他项目对话", 1), projectId: otherProject },
             ],
           }),
         );
@@ -1047,7 +1047,7 @@ describe("target switching and staleness guards", () => {
     view.rerender(<ThreadTagsHarness projectId={otherProject} />);
 
     expect(
-      await screen.findByRole("button", { name: "其他项目线程" }),
+      await screen.findByRole("button", { name: "其他项目对话" }),
     ).toBeInTheDocument();
     expect(screen.queryByRole("dialog", { name: "管理标签" })).toBeNull();
   });

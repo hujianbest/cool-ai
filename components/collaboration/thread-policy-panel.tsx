@@ -261,7 +261,7 @@ export function ThreadPolicyPanel({
         throw new Error(
           apiErrorCopy(
             payload as Partial<CollaborationApiError>,
-            "无法加载线程成员策略。",
+            "无法加载对话成员策略。",
           ),
         );
       }
@@ -277,7 +277,7 @@ export function ThreadPolicyPanel({
       return nextThread;
     } catch (cause) {
       if (epoch === requestEpochRef.current && request.isCurrent()) {
-        setLoadError(caughtApiErrorCopy(cause, "无法加载线程成员策略。"));
+        setLoadError(caughtApiErrorCopy(cause, "无法加载对话成员策略。"));
       }
       return null;
     } finally {
@@ -321,7 +321,7 @@ export function ThreadPolicyPanel({
     setWriteError(null);
     setReceipt(null);
     setStatus(
-      `${reconciled ? "已通过操作核对确认" : "已更新"}线程成员策略，策略版本 ${update.policy.version}，事实 ${update.fact.id}。`,
+      `${reconciled ? "已通过操作核对确认" : "已更新"}对话成员策略，策略版本 ${update.policy.version}，事实 ${update.fact.id}。`,
     );
   }
 
@@ -404,7 +404,7 @@ export function ThreadPolicyPanel({
         setWriteError(
           apiErrorCopy(
             payload as Partial<CollaborationApiError>,
-            "无法更新线程成员策略。",
+            "无法更新对话成员策略。",
           ),
         );
         return;
@@ -442,7 +442,7 @@ export function ThreadPolicyPanel({
   );
   const rosterById = new Map(members.map((member) => [member.agentId, member]));
   const disabledReason = !canEdit
-    ? "只有项目所有者可以修改线程成员策略。"
+    ? "只有项目所有者可以修改对话成员策略。"
     : selectedIds.length < 2
       ? "至少选择 2 名不同的当前项目成员。"
       : submitting
@@ -457,19 +457,19 @@ export function ThreadPolicyPanel({
     >
       <div className="panel-heading">
         <div>
-          <p className="eyebrow">选中线程</p>
+          <p className="eyebrow">选中对话</p>
           <h3
             id={`thread-policy-title-${threadId}`}
             ref={headingRef}
             tabIndex={-1}
           >
-            线程成员策略
+            对话成员策略
           </h3>
         </div>
         {thread ? <span className="status-label">策略版本 {thread.policy.version}</span> : null}
       </div>
       {loading && !thread ? (
-        <p aria-busy="true" className="state-message">正在加载线程成员策略…</p>
+        <p aria-busy="true" className="state-message">正在加载对话成员策略…</p>
       ) : loadError ? (
         <div className="state-message stack">
           <p className="error-text" role="alert">{loadError}</p>
@@ -478,10 +478,10 @@ export function ThreadPolicyPanel({
       ) : thread ? (
         <>
           <p>
-            此策略是不可变的线程版本快照；项目当前成员是实时名单，两者不会自动同步。
+            此策略是不可变的对话版本快照；项目当前成员是实时名单，两者不会自动同步。
           </p>
           <div className="stack">
-            <p className="context-label">线程策略成员（按协作顺序）</p>
+            <p className="context-label">对话策略成员（按协作顺序）</p>
             <ol className="policy-member-list">
               {orderedPolicy.map((member) => {
                 const current = rosterById.get(member.agentId);
@@ -512,7 +512,7 @@ export function ThreadPolicyPanel({
           </div>
           <div className="stack">
             <p className="context-label">项目当前成员（实时名单）</p>
-            <p className="muted">新加入项目的成员不会自动加入线程策略。</p>
+            <p className="muted">新加入项目的成员不会自动加入对话策略。</p>
             {members.length ? (
               <ul className="policy-roster-list">
                 {members.map((member) => <li key={member.agentId}>{member.name}</li>)}
@@ -536,7 +536,7 @@ export function ThreadPolicyPanel({
                 ref={editButtonRef}
                 type="button"
               >
-                修复线程成员策略
+                修复对话成员策略
               </button>
               {!canEdit || members.length < 2 ? <p className="muted">{disabledReason}</p> : null}
             </div>
@@ -548,7 +548,7 @@ export function ThreadPolicyPanel({
                 ref={editButtonRef}
                 type="button"
               >
-                编辑线程成员策略
+                编辑对话成员策略
               </button>
               {!canEdit || members.length < 2 ? <p className="muted">{disabledReason}</p> : null}
             </>
@@ -556,8 +556,8 @@ export function ThreadPolicyPanel({
         </>
       ) : (
         <div className="state-message stack">
-          <p className="error-text" role="alert">线程策略缺失或损坏，已停止自动操作。</p>
-          <button onClick={() => void load()} type="button">重新读取线程策略</button>
+          <p className="error-text" role="alert">对话策略缺失或损坏，已停止自动操作。</p>
+          <button onClick={() => void load()} type="button">重新读取对话策略</button>
         </div>
       )}
       <p aria-atomic="true" aria-live="polite" className="muted" role="status">
@@ -575,7 +575,7 @@ export function ThreadPolicyPanel({
             >
               <div className="panel-heading">
                 <h3 id={`thread-policy-dialog-title-${threadId}`}>
-                  编辑线程成员策略
+                  编辑对话成员策略
                 </h3>
                 <button
                   aria-label="关闭成员策略编辑"

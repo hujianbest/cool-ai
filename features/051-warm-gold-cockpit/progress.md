@@ -3,7 +3,7 @@
 - 特性: 051-warm-gold-cockpit（S-61）
 - 当前阶段: implement（P0 壳层已实现并验证；收尾项：全量套件与冒烟）
 - 执行模式: interactive
-- 下一步: 按 `product/development-plan.md` §3 完成 P0 收尾（全量测试、必需冒烟、axe 关键路径）；真实渲染 loop 已对照 DESIGN 收掉侧栏设置/文件/成员与「确定性示例 Agent」eyebrow
+- 下一步: 按 `product/development-plan.md` §3 完成 P0 收尾（全量测试、必需冒烟、axe 关键路径）；主区已收成「中间对话流 + 底部 composer」，未打开文件夹为 1:1 大厅，打开文件夹后主页面仍是聊天框
 
 ## 状态记录
 
@@ -21,7 +21,7 @@
 - 2026-08-15 全量套件 2587/2719 通过；132 个失败全部归因为环境/平台（本机为 macOS 而非目标 Windows x64——`tests/adapters/workspace/*` 与 safe-execution 原生/合并套件在 macOS 不适用；需绑本地端口的执行/合并路由测试受沙箱 EPERM 限制；浏览器侧为前述既有环境问题）。本次改动的组件测试（project-panel/task-panel/activity-bar/onboarding/collaboration 等）全部通过，无回归。P0 收尾的全量绿基线需在目标环境（Node 24.x、Windows x64 或可绑端口环境）复跑。
 - 2026-08-15 按 `features/051-warm-gold-cockpit/evidence/` 运行截图修复壳层错乱：240px 侧栏把 CJK 压成竖排（筛选 tab / 线程标题 / 「移入回收站」全文按钮抢宽）；主区 `.panel-heading` 负边距造成阶梯；治理视图与子面板标题重复；使命卡按钮被 stretch 成大白块。已改为 tab/标题 nowrap+ellipsis、操作改图标按钮、侧栏可滚动、去掉负边距。`tsc` ✅；布局契约与线程/使命/a11y 聚焦测试绿；theme-activity-bar 2 项与 hydration 浏览器项为既有环境/主题存储失败，非本次回归。
 - 2026-08-15 本地 `npm run dev` 真实渲染 loop（对话 / 任务 / 记忆 / 审批 / 审计）：对照 DESIGN「会话侧栏只留对话」把桌面侧栏的 `ProjectSetupPanel`（工作区路径 / 文件树报错 / 成员 checkbox）挪出主路径，仅窄屏抽屉与 onboarding `workspace`/`members` 步骤仍渲染；项目群聊 eyebrow 不再写「确定性示例 Agent」。布局契约测试已断言侧栏无「项目设置」；onboarding / 窄屏抽屉 / a11y 聚焦绿。仍可见但未在本轮改：聊天下方 legacy「任务目标」表单（`task-flow` 仍依赖）、侧栏标题仍是「项目/线程」而非「对话」、看板四列在 840px 流内偏挤。
-- 2026-08-16 图标轨悬停提示：去掉浏览器原生 `title`（延迟约 1s、且会被侧栏盖住），改为 `data-tooltip` + `::after`，悬停/键盘焦点 200ms 后向右浮出，移开立即消失。`activity-bar` 测试绿。
+- 2026-08-16 聊天窗对齐 DeepSeek / Clowder 大厅：未打开文件夹时 header 为「大厅」、主区为欢迎/消息流 + 底部 composer；打开文件夹后主页面仍是聊天框（可新建对话、@ 召唤成员）。首页不再被项目列表加载挡住；composer 在加载中也保持在底部。`tsc` 与 cockpit-layout / home-direct-chat / collaboration 聚焦测试绿。
 
 ## 任务票
 

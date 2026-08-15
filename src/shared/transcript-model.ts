@@ -259,14 +259,14 @@ const runEventHeadings: Record<string, string> = {
 function heading(type: string, payload?: Record<string, unknown>): string {
   if (type === "owner_message") return "所有者发来消息";
   if (type === "agent_message") return "Agent 发来消息";
-  if (type === "thread_created") return "线程已创建";
+  if (type === "thread_created") return "对话已创建";
   if (type === "policy_changed") return "协作成员策略已更新";
   if (type === "run_linked") return "运行已关联";
   if (type === "run_event" && typeof payload?.eventType === "string") {
     return runEventHeadings[payload.eventType] ?? "运行事件已记录";
   }
   if (type === "inline_decision") return "就地决定已记录";
-  return "线程事实已记录";
+  return "对话事实已记录";
 }
 
 function replyReference(value: unknown): TranscriptReplyReference | null {

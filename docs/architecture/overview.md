@@ -27,7 +27,7 @@ UI 不直接访问 SQLite、Provider 凭据或宿主文件。Provider client 不
 
 ### collaboration：协作与接力
 
-`群聊/控制 UI → collaboration Route Handler → run/turn orchestrator → OpenAI chat client → action committer → SQLite`
+`对话/控制 UI → collaboration Route Handler → run/turn orchestrator → OpenAI chat client → action committer → SQLite`
 
 浏览器在项目打开时逐轮请求推进；服务端每次只提交一个原子业务 turn。严格 JSON object 经 schema 校验后，消息、任务动作、交棒、决策和 usage 在事务中落库。没有后台 worker，重启后只恢复持久状态，不自动重放 Provider 调用。
 

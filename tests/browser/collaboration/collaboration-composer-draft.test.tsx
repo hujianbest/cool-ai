@@ -276,7 +276,7 @@ describe("composer draft recovery", () => {
     });
     renderPanel();
 
-    const composer = await screen.findByLabelText("发送给项目群聊");
+    const composer = await screen.findByLabelText("发送给项目对话");
     await waitFor(() => expect(composer).toHaveValue("恢复的文字"));
     const placeholder = await screen.findByText(/notes\.txt · 128 B/);
     expect(placeholder.textContent).toContain("需重新选择");
@@ -290,14 +290,14 @@ describe("composer draft recovery", () => {
       seedDrafts: {
         [`project-1|${TEST_THREAD_ID}`]: {
           attachments: [],
-          content: "线程一的草稿",
+          content: "对话一的草稿",
           replyToMessageId: null,
           updatedAt: "2026-08-10T00:00:00.000Z",
           version: 1,
         },
         [`project-1|${OTHER_THREAD_ID}`]: {
           attachments: [],
-          content: "线程二的草稿",
+          content: "对话二的草稿",
           replyToMessageId: null,
           updatedAt: "2026-08-10T00:00:00.000Z",
           version: 2,
@@ -306,23 +306,23 @@ describe("composer draft recovery", () => {
       seedMessages: [ownerMessage()],
     });
     const view = renderPanel();
-    const composer = await screen.findByLabelText("发送给项目群聊");
-    await waitFor(() => expect(composer).toHaveValue("线程一的草稿"));
+    const composer = await screen.findByLabelText("发送给项目对话");
+    await waitFor(() => expect(composer).toHaveValue("对话一的草稿"));
 
     view.rerender(createElement(CollaborationPanel, {
       projectId: "project-1",
       selectedRunId: "run-1",
       threadId: OTHER_THREAD_ID,
     }));
-    const switchedComposer = await screen.findByLabelText("发送给项目群聊");
-    await waitFor(() => expect(switchedComposer).toHaveValue("线程二的草稿"));
+    const switchedComposer = await screen.findByLabelText("发送给项目对话");
+    await waitFor(() => expect(switchedComposer).toHaveValue("对话二的草稿"));
 
     await new Promise((resolve) => setTimeout(resolve, 700));
     const crossWrites = draftCalls.filter(
       (call) =>
         call.method === "PUT"
         && call.url.includes(OTHER_THREAD_ID)
-        && String(call.body?.content).includes("线程一"),
+        && String(call.body?.content).includes("对话一"),
     );
     expect(crossWrites).toEqual([]);
   });
@@ -334,7 +334,7 @@ describe("composer draft recovery", () => {
     });
     installFetch({ draftGate: gate, draftReadStatus: 503, seedMessages: [ownerMessage()] });
     renderPanel();
-    const composer = await screen.findByLabelText("发送给项目群聊");
+    const composer = await screen.findByLabelText("发送给项目对话");
     expect(screen.getByText("正在恢复草稿…")).toBeInTheDocument();
     release();
     expect(await screen.findByText(/草稿恢复失败/)).toBeInTheDocument();
@@ -349,7 +349,7 @@ describe("composer draft saving", () => {
   it("upserts the draft after typing stops for the debounce interval, not before", async () => {
     const { draftCalls } = installFetch({ seedMessages: [ownerMessage()] });
     renderPanel();
-    const composer = await screen.findByLabelText("发送给项目群聊");
+    const composer = await screen.findByLabelText("发送给项目对话");
 
     fireEvent.change(composer, { target: { value: "防抖内容" } });
     expect(draftCalls.filter((call) => call.method === "PUT")).toEqual([]);
@@ -371,7 +371,7 @@ describe("composer draft saving", () => {
   it("shows a neutral note when the debounced save fails and keeps the local text", async () => {
     installFetch({ draftSaveStatus: 503, seedMessages: [ownerMessage()] });
     renderPanel();
-    const composer = await screen.findByLabelText("发送给项目群聊");
+    const composer = await screen.findByLabelText("发送给项目对话");
 
     fireEvent.change(composer, { target: { value: "保存失败的草稿" } });
     expect(await screen.findByText(/草稿保存失败/, undefined, {
@@ -395,7 +395,7 @@ describe("composer draft saving", () => {
       seedMessages: [ownerMessage()],
     });
     renderPanel();
-    const composer = await screen.findByLabelText("发送给项目群聊");
+    const composer = await screen.findByLabelText("发送给项目对话");
     await waitFor(() => expect(composer).toHaveValue("待清空"));
 
     fireEvent.change(composer, { target: { value: "" } });
@@ -418,7 +418,7 @@ describe("composer draft saving", () => {
   it("shows a neutral sensitive hint without echoing content when the save is degraded", async () => {
     const { drafts } = installFetch({ seedMessages: [ownerMessage()] });
     renderPanel();
-    const composer = await screen.findByLabelText("发送给项目群聊");
+    const composer = await screen.findByLabelText("发送给项目对话");
 
     fireEvent.change(composer, { target: { value: "token=sk-live-secret" } });
     const hintNode = await screen.findByText(/疑似敏感内容/, undefined, {
@@ -444,7 +444,7 @@ describe("composer draft saving", () => {
     });
     const user = userEvent.setup();
     renderPanel();
-    const composer = await screen.findByLabelText("发送给项目群聊");
+    const composer = await screen.findByLabelText("发送给项目对话");
     await waitFor(() => expect(composer).toHaveValue("发送后应清空"));
     expect(await screen.findByText(/notes\.txt/)).toBeInTheDocument();
 
@@ -469,7 +469,7 @@ describe("composer reply and attachment placeholders", () => {
     const { draftCalls, fetchMock } = installFetch({ seedMessages: [ownerMessage()] });
     const user = userEvent.setup();
     renderPanel();
-    const composer = await screen.findByLabelText("发送给项目群聊");
+    const composer = await screen.findByLabelText("发送给项目对话");
     await screen.findByText("Plan the release");
 
     await user.click(screen.getByRole("button", { name: /回复 项目所有者 的消息/ }));
@@ -505,7 +505,7 @@ describe("composer reply and attachment placeholders", () => {
     const { draftCalls } = installFetch({ seedMessages: [ownerMessage()] });
     const user = userEvent.setup();
     renderPanel();
-    const composer = await screen.findByLabelText("发送给项目群聊");
+    const composer = await screen.findByLabelText("发送给项目对话");
     await screen.findByText("Plan the release");
     await user.click(screen.getByRole("button", { name: /回复 项目所有者 的消息/ }));
     expect(screen.getByText(/回复 项目所有者：Plan the release/)).toBeInTheDocument();
@@ -542,7 +542,7 @@ describe("composer reply and attachment placeholders", () => {
     });
     const user = userEvent.setup();
     renderPanel();
-    const composer = await screen.findByLabelText("发送给项目群聊");
+    const composer = await screen.findByLabelText("发送给项目对话");
     await waitFor(() => expect(composer).toHaveValue("带附件的草稿"));
 
     const chip = await screen.findByText(/plan\.md · 5 B/);
@@ -574,7 +574,7 @@ describe("composer reply and attachment placeholders", () => {
     installFetch({ seedMessages: [ownerMessage()], sendGate });
     const user = userEvent.setup();
     renderPanel();
-    const composer = await screen.findByLabelText("发送给项目群聊");
+    const composer = await screen.findByLabelText("发送给项目对话");
     await screen.findByText("Plan the release");
     await user.click(screen.getByRole("button", { name: /回复 项目所有者 的消息/ }));
 

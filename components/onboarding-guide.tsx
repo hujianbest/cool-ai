@@ -1223,7 +1223,7 @@ export function OnboardingGuide({
             </p>
           ) : readiness === "accepted" ? (
             <p className="onboarding-guide-success">
-              目标已受理。下一步可在项目群聊启动协作；尚未执行、复核或交付。
+              目标已受理。下一步可在项目对话启动协作；尚未执行、复核或交付。
             </p>
           ) : readiness === "started" ? (
             <p className="onboarding-guide-success">
@@ -1283,14 +1283,14 @@ export function OnboardingGuide({
             >
               {readiness === "started"
                 ? "查看已启动协作"
-                : "在项目群聊启动协作"}
+                : "在项目对话启动协作"}
             </button>
           </div>
           {missionDisabled || chatDisabled ? (
             <p className="muted" id="onboarding-disabled-reason">
               {missionDisabled
                 ? "只有 verified Provider、合格项目成员和 ready 工作区全部存在时才能继续。"
-                : "先在现有使命看板创建并确认 Mission，才能启动项目群聊协作。"}
+                : "先在现有使命看板创建并确认 Mission，才能启动项目对话协作。"}
             </p>
           ) : null}
         </>

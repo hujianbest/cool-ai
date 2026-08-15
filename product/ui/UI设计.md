@@ -1087,3 +1087,27 @@ Cool AI 专为追求极致生产力、拥有全栈实现能力的独立创造者
 - [ ] **Axe 无 Critical / Serious 违规**：自动化无障碍扫描工具检查 0 致命缺陷。
 - [ ] **纯键盘全流程闭环**：能够仅依靠 `Tab`、`Shift+Tab`、`Enter`、`Space`、`ESC` 及快捷键完成新建、选择项目、输入、审批与返回对话的全流程。
 - [ ] **减弱动效生效**：在系统开启减弱动效时，动效自动降级为平滑透明度切换，无生硬抖动。
+
+---
+
+## 15. 前台 UI 设计与后台功能需求/Capability 对应关系表
+
+本表系统梳理 `product/ui/preview-ucd.html` 高保真原型及本说明书中所定义的前台 UI 模块、交互控件与后台领域子系统（Bounded Context）、Capability 注册表、切片规划及安全契约的端到端映射关系，确保每一项界面能力均有严格的后台架构承接。
+
+| 序号 | 前台 UI 模块 / 交互组件 | 前台交互与展示表现 (`preview-ucd.html`) | 对应后台领域模块 (Bounded Context) | 对应 Capability & 切片编号 | 交付阶段与状态 | 核心后台 API / 契约 | 核心领域规则与安全约束 |
+| :--- | :--- | :--- | :--- | :--- | :--- | :--- | :--- |
+| **1** | **全局设计基座与壳层** | 暖米+暖金双主题令牌、52px 图标轨、240px 会话侧栏、居中聊天流（max 840px）、浮起 Composer | 壳层 Adapter / 共享偏好 | **S-61 / 051**<br>(暖金壳层基座)<br>**S-10 / 012**<br>(主题切换) | **P0**<br>核心已落地 | CSS 变量投影<br>`localStorage` 主题持久化 | 无 SSR 闪烁，亮暗双套令牌闭环，图标轨纯 CSS Tooltip，桌面侧栏不承载无关设置 |
+| **2** | **文件夹原生选择** | Header / 欢迎态「打开文件夹」按钮，触发操作系统原生目录选择器 | `Project & Workspace` | `CAP-PWS-01`<br>**S-55 / 039**<br>(文件夹即项目)<br>**S-60 / 050**<br>(阶段 1 驾驶舱) | **P1**<br>已交付核心 | `POST /api/projects`<br>`POST /api/directory-picker` | 绝不手动输入绝对路径；选定文件夹即完成 Project 创建/幂等恢复；单绑定根严格隔离 |
+| **3** | **会话侧栏管理** | 对话列表切换、活跃协作脉冲动效 (`pulse-dot`)、新建对话 (`+` / `Cmd+N`) | `Public Collaboration` | `CAP-COL-01`<br>**S-12 / 014**<br>(持久对话) | **P2**<br>已交付核心 | `GET/POST /api/projects/[id]/threads`<br>`GET /api/projects/[id]/threads/[id]` | 复合唯一约束校验（`project_id + thread_id`）；单项目唯一非终态 Run；切换防陈旧竞争 |
+| **4** | **会话分类与整理** | 侧栏过滤药丸（全部 / 收藏 / 标签）、底部回收站入口及计数 | `Public Collaboration` | `CAP-COL-04`<br>**S-19 / 025** (收藏)<br>**S-18 / 032** (标签)<br>**S-20 / 033** (回收站) | **P3**<br>已交付核心 | `/api/projects/[id]/threads/[id]/favorite`<br>`/api/projects/[id]/thread-tags`<br>`/api/projects/[id]/thread-recycle-bin` | 软删除/恢复/永久删除全程生成不可变审计事实；批量标签操作具备幂等 Receipt |
+| **5** | **多角色协同对话流** | 区分 Owner、规划 (Planner)、实施 (Executor)、复核 (Reviewer) 头像、身份与发言时间 | `Public Collaboration`<br>`Identity & Capability` | `CAP-COL-01`<br>`CAP-COL-02`<br>**S-4 / 004**<br>(协作编排) | **P1 / P2**<br>已交付核心 | `GET/POST /api/projects/[id]/threads/[id]/messages`<br>`GET /api/home` | 明确记录发言者角色快照；按 Turn/Attempt 推进生命周期；支持接力轮转 |
+| **6** | **结构化思考过程** | 思考折叠卡片 (`thinking-box`)，展示耗时、推理模型版本 | `Public Collaboration`<br>模型运行时 Adapter | `CAP-COL-01`<br>**S-12 / 014** | **P2**<br>已交付核心 | `/messages` 消息体内 `thinking` 扩展元数据 | 脱敏安全：隐藏深层未授权敏感推理，仅展示合规摘要与耗时指标 |
+| **7** | **提案与就地决策卡片** | Proposal 卡片（ID、标题、变更摘要、冻结来源链接、就地「批准/修改」按钮） | `Public Collaboration` | `CAP-COL-03`<br>**S-13 / 015**<br>(结构化块与就地决策)<br>**S-17 / 017**<br>(消息完整性) | **P2**<br>已交付核心 | `POST /api/projects/[id]/threads/[id]/runs/[id]/decisions/[id]/answer` | 严格 Schema 校验；决策生成 Operation Receipt 与 Version 租约；拒绝陈旧覆盖 |
+| **8** | **浮动 Composer & `@` 提及** | 自适应多行文本框、`@` 呼出 Agent 建议列表 (`mention-popup`)、附件按钮 | `Public Collaboration` | `CAP-COL-01`<br>**S-15 / 023** (草稿)<br>**S-16 / 024** (附件)<br>**S-4 / 004** (@编排) | **P2**<br>已交付核心 | `/api/projects/[id]/threads/[id]/draft`<br>`/api/projects/[id]/threads/[id]/attachments` | 跨页面切换与刷新草稿幂等恢复；附件带安全校验与类型限制；`@` 解析对应真实 Agent 身份 |
+| **9** | **使命与任务看板** | 从图标轨展开四列看板（待办/进行中/阻塞/完成）、任务负责人、依赖 DAG、租约倒计时 | `Mission & Work` | `CAP-MSW-01`<br>`CAP-MSW-02`<br>**S-3 / 003** (任务)<br>**S-25 / 026** (依赖全景)<br>**S-27 / 044** (租约控制) | **P4**<br>已交付核心 | `GET/POST /api/missions`<br>`GET/POST /api/work-items`<br>`POST /api/work-items/[id]/heartbeat` | 任务状态机闭环；跨时占有使用 Dispatch Lease（Token/TTL/Heartbeat 租约）；执行者不可单方面宣称完成 |
+| **10** | **共享记忆与知识沉淀** | 从图标轨展开记忆卡片（架构决策/业务事实、版本号 V1/V2、提议 Agent、冻结来源） | `Memory & Knowledge` | `CAP-MEM-01`<br>**S-6 / 006** (记忆沉淀)<br>**S-28 / 045** (记忆检索) | **P4 / P5**<br>已交付核心<br>(高级检索待 S-29) | `GET/POST /api/projects/[id]/memories`<br>`POST /api/projects/[id]/memories/search` | 不可变溯源：每条记忆绑定生成它的 Session/Run/Decision ID；仅限被复核或 Owner 确认的经验沉淀 |
+| **11** | **统一审批中心 & Diff 查看** | Header Needs Me 角标直达、审批卡片（风险等级、TTL 倒计时、内嵌代码 Diff、批准/驳回） | `Governance`<br>`Safe Execution` | `CAP-GOV-01`<br>`CAP-EXE-01`<br>**S-24 / 029** (审批中心)<br>**S-5 / 005** (安全执行) | **P4**<br>已交付核心 | `GET /api/projects/[id]/approvals/pending`<br>`POST /api/executions/[id]/approvals/[id]`<br>`GET /api/executions/[id]/staged/[id]/diff` | 越界文件写入/危险命令必须挂起等待；沙箱内 Staged Changes 隔离生成 Unified Diff；超时自动 Fail-Closed |
+| **12** | **统一审计与时间轴** | 从图标轨展开不可变审计流（毫秒时间、治理/协作/项目/执行事件分类、日志导出） | `Operational Governance` | `CAP-OPS-01`<br>`CAP-OPS-02`<br>**S-23 审计系列**<br>(036/037/041/042)<br>**S-38 / 040** (导出) | **P4 / P5**<br>已交付核心 | `GET /api/projects/[id]/audit-events`<br>`GET /api/projects/[id]/timeline` | 同事务 Outbox 机制保障事实不丢；所有宿主路径与敏感信息严格脱敏；审计事件只读追加 |
+| **13** | **团队管理与 Provider 设置** | 从图标轨直达 `/team`，查看/配置规划、实施、复核 Agent 的模型绑定、工具权限 | `Identity & Capability` | `CAP-IDC-01`<br>**S-2 / 002**<br>(小队与模型配置) | **P1**<br>已交付核心 | `GET/POST /api/providers`<br>`POST /api/providers/verify`<br>`GET/POST /api/agents` | 凭据本地加密存储；Provider 连通性测试校验；Agent 工具权限范围（提案/受限写/复核裁决）显式声明 |
+| **14** | **独立复核工作台** | 从图标轨或任务卡片调出，展示冻结复核材料、独立测试结果及 PASS/FAIL 裁决 | `Independent Review`<br>`Safe Execution` | `CAP-REV-01`<br>**S-6 / 006**<br>(独立复核与交付) | **P4**<br>已交付核心 | `GET/POST /api/reviews`<br>`POST /api/work-items/[id]/review` | **硬约束**：执行 Agent 绝不能担任同一任务的复核者；复核材料一经封存不可篡改；裁决记录纳入审计 |
+

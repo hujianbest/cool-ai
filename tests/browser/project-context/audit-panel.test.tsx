@@ -418,9 +418,9 @@ describe("Audit panel", () => {
   it("renders the thread recycle-bin lifecycle events with collaboration copy and badge", async () => {
     const AuditPanel = await auditPanel();
     const lifecycleCopy: ReadonlyArray<readonly [string, string]> = [
-      ["thread_deleted", "线程已移入回收站"],
-      ["thread_restored", "线程已恢复"],
-      ["thread_purged", "线程已永久删除"],
+      ["thread_deleted", "对话已移入回收站"],
+      ["thread_restored", "对话已恢复"],
+      ["thread_purged", "对话已永久删除"],
     ];
     const events = lifecycleCopy.map(([eventType], index) =>
       auditEvent({
@@ -598,14 +598,14 @@ describe("Audit panel", () => {
     const list = await screen.findByRole("list", { name: "审计事件" });
     const rows = within(list).getAllByRole("listitem");
     expect(
-      within(rows[0]!).getByRole("link", { name: "定位来源线程" }),
+      within(rows[0]!).getByRole("link", { name: "定位来源对话" }),
     ).toHaveAttribute(
       "href",
       "/projects/project-1?thread=thread-1&run=run-1",
     );
     // runId null (owner_message fact mirror) omits the run parameter.
     expect(
-      within(rows[1]!).getByRole("link", { name: "定位来源线程" }),
+      within(rows[1]!).getByRole("link", { name: "定位来源对话" }),
     ).toHaveAttribute("href", "/projects/project-1?thread=thread-2");
     // Execution rows keep the in-page focus button and gain no link.
     expect(
@@ -1926,7 +1926,7 @@ describe("Audit panel timeline view", () => {
     const rows = within(list).getAllByRole("listitem");
     expect(within(rows[0]!).getByText("来源缺失")).toBeInTheDocument();
     expect(within(rows[0]!).queryByRole("link")).toBeNull();
-    expect(within(rows[1]!).getByRole("link", { name: "定位来源线程" }))
+    expect(within(rows[1]!).getByRole("link", { name: "定位来源对话" }))
       .toHaveAttribute("href", "/projects/project-1?thread=thread-1");
     expect(within(rows[1]!).queryByText("来源缺失")).toBeNull();
   });

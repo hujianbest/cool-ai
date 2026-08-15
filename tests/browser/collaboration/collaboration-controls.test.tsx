@@ -489,12 +489,12 @@ describe("collaboration decisions, controls, and usage", () => {
       threadId,
     }));
 
-    expect(screen.getByText("正在加载项目群聊…")).toBeInTheDocument();
+    expect(screen.getByText("正在加载项目对话…")).toBeInTheDocument();
     expect(await screen.findByRole("alert")).toHaveTextContent(
       "Agent 提交的协作动作无效。",
     );
     expect(screen.queryByText("raw action response")).not.toBeInTheDocument();
-    fireEvent.click(screen.getByRole("button", { name: "重试加载群聊" }));
+    fireEvent.click(screen.getByRole("button", { name: "重试加载对话" }));
 
     const usage = await screen.findByRole("region", { name: "运行用量" });
     expect(usage).toHaveTextContent("尚无已报告的模型用量。");

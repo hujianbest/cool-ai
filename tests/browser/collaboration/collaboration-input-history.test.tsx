@@ -297,7 +297,7 @@ describe("input history panel", () => {
     });
     const user = userEvent.setup();
     renderPanel();
-    await screen.findByLabelText("发送给项目群聊");
+    await screen.findByLabelText("发送给项目对话");
 
     const entry = screen.getByRole("button", { name: "输入历史" });
     expect(entry).toHaveAttribute("aria-expanded", "false");
@@ -315,7 +315,7 @@ describe("input history panel", () => {
       .not.toBeInTheDocument();
 
     await user.click(screen.getByText("部署预发环境"));
-    const composer = screen.getByLabelText("发送给项目群聊");
+    const composer = screen.getByLabelText("发送给项目对话");
     expect(composer).toHaveValue("部署预发环境");
     expect(screen.queryByRole("region", { name: "输入历史" }))
       .not.toBeInTheDocument();
@@ -336,7 +336,7 @@ describe("input history panel", () => {
     });
     const user = userEvent.setup();
     renderPanel();
-    await screen.findByLabelText("发送给项目群聊");
+    await screen.findByLabelText("发送给项目对话");
     await user.click(screen.getByRole("button", { name: "输入历史" }));
     await screen.findByText("部署预发环境");
 
@@ -358,7 +358,7 @@ describe("input history panel", () => {
     installFetch({ historyStatus: 503, seedMessages: [ownerMessage()] });
     const user = userEvent.setup();
     renderPanel();
-    const composer = await screen.findByLabelText("发送给项目群聊");
+    const composer = await screen.findByLabelText("发送给项目对话");
     await user.click(screen.getByRole("button", { name: "输入历史" }));
 
     expect(await screen.findByText(/输入历史加载失败/)).toBeInTheDocument();
@@ -373,7 +373,7 @@ describe("input history panel", () => {
     });
     const user = userEvent.setup();
     renderPanel();
-    await screen.findByLabelText("发送给项目群聊");
+    await screen.findByLabelText("发送给项目对话");
     await user.click(screen.getByRole("button", { name: "输入历史" }));
     await screen.findByText("部署预发环境");
 
@@ -396,7 +396,7 @@ describe("input history panel", () => {
     installFetch({ seedHistory: seedEntries(), seedMessages: [ownerMessage()] });
     const user = userEvent.setup();
     renderPanel();
-    await screen.findByLabelText("发送给项目群聊");
+    await screen.findByLabelText("发送给项目对话");
     const entry = screen.getByRole("button", { name: "输入历史" });
     await user.click(entry);
 
@@ -423,7 +423,7 @@ describe("input history recording toggle", () => {
     });
     const user = userEvent.setup();
     renderPanel();
-    const composer = await screen.findByLabelText("发送给项目群聊");
+    const composer = await screen.findByLabelText("发送给项目对话");
 
     await user.click(screen.getByRole("button", { name: "输入历史" }));
     const toggle = await screen.findByRole("checkbox", { name: "记录新输入历史" });
@@ -454,7 +454,7 @@ describe("input history recording toggle", () => {
     });
     const user = userEvent.setup();
     const view = renderPanel();
-    const composer = await screen.findByLabelText("发送给项目群聊");
+    const composer = await screen.findByLabelText("发送给项目对话");
     await user.type(composer, "recorded send");
     await user.click(screen.getByRole("button", { name: "发送消息" }));
     await waitFor(() => expect(first.sendBodies).toHaveLength(1));
@@ -468,7 +468,7 @@ describe("input history recording toggle", () => {
 
     __inputHistoryRecordingStoreTest?.resetBrowserStore();
     renderPanel();
-    await screen.findByLabelText("发送给项目群聊");
+    await screen.findByLabelText("发送给项目对话");
     await user.click(screen.getByRole("button", { name: "输入历史" }));
     expect(
       await screen.findByRole("checkbox", { name: "记录新输入历史" }),

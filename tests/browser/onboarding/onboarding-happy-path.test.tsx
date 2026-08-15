@@ -459,7 +459,7 @@ describe("progressive onboarding T-1", () => {
     });
     expect(
       await within(goalGuide).findByText(
-        "目标已受理。下一步可在项目群聊启动协作；尚未执行、复核或交付。",
+        "目标已受理。下一步可在项目对话启动协作；尚未执行、复核或交付。",
       ),
     ).toBeInTheDocument();
 
@@ -474,11 +474,11 @@ describe("progressive onboarding T-1", () => {
     expect(goalGuide).toHaveTextContent("非 executor");
 
     await user.click(
-      within(goalGuide).getByRole("button", { name: "在项目群聊启动协作" }),
+      within(goalGuide).getByRole("button", { name: "在项目对话启动协作" }),
     );
-    expect(screen.getByLabelText("发送给项目群聊")).toHaveFocus();
+    expect(screen.getByLabelText("发送给项目对话")).toHaveFocus();
     await user.type(
-      screen.getByLabelText("发送给项目群聊"),
+      screen.getByLabelText("发送给项目对话"),
       "Prepare the verified release plan",
     );
     await user.click(screen.getByRole("button", { name: "发送并开始首次运行" }));
@@ -571,7 +571,7 @@ describe("progressive onboarding T-1", () => {
       within(guide).getByRole("button", { name: "创建使命目标" }),
     ).toBeDisabled();
     expect(
-      within(guide).getByRole("button", { name: "在项目群聊启动协作" }),
+      within(guide).getByRole("button", { name: "在项目对话启动协作" }),
     ).toBeDisabled();
   });
 });
@@ -1979,7 +1979,7 @@ describe("progressive onboarding T-9 formal goal intake", () => {
       await within(guide).findByText("资源已就绪，可以创建使命并启动协作。"),
     ).toBeInTheDocument();
     expect(
-      within(guide).getByRole("button", { name: "在项目群聊启动协作" }),
+      within(guide).getByRole("button", { name: "在项目对话启动协作" }),
     ).toBeDisabled();
     expect(calls.every(({ method }) => method === "GET")).toBe(true);
   });
@@ -2176,7 +2176,7 @@ describe("progressive onboarding T-9 formal goal intake", () => {
     );
     await screen.findByText("尚无协作消息。请发送第一条消息。");
     await user.type(
-      screen.getByLabelText("发送给项目群聊"),
+      screen.getByLabelText("发送给项目对话"),
       "Accept this goal for collaboration.",
     );
     await user.click(screen.getByRole("button", { name: "发送并开始首次运行" }));
@@ -2245,7 +2245,7 @@ describe("progressive onboarding T-9 formal goal intake", () => {
     );
     await screen.findByText("尚无协作消息。请发送第一条消息。");
     await user.type(
-      screen.getByLabelText("发送给项目群聊"),
+      screen.getByLabelText("发送给项目对话"),
       "PRIVATE OWNER MESSAGE MUST NOT ENTER RECEIPT",
     );
     await user.click(screen.getByRole("button", { name: "发送并开始首次运行" }));
@@ -2552,7 +2552,7 @@ describe("progressive onboarding T-14 unknown-write reconciliation", () => {
         threadId={threadId}
       />,
     );
-    const composer = await screen.findByLabelText("发送给项目群聊");
+    const composer = await screen.findByLabelText("发送给项目对话");
     await user.type(composer, content);
     await user.click(screen.getByRole("button", { name: "发送消息" }));
 
@@ -2636,7 +2636,7 @@ describe("progressive onboarding T-14 unknown-write reconciliation", () => {
         threadId={threadId}
       />,
     );
-    await user.type(await screen.findByLabelText("发送给项目群聊"), content);
+    await user.type(await screen.findByLabelText("发送给项目对话"), content);
     await user.click(screen.getByRole("button", { name: "发送消息" }));
 
     const receipt = await screen.findByRole("alert");
@@ -2715,7 +2715,7 @@ describe("progressive onboarding T-14 unknown-write reconciliation", () => {
       />,
     );
     await user.type(
-      await screen.findByLabelText("发送给项目群聊"),
+      await screen.findByLabelText("发送给项目对话"),
       "Refresh-safe start",
     );
     await user.click(screen.getByRole("button", { name: "发送并开始首次运行" }));

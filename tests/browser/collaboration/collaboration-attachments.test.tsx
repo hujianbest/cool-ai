@@ -373,7 +373,7 @@ describe("composer attachment upload", () => {
   it("uploads a pasted image through the same channel", async () => {
     installFetch({ seedMessages: [ownerMessage()] });
     renderPanel();
-    const composer = await screen.findByLabelText("发送给项目群聊");
+    const composer = await screen.findByLabelText("发送给项目对话");
     await screen.findByText("Plan the release");
 
     const file = imageFile("pasted.png", 6);
@@ -440,7 +440,7 @@ describe("composer attachment upload", () => {
   it("rejects wrong type, oversize, and excess count with a neutral field error and no upload", async () => {
     installFetch({ seedMessages: [ownerMessage()] });
     renderPanel();
-    const composer = await screen.findByLabelText("发送给项目群聊");
+    const composer = await screen.findByLabelText("发送给项目对话");
     await screen.findByText("Plan the release");
     const input = screen.getByLabelText("选择附件文件");
 
@@ -470,7 +470,7 @@ describe("composer attachment upload", () => {
     const { fetchMock, uploaded } = installFetch({ seedMessages: [ownerMessage()] });
     const user = userEvent.setup();
     renderPanel();
-    const composer = await screen.findByLabelText("发送给项目群聊");
+    const composer = await screen.findByLabelText("发送给项目对话");
     await screen.findByText("Plan the release");
 
     fireEvent.change(screen.getByLabelText("选择附件文件"), {
@@ -512,7 +512,7 @@ describe("composer attachment upload", () => {
     });
     const user = userEvent.setup();
     renderPanel(TEST_THREAD_ID, false);
-    const composer = await screen.findByLabelText("发送给项目群聊");
+    const composer = await screen.findByLabelText("发送给项目对话");
     await waitFor(() => expect(composer).toBeEnabled());
 
     fireEvent.change(screen.getByLabelText("选择附件文件"), {
@@ -624,7 +624,7 @@ describe("composer draft attachment restore", () => {
       seedMessages: [ownerMessage()],
     });
     renderPanel();
-    const composer = await screen.findByLabelText("发送给项目群聊");
+    const composer = await screen.findByLabelText("发送给项目对话");
     await waitFor(() => expect(composer).toHaveValue("带附件的草稿"));
 
     const ready = await screen.findByText(/ready\.png/);

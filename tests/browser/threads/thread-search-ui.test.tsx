@@ -138,7 +138,7 @@ describe("thread search entry in project thread navigation", () => {
     const user = userEvent.setup();
 
     render(<ThreadSearchHarness />);
-    const input = await screen.findByLabelText("搜索线程");
+    const input = await screen.findByLabelText("搜索对话");
     await user.type(input, "部署");
 
     expect(searchCalls).toHaveLength(0);
@@ -179,10 +179,10 @@ describe("thread search entry in project thread navigation", () => {
     const user = userEvent.setup();
 
     render(<ThreadSearchHarness />);
-    const input = await screen.findByLabelText("搜索线程");
+    const input = await screen.findByLabelText("搜索对话");
     await user.type(input, "部署");
 
-    const region = await screen.findByRole("region", { name: "线程搜索结果" });
+    const region = await screen.findByRole("region", { name: "对话搜索结果" });
     const items = within(region).getAllByRole("listitem");
     expect(items).toHaveLength(2);
     const titleEntry = within(items[0]!).getByRole("button", {
@@ -229,27 +229,27 @@ describe("thread search entry in project thread navigation", () => {
 
     render(<ThreadSearchHarness />);
     expect(
-      await screen.findByRole("tablist", { name: "线程视图" }),
+      await screen.findByRole("tablist", { name: "对话视图" }),
     ).toBeInTheDocument();
 
-    const input = await screen.findByLabelText("搜索线程");
+    const input = await screen.findByLabelText("搜索对话");
     await user.type(input, "发布");
     expect(
-      await screen.findByRole("region", { name: "线程搜索结果" }),
+      await screen.findByRole("region", { name: "对话搜索结果" }),
     ).toBeInTheDocument();
-    expect(screen.queryByRole("tablist", { name: "线程视图" })).toBeNull();
+    expect(screen.queryByRole("tablist", { name: "对话视图" })).toBeNull();
     expect(
-      screen.queryByRole("navigation", { name: "项目线程" }),
+      screen.queryByRole("navigation", { name: "项目对话" }),
     ).toBeNull();
 
     await user.clear(input);
     expect(
-      await screen.findByRole("tablist", { name: "线程视图" }),
+      await screen.findByRole("tablist", { name: "对话视图" }),
     ).toBeInTheDocument();
     expect(
-      screen.getByRole("navigation", { name: "项目线程" }),
+      screen.getByRole("navigation", { name: "项目对话" }),
     ).toBeInTheDocument();
-    expect(screen.queryByRole("region", { name: "线程搜索结果" })).toBeNull();
+    expect(screen.queryByRole("region", { name: "对话搜索结果" })).toBeNull();
   });
 
   it("clears the query and restores the list on Escape from the input", async () => {
@@ -276,15 +276,15 @@ describe("thread search entry in project thread navigation", () => {
     const user = userEvent.setup();
 
     render(<ThreadSearchHarness />);
-    const input = await screen.findByLabelText("搜索线程");
+    const input = await screen.findByLabelText("搜索对话");
     await user.type(input, "发布");
     expect(
-      await screen.findByRole("region", { name: "线程搜索结果" }),
+      await screen.findByRole("region", { name: "对话搜索结果" }),
     ).toBeInTheDocument();
 
     await user.keyboard("{Escape}");
     expect(
-      await screen.findByRole("tablist", { name: "线程视图" }),
+      await screen.findByRole("tablist", { name: "对话视图" }),
     ).toBeInTheDocument();
     expect(input).toHaveValue("");
     expect(input).toHaveFocus();
@@ -314,9 +314,9 @@ describe("thread search entry in project thread navigation", () => {
     const user = userEvent.setup();
 
     render(<ThreadSearchHarness />);
-    const input = await screen.findByLabelText("搜索线程");
+    const input = await screen.findByLabelText("搜索对话");
     await user.type(input, "发布");
-    await screen.findByRole("region", { name: "线程搜索结果" });
+    await screen.findByRole("region", { name: "对话搜索结果" });
 
     const background = screen.getByTestId("thread-search-background");
     const enclosingKeydown = vi.fn();
@@ -326,7 +326,7 @@ describe("thread search entry in project thread navigation", () => {
       expect(enclosingKeydown).not.toHaveBeenCalled();
       expect(input).toHaveValue("");
       expect(input).toHaveFocus();
-      expect(screen.queryByRole("region", { name: "线程搜索结果" })).toBeNull();
+      expect(screen.queryByRole("region", { name: "对话搜索结果" })).toBeNull();
 
       await user.keyboard("{Escape}");
       expect(enclosingKeydown).toHaveBeenCalledTimes(1);
@@ -357,7 +357,7 @@ describe("thread search entry in project thread navigation", () => {
     const user = userEvent.setup();
 
     render(<ThreadSearchHarness />);
-    const input = await screen.findByLabelText("搜索线程");
+    const input = await screen.findByLabelText("搜索对话");
     await user.type(input, "发布");
 
     expect(await screen.findByText("正在搜索…")).toBeInTheDocument();
@@ -397,7 +397,7 @@ describe("thread search entry in project thread navigation", () => {
     const user = userEvent.setup();
 
     render(<ThreadSearchHarness />);
-    const input = await screen.findByLabelText("搜索线程");
+    const input = await screen.findByLabelText("搜索对话");
     await user.type(input, "发布");
 
     const alert = await screen.findByRole("alert");
@@ -408,7 +408,7 @@ describe("thread search entry in project thread navigation", () => {
     );
     await user.click(retry);
     expect(
-      await screen.findByRole("region", { name: "线程搜索结果" }),
+      await screen.findByRole("region", { name: "对话搜索结果" }),
     ).toBeInTheDocument();
     expect(attempts).toBe(2);
   });
@@ -444,10 +444,10 @@ describe("thread search entry in project thread navigation", () => {
     const user = userEvent.setup();
 
     render(<ThreadSearchHarness />);
-    const input = await screen.findByLabelText("搜索线程");
+    const input = await screen.findByLabelText("搜索对话");
     await user.type(input, "部署");
 
-    const region = await screen.findByRole("region", { name: "线程搜索结果" });
+    const region = await screen.findByRole("region", { name: "对话搜索结果" });
     expect(within(region).getAllByRole("listitem")).toHaveLength(1);
     await user.click(
       within(region).getByRole("button", { name: "加载更多搜索结果" }),
@@ -490,7 +490,7 @@ describe("thread search entry in project thread navigation", () => {
     const user = userEvent.setup();
 
     render(<ThreadSearchHarness />);
-    const input = await screen.findByLabelText("搜索线程");
+    const input = await screen.findByLabelText("搜索对话");
     await user.type(input, "部署");
 
     const messageEntry = await screen.findByRole("button", { name: /发布清单/ });
@@ -535,7 +535,7 @@ describe("thread search entry in project thread navigation", () => {
     const user = userEvent.setup();
 
     render(<ThreadSearchHarness />);
-    const input = await screen.findByLabelText("搜索线程");
+    const input = await screen.findByLabelText("搜索对话");
     await user.type(input, "部署");
     const firstResult = await screen.findByRole("button", { name: /部署计划评审/ });
     const secondResult = await screen.findByRole("button", { name: /发布清单/ });
@@ -590,7 +590,7 @@ describe("thread search entry in project thread navigation", () => {
     const user = userEvent.setup();
 
     render(<ThreadSearchHarness />);
-    const input = await screen.findByLabelText("搜索线程");
+    const input = await screen.findByLabelText("搜索对话");
     await user.type(input, "alpha");
     await waitFor(() => expect(requested).toContain(searchUrl("alpha")));
     expect(await screen.findByText("正在搜索…")).toBeInTheDocument();
@@ -626,7 +626,7 @@ describe("thread search entry in project thread navigation", () => {
           return Promise.resolve(
             Response.json({
               nextCursor: null,
-              threads: [{ ...thread("thread-9", "其他线程", 1), projectId: otherProject }],
+              threads: [{ ...thread("thread-9", "其他对话", 1), projectId: otherProject }],
             }),
           );
         }
@@ -644,7 +644,7 @@ describe("thread search entry in project thread navigation", () => {
     const user = userEvent.setup();
 
     const view = render(<ThreadSearchHarness />);
-    const input = await screen.findByLabelText("搜索线程");
+    const input = await screen.findByLabelText("搜索对话");
     await user.type(input, "发布");
     await waitFor(() => expect(searchSignals.length).toBeGreaterThan(0));
     await screen.findByText("正在搜索…");
@@ -653,10 +653,10 @@ describe("thread search entry in project thread navigation", () => {
     view.rerender(<ThreadSearchHarness projectId={otherProject} />);
 
     expect(
-      await screen.findByRole("button", { name: "其他线程" }),
+      await screen.findByRole("button", { name: "其他对话" }),
     ).toBeInTheDocument();
-    expect(screen.queryByRole("region", { name: "线程搜索结果" })).toBeNull();
-    expect(screen.getByLabelText("搜索线程")).toHaveValue("");
+    expect(screen.queryByRole("region", { name: "对话搜索结果" })).toBeNull();
+    expect(screen.getByLabelText("搜索对话")).toHaveValue("");
     expect(searchSignals.length).toBeGreaterThan(0);
     expect(searchSignals.every((signal) => signal.aborted)).toBe(true);
 

@@ -115,7 +115,7 @@ describe("desktop collaboration cockpit", () => {
     expect(
       within(flow).queryByRole("button", { name: "展开待处理消息队列" }),
     ).toBeNull();
-    expect(within(flow).getByRole("heading", { name: "项目群聊" })).toHaveClass(
+    expect(within(flow).getByRole("heading", { name: "项目对话" })).toHaveClass(
       "sr-only",
     );
     expect(within(flow).getByRole("button", { name: "关闭任务编辑" })).toHaveClass(

@@ -38,9 +38,9 @@ const COLLABORATION_EVENT_TYPE_COPY: Record<string, string> = {
   run_stopped: "运行已停止",
   task_claimed: "任务已认领",
   tasks_created: "任务已创建",
-  thread_deleted: "线程已移入回收站",
-  thread_purged: "线程已永久删除",
-  thread_restored: "线程已恢复",
+  thread_deleted: "对话已移入回收站",
+  thread_purged: "对话已永久删除",
+  thread_restored: "对话已恢复",
 };
 
 // Readable copy for the mission-work audit event types (feature 035
@@ -565,7 +565,7 @@ function EventSourceControls({
           定位来源执行
         </button>
       ) : null}
-      {sourceHref ? <a href={sourceHref}>定位来源线程</a> : null}
+      {sourceHref ? <a href={sourceHref}>定位来源对话</a> : null}
       {missionSource
         ? <a href={missionSource.href}>{missionSource.label}</a>
         : null}

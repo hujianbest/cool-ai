@@ -271,7 +271,7 @@ describe("collaboration T-1 vertical slice", () => {
       projectId: "project-1",
       threadId,
     }));
-    expect(screen.getByText("正在加载项目群聊…")).toBeInTheDocument();
+    expect(screen.getByText("正在加载项目对话…")).toBeInTheDocument();
     expect(screen.queryByText("尚无运行。发送首条消息以开始首次运行。")).not.toBeInTheDocument();
     releaseLoad();
     expect(await screen.findByText("尚无运行。发送首条消息以开始首次运行。"))
@@ -300,7 +300,7 @@ describe("collaboration T-1 vertical slice", () => {
     expect(await screen.findByRole("alert")).toHaveTextContent(
       "服务暂时不可用，请稍后重试。",
     );
-    await user.click(screen.getByRole("button", { name: "重试加载群聊" }));
+    await user.click(screen.getByRole("button", { name: "重试加载对话" }));
     expect(await screen.findByText("尚无运行。发送首条消息以开始首次运行。"))
       .toBeInTheDocument();
   });
@@ -316,7 +316,7 @@ describe("collaboration T-1 vertical slice", () => {
     }));
     await screen.findByText("尚无运行。发送首条消息以开始首次运行。");
 
-    await user.type(screen.getByLabelText("发送给项目群聊"), "Ship the smallest useful plan");
+    await user.type(screen.getByLabelText("发送给项目对话"), "Ship the smallest useful plan");
     await user.click(screen.getByRole("button", { name: "发送并开始首次运行" }));
     expect(await screen.findByText("Ship the smallest useful plan")).toBeInTheDocument();
     firstView.unmount();

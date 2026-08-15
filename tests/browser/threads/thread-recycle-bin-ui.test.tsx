@@ -164,7 +164,7 @@ describe("thread recycle bin navigation", () => {
     await user.click(within(confirm).getByRole("button", { name: "确认移入" }));
 
     expect(await screen.findByRole("status")).toHaveTextContent(
-      "线程“Current thread”已移入回收站。",
+      "对话“Current thread”已移入回收站。",
     );
     expect(onNavigate).toHaveBeenCalledWith(`/projects/${encodeURIComponent(project.id)}`);
     expect(screen.queryByRole("button", { name: "Current thread" })).toBeNull();
@@ -241,27 +241,27 @@ describe("thread recycle bin navigation", () => {
     await screen.findByRole("button", { name: "恢复 Recover me" });
 
     await user.click(screen.getByRole("button", { name: "永久删除 Recover me" }));
-    const purgeConfirm = await screen.findByRole("dialog", { name: "永久删除线程" });
+    const purgeConfirm = await screen.findByRole("dialog", { name: "永久删除对话" });
     expect(purgeConfirm).toHaveTextContent(
       "将永久删除 5 条消息、2 个附件。此操作不可恢复；删除操作会记录在审计日志中。",
     );
     expect(within(purgeConfirm).getByRole("button", { name: "取消" })).toHaveFocus();
     await user.keyboard("{Escape}");
-    expect(screen.queryByRole("dialog", { name: "永久删除线程" })).toBeNull();
+    expect(screen.queryByRole("dialog", { name: "永久删除对话" })).toBeNull();
 
     await user.click(screen.getByRole("button", { name: "恢复 Recover me" }));
-    expect(await screen.findByRole("status")).toHaveTextContent("线程“Recover me”已恢复。");
+    expect(await screen.findByRole("status")).toHaveTextContent("对话“Recover me”已恢复。");
     expect(screen.queryByRole("button", { name: "恢复 Recover me" })).toBeNull();
 
     await user.click(screen.getByRole("button", { name: "永久删除 Blocked purge" }));
     await user.click(
-      within(await screen.findByRole("dialog", { name: "永久删除线程" })).getByRole(
+      within(await screen.findByRole("dialog", { name: "永久删除对话" })).getByRole(
         "button",
         { name: "永久删除" },
       ),
     );
     expect(await screen.findByRole("alert")).toHaveTextContent(
-      "该线程已产生执行记录，不可永久删除",
+      "该对话已产生执行记录，不可永久删除",
     );
   });
 });
@@ -330,14 +330,14 @@ describe("thread deleted placeholder panel", () => {
     const user = userEvent.setup();
 
     render(<CollaborationPanel projectId={project.id} threadId="thread-1" />);
-    expect(await screen.findByText("该线程已移入回收站。")).toBeInTheDocument();
+    expect(await screen.findByText("该对话已移入回收站。")).toBeInTheDocument();
 
-    await user.click(screen.getByRole("button", { name: "返回线程列表" }));
+    await user.click(screen.getByRole("button", { name: "返回对话列表" }));
     expect(window.location.search).toBe("");
 
     window.history.replaceState(null, "", `/projects/${project.id}?thread=thread-1`);
-    await user.click(screen.getByRole("button", { name: "恢复线程" }));
-    expect(await screen.findByRole("status")).toHaveTextContent("线程已恢复。");
+    await user.click(screen.getByRole("button", { name: "恢复对话" }));
+    expect(await screen.findByRole("status")).toHaveTextContent("对话已恢复。");
   });
 });
 

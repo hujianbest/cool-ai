@@ -846,6 +846,7 @@ export function ProjectThreadNavigation({
           const href = canonicalThreadHref(projectId, loaded[0]!.id, directMode);
           onNavigate?.(href);
           routerRef.current.replace(href);
+          window.dispatchEvent(new PopStateEvent("popstate"));
         } else if (
           selection.kind === "invalid"
           || (
@@ -854,7 +855,7 @@ export function ProjectThreadNavigation({
           )
         ) {
           setSelectionError(
-            "所选线程无效或不属于当前项目。请选择一个可用线程。",
+            "所选对话无效或不属于当前项目。请选择一个可用对话。",
           );
         }
       })
@@ -864,7 +865,7 @@ export function ProjectThreadNavigation({
         setListError(
           caughtApiErrorCopy(
             cause,
-            "无法加载项目线程，请重试；不会保留无效选择。",
+            "无法加载项目对话，请重试；不会保留无效选择。",
           ),
         );
       });
@@ -1039,7 +1040,7 @@ export function ProjectThreadNavigation({
         .catch((cause: unknown) => {
           if (!request.isCurrent() || epoch !== searchEpochRef.current) return;
           setSearchState("error");
-          setSearchError(caughtApiErrorCopy(cause, "无法搜索线程，请稍后重试。"));
+          setSearchError(caughtApiErrorCopy(cause, "无法搜索对话，请稍后重试。"));
         });
     }, SEARCH_DEBOUNCE_MS);
     return () => window.clearTimeout(timer);
@@ -1182,12 +1183,13 @@ export function ProjectThreadNavigation({
       const href = canonicalThreadHref(projectId, threads[0]!.id, directMode);
       onNavigate?.(href);
       routerRef.current.replace(href);
+      window.dispatchEvent(new PopStateEvent("popstate"));
     } else if (
       selection.kind === "invalid"
       || !threads.some((thread) => thread.id === selection.threadId)
     ) {
       setSelectionError(
-        "所选线程无效或不属于当前项目。请选择一个可用线程。",
+        "所选对话无效或不属于当前项目。请选择一个可用对话。",
       );
     } else {
       setSelectionError(null);
@@ -1252,6 +1254,7 @@ export function ProjectThreadNavigation({
     const href = canonicalThreadHref(projectId, threadId, directMode);
     onNavigate?.(href);
     routerRef.current.push(href);
+    window.dispatchEvent(new PopStateEvent("popstate"));
   }
 
   function selectView(next: ThreadListView, focusTab = false) {
@@ -1367,7 +1370,7 @@ export function ProjectThreadNavigation({
       );
       if (result.threadId !== target.id) throw new Error("invalid_thread_delete_tuple");
       setPendingDeleteThread(null);
-      setCreateNotice(`线程“${target.title}”已移入回收站。`);
+      setCreateNotice(`对话“${target.title}”已移入回收站。`);
       setRecycleReloadKey((current) => current + 1);
       void refreshThreadsSilently(request);
       void refreshRecycleBinSilently(request);
@@ -1376,6 +1379,7 @@ export function ProjectThreadNavigation({
         const href = directMode ? "/" : `/projects/${encodeURIComponent(projectId)}`;
         onNavigate?.(href);
         routerRef.current.push(href);
+        window.dispatchEvent(new PopStateEvent("popstate"));
       }
     } catch (cause: unknown) {
       if (!request.isCurrent()) return;
@@ -1404,7 +1408,7 @@ export function ProjectThreadNavigation({
         (await response.json()) as ThreadRestoreResponse,
       );
       if (result.threadId !== item.id) throw new Error("invalid_thread_restore_tuple");
-      setCreateNotice(`线程“${item.title}”已恢复。`);
+      setCreateNotice(`对话“${item.title}”已恢复。`);
       setRecycleReloadKey((current) => current + 1);
       void refreshThreadsSilently(request);
       void refreshRecycleBinSilently(request);
@@ -1412,7 +1416,7 @@ export function ProjectThreadNavigation({
       if (!request.isCurrent()) return;
       setRecycleBinAlertByThread((current) => ({
         ...current,
-        [item.id]: caughtApiErrorCopy(cause, "恢复线程失败，请稍后重试。"),
+        [item.id]: caughtApiErrorCopy(cause, "恢复对话失败，请稍后重试。"),
       }));
     }
   }
@@ -1442,7 +1446,7 @@ export function ProjectThreadNavigation({
             setPendingPurgeThread(null);
             setRecycleBinAlertByThread((current) => ({
               ...current,
-              [target.id]: "该线程已产生执行记录，不可永久删除",
+              [target.id]: "该对话已产生执行记录，不可永久删除",
             }));
             return;
           }
@@ -1454,7 +1458,7 @@ export function ProjectThreadNavigation({
       );
       if (result.threadId !== target.id) throw new Error("invalid_thread_purge_tuple");
       setPendingPurgeThread(null);
-      setCreateNotice(`线程“${target.title}”已永久删除。`);
+      setCreateNotice(`对话“${target.title}”已永久删除。`);
       setRecycleReloadKey((current) => current + 1);
       void refreshThreadsSilently(request);
       void refreshRecycleBinSilently(request);
@@ -1479,7 +1483,7 @@ export function ProjectThreadNavigation({
       })
       .catch((cause: unknown) => {
         if (!request.isCurrent()) return;
-        setRecycleBinError(caughtApiErrorCopy(cause, "无法加载更多回收站线程，请稍后重试。"));
+        setRecycleBinError(caughtApiErrorCopy(cause, "无法加载更多回收站对话，请稍后重试。"));
       })
       .finally(() => {
         if (request.isCurrent()) setRecycleBinLoadingMore(false);
@@ -1509,8 +1513,8 @@ export function ProjectThreadNavigation({
     setDialogOpen(false);
     setCreateNotice(
       reconciled
-        ? `已通过操作核对确认线程“${created.thread.title}”已创建。`
-        : `线程“${created.thread.title}”已创建。`,
+        ? `已通过操作核对确认对话“${created.thread.title}”已创建。`
+        : `对话“${created.thread.title}”已创建。`,
     );
     setFocusThreadId(created.thread.id);
     const href = canonicalThreadHref(
@@ -1520,6 +1524,7 @@ export function ProjectThreadNavigation({
     );
     onNavigate?.(href);
     routerRef.current.push(href);
+    window.dispatchEvent(new PopStateEvent("popstate"));
   }
 
   async function reconcileUnknownCreate(
@@ -1561,12 +1566,12 @@ export function ProjectThreadNavigation({
         return true;
       }
       setCreateError(
-        "创建结果未知，无法唯一确认已创建的线程。请核对线程列表后再决定是否重试；不会自动重发。",
+        "创建结果未知，无法唯一确认已创建的对话。请核对对话列表后再决定是否重试；不会自动重发。",
       );
       return false;
     } catch {
       setCreateError(
-        "创建结果未知，且操作核对失败。请稍后核对线程列表；不会自动重发。",
+        "创建结果未知，且操作核对失败。请稍后核对对话列表；不会自动重发。",
       );
       return false;
     }
@@ -1578,9 +1583,9 @@ export function ProjectThreadNavigation({
     const graphemeCount = countGraphemes(normalizedTitle);
     const nextTitleError =
       graphemeCount === 0
-        ? "请输入线程标题。"
+        ? "请输入对话标题。"
         : graphemeCount > 80
-          ? "线程标题不能超过 80 个字符。"
+          ? "对话标题不能超过 80 个字符。"
           : null;
     const uniqueMemberIds = Array.from(new Set(selectedMemberIds));
     const nextMemberError =
@@ -1629,7 +1634,7 @@ export function ProjectThreadNavigation({
       if (!request.isCurrent()) return;
       if (cause instanceof ApiDisplayError) {
         setCreateError(
-          caughtApiErrorCopy(cause, "无法创建线程，请检查输入后重试。"),
+          caughtApiErrorCopy(cause, "无法创建对话，请检查输入后重试。"),
         );
       } else {
         await reconcileUnknownCreate(operationId, previousIds, request);
@@ -1771,7 +1776,7 @@ export function ProjectThreadNavigation({
     if (batchConfirm.removeTagIds.length > 0) {
       parts.push(`移除 ${batchConfirm.removeTagIds.length} 个标签`);
     }
-    return `将为 ${batchConfirm.threadIds.length} 条线程${parts.join("、")}。`;
+    return `将为 ${batchConfirm.threadIds.length} 条对话${parts.join("、")}。`;
   }, [batchConfirm]);
 
   function exitOrganizeMode() {
@@ -1823,7 +1828,7 @@ export function ProjectThreadNavigation({
       const result = threadTagBatchResponseSchema.parse(await response.json());
       if (result.operationId !== operationId) throw new Error("invalid_batch_tuple");
       setBatchRetry(null);
-      setBatchNotice(`已为 ${result.applied.length} 条线程更新标签。`);
+      setBatchNotice(`已为 ${result.applied.length} 条对话更新标签。`);
       setBatchConfirm(null);
       setOrganizeMode(false);
       setSelectedThreadIds(new Set());
@@ -1868,17 +1873,17 @@ export function ProjectThreadNavigation({
       >
         <div className="section-heading-row">
           <h2 className="surface-heading" id="project-threads-title">
-            线程
+            对话
           </h2>
           {listState !== "empty" ? (
             <div className="section-heading-actions">
               {view === "all" ? (
                 <IconButton
                   icon={<Plus size={20} weight="regular" />}
-                  label="创建线程"
+                  label="创建对话"
                   onClick={openDialog}
                   ref={createButtonRef}
-                  title="创建线程"
+                  title="创建对话"
                 />
               ) : null}
               <IconButton
@@ -1892,10 +1897,10 @@ export function ProjectThreadNavigation({
                 <IconButton
                   aria-pressed={organizeMode}
                   icon={<Faders size={20} weight="regular" />}
-                  label="整理线程"
+                  label="整理对话"
                   onClick={() => setOrganizeMode(true)}
                   ref={organizeButtonRef}
-                  title="整理线程"
+                  title="整理对话"
                 />
               ) : null}
             </div>
@@ -1903,10 +1908,10 @@ export function ProjectThreadNavigation({
         </div>
         <div className="thread-search">
           <input
-            aria-label="搜索线程"
+            aria-label="搜索对话"
             onChange={(event) => setSearchText(event.target.value)}
             onKeyDown={handleSearchInputKeys}
-            placeholder="搜索线程标题与消息"
+            placeholder="搜索对话标题与消息"
             ref={searchInputRef}
             type="search"
             value={searchText}
@@ -1921,7 +1926,7 @@ export function ProjectThreadNavigation({
             ) : null}
             {searchState === "error" ? (
               <section
-                aria-label="线程搜索结果"
+                aria-label="对话搜索结果"
                 className="stack"
                 id="project-threads-search-results"
               >
@@ -1941,7 +1946,7 @@ export function ProjectThreadNavigation({
             ) : null}
             {searchState !== "error" && visibleSearchPage ? (
               <section
-                aria-label="线程搜索结果"
+                aria-label="对话搜索结果"
                 className="stack"
                 id="project-threads-search-results"
               >
@@ -2011,7 +2016,7 @@ export function ProjectThreadNavigation({
         ) : null}
         {searchActive ? null : (
         <div
-          aria-label="线程视图"
+          aria-label="对话视图"
           className="thread-view-tabs"
           onKeyDown={handleViewKeys}
           role="tablist"
@@ -2079,7 +2084,7 @@ export function ProjectThreadNavigation({
             </div>
           ) : null}
           {tagsState === "ready" && tags.length > 0 && !organizeMode ? (
-            <div aria-label="按标签筛选线程" className="thread-tag-filter-chips" role="group">
+            <div aria-label="按标签筛选对话" className="thread-tag-filter-chips" role="group">
               <button
                 aria-pressed={activeTagId === null}
                 className={
@@ -2112,7 +2117,7 @@ export function ProjectThreadNavigation({
         </div>
         )}
         {searchActive || !organizeMode ? null : (
-        <section aria-label="批量整理线程" className="thread-batch-bar">
+        <section aria-label="批量整理对话" className="thread-batch-bar">
           <button
             className="button-secondary"
             disabled={batchSubmitting}
@@ -2122,7 +2127,7 @@ export function ProjectThreadNavigation({
             取消整理
           </button>
           <p aria-atomic="true" aria-live="polite" className="muted" role="status">
-            {`已选 ${batchSelectionCount} 条线程`}
+            {`已选 ${batchSelectionCount} 条对话`}
           </p>
           <div aria-label="添加标签" className="thread-batch-group" role="group">
             {tags.map((tag) => (
@@ -2213,7 +2218,7 @@ export function ProjectThreadNavigation({
         {searchActive ? null : (
         <nav
           aria-busy={listState === "loading" ? "true" : undefined}
-          aria-label="项目线程"
+          aria-label="项目对话"
           id="project-threads-list"
         >
           {view === "recycle_bin" ? (
@@ -2279,7 +2284,7 @@ export function ProjectThreadNavigation({
             )
           ) : listState === "loading" ? (
             <p className="muted" role="status">
-              正在加载线程…
+              正在加载对话…
             </p>
           ) : listState === "error" ? (
             <div className="stack state-message">
@@ -2291,24 +2296,24 @@ export function ProjectThreadNavigation({
                 onClick={() => setReloadKey((current) => current + 1)}
                 type="button"
               >
-                重试加载线程
+                重试加载对话
               </button>
             </div>
           ) : listState === "empty" || threads.length === 0 ? (
             view === "favorites" ? (
               <div className="empty-guide state-message">
-                <p>暂无收藏线程。在“全部”视图中收藏线程后会显示在这里。</p>
+                <p>暂无收藏对话。在“全部”视图中收藏对话后会显示在这里。</p>
                 <button
                   className="button-secondary"
                   onClick={() => selectView("all")}
                   type="button"
                 >
-                  查看全部线程
+                  查看全部对话
                 </button>
               </div>
             ) : activeTagId ? (
               <div className="empty-guide state-message">
-                <p>{`标签“${tags.find((tag) => tag.id === activeTagId)?.name ?? ""}”下暂无线程。`}</p>
+                <p>{`标签“${tags.find((tag) => tag.id === activeTagId)?.name ?? ""}”下暂无对话。`}</p>
                 <button
                   className="button-secondary"
                   onClick={() => setActiveTagId(null)}
@@ -2319,14 +2324,14 @@ export function ProjectThreadNavigation({
               </div>
             ) : (
               <div className="empty-guide state-message">
-                <p>暂无线程。创建线程后开始协作。</p>
+                <p>暂无对话。创建对话后开始协作。</p>
                 <button
                   className="button-primary"
                   onClick={openDialog}
                   ref={createButtonRef}
                   type="button"
                 >
-                  创建线程
+                  创建对话
                 </button>
               </div>
             )
@@ -2337,13 +2342,13 @@ export function ProjectThreadNavigation({
                   {organizeMode ? (
                     <label className="thread-list-select">
                       <input
-                        aria-label={`选择线程 ${thread.title}`}
+                        aria-label={`选择对话 ${thread.title}`}
                         checked={selectedThreadIds.has(thread.id)}
                         disabled={batchSubmitting}
                         onChange={() => toggleThreadSelected(thread.id)}
                         type="checkbox"
                       />
-                      <span className="sr-only">{`选择线程 ${thread.title}`}</span>
+                      <span className="sr-only">{`选择对话 ${thread.title}`}</span>
                     </label>
                   ) : null}
                   <div className="thread-list-main">
@@ -2392,7 +2397,7 @@ export function ProjectThreadNavigation({
                     aria-label={
                       thread.isFavorite
                         ? `取消收藏 ${thread.title}`
-                        : `收藏线程 ${thread.title}`
+                        : `收藏对话 ${thread.title}`
                     }
                     aria-pressed={thread.isFavorite}
                     className="thread-favorite-toggle"
@@ -2413,7 +2418,7 @@ export function ProjectThreadNavigation({
               onClick={loadMoreRecycleBin}
               type="button"
             >
-              {recycleBinLoadingMore ? "正在加载更多…" : "加载更多回收站线程"}
+              {recycleBinLoadingMore ? "正在加载更多…" : "加载更多回收站对话"}
             </button>
           ) : null}
         </nav>
@@ -2434,9 +2439,9 @@ export function ProjectThreadNavigation({
               role="dialog"
             >
               <div className="section-heading-row">
-                <h2 id="create-thread-title">创建线程</h2>
+                <h2 id="create-thread-title">创建对话</h2>
                 <button
-                  aria-label="关闭创建线程"
+                  aria-label="关闭创建对话"
                   className="button-ghost"
                   disabled={isSubmitting}
                   onKeyDown={(event) => {
@@ -2457,7 +2462,7 @@ export function ProjectThreadNavigation({
               </div>
               <form className="stack" onSubmit={handleCreate}>
                 <div className="form-field">
-                  <label htmlFor="thread-title">线程标题</label>
+                  <label htmlFor="thread-title">对话标题</label>
                   <input
                     aria-describedby={
                       titleError ? "thread-title-error" : "thread-title-help"
@@ -2554,7 +2559,7 @@ export function ProjectThreadNavigation({
                     disabled={Boolean(submitReason)}
                     type="submit"
                   >
-                    {isSubmitting ? "正在创建线程…" : "创建线程"}
+                    {isSubmitting ? "正在创建对话…" : "创建对话"}
                   </button>
                   <button
                     className="button-secondary"
@@ -2565,7 +2570,7 @@ export function ProjectThreadNavigation({
                         event.preventDefault();
                         dialogRef.current
                           ?.querySelector<HTMLButtonElement>(
-                            '[aria-label="关闭创建线程"]',
+                            '[aria-label="关闭创建对话"]',
                           )
                           ?.focus();
                       }
@@ -2669,7 +2674,7 @@ export function ProjectThreadNavigation({
               {tagsState === "ready" ? (
                 tags.length === 0 ? (
                   <p className="muted" role="status">
-                    暂无标签。创建标签后开始整理线程。
+                    暂无标签。创建标签后开始整理对话。
                   </p>
                 ) : (
                   (() => {
@@ -2687,7 +2692,7 @@ export function ProjectThreadNavigation({
                           <li className="thread-tag-manage-item" key={tag.id}>
                             <span className="thread-tag-list-name">{tag.name}</span>
                             <span className="thread-tag-count">
-                              {`已分配 ${tag.threadCount} 条线程`}
+                              {`已分配 ${tag.threadCount} 条对话`}
                             </span>
                             <button
                               aria-label={`删除标签 ${tag.name}`}
@@ -2766,7 +2771,7 @@ export function ProjectThreadNavigation({
               <p>{batchConfirmCopy}</p>
               {batchConfirm.removeTagIds.length > 0 ? (
                 <p className="muted">
-                  移除会立即解除这些线程上的标签分配。
+                  移除会立即解除这些对话上的标签分配。
                 </p>
               ) : null}
               <div className="form-row">
@@ -2838,7 +2843,7 @@ export function ProjectThreadNavigation({
               ref={purgeThreadDialogRef}
               role="dialog"
             >
-              <h2 id="thread-purge-title">永久删除线程</h2>
+              <h2 id="thread-purge-title">永久删除对话</h2>
               <p>
                 {`将永久删除 ${pendingPurgeThread.messageCount} 条消息、${pendingPurgeThread.attachmentCount} 个附件。此操作不可恢复；删除操作会记录在审计日志中。`}
               </p>

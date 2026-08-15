@@ -269,7 +269,7 @@ describe("strict thread fact transcript", () => {
       />,
     );
 
-    expect(screen.getByText("正在加载项目群聊…")).toHaveAttribute(
+    expect(screen.getByText("正在加载项目对话…")).toHaveAttribute(
       "aria-busy",
       "true",
     );
@@ -282,16 +282,16 @@ describe("strict thread fact transcript", () => {
         nextAfter: null,
       }),
     );
-    expect(await screen.findByRole("alert")).toHaveTextContent("无法加载项目群聊");
+    expect(await screen.findByRole("alert")).toHaveTextContent("无法加载项目对话");
     expect(screen.queryByText("Not a fact")).toBeNull();
 
-    await user.click(screen.getByRole("button", { name: "重试加载群聊" }));
+    await user.click(screen.getByRole("button", { name: "重试加载对话" }));
     expect(await screen.findByRole("alert")).toHaveTextContent("服务暂时不可用");
     expect(screen.queryByText("private detail")).toBeNull();
-    await user.click(screen.getByRole("button", { name: "重试加载群聊" }));
+    await user.click(screen.getByRole("button", { name: "重试加载对话" }));
     expect(await screen.findByText("尚无协作消息。请发送第一条消息。"))
       .toBeInTheDocument();
-    expect(screen.getByLabelText("发送给项目群聊")).toBeEnabled();
+    expect(screen.getByLabelText("发送给项目对话")).toBeEnabled();
     view.unmount();
   });
 

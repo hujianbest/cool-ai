@@ -315,7 +315,7 @@ describe("canonical project/thread/run stale request protection", () => {
       />,
     );
     await screen.findByText(`运行 ${oldRun}`);
-    await user.type(screen.getByLabelText("发送给项目群聊"), "old write");
+    await user.type(screen.getByLabelText("发送给项目对话"), "old write");
     await user.click(screen.getByRole("button", { name: "发送消息" }));
 
     switched = true;
@@ -337,7 +337,7 @@ describe("canonical project/thread/run stale request protection", () => {
 
     expect(oldUrlsAfterSwitch).toEqual([]);
     expect(screen.queryByText(/已通过事实核对确认消息已发送/)).toBeNull();
-    expect(screen.getByLabelText("发送给项目群聊")).toHaveValue("");
+    expect(screen.getByLabelText("发送给项目对话")).toHaveValue("");
     expect(window.location.search).not.toContain(oldRun);
   });
 
@@ -380,7 +380,7 @@ describe("canonical project/thread/run stale request protection", () => {
       <ThreadPolicyPanel projectId={projectId} threadId={oldThread} />,
     );
     await user.click(await screen.findByRole("button", {
-      name: "编辑线程成员策略",
+      name: "编辑对话成员策略",
     }));
     await user.click(screen.getByRole("button", { name: "保存成员策略" }));
 

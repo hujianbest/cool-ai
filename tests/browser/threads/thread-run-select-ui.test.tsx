@@ -145,7 +145,7 @@ describe("selected thread run selection", () => {
 
     render(<UrlHarness />);
 
-    const selector = await screen.findByRole("combobox", { name: "选择线程运行" });
+    const selector = await screen.findByRole("combobox", { name: "选择对话运行" });
     expect(selector).toHaveValue("");
     expect(window.location.search).toBe(`?thread=${threadId}`);
     const options = within(selector).getAllByRole("option");
@@ -154,7 +154,7 @@ describe("selected thread run selection", () => {
     expect(options[2]).toHaveTextContent(/stopped.*run-old/);
     const controls = screen.getByRole("region", { name: "运行控制" });
     expect(within(controls).getByRole("button", { name: "暂停" })).toBeDisabled();
-    expect(controls).toHaveTextContent("请先明确选择此线程的一次运行");
+    expect(controls).toHaveTextContent("请先明确选择此对话的一次运行");
     expect(screen.queryByText(/运行状态：running/)).not.toBeInTheDocument();
   });
 
@@ -243,8 +243,8 @@ describe("selected thread run selection", () => {
 
     render(<UrlHarness />);
 
-    expect(await screen.findByText(/另一线程有活动运行/)).toBeVisible();
-    const composer = screen.getByLabelText("发送给项目群聊");
+    expect(await screen.findByText(/另一对话有活动运行/)).toBeVisible();
+    const composer = screen.getByLabelText("发送给项目对话");
     await user.type(composer, ownerMessage.content);
     const submit = screen.getByRole("button", { name: "发送消息" });
     expect(submit).toBeEnabled();
@@ -273,7 +273,7 @@ describe("selected thread run selection", () => {
 
     render(<UrlHarness />);
 
-    const selector = await screen.findByRole("combobox", { name: "选择线程运行" });
+    const selector = await screen.findByRole("combobox", { name: "选择对话运行" });
     await user.selectOptions(selector, older.id);
     expect(screen.getByText("正在切换运行…")).toBeVisible();
     expect(window.location.search).toBe(`?thread=${threadId}&run=${older.id}`);
@@ -293,7 +293,7 @@ describe("selected thread run selection", () => {
       expect(window.location.search).toBe(`?thread=${threadId}`)
     );
     await waitFor(() =>
-      expect(screen.getByRole("combobox", { name: "选择线程运行" }))
+      expect(screen.getByRole("combobox", { name: "选择对话运行" }))
         .toHaveValue("")
     );
     window.history.forward();
@@ -301,7 +301,7 @@ describe("selected thread run selection", () => {
       expect(window.location.search).toBe(`?thread=${threadId}&run=${older.id}`)
     );
     await waitFor(() =>
-      expect(screen.getByRole("combobox", { name: "选择线程运行" }))
+      expect(screen.getByRole("combobox", { name: "选择对话运行" }))
         .toHaveValue(older.id)
     );
   });
@@ -330,7 +330,7 @@ describe("selected thread run selection", () => {
     await user.click(screen.getByRole("button", { name: "重试加载运行" }));
     expect(await screen.findByText("尚无运行。发送首条消息以开始首次运行。"))
       .toBeVisible();
-    expect(screen.getByRole("combobox", { name: "选择线程运行" })).toBeDisabled();
+    expect(screen.getByRole("combobox", { name: "选择对话运行" })).toBeDisabled();
     expect(window.location.search).toBe(`?thread=${threadId}`);
   });
 
@@ -362,7 +362,7 @@ describe("selected thread run selection", () => {
     await waitFor(() =>
       expect(window.location.search).toBe(`?thread=${threadId}`)
     );
-    expect(await screen.findByRole("combobox", { name: "选择线程运行" }))
+    expect(await screen.findByRole("combobox", { name: "选择对话运行" }))
       .toHaveValue("");
     expect(screen.getByRole("status", { name: "运行选择状态" })).toHaveTextContent(
       "所选运行无效或已失效，已清除选择",
@@ -393,7 +393,7 @@ describe("selected thread run selection", () => {
     await waitFor(() =>
       expect(window.location.search).toBe(`?thread=${threadId}`)
     );
-    expect(await screen.findByRole("combobox", { name: "选择线程运行" }))
+    expect(await screen.findByRole("combobox", { name: "选择对话运行" }))
       .toHaveValue("");
     expect(screen.queryByRole("heading", { name: "运行 run-cross" }))
       .not.toBeInTheDocument();
@@ -413,7 +413,7 @@ describe("selected thread run selection", () => {
     render(<UrlHarness />);
 
     const returnLink = await screen.findByRole("link", {
-      name: "返回活动线程 run-active",
+      name: "返回活动对话 run-active",
     });
     expect(returnLink).toHaveAttribute(
       "href",
@@ -441,12 +441,12 @@ describe("selected thread run selection", () => {
 
     render(<UrlHarness surface="run" />);
 
-    const selector = await screen.findByRole("combobox", { name: "选择线程运行" });
+    const selector = await screen.findByRole("combobox", { name: "选择对话运行" });
     expect(within(selector).getAllByRole("option")).toHaveLength(2);
     selector.focus();
     await user.selectOptions(selector, newest.id);
     expect(await screen.findByRole("heading", { name: `运行 ${newest.id}` }))
       .toHaveFocus();
-    expect(screen.queryByLabelText("发送给项目群聊")).not.toBeInTheDocument();
+    expect(screen.queryByLabelText("发送给项目对话")).not.toBeInTheDocument();
   });
 });

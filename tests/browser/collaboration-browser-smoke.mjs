@@ -442,13 +442,13 @@ async function createProjectContext(page) {
 }
 
 async function createThread(page, title, memberNames) {
-  await page.getByRole("button", { name: "创建线程" }).first().click();
-  const dialog = page.getByRole("dialog", { name: "创建线程" });
-  await dialog.getByRole("textbox", { name: "线程标题" }).fill(title);
+  await page.getByRole("button", { name: "创建对话" }).first().click();
+  const dialog = page.getByRole("dialog", { name: "创建对话" });
+  await dialog.getByRole("textbox", { name: "对话标题" }).fill(title);
   for (const memberName of memberNames) {
     await dialog.getByLabel(memberName).check();
   }
-  await dialog.getByRole("button", { name: "创建线程", exact: true }).click();
+  await dialog.getByRole("button", { name: "创建对话", exact: true }).click();
   await dialog.waitFor({ state: "detached" });
   await page.waitForURL((url) => Boolean(url.searchParams.get("thread")));
   return new URL(page.url()).searchParams.get("thread");
@@ -600,7 +600,7 @@ try {
   await page.reload({ waitUntil: "networkidle" });
 
   await selectMentionByKeyboard(page, "Collaboration Alpha");
-  const composer = page.getByLabel("发送给项目群聊");
+  const composer = page.getByLabel("发送给项目对话");
   await composer.fill("Start the two-agent collaboration plan.");
   await page
     .getByRole("button", { name: "发送并开始首次运行" })
@@ -672,7 +672,7 @@ try {
   await page.keyboard.press("Enter");
   const editor = page.getByRole("dialog", { name: "任务编辑" });
   await editor.waitFor();
-  const chatTab = editor.getByRole("tab", { name: "群聊" });
+  const chatTab = editor.getByRole("tab", { name: "对话" });
   await chatTab.focus();
   await page.keyboard.press("End");
   const runTab = editor.getByRole("tab", { name: "运行详情" });

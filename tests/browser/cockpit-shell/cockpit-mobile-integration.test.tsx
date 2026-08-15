@@ -218,7 +218,7 @@ describe("owner-controlled cockpit mobile surfaces", () => {
     ).toHaveFocus();
 
     await user.type(
-      within(editor).getByLabelText("发送给项目群聊"),
+      within(editor).getByLabelText("发送给项目对话"),
       "Keep this draft",
     );
     await user.keyboard("{Escape}");
@@ -245,7 +245,7 @@ describe("owner-controlled cockpit mobile surfaces", () => {
     await user.click(editorOpener);
     expect(
       within(screen.getByRole("dialog", { name: "任务编辑" })).getByLabelText(
-        "发送给项目群聊",
+        "发送给项目对话",
       ),
     ).toHaveValue("Keep this draft");
   });

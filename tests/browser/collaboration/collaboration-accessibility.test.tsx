@@ -215,13 +215,13 @@ describe("narrow collaboration cockpit accessibility", () => {
     expect(within(editor).queryByRole("tab", { name: "看板" })).toBeNull();
     expect(within(editor).queryByRole("tab", { name: "运行详情" })).toBeNull();
     expect(within(editor).queryByRole("heading", { name: "使命看板" })).toBeNull();
-    expect(within(editor).getByLabelText("发送给项目群聊")).toBeVisible();
+    expect(within(editor).getByLabelText("发送给项目对话")).toBeVisible();
 
     view.unmount();
     stubViewport(false);
     installFetch();
     render(<ProjectPanel />);
-    expect(await screen.findByRole("heading", { name: "项目群聊" })).toHaveClass("sr-only");
+    expect(await screen.findByRole("heading", { name: "项目对话" })).toHaveClass("sr-only");
     expect(screen.queryByRole("heading", { name: "使命看板" })).toBeNull();
     expect(screen.queryByRole("region", { name: "运行控制" })).toBeNull();
     expect(screen.queryByRole("tablist", { name: "协作视图" })).toBeNull();
@@ -236,7 +236,7 @@ describe("narrow collaboration cockpit accessibility", () => {
     await user.click(await screen.findByRole("button", { name: "打开编辑" }));
     const editor = screen.getByRole("dialog", { name: "任务编辑" });
     expect(within(editor).queryByRole("tab", { name: "运行详情" })).toBeNull();
-    const composer = within(editor).getByLabelText("发送给项目群聊");
+    const composer = within(editor).getByLabelText("发送给项目对话");
     composer.focus();
     expect(composer).toHaveFocus();
     expect(within(editor).queryByRole("button", { name: "停止" })).toBeNull();

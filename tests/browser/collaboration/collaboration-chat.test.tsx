@@ -205,7 +205,7 @@ describe("collaboration chat composer", () => {
       projectId: "project-1",
       threadId: TEST_THREAD_ID,
     }));
-    expect(screen.getByText("正在加载项目群聊…")).toHaveAttribute("aria-busy", "true");
+    expect(screen.getByText("正在加载项目对话…")).toHaveAttribute("aria-busy", "true");
     release();
     expect(await screen.findByText(/尚无协作消息。/)).toBeInTheDocument();
     view.unmount();
@@ -235,7 +235,7 @@ describe("collaboration chat composer", () => {
       projectId: "project-1",
       threadId: TEST_THREAD_ID,
     }));
-    const composer = await screen.findByLabelText("发送给项目群聊");
+    const composer = await screen.findByLabelText("发送给项目对话");
     const send = screen.getByRole("button", { name: "发送并开始首次运行" });
 
     fireEvent.change(composer, { target: { value: "   " } });
@@ -281,7 +281,7 @@ describe("collaboration chat composer", () => {
       projectId: "project-1",
       threadId: TEST_THREAD_ID,
     }));
-    const composer = await screen.findByLabelText("发送给项目群聊");
+    const composer = await screen.findByLabelText("发送给项目对话");
     await user.type(composer, "Keep this draft");
     await user.click(screen.getByRole("button", { name: "发送并开始首次运行" }));
 
@@ -356,7 +356,7 @@ describe("collaboration chat composer", () => {
     await user.tab();
     expect(screen.queryByRole("listbox", { name: "项目成员" })).not.toBeInTheDocument();
 
-    await user.type(screen.getByLabelText("发送给项目群聊"), "Ask @Alpha plainly");
+    await user.type(screen.getByLabelText("发送给项目对话"), "Ask @Alpha plainly");
     await user.click(screen.getByRole("button", { name: "发送并开始首次运行" }));
     await screen.findByText("Ask @Alpha plainly");
     expect(sentBodies).toHaveLength(1);
@@ -460,7 +460,7 @@ describe("collaboration chat composer", () => {
       selectedRunId: "run-1",
       threadId: TEST_THREAD_ID,
     }));
-    const composer = await screen.findByLabelText("发送给项目群聊");
+    const composer = await screen.findByLabelText("发送给项目对话");
     await user.type(composer, "Plan the release");
     await user.click(screen.getByRole("button", { name: "发送消息" }));
 

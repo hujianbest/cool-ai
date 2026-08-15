@@ -254,10 +254,10 @@ describe("selected thread member policy", () => {
     render(<Harness />);
 
     expect(
-      await screen.findByRole("heading", { name: "线程成员策略" }),
+      await screen.findByRole("heading", { name: "对话成员策略" }),
     ).toBeInTheDocument();
     expect(screen.getByTestId("context-surface")).toContainElement(
-      screen.getByRole("region", { name: "线程成员策略" }),
+      screen.getByRole("region", { name: "对话成员策略" }),
     );
     expect(screen.getByText("策略版本 1")).toBeVisible();
   });
@@ -303,7 +303,7 @@ describe("selected thread member policy", () => {
       "需要修复",
     );
     expect(
-      screen.getByRole("button", { name: "修复线程成员策略" }),
+      screen.getByRole("button", { name: "修复对话成员策略" }),
     ).toBeEnabled();
   });
 
@@ -313,10 +313,10 @@ describe("selected thread member policy", () => {
     render(<DirectHarness />);
 
     const opener = await screen.findByRole("button", {
-      name: "编辑线程成员策略",
+      name: "编辑对话成员策略",
     });
     await user.click(opener);
-    const dialog = screen.getByRole("dialog", { name: "编辑线程成员策略" });
+    const dialog = screen.getByRole("dialog", { name: "编辑对话成员策略" });
     expect(within(dialog).getByLabelText("Alpha current")).toHaveFocus();
     expect(screen.getByTestId("policy-background")).toHaveAttribute("inert");
     expect(within(dialog).getByLabelText("New roster member")).not.toBeChecked();
@@ -333,7 +333,7 @@ describe("selected thread member policy", () => {
     await user.tab({ shift: true });
     expect(dialog).toContainElement(document.activeElement as HTMLElement);
     await user.keyboard("{Escape}");
-    expect(screen.queryByRole("dialog", { name: "编辑线程成员策略" }))
+    expect(screen.queryByRole("dialog", { name: "编辑对话成员策略" }))
       .not.toBeInTheDocument();
     expect(opener).toHaveFocus();
   });
@@ -359,7 +359,7 @@ describe("selected thread member policy", () => {
     render(<DirectHarness />);
 
     await user.click(
-      await screen.findByRole("button", { name: "编辑线程成员策略" }),
+      await screen.findByRole("button", { name: "编辑对话成员策略" }),
     );
     await user.click(screen.getByLabelText("New roster member"));
     await user.click(screen.getByRole("button", { name: "保存成员策略" }));
@@ -382,7 +382,7 @@ describe("selected thread member policy", () => {
       "策略版本 2，事实 fact-policy-2",
     );
     await waitFor(() =>
-      expect(screen.getByRole("heading", { name: "线程成员策略" })).toHaveFocus()
+      expect(screen.getByRole("heading", { name: "对话成员策略" })).toHaveFocus()
     );
   });
 
@@ -425,7 +425,7 @@ describe("selected thread member policy", () => {
     render(<DirectHarness />);
 
     await user.click(
-      await screen.findByRole("button", { name: "编辑线程成员策略" }),
+      await screen.findByRole("button", { name: "编辑对话成员策略" }),
     );
     await user.click(screen.getByLabelText("Beta renamed"));
     await user.click(screen.getByLabelText("New roster member"));
@@ -483,7 +483,7 @@ describe("selected thread member policy", () => {
     render(<DirectHarness />);
 
     await user.click(
-      await screen.findByRole("button", { name: "编辑线程成员策略" }),
+      await screen.findByRole("button", { name: "编辑对话成员策略" }),
     );
     await user.click(screen.getByRole("button", { name: "保存成员策略" }));
 
@@ -522,7 +522,7 @@ describe("selected thread member policy", () => {
     const user = userEvent.setup();
     const view = render(<DirectHarness canEdit={false} />);
 
-    expect(screen.getByText("正在加载线程成员策略…")).toHaveAttribute(
+    expect(screen.getByText("正在加载对话成员策略…")).toHaveAttribute(
       "aria-busy",
       "true",
     );
@@ -531,19 +531,19 @@ describe("selected thread member policy", () => {
       thread: { ...policyDetail().thread, projectId: "other-project" },
     }));
     expect(await screen.findByRole("alert")).toHaveTextContent(
-      "无法加载线程成员策略",
+      "无法加载对话成员策略",
     );
     expect(screen.queryByText("Alpha snapshot")).toBeNull();
 
     await user.click(screen.getByRole("button", { name: "重试加载成员策略" }));
     expect(await screen.findByRole("alert")).toHaveTextContent(
-      "无法加载线程成员策略",
+      "无法加载对话成员策略",
     );
     await user.click(screen.getByRole("button", { name: "重试加载成员策略" }));
     expect(await screen.findByText(/当前项目不足两名成员/)).toBeVisible();
-    expect(screen.getByRole("button", { name: "编辑线程成员策略" }))
+    expect(screen.getByRole("button", { name: "编辑对话成员策略" }))
       .toBeDisabled();
-    expect(screen.getByText("只有项目所有者可以修改线程成员策略。"))
+    expect(screen.getByText("只有项目所有者可以修改对话成员策略。"))
       .toBeVisible();
     view.unmount();
   });

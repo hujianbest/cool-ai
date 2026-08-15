@@ -146,7 +146,7 @@ export function TaskPanel({
     selectedRunId: string | null;
     threadId: string;
   } | null>(() => {
-    if (!projectId || typeof window === "undefined") return null;
+    if (typeof window === "undefined") return null;
     const query = new URLSearchParams(window.location.search);
     const threadIds = query.getAll("thread");
     const runIds = query.getAll("run");
@@ -358,7 +358,7 @@ export function TaskPanel({
   }
 
   const latestTask = tasks.at(-1);
-  const collaborationSurfaces = [{ id: "chat", label: "群聊" }] as const;
+  const collaborationSurfaces = [{ id: "chat", label: "对话" }] as const;
 
   function selectCollaborationSurface(
     surface: (typeof collaborationSurfaces)[number]["id"],

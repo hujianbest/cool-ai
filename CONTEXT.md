@@ -15,7 +15,7 @@ _Avoid_：管理员、经理、最终执行者
 _Avoid_：机器人账号、模型、下属
 
 **Project**：
-承载团队、使命、公开线程、共享记忆与成果来源的隔离协作边界。Owner 通过打开本机文件夹进入或恢复一个 Project；该文件夹是 Workspace 绑定根，不是 Project 的同义词。
+承载团队、使命、公开对话、共享记忆与成果来源的隔离协作边界。Owner 通过打开本机文件夹进入或恢复一个 Project；该文件夹是 Workspace 绑定根，不是 Project 的同义词。
 _Avoid_：工作区、仓库、会话
 
 **Mission**：
@@ -28,12 +28,12 @@ _Avoid_：消息、提示词、待办文本
 
 ## 协作与事实
 
-**Thread**：
+**对话（Session，代码标识 Thread）**：
 Project 内稳定、公开且可长期续接的会话容器；它组织消息上下文，但不取代 Project 共享的 Mission、看板或记忆事实。
 _Avoid_：Run、私聊、分支
 
 **Collaboration Run**：
-明确归属一个 Thread 的一次 Agent 协作生命周期；切换 Thread 不会迁移、重放或结束它。
+明确归属一个对话（Session）的一次 Agent 协作生命周期；切换 Thread 不会迁移、重放或结束它。
 _Avoid_：Thread、会话标签、消息批次
 
 **Thread Fact**：
@@ -45,7 +45,7 @@ _Avoid_：临时 UI 状态、模型原始响应、隐藏推理
 _Avoid_：Provider 响应、审计日志、私语
 
 **Source Tuple**：
-由精确 Project、Thread、Run、Message 及适用的来源实体身份共同形成的冻结来源；缺少某一不适用成员不允许用“最新”实体补足。
+由精确 Project、对话（Session，代码标识 Thread）、Run、Message 及适用的来源实体身份共同形成的冻结来源；缺少某一不适用成员不允许用“最新”实体补足。
 _Avoid_：当前上下文、最近运行、来源链接
 
 **Artifact**：
@@ -94,7 +94,7 @@ _Avoid_：Inline Decision、确认按钮、建议
 
 ## 领域不变量
 
-- Project 是数据与权限隔离边界；Thread、Run、Message、Block、Decision、Receipt 与来源必须属于同一精确 Project 关系。
+- Project 是数据与权限隔离边界；对话（Session，代码标识 Thread）、Run、Message、Block、Decision、Receipt 与来源必须属于同一精确 Project 关系。
 - Thread Fact 与 Structured Message Block 一经成为公开事实即不可变；后续状态以新版本或新事实表达，不改写历史。
 - Source Tuple 冻结来源身份；任何读取、投影、决定或恢复都不得以 latest 实体替代指定来源。
 - Structured Message Block 只表达受支持的正式类型；未知类型或版本不可执行，也不能被猜测解释。
