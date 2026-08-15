@@ -396,7 +396,7 @@ async function evaluateWithNavigationRetry(page, fn, arg) {
 
 async function createAgent(page, name, template, avatar, accent) {
   await page.getByRole("tab", { name: "Agent" }).click();
-  await page.getByRole("button", { name: "创建 Agent" }).click();
+  await page.getByRole("button", { name: "创建 Agent" }).click({ noWaitAfter: true });
   await page.getByLabel("创建方式").selectOption(template);
   await page.getByLabel("Agent 名称").fill(name);
   await page.getByLabel("模型服务", { exact: true }).selectOption({

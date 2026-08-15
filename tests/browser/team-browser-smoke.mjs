@@ -242,7 +242,6 @@ try {
   assert.equal(redirectRequestCount, 0);
   assert.equal(redirectAuthorizationCount, 0);
 
-  await page.getByRole("button", { name: "创建模型服务" }).click();
   await page.getByLabel("服务名称").fill("Smoke Provider");
   await page.getByLabel("Base URL").fill(`${providerBaseUrl}/v1`);
   await page.getByLabel("默认模型").fill("smoke-model");
