@@ -420,7 +420,7 @@ async function createTeamPrerequisites(page) {
   await page
     .getByLabel("指令正文")
     .fill("Keep project context deterministic and sourced.");
-  await page.getByRole("button", { name: "保存技能" }).click();
+  await page.getByRole("button", { name: "创建技能" }).click();
   await page.getByRole("heading", { name: "Context Skill" }).waitFor();
 
   await page.getByRole("tab", { name: "Agent" }).click();
@@ -447,24 +447,26 @@ async function createTeamPrerequisites(page) {
   await page.getByRole("heading", { name: "Context Builder" }).waitFor();
 }
 
-async function createMemory(rightPanel, {
+async function createMemory(page, {
   type,
   content,
   sourceType,
   sourceRef,
   supersedes,
 }) {
-  await rightPanel.getByRole("radio", { name: type }).check();
-  await rightPanel.getByLabel("记忆正文").fill(content);
-  await rightPanel.getByLabel("来源类型").selectOption(sourceType);
-  await rightPanel.getByLabel("来源引用").fill(sourceRef);
+  await page.getByRole("button", { name: "添加记忆" }).click();
+  const dialog = page.getByRole("dialog", { name: "添加记忆" });
+  await dialog.getByRole("radio", { name: type }).check();
+  await dialog.getByLabel("记忆正文").fill(content);
+  await dialog.getByLabel("来源类型").selectOption(sourceType);
+  await dialog.getByLabel("来源引用").fill(sourceRef);
   if (supersedes) {
-    await rightPanel.getByLabel("取代旧记忆").selectOption({
+    await dialog.getByLabel("取代旧记忆").selectOption({
       label: supersedes,
     });
   }
-  await rightPanel.getByRole("button", { name: "保存记忆" }).click();
-  await rightPanel.getByRole("heading", { name: content }).waitFor();
+  await dialog.getByRole("button", { name: "保存记忆" }).click();
+  await page.getByRole("heading", { name: content }).waitFor();
 }
 
 let browser;
@@ -1393,32 +1395,32 @@ try {
   );
 
   const rightPanel = page.locator(".cockpit-context");
-  await createMemory(rightPanel, {
+  await createMemory(page, {
     type: "目标",
     content: "Initial context goal",
     sourceType: "owner_input",
     sourceRef: "Owner baseline",
   });
-  await createMemory(rightPanel, {
+  await createMemory(page, {
     type: "目标",
     content: "Current context goal",
     sourceType: "owner_input",
     sourceRef: "Owner revision",
     supersedes: "Initial context goal",
   });
-  await createMemory(rightPanel, {
+  await createMemory(page, {
     type: "决策",
     content: "Use deterministic transitions",
     sourceType: "owner_input",
     sourceRef: "Owner decision",
   });
-  await createMemory(rightPanel, {
+  await createMemory(page, {
     type: "事实",
     content: "Plan task started",
     sourceType: "work_item",
     sourceRef: planId,
   });
-  await createMemory(rightPanel, {
+  await createMemory(page, {
     type: "产物",
     content: "Acceptance report",
     sourceType: "artifact_path",
@@ -1429,8 +1431,10 @@ try {
   const knowledgeRegion = rightPanel.getByRole("region", { name: "知识动态" });
   await knowledgeRegion.waitFor();
   let memorySearchAssertions = 0;
-  await knowledgeRegion.getByLabel("检索记忆").fill("Current context goal");
-  await knowledgeRegion.getByRole("button", { name: "检索" }).click();
+  await page.getByRole("button", { name: "打开记忆检索" }).click();
+  const searchDialog = page.getByRole("dialog", { name: "记忆检索" });
+  await searchDialog.getByLabel("检索记忆").fill("Current context goal");
+  await searchDialog.getByRole("button", { name: "检索" }).click();
   const searchResults = knowledgeRegion.getByRole("list", { name: "记忆检索结果" });
   await searchResults.waitFor();
   memorySearchAssertions += 1;

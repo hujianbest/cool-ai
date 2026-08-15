@@ -424,7 +424,7 @@ async function createSkill(page, name, instructions) {
   await page.getByLabel("技能名称").fill(name);
   await page.getByLabel("技能说明").fill("Execution smoke private instructions");
   await page.getByLabel("指令正文").fill(instructions);
-  await page.getByRole("button", { name: "保存技能" }).click();
+  await page.getByRole("button", { name: "创建技能" }).click();
   await page.getByRole("heading", { name }).waitFor();
 }
 

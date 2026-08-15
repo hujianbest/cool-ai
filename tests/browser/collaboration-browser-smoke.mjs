@@ -306,7 +306,7 @@ async function createSkill(page, name, description, instructions) {
   await page.getByLabel("技能名称").fill(name);
   await page.getByLabel("技能说明").fill(description);
   await page.getByLabel("指令正文").fill(instructions);
-  await page.getByRole("button", { name: "保存技能" }).click();
+  await page.getByRole("button", { name: "创建技能" }).click();
   await page.getByRole("heading", { name }).waitFor();
 }
 
@@ -429,7 +429,7 @@ async function createProjectContext(page) {
 async function createThread(page, title, memberNames) {
   await page.getByRole("button", { name: "创建线程" }).first().click();
   const dialog = page.getByRole("dialog", { name: "创建线程" });
-  await dialog.getByLabel("线程标题").fill(title);
+  await dialog.getByRole("textbox", { name: "线程标题" }).fill(title);
   for (const memberName of memberNames) {
     await dialog.getByLabel(memberName).check();
   }

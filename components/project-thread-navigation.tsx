@@ -2468,7 +2468,7 @@ export function ProjectThreadNavigation({
                     ref={titleInputRef}
                     value={title}
                   />
-                  <HelpTip id="thread-title-help" label="线程标题说明">
+                  <HelpTip id="thread-title-help" label="标题字数规则">
                     最多 80 个字符。
                   </HelpTip>
                   {titleError ? (
@@ -2615,7 +2615,7 @@ export function ProjectThreadNavigation({
                     ref={newTagInputRef}
                     value={newTagName}
                   />
-                  <HelpTip id="new-thread-tag-help" label="标签名称说明">
+                  <HelpTip id="new-thread-tag-help" label="标签字数规则">
                     最多 40 个字符。
                   </HelpTip>
                   {newTagError ? (

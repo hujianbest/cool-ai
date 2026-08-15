@@ -748,7 +748,7 @@ export function AgentPanel({
             type="number"
             value={maxTokens}
           />
-          <HelpTip id="agent-max-tokens-help" label="Token 预算说明">
+          <HelpTip id="agent-max-tokens-help" label="预算范围">
             每次运行 1–1000000 tokens。
           </HelpTip>
           {fieldErrors.maxTokens ? (

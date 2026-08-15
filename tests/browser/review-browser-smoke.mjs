@@ -313,7 +313,7 @@ async function createSkill(page) {
   await page.getByLabel("技能名称").fill("Review Smoke Skill");
   await page.getByLabel("技能说明").fill("Public review smoke instructions");
   await page.getByLabel("指令正文").fill("Read the supplied public body before deciding.");
-  await page.getByRole("button", { name: "保存技能" }).click();
+  await page.getByRole("button", { name: "创建技能" }).click();
   await page.getByRole("heading", { name: "Review Smoke Skill" }).waitFor();
 }
 

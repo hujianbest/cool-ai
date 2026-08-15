@@ -438,7 +438,7 @@ async function createThread(page, title, memberNames) {
   await openers.first().click();
   const dialog = page.getByRole("dialog", { name: "创建线程" });
   await dialog.waitFor();
-  await dialog.getByLabel("线程标题").fill(title);
+  await dialog.getByRole("textbox", { name: "线程标题" }).fill(title);
   for (const name of memberNames) {
     let checked = false;
     for (let attempt = 0; attempt < 3; attempt += 1) {

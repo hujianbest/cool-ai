@@ -342,7 +342,7 @@ async function createProject(page) {
 async function createThread(page) {
   await page.getByRole("button", { name: "创建线程" }).first().click();
   const dialog = page.getByRole("dialog", { name: "创建线程" });
-  await dialog.getByLabel("线程标题").fill("Structured smoke thread");
+  await dialog.getByRole("textbox", { name: "线程标题" }).fill("Structured smoke thread");
   await dialog.getByLabel("Structured Alpha").check();
   await dialog.getByLabel("Structured Beta").check();
   await dialog.getByRole("button", { name: "创建线程", exact: true }).click();
