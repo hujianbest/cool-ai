@@ -262,6 +262,10 @@ export function WorkspaceSetup({
         }
         if (apiError.error?.code === "RESOURCE_CONFLICT") {
           setNeedsReload(true);
+          updateConfirmation(false);
+          setBindOpen(false);
+          setError(workspaceError(apiError));
+          return;
         }
         throw new KnownWorkspaceError(workspaceError(apiError));
       }

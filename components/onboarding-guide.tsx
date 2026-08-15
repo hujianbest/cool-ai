@@ -854,7 +854,7 @@ export function WorkspaceOnboardingGuide({
             onClick={onFocusWorkspace}
             type="button"
           >
-            {state === "empty" ? "绑定工作区" : "核对工作区"}
+            {state === "empty" ? "使用现有表面绑定工作区" : "核对工作区"}
           </button>
         </>
       )}

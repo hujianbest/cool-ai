@@ -145,6 +145,7 @@ describe("Team accessibility contract", () => {
     view.rerender(<TeamPanel section="agents" />);
     await screen.findByText("暂无 Agent。");
 
+    await user.click(screen.getByRole("button", { name: "创建 Agent" }));
     expect(screen.getByRole("group", { name: "技能" })).toBeInTheDocument();
     expect(screen.getByRole("group", { name: "工具权限" })).toBeInTheDocument();
     const skill = screen.getByRole("checkbox", { name: "规划技能" });

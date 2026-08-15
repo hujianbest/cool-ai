@@ -1465,7 +1465,7 @@ describe("progressive onboarding T-7 workspace binding", () => {
       "尚未绑定工作区",
     );
     expect(within(guide).queryByLabelText("本地工作区路径")).toBeNull();
-    await user.click(within(guide).getByRole("button", { name: "绑定工作区" }));
+    await user.click(within(guide).getByRole("button", { name: "使用现有表面绑定工作区" }));
     expect(screen.getByLabelText("本地工作区路径")).toHaveFocus();
     expect(calls.every(({ method }) => method === "GET")).toBe(true);
   });
@@ -2456,11 +2456,12 @@ describe("progressive onboarding T-14 unknown-write reconciliation", () => {
     render(<MissionBoard projectId={project.id} />);
     await screen.findByRole("heading", { name: mission.title });
     await user.click(screen.getByRole("button", { name: "编辑使命" }));
-    await user.clear(screen.getByLabelText("使命标题"));
-    await user.type(
-      screen.getByLabelText("使命标题"),
-      "Explicitly resubmitted mission",
-    );
+    const resubmitTitle = screen.getByLabelText("使命标题");
+    await user.clear(resubmitTitle);
+    resubmitTitle.focus();
+    await user.type(resubmitTitle, "Explicitly resubmitted mission", {
+      skipClick: true,
+    });
     await user.click(screen.getByRole("button", { name: "保存使命" }));
 
     const receipt = await screen.findByRole("alert");

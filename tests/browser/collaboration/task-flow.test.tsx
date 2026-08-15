@@ -171,6 +171,7 @@ describe("task event flow", () => {
     });
     await user.click(openFolderActions.at(-1)!);
     expect(screen.getByLabelText("文件夹路径")).toHaveFocus();
+    await user.keyboard("{Escape}");
 
     expect(
       await screen.findByText("1:1 对话将在配置 Agent 后可用。"),

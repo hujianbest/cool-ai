@@ -110,6 +110,7 @@ export function useModalSurface(
     lockBodyOverflow();
 
     const dialog = dialogRef.current;
+    let cancelled = false;
     const handleKeyDown = (event: globalThis.KeyboardEvent) => {
       const latest = optionsRef.current;
       if (event.key === "Escape" && latest) {
@@ -132,6 +133,7 @@ export function useModalSurface(
     };
     dialog?.addEventListener("keydown", handleKeyDown);
     queueMicrotask(() => {
+      if (cancelled) return;
       const surface = dialogRef.current;
       // A resuming surface (e.g. the narrow drawer resuming after a layered
       // dialog closes) must not yank focus away from a control already inside
@@ -146,6 +148,7 @@ export function useModalSurface(
       initialFocus?.focus();
     });
     return () => {
+      cancelled = true;
       dialog?.removeEventListener("keydown", handleKeyDown);
       previousAccessibility.forEach(({ ariaHidden, element, inert }) => {
         if (!inert) element.removeAttribute("inert");
@@ -155,11 +158,11 @@ export function useModalSurface(
         }
       });
       unlockBodyOverflow();
-      // Restore only when the surface actually closes. Options-object identity
-      // changes (inline onClose, inert-root discovery) must not yank focus
-      // back to the opener and then to the first field mid-typing.
+      // Restore only when the surface actually closes, using the options that
+      // were active while open. Latest options may already have a null restore
+      // target (e.g. execution overlay clears mobileExecutionId first).
       if (!activeRef.current) {
-        optionsRef.current?.restoreFocusRef.current?.focus();
+        currentOptions?.restoreFocusRef.current?.focus();
       }
     };
   }, [active, dialogRef, legacyInertSelectors, options]);

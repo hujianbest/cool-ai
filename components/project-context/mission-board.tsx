@@ -424,6 +424,7 @@ export function MissionBoard({
       const reconciled = await reconcileMission(expected);
       if (!reconciled) {
         setMissionReceipt(expected);
+        setEditingMission(false);
         setError(
           "使命创建响应已返回，但无法唯一确认使命事实。创建 receipt：项目唯一 Mission。请仅重新核对，或明确选择重试；不会自动重发。",
         );
@@ -443,6 +444,7 @@ export function MissionBoard({
         );
       } else {
         setMissionReceipt(receipt);
+        setEditingMission(false);
         setError(
           "无法唯一确认使命是否已创建。创建 receipt：项目唯一 Mission。请仅重新核对，或明确选择重试；不会自动重发。",
         );
@@ -525,6 +527,7 @@ export function MissionBoard({
       const reconciled = await reconcileMission(receipt);
       if (!parsed?.mission || !reconciled) {
         setMissionReceipt(receipt);
+        setEditingMission(false);
         setError(
           `无法唯一确认使命更新结果。更新 receipt：version ${receipt.expectedVersion}→${receipt.expectedVersion + 1}。请仅重新核对，或由用户明确重新提交；不会自动重发。`,
         );
@@ -549,6 +552,7 @@ export function MissionBoard({
           setSuccess("已通过事实核对确认使命已保存。");
         } else {
           setMissionReceipt(receipt);
+          setEditingMission(false);
           setError(
             `无法唯一确认使命更新结果。更新 receipt：version ${receipt.expectedVersion}→${receipt.expectedVersion + 1}。请仅重新核对，或由用户明确重新提交；不会自动重发。`,
           );
