@@ -566,15 +566,15 @@ export function deleteAgent(agentId: string, databasePath: string): void {
   const database = openDatabase(databasePath);
   try {
     withTransaction(database, () => {
+      if (!selectAgent(database, agentId)) {
+        throw new AgentServiceError("AGENT_NOT_FOUND", 404, "Agent was not found.");
+      }
       if (agentId.startsWith(STARTER_PREFIX)) {
         throw new AgentServiceError(
           "STARTER_AGENT_PROTECTED",
           409,
           "系统自带 Agent 不能删除。",
         );
-      }
-      if (!selectAgent(database, agentId)) {
-        throw new AgentServiceError("AGENT_NOT_FOUND", 404, "Agent was not found.");
       }
       if (isAgentInActiveCollaboration(database, agentId)) {
         throw new AgentServiceError(

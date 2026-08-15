@@ -196,4 +196,16 @@ describe("starter agents", () => {
       ]),
     );
   });
+
+  it("returns AGENT_NOT_FOUND for a missing starter-prefixed id", async () => {
+    const service = await loadService();
+
+    expect(() => service.deleteAgent("starter-missing", databasePath)).toThrowError(
+      expect.objectContaining({
+        code: "AGENT_NOT_FOUND",
+        httpStatus: 404,
+        message: "Agent was not found.",
+      }),
+    );
+  });
 });

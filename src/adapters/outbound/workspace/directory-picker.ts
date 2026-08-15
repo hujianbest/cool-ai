@@ -15,6 +15,7 @@ export class DirectoryPickerError extends Error {
 type SpawnOutcome = {
   spawnFailed: boolean;
   stdout: string;
+  exitCode: number | null;
 };
 
 const WINDOWS_FOLDER_DIALOG = [
@@ -29,11 +30,25 @@ const WINDOWS_FOLDER_DIALOG = [
   "}",
 ].join("; ");
 
+function allowsScriptedPicker(): boolean {
+  return (
+    process.env.NODE_ENV === "test" ||
+    process.env.COCKPIT_ALLOW_SCRIPTED_PICKER === "1"
+  );
+}
+
 function scriptedDirectory(): string | undefined {
+  if (!allowsScriptedPicker()) return undefined;
   const value = process.env.COCKPIT_SCRIPTED_DIRECTORY;
   if (typeof value !== "string") return undefined;
   const trimmed = value.trim();
   return trimmed.length > 0 ? trimmed : undefined;
+}
+
+function hasGraphicalSession(): boolean {
+  return Boolean(
+    process.env.DISPLAY?.trim() || process.env.WAYLAND_DISPLAY?.trim(),
+  );
 }
 
 function run(command: string, args: string[]): Promise<SpawnOutcome> {
@@ -47,12 +62,13 @@ function run(command: string, args: string[]): Promise<SpawnOutcome> {
       chunks.push(Buffer.isBuffer(chunk) ? chunk : Buffer.from(chunk));
     });
     child.on("error", () => {
-      resolve({ spawnFailed: true, stdout: "" });
+      resolve({ spawnFailed: true, stdout: "", exitCode: null });
     });
-    child.on("close", () => {
+    child.on("close", (code) => {
       resolve({
         spawnFailed: false,
         stdout: Buffer.concat(chunks).toString("utf8"),
+        exitCode: code,
       });
     });
   });
@@ -62,6 +78,13 @@ function toResult(stdout: string): DirectoryPickResult {
   const path = stdout.replace(/^\uFEFF/, "").trim();
   if (!path) return { kind: "cancelled" };
   return { kind: "picked", path };
+}
+
+function linuxOutcome(outcome: SpawnOutcome): DirectoryPickResult | "next" {
+  if (outcome.spawnFailed) return "next";
+  if (outcome.exitCode === 0) return toResult(outcome.stdout);
+  if (hasGraphicalSession()) return { kind: "cancelled" };
+  return "next";
 }
 
 export async function pickDirectory(): Promise<DirectoryPickResult> {
@@ -94,14 +117,16 @@ export async function pickDirectory(): Promise<DirectoryPickResult> {
     "--directory",
     "--title=选择项目文件夹",
   ]);
-  if (!zenity.spawnFailed) return toResult(zenity.stdout);
+  const zenityResult = linuxOutcome(zenity);
+  if (zenityResult !== "next") return zenityResult;
 
   const kdialog = await run("kdialog", [
     "--getexistingdirectory",
     ".",
     "选择项目文件夹",
   ]);
-  if (!kdialog.spawnFailed) return toResult(kdialog.stdout);
+  const kdialogResult = linuxOutcome(kdialog);
+  if (kdialogResult !== "next") return kdialogResult;
 
   throw new DirectoryPickerError();
 }

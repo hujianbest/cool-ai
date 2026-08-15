@@ -193,6 +193,7 @@ function startApp() {
         ...process.env,
         COCKPIT_DB_PATH: databasePath,
         COCKPIT_MASTER_KEY: masterKey,
+        COCKPIT_ALLOW_SCRIPTED_PICKER: "1",
         COCKPIT_SCRIPTED_DIRECTORY: workspaceDirectory,
         NEXT_DIST_DIR: `.next-structured-smoke-${process.pid}`,
       },

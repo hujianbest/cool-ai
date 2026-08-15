@@ -89,6 +89,7 @@ function startAppServer() {
     env: {
       ...process.env,
       COCKPIT_DB_PATH: databasePath,
+      COCKPIT_ALLOW_SCRIPTED_PICKER: "1",
       COCKPIT_SCRIPTED_DIRECTORY: workspaceDirectory,
     },
     stdio: ["ignore", "pipe", "pipe"],

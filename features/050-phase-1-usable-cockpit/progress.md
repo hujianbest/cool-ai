@@ -2,16 +2,21 @@
 
 - 特性: 050-phase-1-usable-cockpit
 - 对应切片: S-60
-- 当前阶段: implement（T-01～T-05 已勾选；hf-code-review 初审需修改）
+- 当前阶段: implement（T-01～T-05 已勾选；hf-code-review 初审需修改；严重项作者已改，待独立复审）
 - 执行模式: auto
 - 已加载扩展: 无
-- 下一步: 作者按 `reviews/code-review.md` 严重项修改后独立复审（不得伪造 PASS）
+- 下一步: 独立 subagent 复审 `reviews/code-review.md`；严重项全关才可 PASS（不得伪造）
 
 ## 状态记录
 
 - 2026-08-15 用户否定 049 HelpTip/手输路径，要求系统文件夹选择器、自带 Agent、聊天优先、使命/记忆暂不展示，并按第一性原理重排阶段。路线见 `product/phases.md`，决策 D-49。
 - 项目级 spec/architecture/`hf-review` 豁免（AGENTS.md 2026-08-14）。本片含 DirectoryPicker 路径来源与 Identity 写入，implement 后必须 hf-code-review，不豁免代码门。
 - 2026-08-15 独立 hf-code-review 初审已落盘 `reviews/code-review.md`。结论：**需修改**（未伪造 PASS）。严重项：`COCKPIT_SCRIPTED_DIRECTORY` 无生产门闩；OpenFolder 跨 owner 分事务且仅 `created` 才入组，失败重试不补 roster。
+- 2026-08-15 作者已按初审修改（未自评 PASS）：
+  - 脚本化选夹仅在 `NODE_ENV=test` 或 `COCKPIT_ALLOW_SCRIPTED_PICKER=1` 时短路；冒烟 server env 已加 allow 开关。
+  - OpenFolder 入组去掉 `created` 门闩：`starters.length >= 2` 且 roster 空则 `replaceMembers`，再次打开可重放。
+  - 一般项：`POST /api/directory-picker` 拒绝非空 body；`deleteAgent` 对不存在的 `starter-*` 返回 404；Linux 无 DISPLAY/WAYLAND 且对话框非 0 退出视为 `PICKER_UNAVAILABLE`。
+  - 聚焦测试：directory-picker / directory-picker.api / starter-agents / open-folder-starter-roster 19/19 通过。
 - 规模例外 A-359：用户要求一次完成阶段 1，不拆成选夹/Agent/卸载三片。
 - Grill 按用户明确指示记录 A-353～A-361。
 

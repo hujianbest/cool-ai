@@ -157,4 +157,23 @@ describe("open folder starter roster", () => {
     expect(opened.status).toBe(201);
     expect(await memberIds(opened.id)).toEqual([]);
   });
+
+  it("replays starter membership when a later open finds an empty roster", async () => {
+    const workspacePath = temporaryWorkspace();
+    const opened = await openProject(workspacePath);
+
+    expect(opened.status).toBe(201);
+    expect(await memberIds(opened.id)).toEqual([]);
+
+    insertProvider();
+    const resumed = await openProject(workspacePath);
+
+    expect(resumed.status).toBe(200);
+    expect(resumed.id).toBe(opened.id);
+    expect(await memberIds(resumed.id)).toEqual([
+      "starter-builder",
+      "starter-planner",
+      "starter-reviewer",
+    ]);
+  });
 });

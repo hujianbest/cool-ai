@@ -529,6 +529,7 @@ try {
       ...process.env,
       COCKPIT_DB_PATH: databasePath,
       COCKPIT_MASTER_KEY: masterKey,
+      COCKPIT_ALLOW_SCRIPTED_PICKER: "1",
       COCKPIT_SCRIPTED_DIRECTORY: workspaceDirectory,
       COCKPIT_WORKSPACE_AUDIT_PATH: auditPath,
     },

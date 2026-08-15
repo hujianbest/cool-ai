@@ -316,6 +316,7 @@ function startAppServer() {
       COCKPIT_DB_PATH: databasePath,
       COCKPIT_EXECUTION_ROOT: executionRoot,
       COCKPIT_MASTER_KEY: masterKey,
+      COCKPIT_ALLOW_SCRIPTED_PICKER: "1",
       COCKPIT_SCRIPTED_DIRECTORY: workspaceDirectory,
       EXECUTION_SMOKE_ENV_MARKER: environmentMarker,
     },

@@ -24,7 +24,7 @@ export function createOpenFolderProjectWorkflow(dependencies: {
     async execute(databasePath, path) {
       const opened = await dependencies.openWorkspaceAsProject(databasePath, path);
       const starters: AgentProfile[] = dependencies.ensureStarterAgents(databasePath);
-      if (opened.created && starters.length >= 2) {
+      if (starters.length >= 2) {
         const membership = dependencies.getMembers(databasePath, opened.project.id);
         if (membership.members.length === 0) {
           dependencies.replaceMembers(databasePath, opened.project.id, {

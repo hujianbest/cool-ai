@@ -77,6 +77,7 @@ const server = spawn(serverCommand.command, serverCommand.args, {
   env: {
     ...process.env,
     COCKPIT_DB_PATH: databasePath,
+    COCKPIT_ALLOW_SCRIPTED_PICKER: "1",
     COCKPIT_SCRIPTED_DIRECTORY: workspaceDirectory,
     NEXT_DIST_DIR: smokeDistDirectory,
   },

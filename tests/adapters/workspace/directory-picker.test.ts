@@ -17,7 +17,11 @@ const pickerModules = import.meta.glob<DirectoryPickerModule>(
 );
 
 const previousScripted = process.env.COCKPIT_SCRIPTED_DIRECTORY;
+const previousAllow = process.env.COCKPIT_ALLOW_SCRIPTED_PICKER;
 const previousPath = process.env.PATH;
+const previousNodeEnv = process.env.NODE_ENV;
+const previousDisplay = process.env.DISPLAY;
+const previousWayland = process.env.WAYLAND_DISPLAY;
 const fakeBinaries: string[] = [];
 
 async function loadPicker(): Promise<DirectoryPickerModule> {
@@ -40,17 +44,25 @@ function fakeBin(name: string, script: string): string {
   return directory;
 }
 
+function restoreEnv(name: string, previous: string | undefined): void {
+  if (previous === undefined) {
+    Reflect.deleteProperty(process.env, name);
+    return;
+  }
+  Reflect.set(process.env, name, previous);
+}
+
+function setEnv(name: string, value: string): void {
+  Reflect.set(process.env, name, value);
+}
+
 afterEach(() => {
-  if (previousScripted === undefined) {
-    delete process.env.COCKPIT_SCRIPTED_DIRECTORY;
-  } else {
-    process.env.COCKPIT_SCRIPTED_DIRECTORY = previousScripted;
-  }
-  if (previousPath === undefined) {
-    delete process.env.PATH;
-  } else {
-    process.env.PATH = previousPath;
-  }
+  restoreEnv("COCKPIT_SCRIPTED_DIRECTORY", previousScripted);
+  restoreEnv("COCKPIT_ALLOW_SCRIPTED_PICKER", previousAllow);
+  restoreEnv("PATH", previousPath);
+  restoreEnv("NODE_ENV", previousNodeEnv);
+  restoreEnv("DISPLAY", previousDisplay);
+  restoreEnv("WAYLAND_DISPLAY", previousWayland);
   for (const directory of fakeBinaries.splice(0)) {
     rmSync(directory, { force: true, recursive: true });
   }
@@ -68,12 +80,45 @@ describe("DirectoryPicker", () => {
     });
   });
 
-  it("treats an empty native selection as cancelled", async () => {
+  it("ignores scripted directory in production unless explicitly allowed", async () => {
     const picker = await loadPicker();
-    delete process.env.COCKPIT_SCRIPTED_DIRECTORY;
+    setEnv("NODE_ENV", "production");
+    delete process.env.COCKPIT_ALLOW_SCRIPTED_PICKER;
+    process.env.COCKPIT_SCRIPTED_DIRECTORY = "/tmp/must-not-be-used";
     if (process.platform === "win32" || process.platform === "darwin") {
       return;
     }
+    process.env.PATH = "";
+
+    await expect(picker.pickDirectory()).rejects.toMatchObject({
+      code: "PICKER_UNAVAILABLE",
+      message: "无法打开系统文件夹选择器",
+      name: "DirectoryPickerError",
+    });
+  });
+
+  it("honors an explicit scripted picker allow switch outside test env", async () => {
+    const picker = await loadPicker();
+    setEnv("NODE_ENV", "production");
+    process.env.COCKPIT_ALLOW_SCRIPTED_PICKER = "1";
+    process.env.COCKPIT_SCRIPTED_DIRECTORY = "/tmp/allowed-scripted";
+    process.env.PATH = "";
+
+    await expect(picker.pickDirectory()).resolves.toEqual({
+      kind: "picked",
+      path: "/tmp/allowed-scripted",
+    });
+  });
+
+  it("treats an empty native selection as cancelled", async () => {
+    const picker = await loadPicker();
+    delete process.env.COCKPIT_SCRIPTED_DIRECTORY;
+    delete process.env.COCKPIT_ALLOW_SCRIPTED_PICKER;
+    if (process.platform === "win32" || process.platform === "darwin") {
+      return;
+    }
+    process.env.DISPLAY = ":99";
+    delete process.env.WAYLAND_DISPLAY;
     process.env.PATH = fakeBin(
       "zenity",
       "#!/bin/sh\nexit 1\n",
@@ -82,9 +127,31 @@ describe("DirectoryPicker", () => {
     await expect(picker.pickDirectory()).resolves.toEqual({ kind: "cancelled" });
   });
 
+  it("fails closed when zenity exits without a display", async () => {
+    const picker = await loadPicker();
+    delete process.env.COCKPIT_SCRIPTED_DIRECTORY;
+    delete process.env.COCKPIT_ALLOW_SCRIPTED_PICKER;
+    if (process.platform === "win32" || process.platform === "darwin") {
+      return;
+    }
+    delete process.env.DISPLAY;
+    delete process.env.WAYLAND_DISPLAY;
+    process.env.PATH = fakeBin(
+      "zenity",
+      "#!/bin/sh\nexit 1\n",
+    );
+
+    await expect(picker.pickDirectory()).rejects.toMatchObject({
+      code: "PICKER_UNAVAILABLE",
+      message: "无法打开系统文件夹选择器",
+      name: "DirectoryPickerError",
+    });
+  });
+
   it("fails closed when no native picker binary can be spawned", async () => {
     const picker = await loadPicker();
     delete process.env.COCKPIT_SCRIPTED_DIRECTORY;
+    delete process.env.COCKPIT_ALLOW_SCRIPTED_PICKER;
     if (process.platform === "win32" || process.platform === "darwin") {
       return;
     }
