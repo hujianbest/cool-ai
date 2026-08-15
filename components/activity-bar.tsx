@@ -99,9 +99,9 @@ export function ActivityBar({
             aria-current={isActive ? "page" : undefined}
             aria-label={item.label}
             className="activity-bar-item"
+            data-tooltip={item.label}
             href={href}
             key={item.href}
-            title={item.label}
           >
             <Icon aria-hidden="true" size={20} weight="regular" />
           </a>
@@ -115,9 +115,9 @@ export function ActivityBar({
             aria-pressed={activeGovernance === item.view}
             aria-label={item.label}
             className="activity-bar-item"
+            data-tooltip={item.label}
             key={item.view}
             onClick={() => onGovernance?.(item.view)}
-            title={item.label}
             type="button"
           >
             <Icon aria-hidden="true" size={20} weight="regular" />
@@ -128,9 +128,9 @@ export function ActivityBar({
         <a
           aria-label={`打开固定设置：${section.label}`}
           className="activity-bar-item"
+          data-tooltip={section.label}
           href={buildSettingsHref(section.id, settingsReturnTo)}
           key={`settings-${section.id}`}
-          title={`固定设置：${section.label}`}
         >
           <span aria-hidden="true">
             {section.id === "agents" ? "A" : section.label.slice(0, 1)}
@@ -152,18 +152,18 @@ export function ActivityBar({
             : undefined
         }
         className="activity-bar-item activity-bar-end"
-        disabled={!themePreference.hydrated}
-        onClick={() =>
-          setThemePreference(
-            themePreference.theme === "light" ? "dark" : "light",
-          )
-        }
-        title={
+        data-tooltip={
           themePreference.hydrated
             ? themePreference.theme === "light"
               ? "切换到暗色主题"
               : "切换到明色主题"
             : "主题偏好加载中"
+        }
+        disabled={!themePreference.hydrated}
+        onClick={() =>
+          setThemePreference(
+            themePreference.theme === "light" ? "dark" : "light",
+          )
         }
         type="button"
       >

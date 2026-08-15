@@ -113,6 +113,7 @@ describe("desktop collaboration cockpit", () => {
     expect(within(flow).getByRole("heading", { name: "Launch plan" })).toHaveClass(
       "surface-heading",
     );
+    expect(within(flow).queryByText("确定性示例 Agent")).toBeNull();
     expect(within(flow).getByRole("button", { name: "运行任务" })).toHaveClass(
       "button-primary",
     );
@@ -122,6 +123,15 @@ describe("desktop collaboration cockpit", () => {
     expect(within(cockpit).queryByRole("complementary", { name: "当前任务上下文" })).toBeNull();
     expect(await within(flow).findByText("任务已完成。")).toBeInTheDocument();
     expect(within(flow).getByText("已完成", { selector: ".status-label" })).toBeInTheDocument();
+    expect(
+      within(navigation).queryByRole("heading", { name: "项目设置" }),
+    ).toBeNull();
+    expect(
+      within(navigation).queryByRole("heading", { name: "工作区文件" }),
+    ).toBeNull();
+    expect(
+      within(navigation).queryByRole("button", { name: "保存成员" }),
+    ).toBeNull();
   });
 
   it("renders the ActivityBar navigation rail and drops the in-sidebar text nav", async () => {
@@ -203,6 +213,9 @@ describe("warm-gold 240px sidebar does not crush CJK chrome", () => {
     );
     expect(cockpit).toMatch(
       /\.mission-summary,\s*\.mission-board \.task-summary\s*\{[^}]*align-items:\s*start/s,
+    );
+    expect(cockpit).toMatch(
+      /\.drawer-close\.icon-button\s*\{[^}]*display:\s*none/s,
     );
   });
 });

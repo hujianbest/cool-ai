@@ -54,13 +54,22 @@ describe("ActivityBar", () => {
     expect(work).not.toHaveAttribute("aria-current");
   });
 
-  it("exposes a tooltip via title on every entry", () => {
+  it("exposes a hover tooltip label on every icon-only entry", () => {
     render(<ActivityBar activePath="/" />);
 
     const work = screen.getByRole("link", { name: /工作/ });
     const team = screen.getByRole("link", { name: /团队/ });
-    expect(work).toHaveAttribute("title", "工作");
-    expect(team).toHaveAttribute("title", "团队");
+    expect(work).toHaveAttribute("data-tooltip", "工作");
+    expect(team).toHaveAttribute("data-tooltip", "团队");
+    expect(work).not.toHaveAttribute("title");
+    expect(screen.getByRole("button", { name: "任务" })).toHaveAttribute(
+      "data-tooltip",
+      "任务",
+    );
+    expect(screen.getByRole("button", { name: "记忆" })).toHaveAttribute(
+      "data-tooltip",
+      "记忆",
+    );
   });
 
   it("renders an inline svg icon per entry using currentColor", () => {
@@ -103,6 +112,12 @@ describe("ActivityBar warm-terracotta rail chrome", () => {
     );
     expect(cockpit).toMatch(
       /\.activity-bar \.activity-bar-item\[aria-current="page"\]\s*\{[^}]*color:\s*var\(--interactive-primary\)/s,
+    );
+    expect(cockpit).toMatch(
+      /\.activity-bar \.activity-bar-item::after\s*\{[^}]*content:\s*attr\(data-tooltip\)/s,
+    );
+    expect(cockpit).toMatch(
+      /\.activity-bar \.activity-bar-item:is\(:hover, :focus-visible\)::after\s*\{[^}]*opacity:\s*1[^}]*transition:\s*opacity\s+150ms\s+linear\s+200ms/s,
     );
   });
 });

@@ -78,6 +78,7 @@ export function ProjectPanel({
   const [guideStep, setGuideStep] = useState<
     "project-select" | "workspace" | "members" | "goal" | null
   >(null);
+  const [guideProjectRecovery, setGuideProjectRecovery] = useState(false);
   const [guideActive, setGuideActive] = useState(false);
   const [projects, setProjects] = useState<Project[]>([]);
   const [currentProjectId, setCurrentProjectId] = useState<string | null>(null);
@@ -105,13 +106,7 @@ export function ProjectPanel({
   );
   const [homeState, setHomeState] = useState<HomeState | null>(null);
   const [settingsReturnTo, setSettingsReturnTo] = useState<ProjectReturnTo>(
-    () =>
-      returnTo ??
-      (typeof window === "undefined"
-        ? "/"
-        : parseReturnTo(
-            `${window.location.pathname}${window.location.search}`,
-          )),
+    () => returnTo ?? "/",
   );
   const narrow = useNarrowMode();
   const cockpitRef = useRef<HTMLElement>(null);
@@ -175,6 +170,7 @@ export function ProjectPanel({
         parseReturnTo(`${window.location.pathname}${window.location.search}`),
       );
     };
+    syncSettingsReturnTo();
     window.addEventListener("popstate", syncSettingsReturnTo);
     return () => window.removeEventListener("popstate", syncSettingsReturnTo);
   }, []);
@@ -207,6 +203,9 @@ export function ProjectPanel({
             result.route.step === "workspace" ||
             result.route.step === "members" ||
             result.route.step === "goal"),
+      );
+      setGuideProjectRecovery(
+        result.kind === "guide" && result.route.projectId !== null,
       );
     };
     syncGuideStep();
@@ -455,12 +454,6 @@ export function ProjectPanel({
     queueMicrotask(() => router.push(guideHref(step, projectId)));
   }
 
-  const rawGuideRoute =
-    typeof window === "undefined"
-      ? null
-      : parseGuideUrl(`${window.location.pathname}${window.location.search}`);
-  const guideProjectRecovery =
-    rawGuideRoute?.kind === "guide" && rawGuideRoute.route.projectId !== null;
   const currentProject = projects.find((project) => project.id === currentProjectId) ?? null;
 
   return (
@@ -718,7 +711,10 @@ export function ProjectPanel({
             projectId={homeState.project.id}
           />
         ) : null}
-        {currentProject ? (
+        {currentProject &&
+        (narrow ||
+          guideStep === "workspace" ||
+          guideStep === "members") ? (
           <ProjectSetupPanel
             onGuideContinue={(step) =>
               continueGuideAfterClosingSurface(

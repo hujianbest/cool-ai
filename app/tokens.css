@@ -394,8 +394,13 @@
     grid-template-columns: minmax(0, 1fr);
   }
 
-  .drawer-close {
-    display: block;
+  .drawer-close,
+  .drawer-close.icon-button {
+    display: grid;
+  }
+
+  .cockpit-sidebar .product-identity {
+    display: flex;
   }
 
   .form-row,

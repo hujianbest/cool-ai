@@ -487,7 +487,11 @@ export function TaskPanel({
           </span>
           <div>
             <p className="eyebrow">
-              {homeState?.kind === "ready" ? "1:1 对话" : "确定性示例 Agent"}
+              {currentProjectName
+                ? "项目群聊"
+                : homeState?.kind === "ready"
+                  ? "1:1 对话"
+                  : "确定性示例 Agent"}
             </p>
             <h2
               className="surface-heading"

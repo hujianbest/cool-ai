@@ -141,8 +141,10 @@ ol {
 
 .collaboration-cockpit {
   display: grid;
+  height: var(--viewport-height);
   min-height: var(--viewport-height);
   max-width: var(--full-width);
+  overflow: hidden;
   grid-template-columns: var(--activity-bar-width) var(--sidebar-width) minmax(0, 1fr);
   grid-template-rows: auto minmax(0, 1fr);
   background: var(--surface-sunken);
@@ -199,7 +201,12 @@ ol {
 }
 
 .mobile-toolbar,
-.drawer-close {
+.drawer-close,
+.drawer-close.icon-button {
+  display: none;
+}
+
+.cockpit-sidebar .product-identity {
   display: none;
 }
 
@@ -666,7 +673,8 @@ ol {
 }
 
 .thread-view-tabs [role="tab"] {
-  flex: 1 0 auto;
+  flex: 0 0 auto;
+  padding-inline: var(--space-2);
   white-space: nowrap;
   flex-shrink: 0;
 }
@@ -1982,8 +1990,10 @@ legend {
 .activity-bar {
   display: flex;
   position: relative;
+  z-index: 2;
   flex-direction: column;
   gap: var(--space-1);
+  overflow: visible;
   background: var(--color-rail);
   color: var(--color-rail-ink);
   border-right: var(--border-width) solid var(--color-rail);
@@ -1993,6 +2003,7 @@ legend {
 
 .activity-bar .activity-bar-item {
   display: grid;
+  position: relative;
   min-height: var(--control-min);
   min-width: var(--control-min);
   width: var(--full-width);
@@ -2002,6 +2013,32 @@ legend {
   color: var(--color-rail-ink);
   background: transparent;
   white-space: nowrap;
+}
+
+.activity-bar .activity-bar-item::after {
+  content: attr(data-tooltip);
+  position: absolute;
+  z-index: 1;
+  inset-inline-start: calc(100% + var(--space-2));
+  inset-block-start: 50%;
+  translate: 0 -50%;
+  padding: var(--space-1) var(--space-3);
+  border: var(--border-width) solid var(--border-subtle);
+  border-radius: var(--radius-sm);
+  background: var(--surface-card);
+  color: var(--text-primary);
+  font-size: var(--text-caption);
+  font-weight: 600;
+  line-height: 1.3;
+  box-shadow: var(--shadow-panel);
+  opacity: 0;
+  pointer-events: none;
+  transition: opacity 0s;
+}
+
+.activity-bar .activity-bar-item:is(:hover, :focus-visible)::after {
+  opacity: 1;
+  transition: opacity 150ms linear 200ms;
 }
 
 .activity-bar-end {
