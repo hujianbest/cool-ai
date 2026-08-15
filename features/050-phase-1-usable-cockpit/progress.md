@@ -2,10 +2,10 @@
 
 - 特性: 050-phase-1-usable-cockpit
 - 对应切片: S-60
-- 当前阶段: implement（T-01～T-05 已勾选；hf-code-review 初审需修改；严重项作者已改，待独立复审）
+- 当前阶段: implement（hf-code-review 复审 **PASS**；一般项仍开：home ensure 写、HelpTip、分事务残余）
 - 执行模式: auto
 - 已加载扩展: 无
-- 下一步: 独立 subagent 复审 `reviews/code-review.md`；严重项全关才可 PASS（不得伪造）
+- 下一步: ship 前记录剩余一般项；全量测试与演示验收。不得把仍开的一般项写成已修。
 
 ## 状态记录
 
@@ -17,6 +17,7 @@
   - OpenFolder 入组去掉 `created` 门闩：`starters.length >= 2` 且 roster 空则 `replaceMembers`，再次打开可重放。
   - 一般项：`POST /api/directory-picker` 拒绝非空 body；`deleteAgent` 对不存在的 `starter-*` 返回 404；Linux 无 DISPLAY/WAYLAND 且对话框非 0 退出视为 `PICKER_UNAVAILABLE`。
   - 聚焦测试：directory-picker / directory-picker.api / starter-agents / open-folder-starter-roster 19/19 通过。
+- 2026-08-15 独立 hf-code-review 复审 **PASS**（`reviews/code-review.md`，对照 `5cf4d0b`）。严重项全关。仍开一般项：GET `/api/home` ensure 写；左栏 HelpTip / onboarding 使命焦点；跨 owner 分事务残余（不升严重）。
 - 规模例外 A-359：用户要求一次完成阶段 1，不拆成选夹/Agent/卸载三片。
 - Grill 按用户明确指示记录 A-353～A-361。
 
