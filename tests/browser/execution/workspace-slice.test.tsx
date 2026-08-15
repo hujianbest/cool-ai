@@ -99,8 +99,9 @@ describe("workspace binding vertical slice", () => {
     const user = userEvent.setup();
 
     const firstRender = render(<ProjectPanel />);
-    await screen.findByRole("heading", { name: "Workspace project" });
+    await screen.findByText("尚未绑定本地工作区。");
 
+    await user.click(screen.getByRole("button", { name: "绑定工作区" }));
     await user.type(screen.getByLabelText("本地工作区路径"), "relative/path");
     await user.click(screen.getByRole("button", { name: "绑定工作区" }));
     const pathAlert = screen.getByText("请输入绝对目录路径。");
@@ -122,7 +123,6 @@ describe("workspace binding vertical slice", () => {
 
     render(<ProjectPanel />);
     await screen.findByRole("heading", { name: "Workspace project" });
-    await user.click(screen.getByLabelText("本地工作区路径"));
     expect(await screen.findByText(canonicalPath)).toBeInTheDocument();
   });
 });

@@ -203,7 +203,7 @@ describe("Mission Board", () => {
       screen.getByRole("button", { name: "重试加载使命看板" }),
     );
     expect(await screen.findByText("尚未创建使命。")).toBeInTheDocument();
-    expect(screen.getByLabelText("使命标题")).toBeEnabled();
+    expect(screen.getByRole("button", { name: "创建使命" })).toBeEnabled();
   });
 
   it("creates and edits a mission with field focus and polite success", async () => {
@@ -259,6 +259,7 @@ describe("Mission Board", () => {
 
     await user.click(screen.getByRole("button", { name: "创建使命" }));
     expect(screen.getByLabelText("使命标题")).toHaveFocus();
+    await user.click(screen.getByRole("button", { name: "创建使命" }));
     const titleError = screen.getByText("请输入使命标题。");
     expect(screen.getByLabelText("使命标题")).toHaveAttribute(
       "aria-describedby",
@@ -368,6 +369,7 @@ describe("Mission Board", () => {
     expect(boardRegion.querySelector("[draggable]")).toBeNull();
     expect(within(boardRegion).getByText("等待: Plan")).toBeInTheDocument();
 
+    await user.click(screen.getByRole("button", { name: "创建任务" }));
     await user.type(screen.getByLabelText("任务标题"), "Document");
     await user.type(screen.getByLabelText("任务说明"), "Write docs");
     await user.selectOptions(screen.getByLabelText("负责人"), "agent-b");

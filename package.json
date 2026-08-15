@@ -19,6 +19,7 @@
     "smoke:threads": "node tests/browser/persistent-threads-browser-smoke.mjs"
   },
   "dependencies": {
+    "@phosphor-icons/react": "^2.1.10",
     "canonicalize": "^3.0.0",
     "jsonc-parser": "^3.3.1",
     "koffi": "^3.1.2",

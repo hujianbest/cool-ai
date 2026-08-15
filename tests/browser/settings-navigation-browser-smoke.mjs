@@ -186,6 +186,7 @@ try {
   page.setDefaultTimeout(60_000);
 
   await page.goto(baseUrl, { waitUntil: "networkidle" });
+  await page.getByRole("button", { name: "打开文件夹" }).first().click();
   await page.getByLabel("文件夹路径").fill(workspaceDirectory);
   await page
     .locator("form")

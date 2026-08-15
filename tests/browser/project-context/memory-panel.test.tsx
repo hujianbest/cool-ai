@@ -90,7 +90,7 @@ describe("Shared Memory panel", () => {
       screen.getByRole("button", { name: "重试加载共享记忆" }),
     );
     expect(await screen.findByText("尚无共享记忆。")).toBeInTheDocument();
-    expect(screen.getByLabelText("记忆正文")).toBeEnabled();
+    expect(screen.getByRole("button", { name: "添加记忆" })).toBeEnabled();
   });
 
   it("creates sourced memory, labels artifact references, supersedes active entries and displays history", async () => {
@@ -118,6 +118,7 @@ describe("Shared Memory panel", () => {
     render(<MemoryPanel projectId="project-1" />);
     await screen.findByRole("heading", { name: "Current goal" });
 
+    await user.click(screen.getByRole("button", { name: "添加记忆" }));
     await user.click(screen.getByRole("button", { name: "保存记忆" }));
     expect(screen.getByRole("alert")).toHaveTextContent("请输入记忆正文");
     expect(screen.getByLabelText("记忆正文")).toHaveFocus();
@@ -182,15 +183,15 @@ describe("memory panel search", () => {
     render(<MemoryPanel projectId="project-1" />);
     await screen.findByRole("heading", { name: "Current goal" });
 
-    const knowledge = screen.getByRole("region", { name: "知识动态" });
-    expect(within(knowledge).getByLabelText("检索记忆")).toBeInTheDocument();
-    expect(within(knowledge).getByLabelText("检索类型")).toBeInTheDocument();
-    expect(within(knowledge).getByLabelText("检索来源")).toBeInTheDocument();
-    expect(within(knowledge).getByLabelText("检索版本")).toBeInTheDocument();
+    await user.click(screen.getByRole("button", { name: "打开记忆检索" }));
+    expect(screen.getByLabelText("检索记忆")).toBeInTheDocument();
+    expect(screen.getByLabelText("检索类型")).toBeInTheDocument();
+    expect(screen.getByLabelText("检索来源")).toBeInTheDocument();
+    expect(screen.getByLabelText("检索版本")).toBeInTheDocument();
 
-    await user.type(within(knowledge).getByLabelText("检索记忆"), "Current");
-    await user.selectOptions(within(knowledge).getByLabelText("检索类型"), "goal");
-    await user.click(within(knowledge).getByRole("button", { name: "检索" }));
+    await user.type(screen.getByLabelText("检索记忆"), "Current");
+    await user.selectOptions(screen.getByLabelText("检索类型"), "goal");
+    await user.click(screen.getByRole("button", { name: "检索" }));
 
     expect(await screen.findByText("正在检索记忆…")).toHaveAttribute(
       "aria-busy",
@@ -266,6 +267,7 @@ describe("memory panel search", () => {
     render(<MemoryPanel projectId="project-1" />);
     await screen.findByRole("heading", { name: "Current goal" });
 
+    await user.click(screen.getByRole("button", { name: "打开记忆检索" }));
     await user.type(screen.getByLabelText("检索记忆"), "missing");
     await user.click(screen.getByRole("button", { name: "检索" }));
     await act(async () => {

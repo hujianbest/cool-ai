@@ -1,5 +1,6 @@
 "use client";
 
+import { PuzzlePiece, Plugs, Robot } from "@phosphor-icons/react";
 import { useRouter } from "next/navigation";
 import {
   useEffect,
@@ -329,7 +330,8 @@ export function TeamPanel({
             tabIndex={section === "skills" ? 0 : -1}
             type="button"
           >
-            技能
+            <PuzzlePiece aria-hidden="true" size={20} weight="regular" />
+            <span className="sr-only">技能</span>
           </button>
           <button
             aria-controls="provider-resource-panel"
@@ -342,7 +344,8 @@ export function TeamPanel({
             tabIndex={section === "providers" ? 0 : -1}
             type="button"
           >
-            模型服务
+            <Plugs aria-hidden="true" size={20} weight="regular" />
+            <span className="sr-only">模型服务</span>
           </button>
           <button
             aria-controls="agent-resource-panel"
@@ -355,7 +358,8 @@ export function TeamPanel({
             tabIndex={section === "agents" ? 0 : -1}
             type="button"
           >
-            Agent
+            <Robot aria-hidden="true" size={20} weight="regular" />
+            <span className="sr-only">Agent</span>
           </button>
         </div>
       </aside>

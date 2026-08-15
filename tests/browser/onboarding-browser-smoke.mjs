@@ -917,6 +917,7 @@ try {
     ),
     true,
   );
+  await page.getByRole("button", { name: "保存工作区" }).click();
   const workspaceInput = page.getByLabel("本地工作区路径");
   await workspaceInput.fill(reboundWorkspacePath);
   await page.getByRole("button", { name: "保存工作区" }).click();
@@ -1536,6 +1537,7 @@ try {
   await page.goto(`${baseUrl}/?guide=project-select`, {
     waitUntil: "networkidle",
   });
+  await page.getByRole("button", { name: "打开文件夹" }).first().click();
   await page.getByLabel("文件夹路径").fill(reconciledWorkspaceDirectory);
   await page.getByRole("button", { name: "打开文件夹", exact: true }).click();
   await page.waitForURL(/\/projects\/[^/]+/);

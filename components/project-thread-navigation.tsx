@@ -19,6 +19,7 @@ import {
   useTargetRequestGuard,
 } from "@/components/collaboration/use-target-request-guard";
 import { useModalSurface } from "@/components/mobile-dialog";
+import { HelpTip } from "@/components/ui/help-tip";
 import { parseProjectSelection } from "@/components/settings-navigation";
 import {
   ApiDisplayError,
@@ -2467,9 +2468,9 @@ export function ProjectThreadNavigation({
                     ref={titleInputRef}
                     value={title}
                   />
-                  <p className="muted" id="thread-title-help">
+                  <HelpTip id="thread-title-help" label="线程标题说明">
                     最多 80 个字符。
-                  </p>
+                  </HelpTip>
                   {titleError ? (
                     <p className="error-text" id="thread-title-error" role="alert">
                       {titleError}
@@ -2614,9 +2615,9 @@ export function ProjectThreadNavigation({
                     ref={newTagInputRef}
                     value={newTagName}
                   />
-                  <p className="muted" id="new-thread-tag-help">
+                  <HelpTip id="new-thread-tag-help" label="标签名称说明">
                     最多 40 个字符。
-                  </p>
+                  </HelpTip>
                   {newTagError ? (
                     <p className="error-text" id="new-thread-tag-error" role="alert">
                       {newTagError}

@@ -115,6 +115,7 @@ describe("Provider configuration panel", () => {
     render(<TeamPanel section="providers" />);
     await screen.findByText("暂无模型服务。");
 
+    await user.click(screen.getByRole("button", { name: "创建模型服务" }));
     await user.type(screen.getByLabelText("服务名称"), "Local");
     await user.type(screen.getByLabelText("Base URL"), "http://localhost:11434/v1");
     await user.type(screen.getByLabelText("默认模型"), "model-a");
@@ -211,6 +212,7 @@ describe("Provider configuration panel", () => {
     expect(await screen.findByRole("heading", { name: "Renamed" })).toHaveFocus();
     expect(verifyBodies).toHaveLength(0);
 
+    await user.click(screen.getByRole("button", { name: "编辑 Renamed" }));
     await user.clear(screen.getByLabelText("Base URL"));
     await user.type(screen.getByLabelText("Base URL"), "https://example.test/v2");
     expect(screen.getByRole("button", { name: "保存服务" })).toBeDisabled();
@@ -259,6 +261,7 @@ describe("Provider configuration panel", () => {
     const user = userEvent.setup();
     render(<TeamPanel section="providers" />);
     await screen.findByText("暂无模型服务。");
+    await user.click(screen.getByRole("button", { name: "创建模型服务" }));
     await user.type(screen.getByLabelText("服务名称"), "Primary");
     await user.type(screen.getByLabelText("Base URL"), "https://example.test/v1");
     await user.type(screen.getByLabelText("默认模型"), "model-a");
@@ -349,6 +352,7 @@ describe("Provider configuration panel", () => {
     render(<TeamPanel section="providers" />);
 
     await screen.findByText("暂无模型服务。");
+    await user.click(screen.getByRole("button", { name: "创建模型服务" }));
     await user.type(screen.getByLabelText("服务名称"), "Primary");
     await user.type(screen.getByLabelText("Base URL"), "https://example.test/v1");
     await user.type(screen.getByLabelText("默认模型"), "model-a");

@@ -7,6 +7,14 @@ import {
   type ReactNode,
 } from "react";
 
+import {
+  Brain,
+  CheckCircle,
+  ClockCounterClockwise,
+  Eye,
+  Lightning,
+} from "@phosphor-icons/react";
+
 import { ApprovalCenterPanel } from "@/components/project-context/approval-center-panel";
 import { AuditPanel } from "@/components/project-context/audit-panel";
 import { ContextPreview } from "@/components/project-context/context-preview";
@@ -14,12 +22,16 @@ import { MemoryPanel } from "@/components/project-context/memory-panel";
 
 type ContextTab = "memory" | "context" | "skeleton" | "approvals" | "audit";
 
-const TABS: Array<{ id: ContextTab; label: string }> = [
-  { id: "memory", label: "共享记忆" },
-  { id: "context", label: "上下文预览" },
-  { id: "skeleton", label: "骨架运行" },
-  { id: "approvals", label: "审批" },
-  { id: "audit", label: "审计" },
+const TABS: Array<{
+  id: ContextTab;
+  icon: typeof Brain;
+  label: string;
+}> = [
+  { id: "memory", icon: Brain, label: "共享记忆" },
+  { id: "context", icon: Eye, label: "上下文预览" },
+  { id: "skeleton", icon: Lightning, label: "骨架运行" },
+  { id: "approvals", icon: CheckCircle, label: "审批" },
+  { id: "audit", icon: ClockCounterClockwise, label: "审计" },
 ];
 
 export function ProjectContextPanel({
@@ -76,7 +88,8 @@ export function ProjectContextPanel({
             tabIndex={activeTab === tab.id ? 0 : -1}
             type="button"
           >
-            {tab.label}
+            <tab.icon aria-hidden="true" size={20} weight="regular" />
+            <span className="sr-only">{tab.label}</span>
           </button>
         ))}
       </div>

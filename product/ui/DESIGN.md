@@ -435,6 +435,15 @@ No glass, no backdrop-blur on chrome, no glow.
 
 **`search-input`** — Pill on the directory; 44px min height.
 
+## Interaction language (049)
+
+Quiet chrome. Persistent surfaces show **results** (lists, messages, cards) and the **chat composer**. Authoring and configuration inputs open from an icon or verb control into a single `role="dialog"` overlay. Instructional copy lives in an operable HelpTip, not in body paragraphs beside the control.
+
+- **Icon-first:** Phosphor regular 20px, `currentColor`. Icon-only controls require a Chinese `aria-label`. Decorative icons are `aria-hidden`. No emoji as structure.
+- **Overlay forms:** Open on explicit click. Visible `<label>` on every field. Focus trap, Escape, restore focus to the opener. Submit shows loading then success/error.
+- **HelpTip:** A Question icon button with `aria-expanded`. Keyboard and click open/close. Never use hover-only `title` as the only help.
+- **Composer exception:** The group-chat composer stays visible; it is the primary work surface.
+
 ## Do's and Don'ts
 
 ### Do
@@ -448,6 +457,8 @@ No glass, no backdrop-blur on chrome, no glow.
 - Don't add gradients, glass, glow, or emoji icons.
 - Don't hardcode hex in `app/*.css` outside `tokens.css`.
 - Don't shrink `--control-min` to match the case’s 40px buttons.
+- Don't leave create/edit/bind forms always visible in a column.
+- Don't use hover-only `title` as the only help or truncated-value recovery.
 
 ## Responsive Behavior
 

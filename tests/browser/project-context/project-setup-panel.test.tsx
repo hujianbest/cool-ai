@@ -152,6 +152,8 @@ describe("workspace and equal-member setup", () => {
     await screen.findByText("尚未绑定本地工作区。");
 
     view.rerender(<ProjectSetupPanel projectId="project-low" />);
+    await screen.findByText("尚未绑定本地工作区。");
+    await user.click(screen.getByRole("button", { name: "绑定工作区" }));
     const path = await screen.findByLabelText("本地工作区路径");
     await user.type(path, "D:\\low");
     await user.click(screen.getByRole("button", { name: "绑定工作区" }));
@@ -230,7 +232,7 @@ describe("workspace and equal-member setup", () => {
     expect(await screen.findByRole("alert")).toHaveTextContent(
       "无法加载项目成员",
     );
-    expect(screen.getByLabelText("本地工作区路径")).toBeEnabled();
+    expect(screen.getByRole("button", { name: "绑定工作区" })).toBeEnabled();
     expect(screen.getByText(/Agent 库为空，请先/)).toBeInTheDocument();
 
     await userEvent.setup().click(
@@ -273,6 +275,7 @@ describe("workspace and equal-member setup", () => {
     const user = userEvent.setup();
     render(<ProjectSetupPanel projectId="project-1" />);
 
+    await user.click(await screen.findByRole("button", { name: "保存工作区" }));
     const path = await screen.findByLabelText("本地工作区路径");
     await user.clear(path);
     await user.type(path, "D:\\new");

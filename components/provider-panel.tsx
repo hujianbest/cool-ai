@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useRef, useState, type FormEvent } from "react";
+import { Plus } from "@phosphor-icons/react";
 
 import {
   trapModalFocus,
@@ -12,6 +13,7 @@ import {
   ProviderOnboardingGuide,
   type ProviderGuideFacts,
 } from "@/components/onboarding-guide";
+import { IconButton } from "@/components/ui/icon-button";
 import type { Provider, ProviderDraft } from "@/src/shared/team-contracts";
 
 type ProviderField =
@@ -126,7 +128,7 @@ export function ProviderPanel({
   const createButtonRef = useRef<HTMLButtonElement>(null);
   const providerHeadingRefs = useRef(new Map<string, HTMLHeadingElement>());
 
-  useModalSurface(narrow && editorOpen, dialogRef, PROVIDER_EDITOR_INERT);
+  useModalSurface(editorOpen, dialogRef, PROVIDER_EDITOR_INERT);
 
   useEffect(() => {
     let active = true;
@@ -391,7 +393,7 @@ export function ProviderPanel({
     setKeyVisible(false);
     setStatusMessage(message);
     setFocusProviderId(provider.id);
-    if (narrow) setEditorOpen(false);
+    setEditorOpen(false);
   }
 
   async function reconcileUncertainWrite() {
@@ -440,9 +442,13 @@ export function ProviderPanel({
             <p className="eyebrow">团队资源</p>
             <h2 id="providers-title">模型服务</h2>
           </div>
-          <button onClick={startCreate} ref={createButtonRef} type="button">
-            创建模型服务
-          </button>
+          <IconButton
+            className="button-primary"
+            icon={<Plus size={20} weight="regular" />}
+            label="创建模型服务"
+            onClick={startCreate}
+            ref={createButtonRef}
+          />
         </header>
         {guide === "provider" ? (
           <ProviderOnboardingGuide
@@ -509,15 +515,15 @@ export function ProviderPanel({
         )}
       </main>
 
-      {(!narrow || editorOpen) ? (
+      {editorOpen ? (
       <aside
         aria-labelledby="provider-editor-title"
-        aria-modal={narrow ? true : undefined}
+        aria-modal="true"
         className="cockpit-context"
-        data-open={narrow && editorOpen ? "true" : undefined}
-        onKeyDown={narrow ? (event) => trapModalFocus(event, closeEditor) : undefined}
+        data-open="true"
+        onKeyDown={(event) => trapModalFocus(event, closeEditor)}
         ref={dialogRef}
-        role={narrow ? "dialog" : undefined}
+        role="dialog"
       >
         <button
           aria-label="关闭模型服务编辑器"

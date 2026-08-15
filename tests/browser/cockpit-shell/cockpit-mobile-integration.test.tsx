@@ -132,13 +132,14 @@ describe("owner-controlled cockpit mobile surfaces", () => {
     });
     await user.click(projectOpener);
     const projects = screen.getByRole("dialog", { name: "项目导航" });
-    const path = await within(projects).findByLabelText("本地工作区路径");
-    await user.clear(path);
-    await user.type(path, "D:\\new");
-    const rebindOpener = within(projects).getByRole("button", {
+    const rebindOpener = await within(projects).findByRole("button", {
       name: "保存工作区",
     });
     await user.click(rebindOpener);
+    const path = await screen.findByLabelText("本地工作区路径");
+    await user.clear(path);
+    await user.type(path, "D:\\new");
+    await user.click(screen.getByRole("button", { name: "保存工作区" }));
 
     const confirmation = screen.getByRole("dialog", {
       name: "确认改绑工作区",

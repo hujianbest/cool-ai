@@ -44,9 +44,8 @@ describe("ProjectPanel", () => {
     const user = userEvent.setup();
 
     render(<ProjectPanel />);
-    await screen.findByText(
-      "暂无文件夹项目。打开本地文件夹开始协作，也可直接在中间与 Agent 对话。",
-    );
+    await screen.findByText("暂无文件夹项目。");
+    await user.click(screen.getByRole("button", { name: "打开文件夹" }));
     await user.type(screen.getByLabelText("文件夹路径"), "D:\\work\\launch-plan");
     const projectForm = screen.getByLabelText("文件夹路径").closest("form");
     expect(projectForm).not.toBeNull();
@@ -75,9 +74,8 @@ describe("ProjectPanel", () => {
     const user = userEvent.setup();
 
     render(<ProjectPanel />);
-    await screen.findByText(
-      "暂无文件夹项目。打开本地文件夹开始协作，也可直接在中间与 Agent 对话。",
-    );
+    await screen.findByText("暂无文件夹项目。");
+    await user.click(screen.getByRole("button", { name: "打开文件夹" }));
     const projectForm = screen.getByLabelText("文件夹路径").closest("form");
     expect(projectForm).not.toBeNull();
     await user.click(within(projectForm!).getByRole("button", { name: "打开文件夹" }));

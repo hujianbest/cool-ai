@@ -6,6 +6,11 @@ import {
   useState,
   type FormEvent,
 } from "react";
+import { Plus, PencilSimple } from "@phosphor-icons/react";
+
+import { ActionDialog } from "@/components/ui/action-dialog";
+import { HelpTip } from "@/components/ui/help-tip";
+import { IconButton } from "@/components/ui/icon-button";
 
 import type { ApiError } from "@/src/shared/contracts";
 import { MissionDependencyInsightPanel } from "@/components/project-context/mission-dependency-insight";
@@ -218,6 +223,7 @@ export function MissionBoard({
   const [missionDraft, setMissionDraft] =
     useState<MissionDraft>(EMPTY_MISSION);
   const [editingMission, setEditingMission] = useState(false);
+  const [workItemDialogOpen, setWorkItemDialogOpen] = useState(false);
   const [workItemDraft, setWorkItemDraft] =
     useState<WorkItemDraft>(EMPTY_WORK_ITEM);
   const [editingWorkItemId, setEditingWorkItemId] = useState<string | null>(
@@ -585,6 +591,7 @@ export function MissionBoard({
       }
       setWorkItems((current) => [...current, payload.workItem!]);
       setWorkItemDraft(EMPTY_WORK_ITEM);
+      setWorkItemDialogOpen(false);
       setSuccess("任务已创建。");
       setFocusWorkItemId(payload.workItem.id);
     } catch (cause) {
@@ -942,7 +949,18 @@ export function MissionBoard({
       ) : !mission ? (
         <div className="stack">
           <p className="state-message">尚未创建使命。</p>
-          {missionForm}
+          <IconButton
+            className="button-primary"
+            icon={<Plus size={20} weight="regular" />}
+            label="创建使命"
+            onClick={() => {
+              setEditingMission(true);
+              queueMicrotask(() => missionTitleInputRef.current?.focus());
+            }}
+          />
+          <HelpTip label="使命是什么">
+            使命是项目组共同推进的目标；任务挂在使命下，不在聊天里另建一套清单。
+          </HelpTip>
         </div>
       ) : (
         <>
@@ -963,69 +981,28 @@ export function MissionBoard({
               }}
               type="button"
             >
-              编辑使命
+              <PencilSimple aria-hidden="true" size={20} weight="regular" />
+              <span className="sr-only">编辑使命</span>
             </button>
           </header>
-          {editingMission ? missionForm : null}
           {insightPanel}
 
           <section
             aria-labelledby={`new-work-item-${projectId}`}
             className="stack"
           >
-            <h3 id={`new-work-item-${projectId}`}>创建任务</h3>
-            <form className="stack work-item-form" onSubmit={createWorkItem}>
-              <div className="form-field">
-                <label htmlFor={`work-item-title-${projectId}`}>任务标题</label>
-                <input
-                  aria-describedby={error ? errorId : undefined}
-                  id={`work-item-title-${projectId}`}
-                  onChange={(event) =>
-                    setWorkItemDraft((current) => ({
-                      ...current,
-                      title: event.target.value,
-                    }))
-                  }
-                  placeholder="例如：补齐发布检查清单"
-                  ref={workItemTitleRef}
-                  value={workItemDraft.title}
-                />
-              </div>
-              <div className="form-field">
-                <label htmlFor={`work-item-description-${projectId}`}>
-                  任务说明
-                </label>
-                <textarea
-                  aria-describedby={error ? errorId : undefined}
-                  id={`work-item-description-${projectId}`}
-                  onChange={(event) =>
-                    setWorkItemDraft((current) => ({
-                      ...current,
-                      description: event.target.value,
-                    }))
-                  }
-                  value={workItemDraft.description}
-                />
-              </div>
-              {assigneeSelect(
-                workItemDraft.assigneeAgentId,
-                (assigneeAgentId) =>
-                  setWorkItemDraft((current) => ({
-                    ...current,
-                    assigneeAgentId,
-                  })),
-                "负责人",
-              )}
-              {dependencyFieldset(workItemDraft, (dependencyIds) =>
-                setWorkItemDraft((current) => ({
-                  ...current,
-                  dependencyIds,
-                })),
-              )}
-              <button disabled={isSaving} type="submit">
-                {isSaving ? "正在创建任务…" : "创建任务"}
-              </button>
-            </form>
+            <header className="panel-heading">
+              <h3 id={`new-work-item-${projectId}`}>任务</h3>
+              <IconButton
+                className="button-primary"
+                icon={<Plus size={20} weight="regular" />}
+                label="创建任务"
+                onClick={() => {
+                  setWorkItemDialogOpen(true);
+                  queueMicrotask(() => workItemTitleRef.current?.focus());
+                }}
+              />
+            </header>
           </section>
 
           <div
@@ -1315,6 +1292,76 @@ export function MissionBoard({
           {success}
         </p>
       ) : null}
+      <ActionDialog
+        closeLabel="关闭使命编辑器"
+        initialFocusRef={missionTitleInputRef}
+        onClose={() => setEditingMission(false)}
+        open={editingMission}
+        title={mission ? "编辑使命" : "创建使命"}
+        titleId={`mission-editor-title-${projectId}`}
+      >
+        {missionForm}
+      </ActionDialog>
+      <ActionDialog
+        closeLabel="关闭任务编辑器"
+        initialFocusRef={workItemTitleRef}
+        onClose={() => setWorkItemDialogOpen(false)}
+        open={workItemDialogOpen}
+        title="创建任务"
+        titleId={`work-item-editor-title-${projectId}`}
+      >
+        <form className="stack work-item-form" onSubmit={createWorkItem}>
+          <div className="form-field">
+            <label htmlFor={`work-item-title-${projectId}`}>任务标题</label>
+            <input
+              aria-describedby={error ? errorId : undefined}
+              id={`work-item-title-${projectId}`}
+              onChange={(event) =>
+                setWorkItemDraft((current) => ({
+                  ...current,
+                  title: event.target.value,
+                }))
+              }
+              ref={workItemTitleRef}
+              value={workItemDraft.title}
+            />
+          </div>
+          <div className="form-field">
+            <label htmlFor={`work-item-description-${projectId}`}>
+              任务说明
+            </label>
+            <textarea
+              aria-describedby={error ? errorId : undefined}
+              id={`work-item-description-${projectId}`}
+              onChange={(event) =>
+                setWorkItemDraft((current) => ({
+                  ...current,
+                  description: event.target.value,
+                }))
+              }
+              value={workItemDraft.description}
+            />
+          </div>
+          {assigneeSelect(
+            workItemDraft.assigneeAgentId,
+            (assigneeAgentId) =>
+              setWorkItemDraft((current) => ({
+                ...current,
+                assigneeAgentId,
+              })),
+            "负责人",
+          )}
+          {dependencyFieldset(workItemDraft, (dependencyIds) =>
+            setWorkItemDraft((current) => ({
+              ...current,
+              dependencyIds,
+            })),
+          )}
+          <button disabled={isSaving} type="submit">
+            {isSaving ? "正在创建任务…" : "创建任务"}
+          </button>
+        </form>
+      </ActionDialog>
     </section>
   );
 }

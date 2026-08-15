@@ -147,10 +147,7 @@ try {
   assert.equal(await page.locator("html").getAttribute("lang"), "zh-CN");
   const emptyProjectGuide = page.locator(".empty-guide");
   await emptyProjectGuide
-    .getByText(
-      "暂无文件夹项目。打开本地文件夹开始协作，也可直接在中间与 Agent 对话。",
-      { exact: true },
-    )
+    .getByText("暂无文件夹项目。", { exact: true })
     .waitFor();
   await page
     .getByText("先配置一个 Agent，即可开始个人对话。", { exact: true })

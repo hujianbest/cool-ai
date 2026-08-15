@@ -11,10 +11,13 @@ import {
 } from "react";
 import { createPortal } from "react-dom";
 
+import { FolderPlus } from "@phosphor-icons/react";
 import { useModalSurface } from "@/components/mobile-dialog";
 import { WorkspaceOnboardingGuide } from "@/components/onboarding-guide";
 import { WorkspaceFilePreview } from "@/components/project-context/workspace-file-preview";
 import { WorkspaceFileTree } from "@/components/project-context/workspace-file-tree";
+import { ActionDialog } from "@/components/ui/action-dialog";
+import { IconButton } from "@/components/ui/icon-button";
 import type { ApiError } from "@/src/shared/contracts";
 import type { WorkspaceState } from "@/src/shared/project-context-contracts";
 import {
@@ -97,6 +100,7 @@ export function WorkspaceSetup({
   const [needsReload, setNeedsReload] = useState(false);
   const [reloadKey, setReloadKey] = useState(0);
   const [confirmOpen, setConfirmOpen] = useState(false);
+  const [bindOpen, setBindOpen] = useState(false);
   const [focusSummary, setFocusSummary] = useState(false);
   const contentRef = useRef<HTMLDivElement>(null);
   const dialogRef = useRef<HTMLDivElement>(null);
@@ -104,6 +108,7 @@ export function WorkspaceSetup({
   const saveRef = useRef<HTMLButtonElement>(null);
   const pathRef = useRef<HTMLInputElement>(null);
   const summaryRef = useRef<HTMLParagraphElement>(null);
+  const bindOpenerRef = useRef<HTMLButtonElement>(null);
   const updateConfirmation = useCallback(
     (open: boolean) => {
       setConfirmOpen(open);
@@ -117,7 +122,7 @@ export function WorkspaceSetup({
       dialogRef,
       inertRootRefs: [setupRootRef ?? contentRef],
       initialFocusRef: confirmRef,
-      restoreFocusRef: saveRef,
+      restoreFocusRef: bindOpenerRef,
       onClose: () => updateConfirmation(false),
     }),
     [confirmOpen, updateConfirmation],
@@ -225,9 +230,11 @@ export function WorkspaceSetup({
         onVersionChange?.(parsed.projectVersion);
         updateConfirmation(false);
         setSuccess("已通过事实核对确认工作区已保存。");
+        setBindOpen(false);
         setFocusSummary(true);
       } catch {
         updateConfirmation(false);
+        setBindOpen(true);
         setError(
           "工作区写入结果未知，且无法由 GET 唯一确认。请核对当前绑定后再决定是否重试；不会自动重发。",
         );
@@ -249,6 +256,7 @@ export function WorkspaceSetup({
       if (!response.ok) {
         const apiError = payload as Partial<ApiError>;
         if (apiError.error?.code === "REBIND_CONFIRMATION_REQUIRED") {
+          setBindOpen(false);
           updateConfirmation(true);
           return;
         }
@@ -271,10 +279,12 @@ export function WorkspaceSetup({
       onVersionChange?.(parsed.projectVersion);
       updateConfirmation(false);
       setSuccess("工作区已保存。");
+      setBindOpen(false);
       setFocusSummary(true);
     } catch (cause) {
       if (cause instanceof KnownWorkspaceError) {
         updateConfirmation(false);
+        setBindOpen(true);
         setError(cause.message);
         pathRef.current?.focus();
       } else {
@@ -313,7 +323,10 @@ export function WorkspaceSetup({
               onContinue={onGuideContinue}
               onFocusWorkspace={() => {
                 if (guideFacts?.kind === "success") summaryRef.current?.focus();
-                else pathRef.current?.focus();
+                else {
+                  setBindOpen(true);
+                  queueMicrotask(() => pathRef.current?.focus());
+                }
               }}
               onRetry={() => setReloadKey((current) => current + 1)}
               onSkip={onGuideSkip}
@@ -336,6 +349,24 @@ export function WorkspaceSetup({
           ) : (
             <p className="muted">尚未绑定本地工作区。</p>
           )}
+          <IconButton
+            className="button-primary"
+            icon={<FolderPlus size={20} weight="regular" />}
+            label={workspace ? "保存工作区" : "绑定工作区"}
+            onClick={() => {
+              setBindOpen(true);
+              queueMicrotask(() => pathRef.current?.focus());
+            }}
+            ref={bindOpenerRef}
+          />
+          <ActionDialog
+            closeLabel="关闭工作区绑定"
+            initialFocusRef={pathRef}
+            onClose={() => setBindOpen(false)}
+            open={bindOpen}
+            title={workspace ? "保存工作区" : "绑定工作区"}
+            titleId={`workspace-bind-title-${projectId}`}
+          >
           <form className="stack" onSubmit={handleSubmit}>
             <div className="form-field">
               <label htmlFor={`workspace-path-${projectId}`}>
@@ -374,7 +405,17 @@ export function WorkspaceSetup({
               </p>
             ) : null}
           </form>
-          {error ? (
+          {error && bindOpen ? (
+            <p
+              className="error-text"
+              id={`workspace-error-${projectId}`}
+              role="alert"
+            >
+              {error}
+            </p>
+          ) : null}
+          </ActionDialog>
+          {error && !bindOpen ? (
             <div className="stack">
               <p
                 className="error-text"

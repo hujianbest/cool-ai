@@ -42,9 +42,7 @@ describe("code review fixes", () => {
 
     projects.resolve(Response.json({ projects: [] }));
     expect(
-      await screen.findByText(
-        "暂无文件夹项目。打开本地文件夹开始协作，也可直接在中间与 Agent 对话。",
-      ),
+      await screen.findByText("暂无文件夹项目。"),
     ).toBeInTheDocument();
   });
 
@@ -70,9 +68,7 @@ describe("code review fixes", () => {
 
     expect(fetchMock).toHaveBeenCalledTimes(3);
     expect(
-      await screen.findByText(
-        "暂无文件夹项目。打开本地文件夹开始协作，也可直接在中间与 Agent 对话。",
-      ),
+      await screen.findByText("暂无文件夹项目。"),
     ).toBeInTheDocument();
   });
 
@@ -98,9 +94,8 @@ describe("code review fixes", () => {
     const user = userEvent.setup();
 
     render(<ProjectPanel />);
-    await screen.findByText(
-      "暂无文件夹项目。打开本地文件夹开始协作，也可直接在中间与 Agent 对话。",
-    );
+    await screen.findByText("暂无文件夹项目。");
+    await user.click(screen.getByRole("button", { name: "打开文件夹" }));
     await user.type(screen.getByLabelText("文件夹路径"), "D:\\work\\新项目");
     const projectForm = screen.getByLabelText("文件夹路径").closest("form");
     expect(projectForm).not.toBeNull();
@@ -124,14 +119,13 @@ describe("code review fixes", () => {
 
     render(<ProjectPanel />);
 
+    await user.click(await screen.findByRole("button", { name: "打开文件夹" }));
     expect(screen.getByLabelText("文件夹路径")).toBeInTheDocument();
     const projectForm = screen.getByLabelText("文件夹路径").closest("form");
     expect(projectForm).not.toBeNull();
     expect(within(projectForm!).getByRole("button", { name: "打开文件夹" })).toBeInTheDocument();
     expect(
-      await screen.findByText(
-        "暂无文件夹项目。打开本地文件夹开始协作，也可直接在中间与 Agent 对话。",
-      ),
+      await screen.findByText("暂无文件夹项目。"),
     ).toBeInTheDocument();
   });
 });

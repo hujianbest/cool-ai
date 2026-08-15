@@ -63,6 +63,7 @@ describe("stable field errors", () => {
     const user = userEvent.setup();
     render(<ProviderPanel />);
     await screen.findByText("暂无模型服务。");
+    await user.click(screen.getByRole("button", { name: "创建模型服务" }));
     await user.type(screen.getByLabelText("服务名称"), "Provider");
     await user.type(screen.getByLabelText("Base URL"), "http://provider.test/v1");
     await user.type(screen.getByLabelText("默认模型"), "model-a");
@@ -146,6 +147,7 @@ describe("stable field errors", () => {
     const user = userEvent.setup();
     render(<AgentPanel />);
     await screen.findByText("暂无 Agent。");
+    await user.click(screen.getByRole("button", { name: "创建 Agent" }));
     await user.selectOptions(screen.getByLabelText("创建方式"), "planner");
     await user.selectOptions(screen.getByLabelText("模型服务"), "provider-1");
     await user.click(screen.getByRole("checkbox", { name: "Planning" }));

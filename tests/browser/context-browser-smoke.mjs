@@ -521,6 +521,7 @@ try {
   assert.ok(validationToken);
 
   await page.goto(baseUrl, { waitUntil: "networkidle" });
+  await page.getByRole("button", { name: "打开文件夹" }).first().click();
   await page.getByLabel("文件夹路径").fill(workspaceDirectory);
   await page
     .locator("form")
@@ -875,6 +876,7 @@ try {
     .getByRole("checkbox", { name: /Context Planner/ })
     .waitFor();
 
+  await page.getByRole("button", { name: "创建使命" }).click();
   await page.getByLabel("使命标题").fill("Context Smoke Mission");
   await page
     .getByLabel("使命目标")
@@ -884,12 +886,14 @@ try {
     .getByRole("heading", { name: "Context Smoke Mission" })
     .waitFor();
 
+  await page.getByRole("button", { name: "创建任务" }).click();
   await page.getByLabel("任务标题").fill("Plan task");
   await page.getByLabel("任务说明").fill("Prepare the implementation");
   await selectOptionContaining(page.getByLabel("负责人"), "Context Planner");
   await page.getByRole("button", { exact: true, name: "创建任务" }).click();
   await page.getByRole("heading", { name: "Plan task" }).waitFor();
 
+  await page.getByRole("button", { name: "创建任务" }).click();
   await page.getByLabel("任务标题").fill("Build task");
   await page.getByLabel("任务说明").fill("Implement after planning");
   await selectOptionContaining(page.getByLabel("负责人"), "Context Builder");
@@ -966,6 +970,7 @@ try {
   // --- 026 T-03：Mission 依赖全景真实浏览器验收 ---
   // 造数：既有 Plan→Build 链上补 Test(←Plan)、Ship(←Build,Test)，形成链+菱形。
   // 环在持久层被 DEPENDENCY_CYCLE 守卫拒绝（合法路径不可达），循环呈现由组件测试覆盖。
+  await page.getByRole("button", { name: "创建任务" }).click();
   await page.getByLabel("任务标题").fill("Test task");
   await page.getByLabel("任务说明").fill("Verify the build outcome");
   await selectOptionContaining(page.getByLabel("负责人"), "Context Builder");
@@ -979,6 +984,7 @@ try {
     .getByRole("heading", { exact: true, name: "Test task" })
     .waitFor();
 
+  await page.getByRole("button", { name: "创建任务" }).click();
   await page.getByLabel("任务标题").fill("Ship task");
   await page.getByLabel("任务说明").fill("Release after build and test");
   await selectOptionContaining(page.getByLabel("负责人"), "Context Builder");
@@ -1330,6 +1336,7 @@ try {
 
   // 无依赖 Mission 的 empty 态（第二项目隔离造数，不污染主项目事实）
   await page.goto(baseUrl, { waitUntil: "networkidle" });
+  await page.getByRole("button", { name: "打开文件夹" }).first().click();
   await page.getByLabel("文件夹路径").fill(emptyWorkspaceDirectory);
   await page
     .locator("form")
@@ -1340,6 +1347,7 @@ try {
   await page
     .getByRole("heading", { name: "context-empty-workspace" })
     .waitFor();
+  await page.getByRole("button", { name: "创建使命" }).click();
   await page.getByLabel("使命标题").fill("Empty Mission");
   await page.getByLabel("使命目标").fill("No dependencies at all");
   await page.getByRole("button", { name: "创建使命" }).click();
@@ -1565,14 +1573,13 @@ try {
     await page.getByTestId("editor-surface").getAttribute("inert"),
     null,
   );
-  const narrowWorkspaceInput = projectsDialog.getByLabel(
-    "本地工作区路径",
-  );
-  await narrowWorkspaceInput.fill(reboundWorkspaceDirectory);
   const rebindOpener = projectsDialog.getByRole("button", {
     name: "保存工作区",
   });
   await rebindOpener.click();
+  const narrowWorkspaceInput = page.getByLabel("本地工作区路径");
+  await narrowWorkspaceInput.fill(reboundWorkspaceDirectory);
+  await page.getByRole("button", { name: "保存工作区" }).click();
   let rebindConfirmation = page.getByRole("dialog", {
     name: "确认改绑工作区",
   });

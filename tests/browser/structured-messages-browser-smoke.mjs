@@ -317,6 +317,7 @@ async function provision(page) {
 
 async function createProject(page) {
   await page.goto(baseUrl, { waitUntil: "networkidle" });
+  await page.getByRole("button", { name: "打开文件夹" }).first().click();
   await page.getByLabel("文件夹路径").fill(workspaceDirectory);
   await page.locator("form")
     .filter({ has: page.getByLabel("文件夹路径") })
@@ -330,6 +331,7 @@ async function createProject(page) {
   await members.getByRole("checkbox", { name: /Structured Beta/ }).check();
   await page.getByRole("button", { name: "保存成员" }).click();
   await page.getByText("项目成员已保存。", { exact: true }).waitFor();
+  await page.getByRole("button", { name: "创建使命" }).click();
   await page.getByLabel("使命标题").fill("Structured Browser Mission");
   await page.getByLabel("使命目标").fill("Verify immutable structured messages");
   await page.getByRole("button", { name: "创建使命" }).click();

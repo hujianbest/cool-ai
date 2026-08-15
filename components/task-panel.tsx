@@ -454,12 +454,19 @@ export function TaskPanel({
               }
             }}
             onFocusMission={() => {
-              if (projectId) {
-                focusOnboardingSurface("board", [
-                  `#mission-title-${projectId}`,
-                  "#mission-board .mission-summary h3",
-                ]);
+              if (!projectId) return;
+              const titleSelector = `#mission-title-${projectId}`;
+              if (!document.querySelector(titleSelector)) {
+                document
+                  .querySelector<HTMLButtonElement>(
+                    '#mission-board [aria-label="创建使命"]',
+                  )
+                  ?.click();
               }
+              focusOnboardingSurface("board", [
+                titleSelector,
+                "#mission-board .mission-summary h3",
+              ]);
             }}
             onSelectProject={onboarding.onSelectProject}
             onSkip={onboarding.onSkip}

@@ -99,14 +99,12 @@ describe("desktop collaboration cockpit", () => {
     for (const action of within(toolbar).getAllByRole("button")) {
       expect(action).toHaveClass("button-secondary");
     }
-    expect(within(navigation).getByText("Cool AI")).toHaveClass(
-      "surface-heading",
-    );
+    expect(within(navigation).getByText("Cool AI")).toHaveClass("sr-only");
     expect(within(navigation).getByRole("heading", { name: "项目" })).toHaveClass(
       "surface-heading",
     );
     expect(within(navigation).getByRole("button", { name: "打开文件夹" })).toHaveClass(
-      "button-primary",
+      "icon-button",
     );
     expect(within(navigation).getByRole("button", { name: "关闭项目导航" })).toHaveClass(
       "button-ghost",

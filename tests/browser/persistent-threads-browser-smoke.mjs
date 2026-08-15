@@ -620,9 +620,11 @@ try {
   assert.equal(providerCalls, 1);
   await page.goto(`${baseUrl}/projects/legacy-project`, { waitUntil: "networkidle" });
   await page.getByRole("heading", { name: "Persistent Threads Legacy" }).waitFor();
+  await page.getByRole("button", { name: "绑定工作区" }).click();
   await page.getByLabel("本地工作区路径").fill(workspaceDirectory);
   await page.getByRole("button", { name: "绑定工作区" }).click();
   await page.getByText("工作区已保存。", { exact: true }).waitFor();
+  await page.getByRole("button", { name: "创建使命" }).click();
   await page.getByLabel("使命标题").fill("Persistent Threads Mission");
   await page
     .getByLabel("使命目标")

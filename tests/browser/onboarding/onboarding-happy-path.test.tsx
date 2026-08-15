@@ -1172,6 +1172,7 @@ describe("progressive onboarding T-6 explicit project selection", () => {
     await screen.findByText(
       "尚无可选文件夹项目。请先打开本地文件夹，或直接在中间开始个人对话。",
     );
+    await user.click(screen.getByRole("button", { name: "打开文件夹" }));
     await user.type(screen.getByLabelText("文件夹路径"), "D:\\work\\project-alpha");
     const projectForm = screen.getByLabelText("文件夹路径").closest("form");
     await user.click(
@@ -1219,6 +1220,7 @@ describe("progressive onboarding T-6 explicit project selection", () => {
     await screen.findByText(
       "尚无可选文件夹项目。请先打开本地文件夹，或直接在中间开始个人对话。",
     );
+    await user.click(screen.getByRole("button", { name: "打开文件夹" }));
     await user.type(screen.getByLabelText("文件夹路径"), "D:\\work\\project-alpha");
     const projectForm = screen.getByLabelText("文件夹路径").closest("form");
     await user.click(
@@ -1490,6 +1492,7 @@ describe("progressive onboarding T-7 workspace binding", () => {
 
     render(<WorkspaceSetup projectId={project.id} showGuide />);
     await screen.findByText("尚未绑定工作区。请使用现有 WorkspaceSetup 完成绑定。");
+    await user.click(screen.getByRole("button", { name: "绑定工作区" }));
     await user.type(
       screen.getByLabelText("本地工作区路径"),
       "D:\\private\\workspace",
@@ -1550,6 +1553,7 @@ describe("progressive onboarding T-7 workspace binding", () => {
 
     render(<WorkspaceSetup projectId={project.id} showGuide />);
     await screen.findByText("工作区已 bind ready：目录已规范化且当前可读。");
+    await user.click(screen.getByRole("button", { name: "保存工作区" }));
     await user.clear(screen.getByLabelText("本地工作区路径"));
     await user.type(screen.getByLabelText("本地工作区路径"), "D:\\new");
     await user.click(screen.getByRole("button", { name: "保存工作区" }));
@@ -1564,6 +1568,7 @@ describe("progressive onboarding T-7 workspace binding", () => {
     expect(putCount).toBe(1);
     expect(getCount).toBe(1);
 
+    await user.click(screen.getByRole("button", { name: "保存工作区" }));
     await user.clear(screen.getByLabelText("本地工作区路径"));
     await user.type(screen.getByLabelText("本地工作区路径"), "D:\\third");
     await user.click(screen.getByRole("button", { name: "保存工作区" }));
@@ -2024,6 +2029,7 @@ describe("progressive onboarding T-9 formal goal intake", () => {
 
     render(<MissionBoard projectId={project.id} />);
     await screen.findByText("尚未创建使命。");
+    await user.click(screen.getByRole("button", { name: "创建使命" }));
     await user.type(screen.getByLabelText("使命标题"), mission.title);
     await user.type(screen.getByLabelText("使命目标"), mission.goal);
     await user.click(screen.getByRole("button", { name: "创建使命" }));
@@ -2083,6 +2089,7 @@ describe("progressive onboarding T-9 formal goal intake", () => {
 
     render(<MissionBoard projectId={project.id} />);
     await screen.findByText("尚未创建使命。");
+    await user.click(screen.getByRole("button", { name: "创建使命" }));
     await user.type(screen.getByLabelText("使命标题"), mission.title);
     await user.type(screen.getByLabelText("使命目标"), mission.goal);
     await user.click(screen.getByRole("button", { name: "创建使命" }));
