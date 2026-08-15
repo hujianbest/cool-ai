@@ -5,7 +5,7 @@
 - 用户确认: 2026-08-09 采用领域模块化单体、Ports/Adapters、跨域 Application Workflow、垂直切片、选择性事件投影和受控扩展端口；2026-08-15 确认会话优先、暖米 + 暖金、治理收轨，以及 P0–P5 先闭环再变厚。
 - 一句话: Cool AI 是面向独立产品创造者的本地优先多 Agent 协作产品；单一 owner 把稳定、平等的角色 Agent 组成项目组，让它们围绕公开事实自主讨论、接力执行、独立复核并交付可追溯成果。
 
-关联文档：[`README.md`](./README.md)（文档地图）· [`architecture.md`](./architecture.md)（架构）· [`backlog.md`](./backlog.md)（特性分解）· [`development-plan.md`](./development-plan.md)（开发计划）· [`progress.md`](./progress.md)（进展）· [`ui/UI设计.md`](./ui/UI设计.md)（UCD）· [`ui/DESIGN.md`](./ui/DESIGN.md)（视觉令牌）。
+关联文档：[`README.md`](./README.md)（文档地图）· [`architecture.md`](./architecture.md)（架构）· [`词汇表.md`](./词汇表.md)（统一语言）· [`backlog.md`](./backlog.md)（特性分解）· [`development-plan.md`](./development-plan.md)（开发计划）· [`progress.md`](./progress.md)（进展）· [`ui/UI设计.md`](./ui/UI设计.md)（UCD）· [`ui/DESIGN.md`](./ui/DESIGN.md)（视觉令牌）。
 
 ## 1. 用户、领域与问题
 
@@ -44,7 +44,7 @@ Cool AI 的定义落到用户可感知表面时，只证明三件事：
 
 - 本地单 owner Web 应用已持久化 Provider、Skill、Agent、Project、Mission、Work Item、协作、执行、复核、记忆与交付事实。
 - owner 可用系统文件夹选择器打开/恢复项目，也可在未选项目时进行 1:1 聊天；已验证 Provider 下可配置稳定角色 Agent，并绑定本地 Windows 工作区。
-- 协作驾驶舱支持 owner 公开发言、@Agent、真实模型接力、结构化消息与就地决策、回复引用、草稿、图片附件、持久线程与可恢复时间线。
+- 协作驾驶舱支持 owner 公开发言、@Agent、真实模型接力、结构化消息与就地决策、回复引用、草稿、图片附件、持久对话与可恢复时间线。
 - 会话整理已交付收藏、项目内搜索、标签批量整理、回收站、消息队列与受控 steer。
 - Mission 看板仍是任务、依赖、负责人和状态的唯一业务边界；已交付依赖洞察、SOP 状态投影与派发租约。独立任务可在隔离执行中并行推进。
 - Windows x64 的 verified-handle、sandbox、审批、验证、冲突检测与 merge journal 已为绑定工作区执行提供明确但非 OS 级恶意代码沙箱的安全边界。统一审批中心、按域审计与运行时间轴已交付。
@@ -58,7 +58,7 @@ Cool AI 的定义落到用户可感知表面时，只证明三件事：
 
 ### 5.1 核心协作
 
-让 owner 能配置平等角色 Agent、建立 Project 与 Mission、在持久 Thread 中公开协作，并通过 Work Item、交棒、决定和独立复核完成可追溯交付。
+让 owner 能配置平等角色 Agent、建立 Project 与 Mission、在持久对话（Session）中公开协作，并通过 Work Item、交棒、决定和独立复核完成可追溯交付。
 
 当前已交付基础闭环及会话整理能力。后续目标包括受控扩展表面上的会话体验加厚，而不是第二套任务真相。后续能力必须继续使用同一公开协作事实，不能建立私语。
 
@@ -91,7 +91,7 @@ Cool AI 的定义落到用户可感知表面时，只证明三件事：
 
 ## 7. 设计原则
 
-1. **事实有且只有一个 owner**：每类命令事实由一个逻辑子系统维护；页面、路由、投影和 Adapter 不能成为平行写入口。
+1. **事实有且只有一个 owner**：每类命令事实由一个逻辑子系统维护；页面、路由、投影和 Adapter 不能成为平行写入口。规格、代码与界面使用同一套词，见 [`词汇表.md`](./词汇表.md)。
 2. **跨域结果显式协调**：跨子系统用户结果由 Application Workflow 编排，在需要时使用同一 SQLite 事务保持强不变量；Workflow 不替代子系统业务规则。
 3. **垂直切片交付**：每个真正进入 `implement` 的切片围绕一个 actor、一个主要用户结果和一个主要架构单元形成可演示闭环，再拆为 RED/GREEN 票据。领域切片使用唯一主子系统/主领域 Capability；只改变 Application Workflow、入站/UI Adapter 或交付证据的非领域切片明确主领域 Capability 不适用，并列出消费的真实 Capability；跨多个 owner 的产品追踪别名必须先拆成满足上述规则的真正纵切，别名本身不得进入 `implement`。
 4. **公开 Interface 而非内部穿透**：跨子系统只依赖公开能力与稳定契约，不直接依赖对方表、私有服务或 UI 状态。

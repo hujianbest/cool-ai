@@ -30,7 +30,7 @@ Cool AI 是面向单个产品 owner 的本地优先 Web 多 Agent 协作平台�
 
 - [测试与验证](./testing.md)：安装、构建、单元测试与六个浏览器 smoke 命令。
 - [架构概览](./architecture/overview.md)：先理解三条主链，再定位实现。
-- [项目产品规格说明书](../product/product.md)、[产品架构设计说明书](../product/architecture.md)与[特性分解清单](../product/backlog.md)：分别查看产品边界、架构基线与切片注册。文档地图见 [`product/README.md`](../product/README.md)。
+- [项目产品规格说明书](../product/product.md)、[领域词汇表](../product/词汇表.md)、[产品架构设计说明书](../product/architecture.md)与[特性分解清单](../product/backlog.md)：分别查看产品边界、统一语言、架构基线与切片注册。文档地图见 [`product/README.md`](../product/README.md)。
 
 ## 文档事实边界
 

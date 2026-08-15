@@ -1,14 +1,16 @@
 # 产品架构设计说明书
 
-- 日期: 2026-08-09（2026-08-15 纳入产品文档六件套；架构实质不变）
+- 日期: 2026-08-09（2026-08-16 纳入 DDD 战略第 15 节与词汇表；架构实质决策不变）
 - 状态: 产品级架构基线；目标架构收敛已完成（特性 019，D-45），后续功能开发按本文件准入
 - 用户确认: 2026-08-09 采用领域模块化单体 + Ports/Adapters + 跨域 Application Workflow；2026-08-09 确认先把当前工程实现完整迁入目标架构，再恢复后续功能开发；2026-08-09 确认解除架构优先冻结（D-45）；2026-08-10 确认第 13 节架构特征（驱动力）、第 14 节演进与适应度及 4+1 视图标注
 - 更新: 2026-08-09 收敛完成后按 hf-to-product-architecture 刷新——第 8 节现状证据、第 9 节收敛完成记录，新增第 11 节关键场景与第 12 节横切约定
 - 更新: 2026-08-10 按 hf-to-product-architecture 补全——第 2 节各子系统补易变性声明、第 11 节场景标注验证特征，新增第 13 节架构特征（驱动力）与第 14 节演进与适应度；延续 A-105 追加不重排，既有节号与实质决策不变（A-106）；同日标注 4+1 视图裁剪映射（A-107）
 - 决策依据: `docs/adr/0002-domain-modular-monolith.md`、`docs/adr/0003-pre-release-canonical-database-schema.md`、`docs/adr/0004-architecture-first-convergence.md`
-- 关联文档: [`README.md`](./README.md)（文档地图）· [`product.md`](./product.md)（产品规格）· [`backlog.md`](./backlog.md)（特性分解）· [`development-plan.md`](./development-plan.md)（开发计划）
+- 关联文档: [`README.md`](./README.md)（文档地图）· [`product.md`](./product.md)（产品规格）· [`词汇表.md`](./词汇表.md)（统一语言）· [`backlog.md`](./backlog.md)（特性分解）· [`development-plan.md`](./development-plan.md)（开发计划）
 
-本文件是 **产品架构设计** 的单一事实源。产品范围与用户结果见规格说明书；切片与 Capability 见特性分解清单；交付顺序见开发计划。路径名 `product/architecture.md` 保持稳定，供架构测试与历史引用。
+本文件是 **产品架构设计** 的单一事实源。产品范围与用户结果见规格说明书；**统一语言**见词汇表；切片与 Capability 见特性分解清单；交付顺序见开发计划。路径名 `product/architecture.md` 保持稳定，供架构测试与历史引用。
+
+第 2 节的逻辑子系统即 DDD **限界上下文**；子域类型、上下文地图与聚合目录见第 15 节与 [`词汇表.md`](./词汇表.md)。统一语言中公开协作容器称 **对话 / Session**（D-53）；代码与复合约束仍写 `Thread` / `threadId`，直至机械重命名切片。
 
 ## 1. 架构目标
 
@@ -557,3 +559,71 @@ tests/
 - 跨 3 个及以上 owner 的命名 Workflow 占在途切片比例持续超过一半 → 重评事实所有权划分（D-42 的切片拆分规则是前置防线，本条为架构级信号）。
 - 全量测试墙钟持续超过预算 2 倍（约 300 s）→ 重评测试分治与夹具策略。
 - 首次正式发布 → 重开 schema 兼容政策（ADR-0003）与项目级 review 豁免（`AGENTS.md`），均由用户明确决定。
+
+## 15. 限界上下文、子域与上下文地图（DDD 战略）
+
+本节把第 2 节已经存在的逻辑子系统显式映射为 DDD 战略设计，不改变事实所有权。统一语言与易混对见 [`词汇表.md`](./词汇表.md)。
+
+### 15.1 限界上下文 = 逻辑子系统
+
+每个 `src/modules/<context>/` 是一个限界上下文：有唯一命令事实 owner、公开 Interface（Published Language）和自己的不变量。不按页面、HTTP 路由或表名前缀划界。`runtime` 与 `operations-projection` 在尚无自有命令事实时仍是上下文（通用子域），按 A-101 不建空壳 Module，待 Capability 切片建立目录。
+
+### 15.2 核心 / 支撑 / 通用
+
+- **核心域**（产品之所以是 Cool AI）：Public Collaboration、Mission & Work、Review & Delivery。公开协作、任务真相与「执行者不能独自宣布完成」不可外包、不可被投影或 Adapter 重新定义。
+- **支撑域**（让核心能安全发生）：Identity & Capability、Project & Workspace、Safe Execution、Governance、Knowledge & Provenance。
+- **通用域**（可替换技术能力）：Runtime（Provider/CLI/MCP/通知传输）、Operations Projection（读模型）、SQLite/HTTP/PWA Adapter。
+
+核心域变更必须先改词汇表与本文件第 2 节；通用域变更不应迫使核心域改词。
+
+### 15.3 上下文地图
+
+单体内部不使用网关式微服务关系；用 DDD 关系名标注**已经在第 3 节落地的依赖方向**。
+
+```text
+[入站 Adapter / UI]  --OHS/ACL-->  Application Workflow
+                                      |
+          +------------ published language (Capability Interface / DTO) ------------+
+          |                            |                            |               |
+          v                            v                            v               v
+   Identity & Capability        Project & Workspace          Public Collaboration
+          ^                            ^                            ^
+          | conformist/query           |                            |
+   Runtime (effective grant) <---- Workflow: Resolve Effective Runtime Grant
+          |                            |
+          v                            v
+   Safe Execution  --customer/supplier-->  Governance (Approval 证据)
+          |
+          +--> Mission & Work  --customer/supplier-->  Review & Delivery
+                                                          |
+                                                          v
+                                                 Knowledge & Provenance
+                                                          |
+   各 source owner  --published events / outbox-->  Operations Projection (conformist)
+```
+
+关系约定：
+
+| 关系 | 在本产品中的含义 | 证据 |
+|---|---|---|
+| Published Language | Module `public/` DTO、稳定错误、公开事件 envelope | 第 3、5 节 |
+| Open Host Service | HTTP 入站 Adapter；只做传输校验，不拥有事实 | 第 6、7 节 |
+| Anti-Corruption Layer | workspace / model-runtime / notification Adapter；外部返回不可信 | 第 6 节 |
+| Customer/Supplier | Workflow 编排跨 owner 用户结果；下游不直写上游表 | 第 3 节 Application Workflow |
+| Conformist | Operations Projection 按已发布事件 schema 消费，不回写 | 第 5 节 |
+| Shared Kernel | 仅 `src/shared/` 中无业务 owner 的基础类型 | 第 7 节；禁止把领域对象塞进 shared |
+| Partnership | **不使用**。两个上下文不得共同拥有一张写表 | 第 2、4 节单一写 owner |
+
+明确不采用：微服务式独立数据库、全面事件溯源、进程内通用插件内核（ADR-0002）。
+
+### 15.4 聚合与应用层
+
+聚合根目录见词汇表第 5 节。战术规则已在第 3～4 节：写命令作用在父聚合；child fact 继承 operation；跨聚合强一致只经 Application Workflow 与同一 SQLite 事务。
+
+已命名 Workflow（跨上下文过程，不是第四个领域）：`create-mission`、`project-context-snapshot`、`open-folder-project`、以及授权转换 `Resolve Effective Runtime Grant`。新的跨 owner 用户结果必须新增命名 Workflow，不得在 route 内临时串联。
+
+### 15.5 刻意不做的 DDD 工件
+
+- 不为每个上下文另写 Bounded Context Canvas 或事件风暴墙；切片 spec 必须使用词汇表用词，争议回写词汇表。
+- 不把投影、页面或 Capability ID 提升为限界上下文。
+- 不预先拆核心域为多个可独立发布的上下文；拆分触发见第 14 节复核信号。
