@@ -667,25 +667,17 @@ try {
       { exact: true },
     )
     .waitFor();
-  await page.route("**/api/directory-picker", async (route) => {
-    await route.fulfill({
-      body: JSON.stringify({ cancelled: true }),
-      headers: { "content-type": "application/json" },
-      status: 200,
-    });
-  });
   await emptyProjectGuide
     .getByRole("button", { name: "使用现有表面打开文件夹" })
-    .click();
+    .waitFor();
   assert.equal(await page.getByLabel("文件夹路径").count(), 0);
 
   await page.setViewportSize({ height: 844, width: 390 });
   await page.reload({ waitUntil: "networkidle" });
   await emptyProjectGuide
     .getByRole("button", { name: "使用现有表面打开文件夹" })
-    .click();
+    .waitFor();
   assert.equal(await page.getByLabel("文件夹路径").count(), 0);
-  await page.unroute("**/api/directory-picker");
 
   seedReadyResources();
   await page.setViewportSize({ height: 1000, width: 1440 });
