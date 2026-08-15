@@ -89,6 +89,7 @@ function startAppServer() {
     env: {
       ...process.env,
       COCKPIT_DB_PATH: databasePath,
+      COCKPIT_SCRIPTED_DIRECTORY: workspaceDirectory,
     },
     stdio: ["ignore", "pipe", "pipe"],
     windowsHide: true,
@@ -187,12 +188,6 @@ try {
 
   await page.goto(baseUrl, { waitUntil: "networkidle" });
   await page.getByRole("button", { name: "打开文件夹" }).first().click();
-  await page.getByLabel("文件夹路径").fill(workspaceDirectory);
-  await page
-    .locator("form")
-    .filter({ has: page.getByLabel("文件夹路径") })
-    .getByRole("button", { name: "打开文件夹" })
-    .click();
   await page.waitForURL(/\/projects\/[A-Za-z0-9_-]+$/u);
   const projectPath = new URL(page.url()).pathname;
   const projectId = projectPath.split("/").at(-1);

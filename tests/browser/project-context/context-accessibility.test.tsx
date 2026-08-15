@@ -7,6 +7,7 @@ import { afterEach, describe, expect, it, vi } from "vitest";
 import type { ComponentType, ReactNode } from "react";
 
 import { ProjectPanel } from "@/components/project-panel";
+import { cockpitFetch } from "@/tests/cockpit-test-fetch";
 
 type ProjectContextModule = {
   ProjectContextPanel: ComponentType<{
@@ -103,65 +104,27 @@ describe("context navigation accessibility", () => {
     expect(screen.getAllByRole("tabpanel")).toHaveLength(1);
   });
 
-  it("integrates tabs in the single narrow context modal without exposing background interaction", async () => {
-    stubMobile();
-    window.history.replaceState(null, "", "/projects/project-1");
+  it("keeps project-context tabs out of the phase-1 cockpit chrome", async () => {
     vi.stubGlobal(
       "fetch",
-      vi.fn(async (input: RequestInfo | URL) => {
-        const url = new URL(String(input), "http://localhost");
-        const payloads: Record<string, unknown> = {
-          "/api/projects": {
-            projects: [
-              {
-                id: "project-1",
-                name: "Launch",
-                createdAt: "2026-08-08T00:00:00.000Z",
-              },
-            ],
-          },
-          "/api/projects/project-1/tasks": { tasks: [], events: [] },
-          "/api/projects/project-1/workspace": {
-            workspace: null,
-            projectVersion: 1,
-          },
-          "/api/projects/project-1/members": {
-            members: [],
-            projectVersion: 1,
-          },
-          "/api/projects/project-1/capability-insight": {
-            portraits: [],
-            suggestions: [],
-          },
-          "/api/projects/project-1/mission": {
-            mission: null,
-            workItems: [],
-          },
-          "/api/agents": { agents: [] },
-        };
-        if (url.pathname.endsWith("/memories")) {
-          return Response.json({ memories: [] });
-        }
-        const payload = payloads[url.pathname];
-        if (!payload) throw new Error(`Unexpected request: ${url.pathname}`);
-        return Response.json(payload);
-      }),
+      cockpitFetch([
+        Response.json({
+          projects: [
+            {
+              createdAt: "2026-08-08T00:00:00.000Z",
+              id: "project-1",
+              name: "Launch",
+            },
+          ],
+        }),
+        Response.json({ events: [], tasks: [] }),
+      ]),
     );
-    const user = userEvent.setup();
     render(<ProjectPanel />);
-    const opener = await screen.findByRole("button", {
-      name: "打开当前任务上下文",
-    });
-    await user.click(opener);
-
-    const dialog = screen.getByRole("dialog", { name: "当前任务上下文" });
-    expect(dialog).toHaveAttribute("aria-modal", "true");
-    expect(within(dialog).getByRole("tablist")).toBeInTheDocument();
-    expect(screen.getByTestId("editor-surface")).toHaveAttribute("inert");
-    expect(screen.getAllByRole("dialog")).toHaveLength(1);
-    await user.keyboard("{Escape}");
-    await waitFor(() => expect(screen.queryByRole("dialog")).toBeNull());
-    expect(opener).toHaveFocus();
+    const cockpit = await screen.findByTestId("collaboration-cockpit");
+    expect(within(cockpit).getByRole("button", { name: "打开文件夹" })).toBeInTheDocument();
+    expect(screen.queryByRole("button", { name: "打开当前任务上下文" })).toBeNull();
+    expect(screen.queryByRole("tab", { name: "共享记忆" })).toBeNull();
 
     const css = readFileSync(join(process.cwd(), "app", "cockpit.css"), "utf8");
     expect(css).toMatch(

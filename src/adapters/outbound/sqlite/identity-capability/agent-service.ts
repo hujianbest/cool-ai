@@ -283,6 +283,91 @@ function toAgent(database: DatabaseSync, row: AgentRow): AgentProfile {
   };
 }
 
+const STARTER_PREFIX = "starter-";
+const STARTER_MAX_TOKENS = 16_000;
+const STARTER_MAX_HANDOFFS = 8;
+
+type StarterPermissions = AgentProfile["permissions"];
+
+function starterId(templateId: AgentTemplate["id"]): string {
+  return `${STARTER_PREFIX}${templateId}`;
+}
+
+function starterPermissions(templateId: AgentTemplate["id"]): StarterPermissions {
+  if (templateId === "builder") {
+    return {
+      readFiles: true,
+      runCommands: true,
+      writeFiles: true,
+    };
+  }
+  return {
+    readFiles: true,
+    runCommands: false,
+    writeFiles: false,
+  };
+}
+
+function firstVerifiedProvider(
+  database: DatabaseSync,
+): { defaultModel: string; id: string } | undefined {
+  return database
+    .prepare(`
+      SELECT
+        id,
+        default_model AS defaultModel
+      FROM providers
+      WHERE verified_at IS NOT NULL AND trim(verified_at) != ''
+      ORDER BY created_at ASC, id ASC
+      LIMIT 1
+    `)
+    .get() as { defaultModel: string; id: string } | undefined;
+}
+
+function insertStarterAgent(
+  database: DatabaseSync,
+  template: AgentTemplate,
+  provider: { defaultModel: string; id: string },
+  timestamp: string,
+): void {
+  const id = starterId(template.id);
+  const permissions = starterPermissions(template.id);
+  database
+    .prepare(`
+      INSERT INTO agents (
+        id, name, role, system_prompt, provider_id, model,
+        avatar_text, accent_token, can_read, can_write, can_execute,
+        review_capable, max_tokens, max_handoffs, version, created_at, updated_at
+      ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 1, ?, ?)
+    `)
+    .run(
+      id,
+      template.name,
+      template.role,
+      template.systemPrompt,
+      provider.id,
+      provider.defaultModel,
+      template.avatarText,
+      template.accentToken,
+      Number(permissions.readFiles),
+      Number(permissions.writeFiles),
+      Number(permissions.runCommands),
+      Number(template.reviewCapable),
+      STARTER_MAX_TOKENS,
+      STARTER_MAX_HANDOFFS,
+      timestamp,
+      timestamp,
+    );
+}
+
+function requireAgent(database: DatabaseSync, agentId: string): AgentRow {
+  const row = selectAgent(database, agentId);
+  if (!row) {
+    throw new AgentServiceError("AGENT_NOT_FOUND", 404, "Agent was not found.");
+  }
+  return row;
+}
+
 function insertAgentSkills(
   database: DatabaseSync,
   agentId: string,
@@ -342,7 +427,7 @@ export function createAgent(
           timestamp,
         );
       insertAgentSkills(database, id, parsed.skillIds);
-      return toAgent(database, selectAgent(database, id)!);
+      return toAgent(database, requireAgent(database, id));
     });
   } finally {
     database.close();
@@ -448,7 +533,29 @@ export function updateAgent(
         .prepare("DELETE FROM agent_skills WHERE agent_id = ?")
         .run(agentId);
       insertAgentSkills(database, agentId, parsed.skillIds);
-      return toAgent(database, selectAgent(database, agentId)!);
+      return toAgent(database, requireAgent(database, agentId));
+    });
+  } finally {
+    database.close();
+  }
+}
+
+export function ensureStarterAgents(databasePath: string): AgentProfile[] {
+  const database = openDatabase(databasePath);
+  try {
+    return withTransaction(database, () => {
+      const provider = firstVerifiedProvider(database);
+      if (!provider) return [];
+      const timestamp = new Date().toISOString();
+      const starters: AgentProfile[] = [];
+      for (const template of TEMPLATE_DEFAULTS) {
+        const id = starterId(template.id);
+        if (!selectAgent(database, id)) {
+          insertStarterAgent(database, template, provider, timestamp);
+        }
+        starters.push(toAgent(database, requireAgent(database, id)));
+      }
+      return starters;
     });
   } finally {
     database.close();
@@ -459,6 +566,13 @@ export function deleteAgent(agentId: string, databasePath: string): void {
   const database = openDatabase(databasePath);
   try {
     withTransaction(database, () => {
+      if (agentId.startsWith(STARTER_PREFIX)) {
+        throw new AgentServiceError(
+          "STARTER_AGENT_PROTECTED",
+          409,
+          "系统自带 Agent 不能删除。",
+        );
+      }
       if (!selectAgent(database, agentId)) {
         throw new AgentServiceError("AGENT_NOT_FOUND", 404, "Agent was not found.");
       }

@@ -4,7 +4,7 @@ import {
   internalErrorResponse,
   storageErrorResponse,
 } from "@/app/api/_shared/api-errors";
-import { projects, workspaceService } from "@/src/composition";
+import { openFolderAsProject, projects } from "@/src/composition";
 import { WorkspaceError } from "@/src/modules/project-workspace";
 
 function databasePath(): string {
@@ -97,10 +97,7 @@ export async function POST(request: Request): Promise<Response> {
 
   const path = (body as { path: string }).path;
   try {
-    const result = await workspaceService.openWorkspaceAsProject(
-      databasePath(),
-      path,
-    );
+    const result = await openFolderAsProject(databasePath(), path);
     return Response.json(
       { project: result.project },
       { status: result.created ? 201 : 200 },

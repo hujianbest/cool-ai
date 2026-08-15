@@ -143,7 +143,7 @@ ol {
   display: grid;
   min-height: var(--viewport-height);
   max-width: var(--full-width);
-  grid-template-columns: var(--activity-bar-width) var(--sidebar-width) minmax(0, 1fr) var(--context-width);
+  grid-template-columns: var(--activity-bar-width) var(--sidebar-width) minmax(0, 1fr);
   background: var(--surface-sunken);
 }
 

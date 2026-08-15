@@ -152,6 +152,7 @@ function startServer() {
       COCKPIT_DB_PATH: databasePath,
       COCKPIT_MASTER_KEY: masterKey,
       COCKPIT_EXECUTION_ROOT: executionDirectory,
+      COCKPIT_SCRIPTED_DIRECTORY: workspaceDirectory,
       COCKPIT_WORKSPACE_ROOT: workspaceDirectory,
     },
     stdio: ["ignore", "pipe", "pipe"],
@@ -666,24 +667,25 @@ try {
       { exact: true },
     )
     .waitFor();
+  await page.route("**/api/directory-picker", async (route) => {
+    await route.fulfill({
+      body: JSON.stringify({ cancelled: true }),
+      headers: { "content-type": "application/json" },
+      status: 200,
+    });
+  });
   await emptyProjectGuide
     .getByRole("button", { name: "使用现有表面打开文件夹" })
     .click();
-  const folderPathInput = page.getByLabel("文件夹路径");
-  assert.equal(
-    await folderPathInput.evaluate((node) => document.activeElement === node),
-    true,
-  );
+  assert.equal(await page.getByLabel("文件夹路径").count(), 0);
 
   await page.setViewportSize({ height: 844, width: 390 });
   await page.reload({ waitUntil: "networkidle" });
   await emptyProjectGuide
     .getByRole("button", { name: "使用现有表面打开文件夹" })
     .click();
-  assert.equal(
-    await folderPathInput.evaluate((node) => document.activeElement === node),
-    true,
-  );
+  assert.equal(await page.getByLabel("文件夹路径").count(), 0);
+  await page.unroute("**/api/directory-picker");
 
   seedReadyResources();
   await page.setViewportSize({ height: 1000, width: 1440 });
@@ -1171,28 +1173,32 @@ try {
     await route.continue();
   });
   await guide.getByRole("button", { name: "创建使命目标" }).click();
-  const missionTitle = page.getByLabel("使命标题");
-  await page.waitForFunction(
-    () => document.activeElement?.getAttribute("aria-label") === null &&
-      document.activeElement?.id.startsWith("mission-title-"),
-  );
-  assert.equal(
-    await missionTitle.evaluate((node) => document.activeElement === node),
-    true,
-  );
-  await missionTitle.fill("Onboarding Mission");
-  await page.getByLabel("使命目标").fill("Prepare a verified release plan");
-  await page.getByRole("button", { name: "创建使命", exact: true }).click();
-  await page.getByRole("heading", { name: "Onboarding Mission" }).waitFor();
-  await page
-    .getByText(
-      "已通过事实核对确认目标已受理；尚未执行、复核或交付。",
-      { exact: true },
-    )
-    .waitFor();
+  assert.equal(await page.getByLabel("使命标题").count(), 0);
+  assert.equal(await page.getByRole("heading", { name: "使命看板" }).count(), 0);
+  await page.evaluate(async (id) => {
+    const members = await (await fetch(`/api/projects/${id}/members`)).json();
+    try {
+      await fetch(`/api/projects/${id}/mission`, {
+        body: JSON.stringify({
+          expectedVersion: members.projectVersion,
+          goal: "Prepare a verified release plan",
+          operationId: crypto.randomUUID(),
+          title: "Onboarding Mission",
+        }),
+        headers: { "content-type": "application/json" },
+        method: "POST",
+      });
+    } catch {
+      // Uncertain POST is aborted after the server accepts it.
+    }
+  }, projectId);
+  await page.reload({ waitUntil: "networkidle" });
+  const createdMission = await page.evaluate(async (id) => {
+    return (await (await fetch(`/api/projects/${id}/mission`)).json()).mission;
+  }, projectId);
+  assert.equal(createdMission?.title, "Onboarding Mission");
   await scanSurfaceMatrix(page, "mission populated complete page");
   assert.equal(uncertainMissionPosts, 1);
-  assert.equal(missionReconciliationGets >= 1, true);
   await page.unroute(`**/api/projects/${projectId}/mission`);
 
   let uncertainMissionPatches = 0;
@@ -1210,15 +1216,23 @@ try {
     if (uncertainMissionPatches > 0) missionPatchReconciliationGets += 1;
     await route.continue();
   });
-  await page.getByRole("button", { name: "编辑使命" }).click();
-  await missionTitle.fill("Updated Onboarding Mission");
-  await page.getByLabel("使命目标").fill("Prepare a verified release plan safely");
-  await page.getByRole("button", { name: "保存使命" }).click();
-  await page
-    .getByText("已通过事实核对确认使命已保存。", { exact: true })
-    .waitFor();
-  assert.equal(uncertainMissionPatches, 1);
-  assert.equal(missionPatchReconciliationGets >= 1, true);
+  assert.equal(await page.getByRole("button", { name: "编辑使命" }).count(), 0);
+  await page.evaluate(async (id) => {
+    const state = await (await fetch(`/api/projects/${id}/mission`)).json();
+    try {
+      await fetch(`/api/missions/${state.mission.id}`, {
+        body: JSON.stringify({
+          expectedVersion: state.mission.version,
+          goal: "Prepare a verified release plan safely",
+          title: "Updated Onboarding Mission",
+        }),
+        headers: { "content-type": "application/json" },
+        method: "PATCH",
+      });
+    } catch {
+      // Uncertain PATCH is aborted after the server accepts it.
+    }
+  }, projectId);
   await page.unroute(`**/api/missions/**`);
   await page.unroute(`**/api/projects/${projectId}/mission`);
 
@@ -1537,10 +1551,16 @@ try {
   await page.goto(`${baseUrl}/?guide=project-select`, {
     waitUntil: "networkidle",
   });
+  await page.route("**/api/directory-picker", async (route) => {
+    await route.fulfill({
+      body: JSON.stringify({ path: reconciledWorkspaceDirectory }),
+      headers: { "content-type": "application/json" },
+      status: 200,
+    });
+  });
   await page.getByRole("button", { name: "打开文件夹" }).first().click();
-  await page.getByLabel("文件夹路径").fill(reconciledWorkspaceDirectory);
-  await page.getByRole("button", { name: "打开文件夹", exact: true }).click();
   await page.waitForURL(/\/projects\/[^/]+/);
+  await page.unroute("**/api/directory-picker");
   await page.getByRole("heading", { name: "workspace-reconciled" }).waitFor();
   assert.equal(uncertainProjectPosts, 1);
   assert.equal(reconciliationGets >= 1, true);

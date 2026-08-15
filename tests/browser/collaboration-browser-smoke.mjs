@@ -220,6 +220,7 @@ function startAppServer() {
       ...process.env,
       COCKPIT_DB_PATH: databasePath,
       COCKPIT_MASTER_KEY: masterKey,
+      COCKPIT_SCRIPTED_DIRECTORY: workspaceDirectory,
     },
     stdio: ["ignore", "pipe", "pipe"],
     windowsHide: true,
@@ -388,19 +389,36 @@ async function createTeam(page) {
   assert.notEqual(alphaAgentId, betaAgentId);
 }
 
+async function openFolderProject(page, headingName) {
+  await page.getByRole("button", { name: "打开文件夹" }).first().click();
+  await page.waitForURL(/\/projects\/[^/]+$/);
+  await page.getByRole("heading", { name: headingName }).waitFor();
+}
+
+async function createMissionViaApi(page, title, goal) {
+  const payload = await page.evaluate(async ({ goalText, titleText }) => {
+    const projectId = new URL(window.location.href).pathname.split("/").at(-1);
+    const members = await (await fetch(`/api/projects/${projectId}/members`)).json();
+    const response = await fetch(`/api/projects/${projectId}/mission`, {
+      body: JSON.stringify({
+        expectedVersion: members.projectVersion,
+        goal: goalText,
+        operationId: crypto.randomUUID(),
+        title: titleText,
+      }),
+      headers: { "content-type": "application/json" },
+      method: "POST",
+    });
+    const body = await response.json();
+    if (!response.ok) throw new Error(JSON.stringify(body));
+    return body;
+  }, { goalText: goal, titleText: title });
+  assert.equal(payload.mission.title, title);
+}
+
 async function createProjectContext(page) {
   await page.goto(baseUrl, { waitUntil: "networkidle" });
-  await page.getByRole("button", { name: "打开文件夹" }).first().click();
-  await page.getByLabel("文件夹路径").fill(workspaceDirectory);
-  await page
-    .locator("form")
-    .filter({ has: page.getByLabel("文件夹路径") })
-    .getByRole("button", { name: "打开文件夹" })
-    .click();
-  await page.waitForURL(/\/projects\/[^/]+$/);
-  await page
-    .getByRole("heading", { name: "workspace" })
-    .waitFor();
+  await openFolderProject(page, "workspace");
 
   const members = page.getByRole("group", { name: "平等项目成员" });
   await members
@@ -412,15 +430,11 @@ async function createProjectContext(page) {
   await page.getByRole("button", { name: "保存成员" }).click();
   await page.getByText("项目成员已保存。", { exact: true }).waitFor();
 
-  await page.getByRole("button", { name: "创建使命" }).click();
-  await page.getByLabel("使命标题").fill("Collaboration Smoke Mission");
-  await page
-    .getByLabel("使命目标")
-    .fill("Produce a verified two-agent implementation plan");
-  await page.getByRole("button", { name: "创建使命" }).click();
-  await page
-    .getByRole("heading", { name: "Collaboration Smoke Mission" })
-    .waitFor();
+  await createMissionViaApi(
+    page,
+    "Collaboration Smoke Mission",
+    "Produce a verified two-agent implementation plan",
+  );
 
   return page.evaluate(() =>
     new URL(window.location.href).pathname.split("/").at(-1));

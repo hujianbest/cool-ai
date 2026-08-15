@@ -203,7 +203,7 @@ afterEach(() => {
 });
 
 describe("narrow collaboration cockpit accessibility", () => {
-  it("uses one tabbed mobile surface for chat, board, and run detail while preserving desktop", async () => {
+  it("uses the chat surface without board or run tabs", async () => {
     stubViewport(true);
     installFetch();
     const user = userEvent.setup();
@@ -211,55 +211,38 @@ describe("narrow collaboration cockpit accessibility", () => {
 
     await user.click(await screen.findByRole("button", { name: "打开编辑" }));
     const editor = screen.getByRole("dialog", { name: "任务编辑" });
-    const tabs = within(editor).getByRole("tablist", { name: "协作视图" });
-    const chatTab = within(tabs).getByRole("tab", { name: "群聊" });
-    const boardTab = within(tabs).getByRole("tab", { name: "看板" });
-    const runTab = within(tabs).getByRole("tab", { name: "运行详情" });
-
-    expect(chatTab).toHaveAttribute("aria-selected", "true");
-    expect(within(editor).getByRole("tabpanel", { name: "群聊" })).toBeVisible();
+    expect(within(editor).queryByRole("tablist", { name: "协作视图" })).toBeNull();
+    expect(within(editor).queryByRole("tab", { name: "看板" })).toBeNull();
+    expect(within(editor).queryByRole("tab", { name: "运行详情" })).toBeNull();
     expect(within(editor).queryByRole("heading", { name: "使命看板" })).toBeNull();
-    chatTab.focus();
-    await user.keyboard("{ArrowRight}");
-    expect(boardTab).toHaveFocus();
-    expect(within(editor).getByRole("heading", { name: "使命看板" })).toBeVisible();
-    await user.keyboard("{End}");
-    expect(runTab).toHaveFocus();
-    expect(within(editor).getByRole("region", { name: "运行控制" })).toBeVisible();
-    expect(within(editor).queryByLabelText("发送给项目群聊")).toBeNull();
+    expect(within(editor).getByLabelText("发送给项目群聊")).toBeVisible();
 
     view.unmount();
     stubViewport(false);
     installFetch();
     render(<ProjectPanel />);
     expect(await screen.findByRole("heading", { name: "项目群聊" })).toBeVisible();
-    expect(screen.getByRole("heading", { name: "使命看板" })).toBeVisible();
-    expect(await screen.findByRole("region", { name: "运行控制" })).toBeVisible();
+    expect(screen.queryByRole("heading", { name: "使命看板" })).toBeNull();
+    expect(screen.queryByRole("region", { name: "运行控制" })).toBeNull();
     expect(screen.queryByRole("tablist", { name: "协作视图" })).toBeNull();
   });
 
-  it("supports a keyboard-only decision and control path with text status", async () => {
+  it("keeps the chat composer reachable from the narrow editor without run chrome", async () => {
     stubViewport(true);
-    const calls = installFetch("waiting_owner");
+    installFetch("waiting_owner");
     const user = userEvent.setup();
     render(<ProjectPanel />);
 
     await user.click(await screen.findByRole("button", { name: "打开编辑" }));
     const editor = screen.getByRole("dialog", { name: "任务编辑" });
-    const runTab = within(editor).getByRole("tab", { name: "运行详情" });
-    runTab.focus();
-    await user.keyboard("{Enter}");
-    const option = within(editor).getByRole("radio", { name: "Ship now" });
-    option.focus();
-    await user.keyboard(" ");
-    await user.click(within(editor).getByRole("button", { name: "提交回答" }));
-
-    await waitFor(() => expect(calls.some((call) => call.url.includes("/decisions/"))).toBe(true));
-    expect(await within(editor).findByText("回答已提交，协作将继续。")).toHaveFocus();
-    expect(within(editor).getByText(/运行状态：/)).toBeInTheDocument();
+    expect(within(editor).queryByRole("tab", { name: "运行详情" })).toBeNull();
+    const composer = within(editor).getByLabelText("发送给项目群聊");
+    composer.focus();
+    expect(composer).toHaveFocus();
+    expect(within(editor).queryByRole("button", { name: "停止" })).toBeNull();
   });
 
-  it("gives stop confirmation sole modal ownership, traps focus, and restores it on Escape", async () => {
+  it("keeps the editor as the sole modal without a nested run confirmation surface", async () => {
     stubViewport(true);
     installFetch();
     const user = userEvent.setup();
@@ -267,32 +250,11 @@ describe("narrow collaboration cockpit accessibility", () => {
 
     await user.click(await screen.findByRole("button", { name: "打开编辑" }));
     const editor = screen.getByRole("dialog", { name: "任务编辑" });
-    await user.click(within(editor).getByRole("tab", { name: "运行详情" }));
-    const stop = within(editor).getByRole("button", { name: "停止" });
-    stop.focus();
-    await user.keyboard("{Enter}");
-
-    const confirmation = screen.getByRole("dialog", { name: "确认停止协作" });
     expect(document.querySelectorAll('[aria-modal="true"]')).toHaveLength(1);
     expect(screen.getAllByRole("dialog")).toHaveLength(1);
-    expect(screen.getByTestId("editor-surface")).toHaveAttribute("inert");
-    expect(screen.getByTestId("editor-surface")).toHaveAttribute("aria-hidden", "true");
-    const cancel = within(confirmation).getByRole("button", { name: "取消停止" });
-    const confirm = within(confirmation).getByRole("button", { name: "确认停止" });
-    expect(cancel).toHaveFocus();
-    await user.keyboard("{Shift>}{Tab}{/Shift}");
-    expect(confirm).toHaveFocus();
-    await user.keyboard("{Tab}");
-    expect(cancel).toHaveFocus();
-    await user.keyboard("{Escape}");
-
+    expect(within(editor).queryByRole("tab", { name: "运行详情" })).toBeNull();
     expect(screen.queryByRole("dialog", { name: "确认停止协作" })).toBeNull();
-    expect(screen.getByRole("dialog", { name: "任务编辑" })).toHaveAttribute(
-      "aria-modal",
-      "true",
-    );
-    expect(stop).toHaveFocus();
-    expect(screen.getByTestId("editor-surface")).not.toHaveAttribute("inert");
+    expect(editor).toHaveAttribute("aria-modal", "true");
   });
 
   it("keeps target sizing and text colors on accessible design tokens", () => {

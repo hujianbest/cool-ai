@@ -193,8 +193,18 @@ function threadStateResponse(
   return null;
 }
 
-function installHappyPathFetch() {
-  let mission: null | Record<string, unknown> = null;
+function installHappyPathFetch(options: { missionReady?: boolean } = {}) {
+  let mission: null | Record<string, unknown> = options.missionReady
+    ? {
+        createdAt: "2026-08-08T00:00:00.000Z",
+        goal: "Prepare a release plan",
+        id: "mission-1",
+        projectId: project.id,
+        title: "Release mission",
+        updatedAt: "2026-08-08T00:00:00.000Z",
+        version: 1,
+      }
+    : null;
   let started = false;
   const requests: string[] = [];
   const fetchMock = vi.fn(
@@ -424,7 +434,7 @@ describe("progressive onboarding T-1", () => {
   });
 
   it("uses selected thread/run tuple routes without legacy collaboration, project-only, run-only, or tasks calls", async () => {
-    const { requests } = installHappyPathFetch();
+    const { requests } = installHappyPathFetch({ missionReady: true });
     const user = userEvent.setup();
     window.history.replaceState(null, "", "/?guide=project-select");
     render(<ProjectPanel />);
@@ -449,31 +459,15 @@ describe("progressive onboarding T-1", () => {
     });
     expect(
       await within(goalGuide).findByText(
-        "资源已就绪，可以创建使命并启动协作。",
+        "目标已受理。下一步可在项目群聊启动协作；尚未执行、复核或交付。",
       ),
     ).toBeInTheDocument();
 
     await user.click(
-      within(goalGuide).getByRole("button", { name: "创建使命目标" }),
+      within(goalGuide).getByRole("button", { name: "查看已受理使命" }),
     );
-    expect(screen.getByLabelText("使命标题")).toHaveFocus();
-    await user.type(screen.getByLabelText("使命标题"), "Release mission", {
-      skipClick: true,
-    });
-    const onboardingGoal = screen.getByLabelText("使命目标");
-    onboardingGoal.focus();
-    await user.type(onboardingGoal, "Prepare a release plan", {
-      skipClick: true,
-    });
-    await user.click(screen.getByRole("button", { name: "创建使命" }));
-    expect(
-      await screen.findByRole("heading", { name: "Release mission" }),
-    ).toBeInTheDocument();
-    expect(
-      await within(goalGuide).findByText(
-        "目标已受理。下一步可在项目群聊启动协作；尚未执行、复核或交付。",
-      ),
-    ).toBeInTheDocument();
+    expect(screen.queryByLabelText("使命标题")).toBeNull();
+    expect(screen.queryByRole("heading", { name: "使命看板" })).toBeNull();
     expect(goalGuide).toHaveTextContent("verified handle");
     expect(goalGuide).toHaveTextContent("sandbox");
     expect(goalGuide).toHaveTextContent("审批");
@@ -1054,7 +1048,13 @@ describe("progressive onboarding T-6 explicit project selection", () => {
       stubViewport(narrow);
       vi.stubGlobal(
         "fetch",
-        vi.fn(async () => Response.json({ projects: [] })),
+        vi.fn(async (input: RequestInfo | URL, init?: RequestInit) => {
+          const url = String(input);
+          if (url === "/api/directory-picker") {
+            return Response.json({ cancelled: true });
+          }
+          return emptyResourceResponse(url) ?? Response.json({ projects: [] });
+        }),
       );
       const user = userEvent.setup();
       window.history.replaceState(null, "", "/?guide=project-select");
@@ -1066,7 +1066,7 @@ describe("progressive onboarding T-6 explicit project selection", () => {
       await user.click(
         within(guide).getByRole("button", { name: "使用现有表面打开文件夹" }),
       );
-      expect(screen.getByLabelText("文件夹路径")).toHaveFocus();
+      expect(screen.queryByLabelText("文件夹路径")).toBeNull();
       expect(within(guide).queryByLabelText("文件夹路径")).toBeNull();
     },
   );
@@ -1115,6 +1115,9 @@ describe("progressive onboarding T-6 explicit project selection", () => {
         const url = String(input);
         const method = init?.method ?? "GET";
         calls.push({ method, url });
+        if (url === "/api/directory-picker") {
+          return Response.json({ path: "D:\\work\\project-alpha" });
+        }
         if (method === "GET") {
           return emptyResourceResponse(url) ?? Response.json({ projects: [] });
         }
@@ -1129,18 +1132,15 @@ describe("progressive onboarding T-6 explicit project selection", () => {
     await user.click(
       within(guide).getByRole("button", { name: "使用现有表面打开文件夹" }),
     );
-    await user.type(screen.getByLabelText("文件夹路径"), "D:\\work\\project-alpha");
-    const projectForm = screen.getByLabelText("文件夹路径").closest("form");
-    await user.click(
-      within(projectForm!).getByRole("button", { name: "打开文件夹" }),
-    );
 
     await waitFor(() =>
       expect(window.location.pathname + window.location.search).toBe(
         `/projects/${project.id}?guide=workspace`,
       ),
     );
-    expect(calls.filter(({ method }) => method === "POST")).toHaveLength(1);
+    expect(
+      calls.filter(({ method, url }) => method === "POST" && url === "/api/projects"),
+    ).toHaveLength(1);
   });
 
   it("reconciles a lost POST response with one new GET fact and never resends", async () => {
@@ -1151,6 +1151,9 @@ describe("progressive onboarding T-6 explicit project selection", () => {
       "fetch",
       vi.fn(async (input: RequestInfo | URL, init?: RequestInit) => {
         const url = String(input);
+        if (url === "/api/directory-picker") {
+          return Response.json({ path: "D:\\work\\project-alpha" });
+        }
         if (init?.method === "POST") {
           postCount += 1;
           created = true;
@@ -1179,11 +1182,6 @@ describe("progressive onboarding T-6 explicit project selection", () => {
       "尚无可选文件夹项目。请先打开本地文件夹，或直接在中间开始个人对话。",
     );
     await user.click(screen.getByRole("button", { name: "打开文件夹" }));
-    await user.type(screen.getByLabelText("文件夹路径"), "D:\\work\\project-alpha");
-    const projectForm = screen.getByLabelText("文件夹路径").closest("form");
-    await user.click(
-      within(projectForm!).getByRole("button", { name: "打开文件夹" }),
-    );
 
     await waitFor(() =>
       expect(window.location.pathname + window.location.search).toBe(
@@ -1202,6 +1200,9 @@ describe("progressive onboarding T-6 explicit project selection", () => {
       "fetch",
       vi.fn(async (input: RequestInfo | URL, init?: RequestInit) => {
         const url = String(input);
+        if (url === "/api/directory-picker") {
+          return Response.json({ path: "D:\\work\\project-alpha" });
+        }
         if (init?.method === "POST") {
           postCount += 1;
           throw new TypeError("network result unknown");
@@ -1227,11 +1228,6 @@ describe("progressive onboarding T-6 explicit project selection", () => {
       "尚无可选文件夹项目。请先打开本地文件夹，或直接在中间开始个人对话。",
     );
     await user.click(screen.getByRole("button", { name: "打开文件夹" }));
-    await user.type(screen.getByLabelText("文件夹路径"), "D:\\work\\project-alpha");
-    const projectForm = screen.getByLabelText("文件夹路径").closest("form");
-    await user.click(
-      within(projectForm!).getByRole("button", { name: "打开文件夹" }),
-    );
 
     expect(
       await screen.findByText(/无法唯一确认文件夹项目是否已打开/, {

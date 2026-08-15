@@ -26,6 +26,7 @@ export type CredentialVault = {
 
 export interface IdentityCapabilityCommands {
   createAgent: (input: AgentInput, databasePath: string) => AgentProfile;
+  ensureStarterAgents: (databasePath: string) => AgentProfile[];
   createCredentialVault: () => CredentialVault;
   createProvider: (
     input: unknown,

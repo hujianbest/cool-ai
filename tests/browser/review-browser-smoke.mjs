@@ -238,6 +238,7 @@ function startAppServer() {
       COCKPIT_DB_PATH: databasePath,
       COCKPIT_EXECUTION_ROOT: executionRoot,
       COCKPIT_MASTER_KEY: masterKey,
+      COCKPIT_SCRIPTED_DIRECTORY: workspaceDirectory,
     },
     stdio: ["ignore", "pipe", "pipe"],
     windowsHide: true,
@@ -360,16 +361,36 @@ async function createTeam(page) {
   });
 }
 
+async function openFolderProject(page, headingName) {
+  await page.getByRole("button", { name: "打开文件夹" }).first().click();
+  await page.waitForURL(/\/projects\/[^/]+$/);
+  await page.getByRole("heading", { name: headingName }).waitFor();
+}
+
+async function createMissionViaApi(page, title, goal) {
+  const payload = await page.evaluate(async ({ goalText, titleText }) => {
+    const projectId = new URL(window.location.href).pathname.split("/").at(-1);
+    const members = await (await fetch(`/api/projects/${projectId}/members`)).json();
+    const response = await fetch(`/api/projects/${projectId}/mission`, {
+      body: JSON.stringify({
+        expectedVersion: members.projectVersion,
+        goal: goalText,
+        operationId: crypto.randomUUID(),
+        title: titleText,
+      }),
+      headers: { "content-type": "application/json" },
+      method: "POST",
+    });
+    const body = await response.json();
+    if (!response.ok) throw new Error(JSON.stringify(body));
+    return body;
+  }, { goalText: goal, titleText: title });
+  assert.equal(payload.mission.title, title);
+}
+
 async function createProject(page) {
   await page.goto(baseUrl, { waitUntil: "networkidle" });
-  await page.getByRole("button", { name: "打开文件夹" }).first().click();
-  await page.getByLabel("文件夹路径").fill(workspaceDirectory);
-  await page
-    .locator("form")
-    .filter({ has: page.getByLabel("文件夹路径") })
-    .getByRole("button", { name: "打开文件夹" })
-    .click();
-  await page.waitForURL(/\/projects\/[^/]+$/);
+  await openFolderProject(page, "workspace");
   projectPath = new URL(page.url()).pathname;
   await page.getByRole("heading", { name: "workspace" }).waitFor();
   const members = page.getByRole("group", { name: "平等项目成员" });
@@ -377,11 +398,11 @@ async function createProject(page) {
   await members.getByRole("checkbox", { name: /Review Verifier/ }).check();
   await page.getByRole("button", { name: "保存成员" }).click();
   await page.getByText("项目成员已保存。", { exact: true }).waitFor();
-  await page.getByRole("button", { name: "创建使命" }).click();
-  await page.getByLabel("使命标题").fill("Review Smoke Mission");
-  await page.getByLabel("使命目标").fill("Deliver one independently reviewed public change");
-  await page.getByRole("button", { name: "创建使命" }).click();
-  await page.getByRole("heading", { name: "Review Smoke Mission" }).waitFor();
+  await createMissionViaApi(
+    page,
+    "Review Smoke Mission",
+    "Deliver one independently reviewed public change",
+  );
   return page.evaluate(async () => {
     const projectId = new URL(window.location.href).pathname.split("/").at(-1);
     const projects = (await (await fetch("/api/projects")).json()).projects;

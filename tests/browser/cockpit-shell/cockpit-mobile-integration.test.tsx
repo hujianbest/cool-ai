@@ -211,7 +211,7 @@ describe("owner-controlled cockpit mobile surfaces", () => {
     expect(editor).toHaveAttribute("aria-modal", "true");
     expect(screen.getAllByRole("dialog")).toHaveLength(1);
     expect(screen.getByTestId("project-surface")).toHaveAttribute("inert");
-    expect(screen.getByTestId("context-surface")).toHaveAttribute("inert");
+    expect(screen.queryByTestId("context-surface")).toBeNull();
     expect(document.body.style.overflow).toBe("hidden");
     expect(
       within(editor).getByRole("button", { name: "关闭任务编辑" }),
@@ -242,14 +242,6 @@ describe("owner-controlled cockpit mobile surfaces", () => {
     await user.keyboard("{Escape}");
     expect(projectOpener).toHaveFocus();
 
-    const contextOpener = screen.getByRole("button", { name: "打开当前任务上下文" });
-    await user.click(contextOpener);
-    const context = screen.getByRole("dialog", { name: "当前任务上下文" });
-    expect(screen.getAllByRole("dialog")).toHaveLength(1);
-    expect(screen.getByTestId("editor-surface")).toHaveAttribute("inert");
-    await user.keyboard("{Escape}");
-    expect(contextOpener).toHaveFocus();
-
     await user.click(editorOpener);
     expect(
       within(screen.getByRole("dialog", { name: "任务编辑" })).getByLabelText(
@@ -268,9 +260,7 @@ describe("owner-controlled cockpit mobile surfaces", () => {
     expect(document.querySelector("[aria-modal]")).toBeNull();
     expect(document.querySelector("[inert]")).toBeNull();
     expect(screen.getByRole("complementary", { name: "项目导航" })).toBeVisible();
-    expect(
-      screen.getByRole("complementary", { name: "当前任务上下文" }),
-    ).toBeVisible();
+    expect(screen.queryByRole("complementary", { name: "当前任务上下文" })).toBeNull();
     expect(screen.getByRole("region", { name: "任务事件流" })).toBeVisible();
   });
 });
