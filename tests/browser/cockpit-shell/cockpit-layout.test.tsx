@@ -159,6 +159,27 @@ describe("desktop collaboration cockpit", () => {
     expect(within(sidebar).queryByRole("link", { name: "工作" })).toBeNull();
     expect(within(sidebar).queryByRole("link", { name: "团队" })).toBeNull();
   });
+
+  it("keeps home as a single chat pane with the lobby header", async () => {
+    pathnameValue = "/";
+    vi.stubGlobal(
+      "fetch",
+      cockpitFetch([
+        Response.json({ projects: [] }),
+        Response.json({ kind: "needs_agent" }),
+      ]),
+    );
+    render(<ProjectPanel />);
+
+    const cockpit = await screen.findByTestId("collaboration-cockpit");
+    const flow = within(cockpit).getByRole("region", { name: "任务事件流" });
+    expect(within(cockpit).getByText("大厅")).toBeInTheDocument();
+    expect(await within(flow).findByText("欢迎来到 Cool AI")).toBeInTheDocument();
+    expect(within(flow).getByText("先配置一个 Agent，即可开始个人对话。")).toBeInTheDocument();
+    expect(within(flow).getByRole("link", { name: "配置 Agent" })).toBeInTheDocument();
+    expect(within(flow).queryByRole("button", { name: "运行任务" })).toBeNull();
+    expect(within(flow).queryByText("正在加载项目…")).toBeNull();
+  });
 });
 
 describe("desktop warm-terracotta shell grid", () => {
@@ -173,6 +194,12 @@ describe("desktop warm-terracotta shell grid", () => {
     );
     expect(cockpit).toMatch(
       /\.cockpit-flow\s*\{[^}]*background:\s*var\(--surface-main\)/s,
+    );
+    expect(cockpit).toMatch(
+      /\.chat-body\s*\{[^}]*overflow-y:\s*auto/s,
+    );
+    expect(cockpit).toMatch(
+      /\.cockpit-flow \.composer\s*\{[^}]*flex-shrink:\s*0/s,
     );
   });
 

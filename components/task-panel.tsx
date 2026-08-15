@@ -118,7 +118,6 @@ export function TaskPanel({
   onHomeStateChange,
   onboarding,
   legacyTasksEnabled = true,
-  threadListState = null,
 }: TaskPanelProps) {
   const [tasks, setTasks] = useState<TaskRun[]>([]);
   const [events, setEvents] = useState<TaskEvent[]>([]);
@@ -674,6 +673,7 @@ export function TaskPanel({
             ) : null}
           </>
         )}
+        </div>
       </section>
     </>
   );

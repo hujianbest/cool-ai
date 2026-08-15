@@ -284,6 +284,7 @@ ol {
 
 .chat-welcome {
   display: flex;
+  flex: 1;
   min-height: 100%;
   align-items: center;
   justify-content: center;

@@ -3876,7 +3876,7 @@ export function CollaborationPanel({
             </div>
           ) : null}
         </>
-      )}
+      ) : null}
       {threadDeletedNotice ? (
         <p aria-live="polite" role="status">
           {threadDeletedNotice}

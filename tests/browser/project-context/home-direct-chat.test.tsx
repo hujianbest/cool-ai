@@ -184,6 +184,7 @@ describe("home direct chat", () => {
       "aria-current",
     );
     expect(screen.getByRole("heading", { name: "Alpha" })).toBeInTheDocument();
+    expect(screen.getByText("大厅")).toBeInTheDocument();
     expect(screen.queryByText("A · Alpha")).toBeNull();
     expect(screen.queryByText("请先选择项目。")).not.toBeInTheDocument();
   });
