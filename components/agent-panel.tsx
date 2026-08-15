@@ -22,6 +22,14 @@ import {
 } from "@/components/onboarding-guide";
 import { HelpTip } from "@/components/ui/help-tip";
 import { IconButton } from "@/components/ui/icon-button";
+import type {
+  AccentToken,
+  AgentProfile,
+  AgentTemplate,
+  Provider,
+  Skill,
+  ToolPermissions,
+} from "@/src/shared/team-contracts";
 
 type AgentField =
   | "name"
