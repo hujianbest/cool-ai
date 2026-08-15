@@ -110,19 +110,18 @@ describe("desktop collaboration cockpit", () => {
       "aria-current",
       "page",
     );
-    expect(within(flow).getByRole("heading", { name: "Launch plan" })).toHaveClass(
-      "surface-heading",
-    );
     expect(within(flow).queryByText("确定性示例 Agent")).toBeNull();
-    expect(within(flow).getByRole("button", { name: "运行任务" })).toHaveClass(
-      "button-primary",
+    expect(within(flow).queryByRole("button", { name: "运行任务" })).toBeNull();
+    expect(
+      within(flow).queryByRole("button", { name: "展开待处理消息队列" }),
+    ).toBeNull();
+    expect(within(flow).getByRole("heading", { name: "项目群聊" })).toHaveClass(
+      "sr-only",
     );
     expect(within(flow).getByRole("button", { name: "关闭任务编辑" })).toHaveClass(
       "button-ghost",
     );
     expect(within(cockpit).queryByRole("complementary", { name: "当前任务上下文" })).toBeNull();
-    expect(await within(flow).findByText("任务已完成。")).toBeInTheDocument();
-    expect(within(flow).getByText("已完成", { selector: ".status-label" })).toBeInTheDocument();
     expect(
       within(navigation).queryByRole("heading", { name: "项目设置" }),
     ).toBeNull();

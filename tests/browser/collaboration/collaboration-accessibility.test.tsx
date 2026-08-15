@@ -221,7 +221,7 @@ describe("narrow collaboration cockpit accessibility", () => {
     stubViewport(false);
     installFetch();
     render(<ProjectPanel />);
-    expect(await screen.findByRole("heading", { name: "项目群聊" })).toBeVisible();
+    expect(await screen.findByRole("heading", { name: "项目群聊" })).toHaveClass("sr-only");
     expect(screen.queryByRole("heading", { name: "使命看板" })).toBeNull();
     expect(screen.queryByRole("region", { name: "运行控制" })).toBeNull();
     expect(screen.queryByRole("tablist", { name: "协作视图" })).toBeNull();

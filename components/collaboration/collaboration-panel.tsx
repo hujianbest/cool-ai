@@ -1417,7 +1417,7 @@ export function CollaborationPanel({
         }
         return;
       }
-      throw new Error("thread tuple required");
+      return;
     } catch (cause) {
       if (
         cause instanceof ThreadDeletedError
@@ -2960,7 +2960,12 @@ export function CollaborationPanel({
   }
 
   return (
-    <section aria-labelledby="collaboration-title" className="stack">
+    <section aria-labelledby="collaboration-title" className="stack chat-surface">
+      {surface === "chat" ? (
+        <h3 className="sr-only" id="collaboration-title">
+          {directAgentName ?? "项目群聊"}
+        </h3>
+      ) : (
       <div className="panel-heading">
         <div>
           <p className="eyebrow">
@@ -2988,6 +2993,7 @@ export function CollaborationPanel({
           </div>
         ) : null}
       </div>
+      )}
 
       {showRun && !threadDeletedPlaceholder ? (
         <section
@@ -3115,9 +3121,10 @@ export function CollaborationPanel({
         </section>
       ) : null}
 
+      <div className="chat-body">
       {loading ? (
         <p aria-busy="true" className="state-message">
-          正在加载项目群聊…
+          {surface === "chat" ? "正在加载对话…" : "正在加载项目群聊…"}
         </p>
       ) : threadDeletedPlaceholder ? (
         <div className="state-message thread-deleted-placeholder">
@@ -3229,7 +3236,7 @@ export function CollaborationPanel({
               </p>
             </section>
           ) : null}
-          {showChat && state ? (
+          {showChat && surface !== "chat" && state ? (
             <section aria-label="待处理消息队列" className="run-detail" role="region">
               <div className="panel-heading">
                 <h3>待处理消息队列</h3>
@@ -3493,7 +3500,18 @@ export function CollaborationPanel({
             ) : null}
             </>
           ) : showChat ? (
-            <p className="state-message">尚无协作消息。请发送第一条消息。</p>
+            surface === "chat" ? (
+              <div className="chat-welcome">
+                <p className="empty-guide-title">欢迎来到 Cool AI</p>
+                <p>
+                  {directAgentName
+                    ? "直接在下方输入，开始 1:1 对话。"
+                    : "输入消息开始对话；用 @ 召唤成员加入。"}
+                </p>
+              </div>
+            ) : (
+              <p className="state-message">尚无协作消息。请发送第一条消息。</p>
+            )
           ) : null}
           {showChat && requestedMessageNotice ? (
             <p className="muted state-message" role="status">
@@ -3541,19 +3559,35 @@ export function CollaborationPanel({
               </button>
             </div>
           ) : null}
-          {showChat ? (
+        </>
+      )}
+      </div>
+      {showChat && !threadDeletedPlaceholder ? (
+        <>
           <form className="composer" onSubmit={handleSubmit}>
             <div className="form-field">
-              <label htmlFor={`collaboration-message-${projectId}`}>
+              <label
+                className={surface === "chat" ? "sr-only" : undefined}
+                htmlFor={`collaboration-message-${projectId}`}
+              >
                 {directAgentName ? `发送给 ${directAgentName}` : "发送给项目群聊"}
               </label>
               <textarea
                 aria-describedby={fieldError ? fieldErrorId : undefined}
                 aria-invalid={fieldError ? "true" : undefined}
-                disabled={sending}
+                disabled={sending || loading || !threadId}
                 id={`collaboration-message-${projectId}`}
                 onChange={(event) => handleDraftChange(event.target.value)}
                 onPaste={handleComposerPaste}
+                placeholder={
+                  !threadId
+                    ? "新建对话后即可输入…"
+                    : surface === "chat"
+                      ? directAgentName
+                        ? "输入消息…"
+                        : "输入消息…（@ 召唤成员）"
+                      : undefined
+                }
                 value={draft}
               />
               {fieldError ? (
@@ -3768,7 +3802,7 @@ export function CollaborationPanel({
             ) ? (
               <p className="muted">附件上传完成或移除后才能发送。</p>
             ) : null}
-            {!canSubmitMessage || activeRunInOtherThread ? (
+            {!loading && (!canSubmitMessage || activeRunInOtherThread) ? (
               <p className="muted">
                 {activeRunInOtherThread
                   ? "另一线程有活动运行；可发送线程消息，但不能在此启动新一轮。"
@@ -3776,7 +3810,6 @@ export function CollaborationPanel({
               </p>
             ) : null}
           </form>
-          ) : null}
           {showChat && historyOpen ? (
             <InputHistoryPanel
               disabled={sending}

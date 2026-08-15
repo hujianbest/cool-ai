@@ -1,9 +1,11 @@
 // @vitest-environment jsdom
 import { act, render, screen, waitFor, within } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
+import { useRef } from "react";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
 import { ProjectPanel } from "@/components/project-panel";
+import { TaskPanel } from "@/components/task-panel";
 import type { TaskEvent, TaskRun } from "@/src/shared/contracts";
 import { cockpitFetch } from "@/tests/cockpit-test-fetch";
 
@@ -78,6 +80,35 @@ function deferred<T>() {
   return { promise, resolve };
 }
 
+function LegacyTaskHarness() {
+  const titleRef = useRef<HTMLHeadingElement>(null);
+  const editorRef = useRef<HTMLElement>(null);
+  const editorCloseRef = useRef<HTMLButtonElement>(null);
+  const contextRef = useRef<HTMLElement>(null);
+  const contextCloseRef = useRef<HTMLButtonElement>(null);
+  return (
+    <TaskPanel
+      contextCloseRef={contextCloseRef}
+      contextOpen={false}
+      contextSurfaceRef={contextRef}
+      currentProjectName={project.name}
+      currentProjectTitleRef={titleRef}
+      editorCloseRef={editorCloseRef}
+      editorOpen={false}
+      editorSurfaceRef={editorRef}
+      legacyTasksEnabled
+      narrow={false}
+      onCloseContext={() => undefined}
+      onCloseEditor={() => undefined}
+      onSelectProject={() => undefined}
+      projectError={null}
+      projectId={project.id}
+      projectLoading={false}
+      threadListState="empty"
+    />
+  );
+}
+
 function stubViewport(narrow: boolean): void {
   vi.stubGlobal(
     "matchMedia",
@@ -109,12 +140,11 @@ describe("task event flow", () => {
     vi.stubGlobal(
       "fetch",
       cockpitFetch([
-        Response.json({ projects: [project] }),
         loaded.promise,
       ]),
     );
 
-    render(<ProjectPanel />);
+    render(<LegacyTaskHarness />);
 
     expect(await screen.findByText("正在加载任务历史…")).toBeInTheDocument();
     loaded.resolve(
@@ -137,12 +167,11 @@ describe("task event flow", () => {
     vi.stubGlobal(
       "fetch",
       cockpitFetch([
-        Response.json({ projects: [project] }),
         Response.json({ tasks: [], events: [] }),
       ]),
     );
 
-    render(<ProjectPanel />);
+    render(<LegacyTaskHarness />);
 
     expect(await screen.findByText("暂无任务。输入目标即可运行示例 Agent。")).toBeInTheDocument();
     await userEvent.setup().click(screen.getByRole("button", { name: "开始创建任务" }));
@@ -184,7 +213,6 @@ describe("task event flow", () => {
     const runningEvent = event(2, "running", "Task started.");
     const completedEvent = event(3, "completed", "Task completed.");
     const fetchMock = cockpitFetch([
-      Response.json({ projects: [project] }),
       Response.json({ tasks: [], events: [] }),
       Response.json({ task: task("queued"), events: [queuedEvent] }, { status: 201 }),
       start.promise,
@@ -193,7 +221,7 @@ describe("task event flow", () => {
     vi.stubGlobal("fetch", fetchMock);
     const user = userEvent.setup();
 
-    render(<ProjectPanel />);
+    render(<LegacyTaskHarness />);
     await screen.findByText("暂无任务。输入目标即可运行示例 Agent。");
     await user.type(screen.getByLabelText("任务目标"), "Prepare launch notes");
     await user.click(screen.getByRole("button", { name: "运行任务" }));
@@ -233,8 +261,7 @@ describe("task event flow", () => {
 
   it("offers retry after a load error", async () => {
     const fetchMock = cockpitFetch([
-      Response.json({ projects: [project] }),
-        Response.json(
+      Response.json(
           { error: { code: "STORAGE_UNAVAILABLE", message: "Could not load tasks." } },
           { status: 503 },
         ),
@@ -243,7 +270,7 @@ describe("task event flow", () => {
     vi.stubGlobal("fetch", fetchMock);
     const user = userEvent.setup();
 
-    render(<ProjectPanel />);
+    render(<LegacyTaskHarness />);
 
     const loadAlert = await screen.findByText("服务暂时不可用，请稍后重试。");
     expect(loadAlert.closest('[role="alert"]')).not.toBeNull();
@@ -258,7 +285,6 @@ describe("task event flow", () => {
     vi.stubGlobal(
       "fetch",
       cockpitFetch([
-        Response.json({ projects: [project] }),
         Response.json({ tasks: [], events: [] }),
         Response.json({ task: task("queued"), events: [queuedEvent] }, { status: 201 }),
           Response.json({ task: task("running"), events: [queuedEvent, runningEvent] }),
@@ -275,7 +301,7 @@ describe("task event flow", () => {
     );
     const user = userEvent.setup();
 
-    render(<ProjectPanel />);
+    render(<LegacyTaskHarness />);
     await screen.findByText("暂无任务。输入目标即可运行示例 Agent。");
     await user.type(screen.getByLabelText("任务目标"), "Prepare launch notes");
     await user.click(screen.getByRole("button", { name: "运行任务" }));

@@ -1,0 +1,1913 @@
+<!DOCTYPE html>
+<html lang="zh-CN" data-theme="light">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Cool AI — 暖金驾驶舱全页面 UCD 高保真交互原型</title>
+  <!-- Phosphor Icons CDN -->
+  <script src="https://unpkg.com/@phosphor-icons/web@2.1.1"></script>
+  <style>
+    :root {
+      color-scheme: light;
+      --color-primary: #9A5F1A;
+      --color-primary-hover: #794819;
+      --color-primary-soft: #FDF3E0;
+      --color-primary-on-dark: #E4B066;
+      --color-on-primary: #FFFFFF;
+      --color-ink: #221E1C;
+      --color-ink-muted-80: #595451;
+      --color-ink-muted-48: #847F7B;
+      --color-divider-soft: #E8E3DC;
+      --color-hairline: #B2ADA9;
+      --color-canvas: #F4EFE7;
+      --color-canvas-parchment: #FAF6F1;
+      --color-surface-pearl: #FEFBF8;
+      --color-rail: #EAE4DA;
+      --color-rail-hover: #DFD8CD;
+      --color-danger: #A34B32;
+      --color-danger-soft: #F9E9E2;
+      --color-success: #4F6B2E;
+      --color-success-soft: #EFF5E6;
+      --color-queued: #8F5E12;
+      --color-queued-soft: #FDF3E0;
+      
+      --font-sans: -apple-system, "PingFang SC", "Noto Sans SC", "Segoe UI Variable", system-ui, sans-serif;
+      --font-mono: "Cascadia Mono", "SF Mono", Consolas, monospace;
+      
+      --shadow-sm: 0 1px 2px rgba(34, 30, 28, 0.05);
+      --shadow-md: 0 8px 24px rgba(34, 30, 28, 0.08);
+      --shadow-lg: 0 12px 32px rgba(34, 30, 28, 0.12);
+      
+      --rounded-xs: 4px;
+      --rounded-sm: 8px;
+      --rounded-md: 12px;
+      --rounded-lg: 16px;
+      --rounded-pill: 9999px;
+    }
+
+    [data-theme="dark"] {
+      color-scheme: dark;
+      --color-primary: #E4B066;
+      --color-primary-hover: #F4CD99;
+      --color-primary-soft: #3A2E1E;
+      --color-primary-on-dark: #E4B066;
+      --color-on-primary: #3A1E0E;
+      --color-ink: #F2EDE6;
+      --color-ink-muted-80: #A79F95;
+      --color-ink-muted-48: #847C72;
+      --color-divider-soft: #332F29;
+      --color-hairline: #4A453D;
+      --color-canvas: #1E1B17;
+      --color-canvas-parchment: #26221D;
+      --color-surface-pearl: #2E2923;
+      --color-rail: #16130F;
+      --color-rail-hover: #221D17;
+      --color-danger: #E07A5F;
+      --color-danger-soft: #3A1E1E;
+      --color-success: #81B29A;
+      --color-success-soft: #1E2E24;
+      --color-queued: #F2CC8F;
+      --color-queued-soft: #3A2E1E;
+      
+      --shadow-sm: 0 1px 2px rgba(0, 0, 0, 0.2);
+      --shadow-md: 0 8px 24px rgba(0, 0, 0, 0.35);
+      --shadow-lg: 0 12px 32px rgba(0, 0, 0, 0.5);
+    }
+
+    * {
+      box-sizing: border-box;
+      margin: 0;
+      padding: 0;
+      -webkit-font-smoothing: antialiased;
+    }
+
+    body {
+      font-family: var(--font-sans);
+      background-color: var(--color-canvas);
+      color: var(--color-ink);
+      font-size: 15px;
+      line-height: 1.5;
+      overflow: hidden;
+      height: 100vh;
+      display: flex;
+      flex-direction: column;
+    }
+
+    /* Top Utility Bar for Interactive Prototype */
+    .prototype-bar {
+      height: 36px;
+      background: var(--color-primary);
+      color: var(--color-on-primary);
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      padding: 0 16px;
+      font-size: 13px;
+      font-weight: 500;
+      z-index: 1000;
+      flex-shrink: 0;
+    }
+
+    .prototype-bar-title {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+    }
+
+    .prototype-controls {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+    }
+
+    .proto-btn {
+      background: rgba(255, 255, 255, 0.2);
+      border: 1px solid rgba(255, 255, 255, 0.3);
+      color: inherit;
+      padding: 2px 10px;
+      border-radius: var(--rounded-pill);
+      font-size: 12px;
+      cursor: pointer;
+      display: inline-flex;
+      align-items: center;
+      gap: 4px;
+      transition: all 0.15s ease;
+    }
+    .proto-btn:hover {
+      background: rgba(255, 255, 255, 0.35);
+    }
+
+    /* Main Cockpit Layout */
+    .cockpit-layout {
+      flex: 1;
+      display: flex;
+      height: calc(100vh - 36px);
+      position: relative;
+      background: var(--color-canvas);
+    }
+
+    /* 1. Activity Bar (52px) */
+    .activity-bar {
+      width: 52px;
+      background-color: var(--color-rail);
+      border-right: 1px solid var(--color-hairline);
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: space-between;
+      padding: 12px 0;
+      flex-shrink: 0;
+      z-index: 20;
+    }
+
+    .activity-group {
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      gap: 6px;
+      width: 100%;
+    }
+
+    .activity-btn {
+      width: 44px;
+      height: 44px;
+      border-radius: var(--rounded-sm);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      background: transparent;
+      border: none;
+      color: var(--color-ink-muted-80);
+      cursor: pointer;
+      font-size: 20px;
+      position: relative;
+      transition: background 0.15s, color 0.15s;
+    }
+
+    .activity-btn:hover {
+      background-color: var(--color-rail-hover);
+      color: var(--color-ink);
+    }
+
+    .activity-btn.active {
+      color: var(--color-primary);
+      background: var(--color-surface-pearl);
+    }
+
+    .activity-btn.active::before {
+      content: "";
+      position: absolute;
+      left: 2px;
+      top: 10px;
+      bottom: 10px;
+      width: 3px;
+      background-color: var(--color-primary);
+      border-radius: 2px;
+    }
+
+    .badge-dot {
+      position: absolute;
+      top: 8px;
+      right: 8px;
+      width: 8px;
+      height: 8px;
+      background-color: var(--color-primary);
+      border-radius: 50%;
+      border: 2px solid var(--color-rail);
+    }
+
+    .activity-divider {
+      width: 24px;
+      height: 1px;
+      background-color: var(--color-divider-soft);
+      margin: 4px 0;
+    }
+
+    /* Tooltip simulation */
+    [data-tooltip] {
+      position: relative;
+    }
+    [data-tooltip]:hover::after {
+      content: attr(data-tooltip);
+      position: absolute;
+      left: 56px;
+      top: 50%;
+      transform: translateY(-50%);
+      background: var(--color-ink);
+      color: var(--color-canvas);
+      padding: 4px 8px;
+      font-size: 11px;
+      border-radius: var(--rounded-xs);
+      white-space: nowrap;
+      z-index: 100;
+      box-shadow: var(--shadow-sm);
+      pointer-events: none;
+      animation: fadeIn 0.15s ease;
+    }
+
+    @keyframes fadeIn {
+      from { opacity: 0; transform: translateY(-50%) translateX(-4px); }
+      to { opacity: 1; transform: translateY(-50%) translateX(0); }
+    }
+
+    /* 2. Conversation Sidebar (240px) */
+    .sidebar {
+      width: 240px;
+      background-color: var(--color-canvas-parchment);
+      border-right: 1px solid var(--color-hairline);
+      display: flex;
+      flex-direction: column;
+      flex-shrink: 0;
+      z-index: 10;
+    }
+
+    .sidebar-header {
+      padding: 14px 16px;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      border-bottom: 1px solid var(--color-divider-soft);
+    }
+
+    .sidebar-title {
+      font-size: 15px;
+      font-weight: 600;
+      color: var(--color-ink);
+    }
+
+    .btn-icon-sm {
+      width: 30px;
+      height: 30px;
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      border-radius: var(--rounded-sm);
+      border: 1px solid var(--color-hairline);
+      background: var(--color-surface-pearl);
+      color: var(--color-ink);
+      cursor: pointer;
+      font-size: 15px;
+      transition: all 0.15s;
+    }
+    .btn-icon-sm:hover {
+      background: var(--color-primary-soft);
+      border-color: var(--color-primary);
+      color: var(--color-primary);
+    }
+
+    /* Filter Tabs */
+    .filter-tabs {
+      display: flex;
+      padding: 8px 12px;
+      gap: 6px;
+      border-bottom: 1px solid var(--color-divider-soft);
+    }
+
+    .tab-pill {
+      padding: 3px 10px;
+      font-size: 12px;
+      font-weight: 500;
+      border-radius: var(--rounded-pill);
+      border: none;
+      background: transparent;
+      color: var(--color-ink-muted-80);
+      cursor: pointer;
+      transition: all 0.15s;
+    }
+    .tab-pill.active {
+      background: var(--color-primary-soft);
+      color: var(--color-primary);
+      font-weight: 600;
+    }
+
+    /* Session List */
+    .session-list {
+      flex: 1;
+      overflow-y: auto;
+      padding: 8px;
+      display: flex;
+      flex-direction: column;
+      gap: 4px;
+    }
+
+    .session-item {
+      padding: 9px 12px;
+      border-radius: var(--rounded-sm);
+      cursor: pointer;
+      display: flex;
+      flex-direction: column;
+      gap: 3px;
+      position: relative;
+      border: 1px solid transparent;
+      transition: background 0.15s;
+    }
+
+    .session-item:hover {
+      background: var(--color-surface-pearl);
+    }
+
+    .session-item.active {
+      background: var(--color-surface-pearl);
+      border-color: var(--color-divider-soft);
+    }
+
+    .session-item.active::before {
+      content: "";
+      position: absolute;
+      left: 0;
+      top: 6px;
+      bottom: 6px;
+      width: 3px;
+      background: var(--color-primary);
+      border-radius: 2px;
+    }
+
+    .session-item-top {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+    }
+
+    .session-item-title {
+      font-size: 13.5px;
+      font-weight: 500;
+      color: var(--color-ink);
+      white-space: nowrap;
+      overflow: hidden;
+      text-overflow: ellipsis;
+      max-width: 160px;
+    }
+    .session-item.active .session-item-title {
+      font-weight: 600;
+    }
+
+    .session-item-meta {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      font-size: 11.5px;
+      color: var(--color-ink-muted-48);
+    }
+
+    .agent-avatars-mini {
+      display: flex;
+      align-items: center;
+    }
+
+    .avatar-mini {
+      width: 16px;
+      height: 16px;
+      border-radius: 50%;
+      background: var(--color-primary-soft);
+      color: var(--color-primary);
+      font-size: 9px;
+      font-weight: bold;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      border: 1px solid var(--color-canvas-parchment);
+      margin-left: -4px;
+    }
+    .avatar-mini:first-child { margin-left: 0; }
+
+    .pulse-dot {
+      width: 6px;
+      height: 6px;
+      background-color: var(--color-primary);
+      border-radius: 50%;
+      animation: pulse 1.5s infinite;
+    }
+
+    @keyframes pulse {
+      0% { opacity: 0.4; transform: scale(0.9); }
+      50% { opacity: 1; transform: scale(1.1); }
+      100% { opacity: 0.4; transform: scale(0.9); }
+    }
+
+    .sidebar-footer {
+      padding: 10px 12px;
+      border-top: 1px solid var(--color-divider-soft);
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+    }
+
+    .trash-btn {
+      display: flex;
+      align-items: center;
+      gap: 6px;
+      background: none;
+      border: none;
+      color: var(--color-ink-muted-80);
+      font-size: 12.5px;
+      cursor: pointer;
+      padding: 4px 8px;
+      border-radius: var(--rounded-sm);
+    }
+    .trash-btn:hover {
+      background: var(--color-canvas);
+      color: var(--color-ink);
+    }
+
+    /* 3. Main Stage */
+    .main-stage {
+      flex: 1;
+      display: flex;
+      flex-direction: column;
+      position: relative;
+      overflow: hidden;
+      background: var(--color-canvas);
+    }
+
+    /* Top Header (48px) */
+    .header {
+      height: 48px;
+      background: var(--color-canvas-parchment);
+      border-bottom: 1px solid var(--color-hairline);
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      padding: 0 20px;
+      flex-shrink: 0;
+      z-index: 5;
+    }
+
+    .header-left {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+    }
+
+    .brand-logo {
+      font-size: 16px;
+      font-weight: 700;
+      color: var(--color-primary);
+      letter-spacing: -0.3px;
+      display: flex;
+      align-items: center;
+      gap: 6px;
+    }
+
+    .header-context {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      font-size: 13.5px;
+      color: var(--color-ink-muted-80);
+    }
+    .header-context strong {
+      color: var(--color-ink);
+      font-weight: 600;
+    }
+
+    .header-right {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+    }
+
+    .btn-header {
+      height: 32px;
+      padding: 0 12px;
+      border-radius: var(--rounded-pill);
+      border: 1px solid var(--color-hairline);
+      background: var(--color-surface-pearl);
+      color: var(--color-ink);
+      font-size: 13px;
+      font-weight: 500;
+      display: inline-flex;
+      align-items: center;
+      gap: 6px;
+      cursor: pointer;
+      transition: all 0.15s;
+    }
+    .btn-header:hover {
+      border-color: var(--color-primary);
+      color: var(--color-primary);
+    }
+
+    .needs-me-badge {
+      background: var(--color-primary-soft);
+      border: 1px solid var(--color-primary);
+      color: var(--color-primary);
+      padding: 3px 10px;
+      border-radius: var(--rounded-pill);
+      font-size: 12px;
+      font-weight: 600;
+      display: flex;
+      align-items: center;
+      gap: 6px;
+      cursor: pointer;
+      animation: pulse 2s infinite;
+    }
+
+    /* Views Container (View Switcher) */
+    .view-content {
+      flex: 1;
+      display: none;
+      flex-direction: column;
+      overflow-y: auto;
+      height: calc(100% - 48px);
+    }
+
+    .view-content.active {
+      display: flex;
+    }
+
+    /* Chat Flow Main Container */
+    .chat-view-container {
+      flex: 1;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      overflow-y: auto;
+      padding: 24px 20px 140px;
+      position: relative;
+    }
+
+    .chat-stream-inner {
+      width: 100%;
+      max-width: 840px;
+      display: flex;
+      flex-direction: column;
+      gap: 20px;
+    }
+
+    /* Empty State */
+    .empty-welcome-card {
+      background: var(--color-surface-pearl);
+      border: 1px solid var(--color-divider-soft);
+      border-radius: var(--rounded-lg);
+      padding: 36px 32px;
+      text-align: center;
+      box-shadow: var(--shadow-sm);
+      margin: 40px auto;
+      max-width: 600px;
+    }
+
+    .empty-welcome-icon {
+      font-size: 44px;
+      color: var(--color-primary);
+      margin-bottom: 12px;
+    }
+
+    .empty-welcome-title {
+      font-size: 20px;
+      font-weight: 600;
+      margin-bottom: 6px;
+      color: var(--color-ink);
+    }
+
+    .empty-welcome-desc {
+      font-size: 14px;
+      color: var(--color-ink-muted-80);
+      margin-bottom: 24px;
+      line-height: 1.6;
+    }
+
+    .action-chips {
+      display: flex;
+      justify-content: center;
+      gap: 10px;
+      flex-wrap: wrap;
+    }
+
+    .action-chip {
+      background: var(--color-canvas);
+      border: 1px solid var(--color-hairline);
+      border-radius: var(--rounded-pill);
+      padding: 6px 14px;
+      font-size: 13px;
+      color: var(--color-ink);
+      cursor: pointer;
+      display: inline-flex;
+      align-items: center;
+      gap: 6px;
+      transition: all 0.15s;
+    }
+    .action-chip:hover {
+      border-color: var(--color-primary);
+      color: var(--color-primary);
+      background: var(--color-primary-soft);
+    }
+
+    /* Message Bubbles */
+    .message-row {
+      display: flex;
+      gap: 12px;
+      width: 100%;
+    }
+
+    .msg-avatar {
+      width: 34px;
+      height: 34px;
+      border-radius: 50%;
+      background: var(--color-surface-pearl);
+      border: 1px solid var(--color-hairline);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-weight: 600;
+      font-size: 14px;
+      flex-shrink: 0;
+      color: var(--color-primary);
+    }
+
+    .msg-avatar.owner {
+      background: var(--color-primary);
+      color: var(--color-on-primary);
+      border: none;
+    }
+
+    .msg-body {
+      flex: 1;
+      display: flex;
+      flex-direction: column;
+      gap: 6px;
+      min-width: 0;
+    }
+
+    .msg-header {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+    }
+
+    .msg-author {
+      font-weight: 600;
+      font-size: 13.5px;
+      color: var(--color-ink);
+    }
+
+    .msg-role-tag {
+      font-size: 11px;
+      padding: 1px 6px;
+      border-radius: var(--rounded-xs);
+      background: var(--color-primary-soft);
+      color: var(--color-primary);
+      font-weight: 500;
+    }
+
+    .msg-time {
+      font-size: 11.5px;
+      color: var(--color-ink-muted-48);
+    }
+
+    .msg-content {
+      background: var(--color-surface-pearl);
+      border: 1px solid var(--color-divider-soft);
+      border-radius: var(--rounded-md);
+      padding: 14px 18px;
+      font-size: 14.5px;
+      line-height: 1.6;
+      box-shadow: var(--shadow-sm);
+    }
+
+    .msg-content pre {
+      background: var(--color-canvas);
+      padding: 10px 14px;
+      border-radius: var(--rounded-sm);
+      font-family: var(--font-mono);
+      font-size: 13px;
+      overflow-x: auto;
+      margin: 8px 0;
+      border: 1px solid var(--color-divider-soft);
+    }
+
+    /* Structured Block Cards */
+    .block-card {
+      background: var(--color-canvas);
+      border: 1px solid var(--color-hairline);
+      border-radius: var(--rounded-sm);
+      padding: 12px 14px;
+      margin-top: 10px;
+    }
+
+    .block-card-header {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      margin-bottom: 8px;
+    }
+
+    .block-card-tag {
+      font-size: 11px;
+      font-weight: 600;
+      text-transform: uppercase;
+      padding: 2px 6px;
+      border-radius: var(--rounded-xs);
+      background: var(--color-primary-soft);
+      color: var(--color-primary);
+    }
+
+    .block-card-title {
+      font-weight: 600;
+      font-size: 13.5px;
+      color: var(--color-ink);
+    }
+
+    .block-actions {
+      display: flex;
+      gap: 8px;
+      margin-top: 10px;
+    }
+
+    .btn-block-primary {
+      padding: 5px 12px;
+      background: var(--color-primary);
+      color: var(--color-on-primary);
+      border: none;
+      border-radius: var(--rounded-sm);
+      font-size: 12.5px;
+      font-weight: 500;
+      cursor: pointer;
+    }
+    .btn-block-primary:hover {
+      background: var(--color-primary-hover);
+    }
+
+    .btn-block-secondary {
+      padding: 5px 12px;
+      background: var(--color-surface-pearl);
+      color: var(--color-ink);
+      border: 1px solid var(--color-hairline);
+      border-radius: var(--rounded-sm);
+      font-size: 12.5px;
+      cursor: pointer;
+    }
+
+    /* Thinking Collapsible */
+    .thinking-box {
+      border: 1px dashed var(--color-hairline);
+      background: rgba(0, 0, 0, 0.02);
+      border-radius: var(--rounded-sm);
+      padding: 8px 12px;
+      font-size: 13px;
+      color: var(--color-ink-muted-80);
+      margin-bottom: 8px;
+    }
+    .thinking-summary {
+      display: flex;
+      align-items: center;
+      gap: 6px;
+      cursor: pointer;
+      font-weight: 500;
+    }
+
+    /* Source Reference Tag */
+    .source-tag {
+      display: inline-flex;
+      align-items: center;
+      gap: 4px;
+      padding: 2px 8px;
+      background: var(--color-canvas);
+      border: 1px solid var(--color-hairline);
+      border-radius: var(--rounded-xs);
+      font-size: 12px;
+      font-family: var(--font-mono);
+      color: var(--color-ink-muted-80);
+      cursor: pointer;
+      margin-top: 6px;
+    }
+    .source-tag:hover {
+      color: var(--color-primary);
+      border-color: var(--color-primary);
+    }
+
+    /* Floating Composer (max 840px) */
+    .composer-container {
+      position: absolute;
+      bottom: 20px;
+      left: 0;
+      right: 0;
+      display: flex;
+      justify-content: center;
+      padding: 0 20px;
+      pointer-events: none;
+      z-index: 50;
+    }
+
+    .composer-card {
+      width: 100%;
+      max-width: 840px;
+      background: var(--color-surface-pearl);
+      border: 1px solid var(--color-hairline);
+      border-radius: var(--rounded-md);
+      box-shadow: var(--shadow-md);
+      padding: 8px 12px;
+      display: flex;
+      flex-direction: column;
+      gap: 6px;
+      pointer-events: auto;
+      transition: border-color 0.15s, box-shadow 0.15s;
+      position: relative;
+    }
+
+    .composer-card:focus-within {
+      border-color: var(--color-primary);
+      box-shadow: 0 0 0 2px var(--color-primary-soft), var(--shadow-md);
+    }
+
+    .composer-input-row {
+      display: flex;
+      align-items: flex-end;
+      gap: 8px;
+    }
+
+    .composer-textarea {
+      flex: 1;
+      border: none;
+      background: transparent;
+      font-family: inherit;
+      font-size: 14.5px;
+      color: var(--color-ink);
+      resize: none;
+      min-height: 28px;
+      max-height: 160px;
+      outline: none;
+      line-height: 1.5;
+    }
+    .composer-textarea::placeholder {
+      color: var(--color-ink-muted-48);
+    }
+
+    .composer-btn-send {
+      width: 36px;
+      height: 36px;
+      border-radius: var(--rounded-sm);
+      background: var(--color-primary);
+      color: var(--color-on-primary);
+      border: none;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 18px;
+      cursor: pointer;
+      transition: background 0.15s;
+    }
+    .composer-btn-send:hover {
+      background: var(--color-primary-hover);
+    }
+
+    .composer-footer {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      font-size: 12px;
+      color: var(--color-ink-muted-48);
+      padding-top: 4px;
+      border-top: 1px solid var(--color-divider-soft);
+    }
+
+    .composer-tools {
+      display: flex;
+      align-items: center;
+      gap: 6px;
+    }
+
+    .btn-tool {
+      background: none;
+      border: none;
+      color: var(--color-ink-muted-80);
+      font-size: 15px;
+      padding: 2px 6px;
+      border-radius: var(--rounded-xs);
+      cursor: pointer;
+      display: inline-flex;
+      align-items: center;
+      gap: 4px;
+    }
+    .btn-tool:hover {
+      background: var(--color-canvas);
+      color: var(--color-ink);
+    }
+
+    /* @Agent Mention Popup */
+    .mention-popup {
+      position: absolute;
+      bottom: calc(100% + 8px);
+      left: 12px;
+      width: 220px;
+      background: var(--color-surface-pearl);
+      border: 1px solid var(--color-hairline);
+      border-radius: var(--rounded-md);
+      box-shadow: var(--shadow-lg);
+      padding: 4px;
+      display: none;
+      flex-direction: column;
+      gap: 2px;
+      z-index: 100;
+    }
+    .mention-popup.show { display: flex; }
+
+    .mention-item {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      padding: 6px 10px;
+      border-radius: var(--rounded-sm);
+      font-size: 13px;
+      cursor: pointer;
+      color: var(--color-ink);
+    }
+    .mention-item:hover, .mention-item.active {
+      background: var(--color-primary-soft);
+      color: var(--color-primary);
+    }
+
+    /* 4. Governance Views (Full Stage) */
+    .gov-view-header {
+      padding: 16px 24px;
+      border-bottom: 1px solid var(--color-hairline);
+      background: var(--color-canvas-parchment);
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      flex-shrink: 0;
+    }
+
+    .btn-back-chat {
+      display: inline-flex;
+      align-items: center;
+      gap: 6px;
+      background: var(--color-surface-pearl);
+      border: 1px solid var(--color-hairline);
+      padding: 6px 14px;
+      border-radius: var(--rounded-pill);
+      color: var(--color-primary);
+      font-weight: 600;
+      font-size: 13px;
+      cursor: pointer;
+      transition: all 0.15s;
+    }
+    .btn-back-chat:hover {
+      background: var(--color-primary);
+      color: var(--color-on-primary);
+      border-color: var(--color-primary);
+    }
+
+    .gov-view-title {
+      font-size: 18px;
+      font-weight: 600;
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      color: var(--color-ink);
+    }
+
+    .gov-view-body {
+      flex: 1;
+      overflow-y: auto;
+      padding: 24px;
+    }
+
+    /* Kanban Board View */
+    .kanban-grid {
+      display: grid;
+      grid-template-columns: repeat(4, 1fr);
+      gap: 16px;
+      height: 100%;
+      min-height: 500px;
+    }
+
+    .kanban-col {
+      background: var(--color-canvas-parchment);
+      border: 1px solid var(--color-divider-soft);
+      border-radius: var(--rounded-md);
+      padding: 12px;
+      display: flex;
+      flex-direction: column;
+      gap: 10px;
+    }
+
+    .kanban-col-header {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      font-size: 13px;
+      font-weight: 600;
+      padding-bottom: 6px;
+      border-bottom: 1px solid var(--color-divider-soft);
+    }
+
+    .kanban-col-count {
+      background: var(--color-canvas);
+      padding: 2px 6px;
+      border-radius: var(--rounded-pill);
+      font-size: 11px;
+    }
+
+    .task-card {
+      background: var(--color-surface-pearl);
+      border: 1px solid var(--color-hairline);
+      border-radius: var(--rounded-sm);
+      padding: 12px;
+      box-shadow: var(--shadow-sm);
+      display: flex;
+      flex-direction: column;
+      gap: 6px;
+      cursor: grab;
+    }
+
+    .task-card-title {
+      font-size: 13.5px;
+      font-weight: 600;
+    }
+
+    .task-card-desc {
+      font-size: 12px;
+      color: var(--color-ink-muted-80);
+      line-height: 1.4;
+    }
+
+    .task-card-meta {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      margin-top: 4px;
+      font-size: 11px;
+      color: var(--color-ink-muted-48);
+    }
+
+    /* Memory / Knowledge View */
+    .memory-list {
+      display: flex;
+      flex-direction: column;
+      gap: 12px;
+      max-width: 900px;
+      margin: 0 auto;
+    }
+
+    .memory-card {
+      background: var(--color-surface-pearl);
+      border: 1px solid var(--color-divider-soft);
+      border-radius: var(--rounded-md);
+      padding: 16px;
+      box-shadow: var(--shadow-sm);
+      display: flex;
+      flex-direction: column;
+      gap: 8px;
+    }
+
+    .memory-card-head {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+    }
+
+    .memory-badge {
+      padding: 2px 8px;
+      border-radius: var(--rounded-xs);
+      font-size: 11.5px;
+      font-weight: 600;
+      background: var(--color-primary-soft);
+      color: var(--color-primary);
+    }
+
+    /* Approval Center View */
+    .approval-card-large {
+      background: var(--color-surface-pearl);
+      border: 1px solid var(--color-primary);
+      border-radius: var(--rounded-md);
+      padding: 20px;
+      max-width: 800px;
+      margin: 0 auto;
+      box-shadow: var(--shadow-md);
+      display: flex;
+      flex-direction: column;
+      gap: 14px;
+    }
+
+    .diff-viewer {
+      background: var(--color-canvas);
+      border: 1px solid var(--color-divider-soft);
+      border-radius: var(--rounded-sm);
+      font-family: var(--font-mono);
+      font-size: 12.5px;
+      padding: 12px;
+      line-height: 1.5;
+    }
+    .diff-del { color: var(--color-danger); background: var(--color-danger-soft); }
+    .diff-add { color: var(--color-success); background: var(--color-success-soft); }
+
+    /* Audit Center View */
+    .audit-timeline {
+      max-width: 860px;
+      margin: 0 auto;
+      display: flex;
+      flex-direction: column;
+      gap: 12px;
+    }
+
+    .audit-event-item {
+      display: flex;
+      gap: 12px;
+      padding: 12px;
+      background: var(--color-surface-pearl);
+      border: 1px solid var(--color-divider-soft);
+      border-radius: var(--rounded-sm);
+      font-size: 13px;
+    }
+
+    .audit-time {
+      font-family: var(--font-mono);
+      font-size: 12px;
+      color: var(--color-ink-muted-48);
+      width: 80px;
+      flex-shrink: 0;
+    }
+
+    /* Responsive */
+    @media (max-width: 960px) {
+      .sidebar { display: none; }
+      .kanban-grid { grid-template-columns: 1fr; }
+    }
+  </style>
+</head>
+<body>
+
+  <!-- Top Prototype Control Banner -->
+  <div class="prototype-bar">
+    <div class="prototype-bar-title">
+      <i class="ph-bold ph-compass"></i>
+      <span>Cool AI 暖金驾驶舱 — 完整页面与 UCD 交互原型预览</span>
+    </div>
+    <div class="prototype-controls">
+      <span>当前模式：<strong>高保真 UCD 预览</strong></span>
+      <button class="proto-btn" onclick="toggleTheme()" id="themeBtn">
+        <i class="ph-bold ph-sun" id="themeIcon"></i>
+        <span id="themeText">切换暗色</span>
+      </button>
+      <button class="proto-btn" onclick="simulateFolderPick()">
+        <i class="ph-bold ph-folder-open"></i>
+        <span>模拟原生选夹</span>
+      </button>
+    </div>
+  </div>
+
+  <!-- Cockpit Shell Main Layout -->
+  <div class="cockpit-layout">
+
+    <!-- 1. Activity Bar (52px) -->
+    <aside class="activity-bar">
+      <div class="activity-group">
+        <button class="activity-btn active" data-tooltip="对话 (Cmd+1)" onclick="switchView('chat')">
+          <i class="ph-bold ph-chat-teardrop-text"></i>
+        </button>
+        <button class="activity-btn" data-tooltip="任务看板 (Cmd+2)" onclick="switchView('tasks')">
+          <i class="ph-bold ph-check-square"></i>
+        </button>
+        <button class="activity-btn" data-tooltip="共享记忆 (Cmd+3)" onclick="switchView('memory')">
+          <i class="ph-bold ph-brain"></i>
+        </button>
+        <button class="activity-btn" data-tooltip="审批中心 (Cmd+4)" onclick="switchView('approval')">
+          <i class="ph-bold ph-shield-check"></i>
+          <span class="badge-dot" id="approvalDot"></span>
+        </button>
+        <button class="activity-btn" data-tooltip="审计中心 (Cmd+5)" onclick="switchView('audit')">
+          <i class="ph-bold ph-list-magnifying-glass"></i>
+        </button>
+      </div>
+
+      <div class="activity-group">
+        <div class="activity-divider"></div>
+        <button class="activity-btn" data-tooltip="团队与模型 (/team)" onclick="switchView('team')">
+          <i class="ph-bold ph-users"></i>
+        </button>
+        <button class="activity-btn" data-tooltip="复核工作台" onclick="switchView('review')">
+          <i class="ph-bold ph-check-circle"></i>
+        </button>
+        <button class="activity-btn" data-tooltip="切换主题" onclick="toggleTheme()">
+          <i class="ph-bold ph-moon" id="railThemeIcon"></i>
+        </button>
+      </div>
+    </aside>
+
+    <!-- 2. Conversation Sidebar (240px) -->
+    <aside class="sidebar">
+      <div class="sidebar-header">
+        <span class="sidebar-title">对话</span>
+        <button class="btn-icon-sm" title="新建对话 (Cmd+N)" onclick="newChat()">
+          <i class="ph-bold ph-plus"></i>
+        </button>
+      </div>
+
+      <!-- Filter Tabs -->
+      <div class="filter-tabs">
+        <button class="tab-pill active" onclick="filterSessions('all', this)">全部</button>
+        <button class="tab-pill" onclick="filterSessions('fav', this)">收藏</button>
+        <button class="tab-pill" onclick="filterSessions('tag', this)">标签</button>
+      </div>
+
+      <!-- Session List -->
+      <div class="session-list" id="sessionList">
+        <div class="session-item active" onclick="selectSession(this, 'JWT 登录模块重构方案')">
+          <div class="session-item-top">
+            <span class="session-item-title">JWT 登录模块重构方案</span>
+            <span class="pulse-dot" title="正在协作中"></span>
+          </div>
+          <div class="session-item-meta">
+            <span>2 分钟前</span>
+            <div class="agent-avatars-mini">
+              <span class="avatar-mini" title="规划">规</span>
+              <span class="avatar-mini" title="实施">实</span>
+              <span class="avatar-mini" title="复核">复</span>
+            </div>
+          </div>
+        </div>
+
+        <div class="session-item" onclick="selectSession(this, 'SQLite Canonical Schema 对齐')">
+          <div class="session-item-top">
+            <span class="session-item-title">SQLite Canonical Schema 对齐</span>
+          </div>
+          <div class="session-item-meta">
+            <span>1 小时前</span>
+            <div class="agent-avatars-mini">
+              <span class="avatar-mini">规</span>
+              <span class="avatar-mini">实</span>
+            </div>
+          </div>
+        </div>
+
+        <div class="session-item" onclick="selectSession(this, 'UCD 页面规范与暖金令牌')">
+          <div class="session-item-top">
+            <span class="session-item-title">UCD 页面规范与暖金令牌</span>
+          </div>
+          <div class="session-item-meta">
+            <span>昨天</span>
+            <div class="agent-avatars-mini">
+              <span class="avatar-mini">规</span>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Sidebar Footer -->
+      <div class="sidebar-footer">
+        <button class="trash-btn" onclick="switchView('trash')">
+          <i class="ph-bold ph-trash"></i>
+          <span>回收站 (2)</span>
+        </button>
+      </div>
+    </aside>
+
+    <!-- 3. Main Stage -->
+    <main class="main-stage">
+
+      <!-- Header (48px) -->
+      <header class="header">
+        <div class="header-left">
+          <div class="brand-logo">
+            <i class="ph-fill ph-sparkle"></i>
+            <span>Cool AI</span>
+          </div>
+          <span style="color: var(--color-divider-soft);">|</span>
+          <div class="header-context">
+            <span id="headerProjectName"><strong>cool-mobile</strong></span>
+            <span>·</span>
+            <span id="headerSessionTitle">JWT 登录模块重构方案</span>
+          </div>
+        </div>
+
+        <div class="header-right">
+          <div class="needs-me-badge" id="needsMeBadge" onclick="switchView('approval')">
+            <i class="ph-bold ph-bell-ringing"></i>
+            <span>Needs Me (1)</span>
+          </div>
+          <button class="btn-header" onclick="simulateFolderPick()">
+            <i class="ph-bold ph-folder"></i>
+            <span>打开文件夹</span>
+          </button>
+        </div>
+      </header>
+
+      <!-- VIEW A: Chat Flow Main Stream -->
+      <div class="view-content active" id="view-chat">
+        <div class="chat-view-container">
+          <div class="chat-stream-inner" id="chatStream">
+
+            <!-- Owner Message -->
+            <div class="message-row">
+              <div class="msg-avatar owner">A</div>
+              <div class="msg-body">
+                <div class="msg-header">
+                  <span class="msg-author">Alex (Owner)</span>
+                  <span class="msg-time">10:24</span>
+                </div>
+                <div class="msg-content">
+                  <p>@规划 请拆解一下 JWT 登录模块的改造方案，要求采用 RS256 非对称签名，并由 @实施 执行代码改动。</p>
+                </div>
+              </div>
+            </div>
+
+            <!-- Planner Agent Message -->
+            <div class="message-row">
+              <div class="msg-avatar">规</div>
+              <div class="msg-body">
+                <div class="msg-header">
+                  <span class="msg-author">规划 Agent</span>
+                  <span class="msg-role-tag">Planner</span>
+                  <span class="msg-time">10:24</span>
+                </div>
+                <div class="msg-content">
+                  <div class="thinking-box">
+                    <div class="thinking-summary">
+                      <i class="ph-bold ph-gear-six"></i>
+                      <span>思考过程 (耗时 1.2s · 模型 DeepSeek V3)</span>
+                    </div>
+                  </div>
+
+                  <p>已针对当前项目的鉴权模块完成架构拆解，提议如下重构步骤：</p>
+
+                  <!-- Proposal Block Card -->
+                  <div class="block-card" id="proposalBlock">
+                    <div class="block-card-header">
+                      <span class="block-card-title">提案 Proposal #102: JWT 引入 RS256 与私钥隔离</span>
+                      <span class="block-card-tag">PROPOSAL</span>
+                    </div>
+                    <p style="font-size: 13px; color: var(--color-ink-muted-80);">
+                      将 <code>src/adapters/auth.ts</code> 的 HMAC 签名升级为 RS256，补齐公私钥配置及单元测试。
+                    </p>
+                    <div class="source-tag" onclick="switchView('audit')">
+                      <i class="ph-bold ph-git-commit"></i>
+                      <span>冻结来源: Session #1 / Run #1 / auth.ts:42</span>
+                    </div>
+                    <div class="block-actions" id="proposalActions">
+                      <button class="btn-block-primary" onclick="approveProposal()">批准方案 (Approve)</button>
+                      <button class="btn-block-secondary" onclick="alert('已标记修改建议')">提出修改</button>
+                    </div>
+                  </div>
+
+                  <p style="margin-top: 10px;">@实施 请根据上述方案修改 <code>src/adapters/auth.ts</code> 并生成 Diff 提交审批。</p>
+                </div>
+              </div>
+            </div>
+
+            <!-- Executor Agent Message -->
+            <div class="message-row" id="executorMsg">
+              <div class="msg-avatar">实</div>
+              <div class="msg-body">
+                <div class="msg-header">
+                  <span class="msg-author">实施 Agent</span>
+                  <span class="msg-role-tag">Executor</span>
+                  <span class="msg-time">10:25</span>
+                </div>
+                <div class="msg-content">
+                  <p>已接棒。正在准备向工作区写入文件改动，触发安全策略，已发起审批申请：</p>
+                  
+                  <div class="block-card" style="border-left: 3px solid var(--color-primary);">
+                    <div class="block-card-header">
+                      <span class="block-card-title">🛡️ 越界写入审批请求 (ID: app-8912)</span>
+                      <span class="block-card-tag" style="background: var(--color-primary-soft); color: var(--color-primary);">NEEDS ME</span>
+                    </div>
+                    <p style="font-size: 13px;">目标文件: <code>src/adapters/auth.ts</code> · 风险等级: 高</p>
+                    <div class="block-actions">
+                      <button class="btn-block-primary" onclick="switchView('approval')">前往审批中心查看 Diff</button>
+                    </div>
+                  </div>
+                </div>
+              </div>
+            </div>
+
+          </div>
+        </div>
+
+        <!-- Floating Composer -->
+        <div class="composer-container">
+          <div class="composer-card">
+            
+            <!-- Mention Popup -->
+            <div class="mention-popup" id="mentionPopup">
+              <div class="mention-item active" onclick="insertMention('规划')">
+                <span class="avatar-mini">规</span>
+                <span>@规划 (Planner)</span>
+              </div>
+              <div class="mention-item" onclick="insertMention('实施')">
+                <span class="avatar-mini">实</span>
+                <span>@实施 (Executor)</span>
+              </div>
+              <div class="mention-item" onclick="insertMention('复核')">
+                <span class="avatar-mini">复</span>
+                <span>@复核 (Reviewer)</span>
+              </div>
+            </div>
+
+            <div class="composer-input-row">
+              <textarea class="composer-textarea" id="composerInput" placeholder="输入消息，按 Enter 发送，输入 @ 提及 Agent…" oninput="handleComposerInput(this)"></textarea>
+              <button class="composer-btn-send" onclick="sendMessage()">
+                <i class="ph-bold ph-arrow-up"></i>
+              </button>
+            </div>
+
+            <div class="composer-footer">
+              <div class="composer-tools">
+                <button class="btn-tool" onclick="alert('已模拟添加本地附件/文件上下文')">
+                  <i class="ph-bold ph-paperclip"></i>
+                  <span>附件</span>
+                </button>
+                <button class="btn-tool" onclick="insertMention('规划')">
+                  <i class="ph-bold ph-at"></i>
+                  <span>Agent</span>
+                </button>
+              </div>
+              <div>
+                <span>Shift+Enter 换行 · ESC 返回对话</span>
+              </div>
+            </div>
+
+          </div>
+        </div>
+      </div>
+
+      <!-- VIEW B: Task Kanban View -->
+      <div class="view-content" id="view-tasks">
+        <div class="gov-view-header">
+          <button class="btn-back-chat" onclick="switchView('chat')">
+            <i class="ph-bold ph-arrow-left"></i>
+            <span>返回对话</span>
+          </button>
+          <span class="gov-view-title">
+            <i class="ph-bold ph-check-square"></i>
+            <span>使命与任务看板 · cool-mobile</span>
+          </span>
+          <button class="btn-header" onclick="alert('新建任务')">+ 新建任务</button>
+        </div>
+        <div class="gov-view-body">
+          <div class="kanban-grid">
+            <div class="kanban-col">
+              <div class="kanban-col-header">
+                <span>待办 (Todo)</span>
+                <span class="kanban-col-count">1</span>
+              </div>
+              <div class="task-card">
+                <span class="task-card-title">#3 补全端到端测试用例</span>
+                <p class="task-card-desc">验证 RS256 签名的 Token 过期与刷新链路。</p>
+                <div class="task-card-meta">
+                  <span>负责人: 复核 Agent</span>
+                  <span>依赖: #2</span>
+                </div>
+              </div>
+            </div>
+
+            <div class="kanban-col">
+              <div class="kanban-col-header">
+                <span>进行中 (In Progress)</span>
+                <span class="kanban-col-count">1</span>
+              </div>
+              <div class="task-card" style="border-color: var(--color-primary);">
+                <span class="task-card-title">#2 重构 auth.ts 引入双 Token</span>
+                <p class="task-card-desc">实施 Agent 正在等待 Owner 审批写入权限。</p>
+                <div class="task-card-meta">
+                  <span>负责人: 实施 Agent</span>
+                  <span style="color: var(--color-primary);">租约: 114s</span>
+                </div>
+              </div>
+            </div>
+
+            <div class="kanban-col">
+              <div class="kanban-col-header">
+                <span>阻塞 (Blocked)</span>
+                <span class="kanban-col-count">0</span>
+              </div>
+            </div>
+
+            <div class="kanban-col">
+              <div class="kanban-col-header">
+                <span>完成 (Done)</span>
+                <span class="kanban-col-count">1</span>
+              </div>
+              <div class="task-card">
+                <span class="task-card-title">#1 架构方案设计与拆解</span>
+                <p class="task-card-desc">已由规划 Agent 完成并在对话中达成共识。</p>
+                <div class="task-card-meta">
+                  <span>负责人: 规划 Agent</span>
+                  <span style="color: var(--color-success);">已复核</span>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- VIEW C: Memory & Knowledge View -->
+      <div class="view-content" id="view-memory">
+        <div class="gov-view-header">
+          <button class="btn-back-chat" onclick="switchView('chat')">
+            <i class="ph-bold ph-arrow-left"></i>
+            <span>返回对话</span>
+          </button>
+          <span class="gov-view-title">
+            <i class="ph-bold ph-brain"></i>
+            <span>共享记忆与知识库 · cool-mobile</span>
+          </span>
+          <button class="btn-header" onclick="alert('沉淀新记忆')">+ 沉淀记忆</button>
+        </div>
+        <div class="gov-view-body">
+          <div class="memory-list">
+            <div class="memory-card">
+              <div class="memory-card-head">
+                <span class="memory-badge">⚖️ 架构决策 · V2</span>
+                <span style="font-size: 12px; color: var(--color-ink-muted-48);">提议者: 规划 Agent</span>
+              </div>
+              <p style="font-size: 14px; font-weight: 500;">
+                鉴权核心采用 RS256 非对称加密，私钥通过环境变量注入，公钥向客户端只读暴露。
+              </p>
+              <div class="source-tag">
+                <i class="ph-bold ph-link"></i>
+                <span>冻结来源: Session #1 · Run #1 · Decision #102</span>
+              </div>
+            </div>
+
+            <div class="memory-card">
+              <div class="memory-card-head">
+                <span class="memory-badge">📌 事实事实 · V1</span>
+                <span style="font-size: 12px; color: var(--color-ink-muted-48);">提议者: Owner</span>
+              </div>
+              <p style="font-size: 14px; font-weight: 500;">
+                本地 Windows 工作区统一使用 UTF-8 编码，换行符统一为 LF。
+              </p>
+              <div class="source-tag">
+                <i class="ph-bold ph-link"></i>
+                <span>冻结来源: 手工录入</span>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- VIEW D: Approval Center View -->
+      <div class="view-content" id="view-approval">
+        <div class="gov-view-header">
+          <button class="btn-back-chat" onclick="switchView('chat')">
+            <i class="ph-bold ph-arrow-left"></i>
+            <span>返回对话</span>
+          </button>
+          <span class="gov-view-title">
+            <i class="ph-bold ph-shield-check"></i>
+            <span>统一审批中心 (待处理: 1)</span>
+          </span>
+          <div></div>
+        </div>
+        <div class="gov-view-body">
+          <div class="approval-card-large" id="approvalCardMain">
+            <div style="display: flex; justify-content: space-between; align-items: center;">
+              <span style="font-weight: 700; font-size: 16px; color: var(--color-primary);">⚠️ 工作区受限写入审批 (TTL: 04:12)</span>
+              <span class="memory-badge">RISK: HIGH</span>
+            </div>
+            <p style="font-size: 13.5px;">
+              发起角色: <strong>实施 Agent</strong> · 目标文件: <code>src/adapters/auth.ts</code>
+            </p>
+            <div class="diff-viewer">
+              <div>@@ -42,3 +42,5 @@</div>
+              <div class="diff-del">- const token = jwt.sign(payload, process.env.SECRET);</div>
+              <div class="diff-add">+ const privateKey = getMasterKey();</div>
+              <div class="diff-add">+ const token = jwt.sign(payload, privateKey, { algorithm: 'RS256' });</div>
+            </div>
+            <div style="display: flex; gap: 12px; justify-content: flex-end; margin-top: 8px;">
+              <button class="btn-block-secondary" onclick="rejectApproval()">❌ 驳回 (Reject)</button>
+              <button class="btn-block-primary" style="padding: 8px 18px; font-size: 13.5px;" onclick="confirmApproval()">✅ 批准执行 (Approve)</button>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- VIEW E: Audit Center View -->
+      <div class="view-content" id="view-audit">
+        <div class="gov-view-header">
+          <button class="btn-back-chat" onclick="switchView('chat')">
+            <i class="ph-bold ph-arrow-left"></i>
+            <span>返回对话</span>
+          </button>
+          <span class="gov-view-title">
+            <i class="ph-bold ph-list-magnifying-glass"></i>
+            <span>统一审计中心与不可变时间轴</span>
+          </span>
+          <button class="btn-header" onclick="alert('已导出脱敏审计日志')">导出日志</button>
+        </div>
+        <div class="gov-view-body">
+          <div class="audit-timeline">
+            <div class="audit-event-item">
+              <span class="audit-time">10:25:30</span>
+              <span class="memory-badge">治理</span>
+              <span><strong>approval_requested</strong> · ID: app-8912 · 实施 Agent 请求写入 <code>src/adapters/auth.ts</code></span>
+            </div>
+            <div class="audit-event-item">
+              <span class="audit-time">10:24:45</span>
+              <span class="memory-badge">协作</span>
+              <span><strong>decision_answered</strong> · Owner 批准了 Proposal #102 架构方案</span>
+            </div>
+            <div class="audit-event-item">
+              <span class="audit-time">10:24:12</span>
+              <span class="memory-badge">项目</span>
+              <span><strong>workspace_bound</strong> · 成功绑定本地工作区 <code>/Users/hujian/Projects/cool-mobile</code></span>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- VIEW F: Team / Provider Settings View -->
+      <div class="view-content" id="view-team">
+        <div class="gov-view-header">
+          <button class="btn-back-chat" onclick="switchView('chat')">
+            <i class="ph-bold ph-arrow-left"></i>
+            <span>返回对话</span>
+          </button>
+          <span class="gov-view-title">
+            <i class="ph-bold ph-users"></i>
+            <span>团队编排与 Provider 设置 (/team)</span>
+          </span>
+          <div></div>
+        </div>
+        <div class="gov-view-body">
+          <div style="max-width: 800px; margin: 0 auto; display: flex; flex-direction: column; gap: 20px;">
+            <div class="memory-card">
+              <h3 style="font-size: 15px; font-weight: 600;">🤖 规划 Agent (Planner)</h3>
+              <p style="font-size: 13px; color: var(--color-ink-muted-80);">职责：任务拆解、架构方案提案、协作路由编排。</p>
+              <div style="display: flex; gap: 10px; margin-top: 8px;">
+                <span class="source-tag">绑定模型: deepseek-reasoner</span>
+                <span class="source-tag">权限: 提案/指派</span>
+              </div>
+            </div>
+
+            <div class="memory-card">
+              <h3 style="font-size: 15px; font-weight: 600;">💻 实施 Agent (Executor)</h3>
+              <p style="font-size: 13px; color: var(--color-ink-muted-80);">职责：工作区受限文件读取、代码改动生成、验证测试。</p>
+              <div style="display: flex; gap: 10px; margin-top: 8px;">
+                <span class="source-tag">绑定模型: deepseek-coder</span>
+                <span class="source-tag">权限: 工作区受限写</span>
+              </div>
+            </div>
+
+            <div class="memory-card">
+              <h3 style="font-size: 15px; font-weight: 600;">🧐 复核 Agent (Reviewer)</h3>
+              <p style="font-size: 13px; color: var(--color-ink-muted-80);">职责：非执行者独立验证、代码质量把关、记忆沉淀提炼。</p>
+              <div style="display: flex; gap: 10px; margin-top: 8px;">
+                <span class="source-tag">绑定模型: gpt-4o</span>
+                <span class="source-tag">权限: 独立裁决/测试执行</span>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- VIEW G: Review Workspace View -->
+      <div class="view-content" id="view-review">
+        <div class="gov-view-header">
+          <button class="btn-back-chat" onclick="switchView('chat')">
+            <i class="ph-bold ph-arrow-left"></i>
+            <span>返回对话</span>
+          </button>
+          <span class="gov-view-title">
+            <i class="ph-bold ph-check-circle"></i>
+            <span>独立复核工作台 · 任务 #2「重构 auth.ts」</span>
+          </span>
+          <div></div>
+        </div>
+        <div class="gov-view-body">
+          <div style="max-width: 800px; margin: 0 auto; display: flex; flex-direction: column; gap: 16px;">
+            <div class="memory-card">
+              <h4 style="font-size: 14px; font-weight: 600;">📋 冻结复核材料</h4>
+              <p style="font-size: 13px; color: var(--color-ink-muted-80);">目标: 引入 RS256 签名算法并补充校验用例 (2 个文件改动，测试全绿)。</p>
+            </div>
+            <div class="memory-card" style="border-left: 3px solid var(--color-success);">
+              <h4 style="font-size: 14px; font-weight: 600; color: var(--color-success);">✅ 复核判定: PASS</h4>
+              <p style="font-size: 13px; color: var(--color-ink-muted-80);">复核意见: 代码逻辑清晰，密钥安全脱敏完整，测试覆盖达标。准予合入。</p>
+            </div>
+          </div>
+        </div>
+      </div>
+
+    </main>
+
+  </div>
+
+  <script>
+    // Theme Switcher
+    function toggleTheme() {
+      const html = document.documentElement;
+      const current = html.getAttribute('data-theme');
+      const next = current === 'dark' ? 'light' : 'dark';
+      html.setAttribute('data-theme', next);
+      
+      const themeText = document.getElementById('themeText');
+      const themeIcon = document.getElementById('themeIcon');
+      const railThemeIcon = document.getElementById('railThemeIcon');
+      
+      if (next === 'dark') {
+        themeText.innerText = '切换亮色';
+        themeIcon.className = 'ph-bold ph-moon';
+        railThemeIcon.className = 'ph-bold ph-sun';
+      } else {
+        themeText.innerText = '切换暗色';
+        themeIcon.className = 'ph-bold ph-sun';
+        railThemeIcon.className = 'ph-bold ph-moon';
+      }
+    }
+
+    // View Switcher
+    function switchView(viewId) {
+      document.querySelectorAll('.view-content').forEach(el => el.classList.remove('active'));
+      document.querySelectorAll('.activity-btn').forEach(el => el.classList.remove('active'));
+      
+      const targetView = document.getElementById('view-' + viewId);
+      if (targetView) targetView.classList.add('active');
+
+      const btnMap = {
+        'chat': 0, 'tasks': 1, 'memory': 2, 'approval': 3, 'audit': 4, 'team': 5, 'review': 6
+      };
+      const btns = document.querySelectorAll('.activity-bar .activity-btn');
+      if (btns[btnMap[viewId]]) btns[btnMap[viewId]].classList.add('active');
+    }
+
+    // Global Shortcut Keys
+    window.addEventListener('keydown', (e) => {
+      if (e.key === 'Escape') {
+        switchView('chat');
+      }
+      if ((e.metaKey || e.ctrlKey) && e.key === '1') { switchView('chat'); e.preventDefault(); }
+      if ((e.metaKey || e.ctrlKey) && e.key === '2') { switchView('tasks'); e.preventDefault(); }
+      if ((e.metaKey || e.ctrlKey) && e.key === '3') { switchView('memory'); e.preventDefault(); }
+      if ((e.metaKey || e.ctrlKey) && e.key === '4') { switchView('approval'); e.preventDefault(); }
+      if ((e.metaKey || e.ctrlKey) && e.key === '5') { switchView('audit'); e.preventDefault(); }
+    });
+
+    // Session Switcher
+    function selectSession(el, title) {
+      document.querySelectorAll('.session-item').forEach(item => item.classList.remove('active'));
+      el.classList.add('active');
+      document.getElementById('headerSessionTitle').innerText = title;
+      switchView('chat');
+    }
+
+    function newChat() {
+      const title = '新建对话 #' + Math.floor(Math.random() * 100);
+      const list = document.getElementById('sessionList');
+      const item = document.createElement('div');
+      item.className = 'session-item active';
+      item.onclick = function() { selectSession(this, title); };
+      item.innerHTML = `
+        <div class="session-item-top">
+          <span class="session-item-title">${title}</span>
+          <span class="pulse-dot"></span>
+        </div>
+        <div class="session-item-meta">
+          <span>刚刚</span>
+          <div class="agent-avatars-mini"><span class="avatar-mini">规</span></div>
+        </div>
+      `;
+      document.querySelectorAll('.session-item').forEach(i => i.classList.remove('active'));
+      list.insertBefore(item, list.firstChild);
+      document.getElementById('headerSessionTitle').innerText = title;
+      switchView('chat');
+    }
+
+    function filterSessions(type, btn) {
+      document.querySelectorAll('.tab-pill').forEach(b => b.classList.remove('active'));
+      btn.classList.add('active');
+    }
+
+    // Mention Trigger
+    function handleComposerInput(textarea) {
+      const val = textarea.value;
+      const popup = document.getElementById('mentionPopup');
+      if (val.endsWith('@')) {
+        popup.classList.add('show');
+      } else {
+        popup.classList.remove('show');
+      }
+    }
+
+    function insertMention(name) {
+      const input = document.getElementById('composerInput');
+      input.value = input.value.replace(/@?$/, '@' + name + ' ');
+      document.getElementById('mentionPopup').classList.remove('show');
+      input.focus();
+    }
+
+    // Message Send Simulation
+    function sendMessage() {
+      const input = document.getElementById('composerInput');
+      const text = input.value.trim();
+      if (!text) return;
+
+      const stream = document.getElementById('chatStream');
+      
+      // Append Owner Message
+      const ownerRow = document.createElement('div');
+      ownerRow.className = 'message-row';
+      ownerRow.innerHTML = `
+        <div class="msg-avatar owner">A</div>
+        <div class="msg-body">
+          <div class="msg-header">
+            <span class="msg-author">Alex (Owner)</span>
+            <span class="msg-time">刚刚</span>
+          </div>
+          <div class="msg-content"><p>${text}</p></div>
+        </div>
+      `;
+      stream.appendChild(ownerRow);
+      input.value = '';
+
+      // Auto reply from planner
+      setTimeout(() => {
+        const replyRow = document.createElement('div');
+        replyRow.className = 'message-row';
+        replyRow.innerHTML = `
+          <div class="msg-avatar">规</div>
+          <div class="msg-body">
+            <div class="msg-header">
+              <span class="msg-author">规划 Agent</span>
+              <span class="msg-role-tag">Planner</span>
+              <span class="msg-time">刚刚</span>
+            </div>
+            <div class="msg-content">
+              <p>收到指令：“${text}”。已自动规划任务并通知实施 Agent 接力。</p>
+            </div>
+          </div>
+        `;
+        stream.appendChild(replyRow);
+        stream.parentElement.scrollTop = stream.parentElement.scrollHeight;
+      }, 600);
+
+      stream.parentElement.scrollTop = stream.parentElement.scrollHeight;
+    }
+
+    // Proposal & Approval Handlers
+    function approveProposal() {
+      const actions = document.getElementById('proposalActions');
+      actions.innerHTML = `
+        <span style="font-size: 12px; font-weight: 600; color: var(--color-success); display: inline-flex; align-items: center; gap: 4px;">
+          <i class="ph-bold ph-check-circle"></i> 已由 Owner 批准 (Action Receipt #204)
+        </span>
+      `;
+    }
+
+    function confirmApproval() {
+      const card = document.getElementById('approvalCardMain');
+      card.innerHTML = `
+        <div style="text-align: center; padding: 20px;">
+          <i class="ph-fill ph-check-circle" style="font-size: 40px; color: var(--color-success); margin-bottom: 8px;"></i>
+          <h3 style="font-size: 16px; font-weight: 600; color: var(--color-ink);">审批已批准并执行合入</h3>
+          <p style="font-size: 13px; color: var(--color-ink-muted-80); margin-top: 4px;">实施 Agent 已获得授权并完成工作区改动，已进入独立复核阶段。</p>
+          <button class="btn-block-primary" style="margin-top: 14px;" onclick="switchView('chat')">返回对话查看进度</button>
+        </div>
+      `;
+      document.getElementById('needsMeBadge').style.display = 'none';
+      document.getElementById('approvalDot').style.display = 'none';
+    }
+
+    function rejectApproval() {
+      alert('已驳回该申请并要求实施 Agent 重新生成方案');
+      switchView('chat');
+    }
+
+    function simulateFolderPick() {
+      const name = prompt('模拟原生文件夹选择：请输入要打开的项目目录名', 'cool-next-web');
+      if (name) {
+        document.getElementById('headerProjectName').innerHTML = '<strong>' + name + '</strong>';
+        alert('成功绑定项目工作区：' + name + '。自带三名 Agent 已就绪。');
+      }
+    }
+  </script>
+</body>
+</html>

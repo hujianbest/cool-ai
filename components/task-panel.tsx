@@ -481,29 +481,15 @@ export function TaskPanel({
             )}
           </div>
         ) : null}
-        <div className="panel-heading">
-          <span aria-hidden="true" className="agent-mark">
-            {homeState?.kind === "ready" ? homeState.agent.avatarText : "A"}
-          </span>
-          <div>
-            <p className="eyebrow">
-              {currentProjectName
-                ? "项目群聊"
-                : homeState?.kind === "ready"
-                  ? "1:1 对话"
-                  : "确定性示例 Agent"}
-            </p>
-            <h2
-              className="surface-heading"
-              id="tasks-title"
-              ref={currentProjectTitleRef}
-              tabIndex={currentProjectName ? -1 : undefined}
-            >
-              {currentProjectName ??
-                (homeState?.kind === "ready" ? homeState.agent.name : "任务活动")}
-            </h2>
-          </div>
-        </div>
+        <h2
+          className="sr-only surface-heading"
+          id="tasks-title"
+          ref={currentProjectTitleRef}
+          tabIndex={currentProjectName ? -1 : undefined}
+        >
+          {currentProjectName ??
+            (homeState?.kind === "ready" ? homeState.agent.name : "任务活动")}
+        </h2>
 
         {onboarding ? (
           <OnboardingGuide
@@ -549,7 +535,8 @@ export function TaskPanel({
           />
         ) : null}
 
-        {projectLoading ? (
+        <div className="chat-column">
+        {projectId && projectLoading ? (
           <p aria-busy="true" className="state-message">
             正在加载项目…
           </p>
@@ -574,10 +561,9 @@ export function TaskPanel({
               </button>
             </div>
           ) : homeState?.kind === "needs_agent" ? (
-            <div className="empty-guide state-message">
+            <div className="chat-welcome">
               <p className="empty-guide-title">欢迎来到 Cool AI</p>
               <p>先配置一个 Agent，即可开始个人对话。</p>
-              <p className="muted">输入 @成员 可召唤一名 Agent 开始协作。</p>
               <Link
                 className="button-primary"
                 href="/team?section=agents&returnTo=/"
@@ -599,11 +585,6 @@ export function TaskPanel({
           ) : null
         ) : (
           <>
-            {threadListState === "empty" ? (
-              <p className="state-message">
-                创建线程后即可开始协作。
-              </p>
-            ) : (
               <CollaborationPanel
                 modalBackgroundRef={editorSurfaceRef}
                 onGoalFactChanged={() =>
@@ -617,7 +598,6 @@ export function TaskPanel({
                 surface="chat"
                 threadId={collaborationTarget?.threadId}
               />
-            )}
             {legacyTasksEnabled ? (
             <>
             <form className="composer" onSubmit={handleSubmit}>

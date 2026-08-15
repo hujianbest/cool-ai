@@ -479,8 +479,7 @@ export function ProjectPanel({
             <span className="cockpit-header-title">Cool AI</span>
           </div>
           <div className="cockpit-header-context">
-            {currentProject?.name ??
-              (homeState?.kind === "ready" ? homeState.agent.name : "大厅")}
+            {currentProject?.name ?? "大厅"}
           </div>
           <button
             aria-label="打开项目文件夹"
@@ -790,7 +789,7 @@ export function ProjectPanel({
         projectId={currentProjectId}
         projectLoading={isLoading}
         threadListState={threadListState}
-        legacyTasksEnabled={!guideActive}
+        legacyTasksEnabled={false}
       />
     </main>
   );
