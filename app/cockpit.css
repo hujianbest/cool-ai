@@ -249,14 +249,53 @@ ol {
   flex-direction: column;
   gap: var(--space-6);
   padding: var(--space-8);
-  overflow-y: auto;
+  overflow: hidden;
   background: var(--surface-main);
 }
 
-.cockpit-flow > section.stack {
+.cockpit-flow-governance {
+  overflow-y: auto;
+}
+
+.cockpit-flow > section.stack,
+.cockpit-flow .chat-column {
+  display: flex;
+  flex: 1;
+  min-height: 0;
   width: var(--full-width);
   max-width: var(--chat-flow-max-width);
   margin-inline: auto;
+  flex-direction: column;
+}
+
+.cockpit-flow .chat-column > .chat-surface {
+  flex: 1;
+  min-height: 0;
+  width: var(--full-width);
+  max-width: none;
+  margin-inline: 0;
+}
+
+.chat-body {
+  flex: 1;
+  min-height: 0;
+  overflow-y: auto;
+}
+
+.chat-welcome {
+  display: flex;
+  min-height: 100%;
+  align-items: center;
+  justify-content: center;
+  flex-direction: column;
+  gap: var(--space-3);
+  padding: var(--space-8);
+  text-align: center;
+}
+
+.cockpit-flow .composer {
+  flex-shrink: 0;
+  margin-top: var(--space-4);
 }
 
 .cockpit-flow-governance > *:not(.governance-view) {
