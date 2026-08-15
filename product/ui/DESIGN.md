@@ -1,7 +1,7 @@
 ---
 version: alpha
 name: Cool-AI-warm-terracotta
-description: A local-first multi-agent cockpit on warm parchment. Four columns — dark rail, conversation directory, project group chat, and a mission board — share one sage accent, terracotta-ink type, and paper surfaces. Chrome stays flat; elevation is reserved for composer and approval overlays.
+description: A local-first multi-agent cockpit on warm parchment. Phase 1 uses three columns — dark rail, session directory, and project group chat — with one sage accent, terracotta-ink type, and paper surfaces. Mission/memory boards stay out of the phase-1 chrome. Elevation is reserved for the composer.
 
 colors:
   primary: "#3E6B5E"
@@ -429,20 +429,24 @@ No glass, no backdrop-blur on chrome, no glow.
 
 **`flow-canvas`** — Sage-warm canvas for the project group chat: thread header on parchment, transcript, composer overlay.
 
-**`context-panel`** — 304px parchment board: tabs, mission cards, approval overlay, memory cards.
+**`context-panel`** — Reserved for later phases (memory, mission, audit). Phase 1 does not mount this column.
 
 **`button-primary`** — Sage fill, `{colors.on-primary}` label, `{rounded.md}`, 44px min height.
 
 **`search-input`** — Pill on the directory; 44px min height.
 
-## Interaction language (049)
+## Interaction language (050 / phase 1)
 
-Quiet chrome. Persistent surfaces show **results** (lists, messages, cards) and the **chat composer**. Authoring and configuration inputs open from an icon or verb control into a single `role="dialog"` overlay. Instructional copy lives in an operable HelpTip, not in body paragraphs beside the control.
+Chat-first cockpit, aligned with pi and DeepSeek Harness information architecture (not their assets). Persistent surfaces are **sessions**, **transcript**, and **composer**. Opening a folder uses the **OS directory picker**; the page never asks for a typed path.
 
-- **Icon-first:** Phosphor regular 20px, `currentColor`. Icon-only controls require a Chinese `aria-label`. Decorative icons are `aria-hidden`. No emoji as structure.
-- **Overlay forms:** Open on explicit click. Visible `<label>` on every field. Focus trap, Escape, restore focus to the opener. Submit shows loading then success/error.
-- **HelpTip:** A Question icon button with `aria-expanded`. Keyboard and click open/close. Never use hover-only `title` as the only help.
-- **Composer exception:** The group-chat composer stays visible; it is the primary work surface.
+- **Native folder pick:** One control, Chinese accessible name 「打开文件夹」. Host opens the system folder dialog. Cancel is silent. Failure uses a stable redacted error. No path `<input>`.
+- **Starter team:** Planner / builder / reviewer exist as real Agents once a provider is verified. Empty-state copy may say to add a model service; no HelpTip bubble.
+- **Hidden in phase 1:** Mission board, shared memory, SOP, capability portraits, HelpTip, the 304px context rail.
+- **Composer exception:** Group-chat composer stays visible.
+- **Icon chrome:** Phosphor regular 20px may remain on the rail; icon-only controls still need a Chinese `aria-label`.
+- **Settings forms:** `/team` create/edit may still use a dialog with visible `<label>`s.
+
+049 HelpTip / overlay-everywhere language is superseded for the cockpit.
 
 ## Do's and Don'ts
 
@@ -457,15 +461,15 @@ Quiet chrome. Persistent surfaces show **results** (lists, messages, cards) and 
 - Don't add gradients, glass, glow, or emoji icons.
 - Don't hardcode hex in `app/*.css` outside `tokens.css`.
 - Don't shrink `--control-min` to match the case’s 40px buttons.
-- Don't leave create/edit/bind forms always visible in a column.
-- Don't use hover-only `title` as the only help or truncated-value recovery.
+- Don't leave a folder-path text field in the cockpit.
+- Don't show HelpTip, mission, or memory chrome in phase 1.
 
 ## Responsive Behavior
 
 | Name | Width | Key Changes |
 |---|---|---|
 | Narrow | ≤ 56.25rem | Existing drawers; rail stays 56px |
-| Desktop | > 56.25rem | Four columns 56 / 236 / 1fr / 304 |
+| Desktop | > 56.25rem | Three columns 56 / 236 / 1fr (phase 1). Context width token remains for later phases. |
 
 Touch targets remain 44×44. Narrow drawers keep `--sidebar-width` and `--context-width`.
 

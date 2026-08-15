@@ -113,9 +113,12 @@ S-9～S-12 的 `依赖: S-*` 是原历史文字，只说明当时切片记录；
 
 ## 当前在途
 
-- [ ] S-59 图标优先安静驾驶舱 — 主子系统: 不适用；主领域 Capability: 不适用（只改变入站 UI Adapter 与设计交互语言，不新增领域事实）；主要架构单元: 入站 UI Adapter；消费 Capability: 已交付 UI 呈现面（`CAP-PWS-01`、`CAP-MWK-01`、`CAP-COL-01/02/04`、`CAP-IDC-01`、`CAP-KNW-02` 等）；票据: [`features/049-icon-first-cockpit/tickets.md`](../features/049-icon-first-cockpit/tickets.md)；演示判据: owner 打开驾驶舱时 chrome 以图标表达，创建/绑定/编辑输入框仅在点击按钮后弹出，说明在可操作帮助提示中，群聊 composer 仍可直接输入；约束: 工作区=不适用，verified-handle=不适用，sandbox=不适用，凭据=仅出现在既有 Provider dialog，审批=不适用，独立复核=交付必需（纯 UI，hf-code-review 豁免记录于 progress），审计=不适用；不复制 Clowder 品牌、源码或资产
-  - 排期: 2026-08-15 用户指示安装 UI UX Pro Max 并完全重新设计前端交互。
-  - 准入: 已交付前置: 038/S-54 暖陶四列；本片建立: 图标优先 chrome、ActionDialog 披露、HelpTip。
+- [ ] S-60 阶段 1 基本可用多 Agent 作业系统 — 主子系统: 不适用；主领域 Capability: 不适用（Application Workflow + 入站 UI Adapter + DirectoryPicker，不新增领域表）；主要架构单元: Application Workflow + 入站 UI Adapter；消费 Capability: `CAP-PWS-01`、`CAP-IDC-01`、`CAP-COL-01`；票据: [`features/050-phase-1-usable-cockpit/tickets.md`](../features/050-phase-1-usable-cockpit/tickets.md)；演示判据: owner 用系统文件夹选择器打开项目（无路径手输），在已验证 Provider 下立即拥有规划/实施/复核自带 Agent 并自动入组，驾驶舱为聊天优先且不展示使命/记忆/HelpTip；约束: 工作区=打开的目录即绑定根，verified-handle=打开时必需，sandbox=打开不授予执行，凭据=选择器错误脱敏且脚本化路径仅测试，审批=不适用，独立复核=交付必需（DirectoryPicker 与 Identity 写入须 hf-code-review），审计=沿用既有 project_created/workspace_bound/member 事件；不复制 pi、DeepSeek Harness 或 Clowder 品牌/源码/资产
+  - 排期: 2026-08-15 用户要求重排阶段并完成第一阶段。
+  - 准入: 已交付前置: `CAP-PWS-01` 打开文件夹、`CAP-IDC-01` Agent 模板、`CAP-COL-01` 群聊；本片建立: 原生选夹、自带 Agent ensure、阶段 1 表面卸载。
+  - 规模例外: A-359。
+
+- [ ] S-59 图标优先安静驾驶舱 — **superseded（不 ship）**；交互方向由 S-60 / D-49 取代。历史票据: [`features/049-icon-first-cockpit/tickets.md`](../features/049-icon-first-cockpit/tickets.md)
 
 ## 主题簇一：公开协作
 
@@ -238,7 +241,7 @@ S-9～S-12 的 `依赖: S-*` 是原历史文字，只说明当时切片记录；
   - 排期: 2026-08-12 用户指示追加到既有在途切片之后（A-242），同日又指示立即自动完成（A-244 覆盖排队语义）；注：S-51 片号与同日并行交付的 AUD-MWK 审计实现片双占（双 035 特性号同理），见 A-256。
   - 准入: 已交付前置: 既有在途切片完成后解锁（共享 `app/tokens.css`/组件面，避免并行写冲突）；本片建立: DESIGN.md、tokens.css 对齐、preview.html 与应用壳层/公共组件收敛（规划中；grill 收尾后进入 to-spec）。
 
-- [ ] S-59 图标优先安静驾驶舱 — 见「当前在途」。
+- [ ] S-60 阶段 1 基本可用多 Agent 作业系统 — 见「当前在途」。
 
 - [x] S-54 暖陶工作台驾驶舱（左对话 / 中群聊 / 右看板） — 主子系统: 不适用；主领域 Capability: 不适用（只改变设计令牌与入站 UI Adapter，不新增领域事实）；主要架构单元: 入站 UI Adapter；消费 Capability: 已交付的 `CAP-PWS-01`、`CAP-MWK-01`、`CAP-COL-01/02/03/04/05`、`CAP-EXE-01`、`CAP-GOV-02`、`CAP-KNW-01` 等 UI 呈现面；票据: [`features/038-warm-terracotta-cockpit/tickets.md`](../features/038-warm-terracotta-cockpit/tickets.md)；Ship: 2026-08-14，case 暖陶色板替换 Apple 蓝、`DESIGN.md` 重写并归档 Apple 原文、桌面栅格 `56/236/1fr/304`、三栏 chrome 对齐 case、preview 暖陶目录、`npm test` 2577 / build 绿、smoke:context 与 cockpit smoke 绿、smoke:threads 57 断言 / 39 axe；演示判据: owner 打开项目驾驶舱时看到与 `product/ui/cool-ai-design-md-case.html` 一致的暖陶四列——左 Thread 对话目录、中项目群聊、右使命看板/审批/记忆状态——亮暗主题、键盘与 axe 关键路径不回归；约束: 工作区=不适用，verified-handle=不适用，sandbox=不适用，凭据=不适用，审批=不适用，独立复核=交付必需（项目级 review 豁免按 AGENTS.md 记录于 progress），审计=不适用；不复制 Clowder 品牌、源码或资产
   - 排期: 2026-08-14 用户指示以 case 为布局与颜色约束立即调整 UI；同日指示自动完成并 commit/push（A-263）；037/S-53 AUD-GOV 暂停于 T-02。
