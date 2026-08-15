@@ -440,9 +440,11 @@ export function TaskPanel({
             <div className="panel-heading">
               <div>
                 <p className="eyebrow">治理视图</p>
-                <h2 className="surface-heading">
-                  {GOVERNANCE_TITLES[governance.view]}
-                </h2>
+                {governance.projectId ? null : (
+                  <h2 className="surface-heading">
+                    {GOVERNANCE_TITLES[governance.view]}
+                  </h2>
+                )}
               </div>
               <button
                 className="button-secondary"

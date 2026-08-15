@@ -3,7 +3,7 @@
 - 特性: 051-warm-gold-cockpit（S-61）
 - 当前阶段: implement（P0 壳层已实现并验证；收尾项：全量套件与冒烟）
 - 执行模式: interactive
-- 下一步: 按 `product/development-plan.md` §3 完成 P0 收尾（全量测试、必需冒烟、axe 关键路径），随后进入 P1–P5 逐阶段集成核对
+- 下一步: 按 `product/development-plan.md` §3 完成 P0 收尾（全量测试、必需冒烟、axe 关键路径）；布局错乱已按证据截图修复
 
 ## 状态记录
 
@@ -19,6 +19,7 @@
   - T-06 ⏳ 部分完成：`tsc` ✅、`build` ✅、聚焦测试（cockpit-shell 87/90、28 项相关测试）✅、亮/暗截图与交互验证 ✅；全量套件与必需冒烟待 P0 收尾。
 - 2026-08-15 浏览器目录回归 646/656：10 个失败全部经基线对照确认为此环境既有问题（localStorage 实验性警告 x4、沙箱禁止测试自起服务器绑端口 x2、窄屏抽屉渲染 x1、review 流程 x3 中 1 个为真实浏览器 EPERM），另 execution-start-policy 为时序抖动（3 次跑 2 次失败 1 次通过，与本次改动无关）。
 - 2026-08-15 全量套件 2587/2719 通过；132 个失败全部归因为环境/平台（本机为 macOS 而非目标 Windows x64——`tests/adapters/workspace/*` 与 safe-execution 原生/合并套件在 macOS 不适用；需绑本地端口的执行/合并路由测试受沙箱 EPERM 限制；浏览器侧为前述既有环境问题）。本次改动的组件测试（project-panel/task-panel/activity-bar/onboarding/collaboration 等）全部通过，无回归。P0 收尾的全量绿基线需在目标环境（Node 24.x、Windows x64 或可绑端口环境）复跑。
+- 2026-08-15 按 `features/051-warm-gold-cockpit/evidence/` 运行截图修复壳层错乱：240px 侧栏把 CJK 压成竖排（筛选 tab / 线程标题 / 「移入回收站」全文按钮抢宽）；主区 `.panel-heading` 负边距造成阶梯；治理视图与子面板标题重复；使命卡按钮被 stretch 成大白块。已改为 tab/标题 nowrap+ellipsis、操作改图标按钮、侧栏可滚动、去掉负边距。`tsc` ✅；布局契约与线程/使命/a11y 聚焦测试绿；theme-activity-bar 2 项与 hydration 浏览器项为既有环境/主题存储失败，非本次回归。
 
 ## 任务票
 

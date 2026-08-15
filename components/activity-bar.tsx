@@ -151,7 +151,7 @@ export function ActivityBar({
             ? themePreference.theme === "dark"
             : undefined
         }
-        className="activity-bar-item"
+        className="activity-bar-item activity-bar-end"
         disabled={!themePreference.hydrated}
         onClick={() =>
           setThemePreference(

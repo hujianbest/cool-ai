@@ -1,4 +1,8 @@
-# 产品演进 Backlog
+# 特性分解清单
+
+- 日期: 2026-08-15
+- 状态: 生效。本文件是 **Capability 与可演示切片** 的注册表；交付顺序以 [`development-plan.md`](./development-plan.md) 为准，本文件不重排已 ship 历史。
+- 关联文档: [`README.md`](./README.md) · [`product.md`](./product.md) · [`architecture.md`](./architecture.md) · [`progress.md`](./progress.md)
 
 本文件使用四级治理，避免把产品方向、架构能力、用户切片和实现票据混成同一层：
 
@@ -18,6 +22,84 @@
 - 页面不作为架构依赖。切片编号只用于历史追踪；跨切片准入必须落到具名 Capability Interface 及其状态。
 - 勾选只在切片 ship 后由 hf-ship 执行。未勾选项不得因规格、代码或评审存在而描述为已交付。
 - S-1～S-12 保留已 ship 的历史记录和原演示判据；S-13～S-50 保留既有编号与用户结果，不改写已交付 feature 历史。
+
+## 按交付阶段的切片映射
+
+阶段目标与前后端拆分见开发计划。下表只回答「这一阶段包含哪些切片、是否已 ship」。勾选语义与下文切片记录一致：未勾选不得描述为已交付。
+
+### P0 全局设计基座
+
+| 切片 | 用户结果 | 状态 |
+|---|---|---|
+| S-51 / 035 | DESIGN.md 设计基座与壳层（历史色板，已被暖金替换） | 已 ship |
+| S-54 / 038 | 暖陶工作台四列（色板已被 D-50 替换，IA 被会话优先取代） | 已 ship |
+| S-61 / 051 | 暖米 + 暖金会话优先壳层：52px 轨 / 240px 侧栏 / 居中聊天 / 治理收轨 | 在途（壳层已实现，P0 收尾待目标环境） |
+
+### P1 基本可用
+
+| 切片 | 用户结果 | 状态 |
+|---|---|---|
+| S-55 / 039 | 打开本地文件夹即进入/恢复 Project | 已 ship |
+| S-56 / 040 | 未选项目时 1:1 聊天 | 已 ship |
+| S-9 / 011 | 统一设置导航 | 已 ship |
+| S-10 / 012 | 亮暗主题 | 已 ship |
+| S-11 / 013 | 渐进式首次使用引导 | 已 ship |
+| S-60 / 050 | 阶段 1 驾驶舱：原生选夹 + 三名自带 Agent + 聊天优先、治理不在主路径 | 在途 |
+| S-59 / 049 | 图标优先 + HelpTip | superseded，不 ship |
+
+### P2 会话基础
+
+| 切片 | 用户结果 | 状态 |
+|---|---|---|
+| S-12 / 014 | 持久线程与上下文续接 | 已 ship |
+| S-13 / 015 | 结构化消息与就地决策 | 已 ship |
+| S-14 / 022 | 回复引用与来源跳转 | 已 ship |
+| S-15 / 023 | 草稿与输入历史 | 已 ship |
+| S-16 / 024 | 图片附件 | 已 ship |
+
+### P3 会话整理
+
+| 切片 | 用户结果 | 状态 |
+|---|---|---|
+| S-19 / 025 | 线程收藏与排序 | 已 ship |
+| S-17 / 031 | 线程搜索与精确定位 | 已 ship |
+| S-18 / 032 | 标签与批量整理 | 已 ship |
+| S-20 / 033 | 回收站、恢复与永久删除 | 已 ship |
+| S-21 / 034 | 消息队列、重排与 steer | 已 ship |
+
+### P4 可信执行与任务真相
+
+| 切片 | 用户结果 | 状态 |
+|---|---|---|
+| S-5 / 005 | 安全并行执行 | 已 ship |
+| S-6 / 006 | 独立复核、记忆沉淀与交付 | 已 ship |
+| S-22 / 027 | 工作区只读浏览 | 已 ship |
+| S-24 / 029 | 统一审批中心 | 已 ship |
+| S-23 及子片 | 脱敏统一审计（AUD-MVP/PWS/COL/MWK/GOV/RUN/UI） | 已 ship |
+| S-25 / 026 | Mission 依赖与阻塞全景 | 已 ship |
+| S-26 / 043 | SOP 状态投影 | 已 ship |
+| S-27 / 044 | 任务租约与派发控制面 | 已 ship |
+| S-39 / 047 | 跨任务运行时间轴 | 已 ship |
+| S-42 | 受控工作区编辑与 Git 合入 | 规划中（高风险） |
+| S-43 | 策略内终端与浏览器预览 | 规划中（高风险） |
+| S-44 | 领域化运维命令与救援 | 规划中（高风险） |
+
+### P5 知识与扩展
+
+| 切片 | 用户结果 | 状态 |
+|---|---|---|
+| S-28 / 045 | 记忆检索 | 已 ship（专用索引健康仍待 S-29） |
+| S-33 / 046 | 能力画像与只读路由建议 | 已 ship（规则/注入检查仍待 S-34） |
+| S-41 / 048 | 浏览器通知与 PWA | 已 ship |
+| S-29 | 记忆索引健康 | 规划中 |
+| S-30 / S-31 | 知识集合与图谱 | 规划中 |
+| S-32 | Agent 署名提炼 | 规划中 |
+| S-34～S-37 | 规则检查、健康、用量、贡献视图 | 规划中 |
+| S-38 / S-40 | 脱敏导出与交付回放 | 规划中 |
+| S-45～S-49 | CLI/ACP、MCP、插件与能力市场 | 规划中（高风险） |
+| S-50 | 语音 | 规划中（高风险） |
+
+S-1～S-8、S-2～S-4 等行走骨架与核心闭环切片是 P1/P4 的历史基础，记录仍保留在「已交付切片记录」。
 
 ## Capability 清单
 
@@ -112,6 +194,10 @@ S-9～S-12 的 `依赖: S-*` 是原历史文字，只说明当时切片记录；
 - [x] S-13 结构化消息与就地决策（CI-2.3） — 主子系统: Public Collaboration；主 Capability: `CAP-COL-03`；票据: [`features/015.../tickets.md`](../features/015-structured-messages-inline-decisions/tickets.md)；Ship: 2026-08-10（017/018 review-remediation 子片先 done，按项目级 review 豁免收口）；演示判据: owner 能在消息流中查看带来源和版本的提案、diff、清单与交棒卡，并在原位完成允许的决定且重复提交不产生重复动作；约束: 工作区=文件卡仅限项目，verified-handle=文件来源必需，sandbox=变更预览来自隔离结果，凭据=内容脱敏，审批=高风险动作走正式审批，独立复核=交付必需，审计=operation/version/lease 可追溯；不复制 Clowder 品牌、源码或资产
 
 ## 当前在途
+
+- [ ] S-61 暖金会话优先驾驶舱壳层 — 主子系统: 不适用；主领域 Capability: 不适用（只改变设计令牌与入站 UI Adapter，不新增领域事实）；主要架构单元: DESIGN.md + 入站 UI Adapter；消费 Capability: 已交付 UI 呈现面；票据: [`features/051-warm-gold-cockpit/feature.md`](../features/051-warm-gold-cockpit/feature.md)；演示判据: owner 打开驾驶舱看到暖米 + 暖金三区（52px 图标轨 / 240px 会话侧栏 / 居中聊天），治理由图标轨按需打开并返回对话；约束: 不新增领域事实，不复制 Clowder 品牌或资产
+  - 排期: 2026-08-15 用户确认暖金方向与治理收轨（D-50）；P0 主切片。
+  - 准入: 已交付前置: S-51 令牌基座、S-54 壳层、S-55/S-56 选夹与直聊；本片建立: 暖金 DESIGN.md、tokens 投影、会话优先壳层（实现已落地，P0 收尾待目标环境）。
 
 - [ ] S-60 阶段 1 基本可用多 Agent 作业系统 — 主子系统: 不适用；主领域 Capability: 不适用（Application Workflow + 入站 UI Adapter + DirectoryPicker，不新增领域表）；主要架构单元: Application Workflow + 入站 UI Adapter；消费 Capability: `CAP-PWS-01`、`CAP-IDC-01`、`CAP-COL-01`；票据: [`features/050-phase-1-usable-cockpit/tickets.md`](../features/050-phase-1-usable-cockpit/tickets.md)；演示判据: owner 用系统文件夹选择器打开项目（无路径手输），在已验证 Provider 下立即拥有规划/实施/复核自带 Agent 并自动入组，驾驶舱为聊天优先且不展示使命/记忆/HelpTip；约束: 工作区=打开的目录即绑定根，verified-handle=打开时必需，sandbox=打开不授予执行，凭据=选择器错误脱敏且脚本化路径仅测试，审批=不适用，独立复核=交付必需（DirectoryPicker 与 Identity 写入须 hf-code-review），审计=沿用既有 project_created/workspace_bound/member 事件；不复制 pi、DeepSeek Harness 或 Clowder 品牌/源码/资产
   - 排期: 2026-08-15 用户要求重排阶段并完成第一阶段。
@@ -242,6 +328,8 @@ S-9～S-12 的 `依赖: S-*` 是原历史文字，只说明当时切片记录；
   - 准入: 已交付前置: 既有在途切片完成后解锁（共享 `app/tokens.css`/组件面，避免并行写冲突）；本片建立: DESIGN.md、tokens.css 对齐、preview.html 与应用壳层/公共组件收敛（规划中；grill 收尾后进入 to-spec）。
 
 - [ ] S-60 阶段 1 基本可用多 Agent 作业系统 — 见「当前在途」。
+
+- [ ] S-61 暖金会话优先驾驶舱壳层 — 见「当前在途」。
 
 - [x] S-54 暖陶工作台驾驶舱（左对话 / 中群聊 / 右看板） — 主子系统: 不适用；主领域 Capability: 不适用（只改变设计令牌与入站 UI Adapter，不新增领域事实）；主要架构单元: 入站 UI Adapter；消费 Capability: 已交付的 `CAP-PWS-01`、`CAP-MWK-01`、`CAP-COL-01/02/03/04/05`、`CAP-EXE-01`、`CAP-GOV-02`、`CAP-KNW-01` 等 UI 呈现面；票据: [`features/038-warm-terracotta-cockpit/tickets.md`](../features/038-warm-terracotta-cockpit/tickets.md)；Ship: 2026-08-14，case 暖陶色板替换 Apple 蓝、`DESIGN.md` 重写并归档 Apple 原文、桌面栅格 `56/236/1fr/304`、三栏 chrome 对齐 case、preview 暖陶目录、`npm test` 2577 / build 绿、smoke:context 与 cockpit smoke 绿、smoke:threads 57 断言 / 39 axe；演示判据: owner 打开项目驾驶舱时看到与 `product/ui/cool-ai-design-md-case.html` 一致的暖陶四列——左 Thread 对话目录、中项目群聊、右使命看板/审批/记忆状态——亮暗主题、键盘与 axe 关键路径不回归；约束: 工作区=不适用，verified-handle=不适用，sandbox=不适用，凭据=不适用，审批=不适用，独立复核=交付必需（项目级 review 豁免按 AGENTS.md 记录于 progress），审计=不适用；不复制 Clowder 品牌、源码或资产
   - 排期: 2026-08-14 用户指示以 case 为布局与颜色约束立即调整 UI；同日指示自动完成并 commit/push（A-263）；037/S-53 AUD-GOV 暂停于 T-02。

@@ -1,11 +1,14 @@
-# Cool AI 产品架构
+# 产品架构设计说明书
 
-- 日期: 2026-08-09
+- 日期: 2026-08-09（2026-08-15 纳入产品文档六件套；架构实质不变）
 - 状态: 产品级架构基线；目标架构收敛已完成（特性 019，D-45），后续功能开发按本文件准入
 - 用户确认: 2026-08-09 采用领域模块化单体 + Ports/Adapters + 跨域 Application Workflow；2026-08-09 确认先把当前工程实现完整迁入目标架构，再恢复后续功能开发；2026-08-09 确认解除架构优先冻结（D-45）；2026-08-10 确认第 13 节架构特征（驱动力）、第 14 节演进与适应度及 4+1 视图标注
 - 更新: 2026-08-09 收敛完成后按 hf-to-product-architecture 刷新——第 8 节现状证据、第 9 节收敛完成记录，新增第 11 节关键场景与第 12 节横切约定
 - 更新: 2026-08-10 按 hf-to-product-architecture 补全——第 2 节各子系统补易变性声明、第 11 节场景标注验证特征，新增第 13 节架构特征（驱动力）与第 14 节演进与适应度；延续 A-105 追加不重排，既有节号与实质决策不变（A-106）；同日标注 4+1 视图裁剪映射（A-107）
 - 决策依据: `docs/adr/0002-domain-modular-monolith.md`、`docs/adr/0003-pre-release-canonical-database-schema.md`、`docs/adr/0004-architecture-first-convergence.md`
+- 关联文档: [`README.md`](./README.md)（文档地图）· [`product.md`](./product.md)（产品规格）· [`backlog.md`](./backlog.md)（特性分解）· [`development-plan.md`](./development-plan.md)（开发计划）
+
+本文件是 **产品架构设计** 的单一事实源。产品范围与用户结果见规格说明书；切片与 Capability 见特性分解清单；交付顺序见开发计划。路径名 `product/architecture.md` 保持稳定，供架构测试与历史引用。
 
 ## 1. 架构目标
 
@@ -332,7 +335,7 @@ cool-ai/
 │  ├─ browser/                          # 按可演示垂直切片分治
 │  ├─ architecture/                     # 全局 import、owner、writer、依赖图约束
 │  └─ fixtures/                         # 按 owner 分治的确定性 fixture builder
-├─ product/                             # 产品定义、目标架构、决策与待办
+├─ product/                             # 规格、架构、特性分解、开发计划、进展、UI 设计
 ├─ features/                            # 垂直切片规格、架构、票据、评审与进度
 └─ docs/adr/                            # 跨切片长期架构决定
 ```
@@ -451,10 +454,9 @@ tests/
 - **Application Workflow 与事务协调 Port 已显式化**：跨 owner 结果由命名 Workflow 编排；事务协调 Port 归应用层、SQLite 实现归 outbound Adapter（A-99）。证据索引：`src/application/workflows/create-mission/workflow.ts`、`src/application/workflows/project-context-snapshot/workflow.ts`、`src/application/unit-of-work.ts`、`tests/workflows/create-mission/`。
 - **composition root 唯一装配**：concrete Adapter 与 Interface 的构造注入集中在 `src/composition/`，不含业务分支。证据索引：`src/composition/index.ts`、`src/composition/server-composition.ts`。
 - **Safe Execution 边界保持**：Windows verified-handle、sandbox、Validation、Staged Change、Approval、冲突检查与 Merge 路径按 owner/技术接缝归位；`execution_approvals` 写 SQL 已提取为 Governance approval-store 能力。证据索引：`src/adapters/outbound/workspace/windows-verified-execution-adapter.ts`、`src/adapters/outbound/sqlite/safe-execution/execution-service.ts`、`src/adapters/outbound/sqlite/governance/approval-store.ts`、`tests/adapters/sqlite/safe-execution/execution-security-integration.test.ts`、`tests/modules/safe-execution/execution-approvals.test.ts`。
-- **公开 Thread Fact 流与 S-12 tuple 已交付**：`collaboration_thread_facts` 由 current canonical schema 和唯一 writer seam 支撑，线程读取按 fact 分页。证据索引：`src/adapters/outbound/sqlite/public-collaboration/thread-fact-store.ts`、`tests/modules/public-collaboration/thread-fact-store.test.ts`、`tests/modules/public-collaboration/thread-history-api.test.ts`、`features/014-persistent-project-threads/progress.md`。
-- **S-13 结构化消息代码在途、尚未 ship**：block/decision 持久化位于 public-collaboration owner 与其 SQLite Adapter，不能视为已交付 Capability；阶段与票据状态以 feature 记录为准。证据索引：`src/adapters/outbound/sqlite/public-collaboration/structured-message-store.ts`、`src/adapters/outbound/sqlite/public-collaboration/inline-decision-service.ts`、`src/modules/public-collaboration/internal/structured-message-schema.ts`、`features/015-structured-messages-inline-decisions/progress.md`。
+- **公开 Thread Fact 流、S-12 tuple 与 S-13 结构化消息已交付**：`collaboration_thread_facts` 由 current canonical schema 和唯一 writer seam 支撑；block/decision 持久化位于 public-collaboration owner 与其 SQLite Adapter。阶段与票据状态以 feature 记录为准。证据索引：`src/adapters/outbound/sqlite/public-collaboration/thread-fact-store.ts`、`src/adapters/outbound/sqlite/public-collaboration/structured-message-store.ts`、`src/adapters/outbound/sqlite/public-collaboration/inline-decision-service.ts`、`features/014-persistent-project-threads/progress.md`、`features/015-structured-messages-inline-decisions/progress.md`。
 - **机械约束已阻断化**：import 边界、写表 owner、运行时 writer、依赖图与测试分区检查已进入 `tests/architecture/` 并阻断回退。证据索引：`tests/architecture/imports.test.ts`、`tests/architecture/ownership.test.ts`、`tests/architecture/writers.test.ts`、`tests/architecture/dependency-graph.test.ts`、`tests/architecture/test-partition.test.ts`。
-- **通用 outbox/Operations Projection 未交付**：收敛后扫描确认 `src/` 无 outbox 实现；`CAP-OPS-01/02` 保持规划中，由 S-23 拆分片按第 5 节建立。
+- **选择性 outbox 与 Operations Projection 已交付核心**：S-23 拆分片建立 `CAP-OPS-01/02` 与各 source-owner 公开事件；投影只读，不回写命令事实。健康/用量/导出回放（`CAP-OPS-03/04`）仍规划中。
 - **第三方通用插件宿主未交付**：产品/ADR 继续禁止任意进程内插件；`CAP-RUN-04` 保持规划中，不能作为现有能力。
 
 后续功能切片必须直接落在目标结构上：新命令事实先登记唯一 owner 与写表清单，跨 owner 结果新增命名 Workflow，禁止在 route 内重建编排、跨域 deep import 或绕过机械约束。
@@ -492,7 +494,7 @@ tests/
 2. **公开协作接力**（已交付 S-4、S-12）：owner 在 Thread 公开发言/@Agent → Collaboration Run 受理、Turn/Attempt、结构化交棒与 owner 决策请求/回答（Public Collaboration）→ 暂停/恢复与可恢复时间线。治理点：凭据拒绝、Project/Thread/Run tuple、预算与轮次上限。验证特征：AC-1（公开事实流与冻结来源）、AC-2（凭据拒绝失败关闭）、AC-5（lease 暂停/恢复、重启不自动重放）。
 3. **受控执行与合入**（已交付 S-5）：Resolve Effective Runtime Grant（配置权限 ∩ 项目范围 ∩ Approval → Runtime 投影，第 2 节）→ Safe Execution acquire/checkpoint/finalize → sandbox 内工具动作与验证 → Staged Change 冲突/陈旧检查 → Merge Journal 原子合入或失败关闭。验证特征：AC-2（grant 求交、sandbox、Approval 组合）、AC-5（三阶段崩溃恢复）、AC-1（基线冻结与合入事实唯一）。
 4. **独立复核与交付**（已交付 S-6）：owner 显式发起、合格非执行者 Agent 复核裁决（Review & Delivery）→ 署名记忆候选沉淀（Knowledge & Provenance）→ Delivery 持久化 → Mission 完成门槛判定（Mission & Work）。验证特征：AC-1（冻结材料复核、署名来源、完成门槛单一口径）。
-5. **脱敏运维读侧**（规划中，S-23 拆分片建立）：source owner 在命令事务内提交公开事件 envelope → Operations Projection 幂等消费、checkpoint/rebuild 与 freshness → owner 只读查询并跳回精确来源；投影永不回写命令事实（第 5 节）。验证特征：AC-3（读侧扩展不改命令侧）、AC-1（精确来源导航）、AC-2（强制脱敏）。
+5. **脱敏运维读侧**（已交付 S-23 拆分片核心；健康/用量/导出仍规划中）：source owner 在命令事务内提交公开事件 envelope → Operations Projection 幂等消费、checkpoint/rebuild 与 freshness → owner 只读查询并跳回精确来源；投影永不回写命令事实（第 5 节）。验证特征：AC-3（读侧扩展不改命令侧）、AC-1（精确来源导航）、AC-2（强制脱敏）。
 
 ## 12. 横切约定
 

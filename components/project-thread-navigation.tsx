@@ -1,6 +1,12 @@
 "use client";
 
 import {
+  Faders,
+  Plus,
+  Tag,
+  Trash,
+} from "@phosphor-icons/react";
+import {
   useCallback,
   useEffect,
   useMemo,
@@ -20,6 +26,7 @@ import {
 } from "@/components/collaboration/use-target-request-guard";
 import { useModalSurface } from "@/components/mobile-dialog";
 import { HelpTip } from "@/components/ui/help-tip";
+import { IconButton } from "@/components/ui/icon-button";
 import { parseProjectSelection } from "@/components/settings-navigation";
 import {
   ApiDisplayError,
@@ -1863,36 +1870,35 @@ export function ProjectThreadNavigation({
           <h2 className="surface-heading" id="project-threads-title">
             线程
           </h2>
-          {listState !== "empty" && view === "all" ? (
-            <button
-              className="button-secondary"
-              onClick={openDialog}
-              ref={createButtonRef}
-              type="button"
-            >
-              创建线程
-            </button>
-          ) : null}
           {listState !== "empty" ? (
-            <button
-              className="button-secondary"
-              onClick={openManageDialog}
-              ref={manageButtonRef}
-              type="button"
-            >
-              管理标签
-            </button>
-          ) : null}
-          {listState !== "empty" && view === "all" ? (
-            <button
-              aria-pressed={organizeMode}
-              className="button-secondary"
-              onClick={() => setOrganizeMode(true)}
-              ref={organizeButtonRef}
-              type="button"
-            >
-              整理线程
-            </button>
+            <div className="section-heading-actions">
+              {view === "all" ? (
+                <IconButton
+                  icon={<Plus size={20} weight="regular" />}
+                  label="创建线程"
+                  onClick={openDialog}
+                  ref={createButtonRef}
+                  title="创建线程"
+                />
+              ) : null}
+              <IconButton
+                icon={<Tag size={20} weight="regular" />}
+                label="管理标签"
+                onClick={openManageDialog}
+                ref={manageButtonRef}
+                title="管理标签"
+              />
+              {view === "all" ? (
+                <IconButton
+                  aria-pressed={organizeMode}
+                  icon={<Faders size={20} weight="regular" />}
+                  label="整理线程"
+                  onClick={() => setOrganizeMode(true)}
+                  ref={organizeButtonRef}
+                  title="整理线程"
+                />
+              ) : null}
+            </div>
           ) : null}
         </div>
         <div className="thread-search">
@@ -2372,17 +2378,15 @@ export function ProjectThreadNavigation({
                     ) : null}
                   </div>
                   {!organizeMode ? (
-                    <button
-                      aria-label={`移入回收站 ${thread.title}`}
-                      className="thread-recycle-item-action"
+                    <IconButton
+                      icon={<Trash size={20} weight="regular" />}
+                      label={`移入回收站 ${thread.title}`}
                       onClick={() => {
                         setDeleteThreadError(null);
                         setPendingDeleteThread(thread);
                       }}
-                      type="button"
-                    >
-                      移入回收站
-                    </button>
+                      title={`移入回收站 ${thread.title}`}
+                    />
                   ) : null}
                   <button
                     aria-label={

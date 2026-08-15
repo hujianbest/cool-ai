@@ -151,6 +151,7 @@ ol {
 .activity-bar {
   grid-column: 1;
   grid-row: 1 / span 2;
+  min-width: 0;
 }
 
 .cockpit-sidebar {
@@ -161,6 +162,7 @@ ol {
 .cockpit-flow {
   grid-column: 3;
   grid-row: 2;
+  min-height: 0;
 }
 
 .cockpit-header {
@@ -208,9 +210,13 @@ ol {
 .cockpit-sidebar,
 .cockpit-context {
   display: flex;
+  min-width: 0;
+  min-height: 0;
   flex-direction: column;
-  gap: var(--space-6);
-  padding: var(--space-6);
+  gap: var(--space-4);
+  padding: var(--space-4);
+  overflow-x: hidden;
+  overflow-y: auto;
   background: var(--surface-panel);
   border: var(--border-width) solid var(--border-subtle);
 }
@@ -232,9 +238,11 @@ ol {
 .cockpit-flow {
   display: flex;
   min-width: 0;
+  min-height: 0;
   flex-direction: column;
   gap: var(--space-6);
   padding: var(--space-8);
+  overflow-y: auto;
   background: var(--surface-main);
 }
 
@@ -333,9 +341,20 @@ ol {
   border-radius: var(--rounded-md);
 }
 
+.mission-summary,
+.mission-board .task-summary {
+  align-items: start;
+}
+
 .mission-board .task-summary {
   background: var(--surface-card);
   border-radius: var(--rounded-md);
+}
+
+.mission-summary > button,
+.mission-board .task-summary > button {
+  width: auto;
+  max-width: var(--full-width);
 }
 
 .mission-status h4,
@@ -357,6 +376,10 @@ ol {
 .panel-heading,
 .baton {
   justify-content: space-between;
+}
+
+.panel-heading {
+  flex-wrap: wrap;
 }
 
 .baton > span:last-child {
@@ -430,6 +453,9 @@ ol {
   background: var(--color-card-strong);
   color: var(--text-primary);
   min-height: var(--control-min);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
   border-radius: var(--rounded-md);
   box-shadow: var(--shadow-panel);
 }
@@ -615,9 +641,34 @@ ol {
   color: var(--surface);
 }
 
+.section-heading-row {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: var(--space-2);
+}
+
+.section-heading-row .surface-heading {
+  flex: 1;
+  min-width: 0;
+}
+
+.section-heading-actions {
+  display: flex;
+  flex-shrink: 0;
+  gap: var(--space-1);
+}
+
 .thread-view-tabs {
   display: flex;
+  flex-wrap: wrap;
   gap: var(--space-2);
+}
+
+.thread-view-tabs [role="tab"] {
+  flex: 1 0 auto;
+  white-space: nowrap;
+  flex-shrink: 0;
 }
 
 .thread-list-item {
@@ -629,7 +680,17 @@ ol {
 .thread-list-item .thread-list-entry {
   flex: 1;
   min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
   border-radius: var(--rounded-sm);
+}
+
+.thread-list-item .icon-button,
+.thread-list-item .thread-favorite-toggle {
+  display: grid;
+  flex-shrink: 0;
+  padding: 0;
 }
 
 .thread-list-entry[aria-current] {
@@ -1495,10 +1556,15 @@ ol {
 }
 
 .cockpit-flow .panel-heading {
-  margin: calc(var(--space-8) * -1) calc(var(--space-8) * -1) 0;
-  padding: var(--space-4) var(--space-8);
+  padding: var(--space-3) 0;
   background: var(--surface-panel);
   border-bottom: var(--border-width) solid var(--border-subtle);
+}
+
+.cockpit-flow .run-detail > .panel-heading {
+  padding: 0;
+  background: transparent;
+  border-bottom: none;
 }
 
 .collaboration-timeline {
@@ -1929,10 +1995,17 @@ legend {
   display: grid;
   min-height: var(--control-min);
   min-width: var(--control-min);
+  width: var(--full-width);
+  padding: 0;
+  border-color: transparent;
   place-items: center;
   color: var(--color-rail-ink);
   background: transparent;
   white-space: nowrap;
+}
+
+.activity-bar-end {
+  margin-top: auto;
 }
 
 .activity-bar .activity-bar-item:hover {

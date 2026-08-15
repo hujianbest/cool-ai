@@ -175,3 +175,34 @@ describe("desktop warm-terracotta shell grid", () => {
     );
   });
 });
+
+describe("warm-gold 240px sidebar does not crush CJK chrome", () => {
+  it("keeps compact labels on one line, scrolls the sidebar, and stops nested headings from pulling out of their cards", () => {
+    const cockpit = readFileSync("app/cockpit.css", "utf8");
+
+    expect(cockpit).toMatch(
+      /\.cockpit-sidebar,\s*\.cockpit-context\s*\{[^}]*min-height:\s*0[^}]*overflow-y:\s*auto/s,
+    );
+    expect(cockpit).toMatch(
+      /\.section-heading-row\s*\{[^}]*display:\s*flex[^}]*flex-wrap:\s*wrap/s,
+    );
+    expect(cockpit).toMatch(
+      /\.thread-view-tabs\s*\{[^}]*flex-wrap:\s*wrap/s,
+    );
+    expect(cockpit).toMatch(
+      /\.thread-view-tabs \[role="tab"\]\s*\{[^}]*white-space:\s*nowrap[^}]*flex-shrink:\s*0/s,
+    );
+    expect(cockpit).toMatch(
+      /\.thread-list-item \.thread-list-entry\s*\{[^}]*overflow:\s*hidden[^}]*text-overflow:\s*ellipsis[^}]*white-space:\s*nowrap/s,
+    );
+    expect(cockpit).toMatch(
+      /\.activity-bar \.activity-bar-item\s*\{[^}]*padding:\s*0/s,
+    );
+    expect(cockpit).not.toMatch(
+      /\.cockpit-flow \.panel-heading\s*\{[^}]*margin:\s*calc\(var\(--space-8\)\s*\*\s*-1\)/s,
+    );
+    expect(cockpit).toMatch(
+      /\.mission-summary,\s*\.mission-board \.task-summary\s*\{[^}]*align-items:\s*start/s,
+    );
+  });
+});
