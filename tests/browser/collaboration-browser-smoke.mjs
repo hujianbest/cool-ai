@@ -401,7 +401,7 @@ async function createMissionViaApi(page, title, goal) {
     const members = await (await fetch(`/api/projects/${projectId}/members`)).json();
     const response = await fetch(`/api/projects/${projectId}/mission`, {
       body: JSON.stringify({
-        expectedVersion: members.projectVersion,
+        expectedVersion: 0,
         goal: goalText,
         operationId: crypto.randomUUID(),
         title: titleText,

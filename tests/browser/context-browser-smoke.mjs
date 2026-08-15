@@ -930,7 +930,7 @@ try {
     }
     const missionResponse = await fetch(`/api/projects/${projectId}/mission`, {
       body: JSON.stringify({
-        expectedVersion: members.projectVersion,
+        expectedVersion: 0,
         goal: "Prove real deterministic project context",
         operationId: crypto.randomUUID(),
         title: "Context Smoke Mission",
@@ -1154,7 +1154,7 @@ try {
     const members = await (await fetch(`/api/projects/${projectId}/members`)).json();
     const response = await fetch(`/api/projects/${projectId}/mission`, {
       body: JSON.stringify({
-        expectedVersion: members.projectVersion,
+        expectedVersion: 0,
         goal: "No dependencies at all",
         operationId: crypto.randomUUID(),
         title: "Empty Mission",

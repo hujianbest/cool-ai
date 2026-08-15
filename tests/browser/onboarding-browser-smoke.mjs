@@ -1180,7 +1180,7 @@ try {
     try {
       await fetch(`/api/projects/${id}/mission`, {
         body: JSON.stringify({
-          expectedVersion: members.projectVersion,
+          expectedVersion: 0,
           goal: "Prepare a verified release plan",
           operationId: crypto.randomUUID(),
           title: "Onboarding Mission",
