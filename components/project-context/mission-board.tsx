@@ -1323,6 +1323,7 @@ export function MissionBoard({
                 }))
               }
               ref={workItemTitleRef}
+              placeholder="例如：补齐发布检查清单"
               value={workItemDraft.title}
             />
           </div>

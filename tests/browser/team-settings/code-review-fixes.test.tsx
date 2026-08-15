@@ -118,6 +118,7 @@ describe("code review fixes", () => {
     );
 
     render(<ProjectPanel />);
+    const user = userEvent.setup();
 
     await user.click(await screen.findByRole("button", { name: "打开文件夹" }));
     expect(screen.getByLabelText("文件夹路径")).toBeInTheDocument();

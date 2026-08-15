@@ -619,12 +619,6 @@ export function ProjectPanel({
           ) : projects.length === 0 ? (
             <div className="empty-guide state-message">
               <p>暂无文件夹项目。</p>
-              <IconButton
-                className="button-primary"
-                icon={<FolderPlus size={20} weight="regular" />}
-                label="打开文件夹"
-                onClick={openFolderDialog}
-              />
               <HelpTip label="没有项目时还能做什么">
                 打开本地文件夹开始协作，也可直接在中间与 Agent 对话。
               </HelpTip>
@@ -772,6 +766,7 @@ export function ProjectPanel({
               id="project-folder-path"
               name="path"
               onChange={(event) => setFolderPath(event.target.value)}
+              placeholder="例如：D:\work\my-app"
               ref={projectFolderPathInputRef}
               value={folderPath}
             />

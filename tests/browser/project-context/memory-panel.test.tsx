@@ -125,8 +125,12 @@ describe("Shared Memory panel", () => {
     await user.selectOptions(screen.getByLabelText("来源类型"), "artifact_path");
     expect(screen.getByText("仅引用，尚未读取")).toBeInTheDocument();
     await user.selectOptions(screen.getByLabelText("来源类型"), "owner_input");
-    await user.type(screen.getByLabelText("记忆正文"), "Next goal");
-    await user.type(screen.getByLabelText("来源引用"), "Owner update");
+    const content = screen.getByLabelText("记忆正文");
+    content.focus();
+    await user.type(content, "Next goal", { skipClick: true });
+    const sourceRef = screen.getByLabelText("来源引用");
+    sourceRef.focus();
+    await user.type(sourceRef, "Owner update", { skipClick: true });
     await user.selectOptions(
       screen.getByLabelText("取代旧记忆"),
       activeGoal.id,
@@ -189,7 +193,9 @@ describe("memory panel search", () => {
     expect(screen.getByLabelText("检索来源")).toBeInTheDocument();
     expect(screen.getByLabelText("检索版本")).toBeInTheDocument();
 
-    await user.type(screen.getByLabelText("检索记忆"), "Current");
+    const searchInput = screen.getByLabelText("检索记忆");
+    searchInput.focus();
+    await user.type(searchInput, "Current", { skipClick: true });
     await user.selectOptions(screen.getByLabelText("检索类型"), "goal");
     await user.click(screen.getByRole("button", { name: "检索" }));
 
@@ -268,7 +274,9 @@ describe("memory panel search", () => {
     await screen.findByRole("heading", { name: "Current goal" });
 
     await user.click(screen.getByRole("button", { name: "打开记忆检索" }));
-    await user.type(screen.getByLabelText("检索记忆"), "missing");
+    const missingQuery = screen.getByLabelText("检索记忆");
+    missingQuery.focus();
+    await user.type(missingQuery, "missing", { skipClick: true });
     await user.click(screen.getByRole("button", { name: "检索" }));
     await act(async () => {
       firstSearch.resolve(
@@ -281,6 +289,7 @@ describe("memory panel search", () => {
     expect(await screen.findByRole("alert")).toHaveTextContent("无法检索记忆");
     expect(screen.getByRole("list", { name: "Active 共享记忆" })).toBeInTheDocument();
 
+    await user.click(screen.getByRole("button", { name: "打开记忆检索" }));
     await user.click(screen.getByRole("button", { name: "检索" }));
     expect(await screen.findByText("没有匹配的记忆。")).toBeInTheDocument();
     expect(screen.getByRole("heading", { name: "Current goal" })).toBeInTheDocument();

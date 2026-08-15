@@ -39,6 +39,11 @@ export function ActionDialog({
   const restoreRef = useRef<HTMLElement | null>(null);
   const restoreFocusRef = useRef<HTMLElement | null>(null);
   restoreFocusRef.current = restoreRef.current;
+  const onCloseRef = useRef(onClose);
+  onCloseRef.current = onClose;
+  const handleClose = useRef(() => {
+    onCloseRef.current();
+  }).current;
   const [inertRoots, setInertRoots] = useState<HTMLElement[]>([]);
 
   useLayoutEffect(() => {
@@ -68,10 +73,10 @@ export function ActionDialog({
       hideBackground: true as const,
       inertRootRefs,
       initialFocusRef: initialFocusRef ?? closeRef,
-      onClose,
+      onClose: handleClose,
       restoreFocusRef,
     }),
-    [inertRootRefs, initialFocusRef, onClose, open],
+    [handleClose, inertRootRefs, initialFocusRef, open],
   );
   useModalSurface(options);
 
@@ -88,7 +93,7 @@ export function ActionDialog({
         aria-labelledby={titleId}
         aria-modal="true"
         className="action-dialog stack"
-        onKeyDown={(event) => trapModalFocus(event, onClose)}
+        onKeyDown={(event) => trapModalFocus(event, handleClose)}
         ref={dialogRef}
         role="dialog"
       >
@@ -99,7 +104,7 @@ export function ActionDialog({
             data-dialog-close="true"
             icon={<X size={20} weight="regular" />}
             label={closeLabel}
-            onClick={onClose}
+            onClick={handleClose}
             ref={closeRef}
           />
         </header>

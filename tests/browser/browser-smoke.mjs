@@ -162,7 +162,7 @@ try {
   assert.equal(await workbenchHeading.count(), 1);
   assert.equal(await workbenchHeading.isVisible(), true);
   await assertAxeCriticalFree(page, "/");
-  await emptyProjectGuide.getByRole("button", { name: "打开文件夹" }).click();
+  await page.getByRole("button", { name: "打开文件夹" }).click();
   const folderPathInput = page.getByLabel("文件夹路径");
   assert.equal(
     await folderPathInput.evaluate((element) => document.activeElement === element),

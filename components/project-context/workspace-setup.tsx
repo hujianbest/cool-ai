@@ -304,6 +304,7 @@ export function WorkspaceSetup({
       return;
     }
     if (workspace && path.trim() !== workspace.path) {
+      setBindOpen(false);
       updateConfirmation(true);
       return;
     }

@@ -260,6 +260,11 @@ export function SkillPanel() {
             ))}
           </ul>
         )}
+        {success ? (
+          <p aria-live="polite" role="status">
+            {success}
+          </p>
+        ) : null}
       </main>
 
       {editorActivated ? (
@@ -356,7 +361,6 @@ export function SkillPanel() {
               {formError}
             </div>
           ) : null}
-          {success ? <p role="status">{success}</p> : null}
         </form>
       </aside>
       ) : null}

@@ -265,8 +265,12 @@ describe("Mission Board", () => {
       "aria-describedby",
       titleError.id,
     );
-    await user.type(screen.getByLabelText("使命标题"), mission.title);
-    await user.type(screen.getByLabelText("使命目标"), mission.goal);
+    const titleInput = screen.getByLabelText("使命标题");
+    titleInput.focus();
+    await user.type(titleInput, mission.title, { skipClick: true });
+    const goalInput = screen.getByLabelText("使命目标");
+    goalInput.focus();
+    await user.type(goalInput, mission.goal, { skipClick: true });
     await user.click(screen.getByRole("button", { name: "创建使命" }));
 
     const createCall = fetchMock.mock.calls.find(
@@ -292,10 +296,14 @@ describe("Mission Board", () => {
     );
 
     await user.click(screen.getByRole("button", { name: "编辑使命" }));
-    await user.clear(screen.getByLabelText("使命标题"));
-    await user.type(screen.getByLabelText("使命标题"), "Updated mission");
-    await user.clear(screen.getByLabelText("使命目标"));
-    await user.type(screen.getByLabelText("使命目标"), "Updated goal");
+    const editTitle = screen.getByLabelText("使命标题");
+    await user.clear(editTitle);
+    editTitle.focus();
+    await user.type(editTitle, "Updated mission", { skipClick: true });
+    const editGoal = screen.getByLabelText("使命目标");
+    await user.clear(editGoal);
+    editGoal.focus();
+    await user.type(editGoal, "Updated goal", { skipClick: true });
     await user.click(screen.getByRole("button", { name: "保存使命" }));
 
     const updated = await screen.findByRole("heading", {
@@ -370,8 +378,12 @@ describe("Mission Board", () => {
     expect(within(boardRegion).getByText("等待: Plan")).toBeInTheDocument();
 
     await user.click(screen.getByRole("button", { name: "创建任务" }));
-    await user.type(screen.getByLabelText("任务标题"), "Document");
-    await user.type(screen.getByLabelText("任务说明"), "Write docs");
+    const workTitle = screen.getByLabelText("任务标题");
+    workTitle.focus();
+    await user.type(workTitle, "Document", { skipClick: true });
+    const workDescription = screen.getByLabelText("任务说明");
+    workDescription.focus();
+    await user.type(workDescription, "Write docs", { skipClick: true });
     await user.selectOptions(screen.getByLabelText("负责人"), "agent-b");
     const dependencies = screen.getByRole("group", { name: "前置依赖" });
     await user.click(

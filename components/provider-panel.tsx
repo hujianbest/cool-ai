@@ -513,6 +513,11 @@ export function ProviderPanel({
             ))}
           </ul>
         )}
+        {statusMessage && !editorOpen ? (
+          <p aria-live="polite" className="context-status" role="status">
+            {statusMessage}
+          </p>
+        ) : null}
       </main>
 
       {editorOpen ? (

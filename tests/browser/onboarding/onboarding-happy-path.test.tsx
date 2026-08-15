@@ -457,8 +457,14 @@ describe("progressive onboarding T-1", () => {
       within(goalGuide).getByRole("button", { name: "创建使命目标" }),
     );
     expect(screen.getByLabelText("使命标题")).toHaveFocus();
-    await user.type(screen.getByLabelText("使命标题"), "Release mission");
-    await user.type(screen.getByLabelText("使命目标"), "Prepare a release plan");
+    await user.type(screen.getByLabelText("使命标题"), "Release mission", {
+      skipClick: true,
+    });
+    const onboardingGoal = screen.getByLabelText("使命目标");
+    onboardingGoal.focus();
+    await user.type(onboardingGoal, "Prepare a release plan", {
+      skipClick: true,
+    });
     await user.click(screen.getByRole("button", { name: "创建使命" }));
     expect(
       await screen.findByRole("heading", { name: "Release mission" }),
@@ -2030,8 +2036,10 @@ describe("progressive onboarding T-9 formal goal intake", () => {
     render(<MissionBoard projectId={project.id} />);
     await screen.findByText("尚未创建使命。");
     await user.click(screen.getByRole("button", { name: "创建使命" }));
-    await user.type(screen.getByLabelText("使命标题"), mission.title);
-    await user.type(screen.getByLabelText("使命目标"), mission.goal);
+    await user.type(screen.getByLabelText("使命标题"), mission.title, { skipClick: true });
+    const privateGoal = screen.getByLabelText("使命目标");
+    privateGoal.focus();
+    await user.type(privateGoal, mission.goal, { skipClick: true });
     await user.click(screen.getByRole("button", { name: "创建使命" }));
 
     expect(
@@ -2090,8 +2098,10 @@ describe("progressive onboarding T-9 formal goal intake", () => {
     render(<MissionBoard projectId={project.id} />);
     await screen.findByText("尚未创建使命。");
     await user.click(screen.getByRole("button", { name: "创建使命" }));
-    await user.type(screen.getByLabelText("使命标题"), mission.title);
-    await user.type(screen.getByLabelText("使命目标"), mission.goal);
+    await user.type(screen.getByLabelText("使命标题"), mission.title, { skipClick: true });
+    const retryGoal = screen.getByLabelText("使命目标");
+    retryGoal.focus();
+    await user.type(retryGoal, mission.goal, { skipClick: true });
     await user.click(screen.getByRole("button", { name: "创建使命" }));
 
     const receipt = await screen.findByRole("alert");
@@ -2375,10 +2385,18 @@ describe("progressive onboarding T-14 unknown-write reconciliation", () => {
     render(<MissionBoard projectId={project.id} />);
     await screen.findByRole("heading", { name: mission.title });
     await user.click(screen.getByRole("button", { name: "编辑使命" }));
-    await user.clear(screen.getByLabelText("使命标题"));
-    await user.type(screen.getByLabelText("使命标题"), "Updated mission");
-    await user.clear(screen.getByLabelText("使命目标"));
-    await user.type(screen.getByLabelText("使命目标"), "Updated private goal");
+    const privateEditTitle = screen.getByLabelText("使命标题");
+    await user.clear(privateEditTitle);
+    privateEditTitle.focus();
+    await user.type(privateEditTitle, "Updated mission", {
+      skipClick: true,
+    });
+    const privateEditGoal = screen.getByLabelText("使命目标");
+    await user.clear(privateEditGoal);
+    privateEditGoal.focus();
+    await user.type(privateEditGoal, "Updated private goal", {
+      skipClick: true,
+    });
     await user.click(screen.getByRole("button", { name: "保存使命" }));
 
     expect(

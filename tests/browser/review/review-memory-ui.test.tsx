@@ -244,8 +244,12 @@ describe("review memory UI", () => {
     expect(screen.getByRole("radio", { name: "目标" })).toBeInTheDocument();
     expect(screen.queryByRole("radio", { name: /Agent|review confirmation/i })).toBeNull();
     await user.click(screen.getByRole("radio", { name: "经验" }));
-    await user.type(screen.getByLabelText("记忆正文"), "Keep review evidence");
-    await user.type(screen.getByLabelText("来源引用"), "Owner note");
+    const content = screen.getByLabelText("记忆正文");
+    content.focus();
+    await user.type(content, "Keep review evidence", { skipClick: true });
+    const sourceRef = screen.getByLabelText("来源引用");
+    sourceRef.focus();
+    await user.type(sourceRef, "Owner note", { skipClick: true });
     await user.click(screen.getByRole("button", { name: "保存记忆" }));
 
     const post = fetchMock.mock.calls.find((call) =>
@@ -281,8 +285,12 @@ describe("review memory UI", () => {
     await user.click(screen.getByRole("button", { name: "重试加载共享记忆" }));
     await screen.findByText("尚无共享记忆。");
     await user.click(screen.getByRole("button", { name: "添加记忆" }));
-    await user.type(screen.getByLabelText("记忆正文"), "Draft survives");
-    await user.type(screen.getByLabelText("来源引用"), "Owner note");
+    const content = screen.getByLabelText("记忆正文");
+    content.focus();
+    await user.type(content, "Draft survives", { skipClick: true });
+    const sourceRef = screen.getByLabelText("来源引用");
+    sourceRef.focus();
+    await user.type(sourceRef, "Owner note", { skipClick: true });
     await user.click(screen.getByRole("button", { name: "保存记忆" }));
 
     expect(await screen.findByRole("alert")).toHaveTextContent("数据已更新");

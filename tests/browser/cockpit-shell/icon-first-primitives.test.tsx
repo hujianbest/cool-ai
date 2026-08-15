@@ -76,4 +76,59 @@ describe("icon-first primitives", () => {
     expect(screen.queryByRole("dialog")).toBeNull();
     expect(screen.getByRole("button", { name: "打开文件夹" })).toHaveFocus();
   });
+
+  it("keeps typing in the second field while the dialog parent re-renders", async () => {
+    const user = userEvent.setup();
+    function Harness() {
+      const [open, setOpen] = useState(false);
+      const [title, setTitle] = useState("");
+      const [goal, setGoal] = useState("");
+      const titleRef = useRef<HTMLInputElement>(null);
+      return (
+        <>
+          <IconButton
+            icon={<Plus size={20} />}
+            label="创建使命"
+            onClick={() => setOpen(true)}
+          />
+          <ActionDialog
+            closeLabel="关闭创建使命"
+            initialFocusRef={titleRef}
+            onClose={() => setOpen(false)}
+            open={open}
+            title="创建使命"
+            titleId="create-mission-title"
+          >
+            <div className="form-field">
+              <label htmlFor="mission-title">使命标题</label>
+              <input
+                id="mission-title"
+                onChange={(event) => setTitle(event.target.value)}
+                ref={titleRef}
+                value={title}
+              />
+            </div>
+            <div className="form-field">
+              <label htmlFor="mission-goal">使命目标</label>
+              <input
+                id="mission-goal"
+                onChange={(event) => setGoal(event.target.value)}
+                value={goal}
+              />
+            </div>
+            <output data-testid="dialog-values">{`${title}|${goal}`}</output>
+          </ActionDialog>
+        </>
+      );
+    }
+    render(<Harness />);
+    await user.click(screen.getByRole("button", { name: "创建使命" }));
+    await user.type(screen.getByLabelText("使命标题"), "Ship", {
+      skipClick: true,
+    });
+    const goal = screen.getByLabelText("使命目标");
+    goal.focus();
+    await user.type(goal, "Deliver", { skipClick: true });
+    expect(screen.getByTestId("dialog-values")).toHaveTextContent("Ship|Deliver");
+  });
 });

@@ -161,7 +161,7 @@ describe("Provider configuration panel", () => {
     const heading = await screen.findByRole("heading", { name: "Local" });
     expect(heading).toHaveFocus();
     expect(screen.getByRole("status")).toHaveTextContent("模型服务已保存。");
-    expect(screen.getByLabelText("API key")).toHaveValue("");
+    expect(screen.queryByLabelText("API key")).toBeNull();
     expect(document.body.textContent).not.toContain(API_KEY);
     expect(document.querySelector(`input[value="${API_KEY}"]`)).toBeNull();
     expect(calls.find((call) => call.url === "/api/providers/verify")?.body).toMatchObject({

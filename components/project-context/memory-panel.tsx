@@ -251,6 +251,7 @@ export function MemoryPanel({ projectId }: { projectId: string }) {
     const query = searchQuery.trim();
     if (!query) return;
     setIsSearching(true);
+    setSearchOpen(false);
     setSearchError(null);
     const params = new URLSearchParams({ q: query });
     if (searchType) params.set("type", searchType);
@@ -267,7 +268,6 @@ export function MemoryPanel({ projectId }: { projectId: string }) {
         throw new Error("search");
       }
       setSearchHits(payload.results);
-      setSearchOpen(false);
     } catch {
       setSearchError("无法检索记忆，请稍后重试。");
       setSearchHits(null);
@@ -477,7 +477,7 @@ export function MemoryPanel({ projectId }: { projectId: string }) {
           closeLabel="关闭记忆检索"
           onClose={() => setSearchOpen(false)}
           open={searchOpen}
-          title="检索记忆"
+          title="记忆检索"
           titleId={`memory-search-title-${projectId}`}
         >
         <form className="stack" onSubmit={submitSearch}>
