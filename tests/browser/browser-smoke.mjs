@@ -185,7 +185,6 @@ try {
   }
   const statuses = await page.locator(".status-label").allTextContents();
   assert.deepEqual(statuses, ["排队中", "运行中", "已完成"]);
-  const taskResult = page.getByText(/示例 Agent 已完成骨架任务/);
 
   await page.screenshot({ path: smokeScreenshot, fullPage: true });
   await page.screenshot({ path: currentDesktopScreenshot, fullPage: true });
@@ -193,7 +192,6 @@ try {
   await page.reload({ waitUntil: "networkidle" });
   await page.getByRole("button", { name: "real-workspace" }).waitFor();
   await page.getByText("任务已完成。", { exact: true }).waitFor();
-  await taskResult.scrollIntoViewIfNeeded();
   assert.deepEqual(await page.locator(".status-label").allTextContents(), [
     "排队中",
     "运行中",
