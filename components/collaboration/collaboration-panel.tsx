@@ -3689,6 +3689,11 @@ export function CollaborationPanel({
             </div>
             {visibleFacts.length ? (
               <button
+                className={
+                  factsPage?.nextAfter === null && !factsPending
+                    ? "sr-only"
+                    : undefined
+                }
                 disabled={factsPending || factsPage?.nextAfter === null}
                 onClick={() => void readNextFacts("page")}
                 type="button"

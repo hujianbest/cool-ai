@@ -179,6 +179,9 @@ describe("strict thread fact transcript", () => {
     );
     expect(loadMore).toHaveFocus();
     expect(screen.queryByRole("button", { name: "加载更多事实" })).toBeNull();
+    expect(screen.getByRole("button", { name: "已加载全部事实" })).toHaveClass(
+      "sr-only",
+    );
   });
 
   it("renders each nested owner or Agent message once and never maps the messages page", async () => {

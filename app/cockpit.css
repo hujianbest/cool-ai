@@ -24,9 +24,13 @@ body {
   position: absolute;
   width: var(--sr-only-size);
   height: var(--sr-only-size);
+  min-width: 0;
+  min-height: 0;
   overflow: hidden;
   clip-path: inset(50%);
   white-space: nowrap;
+  padding: 0;
+  border: 0;
 }
 
 button,
@@ -1912,6 +1916,11 @@ ol {
   padding: var(--space-2) 0;
 }
 
+.timeline-item.message-row-system {
+  padding: var(--space-1) 0;
+  color: var(--text-secondary);
+}
+
 .timeline-item.message-row {
   flex-direction: row;
   align-items: flex-start;
@@ -1988,9 +1997,8 @@ ol {
   margin: 0;
 }
 
-.message-row-system .msg-author {
-  color: var(--text-secondary);
-  font-weight: 500;
+.message-row-system .msg-header {
+  font-size: var(--text-fine-print);
 }
 
 .message-attachments {
