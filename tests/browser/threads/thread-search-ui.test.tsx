@@ -115,6 +115,33 @@ afterEach(() => {
 });
 
 describe("thread search entry in project thread navigation", () => {
+  it("opens a centered search dialog with Cmd/Ctrl+K", async () => {
+    vi.stubGlobal(
+      "fetch",
+      vi.fn(async (input: RequestInfo | URL) => {
+        const url = String(input);
+        if (url === `/api/projects/${project.id}/threads?limit=100`) {
+          return Response.json(listThreads([thread("thread-1", "发布计划", 1)]));
+        }
+        if (url === `/api/projects/${project.id}/thread-tags?limit=100`) {
+          return Response.json({ tags: [] });
+        }
+        throw new Error(`Unexpected request: ${url}`);
+      }),
+    );
+    window.history.replaceState(null, "", `/projects/${project.id}?thread=thread-1`);
+    const user = userEvent.setup();
+
+    render(<ThreadSearchHarness />);
+    await screen.findByRole("button", { name: "发布计划" });
+    expect(screen.queryByRole("dialog", { name: "会话搜索" })).toBeNull();
+
+    await user.keyboard("{Control>}k{/Control}");
+    const dialog = await screen.findByRole("dialog", { name: "会话搜索" });
+    expect(dialog).toHaveClass("thread-search-overlay");
+    expect(within(dialog).getByLabelText("搜索对话")).toHaveFocus();
+  });
+
   it("debounces input for about 300ms before issuing one search request", async () => {
     const searchCalls: string[] = [];
     vi.stubGlobal(

@@ -1044,6 +1044,32 @@ ol {
   display: flex;
 }
 
+.thread-search-overlay {
+  display: flex;
+  position: fixed;
+  inset: 0;
+  z-index: 6;
+  flex-direction: column;
+  align-items: center;
+  gap: var(--space-3);
+  padding: var(--space-8) var(--space-4);
+  background: color-mix(in srgb, var(--color-surface-black) 46%, transparent);
+}
+
+.thread-search-overlay .thread-search {
+  width: min(100%, var(--content-min));
+  padding: var(--space-4);
+  border-radius: var(--rounded-lg);
+  background: var(--surface-card);
+  box-shadow: var(--shadow-2);
+}
+
+.thread-search-overlay .thread-search input,
+.thread-search-overlay [aria-label="对话搜索结果"],
+.thread-search-overlay [role="status"] {
+  width: min(100%, var(--content-min));
+}
+
 .thread-search input {
   flex: 1;
   border-radius: var(--rounded-pill);

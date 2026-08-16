@@ -4,7 +4,7 @@
 - 当前阶段: implement（P0 壳层已实现并验证；收尾项：全量套件与冒烟）
 - 执行模式: auto
 - 已加载: hf-ui-design
-- 下一步: Cmd/Ctrl+K 搜索浮层对齐 UCD（侧栏搜索已 sr-only）；演示 auto-approved 须呈上。
+- 下一步: 有真实 Agent 块时把 Proposal/Thinking 更贴近 UCD 原型（不伪造数据）；演示 auto-approved 须呈上。
 
 ## 状态记录
 
@@ -37,6 +37,7 @@
 - 2026-08-16 执行模式改为 auto（A-362）。按 UCD §9.1.2 / §9.1.3 把 Owner/Agent 事实渲染为头像气泡，系统事实改为安静行；不伪造思考链。localhost:3002 浏览器核对。聚焦测试 93/93，`build` 绿。演示 auto-approved 2026-08-16。
 - 2026-08-16 按 UCD 主路径去掉「已加载全部事实」可见 chrome：耗尽后加载按钮加 `sr-only`（节点保留以维持焦点），`.sr-only` 覆盖全局 button `min-height`。localhost:3002 浏览器核对主区不再看见该禁用按钮。聚焦测试 18/18，`build` 绿。演示 auto-approved 2026-08-16。
 - 2026-08-16 按 UCD 原型把消息「回复」改为悬停/焦点显现：`.msg-reply` 默认 opacity 0，`:hover` / `:focus-within` 显现，保留 a11y name。localhost:3002 浏览器核对空闲态无常驻回复。聚焦测试 31/31，`build` 绿。演示 auto-approved 2026-08-16。
+- 2026-08-16 按 UCD §9.6.1 把 `Cmd/Ctrl+K` 从侧栏内联搜索改为居中 `会话搜索` 浮层；空查询 ESC 关闭。localhost:3002 浏览器核对。聚焦测试 53/53，`build` 绿。演示 auto-approved 2026-08-16。
 
 ## 任务票
 

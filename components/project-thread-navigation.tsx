@@ -553,6 +553,7 @@ export function ProjectThreadNavigation({
   const searchEpochRef = useRef(0);
   const searchAreaRef = useRef<HTMLElement>(null);
   const searchActiveRef = useRef(false);
+  const searchRevealedRef = useRef(false);
   const searchInputRef = useRef<HTMLInputElement>(null);
   const searchResultRefs = useRef(new Map<number, HTMLButtonElement>());
   const createButtonRef = useRef<HTMLButtonElement>(null);
@@ -1127,6 +1128,11 @@ export function ProjectThreadNavigation({
         organizeButtonRef.current?.focus();
         return;
       }
+      if (searchRevealedRef.current && !searchActiveRef.current) {
+        event.stopPropagation();
+        setSearchRevealed(false);
+        return;
+      }
       if (!searchActiveRef.current) return;
       event.stopPropagation();
       setSearchText("");
@@ -1139,6 +1145,7 @@ export function ProjectThreadNavigation({
   const trimmedSearch = searchText.trim();
   const searchActive = trimmedSearch.length > 0;
   searchActiveRef.current = searchActive;
+  searchRevealedRef.current = searchRevealed;
   const visibleSearchPage =
     searchPage && searchPage.query === trimmedSearch ? searchPage : null;
 
@@ -1976,7 +1983,17 @@ export function ProjectThreadNavigation({
               />
             ) : null}
         </div>
-        <div className={searchRevealed || searchActive ? "thread-search" : "thread-search sr-only"}>
+        <div
+          aria-label={searchRevealed || searchActive ? "会话搜索" : undefined}
+          aria-modal={searchRevealed || searchActive ? true : undefined}
+          className={
+            searchRevealed || searchActive
+              ? "thread-search-overlay"
+              : "thread-search sr-only"
+          }
+          role={searchRevealed || searchActive ? "dialog" : undefined}
+        >
+          <div className="thread-search">
           <input
             aria-label="搜索对话"
             onChange={(event) => setSearchText(event.target.value)}
@@ -1986,7 +2003,7 @@ export function ProjectThreadNavigation({
             type="search"
             value={searchText}
           />
-        </div>
+          </div>
         {searchActive ? (
           <>
             {searchState === "loading" ? (
@@ -2084,6 +2101,7 @@ export function ProjectThreadNavigation({
             ) : null}
           </>
         ) : null}
+        </div>
         {searchActive ? null : (
         <div
           aria-label="对话视图"
