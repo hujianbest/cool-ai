@@ -228,6 +228,52 @@ describe("strict thread fact transcript", () => {
       .toHaveLength(3);
   });
 
+  it("renders owner and Agent facts as avatar message rows", async () => {
+    const owner = message("message-owner", 1, "owner", "Owner fact content");
+    const agent = message("message-agent", 2, "agent", "Agent fact content");
+    vi.stubGlobal(
+      "fetch",
+      vi.fn((input: RequestInfo | URL) => {
+        const url = String(input);
+        if (url.endsWith(`/threads/${TEST_THREAD_ID}`)) {
+          return Promise.resolve(Response.json(detail()));
+        }
+        if (url.endsWith(`/threads/${TEST_THREAD_ID}/messages`)) {
+          return Promise.resolve(Response.json({ items: [owner, agent], nextAfter: null }));
+        }
+        if (url.endsWith(`/threads/${TEST_THREAD_ID}/facts`)) {
+          return Promise.resolve(
+            Response.json({
+              items: [
+                messageFact("fact-owner", 1, owner),
+                messageFact("fact-agent", 2, agent),
+              ],
+              nextAfter: null,
+            }),
+          );
+        }
+        throw new Error(`Unexpected request: ${url}`);
+      }),
+    );
+
+    render(
+      <CollaborationPanel
+        projectId={projectId}
+        threadId={TEST_THREAD_ID}
+      />,
+    );
+
+    expect(await screen.findByLabelText("项目所有者 的消息头像")).toHaveTextContent("项");
+    expect(screen.getByLabelText("Alpha 的消息头像")).toHaveTextContent("A");
+    const ownerRow = screen.getByText("Owner fact content").closest("li");
+    const agentRow = screen.getByText("Agent fact content").closest("li");
+    expect(ownerRow).toHaveClass("message-row");
+    expect(agentRow).toHaveClass("message-row");
+    expect(ownerRow?.querySelector(".msg-avatar")).toHaveClass("owner");
+    expect(ownerRow).toHaveTextContent("项目所有者 (Owner)");
+    expect(agentRow).toHaveTextContent("Alpha");
+  });
+
   it("covers loading, empty, failed fact retry, and fail-closed tuple validation", async () => {
     let resolveFacts!: (response: Response) => void;
     const pendingFacts = new Promise<Response>((resolve) => {

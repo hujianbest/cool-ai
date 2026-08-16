@@ -53,7 +53,7 @@ import type {
   MembershipState,
   ProjectMember,
 } from "@/src/shared/project-context-contracts";
-import { reduceTranscript, type TranscriptReplyReference } from "@/src/shared/transcript-model";
+import { reduceTranscript, type TranscriptEntry, type TranscriptReplyReference } from "@/src/shared/transcript-model";
 
 type CollaborationPanelProps = {
   directAgentName?: string;
@@ -800,6 +800,40 @@ function readableTime(timestamp: string): string {
     month: "2-digit",
     year: "numeric",
   }).format(new Date(timestamp));
+}
+
+function messageClock(timestamp: string): string {
+  return new Intl.DateTimeFormat("zh-CN", {
+    hour: "2-digit",
+    hour12: false,
+    minute: "2-digit",
+  }).format(new Date(timestamp));
+}
+
+function isOwnerMessage(entry: TranscriptEntry): boolean {
+  return entry.messageId !== null && entry.heading === "所有者发来消息";
+}
+
+function isAgentMessage(entry: TranscriptEntry): boolean {
+  return entry.messageId !== null && entry.heading === "Agent 发来消息";
+}
+
+function messageAvatarGlyph(
+  entry: TranscriptEntry,
+  members: ProjectMember[] | null,
+): string {
+  if (isOwnerMessage(entry)) {
+    return [...entry.actorLabel][0] ?? "O";
+  }
+  const member = members?.find((item) => item.name === entry.actorLabel);
+  return member?.avatarText ?? [...entry.actorLabel][0] ?? "A";
+}
+
+function memberRoleLabel(
+  actorLabel: string,
+  members: ProjectMember[] | null,
+): string | null {
+  return members?.find((item) => item.name === actorLabel)?.role ?? null;
 }
 
 function canonicalRunHref(
@@ -3476,6 +3510,7 @@ export function CollaborationPanel({
             <div
               aria-busy={factsPending}
               aria-label="协作时间线"
+              aria-live="polite"
               className="collaboration-timeline"
               onScroll={(event) => {
                 const log = event.currentTarget;
@@ -3492,12 +3527,25 @@ export function CollaborationPanel({
               >
               {transcript.entries.map((entry) => {
                 const replyTo = entry.replyTo;
+                const ownerMessage = isOwnerMessage(entry);
+                const agentMessage = isAgentMessage(entry);
+                const spokenMessage = ownerMessage || agentMessage;
+                const roleLabel = agentMessage
+                  ? memberRoleLabel(entry.actorLabel, members)
+                  : null;
                 return (
                   <li
                     className={
-                      entry.messageId && entry.messageId === highlightMessageId
-                        ? "timeline-item timeline-event reply-target-highlight"
-                        : "timeline-item timeline-event"
+                      [
+                        "timeline-item",
+                        "timeline-event",
+                        spokenMessage ? "message-row" : "message-row-system",
+                        entry.messageId && entry.messageId === highlightMessageId
+                          ? "reply-target-highlight"
+                          : "",
+                      ]
+                        .filter(Boolean)
+                        .join(" ")
                     }
                     key={entry.factId}
                     ref={(node) => {
@@ -3507,11 +3555,42 @@ export function CollaborationPanel({
                     }}
                     tabIndex={entry.messageId ? -1 : undefined}
                   >
-                    <div className="timeline-event-heading">
-                      <h4>{entry.heading}</h4>
-                      <time dateTime={entry.createdAt}>{readableTime(entry.createdAt)}</time>
+                    {spokenMessage ? (
+                      <span
+                        aria-label={`${entry.actorLabel} 的消息头像`}
+                        className={ownerMessage ? "msg-avatar owner" : "msg-avatar"}
+                      >
+                        {messageAvatarGlyph(entry, members)}
+                      </span>
+                    ) : null}
+                    <div className="msg-body">
+                    <div className="msg-header">
+                      <h4 className="msg-author">
+                        {ownerMessage
+                          ? `${entry.actorLabel} (Owner)`
+                          : agentMessage
+                            ? entry.actorLabel
+                            : entry.heading}
+                      </h4>
+                      {roleLabel ? (
+                        <span className="msg-role-tag">{roleLabel}</span>
+                      ) : null}
+                      <time
+                        className="msg-time"
+                        dateTime={entry.createdAt}
+                        title={readableTime(entry.createdAt)}
+                      >
+                        {spokenMessage
+                          ? messageClock(entry.createdAt)
+                          : readableTime(entry.createdAt)}
+                      </time>
+                      {spokenMessage ? (
+                        <span className="sr-only">{entry.heading}</span>
+                      ) : null}
                     </div>
-                    <p className="muted">{entry.actorLabel}</p>
+                    {spokenMessage ? null : (
+                      <p className="muted">{entry.actorLabel}</p>
+                    )}
                     {entry.mention ? (
                       <span className="mention-chip">
                         @{entry.mention.displayName}
@@ -3549,7 +3628,15 @@ export function CollaborationPanel({
                         </button>
                       )
                     ) : null}
-                    {entry.text ? <p>{entry.text}</p> : null}
+                    {entry.text ? (
+                      spokenMessage ? (
+                        <div className="msg-content">
+                          <p>{entry.text}</p>
+                        </div>
+                      ) : (
+                        <p>{entry.text}</p>
+                      )
+                    ) : null}
                     {entry.messageId && threadId
                       && (messageAttachmentsById.get(entry.messageId)?.length ?? 0) > 0 ? (
                       <ul className="message-attachments">
@@ -3594,6 +3681,7 @@ export function CollaborationPanel({
                         回复
                       </button>
                     ) : null}
+                    </div>
                   </li>
                 );
               })}
