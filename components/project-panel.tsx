@@ -122,6 +122,39 @@ export function ProjectPanel({
   const contextCloseRef = useRef<HTMLButtonElement>(null);
   const currentProjectTitleRef = useRef<HTMLHeadingElement>(null);
   const closeMobileSurface = useCallback(() => setMobileSurface(null), []);
+
+  useEffect(() => {
+    function onKeyDown(event: KeyboardEvent) {
+      if (event.key === "Escape") {
+        if (threadDialogOpen || workspaceConfirmationOpen) {
+          return;
+        }
+        setGovernanceView(null);
+        return;
+      }
+
+      if (!(event.metaKey || event.ctrlKey) || event.shiftKey || event.altKey) {
+        return;
+      }
+
+      const viewByDigit: Record<string, GovernanceView | null> = {
+        "1": null,
+        "2": "mission",
+        "3": "memory",
+        "4": "approvals",
+        "5": "audit",
+      };
+      if (!(event.key in viewByDigit)) {
+        return;
+      }
+      event.preventDefault();
+      setGovernanceView(viewByDigit[event.key] ?? null);
+    }
+
+    window.addEventListener("keydown", onKeyDown);
+    return () => window.removeEventListener("keydown", onKeyDown);
+  }, [threadDialogOpen, workspaceConfirmationOpen]);
+
   const projectModal = useMemo(
     () => ({
       active:

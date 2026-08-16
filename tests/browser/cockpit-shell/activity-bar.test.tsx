@@ -38,6 +38,27 @@ describe("ActivityBar", () => {
     expect(screen.queryByRole("link", { name: "首次使用引导" })).toBeNull();
   });
 
+  it("keeps 对话 on the current project when returnTo or activePath is a project", () => {
+    const { rerender } = render(
+      <ActivityBar activePath="/projects/project-1" />,
+    );
+    expect(screen.getByRole("link", { name: "对话" })).toHaveAttribute(
+      "href",
+      "/projects/project-1",
+    );
+
+    rerender(
+      <ActivityBar activePath="/team" returnTo="/projects/project-1" />,
+    );
+    expect(screen.getByRole("link", { name: "对话" })).toHaveAttribute(
+      "href",
+      "/projects/project-1",
+    );
+    expect(screen.getByRole("link", { name: "对话" })).not.toHaveAttribute(
+      "aria-current",
+    );
+  });
+
   it("points 对话 at / and safely structures the 团队 and 设置 URLs", () => {
     render(<ActivityBar activePath="/" />);
 

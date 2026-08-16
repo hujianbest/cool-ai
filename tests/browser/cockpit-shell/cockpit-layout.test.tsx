@@ -1,6 +1,7 @@
 // @vitest-environment jsdom
 import { readFileSync } from "node:fs";
 import { render, screen, within } from "@testing-library/react";
+import userEvent from "@testing-library/user-event";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
 import { ProjectPanel } from "@/components/project-panel";
@@ -159,6 +160,60 @@ describe("desktop collaboration cockpit", () => {
     });
     expect(within(sidebar).queryByRole("link", { name: "对话" })).toBeNull();
     expect(within(sidebar).queryByRole("link", { name: "团队" })).toBeNull();
+  });
+
+  it("keeps 对话 on the current project and returns from governance with Escape or Cmd+1", async () => {
+    const user = userEvent.setup();
+    pathnameValue = "/projects/project-1";
+    vi.stubGlobal(
+      "fetch",
+      cockpitFetch([
+        Response.json({
+          projects: [
+            {
+              id: "project-1",
+              name: "Launch plan",
+              createdAt: "2026-07-29T00:00:00.000Z",
+            },
+          ],
+        }),
+        Response.json({ tasks: [], events: [] }),
+      ]),
+    );
+    render(<ProjectPanel />);
+
+    const cockpit = await screen.findByTestId("collaboration-cockpit");
+    const activityBar = within(cockpit).getByRole("navigation", {
+      name: "主导航",
+    });
+    expect(within(activityBar).getByRole("link", { name: "对话" })).toHaveAttribute(
+      "href",
+      "/projects/project-1",
+    );
+
+    await user.click(within(activityBar).getByRole("button", { name: "任务" }));
+    expect(
+      await within(cockpit).findByRole("button", { name: "返回对话" }),
+    ).toBeInTheDocument();
+    expect(within(activityBar).getByRole("button", { name: "任务" })).toHaveAttribute(
+      "aria-pressed",
+      "true",
+    );
+
+    await user.keyboard("{Escape}");
+    expect(within(cockpit).queryByRole("button", { name: "返回对话" })).toBeNull();
+
+    await user.keyboard("{Control>}3{/Control}");
+    expect(
+      await within(cockpit).findByRole("button", { name: "返回对话" }),
+    ).toBeInTheDocument();
+    expect(within(activityBar).getByRole("button", { name: "记忆" })).toHaveAttribute(
+      "aria-pressed",
+      "true",
+    );
+
+    await user.keyboard("{Control>}1{/Control}");
+    expect(within(cockpit).queryByRole("button", { name: "返回对话" })).toBeNull();
   });
 
   it("keeps home as a single chat pane with the lobby header", async () => {

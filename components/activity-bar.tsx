@@ -14,7 +14,7 @@ import {
 
 import {
   buildSettingsHref,
-  parseReturnTo,
+  parseProjectSelection,
   SETTINGS_SECTIONS,
 } from "@/components/settings-navigation";
 import { useSettingsPreferences } from "@/components/settings-preferences-store";
@@ -26,7 +26,7 @@ import {
 export type ActivityBarProps = {
   activeGovernance?: GovernanceView | null;
   activePath: string;
-  onGovernance?: (view: GovernanceView) => void;
+  onGovernance?: (view: GovernanceView | null) => void;
   returnTo?: "/" | `/projects/${string}`;
 };
 
@@ -61,8 +61,11 @@ export function ActivityBar({
       }[themePreference.error]
     : null;
   const settingsReturnTo = returnTo ?? activePath;
+  const chatHref =
+    parseProjectSelection(activePath)?.projectHref ??
+    (settingsReturnTo.startsWith("/projects/") ? settingsReturnTo : "/");
   const chatIsActive =
-    (activePath === "/" || parseReturnTo(activePath) === activePath) &&
+    (activePath === "/" || Boolean(parseProjectSelection(activePath))) &&
     !activeGovernance;
   const teamIsActive = activePath === "/team" || activePath.startsWith("/team?");
   const teamHref = buildSettingsHref("skills", settingsReturnTo);
@@ -79,7 +82,13 @@ export function ActivityBar({
         aria-label="对话"
         className="activity-bar-item"
         data-tooltip="对话"
-        href="/"
+        href={chatHref}
+        onClick={(event) => {
+          onGovernance?.(null);
+          if (chatHref === activePath) {
+            event.preventDefault();
+          }
+        }}
       >
         <ChatCircle aria-hidden="true" size={20} weight="regular" />
       </a>
