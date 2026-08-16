@@ -108,6 +108,19 @@ describe("Diff/File/Handoff read-only public UI surface", () => {
       .toHaveAttribute("href", expect.stringContaining("execution-file"));
   });
 
+  it("renders a File Reference as a UCD source tag with the frozen public name", () => {
+    vi.stubGlobal("fetch", vi.fn());
+    render(
+      <StructuredMessageBlock
+        block={readonlyBlock("file_reference")}
+        targetKey="project-1|thread-1|run-1"
+      />,
+    );
+    const tag = screen.getByRole("button", { name: "打开 File Reference 安全来源" });
+    expect(tag).toHaveClass("source-tag");
+    expect(tag).toHaveTextContent("frozen-safe-name.txt");
+  });
+
   it("locks the frozen File Reference public name on the card without fetching the source", async () => {
     const fetcher = vi.fn((_input: RequestInfo | URL, _init?: RequestInit) =>
       Promise.resolve(Response.json({

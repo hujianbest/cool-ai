@@ -4,8 +4,8 @@
 - 当前阶段: ready
 - 执行模式: auto
 - 已加载扩展: 无
-- 当前主切片: P0 的 051/S-61 暖金壳层（壳层已实现；目标环境全量绿 + 冒烟 + demo 验收待收尾）
-- 下一步: 完成 P0 收尾后进入 P1（050/S-60 阶段 1 驾驶舱）。新上下文开发先读 [`development-plan.md`](./development-plan.md)，再读本文件与当前特性 `progress.md`。
+- 当前主切片: P0 的 051/S-61 暖金壳层已按 UCD 收口可用 API 的主路径与治理顶栏；长任务转入 050/S-60 ship 残余一般项
+- 下一步: 050 仍开一般项（onboarding 使命焦点、GET home 的 PWS ensure 写、跨 owner 分事务）；演示 auto-approved 须呈上驾驶舱与 UCD 原型对照。
 
 ## 当前快照（2026-08-15）
 
@@ -71,3 +71,4 @@
 - 2026-08-16 主路径聊天区耗尽分页后「已加载全部事实」改为 `sr-only`，不再占用可见 chrome。演示 auto-approved 2026-08-16。
 - 2026-08-16 消息「回复」改为悬停/焦点显现，空闲态与 UCD 原型一致。演示 auto-approved 2026-08-16。
 - 2026-08-16 `Cmd/Ctrl+K` 呼出居中会话搜索浮层（UCD §9.6.1）。演示 auto-approved 2026-08-16。
+- 2026-08-17 用户指示按 UCD 开发完后进入长任务。治理视图收口全宽顶栏（`← 返回对话`、无「治理视图」eyebrow、标题 `任务看板 · 项目` 等）、泳道计数与 pearl 任务卡；内层重复 h2 改为 `sr-only`。文案对齐：新建任务 / 沉淀新记忆 / 批准执行 / 驳回。localhost:3002 对照 `preview-ucd.html` 核对任务/记忆/审批空态。长任务已关 050 HelpTip 与 GET `/api/home` 的 Identity ensure 写。未伪造 TTL/Diff/Thinking/迷你头像（A-371～A-375）。演示 auto-approved 2026-08-17。

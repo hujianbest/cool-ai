@@ -303,11 +303,13 @@ export function MemoryPanel({ projectId }: { projectId: string }) {
   return (
     <section aria-labelledby={`memory-title-${projectId}`} className="stack">
       <header className="panel-heading">
-        <h2 id={`memory-title-${projectId}`}>共享记忆</h2>
+        <h2 className="sr-only" id={`memory-title-${projectId}`}>
+          共享记忆
+        </h2>
         <IconButton
           className="button-primary"
           icon={<Plus size={20} weight="regular" />}
-          label="添加记忆"
+          label="沉淀新记忆"
           onClick={() => {
             setWriteOpen(true);
             queueMicrotask(() => contentRef.current?.focus());

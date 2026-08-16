@@ -234,6 +234,44 @@ describe("desktop collaboration cockpit", () => {
     expect(within(cockpit).queryByRole("button", { name: "返回对话" })).toBeNull();
   });
 
+  it("opens a full-width UCD governance view with back-to-chat chrome", async () => {
+    const user = userEvent.setup();
+    pathnameValue = "/projects/project-1";
+    vi.stubGlobal(
+      "fetch",
+      cockpitFetch([
+        Response.json({
+          projects: [
+            {
+              id: "project-1",
+              name: "Launch plan",
+              createdAt: "2026-07-29T00:00:00.000Z",
+            },
+          ],
+        }),
+        Response.json({ tasks: [], events: [] }),
+      ]),
+    );
+    render(<ProjectPanel />);
+    const cockpit = await screen.findByTestId("collaboration-cockpit");
+    const activityBar = within(cockpit).getByRole("navigation", {
+      name: "主导航",
+    });
+    await user.click(within(activityBar).getByRole("button", { name: "任务" }));
+    const back = await within(cockpit).findByRole("button", { name: "返回对话" });
+    expect(back).toHaveClass("btn-back-chat");
+    expect(within(cockpit).queryByText("治理视图")).toBeNull();
+    expect(
+      within(cockpit).getByRole("heading", { name: "任务看板 · Launch plan" }),
+    ).toBeVisible();
+    expect(within(cockpit).getByRole("heading", { name: "使命看板" })).toHaveClass(
+      "sr-only",
+    );
+    expect(within(cockpit).getByTestId("editor-surface")).toHaveClass(
+      "cockpit-flow-governance",
+    );
+  });
+
   it("opens the system folder picker with Cmd/Ctrl+O", async () => {
     const user = userEvent.setup();
     pathnameValue = "/projects/project-1";
@@ -255,7 +293,7 @@ describe("desktop collaboration cockpit", () => {
         if (String(input) === "/api/directory-picker") {
           return Promise.resolve(Response.json({ cancelled: true }));
         }
-        return fetchMock(input, init);
+        return fetchMock(input);
       }),
     );
     render(<ProjectPanel />);
@@ -268,6 +306,39 @@ describe("desktop collaboration cockpit", () => {
         expect.objectContaining({ method: "POST" }),
       ),
     );
+  });
+
+  it("collapses and expands the session sidebar with Cmd/Ctrl+B", async () => {
+    const user = userEvent.setup();
+    pathnameValue = "/projects/project-1";
+    vi.stubGlobal(
+      "fetch",
+      cockpitFetch([
+        Response.json({
+          projects: [
+            {
+              id: "project-1",
+              name: "Launch plan",
+              createdAt: "2026-07-29T00:00:00.000Z",
+            },
+          ],
+        }),
+        Response.json({ tasks: [], events: [] }),
+      ]),
+    );
+    render(<ProjectPanel />);
+    const cockpit = await screen.findByTestId("collaboration-cockpit");
+    const sidebar = within(cockpit).getByRole("complementary", { name: "项目导航" });
+    expect(cockpit).not.toHaveAttribute("data-sidebar-collapsed");
+    expect(sidebar).not.toHaveAttribute("data-collapsed");
+
+    await user.keyboard("{Control>}b{/Control}");
+    expect(cockpit).toHaveAttribute("data-sidebar-collapsed", "true");
+    expect(sidebar).toHaveAttribute("data-collapsed", "true");
+
+    await user.keyboard("{Control>}b{/Control}");
+    expect(cockpit).not.toHaveAttribute("data-sidebar-collapsed");
+    expect(sidebar).not.toHaveAttribute("data-collapsed");
   });
 
   it("lights Needs Me on the header and 审批 rail when approvals are pending", async () => {
@@ -413,6 +484,12 @@ describe("desktop warm-terracotta shell grid", () => {
     );
     expect(cockpit).toMatch(
       /\.composer-send\s*\{[^}]*background:\s*var\(--interactive-primary\)/s,
+    );
+    expect(cockpit).toMatch(
+      /\.governance-view\s*\{[^}]*max-width:\s*none/s,
+    );
+    expect(cockpit).toMatch(
+      /\.btn-back-chat\s*\{[^}]*border-radius:\s*var\(--rounded-pill\)[^}]*color:\s*var\(--interactive-primary\)/s,
     );
   });
 

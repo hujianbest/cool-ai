@@ -90,7 +90,7 @@ describe("Shared Memory panel", () => {
       screen.getByRole("button", { name: "重试加载共享记忆" }),
     );
     expect(await screen.findByText("尚无共享记忆。")).toBeInTheDocument();
-    expect(screen.getByRole("button", { name: "添加记忆" })).toBeEnabled();
+    expect(screen.getByRole("button", { name: "沉淀新记忆" })).toBeEnabled();
   });
 
   it("creates sourced memory, labels artifact references, supersedes active entries and displays history", async () => {
@@ -118,7 +118,7 @@ describe("Shared Memory panel", () => {
     render(<MemoryPanel projectId="project-1" />);
     await screen.findByRole("heading", { name: "Current goal" });
 
-    await user.click(screen.getByRole("button", { name: "添加记忆" }));
+    await user.click(screen.getByRole("button", { name: "沉淀新记忆" }));
     await user.click(screen.getByRole("button", { name: "保存记忆" }));
     expect(screen.getByRole("alert")).toHaveTextContent("请输入记忆正文");
     expect(screen.getByLabelText("记忆正文")).toHaveFocus();

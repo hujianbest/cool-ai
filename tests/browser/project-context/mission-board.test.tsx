@@ -377,7 +377,7 @@ describe("Mission Board", () => {
     expect(boardRegion.querySelector("[draggable]")).toBeNull();
     expect(within(boardRegion).getByText("等待: Plan")).toBeInTheDocument();
 
-    await user.click(screen.getByRole("button", { name: "创建任务" }));
+    await user.click(screen.getByRole("button", { name: "新建任务" }));
     const workTitle = screen.getByLabelText("任务标题");
     workTitle.focus();
     await user.type(workTitle, "Document", { skipClick: true });
@@ -665,10 +665,19 @@ describe("mission board chrome", () => {
   it("renders task cards on pearl surfaces with case radius", () => {
     const css = readFileSync(join(process.cwd(), "app", "cockpit.css"), "utf8");
     expect(css).toMatch(
-      /\.mission-board \.task-summary\s*\{[^}]*background:\s*var\(--surface-card\)[^}]*border-radius:\s*var\(--rounded-md\)/s,
+      /\.mission-board \.task-summary\s*\{[^}]*background:\s*var\(--color-surface-pearl\)/s,
     );
     expect(css).toMatch(
-      /\.mission-status\s*\{[^}]*background:\s*var\(--surface-card\)[^}]*border-radius:\s*var\(--rounded-md\)/s,
+      /\.mission-board \.task-summary\s*\{[^}]*border-radius:\s*var\(--rounded-sm\)/s,
+    );
+    expect(css).toMatch(
+      /\.mission-board \.task-summary\s*\{[^}]*border:\s*var\(--border-width\) solid var\(--color-hairline\)/s,
+    );
+    expect(css).toMatch(
+      /\.mission-status\s*\{[^}]*background:\s*var\(--color-canvas-parchment\)/s,
+    );
+    expect(css).toMatch(
+      /\.mission-status\s*\{[^}]*border-radius:\s*var\(--rounded-md\)/s,
     );
   });
 });

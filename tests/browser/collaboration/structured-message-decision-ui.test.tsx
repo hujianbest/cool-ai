@@ -178,6 +178,21 @@ describe("Proposal and Checklist fact-only UI public surface", () => {
       .toBeVisible();
   });
 
+  it("renders a Proposal as a UCD block card with approve and reject actions", () => {
+    vi.stubGlobal("fetch", vi.fn());
+    render(<StructuredMessageBlock block={proposal()} targetKey="project-1|thread-1|run-1" />);
+    const region = screen.getByRole("region", { name: "Proposal" });
+    expect(region.querySelector(".block-card-tag")).toHaveTextContent("PROPOSAL");
+    expect(region.querySelector(".block-provenance")).toHaveClass("sr-only");
+    expect(region.querySelector(".source-tag")).toHaveTextContent(
+      "冻结来源: message · message-1",
+    );
+    expect(screen.getByRole("button", { name: "接受 Proposal" })).toHaveTextContent(
+      "批准方案",
+    );
+    expect(screen.getByRole("button", { name: "拒绝 Proposal" })).toHaveTextContent("驳回");
+  });
+
   it("shows success and moves focus only after a strict completed Receipt", async () => {
     const operationId = "11111111-1111-4111-8111-111111111111";
     vi.spyOn(crypto, "randomUUID").mockReturnValue(operationId);

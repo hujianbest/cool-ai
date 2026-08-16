@@ -267,6 +267,9 @@ describe("manage tags dialog", () => {
     expect(dialog).toHaveAttribute("aria-modal", "true");
     expect(screen.getByTestId("thread-tags-background")).toHaveAttribute("inert");
     expect(within(dialog).getByLabelText("新标签名称")).toHaveFocus();
+    expect(
+      within(dialog).queryByRole("button", { name: "标签字数规则" }),
+    ).toBeNull();
 
     const rows = within(dialog).getAllByRole("listitem");
     expect(rows).toHaveLength(2);

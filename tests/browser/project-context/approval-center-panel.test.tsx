@@ -165,15 +165,15 @@ describe("Approval center panel", () => {
     expect(lapsedBadge).toHaveClass("status-failed");
     expect(within(lapsedRow!).getByText(/无法裁决：请求已过期。/))
       .toBeInTheDocument();
-    expect(within(lapsedRow!).queryByRole("button", { name: /^批准/ })).toBeNull();
-    expect(within(lapsedRow!).queryByRole("button", { name: /^拒绝/ })).toBeNull();
+    expect(within(lapsedRow!).queryByRole("button", { name: /^批准执行/ })).toBeNull();
+    expect(within(lapsedRow!).queryByRole("button", { name: /^驳回/ })).toBeNull();
 
-    expect(within(commandRow!).getByRole("button", { name: "批准 node -v" }))
+    expect(within(commandRow!).getByRole("button", { name: "批准执行 node -v" }))
       .toBeEnabled();
-    expect(within(commandRow!).getByRole("button", { name: "拒绝 node -v" }))
+    expect(within(commandRow!).getByRole("button", { name: "驳回 node -v" }))
       .toBeEnabled();
     expect(
-      within(proposalRow!).getByRole("button", { name: "批准 Adopt plan" }),
+      within(proposalRow!).getByRole("button", { name: "批准执行 Adopt plan" }),
     ).toBeEnabled();
 
     // 除裁决与定位/刷新外无任何编辑入口。
@@ -219,11 +219,11 @@ describe("Approval center panel", () => {
 
     const list = await screen.findByRole("list", { name: "待裁决请求" });
     await user.click(
-      within(list).getByRole("button", { name: "批准 node -v" }),
+      within(list).getByRole("button", { name: "批准执行 node -v" }),
     );
 
     expect(
-      await screen.findByRole("button", { name: "批准 node -v" }),
+      await screen.findByRole("button", { name: "批准执行 node -v" }),
     ).toBeDisabled();
     await waitFor(() => expect(calls).toHaveLength(3));
     expect(calls[1]).toEqual({ method: "GET", url: "/api/executions/exec-1" });
@@ -289,7 +289,7 @@ describe("Approval center panel", () => {
 
     const list = await screen.findByRole("list", { name: "待裁决请求" });
     await user.click(
-      within(list).getByRole("button", { name: "拒绝 Adopt plan" }),
+      within(list).getByRole("button", { name: "驳回 Adopt plan" }),
     );
 
     expect(await screen.findByText("没有待裁决的请求。")).toBeInTheDocument();
@@ -350,17 +350,17 @@ describe("Approval center panel", () => {
 
     const list = await screen.findByRole("list", { name: "待裁决请求" });
     await user.click(
-      within(list).getByRole("button", { name: "批准 node -v" }),
+      within(list).getByRole("button", { name: "批准执行 node -v" }),
     );
 
     const alert = await screen.findByRole("alert");
     expect(alert).toHaveTextContent("裁决未完成，请刷新后重试。");
     expect(alert).not.toHaveTextContent("raw conflict detail");
     expect(
-      within(list).getByRole("button", { name: "批准 node -v" }),
+      within(list).getByRole("button", { name: "批准执行 node -v" }),
     ).toBeEnabled();
     expect(
-      within(list).getByRole("button", { name: "拒绝 node -v" }),
+      within(list).getByRole("button", { name: "驳回 node -v" }),
     ).toBeEnabled();
     expect(within(list).getAllByRole("listitem")).toHaveLength(1);
     expect(listCalls).toBe(1);

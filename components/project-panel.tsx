@@ -105,6 +105,7 @@ export function ProjectPanel({
   const [governanceView, setGovernanceView] = useState<GovernanceView | null>(
     null,
   );
+  const [sidebarCollapsed, setSidebarCollapsed] = useState(false);
   const pendingApprovalCount = usePendingApprovalCount(currentProjectId);
   const [homeState, setHomeState] = useState<HomeState | null>(null);
   const [settingsReturnTo, setSettingsReturnTo] = useState<ProjectReturnTo>(
@@ -152,6 +153,21 @@ export function ProjectPanel({
         return;
       }
 
+      if (event.key.toLowerCase() === "b") {
+        if (threadDialogOpen || workspaceConfirmationOpen) {
+          return;
+        }
+        event.preventDefault();
+        if (narrow) {
+          setMobileSurface((current) =>
+            current === "projects" ? null : "projects",
+          );
+        } else {
+          setSidebarCollapsed((current) => !current);
+        }
+        return;
+      }
+
       const viewByDigit: Record<string, GovernanceView | null> = {
         "1": null,
         "2": "mission",
@@ -168,7 +184,7 @@ export function ProjectPanel({
 
     window.addEventListener("keydown", onKeyDown);
     return () => window.removeEventListener("keydown", onKeyDown);
-  }, [threadDialogOpen, workspaceConfirmationOpen]);
+  }, [narrow, threadDialogOpen, workspaceConfirmationOpen]);
 
   const projectModal = useMemo(
     () => ({
@@ -518,6 +534,7 @@ export function ProjectPanel({
   return (
     <main
       className="collaboration-cockpit"
+      data-sidebar-collapsed={!narrow && sidebarCollapsed ? "true" : undefined}
       data-testid="collaboration-cockpit"
       ref={cockpitRef}
     >
@@ -637,6 +654,7 @@ export function ProjectPanel({
             : undefined
         }
         className="cockpit-sidebar"
+        data-collapsed={!narrow && sidebarCollapsed ? "true" : undefined}
         data-open={mobileSurface === "projects"}
         data-testid="project-surface"
         hidden={narrow && mobileSurface !== "projects"}

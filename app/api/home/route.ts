@@ -18,7 +18,6 @@ function databasePath(): string {
 export async function GET(): Promise<Response> {
   try {
     const path = databasePath();
-    agentService.ensureStarterAgents(path);
     const agents = agentService.listAgents(path);
     const firstAgent = agents.at(0);
     if (!firstAgent) {

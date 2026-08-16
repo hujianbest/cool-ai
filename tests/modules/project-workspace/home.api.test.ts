@@ -13,7 +13,7 @@ const routeModules = import.meta.glob<HomeRouteModule>(
 
 let previousDatabasePath: string | undefined;
 
-function seedAgent(): void {
+function seedProvider(): void {
   const databasePath = process.env.COCKPIT_DB_PATH;
   if (!databasePath) throw new Error("Test database path is unavailable.");
   const database = openDatabase(databasePath);
@@ -26,6 +26,16 @@ function seedAgent(): void {
       'provider-1', 'Provider', 'https://example.invalid', 'model-a',
       'cipher-secret', 'iv-secret', 'tag-secret', 1, 1, 'key-secret', '****', 'now', 1, 'now', 'now'
     );
+  `);
+  database.close();
+}
+
+function seedAgent(): void {
+  seedProvider();
+  const databasePath = process.env.COCKPIT_DB_PATH;
+  if (!databasePath) throw new Error("Test database path is unavailable.");
+  const database = openDatabase(databasePath);
+  database.exec(`
     INSERT INTO agents (
       id, name, role, system_prompt, provider_id, model, avatar_text, accent_token,
       can_read, can_write, can_execute, max_tokens, max_handoffs, version, created_at, updated_at
@@ -64,6 +74,24 @@ describe("GET /api/home", () => {
 
     expect(response.status).toBe(200);
     expect(await response.json()).toEqual({ kind: "needs_agent" });
+  });
+
+  it("does not mint starter agents on a read of an empty roster", async () => {
+    const route = await loadRoute();
+    seedProvider();
+
+    const response = await route.GET();
+    const databasePath = process.env.COCKPIT_DB_PATH;
+    if (!databasePath) throw new Error("Test database path is unavailable.");
+    const database = openDatabase(databasePath);
+    const agentCount = database.prepare("SELECT COUNT(*) AS count FROM agents").get() as {
+      count: number;
+    };
+    database.close();
+
+    expect(response.status).toBe(200);
+    expect(await response.json()).toEqual({ kind: "needs_agent" });
+    expect(agentCount.count).toBe(0);
   });
 
   it("returns a sanitized ready home with one stable direct project", async () => {

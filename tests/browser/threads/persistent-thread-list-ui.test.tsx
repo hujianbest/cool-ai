@@ -394,6 +394,27 @@ describe("persistent project thread list and creation", () => {
     );
   });
 
+  it("auto-selects the first conversation by updating the URL before popstate listeners read it", async () => {
+    const newest = thread("thread-new", "Alpha", 20);
+    vi.stubGlobal("fetch", stubListAndMembers([newest]));
+    window.history.replaceState(null, "", "/");
+    const searches: string[] = [];
+    const onPop = () => {
+      searches.push(window.location.search);
+    };
+    window.addEventListener("popstate", onPop);
+    try {
+      render(<DirectThreadHarness />);
+      await screen.findByRole("button", { name: "Alpha" });
+      await waitFor(() =>
+        expect(window.location.search).toBe(`?thread=${newest.id}`),
+      );
+      expect(searches).toContain(`?thread=${newest.id}`);
+    } finally {
+      window.removeEventListener("popstate", onPop);
+    }
+  });
+
   it("traps dialog focus, closes on Escape, restores focus, and validates title and members", async () => {
     vi.stubGlobal("fetch", stubListAndMembers([]));
     window.history.replaceState(null, "", `/projects/${project.id}`);
@@ -969,7 +990,11 @@ describe("thread favorites UI", () => {
     );
 
     await user.click(screen.getByRole("button", { name: "新对话" }));
-    expect(await screen.findByRole("dialog", { name: "创建对话" })).toBeInTheDocument();
+    const createDialog = await screen.findByRole("dialog", { name: "创建对话" });
+    expect(createDialog).toBeInTheDocument();
+    expect(
+      within(createDialog).queryByRole("button", { name: "标题字数规则" }),
+    ).toBeNull();
     await user.keyboard("{Escape}");
     expect(screen.queryByRole("dialog", { name: "创建对话" })).toBeNull();
 

@@ -748,7 +748,9 @@ export function AuditPanel({ projectId }: { projectId: string }) {
       aria-labelledby={`audit-title-${projectId}`}
       className="stack audit-panel"
     >
-      <h2 id={`audit-title-${projectId}`}>审计</h2>
+      <h2 className="sr-only" id={`audit-title-${projectId}`}>
+        审计
+      </h2>
       <div
         aria-label="审计视图"
         className="audit-domain-filters"

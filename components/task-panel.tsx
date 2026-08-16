@@ -9,6 +9,7 @@ import {
   type KeyboardEvent,
   type RefObject,
 } from "react";
+import { ArrowLeft } from "@phosphor-icons/react";
 
 import { CollaborationPanel } from "@/components/collaboration/collaboration-panel";
 import type { GovernanceView } from "@/components/activity-bar";
@@ -437,22 +438,20 @@ export function TaskPanel({
         </button>
         {governance ? (
           <div className="governance-view stack">
-            <div className="panel-heading">
-              <div>
-                <p className="eyebrow">治理视图</p>
-                {governance.projectId ? null : (
-                  <h2 className="surface-heading">
-                    {GOVERNANCE_TITLES[governance.view]}
-                  </h2>
-                )}
-              </div>
+            <div className="gov-view-header">
               <button
-                className="button-secondary"
+                className="btn-back-chat"
                 onClick={governance.onClose}
                 type="button"
               >
+                <ArrowLeft aria-hidden="true" size={16} weight="bold" />
                 返回对话
               </button>
+              <h2 className="gov-view-title">
+                {currentProjectName
+                  ? `${GOVERNANCE_TITLES[governance.view]} · ${currentProjectName}`
+                  : GOVERNANCE_TITLES[governance.view]}
+              </h2>
             </div>
             {governance.projectId ? (
               governance.view === "mission" ? (

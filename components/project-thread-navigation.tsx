@@ -26,7 +26,6 @@ import {
   useTargetRequestGuard,
 } from "@/components/collaboration/use-target-request-guard";
 import { useModalSurface } from "@/components/mobile-dialog";
-import { HelpTip } from "@/components/ui/help-tip";
 import { IconButton } from "@/components/ui/icon-button";
 import { parseProjectSelection } from "@/components/settings-navigation";
 import {
@@ -902,8 +901,9 @@ export function ProjectThreadNavigation({
         if (loaded.length > 0 && selection.kind === "none") {
           const href = canonicalThreadHref(projectId, loaded[0]!.id, directMode);
           onNavigate?.(href);
-          routerRef.current.replace(href);
+          window.history.replaceState(window.history.state, "", href);
           window.dispatchEvent(new PopStateEvent("popstate"));
+          routerRef.current.replace(href);
         } else if (
           selection.kind === "invalid"
           || (
@@ -1247,8 +1247,9 @@ export function ProjectThreadNavigation({
       if (autoSelectHrefRef.current === href) return;
       autoSelectHrefRef.current = href;
       onNavigate?.(href);
-      routerRef.current.replace(href);
+      window.history.replaceState(window.history.state, "", href);
       window.dispatchEvent(new PopStateEvent("popstate"));
+      routerRef.current.replace(href);
     } else if (
       selection.kind === "invalid"
       || !threads.some((thread) => thread.id === selection.threadId)
@@ -2566,7 +2567,7 @@ export function ProjectThreadNavigation({
                   <label htmlFor="thread-title">对话标题</label>
                   <input
                     aria-describedby={
-                      titleError ? "thread-title-error" : "thread-title-help"
+                      titleError ? "thread-title-error" : undefined
                     }
                     aria-invalid={titleError ? "true" : undefined}
                     aria-required="true"
@@ -2578,9 +2579,6 @@ export function ProjectThreadNavigation({
                     ref={titleInputRef}
                     value={title}
                   />
-                  <HelpTip id="thread-title-help" label="标题字数规则">
-                    最多 80 个字符。
-                  </HelpTip>
                   {titleError ? (
                     <p className="error-text" id="thread-title-error" role="alert">
                       {titleError}
@@ -2716,7 +2714,9 @@ export function ProjectThreadNavigation({
                 <div className="form-field">
                   <label htmlFor="new-thread-tag-name">新标签名称</label>
                   <input
-                    aria-describedby="new-thread-tag-help"
+                    aria-describedby={
+                      newTagError ? "new-thread-tag-error" : undefined
+                    }
                     aria-invalid={newTagError ? "true" : undefined}
                     disabled={creatingTag}
                     id="new-thread-tag-name"
@@ -2725,9 +2725,6 @@ export function ProjectThreadNavigation({
                     ref={newTagInputRef}
                     value={newTagName}
                   />
-                  <HelpTip id="new-thread-tag-help" label="标签字数规则">
-                    最多 40 个字符。
-                  </HelpTip>
                   {newTagError ? (
                     <p className="error-text" id="new-thread-tag-error" role="alert">
                       {newTagError}

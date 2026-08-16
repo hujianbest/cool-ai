@@ -2,10 +2,10 @@
 
 - 特性: 050-phase-1-usable-cockpit
 - 对应切片: S-60
-- 当前阶段: implement（hf-code-review 复审 **PASS**；一般项仍开：home ensure 写、HelpTip、分事务残余）
+- 当前阶段: implement（hf-code-review 复审 **PASS**；一般项仍开：onboarding 使命焦点、GET home 的 PWS ensure、跨 owner 分事务）
 - 执行模式: auto
 - 已加载扩展: 无
-- 下一步: ship 前记录剩余一般项；全量测试与演示验收。不得把仍开的一般项写成已修。
+- 下一步: ship 前记录仍开一般项：onboarding 使命焦点、GET `/api/home` 的 `ensureDirectProject` 写、跨 owner 分事务。HelpTip 与 GET home 的 Identity ensure 已关。不得把仍开项写成已修。
 
 ## 状态记录
 
@@ -19,7 +19,7 @@
   - 聚焦测试：directory-picker / directory-picker.api / starter-agents / open-folder-starter-roster 19/19 通过。
 - 2026-08-15 独立 hf-code-review 复审 **PASS**（`reviews/code-review.md`，对照 `5cf4d0b`）。严重项全关。仍开一般项：GET `/api/home` ensure 写；左栏 HelpTip / onboarding 使命焦点；跨 owner 分事务残余（不升严重）。
 - 规模例外 A-359：用户要求一次完成阶段 1，不拆成选夹/Agent/卸载三片。
-- Grill 按用户明确指示记录 A-353～A-361。
+- 2026-08-17 长任务关闭两项 050 一般项：(1) 会话创建/标签对话框去掉 HelpTip（A-374）；(2) `GET /api/home` 不再 `ensureStarterAgents`，仅 Provider、无 Agent 时返回 `needs_agent` 且不插入 starter（A-375）。仍开：onboarding `onFocusMission` 仍尝试点击未挂载的使命标题；GET home 仍 `ensureDirectProject`；跨 owner 分事务。聚焦：persistent-thread-list-ui / thread-tags / home.api 绿。
 
 ## implement 验证（2026-08-15）
 

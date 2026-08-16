@@ -933,7 +933,9 @@ export function MissionBoard({
       className="stack mission-board"
       id="mission-board"
     >
-      <h2 id={`mission-board-title-${projectId}`}>使命看板</h2>
+      <h2 className="sr-only" id={`mission-board-title-${projectId}`}>
+        使命看板
+      </h2>
       {isLoading ? (
         <p aria-busy="true" className="state-message">
           正在加载使命看板…
@@ -1000,7 +1002,7 @@ export function MissionBoard({
               <IconButton
                 className="button-primary"
                 icon={<Plus size={20} weight="regular" />}
-                label="创建任务"
+                label="新建任务"
                 onClick={() => {
                   setWorkItemDialogOpen(true);
                   queueMicrotask(() => workItemTitleRef.current?.focus());
@@ -1021,7 +1023,12 @@ export function MissionBoard({
                 key={status}
                 role="region"
               >
-                <h3 id={`status-${status}-${projectId}`}>{label}</h3>
+                <h3 id={`status-${status}-${projectId}`}>
+                  {label}
+                  <span aria-hidden="true" className="kanban-col-count">
+                    {workItems.filter((item) => item.status === status).length}
+                  </span>
+                </h3>
                 <ul aria-label={`${label}任务`} className="stack">
                   {workItems
                     .filter((item) => item.status === status)

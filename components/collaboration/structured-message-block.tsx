@@ -1,5 +1,6 @@
 "use client";
 
+import { GitCommit } from "@phosphor-icons/react";
 import { useEffect, useRef, useState } from "react";
 
 import { useTargetRequestGuard } from "@/components/collaboration/use-target-request-guard";
@@ -501,16 +502,32 @@ export function StructuredMessageBlock({
     <section
       aria-busy={pending || sourcePending}
       aria-label={regionLabel}
-      className="structured-block"
+      className={
+        displayBlock.kind === "proposal"
+          ? "structured-block block-card"
+          : "structured-block"
+      }
     >
-      <h5>{displayBlock.title}</h5>
-      <p className="muted">
+      {displayBlock.kind === "proposal" ? (
+        <div className="block-card-header">
+          <h5 className="block-card-title">{displayBlock.title}</h5>
+          <span className="block-card-tag">PROPOSAL</span>
+        </div>
+      ) : (
+        <h5>{displayBlock.title}</h5>
+      )}
+      <p className="muted block-provenance sr-only">
         {displayBlock.actorLabel} · schema {displayBlock.blockSchemaVersion} · revision{" "}
         {displayBlock.blockRevision} · state {displayBlock.stateVersion} ·{" "}
         {displayBlock.sourceLabel}
       </p>
       {displayBlock.body ? <p>{displayBlock.body}</p> : null}
-      {block.kind === "file_reference" && block.fileName ? <p>{block.fileName}</p> : null}
+      {displayBlock.kind === "proposal" ? (
+        <p className="source-tag">
+          <GitCommit aria-hidden="true" size={12} weight="bold" />
+          <span>冻结来源: {displayBlock.sourceLabel}</span>
+        </p>
+      ) : null}
       {block.kind === "diff_preview"
         || block.kind === "file_reference"
         || block.kind === "handoff_card" ? (
@@ -521,11 +538,21 @@ export function StructuredMessageBlock({
                 : block.kind === "diff_preview"
                   ? "加载 Diff Preview 安全来源"
                   : "加载 Handoff Card 安全来源"}
+              className={block.kind === "file_reference" ? "source-tag" : undefined}
               disabled={sourcePending}
               onClick={() => void loadSource()}
               type="button"
             >
-              {sourcePending ? "正在核对来源…" : "核对并查看安全来源"}
+              {block.kind === "file_reference" ? (
+                <>
+                  <GitCommit aria-hidden="true" size={12} weight="bold" />
+                  <span>
+                    {sourcePending
+                      ? "正在核对来源…"
+                      : (block.fileName ?? "核对并查看安全来源")}
+                  </span>
+                </>
+              ) : sourcePending ? "正在核对来源…" : "核对并查看安全来源"}
             </button>
             {sourcePending ? (
               <p className="muted" role="status">正在核对来源，请稍候…</p>
@@ -606,22 +633,24 @@ export function StructuredMessageBlock({
         </button>
       ) : null}
       {displayBlock.kind === "proposal" ? (
-        <div className="structured-block-actions">
+        <div className="structured-block-actions block-actions">
           <button
             aria-label="接受 Proposal"
+            className="btn-block-primary"
             disabled={disabled}
             onClick={() => void decide("accept")}
             type="button"
           >
-            接受
+            批准方案
           </button>
           <button
             aria-label="拒绝 Proposal"
+            className="btn-block-secondary"
             disabled={disabled}
             onClick={() => void decide("reject")}
             type="button"
           >
-            拒绝
+            驳回
           </button>
         </div>
       ) : null}

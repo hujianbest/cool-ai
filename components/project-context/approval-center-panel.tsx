@@ -268,7 +268,9 @@ export function ApprovalCenterPanel({ projectId }: { projectId: string }) {
       aria-labelledby={`approval-center-title-${projectId}`}
       className="stack approval-center-panel"
     >
-      <h2 id={`approval-center-title-${projectId}`}>审批</h2>
+      <h2 className="sr-only" id={`approval-center-title-${projectId}`}>
+        审批
+      </h2>
       {isLoading ? (
         <p aria-busy="true" className="state-message">
           正在加载待裁决请求…
@@ -327,20 +329,20 @@ export function ApprovalCenterPanel({ projectId }: { projectId: string }) {
                     ) : (
                       <div className="approval-center-actions">
                         <button
-                          aria-label={`批准 ${displayTitle}`}
+                          aria-label={`批准执行 ${displayTitle}`}
                           disabled={decidingId === item.approvalId}
                           onClick={() => void decide(item, "approve")}
                           type="button"
                         >
-                          批准
+                          批准执行
                         </button>
                         <button
-                          aria-label={`拒绝 ${displayTitle}`}
+                          aria-label={`驳回 ${displayTitle}`}
                           disabled={decidingId === item.approvalId}
                           onClick={() => void decide(item, "reject")}
                           type="button"
                         >
-                          拒绝
+                          驳回
                         </button>
                       </div>
                     )}

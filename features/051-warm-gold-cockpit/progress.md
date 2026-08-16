@@ -4,7 +4,7 @@
 - 当前阶段: implement（P0 壳层已实现并验证；收尾项：全量套件与冒烟）
 - 执行模式: auto
 - 已加载: hf-ui-design
-- 下一步: 有真实 Agent 块时把 Proposal/Thinking 更贴近 UCD 原型（不伪造数据）；演示 auto-approved 须呈上。
+- 下一步: 长任务继续 050 残余（onboarding 使命焦点、GET home 的 PWS ensure、跨 owner 分事务）；UCD 待 DTO 的项不伪造。
 
 ## 状态记录
 
@@ -38,6 +38,7 @@
 - 2026-08-16 按 UCD 主路径去掉「已加载全部事实」可见 chrome：耗尽后加载按钮加 `sr-only`（节点保留以维持焦点），`.sr-only` 覆盖全局 button `min-height`。localhost:3002 浏览器核对主区不再看见该禁用按钮。聚焦测试 18/18，`build` 绿。演示 auto-approved 2026-08-16。
 - 2026-08-16 按 UCD 原型把消息「回复」改为悬停/焦点显现：`.msg-reply` 默认 opacity 0，`:hover` / `:focus-within` 显现，保留 a11y name。localhost:3002 浏览器核对空闲态无常驻回复。聚焦测试 31/31，`build` 绿。演示 auto-approved 2026-08-16。
 - 2026-08-16 按 UCD §9.6.1 把 `Cmd/Ctrl+K` 从侧栏内联搜索改为居中 `会话搜索` 浮层；空查询 ESC 关闭。localhost:3002 浏览器核对。聚焦测试 53/53，`build` 绿。演示 auto-approved 2026-08-16。
+- 2026-08-17 按 UCD §9.2 收口治理视图：全宽 `.gov-view-header` + `btn-back-chat`、去掉 eyebrow、内层标题 sr-only、看板泳道 parchment + 计数、任务卡 pearl/hairline。文案：新建任务、沉淀新记忆、批准执行/驳回。浏览器核对任务/记忆/审批空态（无项目时引导打开文件夹）。聚焦测试 cockpit-layout / mission-board / memory / approval / audit 69/69，后文案与 HelpTip 相关套件续绿。演示 auto-approved 2026-08-17。Thinking/迷你头像/回收站总数/审批 TTL·Diff 不伪造（A-367～A-373）。
 
 ## 任务票
 
