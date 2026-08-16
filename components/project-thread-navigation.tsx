@@ -60,6 +60,7 @@ type UrlThreadSelection =
 type ProjectThreadNavigationProps = {
   backgroundRef: RefObject<HTMLElement | null>;
   directMode?: boolean;
+  onActiveConversationChange?: (title: string | null) => void;
   onDialogChange?: (open: boolean) => void;
   onNavigate?: (href: string) => void;
   onStateChange?: (state: ThreadListState) => void;
@@ -479,6 +480,7 @@ function StarIcon({ filled }: { filled: boolean }) {
 export function ProjectThreadNavigation({
   backgroundRef,
   directMode = false,
+  onActiveConversationChange,
   onDialogChange,
   onNavigate,
   onStateChange,
@@ -1883,6 +1885,17 @@ export function ProjectThreadNavigation({
     typeof window === "undefined"
       ? null
       : selectedThreadFromUrl(projectId, directMode);
+  const activeConversationTitle = selectedThreadId
+    ? threads.find((thread) => thread.id === selectedThreadId)?.title ?? null
+    : null;
+
+  useEffect(() => {
+    onActiveConversationChange?.(activeConversationTitle);
+  }, [activeConversationTitle, onActiveConversationChange]);
+
+  useEffect(() => {
+    return () => onActiveConversationChange?.(null);
+  }, [onActiveConversationChange]);
   const submitReason = membersLoading
     ? "正在加载当前项目成员。"
     : membersError

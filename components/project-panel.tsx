@@ -102,6 +102,7 @@ export function ProjectPanel({
   const [threadListState, setThreadListState] = useState<
     "loading" | "empty" | "ready" | "error" | null
   >(null);
+  const [conversationTitle, setConversationTitle] = useState<string | null>(null);
   const [governanceView, setGovernanceView] = useState<GovernanceView | null>(
     null,
   );
@@ -503,6 +504,14 @@ export function ProjectPanel({
   }
 
   const currentProject = projects.find((project) => project.id === currentProjectId) ?? null;
+  const headerContext = currentProject
+    ? conversationTitle
+      ? `${currentProject.name} · ${conversationTitle}`
+      : currentProject.name
+    : "未选择项目 · 个人对话";
+  const handleActiveConversationChange = useCallback((title: string | null) => {
+    setConversationTitle(title);
+  }, []);
 
   return (
     <main
@@ -528,7 +537,7 @@ export function ProjectPanel({
             <span className="cockpit-header-title">Cool AI</span>
           </div>
           <div className="cockpit-header-context">
-            {currentProject?.name ?? "大厅"}
+            {headerContext}
           </div>
           <button
             aria-label="打开项目文件夹"
@@ -748,6 +757,7 @@ export function ProjectPanel({
         ) ? (
           <ProjectThreadNavigation
             backgroundRef={cockpitRef}
+            onActiveConversationChange={handleActiveConversationChange}
             onDialogChange={setThreadDialogOpen}
             onNavigate={updateSettingsReturnTo}
             onStateChange={setThreadListState}
@@ -757,6 +767,7 @@ export function ProjectPanel({
           <ProjectThreadNavigation
             backgroundRef={cockpitRef}
             directMode
+            onActiveConversationChange={handleActiveConversationChange}
             onDialogChange={setThreadDialogOpen}
             onNavigate={updateSettingsReturnTo}
             onStateChange={setThreadListState}

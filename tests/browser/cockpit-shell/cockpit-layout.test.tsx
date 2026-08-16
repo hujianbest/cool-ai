@@ -9,17 +9,34 @@ import { cockpitFetch } from "@/tests/cockpit-test-fetch";
 
 let pathnameValue = "/projects/project-1";
 
+const threadNav = vi.hoisted(() => ({
+  conversationTitle: null as string | null,
+}));
+
 vi.mock("next/navigation", () => ({
   usePathname: () => pathnameValue,
   useRouter: () => ({ back: vi.fn(), push: vi.fn(), replace: vi.fn() }),
 }));
 
-vi.mock("@/components/project-thread-navigation", () => ({
-  ProjectThreadNavigation: () => null,
-}));
+vi.mock("@/components/project-thread-navigation", () => {
+  const { useEffect } = require("react") as typeof import("react");
+  return {
+    ProjectThreadNavigation: function MockProjectThreadNavigation({
+      onActiveConversationChange,
+    }: {
+      onActiveConversationChange?: (title: string | null) => void;
+    }) {
+      useEffect(() => {
+        onActiveConversationChange?.(threadNav.conversationTitle);
+      }, [onActiveConversationChange]);
+      return null;
+    },
+  };
+});
 
 beforeEach(() => {
   pathnameValue = "/projects/project-1";
+  threadNav.conversationTitle = null;
 });
 
 afterEach(() => {
@@ -326,7 +343,7 @@ describe("desktop collaboration cockpit", () => {
 
     const cockpit = await screen.findByTestId("collaboration-cockpit");
     const flow = within(cockpit).getByRole("region", { name: "任务事件流" });
-    expect(within(cockpit).getByText("大厅")).toBeInTheDocument();
+    expect(within(cockpit).getByText("未选择项目 · 个人对话")).toBeInTheDocument();
     expect(await within(flow).findByText("欢迎来到 Cool AI")).toBeInTheDocument();
     expect(within(flow).getByText("先配置一个 Agent，即可开始个人对话。")).toBeInTheDocument();
     expect(within(flow).getByRole("link", { name: "配置 Agent" })).toBeInTheDocument();
@@ -336,6 +353,32 @@ describe("desktop collaboration cockpit", () => {
     );
     expect(within(flow).queryByRole("button", { name: "运行任务" })).toBeNull();
     expect(within(flow).queryByText("正在加载项目…")).toBeNull();
+  });
+
+  it("shows the project name and conversation title in the header", async () => {
+    threadNav.conversationTitle = "登录模块重构";
+    vi.stubGlobal(
+      "fetch",
+      cockpitFetch([
+        Response.json({
+          projects: [
+            {
+              id: "project-1",
+              name: "Launch plan",
+              createdAt: "2026-07-29T00:00:00.000Z",
+            },
+          ],
+        }),
+        Response.json({ tasks: [], events: [] }),
+      ]),
+    );
+    render(<ProjectPanel />);
+
+    const cockpit = await screen.findByTestId("collaboration-cockpit");
+    const header = cockpit.querySelector(".cockpit-header");
+    await waitFor(() => {
+      expect(header).toHaveTextContent("Launch plan · 登录模块重构");
+    });
   });
 });
 
