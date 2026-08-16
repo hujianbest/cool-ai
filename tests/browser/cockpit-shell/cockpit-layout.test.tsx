@@ -216,6 +216,67 @@ describe("desktop collaboration cockpit", () => {
     expect(within(cockpit).queryByRole("button", { name: "返回对话" })).toBeNull();
   });
 
+  it("lights Needs Me on the header and 审批 rail when approvals are pending", async () => {
+    const user = userEvent.setup();
+    pathnameValue = "/projects/project-1";
+    const pending = {
+      approvalId: "approval-1",
+      createdAt: "2026-08-10T04:00:00.005Z",
+      decisionHint: null,
+      domain: "execution",
+      impactSummary: "Run the build",
+      kind: "command",
+      sourceRef: {
+        executionId: "exec-1",
+        messageId: null,
+        runId: null,
+        threadId: null,
+      },
+      status: "pending",
+      title: "node -v",
+    };
+    const fetchMock = cockpitFetch([
+      Response.json({
+        projects: [
+          {
+            id: "project-1",
+            name: "Launch plan",
+            createdAt: "2026-07-29T00:00:00.000Z",
+          },
+        ],
+      }),
+      Response.json({ tasks: [], events: [] }),
+    ]);
+    vi.stubGlobal(
+      "fetch",
+      vi.fn((input: RequestInfo | URL) => {
+        const url = String(input);
+        if (url === "/api/projects/project-1/approvals/pending") {
+          return Promise.resolve(Response.json({ approvals: [pending] }));
+        }
+        return fetchMock(input);
+      }),
+    );
+    render(<ProjectPanel />);
+
+    const cockpit = await screen.findByTestId("collaboration-cockpit");
+    const needsMe = await within(cockpit).findByRole("button", {
+      name: "Needs Me，1 项待处理",
+    });
+    const activityBar = within(cockpit).getByRole("navigation", {
+      name: "主导航",
+    });
+    expect(within(activityBar).getByRole("button", { name: "审批，有待处理项" })).toBeInTheDocument();
+
+    await user.click(needsMe);
+    expect(
+      await within(cockpit).findByRole("button", { name: "返回对话" }),
+    ).toBeInTheDocument();
+    expect(
+      within(activityBar).getByRole("button", { name: "审批，有待处理项" }),
+    ).toHaveAttribute("aria-pressed", "true");
+  });
+
   it("keeps home as a single chat pane with the lobby header", async () => {
     pathnameValue = "/";
     vi.stubGlobal(

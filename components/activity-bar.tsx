@@ -26,6 +26,7 @@ import {
 export type ActivityBarProps = {
   activeGovernance?: GovernanceView | null;
   activePath: string;
+  needsMe?: boolean;
   onGovernance?: (view: GovernanceView | null) => void;
   returnTo?: "/" | `/projects/${string}`;
 };
@@ -48,6 +49,7 @@ const GOVERNANCE_ITEMS: readonly GovernanceItem[] = [
 export function ActivityBar({
   activeGovernance = null,
   activePath,
+  needsMe = false,
   onGovernance,
   returnTo,
 }: ActivityBarProps) {
@@ -94,10 +96,11 @@ export function ActivityBar({
       </a>
       {GOVERNANCE_ITEMS.map((item) => {
         const Icon = item.icon;
+        const attention = needsMe && item.view === "approvals";
         return (
           <button
             aria-pressed={activeGovernance === item.view}
-            aria-label={item.label}
+            aria-label={attention ? `${item.label}，有待处理项` : item.label}
             className="activity-bar-item"
             data-tooltip={item.label}
             key={item.view}
@@ -105,6 +108,9 @@ export function ActivityBar({
             type="button"
           >
             <Icon aria-hidden="true" size={20} weight="regular" />
+            {attention ? (
+              <span aria-hidden="true" className="activity-bar-attention" />
+            ) : null}
           </button>
         );
       })}

@@ -322,6 +322,9 @@ export function cockpitFetch(responses: QueuedResponse[]) {
         }),
       );
     }
+    if (/\/api\/projects\/[^/]+\/approvals\/pending$/.test(url)) {
+      return Promise.resolve(Response.json({ approvals: [] }));
+    }
     const response = responses[index++];
     if (!response) {
       return Promise.reject(new Error(`Unexpected cockpit test request: ${url}`));

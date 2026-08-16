@@ -200,6 +200,41 @@ ol {
   font-size: var(--text-caption);
 }
 
+.needs-me-badge {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--space-1);
+  min-height: var(--control-min);
+  padding: var(--space-1) var(--space-3);
+  border: var(--border-width) solid var(--interactive-primary);
+  border-radius: var(--rounded-pill);
+  background: var(--interactive-accent-soft);
+  color: var(--interactive-primary);
+  font-size: var(--text-fine-print);
+  font-weight: 600;
+}
+
+.needs-me-badge:focus-visible {
+  outline: none;
+  box-shadow: var(--focus-ring);
+}
+
+@media (prefers-reduced-motion: no-preference) {
+  .needs-me-badge {
+    animation: needs-me-pulse 2s ease-in-out infinite;
+  }
+}
+
+@keyframes needs-me-pulse {
+  0%,
+  100% {
+    box-shadow: 0 0 0 0 color-mix(in srgb, var(--interactive-primary) 35%, transparent);
+  }
+  50% {
+    box-shadow: 0 0 0 var(--space-1) color-mix(in srgb, var(--interactive-primary) 0%, transparent);
+  }
+}
+
 .mobile-toolbar,
 .drawer-close,
 .drawer-close.icon-button {
@@ -2107,6 +2142,16 @@ legend {
   inset-block: var(--space-2);
   width: var(--rail-indicator-width);
   border-radius: 0 var(--rail-indicator-radius) var(--rail-indicator-radius) 0;
+  background: var(--interactive-primary);
+}
+
+.activity-bar-attention {
+  position: absolute;
+  inset-block-start: var(--space-2);
+  inset-inline-end: var(--space-2);
+  width: var(--space-2);
+  height: var(--space-2);
+  border-radius: var(--rounded-pill);
   background: var(--interactive-primary);
 }
 

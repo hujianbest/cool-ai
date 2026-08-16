@@ -25,6 +25,7 @@
 - 2026-08-16 按 UCD 收口图标轨 IA：主项组为对话/任务/记忆/审批/审计，底部分组为团队/设置/主题；首次使用引导从轨上移到大厅空状态。`AGENTS.md` 明确产品开发以 `product/ui/UI设计.md` 为基准。
 - 2026-08-16 按 UCD §8.4 / §8.7 落地返回对话与治理快捷键：项目页「对话」href 为当前 `/projects/:id`（团队页则带回程项目）；`ESC` / `Cmd/Ctrl+1` 关闭治理回对话，`Cmd/Ctrl+2–5` 打开任务/记忆/审批/审计。弹窗打开时不抢 `ESC`。聚焦测试（cockpit-layout / activity-bar / a11y / settings-return / team-skill）29/29，`build` 绿。
 - 2026-08-16 按 UCD §8.1 落地图标轨选中态左侧 3px 暖金指示条（令牌 `--rail-indicator-width` / `--rail-indicator-radius`），并收口 `DESIGN.md` 与 UCD 冲突的「4px 圆点」表述。activity-bar / visual-tokens 20/20，`build` 绿。
+- 2026-08-16 按 UCD §7.1 / §14.2 落地 Needs Me：`GET /approvals/pending` 驱动 Header 徽标与图标轨「审批」暖金圆点；点击徽标打开审批视图。cockpit-layout / activity-bar / visual-tokens / settings-return / a11y / home / approval-center 53/53，`build` 绿。
 
 ## 任务票
 

@@ -59,6 +59,14 @@ describe("ActivityBar", () => {
     );
   });
 
+  it("marks 审批 with a Needs Me label when pending approvals exist", () => {
+    render(<ActivityBar activePath="/projects/project-1" needsMe />);
+    expect(
+      screen.getByRole("button", { name: "审批，有待处理项" }),
+    ).toBeInTheDocument();
+    expect(screen.getByRole("button", { name: "任务" })).toBeInTheDocument();
+  });
+
   it("points 对话 at / and safely structures the 团队 and 设置 URLs", () => {
     render(<ActivityBar activePath="/" />);
 

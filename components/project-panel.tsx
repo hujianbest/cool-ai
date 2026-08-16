@@ -20,6 +20,7 @@ import {
   ActivityBar,
   type GovernanceView,
 } from "@/components/activity-bar";
+import { NeedsMeBadge, usePendingApprovalCount } from "@/components/needs-me-badge";
 import { ProjectNotificationPoller } from "@/components/notifications/project-notification-poller";
 import { ProjectThreadNavigation } from "@/components/project-thread-navigation";
 import {
@@ -104,6 +105,7 @@ export function ProjectPanel({
   const [governanceView, setGovernanceView] = useState<GovernanceView | null>(
     null,
   );
+  const pendingApprovalCount = usePendingApprovalCount(currentProjectId);
   const [homeState, setHomeState] = useState<HomeState | null>(null);
   const [settingsReturnTo, setSettingsReturnTo] = useState<ProjectReturnTo>(
     () => returnTo ?? "/",
@@ -500,6 +502,7 @@ export function ProjectPanel({
       <ActivityBar
         activeGovernance={governanceView}
         activePath={pathname ?? "/"}
+        needsMe={pendingApprovalCount > 0}
         onGovernance={setGovernanceView}
         returnTo={settingsReturnTo}
       />
@@ -526,6 +529,10 @@ export function ProjectPanel({
           >
             打开项目文件夹
           </button>
+          <NeedsMeBadge
+            count={pendingApprovalCount}
+            onOpen={() => setGovernanceView("approvals")}
+          />
         </header>
       ) : null}
       <header className="mobile-toolbar">
