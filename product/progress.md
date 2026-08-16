@@ -62,3 +62,4 @@
 - 2026-08-16 按 UCD §7.1 / §14.2 落地 Needs Me：待处理审批时 Header 暖金徽标与图标轨「审批」红点同时亮起，点击徽标打开审批中心。聚焦测试 53/53，`build` 绿。
 - 2026-08-16 按 UCD §9.1.5 收口会话侧栏：全部/收藏/标签 Tab、底部回收站、「新对话」与 `Cmd/Ctrl+N`。聚焦测试 44/44，`build` 绿。
 - 2026-08-16 按 UCD §8.7 落地 `Cmd/Ctrl+O` 调起系统文件夹选择器。cockpit-layout 9/9。
+- 2026-08-16 按 UCD §8.6 落地 Composer：`Enter` 发送、`Shift+Enter` 换行、键入 `@` 补全 Agent。collaboration-chat 8/8，`build` 绿。

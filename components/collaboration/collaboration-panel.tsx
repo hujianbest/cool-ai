@@ -85,6 +85,20 @@ class ThreadDeletedError extends CollaborationResponseError {
 
 class InvalidThreadEnvelopeError extends Error {}
 
+function mentionTokenAtCursor(
+  value: string,
+  cursor: number,
+): { start: number; query: string } | null {
+  const index = Math.min(Math.max(cursor, 0), value.length);
+  const before = value.slice(0, index);
+  const at = before.lastIndexOf("@");
+  if (at < 0) return null;
+  if (at > 0 && !/[\s\n]/.test(before.charAt(at - 1))) return null;
+  const query = before.slice(at + 1);
+  if (/[\s\n]/.test(query)) return null;
+  return { start: at, query };
+}
+
 async function readApiResponse<T>(response: Response, fallback: string): Promise<T> {
   const payload = await readJson<T & Partial<CollaborationApiError>>(response);
   if (!response.ok) {
@@ -1226,6 +1240,7 @@ export function CollaborationPanel({
   const [membersLoading, setMembersLoading] = useState(false);
   const [membersError, setMembersError] = useState<string | null>(null);
   const [mentionOpen, setMentionOpen] = useState(false);
+  const [mentionQuery, setMentionQuery] = useState("");
   const [historyOpen, setHistoryOpen] = useState(false);
   const [activeMemberIndex, setActiveMemberIndex] = useState(0);
   const [selectedMember, setSelectedMember] = useState<ProjectMember | null>(null);
@@ -1263,6 +1278,8 @@ export function CollaborationPanel({
     useState<CollaborationWriteReceipt | null>(null);
   const messageRefs = useRef(new Map<string, HTMLLIElement>());
   const mentionButtonRef = useRef<HTMLButtonElement>(null);
+  const composerRef = useRef<HTMLTextAreaElement>(null);
+  const mentionFromComposerRef = useRef(false);
   const logRef = useRef<HTMLDivElement>(null);
   const decisionSuccessRef = useRef<HTMLParagraphElement>(null);
   const runHeadingRef = useRef<HTMLHeadingElement>(null);
@@ -1281,6 +1298,20 @@ export function CollaborationPanel({
   const requestedMessageHandledRef = useRef<string | null>(null);
   const listboxId = `collaboration-members-${projectId}`;
   const fieldErrorId = `collaboration-message-error-${projectId}`;
+  const visibleMembers = useMemo(() => {
+    if (!members) return members;
+    const query = mentionQuery.trim().toLowerCase();
+    if (!query) return members;
+    return members.filter((member) => {
+      const haystack = `${member.name} ${member.role} ${member.avatarText}`.toLowerCase();
+      return haystack.includes(query);
+    });
+  }, [members, mentionQuery]);
+  const activeMentionMember = visibleMembers?.[activeMemberIndex] ?? visibleMembers?.[0];
+
+  useEffect(() => {
+    setActiveMemberIndex(0);
+  }, [mentionQuery]);
   const targetKey = `${projectId}|${threadId ?? ""}|${selectedRunId ?? ""}`;
   const targetGuard = useTargetRequestGuard(targetKey);
   const draftGuard = useTargetRequestGuard(targetKey);
@@ -2005,22 +2036,66 @@ export function CollaborationPanel({
     void loadMembers();
   }
 
-  function selectMember(member: ProjectMember) {
-    setSelectedMember(member);
+  function closeMentionPicker() {
     setMentionOpen(false);
+    setMentionQuery("");
+    mentionFromComposerRef.current = false;
+  }
+
+  function syncComposerMention(value: string, cursor: number) {
+    if (directAgentName) return;
+    const token = mentionTokenAtCursor(value, cursor);
+    if (!token) {
+      if (mentionFromComposerRef.current) closeMentionPicker();
+      return;
+    }
+    mentionFromComposerRef.current = true;
+    setMentionQuery(token.query);
+    setMentionOpen(true);
+    void loadMembers();
+  }
+
+  function selectMember(
+    member: ProjectMember,
+    source: "button" | "composer" = mentionFromComposerRef.current ? "composer" : "button",
+  ) {
+    const composer = composerRef.current;
+    if (source === "composer" && composer) {
+      const cursor = composer.selectionStart ?? draft.length;
+      const token = mentionTokenAtCursor(draft, cursor);
+      if (token) {
+        const next = `${draft.slice(0, token.start)}${draft.slice(cursor)}`;
+        handleDraftChange(next);
+        const caret = token.start;
+        queueMicrotask(() => {
+          composer.focus();
+          composer.setSelectionRange(caret, caret);
+        });
+      }
+    }
+    setSelectedMember(member);
+    closeMentionPicker();
     setMembersError(null);
-    mentionButtonRef.current?.focus();
+    if (source === "button") mentionButtonRef.current?.focus();
+    else composer?.focus();
+  }
+
+  function moveMentionSelection(offset: number) {
+    if (!visibleMembers?.length) return;
+    setActiveMemberIndex(
+      (current) => (current + offset + visibleMembers.length) % visibleMembers.length,
+    );
   }
 
   function handleMentionKeyDown(event: KeyboardEvent<HTMLButtonElement>) {
     if (event.key === "Escape") {
       event.preventDefault();
-      setMentionOpen(false);
+      closeMentionPicker();
       mentionButtonRef.current?.focus();
       return;
     }
     if (event.key === "Tab") {
-      setMentionOpen(false);
+      closeMentionPicker();
       return;
     }
     if (event.key === "ArrowDown" || event.key === "ArrowUp") {
@@ -2029,14 +2104,53 @@ export function CollaborationPanel({
         openMentionPicker();
         return;
       }
-      if (!members?.length) return;
-      const offset = event.key === "ArrowDown" ? 1 : -1;
-      setActiveMemberIndex((current) => (current + offset + members.length) % members.length);
+      moveMentionSelection(event.key === "ArrowDown" ? 1 : -1);
       return;
     }
-    if (event.key === "Enter" && mentionOpen && members?.length) {
+    if (event.key === "Enter" && mentionOpen && visibleMembers?.length) {
       event.preventDefault();
-      selectMember(members[activeMemberIndex] ?? members[0]);
+      selectMember(
+        visibleMembers[activeMemberIndex] ?? visibleMembers[0],
+        "button",
+      );
+    }
+  }
+
+  function handleComposerKeyDown(event: KeyboardEvent<HTMLTextAreaElement>) {
+    if (event.nativeEvent.isComposing || event.keyCode === 229) return;
+    if (mentionOpen) {
+      if (event.key === "Escape") {
+        event.preventDefault();
+        closeMentionPicker();
+        event.currentTarget.focus();
+        return;
+      }
+      if (event.key === "ArrowDown" || event.key === "ArrowUp") {
+        event.preventDefault();
+        moveMentionSelection(event.key === "ArrowDown" ? 1 : -1);
+        return;
+      }
+      if ((event.key === "Enter" || event.key === "Tab") && visibleMembers?.length) {
+        event.preventDefault();
+        selectMember(
+          visibleMembers[activeMemberIndex] ?? visibleMembers[0],
+          "composer",
+        );
+        return;
+      }
+      if (event.key === "Tab") {
+        closeMentionPicker();
+        return;
+      }
+      if (event.key === "Enter" && !event.shiftKey) {
+        event.preventDefault();
+        return;
+      }
+    }
+    if (event.key === "Enter" && !event.shiftKey) {
+      event.preventDefault();
+      if (!event.currentTarget.value.trim()) return;
+      event.currentTarget.form?.requestSubmit();
     }
   }
 
@@ -3575,11 +3689,26 @@ export function CollaborationPanel({
                 {directAgentName ? `发送给 ${directAgentName}` : "发送给项目对话"}
               </label>
               <textarea
+                aria-activedescendant={
+                  mentionOpen && !directAgentName && activeMentionMember
+                    ? `${listboxId}-${activeMentionMember.agentId}`
+                    : undefined
+                }
+                aria-autocomplete={directAgentName ? undefined : "list"}
+                aria-controls={!directAgentName ? listboxId : undefined}
                 aria-describedby={fieldError ? fieldErrorId : undefined}
+                aria-expanded={!directAgentName ? mentionOpen : undefined}
                 aria-invalid={fieldError ? "true" : undefined}
                 disabled={sending || loading || !threadId}
                 id={`collaboration-message-${projectId}`}
-                onChange={(event) => handleDraftChange(event.target.value)}
+                onChange={(event) => {
+                  handleDraftChange(event.target.value);
+                  syncComposerMention(
+                    event.target.value,
+                    event.target.selectionStart ?? event.target.value.length,
+                  );
+                }}
+                onKeyDown={handleComposerKeyDown}
                 onPaste={handleComposerPaste}
                 placeholder={
                   !threadId
@@ -3590,6 +3719,7 @@ export function CollaborationPanel({
                         : "输入消息…（@ 召唤成员）"
                       : undefined
                 }
+                ref={composerRef}
                 value={draft}
               />
               {fieldError ? (
@@ -3714,8 +3844,8 @@ export function CollaborationPanel({
                 <>
               <button
                 aria-activedescendant={
-                  mentionOpen && members?.[activeMemberIndex]
-                    ? `${listboxId}-${members[activeMemberIndex].agentId}`
+                  mentionOpen && activeMentionMember
+                    ? `${listboxId}-${activeMentionMember.agentId}`
                     : undefined
                 }
                 aria-controls={listboxId}
@@ -3724,8 +3854,13 @@ export function CollaborationPanel({
                 aria-label="@成员"
                 disabled={sending}
                 onClick={() => {
-                  if (mentionOpen) setMentionOpen(false);
-                  else openMentionPicker();
+                  if (mentionOpen) {
+                    closeMentionPicker();
+                    return;
+                  }
+                  mentionFromComposerRef.current = false;
+                  setMentionQuery("");
+                  openMentionPicker();
                 }}
                 onKeyDown={handleMentionKeyDown}
                 ref={mentionButtonRef}
@@ -3755,9 +3890,9 @@ export function CollaborationPanel({
                         重试加载成员
                       </button>
                     </div>
-                  ) : members?.length ? (
+                  ) : visibleMembers?.length ? (
                     <div aria-label="项目成员" id={listboxId} role="listbox">
-                      {members.map((member, index) => (
+                      {visibleMembers.map((member, index) => (
                         <button
                           aria-selected={index === activeMemberIndex}
                           id={`${listboxId}-${member.agentId}`}

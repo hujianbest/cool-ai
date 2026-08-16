@@ -366,6 +366,66 @@ describe("collaboration chat composer", () => {
     });
   });
 
+  it("sends with Enter, inserts a newline with Shift+Enter, and completes @ mentions from the composer", async () => {
+    const sentBodies: Array<Record<string, unknown>> = [];
+    installFetch((url, init) => {
+      if (url.endsWith("/runs")) {
+        const body = JSON.parse(String(init?.body)) as Record<string, unknown>;
+        sentBodies.push(body);
+        return Response.json(
+          {
+            created: true,
+            message: ownerMessage({
+              content: String(body.message),
+              mentionAgentId: "agent-b",
+              mentionDisplayName: "Beta",
+              mentionMemberStatus: "current",
+            }),
+            run: {
+              createdAt: "2026-07-30T00:00:00.000Z",
+              currentAgentId: "agent-b",
+              id: "run-1",
+              pauseCategory: null,
+              projectId: "project-1",
+              roundCount: 0,
+              status: "running",
+              updatedAt: "2026-07-30T00:00:00.000Z",
+              version: 1,
+            },
+          },
+          { status: 201 },
+        );
+      }
+      if (url.endsWith("/collaboration")) return Response.json(emptyRead);
+      return Response.json(members);
+    });
+    const user = userEvent.setup();
+    render(createElement(CollaborationPanel, {
+      projectId: "project-1",
+      threadId: TEST_THREAD_ID,
+    }));
+    const composer = await screen.findByLabelText("发送给项目对话");
+    await screen.findByText(/尚无协作消息。/);
+
+    await user.type(composer, "@");
+    expect(await screen.findByRole("listbox", { name: "项目成员" })).toBeInTheDocument();
+    await user.keyboard("{ArrowDown}{Enter}");
+    expect(screen.getByText("@Beta")).toBeInTheDocument();
+    expect(screen.queryByRole("listbox", { name: "项目成员" })).not.toBeInTheDocument();
+    expect(composer).toHaveValue("");
+
+    await user.type(composer, "hello{Shift>}{Enter}{/Shift}world");
+    expect(composer).toHaveValue("hello\nworld");
+    expect(sentBodies).toHaveLength(0);
+
+    await user.keyboard("{Enter}");
+    await waitFor(() => expect(sentBodies).toHaveLength(1));
+    expect(sentBodies[0]).toMatchObject({
+      mentionAgentId: "agent-b",
+      message: "hello\nworld",
+    });
+  });
+
   it("uses message or start APIs by run state and focuses the successful owner message", async () => {
     const activeRead = {
       ...emptyRead,
