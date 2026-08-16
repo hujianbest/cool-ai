@@ -2,7 +2,6 @@
 
 import {
   Folder,
-  FolderPlus,
   PencilSimple,
   X,
 } from "@phosphor-icons/react";
@@ -29,7 +28,6 @@ import {
 } from "@/components/settings-navigation";
 import { ProjectSetupPanel } from "@/components/project-context/project-setup-panel";
 import { TaskPanel } from "@/components/task-panel";
-import { IconButton } from "@/components/ui/icon-button";
 import {
   ApiDisplayError,
   apiErrorCopy,
@@ -147,7 +145,7 @@ export function ProjectPanel({
         event.preventDefault();
         document
           .querySelector<HTMLButtonElement>(
-            'button[aria-label="打开项目文件夹"], button[aria-label="打开文件夹"]',
+            'button[aria-label="打开文件夹"]',
           )
           ?.click();
         return;
@@ -253,8 +251,11 @@ export function ProjectPanel({
             result.route.step === "members" ||
             result.route.step === "goal"),
       );
+      const labeledGuide = parseGuideUrl(
+        `${window.location.pathname}${window.location.search}${window.location.hash}`,
+      );
       setGuideProjectRecovery(
-        result.kind === "guide" && result.route.projectId !== null,
+        labeledGuide.kind === "guide" && labeledGuide.route.projectId !== null,
       );
     };
     syncGuideStep();
@@ -540,16 +541,16 @@ export function ProjectPanel({
             {headerContext}
           </div>
           <button
-            aria-label="打开项目文件夹"
+            aria-label="打开文件夹"
             className="button-secondary"
             disabled={isSubmitting}
             onClick={() => {
               void openFolderFromPicker();
             }}
-            title="打开项目文件夹"
+            title="打开文件夹"
             type="button"
           >
-            打开项目文件夹
+            打开文件夹
           </button>
           <NeedsMeBadge
             count={pendingApprovalCount}
@@ -670,87 +671,40 @@ export function ProjectPanel({
           <span className="sr-only">Cool AI</span>
         </div>
 
-        <section aria-labelledby="projects-title" className="stack">
-          <header className="panel-heading">
-            <h2 className="surface-heading" id="projects-title">
-              项目
-            </h2>
-            <IconButton
-              className="button-primary"
-              disabled={isSubmitting}
-              icon={<FolderPlus size={20} weight="regular" />}
-              label="打开文件夹"
-              onClick={() => {
-                void openFolderFromPicker();
-              }}
-            />
-          </header>
-          {formError ? (
-            <p className="error-text" id="project-folder-path-error" role="alert">
-              {formError}
+        {formError ? (
+          <p className="error-text" id="project-folder-path-error" role="alert">
+            {formError}
+          </p>
+        ) : null}
+        {projectCreateNotice ? (
+          <p className="onboarding-guide-success" role="status">
+            {projectCreateNotice}
+          </p>
+        ) : null}
+        {projectLoadError && !narrow ? (
+          <div className="stack">
+            <p className="error-text" role="alert">
+              {projectLoadError}
             </p>
-          ) : null}
-          {projectCreateNotice ? (
-            <p className="onboarding-guide-success" role="status">
-              {projectCreateNotice}
+            <button onClick={() => setReloadKey((current) => current + 1)} type="button">
+              重试加载项目
+            </button>
+          </div>
+        ) : null}
+        {routeProjectError && !narrow ? (
+          <div className="empty-guide">
+            <p className="error-text" role="alert">
+              {routeProjectError}
             </p>
-          ) : null}
-          {isLoading ? (
-            <p aria-busy="true" className="muted">
-              正在加载项目…
-            </p>
-          ) : projectLoadError ? (
-            <div className="stack">
-              <p className="error-text" role="alert">
-                {projectLoadError}
-              </p>
-              <button onClick={() => setReloadKey((current) => current + 1)} type="button">
-                重试加载项目
-              </button>
-            </div>
-          ) : projects.length === 0 ? (
-            <div className="empty-guide state-message">
-              <p>暂无文件夹项目。</p>
-            </div>
-          ) : (
-            <>
-              {routeProjectError && !narrow ? (
-                <div className="empty-guide">
-                  <p className="error-text" role="alert">
-                    {routeProjectError}
-                  </p>
-                  <button
-                    className="button-secondary"
-                    onClick={projectRecovery}
-                    type="button"
-                  >
-                    {guideProjectRecovery ? "返回项目选择" : "返回项目列表"}
-                  </button>
-                </div>
-              ) : null}
-              <nav aria-label="项目">
-                <ul className="project-list">
-                  {projects.map((project) => (
-                    <li key={project.id}>
-                      <button
-                        aria-current={project.id === currentProjectId ? "page" : undefined}
-                        className="nav-item"
-                        onClick={() => {
-                          router.push(`/projects/${project.id}`);
-                          if (mobileSurface === "projects")
-                            closeProjectNavigation();
-                        }}
-                        type="button"
-                      >
-                        {project.name}
-                      </button>
-                    </li>
-                  ))}
-                </ul>
-              </nav>
-            </>
-          )}
-        </section>
+            <button
+              className="button-secondary"
+              onClick={projectRecovery}
+              type="button"
+            >
+              {guideProjectRecovery ? "返回项目选择" : "返回项目列表"}
+            </button>
+          </div>
+        ) : null}
         {currentProject &&
         pathname?.startsWith(
           `/projects/${encodeURIComponent(currentProject.id)}`,

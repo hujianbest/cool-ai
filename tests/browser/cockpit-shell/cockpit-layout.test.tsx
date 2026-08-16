@@ -29,7 +29,11 @@ vi.mock("@/components/project-thread-navigation", () => {
       useEffect(() => {
         onActiveConversationChange?.(threadNav.conversationTitle);
       }, [onActiveConversationChange]);
-      return null;
+      return (
+        <h2 className="surface-heading" id="project-threads-title">
+          对话
+        </h2>
+      );
     },
   };
 });
@@ -113,20 +117,17 @@ describe("desktop collaboration cockpit", () => {
       expect(action).toHaveClass("button-secondary");
     }
     expect(within(navigation).getByText("Cool AI")).toHaveClass("sr-only");
-    expect(within(navigation).getByRole("heading", { name: "项目" })).toHaveClass(
+    expect(within(navigation).getByRole("heading", { name: "对话" })).toHaveClass(
       "surface-heading",
     );
-    expect(within(navigation).getByRole("button", { name: "打开文件夹" })).toHaveClass(
-      "icon-button",
+    expect(within(navigation).queryByRole("heading", { name: "项目" })).toBeNull();
+    expect(within(navigation).queryByRole("button", { name: "Launch plan" })).toBeNull();
+    expect(within(navigation).queryByRole("navigation", { name: "项目" })).toBeNull();
+    expect(within(cockpit).getByRole("button", { name: "打开文件夹" })).toHaveClass(
+      "button-secondary",
     );
     expect(within(navigation).getByRole("button", { name: "关闭项目导航" })).toHaveClass(
       "button-ghost",
-    );
-    const currentProject = within(navigation).getByRole("button", { name: "Launch plan" });
-    expect(currentProject).toHaveClass("nav-item");
-    expect(currentProject).toHaveAttribute(
-      "aria-current",
-      "page",
     );
     expect(within(flow).queryByText("确定性示例 Agent")).toBeNull();
     expect(within(flow).queryByRole("button", { name: "运行任务" })).toBeNull();
@@ -258,7 +259,7 @@ describe("desktop collaboration cockpit", () => {
       }),
     );
     render(<ProjectPanel />);
-    await screen.findByRole("button", { name: "打开项目文件夹" });
+    await screen.findByRole("button", { name: "打开文件夹" });
 
     await user.keyboard("{Control>}o{/Control}");
     await waitFor(() =>

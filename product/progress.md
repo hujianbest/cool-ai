@@ -65,3 +65,4 @@
 - 2026-08-16 按 UCD §8.6 落地 Composer：`Enter` 发送、`Shift+Enter` 换行、键入 `@` 补全 Agent。collaboration-chat 8/8，`build` 绿。
 - 2026-08-16 按 UCD §7.1 / §9.1.2 落地 Header 语境：`未选择项目 · 个人对话` 或 `[项目名] · [对话标题]`。cockpit-layout 10/10。
 - 2026-08-16 按 UCD §8.1 / §9.1.5 落地对话列表选中态：左侧 3px 暖金条 + `--color-surface-pearl` 底 + 字重 600；`AGENTS.md` 写入前端必须在真实浏览器核对。聚焦测试 54/54。
+- 2026-08-16 按 UCD §7.1 收口会话侧栏只留「对话」：桌面侧栏不再列出文件夹项目；打开/切换项目只走 Header「打开文件夹」。聚焦测试与 `build` 绿。

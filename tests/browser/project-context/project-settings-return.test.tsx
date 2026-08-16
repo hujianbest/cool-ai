@@ -79,7 +79,12 @@ describe("real project settings return path", () => {
     window.history.replaceState(null, "", `/projects/${project.id}`);
     render(<ProjectPanel />);
 
-    await screen.findByRole("button", { name: project.name });
+    const cockpit = await screen.findByTestId("collaboration-cockpit");
+    await waitFor(() => {
+      expect(cockpit.querySelector(".cockpit-header-context")).toHaveTextContent(
+        project.name,
+      );
+    });
     const expectedReturnTo = encodeURIComponent(`/projects/${project.id}`);
     expect(screen.getByRole("link", { name: "对话" })).toHaveAttribute(
       "aria-current",
@@ -109,7 +114,12 @@ describe("real project settings return path", () => {
     window.history.replaceState(null, "", first);
     const view = render(<RoutedProjectPanel returnTo={first} />);
 
-    await screen.findByRole("button", { name: project.name });
+    const cockpit = await screen.findByTestId("collaboration-cockpit");
+    await waitFor(() => {
+      expect(cockpit.querySelector(".cockpit-header-context")).toHaveTextContent(
+        project.name,
+      );
+    });
     expect(screen.getByRole("link", { name: "团队" })).toHaveAttribute(
       "href",
       `/team?section=skills&returnTo=${encodeURIComponent(first)}`,

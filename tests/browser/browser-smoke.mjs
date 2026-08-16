@@ -147,10 +147,6 @@ try {
 
   await page.goto(baseUrl, { waitUntil: "networkidle" });
   assert.equal(await page.locator("html").getAttribute("lang"), "zh-CN");
-  const emptyProjectGuide = page.locator(".empty-guide");
-  await emptyProjectGuide
-    .getByText("暂无文件夹项目。", { exact: true })
-    .waitFor();
   await page
     .getByText("先配置一个 Agent，即可开始个人对话。", { exact: true })
     .waitFor();
@@ -167,12 +163,7 @@ try {
   await page.getByRole("button", { name: "打开文件夹" }).click();
   await page.waitForURL(/\/projects\/[^/]+$/);
   await page.getByRole("heading", { name: "real-workspace" }).waitFor();
-  const currentProject = page.getByRole("button", { name: "real-workspace" });
-  await currentProject.waitFor();
-  assert.equal(
-    await currentProject.getAttribute("aria-current"),
-    "page",
-  );
+  await page.getByText("real-workspace", { exact: false }).waitFor();
   assert.equal(await workbenchHeading.count(), 1);
   assert.equal(await workbenchHeading.isVisible(), true);
   await assertAxeCriticalFree(page, "/projects/<id>");

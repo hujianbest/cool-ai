@@ -180,9 +180,7 @@ describe("home direct chat", () => {
 
     expect(await screen.findByText("Home threads home-project direct")).toBeInTheDocument();
     expect(screen.queryByRole("button", { name: "个人对话" })).not.toBeInTheDocument();
-    expect(screen.getByRole("button", { name: "Folder project" })).not.toHaveAttribute(
-      "aria-current",
-    );
+    expect(screen.queryByRole("button", { name: "Folder project" })).not.toBeInTheDocument();
     expect(screen.getByRole("heading", { name: "Alpha" })).toBeInTheDocument();
     expect(screen.getByText("未选择项目 · 个人对话")).toBeInTheDocument();
     expect(screen.queryByText("A · Alpha")).toBeNull();

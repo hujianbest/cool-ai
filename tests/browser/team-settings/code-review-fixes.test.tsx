@@ -33,12 +33,12 @@ describe("code review fixes", () => {
     render(<ProjectPanel />);
 
     const flow = screen.getByRole("region", { name: "任务事件流" });
-    expect(within(flow).getByText("正在加载项目…")).toHaveAttribute("aria-busy", "true");
+    expect(within(flow).getByText("正在加载对话…")).toHaveAttribute("aria-busy", "true");
     expect(screen.queryByRole("complementary", { name: "当前任务上下文" })).toBeNull();
 
     projects.resolve(Response.json({ projects: [] }));
     expect(
-      await screen.findByText("暂无文件夹项目。"),
+      await screen.findByText("先配置一个 Agent，即可开始个人对话。"),
     ).toBeInTheDocument();
   });
 
@@ -64,7 +64,7 @@ describe("code review fixes", () => {
 
     expect(fetchMock).toHaveBeenCalledTimes(3);
     expect(
-      await screen.findByText("暂无文件夹项目。"),
+      await screen.findByText("先配置一个 Agent，即可开始个人对话。"),
     ).toBeInTheDocument();
   });
 
@@ -91,8 +91,7 @@ describe("code review fixes", () => {
     const user = userEvent.setup();
 
     render(<ProjectPanel />);
-    await screen.findByText("暂无文件夹项目。");
-    await user.click(screen.getByRole("button", { name: "打开文件夹" }));
+    await user.click(await screen.findByRole("button", { name: "打开文件夹" }));
 
     const title = await screen.findByRole("heading", { level: 2, name: "新项目" });
     expect(title).toHaveAttribute("tabindex", "-1");
@@ -116,8 +115,6 @@ describe("code review fixes", () => {
 
     await user.click(await screen.findByRole("button", { name: "打开文件夹" }));
     expect(screen.queryByLabelText("文件夹路径")).toBeNull();
-    expect(
-      await screen.findByText("暂无文件夹项目。"),
-    ).toBeInTheDocument();
+    expect(screen.getByRole("button", { name: "打开文件夹" })).toBeInTheDocument();
   });
 });

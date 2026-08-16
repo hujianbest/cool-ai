@@ -1,5 +1,5 @@
 // @vitest-environment jsdom
-import { act, render, screen, waitFor, within } from "@testing-library/react";
+import { act, render, screen, waitFor } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { useRef } from "react";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
@@ -104,7 +104,7 @@ function LegacyTaskHarness() {
       projectError={null}
       projectId={project.id}
       projectLoading={false}
-      threadListState="empty"
+      threadListState="ready"
     />
   );
 }
@@ -192,11 +192,7 @@ describe("task event flow", () => {
 
     render(<ProjectPanel />);
 
-    const projectRegion = await screen.findByRole("region", { name: "项目" });
-    const openFolderActions = within(projectRegion).getAllByRole("button", {
-      name: "打开文件夹",
-    });
-    await user.click(openFolderActions.at(-1)!);
+    await user.click(await screen.findByRole("button", { name: "打开文件夹" }));
     expect(screen.queryByLabelText("文件夹路径")).toBeNull();
 
     expect(
@@ -314,14 +310,14 @@ describe("task event flow", () => {
 });
 
 describe("project URL routing", () => {
-  it("pushes the selected project URL", async () => {
+  it("does not list folder projects in the conversation sidebar", async () => {
     installRoutingFetch();
-    const user = userEvent.setup();
     render(<ProjectPanel />);
 
-    await user.click(await screen.findByRole("button", { name: secondProject.name }));
-
-    expect(pushMock).toHaveBeenCalledWith("/projects/project-2");
+    expect(await screen.findByRole("button", { name: "打开文件夹" })).toBeInTheDocument();
+    expect(screen.queryByRole("button", { name: project.name })).toBeNull();
+    expect(screen.queryByRole("button", { name: secondProject.name })).toBeNull();
+    expect(screen.queryByRole("heading", { name: "项目" })).toBeNull();
   });
 
   it("selects a valid project from a direct URL instead of the first project", async () => {
@@ -329,12 +325,14 @@ describe("project URL routing", () => {
     installRoutingFetch();
     render(<ProjectPanel />);
 
-    expect(await screen.findByRole("button", { name: secondProject.name })).toHaveAttribute(
-      "aria-current",
-      "page",
-    );
-    expect(screen.getByRole("button", { name: project.name })).not.toHaveAttribute(
-      "aria-current",
+    const cockpit = await screen.findByTestId("collaboration-cockpit");
+    await waitFor(() => {
+      expect(cockpit.querySelector(".cockpit-header-context")).toHaveTextContent(
+        secondProject.name,
+      );
+    });
+    expect(cockpit.querySelector(".cockpit-header-context")).not.toHaveTextContent(
+      project.name,
     );
   });
 
@@ -342,18 +340,19 @@ describe("project URL routing", () => {
     pathnameValue = "/projects/project-2";
     installRoutingFetch();
     const view = render(<ProjectPanel />);
-    expect(await screen.findByRole("button", { name: secondProject.name })).toHaveAttribute(
-      "aria-current",
-      "page",
-    );
+    const cockpit = await screen.findByTestId("collaboration-cockpit");
+    await waitFor(() => {
+      expect(cockpit.querySelector(".cockpit-header-context")).toHaveTextContent(
+        secondProject.name,
+      );
+    });
 
     pathnameValue = "/projects/project-1";
     view.rerender(<ProjectPanel />);
 
     await waitFor(() =>
-      expect(screen.getByRole("button", { name: project.name })).toHaveAttribute(
-        "aria-current",
-        "page",
+      expect(cockpit.querySelector(".cockpit-header-context")).toHaveTextContent(
+        project.name,
       ),
     );
   });
@@ -364,12 +363,8 @@ describe("project URL routing", () => {
     render(<ProjectPanel />);
 
     expect(await screen.findByRole("alert")).toHaveTextContent("未找到该项目。");
-    expect(screen.getByRole("button", { name: project.name })).not.toHaveAttribute(
-      "aria-current",
-    );
-    expect(screen.getByRole("button", { name: secondProject.name })).not.toHaveAttribute(
-      "aria-current",
-    );
+    expect(screen.queryByRole("button", { name: project.name })).toBeNull();
+    expect(screen.queryByRole("button", { name: secondProject.name })).toBeNull();
   });
 
   it("offers a reachable desktop recovery action for an unknown project", async () => {

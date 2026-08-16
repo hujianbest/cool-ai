@@ -24,8 +24,12 @@ describe("ProjectPanel", () => {
 
     render(<ProjectPanel />);
 
-    expect(screen.getAllByText("正在加载项目…")).toHaveLength(2);
-    expect(await screen.findByRole("button", { name: "Existing project" })).toBeInTheDocument();
+    expect(await screen.findByRole("button", { name: "打开文件夹" })).toBeInTheDocument();
+    await waitFor(() => {
+      expect(screen.queryByText("正在加载对话…")).toBeNull();
+    });
+    expect(screen.queryByRole("button", { name: "Existing project" })).toBeNull();
+    expect(screen.getByText("未选择项目 · 个人对话")).toBeInTheDocument();
   });
 
   it("opens a folder project from the system directory picker", async () => {
@@ -45,10 +49,9 @@ describe("ProjectPanel", () => {
     const user = userEvent.setup();
 
     render(<ProjectPanel />);
-    await screen.findByText("暂无文件夹项目。");
     expect(screen.queryByLabelText("文件夹路径")).toBeNull();
     expect(screen.queryByRole("button", { name: "如何打开项目" })).toBeNull();
-    await user.click(screen.getByRole("button", { name: "打开文件夹" }));
+    await user.click(await screen.findByRole("button", { name: "打开文件夹" }));
 
     expect(await screen.findByRole("heading", { level: 2, name: "Launch plan" })).toBeInTheDocument();
     expect(fetchMock).toHaveBeenCalledWith(
@@ -82,8 +85,7 @@ describe("ProjectPanel", () => {
     const user = userEvent.setup();
 
     render(<ProjectPanel />);
-    await screen.findByText("暂无文件夹项目。");
-    await user.click(screen.getByRole("button", { name: "打开文件夹" }));
+    await user.click(await screen.findByRole("button", { name: "打开文件夹" }));
     await waitFor(() =>
       expect(screen.getByRole("alert")).toHaveTextContent("无法打开系统文件夹选择器"),
     );
@@ -105,8 +107,7 @@ describe("ProjectPanel", () => {
     const user = userEvent.setup();
 
     render(<ProjectPanel />);
-    await screen.findByText("暂无文件夹项目。");
-    await user.click(screen.getByRole("button", { name: "打开文件夹" }));
+    await user.click(await screen.findByRole("button", { name: "打开文件夹" }));
 
     await waitFor(() =>
       expect(fetchMock).toHaveBeenCalledWith(
