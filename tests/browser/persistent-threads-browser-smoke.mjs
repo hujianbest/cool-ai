@@ -1868,7 +1868,7 @@ try {
   });
   const viewTabs = page.getByRole("tablist", { name: "线程视图" });
   const allViewTab = viewTabs.getByRole("tab", { name: "全部" });
-  const favoritesViewTab = viewTabs.getByRole("tab", { name: "已收藏" });
+  const favoritesViewTab = viewTabs.getByRole("tab", { name: "收藏" });
   await allViewTab.waitFor();
   assert.equal(await allViewTab.getAttribute("aria-selected"), "true");
   assert.equal(await favoritesViewTab.getAttribute("aria-selected"), "false");
@@ -2035,7 +2035,7 @@ try {
   await favoritesNavOpener.focus();
   await page.keyboard.press("Enter");
   const favoritesNavDialog = page.getByRole("dialog", { name: "项目导航" });
-  await favoritesNavDialog.getByRole("tab", { name: "已收藏" }).click();
+  await favoritesNavDialog.getByRole("tab", { name: "收藏" }).click();
   const narrowFavoriteEntry = favoritesNavDialog.getByRole("button", {
     exact: true,
     name: "历史协作",
@@ -4037,7 +4037,7 @@ try {
   assert.ok(secondRecycleItem.messageCount >= 2);
   assert.ok(secondRecycleItem.attachmentCount >= 1);
 
-  const recycleViewTab = page.getByRole("tab", { name: "回收站" });
+  const recycleViewTab = page.getByRole("button", { name: "回收站" });
   await recycleViewTab.waitFor();
   const recycleViewTabBox = await recycleViewTab.boundingBox();
   assert.ok(
@@ -4344,7 +4344,7 @@ try {
   await recycleNavOpener.click();
   const recycleDrawer = page.getByRole("dialog", { name: "项目导航" });
   await recycleDrawer.waitFor();
-  const narrowRecycleTab = recycleDrawer.getByRole("tab", { name: "回收站" });
+  const narrowRecycleTab = recycleDrawer.getByRole("button", { name: "回收站" });
   await narrowRecycleTab.waitFor();
   const narrowRecycleTabBox = await narrowRecycleTab.boundingBox();
   assert.ok(
@@ -4369,7 +4369,7 @@ try {
   await page.getByRole("button", { name: /切换到明色主题/ }).waitFor();
   await recycleNavOpener.click();
   await recycleDrawer.waitFor();
-  await recycleDrawer.getByRole("tab", { name: "回收站" }).click();
+  await recycleDrawer.getByRole("button", { name: "回收站" }).click();
   await recycleDrawer.getByText("回收站为空。", { exact: true }).waitFor();
   await axe(page, "narrow dark thread recycle bin drawer");
   await page.screenshot({ fullPage: true, path: evidence.recycleNarrowDark });

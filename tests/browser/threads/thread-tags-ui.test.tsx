@@ -441,6 +441,7 @@ describe("manage tags dialog", () => {
     await user.click(
       within(manageDialog).getByRole("button", { name: "关闭管理标签" }),
     );
+    await user.click(screen.getByRole("tab", { name: "标签" }));
     const filterGroup = await screen.findByRole("group", { name: "按标签筛选对话" });
     expect(
       within(filterGroup).queryByRole("button", { name: "发布" }),
@@ -468,7 +469,13 @@ describe("manage tags dialog", () => {
 
     render(<ThreadTagsHarness />);
     await screen.findByRole("button", { name: "发布计划" });
-    await user.click(screen.getByRole("button", { name: "发布" }));
+    await user.click(screen.getByRole("tab", { name: "标签" }));
+    await user.click(
+      within(await screen.findByRole("group", { name: "按标签筛选对话" })).getByRole(
+        "button",
+        { name: "发布" },
+      ),
+    );
     await waitFor(() =>
       expect(server.requestedUrls).toContain(
         `/api/projects/${project.id}/threads?limit=100&tagId=tag-1`,
@@ -517,6 +524,7 @@ describe("manage tags dialog", () => {
 
     render(<ThreadTagsHarness />);
     await screen.findByRole("button", { name: "发布计划" });
+    await user.click(screen.getByRole("tab", { name: "标签" }));
 
     const filterError = (await screen.findAllByRole("alert")).find((node) =>
       node.textContent?.includes("服务暂时出现问题")
@@ -570,7 +578,8 @@ describe("thread list tag chips and the filter chip bar", () => {
         .querySelectorAll(".thread-tag-chip"),
     ).toHaveLength(0);
 
-    const group = screen.getByRole("group", { name: "按标签筛选对话" });
+    await user.click(screen.getByRole("tab", { name: "标签" }));
+    const group = await screen.findByRole("group", { name: "按标签筛选对话" });
     const releaseChip = within(group).getByRole("button", { name: "发布" });
     expect(releaseChip).toHaveAttribute("aria-pressed", "false");
 
@@ -615,37 +624,34 @@ describe("thread list tag chips and the filter chip bar", () => {
     render(<ThreadTagsHarness />);
     await screen.findByRole("button", { name: "发布计划" });
 
-    await user.click(screen.getByRole("tab", { name: "已收藏" }));
+    await user.click(screen.getByRole("tab", { name: "收藏" }));
     await screen.findByRole("button", { name: "已收藏对话" });
     expect(
       server.requestedUrls.some((url) => url.includes("favorites=true")),
     ).toBe(true);
+    expect(screen.queryByRole("group", { name: "按标签筛选对话" })).toBeNull();
 
-    const group = screen.getByRole("group", { name: "按标签筛选对话" });
+    await user.click(screen.getByRole("tab", { name: "标签" }));
+    const group = await screen.findByRole("group", { name: "按标签筛选对话" });
     await user.click(within(group).getByRole("button", { name: "发布" }));
     await waitFor(() =>
       expect(server.requestedUrls).toContain(
         `/api/projects/${project.id}/threads?limit=100&tagId=tag-1`,
       )
     );
-    expect(screen.getByRole("tab", { name: "全部" })).toHaveAttribute(
+    expect(screen.getByRole("tab", { name: "标签" })).toHaveAttribute(
       "aria-selected",
       "true",
     );
-    expect(screen.getByRole("tab", { name: "已收藏" })).toHaveAttribute(
+    expect(screen.getByRole("tab", { name: "收藏" })).toHaveAttribute(
       "aria-selected",
       "false",
     );
     expect(await screen.findByRole("button", { name: "发布计划" })).toBeInTheDocument();
 
-    await user.click(screen.getByRole("tab", { name: "已收藏" }));
+    await user.click(screen.getByRole("tab", { name: "收藏" }));
     await screen.findByRole("button", { name: "已收藏对话" });
-    expect(
-      within(screen.getByRole("group", { name: "按标签筛选对话" })).getByRole(
-        "button",
-        { name: "发布" },
-      ),
-    ).toHaveAttribute("aria-pressed", "false");
+    expect(screen.queryByRole("group", { name: "按标签筛选对话" })).toBeNull();
     const filteredReads = server.requestedUrls.filter((url) =>
       url.includes("tagId=")
     );
@@ -663,7 +669,8 @@ describe("thread list tag chips and the filter chip bar", () => {
 
     render(<ThreadTagsHarness />);
     await screen.findByRole("button", { name: "闲聊" });
-    const group = screen.getByRole("group", { name: "按标签筛选对话" });
+    await user.click(screen.getByRole("tab", { name: "标签" }));
+    const group = await screen.findByRole("group", { name: "按标签筛选对话" });
     await user.click(within(group).getByRole("button", { name: "发布" }));
 
     expect(
@@ -984,6 +991,7 @@ describe("target switching and staleness guards", () => {
       await screen.findByRole("button", { name: "其他项目对话" }),
     ).toBeInTheDocument();
     expect(screen.queryByRole("region", { name: "批量整理对话" })).toBeNull();
+    await user.click(screen.getByRole("tab", { name: "标签" }));
     expect(
       await within(
         await screen.findByRole("group", { name: "按标签筛选对话" }),

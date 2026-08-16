@@ -402,7 +402,7 @@ describe("persistent project thread list and creation", () => {
     render(<ThreadHarness />);
 
     await screen.findByText("暂无对话。创建对话后开始协作。");
-    const opener = screen.getByRole("button", { name: "创建对话" });
+    const opener = screen.getByRole("button", { name: "新对话" });
     await user.click(opener);
     const dialog = screen.getByRole("dialog", { name: "创建对话" });
     expect(within(dialog).getByLabelText("对话标题")).toHaveFocus();
@@ -835,7 +835,7 @@ describe("thread favorites UI", () => {
     render(<ThreadHarness />);
 
     await screen.findByRole("button", { name: "Beta" });
-    await user.click(screen.getByRole("tab", { name: "已收藏" }));
+    await user.click(screen.getByRole("tab", { name: "收藏" }));
 
     expect(await screen.findByRole("button", { name: "Alpha" })).toBeVisible();
     expect(screen.getByRole("button", { name: "Charlie" })).toBeVisible();
@@ -872,7 +872,7 @@ describe("thread favorites UI", () => {
 
     render(<ThreadHarness />);
 
-    await user.click(await screen.findByRole("tab", { name: "已收藏" }));
+    await user.click(await screen.findByRole("tab", { name: "收藏" }));
     await screen.findByRole("button", { name: "取消收藏 Beta" });
 
     server.setWriteHandler(() => {
@@ -900,7 +900,7 @@ describe("thread favorites UI", () => {
     render(<ThreadHarness />);
 
     await screen.findByRole("button", { name: "Beta" });
-    await user.click(screen.getByRole("tab", { name: "已收藏" }));
+    await user.click(screen.getByRole("tab", { name: "收藏" }));
     await screen.findByRole("button", { name: "Alpha" });
 
     expect(window.location.search).toBe(`?thread=${beta.id}`);
@@ -928,7 +928,7 @@ describe("thread favorites UI", () => {
     const allTab = await screen.findByRole("tab", { name: "全部" });
     allTab.focus();
     await user.keyboard("{ArrowRight}");
-    const favoritesTab = screen.getByRole("tab", { name: "已收藏" });
+    const favoritesTab = screen.getByRole("tab", { name: "收藏" });
     expect(favoritesTab).toHaveFocus();
     expect(favoritesTab).toHaveAttribute("aria-selected", "true");
     await screen.findByRole("button", { name: "取消收藏 Alpha" });
@@ -936,6 +936,42 @@ describe("thread favorites UI", () => {
     await user.keyboard("{ArrowLeft}");
     expect(allTab).toHaveFocus();
     expect(allTab).toHaveAttribute("aria-selected", "true");
+
+    await user.keyboard("{End}");
+    expect(screen.getByRole("tab", { name: "标签" })).toHaveFocus();
+    expect(screen.getByRole("tab", { name: "标签" })).toHaveAttribute(
+      "aria-selected",
+      "true",
+    );
+  });
+
+  it("opens a new conversation from the header control or Cmd+N and keeps 回收站 off the tablist", async () => {
+    const alpha = favorited("thread-alpha", "Alpha", 1, "2026-08-09T10:00:00.000Z");
+    const server = stubFavoriteServer([alpha]);
+    vi.stubGlobal("fetch", server.fetchMock);
+    window.history.replaceState(null, "", `/projects/${project.id}?thread=${alpha.id}`);
+    const user = userEvent.setup();
+
+    render(<ThreadHarness />);
+    await screen.findByRole("button", { name: "Alpha" });
+
+    const tablist = screen.getByRole("tablist", { name: "对话视图" });
+    expect(
+      [...tablist.querySelectorAll('[role="tab"]')].map((node) => node.textContent),
+    ).toEqual(["全部", "收藏", "标签"]);
+    expect(within(tablist).queryByRole("tab", { name: "回收站" })).toBeNull();
+    expect(screen.getByRole("button", { name: "回收站" })).toHaveAttribute(
+      "aria-pressed",
+      "false",
+    );
+
+    await user.click(screen.getByRole("button", { name: "新对话" }));
+    expect(await screen.findByRole("dialog", { name: "创建对话" })).toBeInTheDocument();
+    await user.keyboard("{Escape}");
+    expect(screen.queryByRole("dialog", { name: "创建对话" })).toBeNull();
+
+    await user.keyboard("{Control>}n{/Control}");
+    expect(await screen.findByRole("dialog", { name: "创建对话" })).toBeInTheDocument();
   });
 
   it("restores favorite state from the server after a remount", async () => {

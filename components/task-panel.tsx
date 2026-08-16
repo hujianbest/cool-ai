@@ -118,6 +118,7 @@ export function TaskPanel({
   onHomeStateChange,
   onboarding,
   legacyTasksEnabled = true,
+  threadListState,
 }: TaskPanelProps) {
   const [tasks, setTasks] = useState<TaskRun[]>([]);
   const [events, setEvents] = useState<TaskEvent[]>([]);
@@ -588,7 +589,7 @@ export function TaskPanel({
               threadId={collaborationTarget?.threadId}
             />
           ) : null
-        ) : (
+        ) : threadListState === "empty" ? null : (
           <>
               <CollaborationPanel
                 modalBackgroundRef={editorSurfaceRef}

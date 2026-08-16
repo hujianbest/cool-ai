@@ -754,6 +754,29 @@ ol {
   flex-shrink: 0;
 }
 
+.thread-sidebar {
+  display: flex;
+  flex: 1;
+  min-height: 0;
+  flex-direction: column;
+}
+
+.thread-sidebar-main {
+  flex: 1;
+  min-height: 0;
+  overflow: auto;
+}
+
+.thread-recycle-entry {
+  flex-shrink: 0;
+  min-height: var(--control-min);
+  justify-content: flex-start;
+  margin-block-start: var(--space-2);
+  padding-inline: var(--space-3);
+  border-top: var(--border-width) solid var(--border-subtle);
+  border-radius: 0;
+}
+
 .thread-list-item {
   display: flex;
   align-items: center;

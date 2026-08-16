@@ -111,7 +111,7 @@ describe("thread recycle bin navigation", () => {
 
     render(<NavigationHarness />);
     await screen.findByRole("button", { name: "Thread A" });
-    await user.click(screen.getByRole("tab", { name: "回收站" }));
+    await user.click(screen.getByRole("button", { name: "回收站" }));
 
     expect(await screen.findByText("回收站为空。")).toBeInTheDocument();
     expect(
@@ -237,7 +237,7 @@ describe("thread recycle bin navigation", () => {
 
     render(<NavigationHarness />);
     await screen.findByRole("button", { name: "Kept" });
-    await user.click(screen.getByRole("tab", { name: "回收站" }));
+    await user.click(screen.getByRole("button", { name: "回收站" }));
     await screen.findByRole("button", { name: "恢复 Recover me" });
 
     await user.click(screen.getByRole("button", { name: "永久删除 Recover me" }));

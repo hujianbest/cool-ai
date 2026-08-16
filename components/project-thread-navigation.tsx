@@ -253,7 +253,7 @@ const threadTagBatchResponseSchema = z
 
 type ThreadSummary = z.infer<typeof threadSummarySchema>;
 type ThreadListItem = z.infer<typeof threadListItemSchema>;
-type ThreadListView = "all" | "favorites" | "recycle_bin";
+type ThreadListView = "all" | "favorites" | "tags" | "recycle_bin";
 type ThreadCreateResponse = z.infer<typeof threadCreateResponseSchema>;
 type RecycleBinItem = z.infer<typeof recycleBinItemSchema>;
 type ThreadTagListItem = z.infer<typeof threadTagListItemSchema>;
@@ -542,6 +542,7 @@ export function ProjectThreadNavigation({
   const threadButtonRefs = useRef(new Map<string, HTMLButtonElement>());
   const allViewTabRef = useRef<HTMLButtonElement>(null);
   const favoritesViewTabRef = useRef<HTMLButtonElement>(null);
+  const tagsViewTabRef = useRef<HTMLButtonElement>(null);
   const recycleBinViewTabRef = useRef<HTMLButtonElement>(null);
   const viewRef = useRef(view);
   viewRef.current = view;
@@ -728,6 +729,20 @@ export function ProjectThreadNavigation({
     || pendingPurgeThread !== null;
 
   useEffect(() => {
+    function onKeyDown(event: globalThis.KeyboardEvent) {
+      if (!(event.metaKey || event.ctrlKey) || event.shiftKey || event.altKey) {
+        return;
+      }
+      if (event.key.toLowerCase() !== "n") return;
+      if (anyDialogOpen) return;
+      event.preventDefault();
+      openDialog();
+    }
+    window.addEventListener("keydown", onKeyDown);
+    return () => window.removeEventListener("keydown", onKeyDown);
+  }, [anyDialogOpen]);
+
+  useEffect(() => {
     onDialogChange?.(anyDialogOpen);
   }, [anyDialogOpen, onDialogChange]);
 
@@ -798,6 +813,7 @@ export function ProjectThreadNavigation({
   }, [projectId]);
 
   useEffect(() => {
+    if (view === "recycle_bin") return;
     const request = targetGuard.capture();
     setListState("loading");
     setListError(null);
@@ -1258,17 +1274,32 @@ export function ProjectThreadNavigation({
   }
 
   function selectView(next: ThreadListView, focusTab = false) {
+    if (next !== "tags") setActiveTagId(null);
     setView(next);
     if (focusTab) {
       queueMicrotask(() => {
-        (next === "all" ? allViewTabRef : favoritesViewTabRef).current?.focus();
+        const tabRef =
+          next === "all"
+            ? allViewTabRef
+            : next === "favorites"
+              ? favoritesViewTabRef
+              : next === "tags"
+                ? tagsViewTabRef
+                : recycleBinViewTabRef;
+        tabRef.current?.focus();
       });
     }
   }
 
   function handleViewKeys(event: KeyboardEvent<HTMLDivElement>) {
-    const order: ThreadListView[] = ["all", "favorites", "recycle_bin"];
-    const currentIndex = order.indexOf(view);
+    const order: Array<Exclude<ThreadListView, "recycle_bin">> = [
+      "all",
+      "favorites",
+      "tags",
+    ];
+    const currentIndex = order.indexOf(
+      view === "recycle_bin" ? "all" : view,
+    );
     let next: ThreadListView | undefined;
     if (event.key === "Home") next = order[0];
     if (event.key === "End") next = order[order.length - 1];
@@ -1645,7 +1676,7 @@ export function ProjectThreadNavigation({
   }
 
   function selectTagFilter(tagId: string | null) {
-    if (view === "favorites" && tagId !== null) setView("all");
+    if (tagId !== null) setView("tags");
     setActiveTagId((current) => (current === tagId ? null : tagId));
   }
 
@@ -1865,46 +1896,44 @@ export function ProjectThreadNavigation({
           : null;
 
   return (
-    <>
+    <div className="thread-sidebar">
       <section
         aria-labelledby="project-threads-title"
-        className="stack"
+        className="stack thread-sidebar-main"
         ref={searchAreaRef}
       >
         <div className="section-heading-row">
           <h2 className="surface-heading" id="project-threads-title">
             对话
           </h2>
-          {listState !== "empty" ? (
-            <div className="section-heading-actions">
-              {view === "all" ? (
-                <IconButton
-                  icon={<Plus size={20} weight="regular" />}
-                  label="创建对话"
-                  onClick={openDialog}
-                  ref={createButtonRef}
-                  title="创建对话"
-                />
-              ) : null}
+          <div className="section-heading-actions">
+            {view !== "recycle_bin" ? (
               <IconButton
-                icon={<Tag size={20} weight="regular" />}
-                label="管理标签"
-                onClick={openManageDialog}
-                ref={manageButtonRef}
-                title="管理标签"
+                icon={<Plus size={20} weight="regular" />}
+                label="新对话"
+                onClick={openDialog}
+                ref={createButtonRef}
+                title="新对话"
               />
-              {view === "all" ? (
-                <IconButton
-                  aria-pressed={organizeMode}
-                  icon={<Faders size={20} weight="regular" />}
-                  label="整理对话"
-                  onClick={() => setOrganizeMode(true)}
-                  ref={organizeButtonRef}
-                  title="整理对话"
-                />
-              ) : null}
-            </div>
-          ) : null}
+            ) : null}
+            <IconButton
+              icon={<Tag size={20} weight="regular" />}
+              label="管理标签"
+              onClick={openManageDialog}
+              ref={manageButtonRef}
+              title="管理标签"
+            />
+            {view === "all" && listState !== "empty" ? (
+              <IconButton
+                aria-pressed={organizeMode}
+                icon={<Faders size={20} weight="regular" />}
+                label="整理对话"
+                onClick={() => setOrganizeMode(true)}
+                ref={organizeButtonRef}
+                title="整理对话"
+              />
+            ) : null}
+          </div>
         </div>
         <div className="thread-search">
           <input
@@ -2029,7 +2058,7 @@ export function ProjectThreadNavigation({
             onClick={() => selectView("all")}
             ref={allViewTabRef}
             role="tab"
-            tabIndex={view === "all" ? 0 : -1}
+            tabIndex={view === "all" || view === "recycle_bin" ? 0 : -1}
             type="button"
           >
             全部
@@ -2045,24 +2074,24 @@ export function ProjectThreadNavigation({
             tabIndex={view === "favorites" ? 0 : -1}
             type="button"
           >
-            已收藏
+            收藏
           </button>
           <button
             aria-controls="project-threads-list"
-            aria-selected={view === "recycle_bin"}
+            aria-selected={view === "tags"}
             className="nav-item"
-            id="thread-view-tab-recycle-bin"
-            onClick={() => selectView("recycle_bin")}
-            ref={recycleBinViewTabRef}
+            id="thread-view-tab-tags"
+            onClick={() => selectView("tags")}
+            ref={tagsViewTabRef}
             role="tab"
-            tabIndex={view === "recycle_bin" ? 0 : -1}
+            tabIndex={view === "tags" ? 0 : -1}
             type="button"
           >
-            回收站
+            标签
           </button>
         </div>
         )}
-        {searchActive || view === "recycle_bin" ? null : (
+        {searchActive || view !== "tags" ? null : (
         <div className="thread-tag-filter-bar">
           {tagsState === "loading" ? (
             <p className="muted" role="status">
@@ -2328,7 +2357,6 @@ export function ProjectThreadNavigation({
                 <button
                   className="button-primary"
                   onClick={openDialog}
-                  ref={createButtonRef}
                   type="button"
                 >
                   创建对话
@@ -2429,6 +2457,16 @@ export function ProjectThreadNavigation({
           </p>
         ) : null}
       </section>
+      <button
+        aria-controls="project-threads-list"
+        aria-pressed={view === "recycle_bin"}
+        className="thread-recycle-entry nav-item"
+        onClick={() => selectView("recycle_bin")}
+        ref={recycleBinViewTabRef}
+        type="button"
+      >
+        回收站
+      </button>
       {dialogOpen && typeof document !== "undefined"
         ? createPortal(
             <section
@@ -2873,6 +2911,6 @@ export function ProjectThreadNavigation({
             document.body,
           )
         : null}
-    </>
+    </div>
   );
 }
