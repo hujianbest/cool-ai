@@ -3668,6 +3668,7 @@ export function CollaborationPanel({
                             ? `回复 ${entry.actorLabel} 的消息：${draftExcerpt(entry.text)}`
                             : `回复 ${entry.actorLabel} 的消息`
                         }
+                        className="msg-reply"
                         disabled={sending}
                         onClick={() => {
                           changeReplyTarget(entry.messageId);

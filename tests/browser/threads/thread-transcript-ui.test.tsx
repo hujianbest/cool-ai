@@ -277,6 +277,43 @@ describe("strict thread fact transcript", () => {
     expect(agentRow).toHaveTextContent("Alpha");
   });
 
+  it("keeps message reply actions in the accessibility tree with an idle class", async () => {
+    const owner = message("message-owner", 1, "owner", "Owner fact content");
+    vi.stubGlobal(
+      "fetch",
+      vi.fn((input: RequestInfo | URL) => {
+        const url = String(input);
+        if (url.endsWith(`/threads/${TEST_THREAD_ID}`)) {
+          return Promise.resolve(Response.json(detail()));
+        }
+        if (url.endsWith(`/threads/${TEST_THREAD_ID}/messages`)) {
+          return Promise.resolve(Response.json({ items: [owner], nextAfter: null }));
+        }
+        if (url.endsWith(`/threads/${TEST_THREAD_ID}/facts`)) {
+          return Promise.resolve(
+            Response.json({
+              items: [messageFact("fact-owner", 1, owner)],
+              nextAfter: null,
+            }),
+          );
+        }
+        throw new Error(`Unexpected request: ${url}`);
+      }),
+    );
+
+    render(
+      <CollaborationPanel
+        projectId={projectId}
+        threadId={TEST_THREAD_ID}
+      />,
+    );
+
+    const reply = await screen.findByRole("button", {
+      name: /回复 项目所有者 的消息/,
+    });
+    expect(reply).toHaveClass("msg-reply");
+  });
+
   it("covers loading, empty, failed fact retry, and fail-closed tuple validation", async () => {
     let resolveFacts!: (response: Response) => void;
     const pendingFacts = new Promise<Response>((resolve) => {
