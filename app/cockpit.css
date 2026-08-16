@@ -2100,6 +2100,16 @@ legend {
   color: var(--interactive-primary);
 }
 
+.activity-bar .activity-bar-item:is([aria-current="page"], [aria-pressed="true"])::before {
+  content: "";
+  position: absolute;
+  inset-inline-start: 0;
+  inset-block: var(--space-2);
+  width: var(--rail-indicator-width);
+  border-radius: 0 var(--rail-indicator-radius) var(--rail-indicator-radius) 0;
+  background: var(--interactive-primary);
+}
+
 .activity-bar-separator {
   align-self: center;
   block-size: var(--border-width);

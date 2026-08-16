@@ -271,6 +271,8 @@ describe("DESIGN.md token contract", () => {
     expect(light.get("sidebar-width")).toBe("15rem");
     expect(light.get("context-width")).toBe("19rem");
     expect(light.get("control-min")).toBe("2.75rem");
+    expect(light.get("rail-indicator-width")).toBe("3px");
+    expect(light.get("rail-indicator-radius")).toBe("2px");
     expect(light.get("rounded-sm")).toBe("8px");
     expect(light.get("rounded-md")).toBe("12px");
     expect(light.get("rounded-lg")).toBe("16px");

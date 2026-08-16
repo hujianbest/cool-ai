@@ -196,6 +196,8 @@
 
   /* Layout Tokens */
   --activity-bar-width: 3.25rem;
+  --rail-indicator-width: 3px;
+  --rail-indicator-radius: 2px;
   --sidebar-width: 15rem;
   --context-width: 19rem;
   --chat-flow-max-width: 52.5rem;

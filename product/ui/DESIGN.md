@@ -40,7 +40,7 @@ confirmed: 2026-08-15
 └────┴──────────┴────────────────────────────────────┘
 ```
 
-- **图标轨 52px**：主项为 对话 / 任务 / 记忆 / 审批 / 审计；底部分隔后为 团队 / 设置 / 主题。纯图标 + tooltip，选中态为暖金。
+- **图标轨 52px**：主项为 对话 / 任务 / 记忆 / 审批 / 审计；底部分隔后为 团队 / 设置 / 主题。纯图标 + tooltip，选中态为暖金图标与左侧 3px 指示条。
 - **会话侧栏 240px**：标题「对话」+「+ 新对话」；过滤 tabs（全部 / 收藏 / 标签）；对话列表；底部「回收站」。
 - **header**：左产品名，中当前项目 + 对话语境，右动作（打开文件夹、Needs Me 徽标）。
 - **主区**：聊天流宽度上限 840px 居中；无项目时显示 1:1 对话；治理视图打开时替代聊天流，带「返回对话」。
@@ -106,7 +106,7 @@ confirmed: 2026-08-15
 
 ## 6. 组件规范
 
-- **activity-bar-item**：48×48 触区（图标 20px，线性 stroke 1.5）；选中态 = 暖金图标 + 4px 圆点指示或左侧圆角条；hover 背景 `color-mix(ink 6%, transparent)`；悬停/焦点 200ms 后向右弹出 tooltip（`data-tooltip` + `aria-label`）。
+- **activity-bar-item**：48×48 触区（图标 20px，线性 stroke 1.5）；选中态 = 暖金图标 + 左侧 3px 暖金垂直指示条（圆角 2px，`--rail-indicator-width` / `--rail-indicator-radius`）；hover 背景 `color-mix(ink 6%, transparent)`；悬停/焦点 200ms 后向右弹出 tooltip（`data-tooltip` + `aria-label`）。
 - **sidebar**：背景 `--color-canvas-parchment`；分组标题 12px 600；对话项 44px 高、hover 弱底色、选中态暖金左侧条 + 标题加重。
 - **filter tab**：胶囊按钮 32px 高，选中 = 暖金 soft 底（`--interactive-accent-soft`）。
 - **header**：48px 高，左产品名（16px 600），右动作按钮 44px。

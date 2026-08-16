@@ -58,3 +58,4 @@
 - 2026-08-16 D-53 术语落盘（机械性文案豁免，A-287）：components 六组件、src 两处注释、README.zh-CN.md、docs/ 五文件、CONTEXT.md 术语定义的用户可见「线程→对话」「群聊→对话」替换完成；tests 断言与 tests/browser/*.mjs 冒烟脚本断言同步（仅字符串，未弱化断言）；代码标识（Thread/threadId、文件名、/threads 路径）按词汇表 §244 不重命名。验证：build 绿、public-collaboration + operations-projection + shared 模块测试绿。遗留：2 个壳层测试（persistent-thread-list-ui / thread-policy-ui）与 4 条冒烟的失败为 P0 壳层重构旧 DOM 断言（Cursor 并行改动所致基线问题），并入 S-61 T-06 收尾修复，非本次术语改动回归。
 - 2026-08-16 产品开发以 UCD 为基准写入 `AGENTS.md`；P0/051 图标轨按 UCD §7.1 收口为对话/任务/记忆/审批/审计 + 团队/设置/主题，首次使用引导改到大厅空状态。
 - 2026-08-16 按 UCD §8.4 / §8.7 落地返回对话：项目页「对话」留在当前项目；治理视图支持 `ESC` 与 `Cmd/Ctrl+1` 回对话、`Cmd/Ctrl+2–5` 打开任务/记忆/审批/审计。聚焦测试 29/29，`build` 绿。
+- 2026-08-16 按 UCD §8.1 落地图标轨选中态：左侧 3px 暖金垂直指示条（`--rail-indicator-width` / `--rail-indicator-radius`），`DESIGN.md` 与 UCD 对齐。聚焦测试 20/20，`build` 绿。
