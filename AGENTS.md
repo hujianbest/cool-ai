@@ -43,6 +43,7 @@ Cool AI 是一个本地优先、单 owner 的多 Agent 协作驾驶舱。
 3. 只读取当前特性/阶段的 `progress.md`、`spec.md`、`architecture.md`、`tickets.md`、相关评审，以及存在时的 `CONTEXT.md`。写规格或公开 DTO 时同时对照 `product/词汇表.md`，不得另造同义术语。
 4. 不得从聊天历史推断工作流状态；不得仅因旧工件早于当前工作流格式就重启历史特性。
 5. 设计、构建或评审界面时，先读 `product/ui/UI设计.md`（UCD）与 `product/ui/DESIGN.md`（令牌），再按需加载 `.cursor/skills/ui-ux-pro-max` 技能；其设计系统/可访问性/交互/排版等指导与检索数据优先于本文件的通用表述。
+6. **产品开发以 UCD 为基准**：完成产品界面时，页面、视图、信息架构、交互流与全态必须对照 `product/ui/UI设计.md` 落地，视觉令牌对照 `product/ui/DESIGN.md`；不得另造未在 UCD 中规定的主路径控件、布局或文案。UCD 与 `product/development-plan.md` 冲突时，先更新文档再实现，不在代码里静默偏离。
 
 ### TDD 与测试
 

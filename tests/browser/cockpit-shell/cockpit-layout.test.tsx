@@ -149,14 +149,15 @@ describe("desktop collaboration cockpit", () => {
       name: "主导航",
     });
     expect(activityBar).toHaveClass("activity-bar");
-    const workLink = within(activityBar).getByRole("link", { name: "工作" });
+    const workLink = within(activityBar).getByRole("link", { name: "对话" });
     expect(workLink).toHaveAttribute("aria-current", "page");
     expect(within(activityBar).getByRole("link", { name: "团队" })).toBeInTheDocument();
+    expect(within(activityBar).getByRole("link", { name: "设置" })).toBeInTheDocument();
 
     const sidebar = within(cockpit).getByRole("complementary", {
       name: "项目导航",
     });
-    expect(within(sidebar).queryByRole("link", { name: "工作" })).toBeNull();
+    expect(within(sidebar).queryByRole("link", { name: "对话" })).toBeNull();
     expect(within(sidebar).queryByRole("link", { name: "团队" })).toBeNull();
   });
 
@@ -177,6 +178,10 @@ describe("desktop collaboration cockpit", () => {
     expect(await within(flow).findByText("欢迎来到 Cool AI")).toBeInTheDocument();
     expect(within(flow).getByText("先配置一个 Agent，即可开始个人对话。")).toBeInTheDocument();
     expect(within(flow).getByRole("link", { name: "配置 Agent" })).toBeInTheDocument();
+    expect(within(flow).getByRole("link", { name: "首次使用引导" })).toHaveAttribute(
+      "href",
+      "/team?section=providers&guide=provider&returnTo=/",
+    );
     expect(within(flow).queryByRole("button", { name: "运行任务" })).toBeNull();
     expect(within(flow).queryByText("正在加载项目…")).toBeNull();
   });

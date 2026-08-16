@@ -22,6 +22,7 @@
 - 2026-08-15 按 `features/051-warm-gold-cockpit/evidence/` 运行截图修复壳层错乱：240px 侧栏把 CJK 压成竖排（筛选 tab / 线程标题 / 「移入回收站」全文按钮抢宽）；主区 `.panel-heading` 负边距造成阶梯；治理视图与子面板标题重复；使命卡按钮被 stretch 成大白块。已改为 tab/标题 nowrap+ellipsis、操作改图标按钮、侧栏可滚动、去掉负边距。`tsc` ✅；布局契约与线程/使命/a11y 聚焦测试绿；theme-activity-bar 2 项与 hydration 浏览器项为既有环境/主题存储失败，非本次回归。
 - 2026-08-15 本地 `npm run dev` 真实渲染 loop（对话 / 任务 / 记忆 / 审批 / 审计）：对照 DESIGN「会话侧栏只留对话」把桌面侧栏的 `ProjectSetupPanel`（工作区路径 / 文件树报错 / 成员 checkbox）挪出主路径，仅窄屏抽屉与 onboarding `workspace`/`members` 步骤仍渲染；项目群聊 eyebrow 不再写「确定性示例 Agent」。布局契约测试已断言侧栏无「项目设置」；onboarding / 窄屏抽屉 / a11y 聚焦绿。仍可见但未在本轮改：聊天下方 legacy「任务目标」表单（`task-flow` 仍依赖）、侧栏标题仍是「项目/线程」而非「对话」、看板四列在 840px 流内偏挤。
 - 2026-08-16 聊天窗对齐 DeepSeek / Clowder 大厅：未打开文件夹时 header 为「大厅」、主区为欢迎/消息流 + 底部 composer；打开文件夹后主页面仍是聊天框（可新建对话、@ 召唤成员）。首页不再被项目列表加载挡住；composer 在加载中也保持在底部。`tsc` 与 cockpit-layout / home-direct-chat / collaboration 聚焦测试绿。
+- 2026-08-16 按 UCD 收口图标轨 IA：主项组为对话/任务/记忆/审批/审计，底部分组为团队/设置/主题；首次使用引导从轨上移到大厅空状态。`AGENTS.md` 明确产品开发以 `product/ui/UI设计.md` 为基准。
 
 ## 任务票
 

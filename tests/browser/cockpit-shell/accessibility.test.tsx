@@ -1,5 +1,5 @@
 // @vitest-environment jsdom
-import { render, screen } from "@testing-library/react";
+import { render, screen, within } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { renderToStaticMarkup } from "react-dom/server";
 import { afterEach, describe, expect, it, vi } from "vitest";
@@ -92,11 +92,7 @@ describe("narrow-screen and keyboard accessibility", () => {
     const user = userEvent.setup();
 
     await user.tab();
-    expect(screen.getByRole("link", { name: "工作" })).toHaveFocus();
-    await user.tab();
-    expect(screen.getByRole("link", { name: "团队" })).toHaveFocus();
-    await user.tab();
-    expect(screen.getByRole("link", { name: "首次使用引导" })).toHaveFocus();
+    expect(screen.getByRole("link", { name: "对话" })).toHaveFocus();
     await user.tab();
     expect(screen.getByRole("button", { name: "任务" })).toHaveFocus();
     await user.tab();
@@ -105,6 +101,10 @@ describe("narrow-screen and keyboard accessibility", () => {
     expect(screen.getByRole("button", { name: "审批" })).toHaveFocus();
     await user.tab();
     expect(screen.getByRole("button", { name: "审计" })).toHaveFocus();
+    await user.tab();
+    expect(screen.getByRole("link", { name: "团队" })).toHaveFocus();
+    await user.tab();
+    expect(screen.getByRole("link", { name: "设置" })).toHaveFocus();
     await user.tab();
     expect(
       screen.getByRole("button", {
@@ -119,7 +119,7 @@ describe("narrow-screen and keyboard accessibility", () => {
     expect(document.body).toHaveFocus();
   });
 
-  it("announces the restored task status through a polite status region", async () => {
+  it("keeps restored task status off the chat-first main path", async () => {
     window.history.replaceState(null, "", "/projects/project-1");
     vi.stubGlobal(
       "fetch",
@@ -153,10 +153,8 @@ describe("narrow-screen and keyboard accessibility", () => {
 
     render(<ProjectPanel />);
 
-    await screen.findByText("最新任务状态：已完成");
-    const status = screen.getByText("最新任务状态：已完成");
-    expect(status).toHaveAttribute("role", "status");
-    expect(status).toHaveAttribute("aria-live", "polite");
-    expect(status).toHaveTextContent("最新任务状态：已完成");
+    const cockpit = await screen.findByTestId("collaboration-cockpit");
+    expect(within(cockpit).queryByText("最新任务状态：已完成")).toBeNull();
+    expect(within(cockpit).queryByRole("button", { name: "运行任务" })).toBeNull();
   });
 });

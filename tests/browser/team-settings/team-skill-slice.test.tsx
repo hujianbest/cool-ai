@@ -62,7 +62,7 @@ describe("/team skill vertical slice", () => {
       await TeamPage({ searchParams: Promise.resolve({}) }),
     );
 
-    expect(screen.getByRole("link", { name: "工作" })).toHaveAttribute("href", "/");
+    expect(screen.getByRole("link", { name: "对话" })).toHaveAttribute("href", "/");
     const teamHref = screen
       .getByRole("link", { name: "团队" })
       .getAttribute("href");

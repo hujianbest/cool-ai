@@ -1,13 +1,13 @@
 "use client";
 
 import {
-  BookOpen,
   Brain,
   ChatCircle,
-  CheckCircle,
-  ClockCounterClockwise,
-  Kanban,
+  CheckSquare,
+  Gear,
+  ListMagnifyingGlass,
   Moon,
+  ShieldCheck,
   Sun,
   UsersThree,
 } from "@phosphor-icons/react";
@@ -32,33 +32,17 @@ export type ActivityBarProps = {
 
 export type GovernanceView = "mission" | "memory" | "approvals" | "audit";
 
-type NavItem = {
-  href: string;
-  icon: typeof ChatCircle;
-  label: string;
-};
-
 type GovernanceItem = {
   icon: typeof Brain;
   label: string;
   view: GovernanceView;
 };
 
-const NAV_ITEMS: readonly NavItem[] = [
-  { href: "/", icon: ChatCircle, label: "工作" },
-  { href: "/team", icon: UsersThree, label: "团队" },
-  {
-    href: "/team?section=providers&guide=provider&returnTo=/",
-    icon: BookOpen,
-    label: "首次使用引导",
-  },
-];
-
 const GOVERNANCE_ITEMS: readonly GovernanceItem[] = [
-  { view: "mission", icon: Kanban, label: "任务" },
+  { view: "mission", icon: CheckSquare, label: "任务" },
   { view: "memory", icon: Brain, label: "记忆" },
-  { view: "approvals", icon: CheckCircle, label: "审批" },
-  { view: "audit", icon: ClockCounterClockwise, label: "审计" },
+  { view: "approvals", icon: ShieldCheck, label: "审批" },
+  { view: "audit", icon: ListMagnifyingGlass, label: "审计" },
 ];
 
 export function ActivityBar({
@@ -77,8 +61,12 @@ export function ActivityBar({
       }[themePreference.error]
     : null;
   const settingsReturnTo = returnTo ?? activePath;
-  const workIsActive =
-    activePath === "/" || parseReturnTo(activePath) === activePath;
+  const chatIsActive =
+    (activePath === "/" || parseReturnTo(activePath) === activePath) &&
+    !activeGovernance;
+  const teamIsActive = activePath === "/team" || activePath.startsWith("/team?");
+  const teamHref = buildSettingsHref("skills", settingsReturnTo);
+  const settingsHref = buildSettingsHref("providers", settingsReturnTo);
   const pinnedSections = preference.pinned.flatMap((id) => {
     const section = SETTINGS_SECTIONS.find((candidate) => candidate.id === id);
     return section?.available ? [section] : [];
@@ -86,28 +74,15 @@ export function ActivityBar({
 
   return (
     <nav aria-label="主导航" className="activity-bar">
-      {NAV_ITEMS.map((item) => {
-        const isActive =
-          item.href === "/" ? workIsActive : activePath === item.href;
-        const href =
-          item.href === "/team"
-            ? buildSettingsHref("skills", settingsReturnTo)
-            : item.href;
-        const Icon = item.icon;
-        return (
-          <a
-            aria-current={isActive ? "page" : undefined}
-            aria-label={item.label}
-            className="activity-bar-item"
-            data-tooltip={item.label}
-            href={href}
-            key={item.href}
-          >
-            <Icon aria-hidden="true" size={20} weight="regular" />
-          </a>
-        );
-      })}
-      <div aria-hidden="true" className="activity-bar-separator" />
+      <a
+        aria-current={chatIsActive ? "page" : undefined}
+        aria-label="对话"
+        className="activity-bar-item"
+        data-tooltip="对话"
+        href="/"
+      >
+        <ChatCircle aria-hidden="true" size={20} weight="regular" />
+      </a>
       {GOVERNANCE_ITEMS.map((item) => {
         const Icon = item.icon;
         return (
@@ -124,6 +99,24 @@ export function ActivityBar({
           </button>
         );
       })}
+      <div aria-hidden="true" className="activity-bar-separator" />
+      <a
+        aria-current={teamIsActive ? "page" : undefined}
+        aria-label="团队"
+        className="activity-bar-item"
+        data-tooltip="团队"
+        href={teamHref}
+      >
+        <UsersThree aria-hidden="true" size={20} weight="regular" />
+      </a>
+      <a
+        aria-label="设置"
+        className="activity-bar-item"
+        data-tooltip="设置"
+        href={settingsHref}
+      >
+        <Gear aria-hidden="true" size={20} weight="regular" />
+      </a>
       {pinnedSections.map((section) => (
         <a
           aria-label={`打开固定设置：${section.label}`}

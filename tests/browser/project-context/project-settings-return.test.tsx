@@ -81,7 +81,7 @@ describe("real project settings return path", () => {
 
     await screen.findByRole("button", { name: project.name });
     const expectedReturnTo = encodeURIComponent(`/projects/${project.id}`);
-    expect(screen.getByRole("link", { name: "工作" })).toHaveAttribute(
+    expect(screen.getByRole("link", { name: "对话" })).toHaveAttribute(
       "aria-current",
       "page",
     );

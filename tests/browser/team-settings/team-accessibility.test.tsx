@@ -104,11 +104,11 @@ describe("Team accessibility contract", () => {
       "aria-current",
       "page",
     );
-    expect(within(activityBar).getByRole("link", { name: "工作" })).toHaveClass(
+    expect(within(activityBar).getByRole("link", { name: "对话" })).toHaveClass(
       "activity-bar-item",
     );
     const sidebar = screen.getByRole("complementary", { name: "团队导航" });
-    expect(within(sidebar).queryByRole("link", { name: "工作" })).toBeNull();
+    expect(within(sidebar).queryByRole("link", { name: "对话" })).toBeNull();
     expect(within(sidebar).queryByRole("link", { name: "团队" })).toBeNull();
     expect(screen.getByText("Cool AI")).toHaveClass(
       "surface-heading",

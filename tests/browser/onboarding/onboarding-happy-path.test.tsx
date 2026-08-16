@@ -4,7 +4,6 @@ import userEvent from "@testing-library/user-event";
 import { afterEach, describe, expect, it, vi } from "vitest";
 import type { ComponentType } from "react";
 
-import { ActivityBar } from "@/components/activity-bar";
 import { AgentPanel } from "@/components/agent-panel";
 import { CollaborationPanel } from "@/components/collaboration/collaboration-panel";
 import { ProjectPanel } from "@/components/project-panel";
@@ -18,6 +17,7 @@ import {
 } from "@/components/onboarding-guide";
 import * as onboardingComponents from "@/components/onboarding-guide";
 import * as onboardingMachine from "@/src/shared/onboarding-guide-machine";
+import { cockpitFetch } from "@/tests/cockpit-test-fetch";
 
 const project = {
   createdAt: "2026-08-08T00:00:00.000Z",
@@ -396,10 +396,17 @@ afterEach(() => {
 });
 
 describe("progressive onboarding T-1", () => {
-  it("exposes a keyboard-reachable ActivityBar entry to explicit project selection", () => {
-    render(<ActivityBar activePath="/" />);
+  it("exposes a keyboard-reachable empty-state entry to first-use guide", async () => {
+    vi.stubGlobal(
+      "fetch",
+      cockpitFetch([
+        Response.json({ projects: [] }),
+        Response.json({ kind: "needs_agent" }),
+      ]),
+    );
+    render(<ProjectPanel />);
 
-    const entry = screen.getByRole("link", { name: "首次使用引导" });
+    const entry = await screen.findByRole("link", { name: "首次使用引导" });
     expect(entry).toHaveAttribute(
       "href",
       "/team?section=providers&guide=provider&returnTo=/",

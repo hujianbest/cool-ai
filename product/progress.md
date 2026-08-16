@@ -55,3 +55,5 @@
 - 2026-08-15 用户指示整理 product 目录：六份关键文档落盘为产品规格说明书 / 产品架构设计说明书 / 特性分解清单 / 开发计划 / 开发进展 / UI 设计；`phases.md` 并入开发计划并改为重定向；独立 Gemini agent 产出 UCD（`product/ui/UI设计.md`）；路径名保持稳定以免打断架构测试与历史引用（D-51）。同日确认不保留 `product/reviews/`。
 - 2026-08-16 补齐 DDD 统一语言：新增 [`词汇表.md`](./词汇表.md) 为第七份关键文档；架构说明书追加第 15 节限界上下文 / 子域 / 上下文地图 / 聚合目录（D-52）。不另写事件风暴墙或逐上下文 Canvas。
 - 2026-08-16 对照 Pi / DeepSeek Harness / ChatGPT / Codex / OpenClaw 刷新词汇表：公开协作容器改称 **对话（Session）**，停用产品文案「线程」；Turn 对齐为交还 owner 前的回合（D-53）。
+- 2026-08-16 D-53 术语落盘（机械性文案豁免，A-287）：components 六组件、src 两处注释、README.zh-CN.md、docs/ 五文件、CONTEXT.md 术语定义的用户可见「线程→对话」「群聊→对话」替换完成；tests 断言与 tests/browser/*.mjs 冒烟脚本断言同步（仅字符串，未弱化断言）；代码标识（Thread/threadId、文件名、/threads 路径）按词汇表 §244 不重命名。验证：build 绿、public-collaboration + operations-projection + shared 模块测试绿。遗留：2 个壳层测试（persistent-thread-list-ui / thread-policy-ui）与 4 条冒烟的失败为 P0 壳层重构旧 DOM 断言（Cursor 并行改动所致基线问题），并入 S-61 T-06 收尾修复，非本次术语改动回归。
+- 2026-08-16 产品开发以 UCD 为基准写入 `AGENTS.md`；P0/051 图标轨按 UCD §7.1 收口为对话/任务/记忆/审批/审计 + 团队/设置/主题，首次使用引导改到大厅空状态。

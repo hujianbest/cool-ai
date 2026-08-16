@@ -569,6 +569,12 @@ export function TaskPanel({
               >
                 配置 Agent
               </Link>
+              <Link
+                className="button-secondary"
+                href="/team?section=providers&guide=provider&returnTo=/"
+              >
+                首次使用引导
+              </Link>
             </div>
           ) : homeState?.kind === "ready" ? (
             <CollaborationPanel

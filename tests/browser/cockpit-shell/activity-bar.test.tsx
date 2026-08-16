@@ -17,51 +17,74 @@ describe("ActivityBar", () => {
     expect(links.length).toBeGreaterThanOrEqual(2);
   });
 
-  it("renders 工作 and 团队 entries", () => {
+  it("follows the UCD rail: 对话 then governance, then 团队 / 设置 / 主题", () => {
     render(<ActivityBar activePath="/" />);
 
-    expect(screen.getByRole("link", { name: /工作/ })).toBeInTheDocument();
-    expect(screen.getByRole("link", { name: /团队/ })).toBeInTheDocument();
+    const nav = screen.getByRole("navigation", { name: "主导航" });
+    const labels = [...nav.querySelectorAll("a, button")]
+      .map((node) => node.getAttribute("aria-label"))
+      .filter((label): label is string => Boolean(label));
+    expect(labels.slice(0, 8)).toEqual([
+      "对话",
+      "任务",
+      "记忆",
+      "审批",
+      "审计",
+      "团队",
+      "设置",
+      "当前为明色主题，切换到暗色主题",
+    ]);
+    expect(screen.queryByRole("link", { name: "工作" })).toBeNull();
+    expect(screen.queryByRole("link", { name: "首次使用引导" })).toBeNull();
   });
 
-  it("points 工作 at / and safely structures the 团队 settings URL", () => {
+  it("points 对话 at / and safely structures the 团队 and 设置 URLs", () => {
     render(<ActivityBar activePath="/" />);
 
-    const work = screen.getByRole("link", { name: /工作/ });
-    const team = screen.getByRole("link", { name: /团队/ });
-    expect(work).toHaveAttribute("href", "/");
+    const chat = screen.getByRole("link", { name: "对话" });
+    const team = screen.getByRole("link", { name: "团队" });
+    const settings = screen.getByRole("link", { name: "设置" });
+    expect(chat).toHaveAttribute("href", "/");
     expect(team).toHaveAttribute(
       "href",
       "/team?section=skills&returnTo=%2F",
+    );
+    expect(settings).toHaveAttribute(
+      "href",
+      "/team?section=providers&returnTo=%2F",
     );
   });
 
   it("marks the active route with aria-current=page", () => {
     render(<ActivityBar activePath="/" />);
 
-    const work = screen.getByRole("link", { name: /工作/ });
-    const team = screen.getByRole("link", { name: /团队/ });
-    expect(work).toHaveAttribute("aria-current", "page");
+    const chat = screen.getByRole("link", { name: "对话" });
+    const team = screen.getByRole("link", { name: "团队" });
+    expect(chat).toHaveAttribute("aria-current", "page");
     expect(team).not.toHaveAttribute("aria-current");
   });
 
   it("marks 团队 active when activePath is /team", () => {
     render(<ActivityBar activePath="/team" />);
 
-    const team = screen.getByRole("link", { name: /团队/ });
-    const work = screen.getByRole("link", { name: /工作/ });
+    const team = screen.getByRole("link", { name: "团队" });
+    const chat = screen.getByRole("link", { name: "对话" });
     expect(team).toHaveAttribute("aria-current", "page");
-    expect(work).not.toHaveAttribute("aria-current");
+    expect(chat).not.toHaveAttribute("aria-current");
   });
 
   it("exposes a hover tooltip label on every icon-only entry", () => {
     render(<ActivityBar activePath="/" />);
 
-    const work = screen.getByRole("link", { name: /工作/ });
-    const team = screen.getByRole("link", { name: /团队/ });
-    expect(work).toHaveAttribute("data-tooltip", "工作");
+    const chat = screen.getByRole("link", { name: "对话" });
+    const team = screen.getByRole("link", { name: "团队" });
+    expect(chat).toHaveAttribute("data-tooltip", "对话");
     expect(team).toHaveAttribute("data-tooltip", "团队");
-    expect(work).not.toHaveAttribute("title");
+    expect(chat).not.toHaveAttribute("title");
+    expect(screen.getByRole("link", { name: "设置" })).toHaveAttribute(
+      "data-tooltip",
+      "设置",
+    );
     expect(screen.getByRole("button", { name: "任务" })).toHaveAttribute(
       "data-tooltip",
       "任务",
@@ -90,13 +113,12 @@ describe("ActivityBar", () => {
     render(<ActivityBar activePath="/" />);
     const user = userEvent.setup();
 
-    const work = screen.getByRole("link", { name: /工作/ });
-    work.focus();
-    expect(work).toHaveFocus();
+    const chat = screen.getByRole("link", { name: "对话" });
+    chat.focus();
+    expect(chat).toHaveFocus();
 
     await user.tab();
-    const team = screen.getByRole("link", { name: /团队/ });
-    expect(team).toHaveFocus();
+    expect(screen.getByRole("button", { name: "任务" })).toHaveFocus();
   });
 });
 
