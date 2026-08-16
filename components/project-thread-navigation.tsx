@@ -299,6 +299,21 @@ function readableTime(timestamp: string): string {
   }).format(new Date(timestamp));
 }
 
+function relativeActivityTime(timestamp: string, now = Date.now()): string {
+  const then = new Date(timestamp).getTime();
+  if (Number.isNaN(then)) return readableTime(timestamp);
+  const deltaMs = Math.max(0, now - then);
+  const minutes = Math.floor(deltaMs / 60_000);
+  if (minutes < 1) return "刚刚";
+  if (minutes < 60) return `${minutes} 分钟前`;
+  const hours = Math.floor(minutes / 60);
+  if (hours < 24) return `${hours} 小时前`;
+  const days = Math.floor(hours / 24);
+  if (days === 1) return "昨天";
+  if (days < 7) return `${days} 天前`;
+  return readableTime(timestamp);
+}
+
 function threadSelectionFromUrl(
   projectId: string,
   directMode = false,
@@ -524,6 +539,7 @@ export function ProjectThreadNavigation({
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [focusThreadId, setFocusThreadId] = useState<string | null>(null);
   const [searchText, setSearchText] = useState("");
+  const [searchRevealed, setSearchRevealed] = useState(false);
   const [searchState, setSearchState] = useState<ThreadSearchState>("idle");
   const [searchError, setSearchError] = useState<string | null>(null);
   const [searchPage, setSearchPage] = useState<{
@@ -735,6 +751,13 @@ export function ProjectThreadNavigation({
   useEffect(() => {
     function onKeyDown(event: globalThis.KeyboardEvent) {
       if (!(event.metaKey || event.ctrlKey) || event.shiftKey || event.altKey) {
+        return;
+      }
+      if (event.key.toLowerCase() === "k") {
+        if (anyDialogOpen) return;
+        event.preventDefault();
+        setSearchRevealed(true);
+        searchInputRef.current?.focus();
         return;
       }
       if (event.key.toLowerCase() !== "n") return;
@@ -1932,6 +1955,9 @@ export function ProjectThreadNavigation({
                 title="新对话"
               />
             ) : null}
+          </div>
+        </div>
+        <div className={view === "tags" ? "thread-sidebar-utilities" : "sr-only"}>
             <IconButton
               icon={<Tag size={20} weight="regular" />}
               label="管理标签"
@@ -1949,9 +1975,8 @@ export function ProjectThreadNavigation({
                 title="整理对话"
               />
             ) : null}
-          </div>
         </div>
-        <div className="thread-search">
+        <div className={searchRevealed || searchActive ? "thread-search" : "thread-search sr-only"}>
           <input
             aria-label="搜索对话"
             onChange={(event) => setSearchText(event.target.value)}
@@ -2402,6 +2427,7 @@ export function ProjectThreadNavigation({
                           ? "page"
                           : undefined
                       }
+                      aria-label={thread.title}
                       className="nav-item thread-list-entry"
                       data-thread-id={thread.id}
                       onClick={() => {
@@ -2414,7 +2440,10 @@ export function ProjectThreadNavigation({
                       }}
                       type="button"
                     >
-                      {thread.title}
+                      <span className="thread-list-entry-title">{thread.title}</span>
+                      <span aria-hidden="true" className="thread-list-entry-meta">
+                        {relativeActivityTime(thread.updatedAt)}
+                      </span>
                     </button>
                     {thread.tags.length > 0 ? (
                       <span className="thread-tag-chip-list">

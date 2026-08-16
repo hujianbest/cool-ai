@@ -1,6 +1,12 @@
 "use client";
 
 import {
+  ArrowUp,
+  At,
+  ClockCounterClockwise,
+  Plus,
+} from "@phosphor-icons/react";
+import {
   useCallback,
   useEffect,
   useMemo,
@@ -97,6 +103,11 @@ function mentionTokenAtCursor(
   const query = before.slice(at + 1);
   if (/[\s\n]/.test(query)) return null;
   return { start: at, query };
+}
+
+function fitComposerHeight(element: HTMLTextAreaElement) {
+  element.style.height = "auto";
+  element.style.height = `${Math.min(180, Math.max(44, element.scrollHeight))}px`;
 }
 
 async function readApiResponse<T>(response: Response, fallback: string): Promise<T> {
@@ -3681,55 +3692,14 @@ export function CollaborationPanel({
       {showChat && !threadDeletedPlaceholder ? (
         <>
           <form className="composer" onSubmit={handleSubmit}>
-            <div className="form-field">
-              <label
-                className={surface === "chat" ? "sr-only" : undefined}
-                htmlFor={`collaboration-message-${projectId}`}
-              >
-                {directAgentName ? `发送给 ${directAgentName}` : "发送给项目对话"}
-              </label>
-              <textarea
-                aria-activedescendant={
-                  mentionOpen && !directAgentName && activeMentionMember
-                    ? `${listboxId}-${activeMentionMember.agentId}`
-                    : undefined
-                }
-                aria-autocomplete={directAgentName ? undefined : "list"}
-                aria-controls={!directAgentName ? listboxId : undefined}
-                aria-describedby={fieldError ? fieldErrorId : undefined}
-                aria-expanded={!directAgentName ? mentionOpen : undefined}
-                aria-invalid={fieldError ? "true" : undefined}
-                disabled={sending || loading || !threadId}
-                id={`collaboration-message-${projectId}`}
-                onChange={(event) => {
-                  handleDraftChange(event.target.value);
-                  syncComposerMention(
-                    event.target.value,
-                    event.target.selectionStart ?? event.target.value.length,
-                  );
-                }}
-                onKeyDown={handleComposerKeyDown}
-                onPaste={handleComposerPaste}
-                placeholder={
-                  !threadId
-                    ? "新建对话后即可输入…"
-                    : surface === "chat"
-                      ? directAgentName
-                        ? "输入消息…"
-                        : "输入消息…（@ 召唤成员）"
-                      : undefined
-                }
-                ref={composerRef}
-                value={draft}
-              />
-              {fieldError ? (
-                <p className="error-text" id={fieldErrorId}>
-                  {fieldError}
-                </p>
-              ) : null}
-            </div>
-            {replyTargetMessageId || composerAttachments.length ? (
-              <div className="mention-picker">
+            <label
+              className="sr-only"
+              htmlFor={`collaboration-message-${projectId}`}
+            >
+              {directAgentName ? `发送给 ${directAgentName}` : "发送给项目对话"}
+            </label>
+            {replyTargetMessageId || composerAttachments.length || selectedMember ? (
+              <div className="composer-chips">
                 {replyTargetMessageId ? (
                   <span className="mention-chip">
                     回复 {replyTargetLabel}
@@ -3737,6 +3707,19 @@ export function CollaborationPanel({
                       aria-label="移除回复链接"
                       disabled={sending}
                       onClick={() => changeReplyTarget(null)}
+                      type="button"
+                    >
+                      移除
+                    </button>
+                  </span>
+                ) : null}
+                {selectedMember ? (
+                  <span className="mention-chip">
+                    @{selectedMember.name}
+                    <button
+                      aria-label={`移除 @${selectedMember.name}`}
+                      disabled={sending}
+                      onClick={() => setSelectedMember(null)}
                       type="button"
                     >
                       移除
@@ -3795,27 +3778,15 @@ export function CollaborationPanel({
                 检测到疑似敏感内容，草稿正文未保存；附件占位与回复链接仍会保留。
               </p>
             ) : null}
-            <div className="mention-picker">
-              {selectedMember ? (
-                <span className="mention-chip">
-                  @{selectedMember.name}
-                  <button
-                    aria-label={`移除 @${selectedMember.name}`}
-                    disabled={sending}
-                    onClick={() => setSelectedMember(null)}
-                    type="button"
-                  >
-                    移除
-                  </button>
-                </span>
-              ) : null}
+            <div className="composer-input-row">
               <button
                 aria-label="添加附件"
+                className="composer-icon-btn"
                 disabled={sending}
                 onClick={() => attachmentInputRef.current?.click()}
                 type="button"
               >
-                添加附件
+                <Plus aria-hidden="true" size={20} weight="bold" />
               </button>
               <input
                 accept="image/png,image/jpeg,image/gif,image/webp"
@@ -3830,110 +3801,163 @@ export function CollaborationPanel({
                 tabIndex={-1}
                 type="file"
               />
-              <button
-                aria-controls={`collaboration-input-history-${projectId}`}
-                aria-expanded={historyOpen}
-                disabled={sending}
-                onClick={() => setHistoryOpen((open) => !open)}
-                ref={historyEntryRef}
-                type="button"
-              >
-                输入历史
-              </button>
-              {!directAgentName ? (
-                <>
-              <button
+              <textarea
                 aria-activedescendant={
-                  mentionOpen && activeMentionMember
+                  mentionOpen && !directAgentName && activeMentionMember
                     ? `${listboxId}-${activeMentionMember.agentId}`
                     : undefined
                 }
-                aria-controls={listboxId}
-                aria-expanded={mentionOpen}
-                aria-haspopup="listbox"
-                aria-label="@成员"
-                disabled={sending}
-                onClick={() => {
-                  if (mentionOpen) {
-                    closeMentionPicker();
-                    return;
-                  }
-                  mentionFromComposerRef.current = false;
-                  setMentionQuery("");
-                  openMentionPicker();
+                aria-autocomplete={directAgentName ? undefined : "list"}
+                aria-controls={!directAgentName ? listboxId : undefined}
+                aria-describedby={fieldError ? fieldErrorId : undefined}
+                aria-expanded={!directAgentName ? mentionOpen : undefined}
+                aria-invalid={fieldError ? "true" : undefined}
+                disabled={sending || loading || !threadId}
+                id={`collaboration-message-${projectId}`}
+                onChange={(event) => {
+                  handleDraftChange(event.target.value);
+                  fitComposerHeight(event.target);
+                  syncComposerMention(
+                    event.target.value,
+                    event.target.selectionStart ?? event.target.value.length,
+                  );
                 }}
-                onKeyDown={handleMentionKeyDown}
-                ref={mentionButtonRef}
-                role="combobox"
-                type="button"
+                onKeyDown={handleComposerKeyDown}
+                onPaste={handleComposerPaste}
+                placeholder={
+                  !threadId
+                    ? "新建对话后即可输入…"
+                    : directAgentName
+                      ? "输入消息，按 Enter 发送…"
+                      : "输入消息，按 Enter 发送，输入 @ 提及 Agent…"
+                }
+                ref={composerRef}
+                rows={1}
+                value={draft}
+              />
+              <button
+                aria-label={
+                  sending
+                    ? "正在发送…"
+                    : activeRunInOtherThread
+                      ? "发送消息"
+                      : state?.run && activeRunStatuses.has(state.run.status)
+                        ? "发送消息"
+                        : selectedTerminalRun
+                          ? "发送并开始新一轮"
+                          : "发送并开始首次运行"
+                }
+                className="composer-send"
+                disabled={
+                  !draft.trim()
+                  || sending
+                  || !canSubmitMessage
+                  || composerAttachments.some(
+                    (attachment) => attachment.status !== "uploaded",
+                  )
+                }
+                type="submit"
               >
-                @成员
+                <ArrowUp aria-hidden="true" size={18} weight="bold" />
               </button>
-              {mentionOpen ? (
-                <div className="mention-options">
-                  {membersLoading ? (
-                    <p aria-busy="true" className="muted">
-                      正在加载项目成员…
-                    </p>
-                  ) : membersError ? (
-                    <div className="stack">
-                      <p className="error-text" role="alert">
-                        {membersError}
-                      </p>
-                      <button
-                        onClick={() => {
-                          setMembers(null);
-                          void loadMembers();
-                        }}
-                        type="button"
-                      >
-                        重试加载成员
-                      </button>
-                    </div>
-                  ) : visibleMembers?.length ? (
-                    <div aria-label="项目成员" id={listboxId} role="listbox">
-                      {visibleMembers.map((member, index) => (
-                        <button
-                          aria-selected={index === activeMemberIndex}
-                          id={`${listboxId}-${member.agentId}`}
-                          key={member.agentId}
-                          onClick={() => selectMember(member)}
-                          role="option"
-                          type="button"
-                        >
-                          {member.avatarText} · {member.name} · {member.role}
-                        </button>
-                      ))}
-                    </div>
-                  ) : (
-                    <p className="muted">尚无可提及的项目成员。</p>
-                  )}
-                </div>
-              ) : null}
-                </>
-              ) : null}
             </div>
-            <button
-              disabled={
-                !draft.trim()
-                || sending
-                || !canSubmitMessage
-                || composerAttachments.some(
-                  (attachment) => attachment.status !== "uploaded",
-                )
-              }
-              type="submit"
-            >
-              {sending
-                ? "正在发送…"
-                : activeRunInOtherThread
-                  ? "发送消息"
-                  : state?.run && activeRunStatuses.has(state.run.status)
-                  ? "发送消息"
-                  : selectedTerminalRun
-                    ? "发送并开始新一轮"
-                    : "发送并开始首次运行"}
-            </button>
+            {fieldError ? (
+              <p className="error-text" id={fieldErrorId}>
+                {fieldError}
+              </p>
+            ) : null}
+            <div className="composer-footer">
+              <div className="composer-tools">
+                <button
+                  aria-controls={`collaboration-input-history-${projectId}`}
+                  aria-expanded={historyOpen}
+                  aria-label="输入历史"
+                  className="composer-tool"
+                  disabled={sending}
+                  onClick={() => setHistoryOpen((open) => !open)}
+                  ref={historyEntryRef}
+                  type="button"
+                >
+                  <ClockCounterClockwise aria-hidden="true" size={16} weight="bold" />
+                  <span>历史</span>
+                </button>
+                {!directAgentName ? (
+                  <>
+                    <button
+                      aria-activedescendant={
+                        mentionOpen && activeMentionMember
+                          ? `${listboxId}-${activeMentionMember.agentId}`
+                          : undefined
+                      }
+                      aria-controls={listboxId}
+                      aria-expanded={mentionOpen}
+                      aria-haspopup="listbox"
+                      aria-label="@成员"
+                      className="composer-tool"
+                      disabled={sending}
+                      onClick={() => {
+                        if (mentionOpen) {
+                          closeMentionPicker();
+                          return;
+                        }
+                        mentionFromComposerRef.current = false;
+                        setMentionQuery("");
+                        openMentionPicker();
+                      }}
+                      onKeyDown={handleMentionKeyDown}
+                      ref={mentionButtonRef}
+                      role="combobox"
+                      type="button"
+                    >
+                      <At aria-hidden="true" size={16} weight="bold" />
+                      <span>Agent</span>
+                    </button>
+                    {mentionOpen ? (
+                      <div className="mention-options">
+                        {membersLoading ? (
+                          <p aria-busy="true" className="muted">
+                            正在加载项目成员…
+                          </p>
+                        ) : membersError ? (
+                          <div className="stack">
+                            <p className="error-text" role="alert">
+                              {membersError}
+                            </p>
+                            <button
+                              onClick={() => {
+                                setMembers(null);
+                                void loadMembers();
+                              }}
+                              type="button"
+                            >
+                              重试加载成员
+                            </button>
+                          </div>
+                        ) : visibleMembers?.length ? (
+                          <div aria-label="项目成员" id={listboxId} role="listbox">
+                            {visibleMembers.map((member, index) => (
+                              <button
+                                aria-selected={index === activeMemberIndex}
+                                id={`${listboxId}-${member.agentId}`}
+                                key={member.agentId}
+                                onClick={() => selectMember(member)}
+                                role="option"
+                                type="button"
+                              >
+                                {member.avatarText} · {member.name} · {member.role}
+                              </button>
+                            ))}
+                          </div>
+                        ) : (
+                          <p className="muted">尚无可提及的项目成员。</p>
+                        )}
+                      </div>
+                    ) : null}
+                  </>
+                ) : null}
+              </div>
+              <p className="composer-hint">Shift+Enter 换行</p>
+            </div>
             {composerAttachments.some(
               (attachment) => attachment.status !== "uploaded",
             ) ? (

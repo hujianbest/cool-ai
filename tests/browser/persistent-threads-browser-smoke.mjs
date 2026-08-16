@@ -1887,7 +1887,12 @@ try {
   const favoritesEntryTexts = () =>
     page.evaluate(() =>
       [...document.querySelectorAll("#project-threads-list .thread-list-entry")]
-        .map((node) => node.textContent?.trim() ?? "")
+        .map(
+          (node) =>
+            node.querySelector(".thread-list-entry-title")?.textContent?.trim()
+            ?? node.textContent?.trim()
+            ?? "",
+        )
     );
 
   const thirdEntry = threadsList.getByRole("button", {

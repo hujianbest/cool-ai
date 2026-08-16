@@ -402,13 +402,25 @@ describe("desktop warm-terracotta shell grid", () => {
     expect(cockpit).toMatch(
       /\.cockpit-flow \.composer\s*\{[^}]*flex-shrink:\s*0/s,
     );
+    expect(cockpit).toMatch(
+      /\.cockpit-header\s*\{[^}]*height:\s*48px/s,
+    );
+    expect(cockpit).toMatch(
+      /\.cockpit-flow \.composer\s*\{[^}]*background:\s*var\(--color-surface-pearl\)[^}]*border-radius:\s*var\(--rounded-md\)[^}]*box-shadow:\s*var\(--shadow-product\)/s,
+    );
+    expect(cockpit).toMatch(
+      /\.composer-input-row textarea\s*\{[^}]*min-height:\s*var\(--control-min\)[^}]*max-height:\s*180px[^}]*resize:\s*none/s,
+    );
+    expect(cockpit).toMatch(
+      /\.composer-send\s*\{[^}]*background:\s*var\(--interactive-primary\)/s,
+    );
   });
 
-  it("styles the sidebar project switcher like a card-strong row", () => {
+  it("styles conversation list items as quiet UCD rows", () => {
     const cockpit = readFileSync("app/cockpit.css", "utf8");
 
     expect(cockpit).toMatch(
-      /\.cockpit-sidebar \.project-list \.nav-item\s*\{[^}]*background:\s*var\(--color-card-strong\)[^}]*min-height:\s*var\(--control-min\)[^}]*border-radius:\s*var\(--rounded-md\)/s,
+      /\.cockpit-sidebar \.project-list \.nav-item\s*\{[^}]*background:\s*transparent[^}]*min-height:\s*var\(--control-min\)[^}]*border-radius:\s*var\(--rounded-sm\)/s,
     );
   });
 });
@@ -430,7 +442,7 @@ describe("warm-gold 240px sidebar does not crush CJK chrome", () => {
       /\.thread-view-tabs \[role="tab"\]\s*\{[^}]*white-space:\s*nowrap[^}]*flex-shrink:\s*0/s,
     );
     expect(cockpit).toMatch(
-      /\.thread-list-item \.thread-list-entry\s*\{[^}]*overflow:\s*hidden[^}]*text-overflow:\s*ellipsis[^}]*white-space:\s*nowrap/s,
+      /\.thread-list-entry-title\s*\{[^}]*overflow:\s*hidden[^}]*text-overflow:\s*ellipsis[^}]*white-space:\s*nowrap/s,
     );
     expect(cockpit).toMatch(
       /\.activity-bar \.activity-bar-item\s*\{[^}]*padding:\s*0/s,

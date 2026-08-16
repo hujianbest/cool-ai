@@ -171,23 +171,29 @@ ol {
   display: flex;
   grid-column: 3;
   grid-row: 1;
+  height: 48px;
   align-items: center;
-  gap: var(--space-4);
-  padding: var(--space-2) var(--space-6);
-  border-bottom: var(--border-width) solid var(--border-subtle);
-  background: var(--surface-panel);
+  gap: var(--space-3);
+  padding: 0 var(--space-5);
+  border-bottom: var(--border-width) solid var(--color-hairline);
+  background: var(--color-canvas-parchment);
 }
 
 .cockpit-header-identity {
   display: inline-flex;
   align-items: center;
   gap: var(--space-2);
+  color: var(--interactive-primary);
+}
+
+.cockpit-header-identity .product-mark {
+  display: none;
 }
 
 .cockpit-header-title {
   font-size: var(--text-caption-strong);
-  font-weight: 600;
-  color: var(--text-primary);
+  font-weight: 700;
+  color: var(--interactive-primary);
 }
 
 .cockpit-header-context {
@@ -200,12 +206,34 @@ ol {
   font-size: var(--text-caption);
 }
 
+.cockpit-open-folder {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--space-2);
+  height: 32px;
+  min-height: 32px;
+  padding: 0 var(--space-3);
+  border: var(--border-width) solid var(--color-hairline);
+  border-radius: var(--rounded-pill);
+  background: var(--color-surface-pearl);
+  color: var(--text-primary);
+  font-size: var(--text-caption);
+  font-weight: 500;
+}
+
+.cockpit-open-folder:hover {
+  border-color: var(--interactive-primary);
+  background: var(--color-surface-pearl);
+  color: var(--interactive-primary);
+}
+
 .needs-me-badge {
   display: inline-flex;
   align-items: center;
   gap: var(--space-1);
-  min-height: var(--control-min);
-  padding: var(--space-1) var(--space-3);
+  height: 32px;
+  min-height: 32px;
+  padding: 0 var(--space-3);
   border: var(--border-width) solid var(--interactive-primary);
   border-radius: var(--rounded-pill);
   background: var(--interactive-accent-soft);
@@ -282,8 +310,8 @@ ol {
   min-width: 0;
   min-height: 0;
   flex-direction: column;
-  gap: var(--space-6);
-  padding: var(--space-8);
+  gap: 0;
+  padding: 0 var(--space-5);
   overflow: hidden;
   background: var(--surface-main);
 }
@@ -315,6 +343,8 @@ ol {
   flex: 1;
   min-height: 0;
   overflow-y: auto;
+  padding-block: var(--space-4);
+  scroll-padding-bottom: 120px;
 }
 
 .chat-welcome {
@@ -331,7 +361,131 @@ ol {
 
 .cockpit-flow .composer {
   flex-shrink: 0;
-  margin-top: var(--space-4);
+  width: var(--full-width);
+  max-width: var(--chat-flow-max-width);
+  margin: 0 auto var(--space-6);
+  padding: var(--space-2) var(--space-3);
+  background: var(--color-surface-pearl);
+  border: var(--border-width) solid var(--color-hairline);
+  border-radius: var(--rounded-md);
+  box-shadow: var(--shadow-product);
+}
+
+.cockpit-flow .composer:focus-within {
+  border-color: var(--interactive-primary);
+  box-shadow: 0 0 0 2px var(--interactive-accent-soft), var(--shadow-product);
+}
+
+.composer-chips,
+.composer-input-row,
+.composer-footer,
+.composer-tools {
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+}
+
+.composer-chips {
+  flex-wrap: wrap;
+}
+
+.composer-input-row {
+  align-items: flex-end;
+}
+
+.composer-input-row textarea {
+  flex: 1;
+  min-height: var(--control-min);
+  max-height: 180px;
+  padding: var(--space-2) 0;
+  border: none;
+  background: transparent;
+  resize: none;
+  line-height: 1.5;
+  font-size: var(--text-md);
+  box-shadow: none;
+}
+
+.composer-input-row textarea:disabled {
+  background: transparent;
+}
+
+.composer-input-row textarea::placeholder {
+  color: var(--color-ink-muted-48);
+}
+
+.composer-icon-btn,
+.composer-send {
+  display: inline-flex;
+  flex-shrink: 0;
+  align-items: center;
+  justify-content: center;
+  width: var(--control-min);
+  height: var(--control-min);
+  padding: 0;
+  border: none;
+  border-radius: var(--rounded-sm);
+}
+
+.composer-icon-btn {
+  background: transparent;
+  color: var(--text-secondary);
+}
+
+.composer-icon-btn:hover {
+  background: var(--color-canvas);
+  color: var(--text-primary);
+}
+
+.composer-send {
+  background: var(--interactive-primary);
+  color: var(--color-on-primary);
+}
+
+.composer-send:hover:not(:disabled) {
+  background: var(--interactive-primary-hover, var(--color-primary-focus));
+}
+
+.composer-send:disabled {
+  background: var(--interactive-primary);
+  color: var(--color-on-primary);
+  opacity: 0.4;
+}
+
+.composer-footer {
+  justify-content: space-between;
+  padding-top: var(--space-1);
+  border-top: var(--border-width) solid var(--color-divider-soft);
+  position: relative;
+}
+
+.composer-tool {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--space-1);
+  min-height: auto;
+  padding: var(--space-1) var(--space-2);
+  border: none;
+  border-radius: var(--rounded-xs);
+  background: transparent;
+  color: var(--text-secondary);
+  font-size: var(--text-fine-print);
+}
+
+.composer-tool:hover {
+  background: var(--color-canvas);
+  color: var(--text-primary);
+}
+
+.composer-hint {
+  color: var(--color-ink-muted-48);
+  font-size: var(--text-fine-print);
+}
+
+.composer-footer .mention-options {
+  position: absolute;
+  bottom: calc(100% + var(--space-2));
+  left: 0;
 }
 
 .cockpit-flow-governance > *:not(.governance-view) {
@@ -532,18 +686,16 @@ ol {
 }
 
 .cockpit-sidebar .project-list .nav-item {
-  background: var(--color-card-strong);
+  background: transparent;
   color: var(--text-primary);
   min-height: var(--control-min);
   overflow: hidden;
-  text-overflow: ellipsis;
-  white-space: nowrap;
-  border-radius: var(--rounded-md);
-  box-shadow: var(--shadow-panel);
+  border-radius: var(--rounded-sm);
+  box-shadow: none;
 }
 
 .cockpit-sidebar .project-list .nav-item[aria-current] {
-  background: var(--color-card-strong);
+  background: var(--color-surface-pearl);
   color: var(--text-primary);
 }
 
@@ -744,14 +896,27 @@ ol {
 .thread-view-tabs {
   display: flex;
   flex-wrap: wrap;
-  gap: var(--space-2);
+  gap: var(--space-1);
+  padding: var(--space-2) var(--space-3);
+  border-bottom: var(--border-width) solid var(--color-divider-soft);
 }
 
 .thread-view-tabs [role="tab"] {
   flex: 0 0 auto;
-  padding-inline: var(--space-2);
+  min-height: 32px;
+  padding: var(--space-1) var(--space-3);
+  border: none;
+  border-radius: var(--rounded-pill);
+  background: transparent;
+  color: var(--text-secondary);
   white-space: nowrap;
   flex-shrink: 0;
+}
+
+.thread-view-tabs [role="tab"][aria-selected="true"] {
+  background: var(--interactive-accent-soft);
+  color: var(--interactive-primary);
+  font-weight: 600;
 }
 
 .thread-sidebar {
@@ -785,12 +950,28 @@ ol {
 
 .thread-list-item .thread-list-entry {
   position: relative;
+  display: flex;
   flex: 1;
   min-width: 0;
+  min-height: var(--control-min);
+  flex-direction: column;
+  align-items: stretch;
+  gap: 2px;
+  overflow: hidden;
+  padding: var(--space-2) var(--space-3);
+  border-radius: var(--rounded-sm);
+  text-align: start;
+}
+
+.thread-list-entry-title {
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;
-  border-radius: var(--rounded-sm);
+}
+
+.thread-list-entry-meta {
+  color: var(--color-ink-muted-48);
+  font-size: var(--text-fine-print);
 }
 
 .thread-list-item .icon-button,
@@ -798,6 +979,15 @@ ol {
   display: grid;
   flex-shrink: 0;
   padding: 0;
+  opacity: 0;
+}
+
+.thread-list-item:hover .icon-button,
+.thread-list-item:focus-within .icon-button,
+.thread-list-item:hover .thread-favorite-toggle,
+.thread-list-item:focus-within .thread-favorite-toggle,
+.thread-list-item .thread-favorite-toggle[aria-pressed="true"] {
+  opacity: 1;
 }
 
 .thread-list-item .thread-list-entry[aria-current] {
@@ -835,7 +1025,18 @@ ol {
   background: var(--interactive-soft-hover);
 }
 
+.thread-sidebar-utilities {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--space-1);
+  padding: 0 var(--space-3);
+}
+
 .thread-search {
+  display: flex;
+}
+
+.thread-search.sr-only {
   display: flex;
 }
 
@@ -1082,15 +1283,11 @@ ol {
 }
 
 .composer {
-  background: var(--color-card-strong);
-  border: var(--border-width) solid var(--border-strong);
-  border-radius: var(--rounded-lg);
-  box-shadow: var(--shadow-1), var(--shadow-2);
-}
-
-.composer textarea {
-  background: transparent;
-  border-color: transparent;
+  position: relative;
+  background: var(--color-surface-pearl);
+  border: var(--border-width) solid var(--color-hairline);
+  border-radius: var(--rounded-md);
+  box-shadow: var(--shadow-product);
 }
 
 .empty-guide {

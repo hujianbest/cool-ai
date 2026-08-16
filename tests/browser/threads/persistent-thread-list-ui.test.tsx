@@ -730,7 +730,10 @@ describe("thread favorites UI", () => {
     return screen
       .getAllByRole("button")
       .filter((button) => button.dataset.threadId !== undefined)
-      .map((button) => button.textContent ?? "");
+      .map(
+        (button) =>
+          button.querySelector(".thread-list-entry-title")?.textContent ?? "",
+      );
   }
 
   it("toggles favorites with aria-pressed, accessible names, keyboard, and stable list order", async () => {

@@ -3,6 +3,7 @@
 import {
   Folder,
   PencilSimple,
+  Sparkle,
   X,
 } from "@phosphor-icons/react";
 import {
@@ -532,9 +533,7 @@ export function ProjectPanel({
       {!narrow ? (
         <header className="cockpit-header">
           <div className="cockpit-header-identity">
-            <span aria-hidden="true" className="product-mark">
-              C
-            </span>
+            <Sparkle aria-hidden="true" size={18} weight="fill" />
             <span className="cockpit-header-title">Cool AI</span>
           </div>
           <div className="cockpit-header-context">
@@ -542,7 +541,7 @@ export function ProjectPanel({
           </div>
           <button
             aria-label="打开文件夹"
-            className="button-secondary"
+            className="button-secondary cockpit-open-folder"
             disabled={isSubmitting}
             onClick={() => {
               void openFolderFromPicker();
@@ -550,6 +549,7 @@ export function ProjectPanel({
             title="打开文件夹"
             type="button"
           >
+            <Folder aria-hidden="true" size={16} weight="bold" />
             打开文件夹
           </button>
           <NeedsMeBadge
