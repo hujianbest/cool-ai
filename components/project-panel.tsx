@@ -510,7 +510,7 @@ export function ProjectPanel({
       : currentProject.name
     : "未选择项目 · 个人对话";
   const handleActiveConversationChange = useCallback((title: string | null) => {
-    setConversationTitle(title);
+    setConversationTitle((current) => (current === title ? current : title));
   }, []);
 
   return (
@@ -757,6 +757,7 @@ export function ProjectPanel({
         ) ? (
           <ProjectThreadNavigation
             backgroundRef={cockpitRef}
+            key={currentProject.id}
             onActiveConversationChange={handleActiveConversationChange}
             onDialogChange={setThreadDialogOpen}
             onNavigate={updateSettingsReturnTo}
@@ -767,6 +768,7 @@ export function ProjectPanel({
           <ProjectThreadNavigation
             backgroundRef={cockpitRef}
             directMode
+            key={homeState.project.id}
             onActiveConversationChange={handleActiveConversationChange}
             onDialogChange={setThreadDialogOpen}
             onNavigate={updateSettingsReturnTo}

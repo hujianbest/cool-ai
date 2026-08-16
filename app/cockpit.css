@@ -784,6 +784,7 @@ ol {
 }
 
 .thread-list-item .thread-list-entry {
+  position: relative;
   flex: 1;
   min-width: 0;
   overflow: hidden;
@@ -799,9 +800,25 @@ ol {
   padding: 0;
 }
 
-.thread-list-entry[aria-current] {
-  background: var(--interactive-accent-soft);
+.thread-list-item .thread-list-entry[aria-current] {
+  background: var(--color-surface-pearl);
   color: var(--text-primary);
+  font-weight: 600;
+}
+
+.cockpit-sidebar .project-list .thread-list-item .thread-list-entry[aria-current] {
+  background: var(--color-surface-pearl);
+  color: var(--text-primary);
+}
+
+.thread-list-item .thread-list-entry[aria-current]::before {
+  content: "";
+  position: absolute;
+  inset-inline-start: 0;
+  inset-block: var(--space-2);
+  width: var(--rail-indicator-width);
+  border-radius: 0 var(--rail-indicator-radius) var(--rail-indicator-radius) 0;
+  background: var(--interactive-primary);
 }
 
 .project-list .thread-favorite-toggle {

@@ -9,6 +9,7 @@ import {
 import {
   useCallback,
   useEffect,
+  useLayoutEffect,
   useMemo,
   useRef,
   useState,
@@ -548,6 +549,7 @@ export function ProjectThreadNavigation({
   const recycleBinViewTabRef = useRef<HTMLButtonElement>(null);
   const viewRef = useRef(view);
   viewRef.current = view;
+  const autoSelectHrefRef = useRef<string | null>(null);
   const [tags, setTags] = useState<ThreadTagListItem[]>([]);
   const [tagsState, setTagsState] = useState<TagListState>("loading");
   const [tagsError, setTagsError] = useState<string | null>(null);
@@ -751,6 +753,19 @@ export function ProjectThreadNavigation({
   useEffect(() => {
     onStateChange?.(listState);
   }, [listState, onStateChange]);
+
+  const selectedThreadId = useMemo(() => {
+    if (typeof window === "undefined") return null;
+    return selectedThreadFromUrl(projectId, directMode);
+  }, [directMode, locationVersion, projectId]);
+
+  useLayoutEffect(() => {
+    const title = selectedThreadId
+      ? threads.find((thread) => thread.id === selectedThreadId)?.title ?? null
+      : null;
+    onActiveConversationChange?.(title);
+    return () => onActiveConversationChange?.(null);
+  }, [onActiveConversationChange, selectedThreadId, threads]);
 
   useEffect(() => {
     const updateLocation = () => setLocationVersion((current) => current + 1);
@@ -1199,6 +1214,8 @@ export function ProjectThreadNavigation({
     if (selection.kind === "none") {
       setSelectionError(null);
       const href = canonicalThreadHref(projectId, threads[0]!.id, directMode);
+      if (autoSelectHrefRef.current === href) return;
+      autoSelectHrefRef.current = href;
       onNavigate?.(href);
       routerRef.current.replace(href);
       window.dispatchEvent(new PopStateEvent("popstate"));
@@ -1210,6 +1227,7 @@ export function ProjectThreadNavigation({
         "所选对话无效或不属于当前项目。请选择一个可用对话。",
       );
     } else {
+      autoSelectHrefRef.current = null;
       setSelectionError(null);
     }
   }, [
@@ -1881,21 +1899,6 @@ export function ProjectThreadNavigation({
     }
   }
 
-  const selectedThreadId =
-    typeof window === "undefined"
-      ? null
-      : selectedThreadFromUrl(projectId, directMode);
-  const activeConversationTitle = selectedThreadId
-    ? threads.find((thread) => thread.id === selectedThreadId)?.title ?? null
-    : null;
-
-  useEffect(() => {
-    onActiveConversationChange?.(activeConversationTitle);
-  }, [activeConversationTitle, onActiveConversationChange]);
-
-  useEffect(() => {
-    return () => onActiveConversationChange?.(null);
-  }, [onActiveConversationChange]);
   const submitReason = membersLoading
     ? "正在加载当前项目成员。"
     : membersError

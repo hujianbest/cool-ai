@@ -30,6 +30,7 @@
 - 2026-08-16 按 UCD §8.7 落地 `Cmd/Ctrl+O` 打开系统文件夹选择器。cockpit-layout 9/9，`build` 绿。
 - 2026-08-16 按 UCD §8.6 落地 Composer 键盘：`Enter` 发送、`Shift+Enter` 换行；输入框键入 `@` 弹出成员补全，上下键 / `Enter` / `Tab` 选中并插入胶囊。collaboration-chat 8/8，相关 composer 测试 37/37，`build` 绿。
 - 2026-08-16 按 UCD §7.1 / §9.1.2 落地 Header 语境：无项目为「未选择项目 · 个人对话」，有项目为 `[项目名] · [对话标题]`。cockpit-layout 10/10，home-direct-chat 绿，`build` 绿。
+- 2026-08-16 按 UCD §8.1 / §9.1.5 落地对话列表选中态：左侧 3px 暖金指示条 + pearl 底 + `font-weight: 600`（提高侧栏 `.nav-item` 优先级以免被卡片色盖住）。首页自动选对话用 `autoSelectHrefRef` 避免 `replace` 死循环。Header 语境在真实浏览器核对为 `[项目名] · [对话标题]`。`AGENTS.md` 新增前端必须在真实浏览器核对。聚焦测试 54/54。
 
 ## 任务票
 

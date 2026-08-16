@@ -444,4 +444,18 @@ describe("warm-gold 240px sidebar does not crush CJK chrome", () => {
       /\.drawer-close\.icon-button\s*\{[^}]*display:\s*none/s,
     );
   });
+
+  it("marks the selected conversation with a 3px warm-gold rail and pearl fill", () => {
+    const cockpit = readFileSync("app/cockpit.css", "utf8");
+
+    expect(cockpit).toMatch(
+      /\.thread-list-item \.thread-list-entry\[aria-current\]\s*\{[^}]*background:\s*var\(--color-surface-pearl\)[^}]*font-weight:\s*600/s,
+    );
+    expect(cockpit).toMatch(
+      /\.cockpit-sidebar \.project-list \.thread-list-item \.thread-list-entry\[aria-current\]\s*\{[^}]*background:\s*var\(--color-surface-pearl\)/s,
+    );
+    expect(cockpit).toMatch(
+      /\.thread-list-item \.thread-list-entry\[aria-current\]::before\s*\{[^}]*width:\s*var\(--rail-indicator-width\)[^}]*border-radius:[^}]*var\(--rail-indicator-radius\)[^}]*background:\s*var\(--interactive-primary\)/s,
+    );
+  });
 });

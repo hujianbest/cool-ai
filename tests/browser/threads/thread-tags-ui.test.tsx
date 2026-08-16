@@ -1099,16 +1099,20 @@ describe("tag styling contract", () => {
 });
 
 describe("thread catalog chrome", () => {
-  it("styles search as a pill and current thread rows with accent-soft", () => {
+  it("styles search as a pill and current thread rows with a pearl fill and gold rail", () => {
     const cockpit = readFileSync("app/cockpit.css", "utf8");
     const tokens = readFileSync("app/tokens.css", "utf8");
 
-    expect(tokens).toMatch(/--interactive-accent-soft\s*:/);
+    expect(tokens).toMatch(/--color-surface-pearl\s*:/);
+    expect(tokens).toMatch(/--rail-indicator-width\s*:/);
     expect(cockpit).toMatch(
       /\.thread-search input\s*\{[^}]*border-radius:\s*var\(--rounded-pill\)[^}]*min-height:\s*var\(--control-min\)/s,
     );
     expect(cockpit).toMatch(
-      /\.thread-list-entry\[aria-current\]\s*\{[^}]*background:\s*var\(--interactive-accent-soft\)[^}]*color:\s*var\(--text-primary\)/s,
+      /\.thread-list-item \.thread-list-entry\[aria-current\]\s*\{[^}]*background:\s*var\(--color-surface-pearl\)[^}]*font-weight:\s*600/s,
+    );
+    expect(cockpit).toMatch(
+      /\.thread-list-item \.thread-list-entry\[aria-current\]::before\s*\{[^}]*width:\s*var\(--rail-indicator-width\)[^}]*background:\s*var\(--interactive-primary\)/s,
     );
   });
 });
