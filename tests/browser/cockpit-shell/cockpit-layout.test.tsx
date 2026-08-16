@@ -1,6 +1,6 @@
 // @vitest-environment jsdom
 import { readFileSync } from "node:fs";
-import { render, screen, within } from "@testing-library/react";
+import { render, screen, waitFor, within } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
@@ -214,6 +214,42 @@ describe("desktop collaboration cockpit", () => {
 
     await user.keyboard("{Control>}1{/Control}");
     expect(within(cockpit).queryByRole("button", { name: "返回对话" })).toBeNull();
+  });
+
+  it("opens the system folder picker with Cmd/Ctrl+O", async () => {
+    const user = userEvent.setup();
+    pathnameValue = "/projects/project-1";
+    const fetchMock = cockpitFetch([
+      Response.json({
+        projects: [
+          {
+            id: "project-1",
+            name: "Launch plan",
+            createdAt: "2026-07-29T00:00:00.000Z",
+          },
+        ],
+      }),
+      Response.json({ tasks: [], events: [] }),
+    ]);
+    vi.stubGlobal(
+      "fetch",
+      vi.fn((input: RequestInfo | URL, init?: RequestInit) => {
+        if (String(input) === "/api/directory-picker") {
+          return Promise.resolve(Response.json({ cancelled: true }));
+        }
+        return fetchMock(input, init);
+      }),
+    );
+    render(<ProjectPanel />);
+    await screen.findByRole("button", { name: "打开项目文件夹" });
+
+    await user.keyboard("{Control>}o{/Control}");
+    await waitFor(() =>
+      expect(fetch).toHaveBeenCalledWith(
+        "/api/directory-picker",
+        expect.objectContaining({ method: "POST" }),
+      ),
+    );
   });
 
   it("lights Needs Me on the header and 审批 rail when approvals are pending", async () => {

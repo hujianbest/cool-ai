@@ -139,6 +139,19 @@ export function ProjectPanel({
         return;
       }
 
+      if (event.key.toLowerCase() === "o") {
+        if (threadDialogOpen || workspaceConfirmationOpen) {
+          return;
+        }
+        event.preventDefault();
+        document
+          .querySelector<HTMLButtonElement>(
+            'button[aria-label="打开项目文件夹"], button[aria-label="打开文件夹"]',
+          )
+          ?.click();
+        return;
+      }
+
       const viewByDigit: Record<string, GovernanceView | null> = {
         "1": null,
         "2": "mission",

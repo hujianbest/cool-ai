@@ -27,6 +27,7 @@
 - 2026-08-16 按 UCD §8.1 落地图标轨选中态左侧 3px 暖金指示条（令牌 `--rail-indicator-width` / `--rail-indicator-radius`），并收口 `DESIGN.md` 与 UCD 冲突的「4px 圆点」表述。activity-bar / visual-tokens 20/20，`build` 绿。
 - 2026-08-16 按 UCD §7.1 / §14.2 落地 Needs Me：`GET /approvals/pending` 驱动 Header 徽标与图标轨「审批」暖金圆点；点击徽标打开审批视图。cockpit-layout / activity-bar / visual-tokens / settings-return / a11y / home / approval-center 53/53，`build` 绿。
 - 2026-08-16 按 UCD §7.1 / §9.1.5 收口会话侧栏：筛选 Tab 为全部/收藏/标签，回收站改为底部入口，「+ 新对话」支持 `Cmd/Ctrl+N`；无对话时主区不再留禁用 composer。线程列表/回收站/标签 44/44，`build` 绿。
+- 2026-08-16 按 UCD §8.7 落地 `Cmd/Ctrl+O` 打开系统文件夹选择器。cockpit-layout 9/9，`build` 绿。
 
 ## 任务票
 
