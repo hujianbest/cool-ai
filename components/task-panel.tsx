@@ -80,6 +80,7 @@ type TaskPanelProps = {
   contextSurfaceRef: RefObject<HTMLElement | null>;
   contextCloseRef: RefObject<HTMLButtonElement | null>;
   onSelectProject: () => void;
+  onOpenGovernance?: (view: GovernanceView) => void;
   onHomeStateChange?: (state: HomeState | null) => void;
   onboarding?: {
     onCreateProject: () => void;
@@ -116,6 +117,7 @@ export function TaskPanel({
   contextSurfaceRef,
   contextCloseRef,
   onSelectProject,
+  onOpenGovernance,
   onHomeStateChange,
   onboarding,
   legacyTasksEnabled = true,
@@ -276,7 +278,22 @@ export function TaskPanel({
         if (!parsed) {
           throw new ApiDisplayError("个人对话响应无效，请稍后重试。");
         }
-        return parsed;
+        if (parsed.kind !== "needs_direct_chat") {
+          return parsed;
+        }
+        const created = await fetch("/api/home", {
+          method: "POST",
+          signal: controller.signal,
+        });
+        const createdPayload: unknown = await created.json();
+        if (!created.ok) {
+          throw new ApiDisplayError("无法加载个人对话，请稍后重试。");
+        }
+        const createdState = parseHomeState(createdPayload);
+        if (!createdState || createdState.kind === "needs_direct_chat") {
+          throw new ApiDisplayError("个人对话响应无效，请稍后重试。");
+        }
+        return createdState;
       })
       .then((parsed) => {
         if (controller.signal.aborted) return;
@@ -503,6 +520,7 @@ export function TaskPanel({
             }}
             onFocusMission={() => {
               if (!projectId) return;
+              onOpenGovernance?.("mission");
               const titleSelector = `#mission-title-${projectId}`;
               if (!document.querySelector(titleSelector)) {
                 document

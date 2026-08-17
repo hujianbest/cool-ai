@@ -1,3 +1,4 @@
+import type { DatabaseSync } from "node:sqlite";
 import { randomUUID } from "node:crypto";
 
 import type { Project } from "@/src/shared/contracts";
@@ -57,23 +58,30 @@ export function createProject(name: string, databasePath: string): Project {
   }
 }
 
-export function ensureDirectProject(databasePath: string): Project {
+function selectDirectProject(database: DatabaseSync): Project | null {
+  const existing = database
+    .prepare(
+      `SELECT id, name, created_at AS createdAt
+       FROM projects
+       WHERE name = '个人对话' AND workspace_path IS NULL
+       ORDER BY created_at ASC, id ASC
+       LIMIT 1`,
+    )
+    .get() as ProjectRow | undefined;
+  return existing ? toProject(existing) : null;
+}
+
+export function findDirectProject(databasePath: string): Project | null {
   const database = openDatabase(databasePath);
   try {
-    const existing = database
-      .prepare(
-        `SELECT id, name, created_at AS createdAt
-         FROM projects
-         WHERE name = '个人对话' AND workspace_path IS NULL
-         ORDER BY created_at ASC, id ASC
-         LIMIT 1`,
-      )
-      .get() as ProjectRow | undefined;
-    if (existing) return toProject(existing);
+    return selectDirectProject(database);
   } finally {
     database.close();
   }
-  return createProject("个人对话", databasePath);
+}
+
+export function ensureDirectProject(databasePath: string): Project {
+  return findDirectProject(databasePath) ?? createProject("个人对话", databasePath);
 }
 
 export function listProjects(databasePath: string): Project[] {

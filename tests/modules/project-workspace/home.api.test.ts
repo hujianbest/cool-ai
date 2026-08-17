@@ -5,6 +5,7 @@ import { memoryDatabasePath } from "@/tests/fixtures/sqlite/memory-database";
 
 type HomeRouteModule = {
   GET(): Promise<Response>;
+  POST(request: Request): Promise<Response>;
 };
 
 const routeModules = import.meta.glob<HomeRouteModule>(
@@ -94,14 +95,77 @@ describe("GET /api/home", () => {
     expect(agentCount.count).toBe(0);
   });
 
-  it("returns a sanitized ready home with one stable direct project", async () => {
+  it("does not create a personal conversation project on a read", async () => {
     const route = await loadRoute();
     seedAgent();
 
-    const firstResponse = await route.GET();
+    const response = await route.GET();
+    const databasePath = process.env.COCKPIT_DB_PATH;
+    if (!databasePath) throw new Error("Test database path is unavailable.");
+    const database = openDatabase(databasePath);
+    const projectCount = database.prepare("SELECT COUNT(*) AS count FROM projects").get() as {
+      count: number;
+    };
+    database.close();
+
+    expect(response.status).toBe(200);
+    expect(await response.json()).toEqual({ kind: "needs_direct_chat" });
+    expect(projectCount.count).toBe(0);
+  });
+});
+
+describe("POST /api/home", () => {
+  it("rejects a request body", async () => {
+    const route = await loadRoute();
+
+    const response = await route.POST(
+      new Request("http://localhost/api/home", {
+        body: "{}",
+        headers: { "content-type": "application/json" },
+        method: "POST",
+      }),
+    );
+
+    expect(response.status).toBe(400);
+    expect(await response.json()).toEqual({
+      error: {
+        code: "INVALID_INPUT",
+        message: "Home does not accept a request body.",
+      },
+    });
+  });
+
+  it("returns needs-agent without writing a personal conversation project", async () => {
+    const route = await loadRoute();
+
+    const response = await route.POST(new Request("http://localhost/api/home", { method: "POST" }));
+    const databasePath = process.env.COCKPIT_DB_PATH;
+    if (!databasePath) throw new Error("Test database path is unavailable.");
+    const database = openDatabase(databasePath);
+    const projectCount = database.prepare("SELECT COUNT(*) AS count FROM projects").get() as {
+      count: number;
+    };
+    database.close();
+
+    expect(response.status).toBe(200);
+    expect(await response.json()).toEqual({ kind: "needs_agent" });
+    expect(projectCount.count).toBe(0);
+  });
+
+  it("creates one stable sanitized ready home that later reads reuse", async () => {
+    const route = await loadRoute();
+    seedAgent();
+
+    const firstResponse = await route.POST(
+      new Request("http://localhost/api/home", { method: "POST" }),
+    );
     const firstPayload = await firstResponse.json();
-    const secondResponse = await route.GET();
+    const secondResponse = await route.POST(
+      new Request("http://localhost/api/home", { method: "POST" }),
+    );
     const secondPayload = await secondResponse.json();
+    const readResponse = await route.GET();
+    const readPayload = await readResponse.json();
 
     expect(firstResponse.status).toBe(200);
     expect(firstPayload).toEqual({
@@ -122,6 +186,8 @@ describe("GET /api/home", () => {
     });
     expect(secondResponse.status).toBe(200);
     expect(secondPayload).toEqual(firstPayload);
+    expect(readResponse.status).toBe(200);
+    expect(readPayload).toEqual(firstPayload);
     expect(JSON.stringify(firstPayload)).not.toContain("private system prompt");
     expect(JSON.stringify(firstPayload)).not.toContain("cipher-secret");
   });

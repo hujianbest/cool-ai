@@ -99,6 +99,51 @@ describe("home direct chat", () => {
     expect(screen.queryByText("运行详情")).not.toBeInTheDocument();
   });
 
+  it("ensures the personal conversation with POST after a read-only GET", async () => {
+    const methods: string[] = [];
+    vi.stubGlobal(
+      "fetch",
+      vi.fn(async (input: RequestInfo | URL, init?: RequestInit) => {
+        const url = String(input);
+        const method = init?.method ?? "GET";
+        if (url === "/api/projects") {
+          return Response.json({ projects: [] });
+        }
+        if (url === "/api/home") {
+          methods.push(method);
+          if (method === "GET") {
+            return Response.json({ kind: "needs_direct_chat" });
+          }
+          if (method === "POST") {
+            return Response.json({
+              agent: {
+                accentToken: "sage",
+                avatarText: "A",
+                id: "agent-alpha",
+                name: "Alpha",
+                role: "Plans",
+              },
+              kind: "ready",
+              project: {
+                createdAt: "2026-08-14T00:00:00.000Z",
+                id: "home-project",
+                name: "个人对话",
+              },
+              threads: [],
+            });
+          }
+        }
+        throw new Error(`Unexpected fetch: ${method} ${url}`);
+      }),
+    );
+
+    render(<ProjectPanel />);
+
+    expect(await screen.findByRole("heading", { name: "Alpha" })).toBeInTheDocument();
+    expect(screen.getByLabelText("Home chat home-project")).toBeInTheDocument();
+    expect(methods).toEqual(["GET", "POST"]);
+  });
+
   it("shows a retryable home load error", async () => {
     let homeAttempts = 0;
     vi.stubGlobal(

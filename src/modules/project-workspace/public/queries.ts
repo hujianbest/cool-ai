@@ -9,6 +9,7 @@ import type {
 } from "./dto";
 
 export interface ProjectWorkspaceQueries {
+  findDirectProject: (databasePath: string) => Project | null;
   getMembers: (databasePath: string, projectId: string) => MembershipState;
   getValidationPolicy: (databasePath: string, projectId: string) => ValidationPolicy;
   getWorkspace: (databasePath: string, projectId: string) => WorkspaceState;

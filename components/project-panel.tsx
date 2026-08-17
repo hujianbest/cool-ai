@@ -822,6 +822,7 @@ export function ProjectPanel({
         onCloseContext={closeTaskContext}
         onCloseEditor={closeMobileSurface}
         onHomeStateChange={updateHomeState}
+        onOpenGovernance={setGovernanceView}
         onSelectProject={guideToProjectSelection}
         projectError={projectLoadError ?? routeProjectError}
         projectId={currentProjectId}

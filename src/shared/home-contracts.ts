@@ -10,6 +10,7 @@ export type HomeAgent = {
 
 export type HomeState =
   | { kind: "needs_agent" }
+  | { kind: "needs_direct_chat" }
   | {
       agent: HomeAgent;
       kind: "ready";
@@ -63,6 +64,9 @@ function parseAgent(value: unknown): HomeAgent | null {
 export function parseHomeState(value: unknown): HomeState | null {
   if (exactRecord(value, ["kind"]) && value.kind === "needs_agent") {
     return { kind: "needs_agent" };
+  }
+  if (exactRecord(value, ["kind"]) && value.kind === "needs_direct_chat") {
+    return { kind: "needs_direct_chat" };
   }
   if (
     !exactRecord(value, ["agent", "kind", "project", "threads"]) ||

@@ -4,8 +4,8 @@
 - 当前阶段: ready
 - 执行模式: auto
 - 已加载扩展: 无
-- 当前主切片: P0 的 051/S-61 暖金壳层已按 UCD 收口可用 API 的主路径与治理顶栏；长任务转入 050/S-60 ship 残余一般项
-- 下一步: 050 仍开一般项（onboarding 使命焦点、GET home 的 PWS ensure 写、跨 owner 分事务）；演示 auto-approved 须呈上驾驶舱与 UCD 原型对照。
+- 当前主切片: 050/S-60 用户可感知残余已关（引导使命进任务视图、GET home 只读）；051/S-61 暖金壳层继续按 UCD 收口
+- 下一步: 按 UCD 继续主路径；跨 owner 单事务 UoW 另立基础切片（A-376）。演示 auto-approved 须呈上驾驶舱与 UCD 原型对照。
 
 ## 当前快照（2026-08-15）
 
@@ -72,3 +72,4 @@
 - 2026-08-16 消息「回复」改为悬停/焦点显现，空闲态与 UCD 原型一致。演示 auto-approved 2026-08-16。
 - 2026-08-16 `Cmd/Ctrl+K` 呼出居中会话搜索浮层（UCD §9.6.1）。演示 auto-approved 2026-08-16。
 - 2026-08-17 用户指示按 UCD 开发完后进入长任务。治理视图收口全宽顶栏（`← 返回对话`、无「治理视图」eyebrow、标题 `任务看板 · 项目` 等）、泳道计数与 pearl 任务卡；内层重复 h2 改为 `sr-only`。文案对齐：新建任务 / 沉淀新记忆 / 批准执行 / 驳回。localhost:3002 对照 `preview-ucd.html` 核对任务/记忆/审批空态。长任务已关 050 HelpTip 与 GET `/api/home` 的 Identity ensure 写。未伪造 TTL/Diff/Thinking/迷你头像（A-371～A-375）。演示 auto-approved 2026-08-17。
+- 2026-08-17 拉取 `ffe659b` 后继续长任务：引导「查看已受理使命」打开任务治理视图（A-378）；`GET /api/home` 只读，`POST /api/home` 幂等确保个人对话（A-377）。跨 owner 分事务按 A-376 保持三步编排。聚焦 home.api / direct-project / home-direct-chat 17、onboarding T-1 绿。演示 auto-approved 2026-08-17。

@@ -385,3 +385,6 @@ agent 替用户做的默认选择。遇到欠定点的标准动作: 提出带默
 - A-373 2026-08-17 [生效] Composer 保留可见「输入历史」入口（023 已交付）。默认理由: UCD 空输入 ↑ 是附加捷径，不能卸掉已交付能力。
 - A-374 2026-08-17 [生效] 会话「创建对话」「管理标签」对话框去掉 HelpTip；对话标题仍 `maxLength=160`。默认理由: A-358 / 050 一般项要求阶段 1 不展示 HelpTip；原 HelpTip「最多 80 个字符」与控件不一致，以控件为准。
 - A-375 2026-08-17 [生效] `GET /api/home` 不再调用 `ensureStarterAgents`；自带 Agent 只由打开文件夹 workflow 落地。无 Agent 时仍返回 `needs_agent`。`ensureDirectProject` 仍是该 GET 上既有的 PWS 写。默认理由: 查询动词不得旁路 Identity 写入。
+- A-376 2026-08-17 [生效] OpenFolder 保持 050 架构的三步编排（PWS 打开 → IDC ensure → PWS 入组），不在本残余把三个 path-based Adapter 改造成 `TransactionContext` 单事务。空 roster 再次打开可重放；IDC 已写而 roster 仍空是可恢复中间态。单事务 UoW 另立基础切片。默认理由: code-review 已降为一般且不升严重；本片只收口用户可感知残余。
+- A-377 2026-08-17 [生效] `GET /api/home` 改为只读：有 Agent 但无个人对话容器或无成员时返回 `needs_direct_chat`，不写库。`POST /api/home` 幂等 `ensureDirectProject` + 单成员，拒绝非空 body。前端 GET 后再 POST。A-375 中「GET 仍 ensureDirectProject」由本条覆盖。默认理由: 查询动词不得写 PWS。
+- A-378 2026-08-17 [生效] 引导「创建使命目标 / 查看已受理使命」先打开图标轨任务治理视图再尝试聚焦使命标题；不把使命表单搬回聊天主路径。默认理由: UCD §9.2.1 使命只在按需任务视图。

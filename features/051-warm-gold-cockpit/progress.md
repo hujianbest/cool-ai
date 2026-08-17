@@ -4,7 +4,7 @@
 - 当前阶段: implement（P0 壳层已实现并验证；收尾项：全量套件与冒烟）
 - 执行模式: auto
 - 已加载: hf-ui-design
-- 下一步: 长任务继续 050 残余（onboarding 使命焦点、GET home 的 PWS ensure、跨 owner 分事务）；UCD 待 DTO 的项不伪造。
+- 下一步: 050 用户可感知残余已关；长任务继续按 UCD 收口主路径。待 DTO 的项不伪造。
 
 ## 状态记录
 

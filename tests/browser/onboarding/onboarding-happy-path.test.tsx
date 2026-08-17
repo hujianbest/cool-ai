@@ -341,6 +341,9 @@ function installHappyPathFetch(options: { missionReady?: boolean } = {}) {
         }
         return Response.json({ mission, workItems: [] });
       }
+      if (url.endsWith("/capability-insight")) {
+        return Response.json({ portraits: [], suggestions: [] });
+      }
       if (url.endsWith("/dependencies")) {
         return Response.json({
           nodes: [],
@@ -473,8 +476,11 @@ describe("progressive onboarding T-1", () => {
     await user.click(
       within(goalGuide).getByRole("button", { name: "查看已受理使命" }),
     );
-    expect(screen.queryByLabelText("使命标题")).toBeNull();
-    expect(screen.queryByRole("heading", { name: "使命看板" })).toBeNull();
+    expect(
+      await screen.findByRole("heading", { name: /任务看板/ }),
+    ).toBeInTheDocument();
+    expect(await screen.findByText("Release mission")).toBeInTheDocument();
+    expect(screen.getByRole("button", { name: "返回对话" })).toBeEnabled();
     expect(goalGuide).toHaveTextContent("verified handle");
     expect(goalGuide).toHaveTextContent("sandbox");
     expect(goalGuide).toHaveTextContent("审批");

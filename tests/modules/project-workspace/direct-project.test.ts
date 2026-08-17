@@ -5,6 +5,7 @@ import { setDirectChatAgent } from "@/src/adapters/outbound/sqlite/project-works
 import {
   createProject,
   ensureDirectProject,
+  findDirectProject,
 } from "@/src/adapters/outbound/sqlite/project-workspace/projects";
 import { createThread } from "@/src/adapters/outbound/sqlite/public-collaboration/thread-service";
 import { memoryDatabasePath } from "@/tests/fixtures/sqlite/memory-database";
@@ -37,6 +38,14 @@ function seedAgents(databasePath: string): void {
 }
 
 describe("direct home project commands", () => {
+  it("finds no personal conversation project until one is ensured", () => {
+    const databasePath = memoryDatabasePath();
+
+    expect(findDirectProject(databasePath)).toBeNull();
+    const created = ensureDirectProject(databasePath);
+    expect(findDirectProject(databasePath)).toEqual(created);
+  });
+
   it("ensures one stable unbound personal conversation project", () => {
     const databasePath = memoryDatabasePath();
 
