@@ -1096,7 +1096,7 @@ Cool AI 专为追求极致生产力、拥有全栈实现能力的独立创造者
 
 | 序号 | 前台 UI 模块 / 交互组件 | 前台交互与展示表现 (`preview-ucd.html`) | 对应后台领域模块 (Bounded Context) | 对应 Capability & 切片编号 | 交付阶段与状态 | 核心后台 API / 契约 | 核心领域规则与安全约束 |
 | :--- | :--- | :--- | :--- | :--- | :--- | :--- | :--- |
-| **1** | **全局设计基座与壳层** | 暖米+暖金双主题令牌、52px 图标轨、240px 会话侧栏、居中聊天流（max 840px）、浮起 Composer | 壳层 Adapter / 共享偏好 | **S-61 / 051**<br>(暖金壳层基座)<br>**S-10 / 012**<br>(主题切换) | **P0**<br>核心已落地 | CSS 变量投影<br>`localStorage` 主题持久化 | 无 SSR 闪烁，亮暗双套令牌闭环，图标轨纯 CSS Tooltip，桌面侧栏不承载无关设置 |
+| **1** | **全局设计基座与壳层** | 暖米+暖金双主题令牌、52px 图标轨、240px 会话侧栏、居中聊天流（max 840px）、浮起 Composer | 壳层 Adapter / 共享偏好 | **S-61 / 051**<br>(暖金壳层基座)<br>**S-10 / 012**<br>(主题切换) | **P0**<br>已 ship | CSS 变量投影<br>`localStorage` 主题持久化 | 无 SSR 闪烁，亮暗双套令牌闭环，图标轨纯 CSS Tooltip，桌面侧栏不承载无关设置 |
 | **2** | **文件夹原生选择** | Header / 欢迎态「打开文件夹」按钮，触发操作系统原生目录选择器 | `Project & Workspace` | `CAP-PWS-01`<br>**S-55 / 039**<br>(文件夹即项目)<br>**S-60 / 050**<br>(阶段 1 驾驶舱) | **P1**<br>已交付核心 | `POST /api/projects`<br>`POST /api/directory-picker` | 绝不手动输入绝对路径；选定文件夹即完成 Project 创建/幂等恢复；单绑定根严格隔离 |
 | **3** | **会话侧栏管理** | 对话列表切换、活跃协作脉冲动效 (`pulse-dot`)、新建对话 (`+` / `Cmd+N`) | `Public Collaboration` | `CAP-COL-01`<br>**S-12 / 014**<br>(持久对话) | **P2**<br>已交付核心 | `GET/POST /api/projects/[id]/threads`<br>`GET /api/projects/[id]/threads/[id]` | 复合唯一约束校验（`project_id + thread_id`）；单项目唯一非终态 Run；切换防陈旧竞争 |
 | **4** | **会话分类与整理** | 侧栏过滤药丸（全部 / 收藏 / 标签）、底部回收站入口及计数 | `Public Collaboration` | `CAP-COL-04`<br>**S-19 / 025** (收藏)<br>**S-18 / 032** (标签)<br>**S-20 / 033** (回收站) | **P3**<br>已交付核心 | `/api/projects/[id]/threads/[id]/favorite`<br>`/api/projects/[id]/thread-tags`<br>`/api/projects/[id]/thread-recycle-bin` | 软删除/恢复/永久删除全程生成不可变审计事实；批量标签操作具备幂等 Receipt |

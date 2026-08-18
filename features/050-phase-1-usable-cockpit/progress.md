@@ -2,10 +2,12 @@
 
 - 特性: 050-phase-1-usable-cockpit
 - 对应切片: S-60
-- 当前阶段: implement（hf-code-review 复审 **PASS**；用户可感知一般项已关；跨 owner 分事务按 A-376 保持三步编排）
+- 当前阶段: done
 - 执行模式: auto
 - 已加载扩展: 无
-- 下一步: ship 收口（演示 auto-approved 须呈上驾驶舱与 UCD 对照）。跨 owner 单事务 UoW 不在本片实现。
+- 下一步: 无（已 ship）
+- 用户可感知: 是；演示验收 auto-approved 2026-08-17
+- 评审: spec/architecture 豁免；hf-code-review 初审需修改后复审 PASS。跨 owner 单事务 UoW 按 A-376 不在本片实现。
 
 ## 状态记录
 
@@ -21,6 +23,7 @@
 - 规模例外 A-359：用户要求一次完成阶段 1，不拆成选夹/Agent/卸载三片。
 - 2026-08-17 长任务关闭两项 050 一般项：(1) 会话创建/标签对话框去掉 HelpTip（A-374）；(2) `GET /api/home` 不再 `ensureStarterAgents`，仅 Provider、无 Agent 时返回 `needs_agent` 且不插入 starter（A-375）。仍开：onboarding `onFocusMission` 仍尝试点击未挂载的使命标题；GET home 仍 `ensureDirectProject`；跨 owner 分事务。聚焦：persistent-thread-list-ui / thread-tags / home.api 绿。
 - 2026-08-17 长任务再关两项用户可感知一般项：(1) 引导「查看已受理使命」打开任务治理视图（A-378）；(2) `GET /api/home` 只读，`needs_direct_chat` 后由 `POST /api/home` 幂等 ensure（A-377）。跨 owner 分事务按 A-376 保持三步编排，不升实现。聚焦：home.api / direct-project / home-direct-chat 17、onboarding T-1 绿。
+- 2026-08-18 ship：T-01～T-05 已勾选；用户可感知一般项已关；hf-code-review 复审 PASS。回写 `product/backlog.md` S-60。演示 auto-approved 须呈上驾驶舱与 UCD 对照。
 
 ## implement 验证（2026-08-15）
 

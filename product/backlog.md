@@ -33,7 +33,7 @@
 |---|---|---|
 | S-51 / 035 | DESIGN.md 设计基座与壳层（历史色板，已被暖金替换） | 已 ship |
 | S-54 / 038 | 暖陶工作台四列（色板已被 D-50 替换，IA 被会话优先取代） | 已 ship |
-| S-61 / 051 | 暖米 + 暖金会话优先壳层：52px 轨 / 240px 侧栏 / 居中聊天 / 治理收轨 | 在途（壳层已实现，P0 收尾待目标环境） |
+| S-61 / 051 | 暖米 + 暖金会话优先壳层：52px 轨 / 240px 侧栏 / 居中聊天 / 治理收轨 | 已 ship |
 
 ### P1 基本可用
 
@@ -44,7 +44,7 @@
 | S-9 / 011 | 统一设置导航 | 已 ship |
 | S-10 / 012 | 亮暗主题 | 已 ship |
 | S-11 / 013 | 渐进式首次使用引导 | 已 ship |
-| S-60 / 050 | 阶段 1 驾驶舱：原生选夹 + 三名自带 Agent + 聊天优先、治理不在主路径 | 在途 |
+| S-60 / 050 | 阶段 1 驾驶舱：原生选夹 + 三名自带 Agent + 聊天优先、治理不在主路径 | 已 ship |
 | S-59 / 049 | 图标优先 + HelpTip | superseded，不 ship |
 
 ### P2 会话基础
@@ -176,6 +176,13 @@ S-9～S-12 的 `依赖: S-*` 是原历史文字，只说明当时切片记录；
 - [x] S-56 未选项目时单 Agent 聊天 — 主子系统: Project & Workspace；主 Capability: `CAP-PWS-01`；票据: [`features/040-home-direct-chat/tickets.md`](../features/040-home-direct-chat/tickets.md)；Ship: 2026-08-15；演示判据: owner 打开 `/` 未选文件夹项目时中栏是与一名 Agent 的聊天窗（有 Agent 则可发送；无 Agent 则引导配置）；不能在此态开展多 Agent 群聊或使命看板；打开文件夹项目后既有群聊不回归
   - 排期: 2026-08-14 对照 pi-agent 等 WebUI；2026-08-15 与 S-55 一并验证（A-285）。
   - 准入: 已交付前置: `CAP-PWS-01`、`CAP-COL-01`、`CAP-IDC-01`；本片建立: 个人对话容器 1 成员与 home 聊天列（已交付）。
+- [x] S-60 阶段 1 基本可用多 Agent 作业系统 — 主子系统: 不适用；主领域 Capability: 不适用（Application Workflow + 入站 UI Adapter + DirectoryPicker，不新增领域表）；主要架构单元: Application Workflow + 入站 UI Adapter；消费 Capability: `CAP-PWS-01`、`CAP-IDC-01`、`CAP-COL-01`；票据: [`features/050-phase-1-usable-cockpit/tickets.md`](../features/050-phase-1-usable-cockpit/tickets.md)；Ship: 2026-08-18（DirectoryPicker + `POST /api/directory-picker`、`ensureStarterAgents`、打开文件夹入组、聊天优先卸载、`GET /api/home` 只读 + `POST /api/home` 幂等 ensure；hf-code-review 复审 PASS；`npm run smoke` 绿；跨 owner 单事务 UoW 按 A-376 不在本片实现）；演示判据: owner 用系统文件夹选择器打开项目（无路径手输），在已验证 Provider 下立即拥有规划/实施/复核自带 Agent 并自动入组，驾驶舱为聊天优先且不展示使命/记忆/HelpTip；约束: 工作区=打开的目录即绑定根，verified-handle=打开时必需，sandbox=打开不授予执行，凭据=选择器错误脱敏且脚本化路径仅测试，审批=不适用，独立复核=交付必需（DirectoryPicker 与 Identity 写入须 hf-code-review），审计=沿用既有 project_created/workspace_bound/member 事件；不复制 pi、DeepSeek Harness 或 Clowder 品牌/源码/资产
+  - 排期: 2026-08-15 用户要求重排阶段并完成第一阶段。
+  - 准入: 已交付前置: `CAP-PWS-01` 打开文件夹、`CAP-IDC-01` Agent 模板、`CAP-COL-01` 群聊；本片建立: 原生选夹、自带 Agent ensure、阶段 1 表面卸载（已交付）。
+  - 规模例外: A-359。
+- [x] S-61 暖金会话优先驾驶舱壳层 — 主子系统: 不适用；主领域 Capability: 不适用（只改变设计令牌与入站 UI Adapter，不新增领域事实）；主要架构单元: DESIGN.md + 入站 UI Adapter；消费 Capability: 已交付 UI 呈现面；票据: [`features/051-warm-gold-cockpit/feature.md`](../features/051-warm-gold-cockpit/feature.md)；Ship: 2026-08-18（暖金 DESIGN.md + tokens 亮暗投影、52px 图标轨 / 240px 侧栏 / 居中聊天 / 治理按需视图、UCD 主路径收口至围栏代码块与块内复制；视觉契约 25/25；tsc/build/聚焦测试绿；演示 auto-approved。macOS 非目标 Windows x64 与沙箱端口造成的全量失败不阻塞本片。完整 Markdown / 迷你头像 / Thinking / 重命名 / 回收站总数 / 审批 TTL·Diff 仍不伪造）；演示判据: owner 打开驾驶舱看到暖米 + 暖金三区（52px 图标轨 / 240px 会话侧栏 / 居中聊天），治理由图标轨按需打开并返回对话；约束: 不新增领域事实，不复制 Clowder 品牌或资产
+  - 排期: 2026-08-15 用户确认暖金方向与治理收轨（D-50）；P0 主切片。
+  - 准入: 已交付前置: S-51 令牌基座、S-54 壳层、S-55/S-56 选夹与直聊；本片建立: 暖金 DESIGN.md、tokens 投影、会话优先壳层（已交付）。
 - [x] S-58 统一审计浏览器按域筛选（S-23 AUD-UI） — 主子系统: 不适用；主领域 Capability: 不适用（只改变入站 UI Adapter，不新增领域事实）；主要架构单元: 入站 UI Adapter；消费 Capability: `CAP-EXE-05`、`CAP-PWS-03`、`CAP-COL-07`、`CAP-MWK-05`、`CAP-GOV-03`、`CAP-RUN-07`、`CAP-OPS-01`、`CAP-OPS-02`；票据: [`features/042-audit-browser-filters/architecture.md`](../features/042-audit-browser-filters/architecture.md)；Ship: 2026-08-15（客户端按域筛选，`smoke:execution` Runtime 23 断言 / axe 2 态 0 serious/critical）；演示判据: owner 能按执行/协作/任务/项目/治理/运行时筛选已交付审计来源并跳回精确来源；约束: 工作区=项目隔离，verified-handle=不适用，sandbox=只读，凭据=强制脱敏，审批=不适用，独立复核=交付必需（轻量级纯 UI，hf-code-review 豁免记录于 progress），审计=不新增写事实；不复制 Clowder 品牌、源码或资产
   - 排期: 2026-08-15 作为 S-23 最终组合纵切自动交付。
   - 准入: 已交付前置: 各 source event Capability 与 `CAP-OPS-01/02`；本片建立: 统一审计按域筛选（已交付）。
@@ -195,14 +202,7 @@ S-9～S-12 的 `依赖: S-*` 是原历史文字，只说明当时切片记录；
 
 ## 当前在途
 
-- [ ] S-61 暖金会话优先驾驶舱壳层 — 主子系统: 不适用；主领域 Capability: 不适用（只改变设计令牌与入站 UI Adapter，不新增领域事实）；主要架构单元: DESIGN.md + 入站 UI Adapter；消费 Capability: 已交付 UI 呈现面；票据: [`features/051-warm-gold-cockpit/feature.md`](../features/051-warm-gold-cockpit/feature.md)；演示判据: owner 打开驾驶舱看到暖米 + 暖金三区（52px 图标轨 / 240px 会话侧栏 / 居中聊天），治理由图标轨按需打开并返回对话；约束: 不新增领域事实，不复制 Clowder 品牌或资产
-  - 排期: 2026-08-15 用户确认暖金方向与治理收轨（D-50）；P0 主切片。
-  - 准入: 已交付前置: S-51 令牌基座、S-54 壳层、S-55/S-56 选夹与直聊；本片建立: 暖金 DESIGN.md、tokens 投影、会话优先壳层（实现已落地，P0 收尾待目标环境）。
-
-- [ ] S-60 阶段 1 基本可用多 Agent 作业系统 — 主子系统: 不适用；主领域 Capability: 不适用（Application Workflow + 入站 UI Adapter + DirectoryPicker，不新增领域表）；主要架构单元: Application Workflow + 入站 UI Adapter；消费 Capability: `CAP-PWS-01`、`CAP-IDC-01`、`CAP-COL-01`；票据: [`features/050-phase-1-usable-cockpit/tickets.md`](../features/050-phase-1-usable-cockpit/tickets.md)；演示判据: owner 用系统文件夹选择器打开项目（无路径手输），在已验证 Provider 下立即拥有规划/实施/复核自带 Agent 并自动入组，驾驶舱为聊天优先且不展示使命/记忆/HelpTip；约束: 工作区=打开的目录即绑定根，verified-handle=打开时必需，sandbox=打开不授予执行，凭据=选择器错误脱敏且脚本化路径仅测试，审批=不适用，独立复核=交付必需（DirectoryPicker 与 Identity 写入须 hf-code-review），审计=沿用既有 project_created/workspace_bound/member 事件；不复制 pi、DeepSeek Harness 或 Clowder 品牌/源码/资产
-  - 排期: 2026-08-15 用户要求重排阶段并完成第一阶段。
-  - 准入: 已交付前置: `CAP-PWS-01` 打开文件夹、`CAP-IDC-01` Agent 模板、`CAP-COL-01` 群聊；本片建立: 原生选夹、自带 Agent ensure、阶段 1 表面卸载。
-  - 规模例外: A-359。
+无活跃在途切片。UCD 主路径不伪造 DTO 的缺口已收口；未交付规划切片见各主题簇。
 
 - [ ] S-59 图标优先安静驾驶舱 — **superseded（不 ship）**；交互方向由 S-60 / D-49 取代。历史票据: [`features/049-icon-first-cockpit/tickets.md`](../features/049-icon-first-cockpit/tickets.md)
 
@@ -327,9 +327,9 @@ S-9～S-12 的 `依赖: S-*` 是原历史文字，只说明当时切片记录；
   - 排期: 2026-08-12 用户指示追加到既有在途切片之后（A-242），同日又指示立即自动完成（A-244 覆盖排队语义）；注：S-51 片号与同日并行交付的 AUD-MWK 审计实现片双占（双 035 特性号同理），见 A-256。
   - 准入: 已交付前置: 既有在途切片完成后解锁（共享 `app/tokens.css`/组件面，避免并行写冲突）；本片建立: DESIGN.md、tokens.css 对齐、preview.html 与应用壳层/公共组件收敛（规划中；grill 收尾后进入 to-spec）。
 
-- [ ] S-60 阶段 1 基本可用多 Agent 作业系统 — 见「当前在途」。
+- [x] S-60 阶段 1 基本可用多 Agent 作业系统 — 见「已交付切片记录」。
 
-- [ ] S-61 暖金会话优先驾驶舱壳层 — 见「当前在途」。
+- [x] S-61 暖金会话优先驾驶舱壳层 — 见「已交付切片记录」。
 
 - [x] S-54 暖陶工作台驾驶舱（左对话 / 中群聊 / 右看板） — 主子系统: 不适用；主领域 Capability: 不适用（只改变设计令牌与入站 UI Adapter，不新增领域事实）；主要架构单元: 入站 UI Adapter；消费 Capability: 已交付的 `CAP-PWS-01`、`CAP-MWK-01`、`CAP-COL-01/02/03/04/05`、`CAP-EXE-01`、`CAP-GOV-02`、`CAP-KNW-01` 等 UI 呈现面；票据: [`features/038-warm-terracotta-cockpit/tickets.md`](../features/038-warm-terracotta-cockpit/tickets.md)；Ship: 2026-08-14，case 暖陶色板替换 Apple 蓝、`DESIGN.md` 重写并归档 Apple 原文、桌面栅格 `56/236/1fr/304`、三栏 chrome 对齐 case、preview 暖陶目录、`npm test` 2577 / build 绿、smoke:context 与 cockpit smoke 绿、smoke:threads 57 断言 / 39 axe；演示判据: owner 打开项目驾驶舱时看到与 `product/ui/cool-ai-design-md-case.html` 一致的暖陶四列——左 Thread 对话目录、中项目群聊、右使命看板/审批/记忆状态——亮暗主题、键盘与 axe 关键路径不回归；约束: 工作区=不适用，verified-handle=不适用，sandbox=不适用，凭据=不适用，审批=不适用，独立复核=交付必需（项目级 review 豁免按 AGENTS.md 记录于 progress），审计=不适用；不复制 Clowder 品牌、源码或资产
   - 排期: 2026-08-14 用户指示以 case 为布局与颜色约束立即调整 UI；同日指示自动完成并 commit/push（A-263）；037/S-53 AUD-GOV 暂停于 T-02。
