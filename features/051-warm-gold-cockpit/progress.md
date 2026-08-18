@@ -4,7 +4,7 @@
 - 当前阶段: implement（P0 壳层已实现并验证；收尾项：全量套件与冒烟）
 - 执行模式: auto
 - 已加载: hf-ui-design
-- 下一步: Proposal A/R 已落地；继续主路径未伪造项之外的可落地缺口。
+- 下一步: 围栏代码块已落地；继续主路径未伪造项之外的可落地缺口。
 
 ## 状态记录
 
@@ -45,6 +45,7 @@
 - 2026-08-18 按 UCD §9.1.4 落地空 Composer `↑` 打开输入历史；有草稿不拦截（A-382）。input-history 8/8。演示 auto-approved 2026-08-18。项目级 review 豁免（纯 UI）。
 - 2026-08-18 按 UCD §9.1.1 落地消息「复制」：悬停/焦点显现，写入纯文本，成功「已复制」。不引入 Markdown（A-383）。collaboration-chat 9/9。演示 auto-approved 2026-08-18。项目级 review 豁免（纯 UI）。
 - 2026-08-18 按 UCD §9.1.2 落地 Proposal 焦点内 `A`/`R`（A-384）。structured-decision 12/12。演示 auto-approved 2026-08-18。项目级 review 豁免（纯 UI）。
+- 2026-08-18 按 UCD §9.1.1 落地闭合围栏代码块与块内复制；无高亮、无其余 Markdown（A-385）。collaboration-chat 10/10。演示 auto-approved 2026-08-18。项目级 review 豁免（纯 UI）。
 
 ## 任务票
 

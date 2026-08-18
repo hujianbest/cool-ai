@@ -27,6 +27,7 @@ import {
   uploadThreadAttachment,
 } from "@/components/collaboration/attachment-upload";
 import { InputHistoryPanel } from "@/components/collaboration/input-history-panel";
+import { SpokenMessageContent } from "@/components/collaboration/spoken-message-content";
 import { StructuredMessageBlock } from "@/components/collaboration/structured-message-block";
 import { useTargetRequestGuard } from "@/components/collaboration/use-target-request-guard";
 import { useInputHistoryRecording } from "@/components/input-history-recording-store";
@@ -3662,9 +3663,7 @@ export function CollaborationPanel({
                     ) : null}
                     {entry.text ? (
                       spokenMessage ? (
-                        <div className="msg-content">
-                          <p>{entry.text}</p>
-                        </div>
+                        <SpokenMessageContent text={entry.text} />
                       ) : (
                         <p>{entry.text}</p>
                       )

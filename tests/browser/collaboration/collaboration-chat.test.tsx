@@ -630,4 +630,46 @@ describe("collaboration chat composer", () => {
       "复制 项目所有者 的消息：Plan the release",
     );
   });
+
+  it("renders closed fenced code in spoken messages and copies the code body", async () => {
+    const user = userEvent.setup();
+    const writeText = vi.fn().mockResolvedValue(undefined);
+    Object.defineProperty(navigator, "clipboard", {
+      configurable: true,
+      value: { writeText },
+    });
+    installFetch((url) =>
+      url.endsWith("/collaboration")
+        ? Response.json({
+            ...emptyRead,
+            projectMessagesPage: {
+              items: [
+                ownerMessage({
+                  authorAgentId: "agent-a",
+                  authorDisplayName: "Alpha",
+                  authorType: "agent",
+                  content: "See this:\n```ts\nconst x = 1;\n```\nThanks.",
+                  runId: null,
+                }),
+              ],
+              nextAfter: null,
+            },
+          })
+        : Response.json(members),
+    );
+    render(createElement(CollaborationPanel, {
+      projectId: "project-1",
+      surface: "chat",
+      threadId: TEST_THREAD_ID,
+    }));
+
+    expect(await screen.findByText("See this:")).toBeInTheDocument();
+    expect(screen.getByText("Thanks.")).toBeInTheDocument();
+    expect(document.querySelector(".msg-code code")).toHaveTextContent("const x = 1;");
+    expect(screen.getByText("ts")).toBeInTheDocument();
+
+    await user.click(screen.getByRole("button", { name: "复制代码：const x = 1;" }));
+    expect(writeText).toHaveBeenCalledWith("const x = 1;");
+    expect(screen.getByRole("button", { name: "已复制代码" })).toBeInTheDocument();
+  });
 });
