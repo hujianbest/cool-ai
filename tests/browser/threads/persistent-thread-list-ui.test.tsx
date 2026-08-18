@@ -1019,4 +1019,27 @@ describe("thread favorites UI", () => {
       await screen.findByRole("button", { name: "取消收藏 Alpha" }),
     ).toHaveAttribute("aria-pressed", "true");
   });
+
+  it("opens a more menu for tagging and recycle without a rename action", async () => {
+    const alpha = thread("thread-alpha", "Alpha", 1);
+    const server = stubFavoriteServer([alpha]);
+    vi.stubGlobal("fetch", server.fetchMock);
+    window.history.replaceState(null, "", `/projects/${project.id}?thread=${alpha.id}`);
+    const user = userEvent.setup();
+
+    render(<ThreadHarness />);
+    await screen.findByRole("button", { name: "Alpha" });
+    expect(screen.queryByRole("button", { name: "移入回收站 Alpha" })).toBeNull();
+    expect(screen.queryByRole("button", { name: "重命名" })).toBeNull();
+
+    await user.click(screen.getByRole("button", { name: "更多 Alpha" }));
+    expect(screen.getByRole("button", { name: "打标" })).toBeEnabled();
+    expect(screen.getByRole("button", { name: "移入回收站 Alpha" })).toBeEnabled();
+    expect(screen.queryByRole("button", { name: "重命名" })).toBeNull();
+
+    await user.click(screen.getByRole("button", { name: "打标" }));
+    expect(screen.getByLabelText("选择对话 Alpha")).toBeChecked();
+    expect(screen.getByText("已选 1 条对话")).toBeInTheDocument();
+    expect(screen.queryByRole("button", { name: "更多 Alpha" })).toBeNull();
+  });
 });

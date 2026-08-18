@@ -3942,12 +3942,20 @@ try {
     has: page.locator(`[data-thread-id="${secondThread}"]`),
   });
   await secondListItem.waitFor();
+  const moreButton = secondListItem.getByRole("button", { name: /更多/ });
+  await moreButton.waitFor();
+  const moreBox = await moreButton.boundingBox();
+  assert.ok(
+    moreBox && moreBox.height >= 44 && moreBox.width >= 44,
+    "more button must stay >= 44px",
+  );
+  await moreButton.click();
   const softDeleteButton = secondListItem.getByRole("button", { name: /移入回收站/ });
   await softDeleteButton.waitFor();
   const softDeleteBox = await softDeleteButton.boundingBox();
   assert.ok(
     softDeleteBox && softDeleteBox.height >= 44 && softDeleteBox.width >= 44,
-    "soft delete button must stay >= 44px",
+    "soft delete menu item must stay >= 44px",
   );
   await softDeleteButton.click();
   const softDeleteDialog = page.getByRole("dialog", { name: "移入回收站" });
@@ -3960,17 +3968,18 @@ try {
   );
   await page.keyboard.press("Escape");
   await softDeleteDialog.waitFor({ state: "detached" });
-  await softDeleteButton.focus();
+  await moreButton.focus();
   assert.equal(
-    await softDeleteButton.evaluate((node) => document.activeElement === node),
+    await moreButton.evaluate((node) => document.activeElement === node),
     true,
-    "soft delete opener must remain keyboard focusable after Escape",
+    "more opener must remain keyboard focusable after Escape",
   );
   const softDeleteResponse = page.waitForResponse((response) =>
     response.request().method() === "DELETE"
     && response.url().endsWith(`/api/projects/legacy-project/threads/${secondThread}`)
   );
-  await softDeleteButton.click();
+  await moreButton.click();
+  await secondListItem.getByRole("button", { name: /移入回收站/ }).click();
   await softDeleteDialog.waitFor();
   await softDeleteDialog.getByRole("button", { name: "确认移入" }).click();
   assert.equal((await softDeleteResponse).status(), 200);

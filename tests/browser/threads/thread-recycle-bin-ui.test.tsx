@@ -158,6 +158,7 @@ describe("thread recycle bin navigation", () => {
 
     render(<NavigationHarness onNavigate={onNavigate} />);
     await screen.findByRole("button", { name: "Current thread" });
+    await user.click(screen.getByRole("button", { name: "更多 Current thread" }));
     await user.click(screen.getByRole("button", { name: "移入回收站 Current thread" }));
     const confirm = await screen.findByRole("dialog", { name: "移入回收站" });
     expect(confirm).toHaveTextContent("可从回收站恢复");

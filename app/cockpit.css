@@ -1033,6 +1033,7 @@ ol {
 }
 
 .thread-list-item {
+  position: relative;
   display: flex;
   align-items: center;
   gap: var(--space-1);
@@ -1078,6 +1079,31 @@ ol {
 .thread-list-item:focus-within .thread-favorite-toggle,
 .thread-list-item .thread-favorite-toggle[aria-pressed="true"] {
   opacity: 1;
+}
+
+.thread-item-more {
+  position: relative;
+  flex-shrink: 0;
+}
+
+.thread-item-menu {
+  position: absolute;
+  z-index: 4;
+  inset-inline-end: 0;
+  top: calc(100% + var(--space-1));
+  display: grid;
+  min-width: 10rem;
+  padding: var(--space-1);
+  border: var(--border-width) solid var(--border-subtle);
+  border-radius: var(--rounded-sm);
+  background: var(--color-surface-pearl);
+  box-shadow: var(--shadow-panel);
+}
+
+.thread-item-menu-item {
+  min-height: var(--control-min);
+  padding-inline: var(--space-3);
+  text-align: start;
 }
 
 .thread-list-item .thread-list-entry[aria-current] {

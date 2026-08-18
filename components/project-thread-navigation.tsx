@@ -1,10 +1,10 @@
 "use client";
 
 import {
+  DotsThree,
   Faders,
   Plus,
   Tag,
-  Trash,
 } from "@phosphor-icons/react";
 import {
   useCallback,
@@ -616,6 +616,7 @@ export function ProjectThreadNavigation({
   const organizeButtonRef = useRef<HTMLButtonElement>(null);
   const batchConfirmDialogRef = useRef<HTMLElement>(null);
   const batchConfirmApplyRef = useRef<HTMLButtonElement>(null);
+  const [openMenuThreadId, setOpenMenuThreadId] = useState<string | null>(null);
   const [pendingDeleteThread, setPendingDeleteThread] = useState<ThreadListItem | null>(
     null,
   );
@@ -631,6 +632,28 @@ export function ProjectThreadNavigation({
   const purgeThreadDialogRef = useRef<HTMLElement>(null);
   const purgeThreadCancelRef = useRef<HTMLButtonElement>(null);
   const targetGuard = useTargetRequestGuard(`${projectId}||`);
+
+  useEffect(() => {
+    if (!openMenuThreadId) return;
+    function onKeyDown(event: globalThis.KeyboardEvent) {
+      if (event.key !== "Escape") return;
+      event.stopPropagation();
+      setOpenMenuThreadId(null);
+    }
+    function onPointerDown(event: MouseEvent) {
+      const target = event.target;
+      if (target instanceof Element && target.closest(".thread-item-more")) {
+        return;
+      }
+      setOpenMenuThreadId(null);
+    }
+    document.addEventListener("keydown", onKeyDown);
+    document.addEventListener("mousedown", onPointerDown);
+    return () => {
+      document.removeEventListener("keydown", onKeyDown);
+      document.removeEventListener("mousedown", onPointerDown);
+    };
+  }, [openMenuThreadId]);
 
   const closeDialog = useCallback(() => {
     if (isSubmitting) return;
@@ -871,6 +894,7 @@ export function ProjectThreadNavigation({
     setCreateError(null);
     setIsSubmitting(false);
     setFocusThreadId(null);
+    setOpenMenuThreadId(null);
     setFavoriteError(null);
     setPendingFavoriteIds(new Set());
     setSearchText("");
@@ -2475,15 +2499,51 @@ export function ProjectThreadNavigation({
                     ) : null}
                   </div>
                   {!organizeMode ? (
-                    <IconButton
-                      icon={<Trash size={20} weight="regular" />}
-                      label={`移入回收站 ${thread.title}`}
-                      onClick={() => {
-                        setDeleteThreadError(null);
-                        setPendingDeleteThread(thread);
-                      }}
-                      title={`移入回收站 ${thread.title}`}
-                    />
+                    <div className="thread-item-more">
+                      <IconButton
+                        aria-expanded={openMenuThreadId === thread.id}
+                        aria-haspopup="true"
+                        icon={<DotsThree size={20} weight="bold" />}
+                        label={`更多 ${thread.title}`}
+                        onClick={() =>
+                          setOpenMenuThreadId((current) =>
+                            current === thread.id ? null : thread.id,
+                          )
+                        }
+                        title={`更多 ${thread.title}`}
+                      />
+                      {openMenuThreadId === thread.id ? (
+                        <div
+                          aria-label={`${thread.title} 操作`}
+                          className="thread-item-menu"
+                          role="group"
+                        >
+                          <button
+                            className="thread-item-menu-item"
+                            onClick={() => {
+                              setSelectedThreadIds(new Set([thread.id]));
+                              setOrganizeMode(true);
+                              setOpenMenuThreadId(null);
+                            }}
+                            type="button"
+                          >
+                            打标
+                          </button>
+                          <button
+                            aria-label={`移入回收站 ${thread.title}`}
+                            className="thread-item-menu-item"
+                            onClick={() => {
+                              setDeleteThreadError(null);
+                              setPendingDeleteThread(thread);
+                              setOpenMenuThreadId(null);
+                            }}
+                            type="button"
+                          >
+                            移入回收站
+                          </button>
+                        </div>
+                      ) : null}
+                    </div>
                   ) : null}
                   <button
                     aria-label={
