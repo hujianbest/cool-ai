@@ -193,6 +193,40 @@ describe("Proposal and Checklist fact-only UI public surface", () => {
     expect(screen.getByRole("button", { name: "拒绝 Proposal" })).toHaveTextContent("驳回");
   });
 
+  it("decides a focused Proposal with A to accept and R to reject", async () => {
+    const acceptId = "aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa";
+    vi.spyOn(crypto, "randomUUID").mockReturnValue(acceptId);
+    const acceptFetch = vi.fn((_input: RequestInfo | URL, init?: RequestInit) =>
+      Promise.resolve(Response.json(completed(acceptId))),
+    );
+    vi.stubGlobal("fetch", acceptFetch);
+    const user = userEvent.setup();
+    const first = render(
+      <StructuredMessageBlock block={proposal()} targetKey="project-1|thread-1|run-1" />,
+    );
+    screen.getByRole("region", { name: "Proposal" }).focus();
+    await user.keyboard("a");
+    expect(JSON.parse(String(acceptFetch.mock.calls[0]?.[1]?.body ?? ""))).toMatchObject({
+      action: "accept",
+    });
+    first.unmount();
+
+    const rejectId = "bbbbbbbb-bbbb-4bbb-8bbb-bbbbbbbbbbbb";
+    vi.spyOn(crypto, "randomUUID").mockReturnValue(rejectId);
+    const rejectFetch = vi.fn((_input: RequestInfo | URL, init?: RequestInit) =>
+      Promise.resolve(Response.json(completed(rejectId, "reject"))),
+    );
+    vi.stubGlobal("fetch", rejectFetch);
+    render(
+      <StructuredMessageBlock block={proposal()} targetKey="project-1|thread-1|run-1" />,
+    );
+    screen.getByRole("region", { name: "Proposal" }).focus();
+    await user.keyboard("r");
+    expect(JSON.parse(String(rejectFetch.mock.calls[0]?.[1]?.body ?? ""))).toMatchObject({
+      action: "reject",
+    });
+  });
+
   it("shows success and moves focus only after a strict completed Receipt", async () => {
     const operationId = "11111111-1111-4111-8111-111111111111";
     vi.spyOn(crypto, "randomUUID").mockReturnValue(operationId);

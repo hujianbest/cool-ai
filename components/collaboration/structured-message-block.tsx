@@ -1,7 +1,7 @@
 "use client";
 
 import { GitCommit } from "@phosphor-icons/react";
-import { useEffect, useRef, useState } from "react";
+import { useEffect, useRef, useState, type KeyboardEvent } from "react";
 
 import { useTargetRequestGuard } from "@/components/collaboration/use-target-request-guard";
 import type {
@@ -498,6 +498,27 @@ export function StructuredMessageBlock({
     ? typeLabel
     : `${typeLabel}：${displayBlock.title}`;
 
+  function handleProposalKeyDown(event: KeyboardEvent<HTMLElement>) {
+    if (displayBlock.kind !== "proposal") return;
+    if (event.ctrlKey || event.metaKey || event.altKey) return;
+    if (event.nativeEvent.isComposing) return;
+    const target = event.target;
+    if (
+      target instanceof HTMLElement
+      && (target.tagName === "INPUT"
+        || target.tagName === "TEXTAREA"
+        || target.tagName === "SELECT"
+        || target.isContentEditable)
+    ) {
+      return;
+    }
+    const key = event.key.toLowerCase();
+    if (key !== "a" && key !== "r") return;
+    if (disabled) return;
+    event.preventDefault();
+    void decide(key === "a" ? "accept" : "reject");
+  }
+
   return (
     <section
       aria-busy={pending || sourcePending}
@@ -507,6 +528,10 @@ export function StructuredMessageBlock({
           ? "structured-block block-card"
           : "structured-block"
       }
+      onKeyDown={
+        displayBlock.kind === "proposal" ? handleProposalKeyDown : undefined
+      }
+      tabIndex={displayBlock.kind === "proposal" ? 0 : undefined}
     >
       {displayBlock.kind === "proposal" ? (
         <div className="block-card-header">

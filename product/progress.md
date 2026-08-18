@@ -4,8 +4,8 @@
 - 当前阶段: ready
 - 执行模式: auto
 - 已加载扩展: 无
-- 当前主切片: 051/S-61 消息纯文本复制
-- 下一步: 继续 UCD 主路径可落地缺口（审批卡 A/R、不伪造 Markdown/迷你头像/Thinking）。演示 auto-approved 须呈上驾驶舱与 UCD 原型对照。
+- 当前主切片: 051/S-61 Proposal A/R 快捷键
+- 下一步: 继续 UCD 主路径可落地缺口（不伪造 Markdown/迷你头像/Thinking）。演示 auto-approved 须呈上驾驶舱与 UCD 原型对照。
 
 ## 当前快照（2026-08-15）
 
@@ -78,3 +78,4 @@
 - 2026-08-18 Composer 占位对齐 UCD：1:1「与助手直接对话」；项目「@ 提及 Agent 发起协作」。Enter 仍走既有发送键，不写进占位。collaboration-chat + placeholder 契约 9/9。演示 auto-approved 2026-08-18。
 - 2026-08-18 按 UCD §9.1.4 落地空 Composer `↑` 打开输入历史；有草稿不拦截。可见「历史」按钮保留（A-373/A-382）。input-history 8/8。演示 auto-approved 2026-08-18。
 - 2026-08-18 按 UCD §9.1.1 落地消息「复制」：Owner/Agent 气泡悬停复制纯文本，成功显示「已复制」。不引入 Markdown（A-383）。collaboration-chat 9/9。演示 auto-approved 2026-08-18。
+- 2026-08-18 按 UCD §9.1.2 落地 Proposal 焦点内 `A` 批准 / `R` 驳回（A-384）。structured-decision 12/12。演示 auto-approved 2026-08-18。

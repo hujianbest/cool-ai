@@ -2215,6 +2215,11 @@ ol {
   border-radius: var(--rounded-sm);
 }
 
+.structured-block.block-card:focus-visible {
+  outline: none;
+  box-shadow: var(--focus-ring);
+}
+
 .block-card-header {
   display: flex;
   align-items: center;
