@@ -236,6 +236,10 @@ describe("collaboration chat composer", () => {
       threadId: TEST_THREAD_ID,
     }));
     const composer = await screen.findByLabelText("发送给项目对话");
+    expect(composer).toHaveAttribute(
+      "placeholder",
+      "输入消息，@ 提及 Agent 发起协作…",
+    );
     const send = screen.getByRole("button", { name: "发送并开始首次运行" });
 
     fireEvent.change(composer, { target: { value: "   " } });
@@ -262,6 +266,10 @@ describe("collaboration chat composer", () => {
     }));
 
     expect(await screen.findByLabelText("发送给 Alpha")).toBeInTheDocument();
+    expect(screen.getByLabelText("发送给 Alpha")).toHaveAttribute(
+      "placeholder",
+      "输入消息，与助手直接对话…",
+    );
     expect(screen.getByText("欢迎使用 Cool AI")).toBeInTheDocument();
     expect(
       screen.getByText("点击右上角「打开文件夹」进入多 Agent 项目。"),

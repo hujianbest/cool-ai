@@ -3925,8 +3925,8 @@ export function CollaborationPanel({
                   !threadId
                     ? "新建对话后即可输入…"
                     : directAgentName
-                      ? "输入消息，按 Enter 发送…"
-                      : "输入消息，按 Enter 发送，输入 @ 提及 Agent…"
+                      ? "输入消息，与助手直接对话…"
+                      : "输入消息，@ 提及 Agent 发起协作…"
                 }
                 ref={composerRef}
                 rows={1}
