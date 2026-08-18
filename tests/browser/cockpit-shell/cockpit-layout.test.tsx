@@ -416,7 +416,7 @@ describe("desktop collaboration cockpit", () => {
     const cockpit = await screen.findByTestId("collaboration-cockpit");
     const flow = within(cockpit).getByRole("region", { name: "任务事件流" });
     expect(within(cockpit).getByText("未选择项目 · 个人对话")).toBeInTheDocument();
-    expect(await within(flow).findByText("欢迎来到 Cool AI")).toBeInTheDocument();
+    expect(await within(flow).findByText("欢迎使用 Cool AI")).toBeInTheDocument();
     expect(within(flow).getByText("先配置一个 Agent，即可开始个人对话。")).toBeInTheDocument();
     expect(within(flow).getByRole("link", { name: "配置 Agent" })).toBeInTheDocument();
     expect(within(flow).getByRole("link", { name: "首次使用引导" })).toHaveAttribute(

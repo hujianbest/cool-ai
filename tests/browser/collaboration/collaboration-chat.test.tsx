@@ -257,10 +257,18 @@ describe("collaboration chat composer", () => {
     render(createElement(CollaborationPanel, {
       directAgentName: "Alpha",
       projectId: "project-1",
+      surface: "chat",
       threadId: TEST_THREAD_ID,
     }));
 
     expect(await screen.findByLabelText("发送给 Alpha")).toBeInTheDocument();
+    expect(screen.getByText("欢迎使用 Cool AI")).toBeInTheDocument();
+    expect(
+      screen.getByText("点击右上角「打开文件夹」进入多 Agent 项目。"),
+    ).toBeInTheDocument();
+    expect(
+      screen.getByText("或直接在下方输入框开始 1:1 直聊。"),
+    ).toBeInTheDocument();
     expect(
       screen.queryByRole("combobox", { name: "@成员" }),
     ).not.toBeInTheDocument();

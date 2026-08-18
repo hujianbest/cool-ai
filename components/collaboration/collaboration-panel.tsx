@@ -3723,12 +3723,15 @@ export function CollaborationPanel({
           ) : showChat ? (
             surface === "chat" ? (
               <div className="chat-welcome">
-                <p className="empty-guide-title">欢迎来到 Cool AI</p>
-                <p>
-                  {directAgentName
-                    ? "直接在下方输入，开始 1:1 对话。"
-                    : "输入消息开始对话；用 @ 召唤成员加入。"}
-                </p>
+                <p className="empty-guide-title">欢迎使用 Cool AI</p>
+                {directAgentName ? (
+                  <>
+                    <p>点击右上角「打开文件夹」进入多 Agent 项目。</p>
+                    <p>或直接在下方输入框开始 1:1 直聊。</p>
+                  </>
+                ) : (
+                  <p>输入消息开始对话；用 @ 召唤成员加入。</p>
+                )}
               </div>
             ) : (
               <p className="state-message">尚无协作消息。请发送第一条消息。</p>

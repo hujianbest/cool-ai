@@ -4,8 +4,8 @@
 - 当前阶段: ready
 - 执行模式: auto
 - 已加载扩展: 无
-- 当前主切片: 051/S-61 按 UCD §9.1.5 收口会话项更多菜单
-- 下一步: 继续按 UCD 收口主路径（欢迎卡、Composer 附件等）；待 DTO 项不伪造。演示 auto-approved 须呈上驾驶舱与 UCD 原型对照。
+- 当前主切片: 051/S-61 欢迎卡已按 UCD §9.1.1 收口
+- 下一步: Composer 占位文案对齐 UCD §9.1.1 / §9.1.4；待 DTO 项不伪造。演示 auto-approved 须呈上驾驶舱与 UCD 原型对照。
 
 ## 当前快照（2026-08-15）
 
@@ -74,3 +74,4 @@
 - 2026-08-17 用户指示按 UCD 开发完后进入长任务。治理视图收口全宽顶栏（`← 返回对话`、无「治理视图」eyebrow、标题 `任务看板 · 项目` 等）、泳道计数与 pearl 任务卡；内层重复 h2 改为 `sr-only`。文案对齐：新建任务 / 沉淀新记忆 / 批准执行 / 驳回。localhost:3002 对照 `preview-ucd.html` 核对任务/记忆/审批空态。长任务已关 050 HelpTip 与 GET `/api/home` 的 Identity ensure 写。未伪造 TTL/Diff/Thinking/迷你头像（A-371～A-375）。演示 auto-approved 2026-08-17。
 - 2026-08-17 拉取 `ffe659b` 后继续长任务：引导「查看已受理使命」打开任务治理视图（A-378）；`GET /api/home` 只读，`POST /api/home` 幂等确保个人对话（A-377）。跨 owner 分事务按 A-376 保持三步编排。聚焦 home.api / direct-project / home-direct-chat 17、onboarding T-1 绿。演示 auto-approved 2026-08-17。
 - 2026-08-18 按 UCD §9.1.5 落地会话项「更多」菜单（打标进批量整理、移入回收站；不展示重命名 A-379）。聚焦线程列表/回收站/标签 46/46，`tsc` 绿。演示 auto-approved 2026-08-18。
+- 2026-08-18 按 UCD §9.1.1 收口欢迎卡：「欢迎使用 Cool AI」+ 打开文件夹/1:1 直聊。collaboration-chat / cockpit-layout 21/21。演示 auto-approved 2026-08-18。

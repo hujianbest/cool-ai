@@ -579,7 +579,7 @@ export function TaskPanel({
             </div>
           ) : homeState?.kind === "needs_agent" ? (
             <div className="chat-welcome">
-              <p className="empty-guide-title">欢迎来到 Cool AI</p>
+              <p className="empty-guide-title">欢迎使用 Cool AI</p>
               <p>先配置一个 Agent，即可开始个人对话。</p>
               <Link
                 className="button-primary"
