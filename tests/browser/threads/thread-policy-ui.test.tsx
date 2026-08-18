@@ -123,12 +123,14 @@ function DirectHarness({
   const backgroundRef = useRef<HTMLElement>(null);
   return (
     <main data-testid="policy-background" ref={backgroundRef}>
-      <ThreadPolicyPanel
-        canEdit={canEdit}
-        modalBackgroundRef={backgroundRef}
-        projectId={projectId}
-        threadId={threadId}
-      />
+      <div data-testid="context-surface">
+        <ThreadPolicyPanel
+          canEdit={canEdit}
+          modalBackgroundRef={backgroundRef}
+          projectId={projectId}
+          threadId={threadId}
+        />
+      </div>
     </main>
   );
 }
@@ -251,7 +253,7 @@ describe("selected thread member policy", () => {
       }),
     );
 
-    render(<Harness />);
+    render(<DirectHarness />);
 
     expect(
       await screen.findByRole("heading", { name: "对话成员策略" }),

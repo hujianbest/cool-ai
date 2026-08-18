@@ -1,10 +1,18 @@
 "use client";
 
 import {
+  ChatCircle,
+  Check,
   DotsThree,
   Faders,
+  MagnifyingGlass,
   Plus,
+  Robot,
+  Sparkle,
   Tag,
+  Trash,
+  Warning,
+  X,
 } from "@phosphor-icons/react";
 import {
   useCallback,
@@ -56,6 +64,21 @@ type UrlThreadSelection =
   | { kind: "none"; threadId: null }
   | { kind: "invalid"; threadId: null }
   | { kind: "selected"; threadId: string };
+
+const THREAD_PRESETS = [
+  {
+    icon: Sparkle,
+    title: "需求与架构规划",
+  },
+  {
+    icon: ChatCircle,
+    title: "代码与特性开发",
+  },
+  {
+    icon: Tag,
+    title: "质量审计与复核",
+  },
+] as const;
 
 type ProjectThreadNavigationProps = {
   backgroundRef: RefObject<HTMLElement | null>;
@@ -1338,6 +1361,16 @@ export function ProjectThreadNavigation({
     setDialogOpen(true);
   }
 
+  useEffect(() => {
+    function onOpenCreateThread() {
+      if (anyDialogOpen) return;
+      openDialog();
+    }
+    window.addEventListener("cool-ai:open-create-thread", onOpenCreateThread);
+    return () =>
+      window.removeEventListener("cool-ai:open-create-thread", onOpenCreateThread);
+  }, [anyDialogOpen]);
+
   function chooseThread(threadId: string) {
     setCreateNotice(null);
     setSelectionError(null);
@@ -1978,6 +2011,16 @@ export function ProjectThreadNavigation({
             对话
           </h2>
           <div className="section-heading-actions">
+            {view === "all" && listState !== "empty" ? (
+              <IconButton
+                aria-pressed={organizeMode}
+                icon={<Faders size={20} weight="regular" />}
+                label="整理对话"
+                onClick={() => setOrganizeMode(true)}
+                ref={organizeButtonRef}
+                title="整理对话"
+              />
+            ) : null}
             {view !== "recycle_bin" ? (
               <IconButton
                 icon={<Plus size={20} weight="regular" />}
@@ -1989,25 +2032,18 @@ export function ProjectThreadNavigation({
             ) : null}
           </div>
         </div>
-        <div className={view === "tags" ? "thread-sidebar-utilities" : "sr-only"}>
-            <IconButton
-              icon={<Tag size={20} weight="regular" />}
-              label="管理标签"
+        {view !== "tags" ? (
+          <div className="sr-only">
+            <button
+              aria-label="管理标签"
               onClick={openManageDialog}
               ref={manageButtonRef}
-              title="管理标签"
-            />
-            {view === "all" && listState !== "empty" ? (
-              <IconButton
-                aria-pressed={organizeMode}
-                icon={<Faders size={20} weight="regular" />}
-                label="整理对话"
-                onClick={() => setOrganizeMode(true)}
-                ref={organizeButtonRef}
-                title="整理对话"
-              />
-            ) : null}
-        </div>
+              type="button"
+            >
+              管理标签
+            </button>
+          </div>
+        ) : null}
         <div
           aria-label={searchRevealed || searchActive ? "会话搜索" : undefined}
           aria-modal={searchRevealed || searchActive ? true : undefined}
@@ -2177,6 +2213,23 @@ export function ProjectThreadNavigation({
         )}
         {searchActive || view !== "tags" ? null : (
         <div className="thread-tag-filter-bar">
+          <div className="thread-tag-filter-header">
+            <span className="thread-tag-filter-title">
+              <Tag size={14} weight="bold" />
+              <span>标签筛选</span>
+            </span>
+            <button
+              aria-label="管理标签"
+              className="thread-tag-manage-trigger"
+              onClick={openManageDialog}
+              ref={manageButtonRef}
+              title="管理标签"
+              type="button"
+            >
+              <Tag size={13} weight="bold" />
+              <span>管理标签</span>
+            </button>
+          </div>
           {tagsState === "loading" ? (
             <p className="muted" role="status">
               正在加载标签…
@@ -2225,6 +2278,18 @@ export function ProjectThreadNavigation({
                   {tag.name}
                 </button>
               ))}
+            </div>
+          ) : null}
+          {tagsState === "ready" && tags.length === 0 && !organizeMode ? (
+            <div className="thread-tag-filter-empty">
+              <span className="thread-tag-empty-hint">暂无标签</span>
+              <button
+                className="thread-tag-empty-btn"
+                onClick={openManageDialog}
+                type="button"
+              >
+                + 添加标签
+              </button>
             </div>
           ) : null}
         </div>
@@ -2414,10 +2479,10 @@ export function ProjectThreadNavigation({
             </div>
           ) : listState === "empty" || threads.length === 0 ? (
             view === "favorites" ? (
-              <div className="empty-guide state-message">
-                <p>暂无收藏对话。在“全部”视图中收藏对话后会显示在这里。</p>
+              <div className="thread-empty-state">
+                <p className="thread-empty-desc">暂无收藏对话。在“全部”视图中收藏对话后会显示在这里。</p>
                 <button
-                  className="button-secondary"
+                  className="thread-empty-action"
                   onClick={() => selectView("all")}
                   type="button"
                 >
@@ -2425,10 +2490,10 @@ export function ProjectThreadNavigation({
                 </button>
               </div>
             ) : activeTagId ? (
-              <div className="empty-guide state-message">
-                <p>{`标签“${tags.find((tag) => tag.id === activeTagId)?.name ?? ""}”下暂无对话。`}</p>
+              <div className="thread-empty-state">
+                <p className="thread-empty-desc">{`标签“${tags.find((tag) => tag.id === activeTagId)?.name ?? ""}”下暂无对话。`}</p>
                 <button
-                  className="button-secondary"
+                  className="thread-empty-action"
                   onClick={() => setActiveTagId(null)}
                   type="button"
                 >
@@ -2436,14 +2501,22 @@ export function ProjectThreadNavigation({
                 </button>
               </div>
             ) : (
-              <div className="empty-guide state-message">
-                <p>暂无对话。创建对话后开始协作。</p>
+              <div className="thread-empty-state">
+                <div aria-hidden="true" className="thread-empty-icon-wrap">
+                  <ChatCircle size={22} weight="duotone" />
+                </div>
+                <p className="thread-empty-desc">暂无对话。创建对话后开始协作。</p>
                 <button
-                  className="button-primary"
+                  aria-label="创建对话"
+                  className="thread-empty-action"
                   onClick={openDialog}
                   type="button"
                 >
-                  创建对话
+                  <Plus aria-hidden="true" size={13} weight="bold" />
+                  <span>创建对话</span>
+                  <kbd aria-hidden="true" className="thread-empty-kbd">
+                    ⌘N
+                  </kbd>
                 </button>
               </div>
             )
@@ -2593,365 +2666,562 @@ export function ProjectThreadNavigation({
       </button>
       {dialogOpen && typeof document !== "undefined"
         ? createPortal(
-            <section
-              aria-labelledby="create-thread-title"
-              aria-modal="true"
-              className="modal-surface thread-create-dialog"
-              ref={dialogRef}
-              role="dialog"
-            >
-              <div className="section-heading-row">
-                <h2 id="create-thread-title">创建对话</h2>
-                <button
-                  aria-label="关闭创建对话"
-                  className="button-ghost"
-                  disabled={isSubmitting}
-                  onKeyDown={(event) => {
-                    if (event.key === "Tab" && event.shiftKey) {
-                      event.preventDefault();
-                      dialogRef.current
-                        ?.querySelector<HTMLButtonElement>(
-                          '[data-thread-dialog-last="true"]',
-                        )
-                        ?.focus();
-                    }
-                  }}
-                  onClick={closeDialog}
-                  type="button"
-                >
-                  关闭
-                </button>
-              </div>
-              <form className="stack" onSubmit={handleCreate}>
-                <div className="form-field">
-                  <label htmlFor="thread-title">对话标题</label>
-                  <input
-                    aria-describedby={
-                      titleError ? "thread-title-error" : undefined
-                    }
-                    aria-invalid={titleError ? "true" : undefined}
-                    aria-required="true"
-                    disabled={isSubmitting}
-                    id="thread-title"
-                    maxLength={160}
-                    onChange={(event) => setTitle(event.target.value)}
-                    placeholder="例如：发布计划评审"
-                    ref={titleInputRef}
-                    value={title}
-                  />
-                  {titleError ? (
-                    <p className="error-text" id="thread-title-error" role="alert">
-                      {titleError}
-                    </p>
-                  ) : null}
-                </div>
-                <fieldset
-                  aria-busy={membersLoading ? "true" : undefined}
-                  className="stack"
-                  disabled={isSubmitting || membersLoading}
-                >
-                  <legend>{directMode ? "对话 Agent" : "当前策略成员"}</legend>
-                  {membersLoading ? (
-                    <p className="muted" role="status">
-                      正在加载当前项目成员…
-                    </p>
-                  ) : membersError ? (
-                    <div className="stack">
-                      <p className="error-text" role="alert">
-                        {membersError}
-                      </p>
-                      <button
-                        className="button-secondary"
-                        onClick={() =>
-                          setMembersReloadKey((current) => current + 1)
-                        }
-                        type="button"
-                      >
-                        重试加载成员
-                      </button>
+            <div className="action-dialog-root" data-action-dialog-root="">
+              <div
+                aria-hidden="true"
+                className="action-dialog-scrim"
+                onClick={closeDialog}
+              />
+              <section
+                aria-labelledby="create-thread-title"
+                aria-modal="true"
+                className="action-dialog thread-create-dialog stack"
+                ref={dialogRef}
+                role="dialog"
+              >
+                <div className="action-dialog-header thread-create-header">
+                  <div className="thread-create-header-title">
+                    <div className="thread-create-icon-badge" aria-hidden="true">
+                      <Sparkle size={18} weight="fill" />
                     </div>
-                  ) : members.length === 0 ? (
-                    <p className="muted">当前项目没有可选成员。</p>
-                  ) : directMode ? (
-                    <p>{members.at(0)?.name ?? "个人对话 Agent"}</p>
-                  ) : (
-                    members.map((member) => (
-                      <label className="check-row" key={member.agentId}>
-                        <input
-                          checked={selectedMemberIds.includes(member.agentId)}
-                          onChange={(event) =>
-                            setSelectedMemberIds((current) =>
-                              event.target.checked
-                                ? [...current, member.agentId]
-                                : current.filter((id) => id !== member.agentId),
-                            )
-                          }
-                          type="checkbox"
-                          value={member.agentId}
-                        />
-                        <span>{member.name}</span>
-                      </label>
-                    ))
-                  )}
-                  {memberError ? (
-                    <p className="error-text" id="thread-members-error" role="alert">
-                      {memberError}
-                    </p>
-                  ) : null}
-                </fieldset>
-                {createError ? (
-                  <p className="error-text" role="alert">
-                    {createError}
-                  </p>
-                ) : null}
-                {submitReason ? (
-                  <p className="muted" id="thread-submit-reason">
-                    {submitReason}
-                  </p>
-                ) : null}
-                <div className="form-row">
+                    <div>
+                      <h2 id="create-thread-title">创建对话</h2>
+                      <p className="thread-create-subtitle">
+                        配置标题与协作 Agent，开启新一轮协同探索
+                      </p>
+                    </div>
+                  </div>
                   <button
-                    className="button-primary"
-                    aria-describedby={
-                      submitReason ? "thread-submit-reason" : undefined
-                    }
-                    disabled={Boolean(submitReason)}
-                    type="submit"
-                  >
-                    {isSubmitting ? "正在创建对话…" : "创建对话"}
-                  </button>
-                  <button
-                    className="button-secondary"
-                    data-thread-dialog-last="true"
+                    aria-label="关闭创建对话"
+                    className="button-ghost icon-button thread-dialog-close"
                     disabled={isSubmitting}
+                    onClick={closeDialog}
                     onKeyDown={(event) => {
-                      if (event.key === "Tab" && !event.shiftKey) {
+                      if (event.key === "Tab" && event.shiftKey) {
                         event.preventDefault();
                         dialogRef.current
                           ?.querySelector<HTMLButtonElement>(
-                            '[aria-label="关闭创建对话"]',
+                            '[data-thread-dialog-last="true"]',
                           )
                           ?.focus();
                       }
                     }}
-                    onClick={closeDialog}
                     type="button"
                   >
-                    取消
+                    <X size={18} weight="bold" />
                   </button>
                 </div>
-              </form>
-            </section>,
+                <form className="stack thread-create-form" onSubmit={handleCreate}>
+                  <div className="form-field thread-title-field">
+                    <div className="thread-title-label-row">
+                      <label htmlFor="thread-title">对话标题</label>
+                      <span className="thread-title-counter">{title.length}/160</span>
+                    </div>
+                    <input
+                      aria-describedby={
+                        titleError ? "thread-title-error" : undefined
+                      }
+                      aria-invalid={titleError ? "true" : undefined}
+                      aria-required="true"
+                      className="thread-title-input"
+                      disabled={isSubmitting}
+                      id="thread-title"
+                      maxLength={160}
+                      onChange={(event) => {
+                        setTitle(event.target.value);
+                        if (titleError) setTitleError(null);
+                      }}
+                      placeholder="例如：发布计划评审、重构任务设计…"
+                      ref={titleInputRef}
+                      value={title}
+                    />
+                    {titleError ? (
+                      <p className="error-text" id="thread-title-error" role="alert">
+                        {titleError}
+                      </p>
+                    ) : null}
+                  </div>
+
+                  <div className="thread-presets-row">
+                    <span className="thread-presets-label">快速预设：</span>
+                    <div className="thread-presets-list">
+                      {THREAD_PRESETS.map((preset) => {
+                        const PresetIcon = preset.icon;
+                        return (
+                          <button
+                            className="thread-preset-chip"
+                            disabled={isSubmitting}
+                            key={preset.title}
+                            onClick={() => {
+                              setTitle(preset.title);
+                              if (titleError) setTitleError(null);
+                              titleInputRef.current?.focus();
+                            }}
+                            type="button"
+                          >
+                            <PresetIcon aria-hidden="true" size={12} weight="bold" />
+                            <span>{preset.title}</span>
+                          </button>
+                        );
+                      })}
+                    </div>
+                  </div>
+
+                  <fieldset
+                    aria-busy={membersLoading ? "true" : undefined}
+                    className="thread-members-fieldset"
+                    disabled={isSubmitting || membersLoading}
+                  >
+                    <legend className="thread-members-legend">
+                      {directMode ? "对话 Agent" : "协作成员策略"}
+                    </legend>
+                    {membersLoading ? (
+                      <div className="thread-members-loading">
+                        <p className="muted" role="status">
+                          正在加载当前项目成员…
+                        </p>
+                      </div>
+                    ) : membersError ? (
+                      <div className="stack">
+                        <p className="error-text" role="alert">
+                          {membersError}
+                        </p>
+                        <button
+                          className="button-secondary"
+                          onClick={() =>
+                            setMembersReloadKey((current) => current + 1)
+                          }
+                          type="button"
+                        >
+                          重试加载成员
+                        </button>
+                      </div>
+                    ) : members.length === 0 ? (
+                      <p className="muted">当前项目没有可选成员。</p>
+                    ) : directMode ? (
+                      <div className="agent-direct-card">
+                        <div className="agent-select-avatar" aria-hidden="true">
+                          <Robot size={20} weight="duotone" />
+                        </div>
+                        <div className="agent-select-info">
+                          <span className="agent-select-name">
+                            {members.at(0)?.name ?? "个人对话 Agent"}
+                          </span>
+                          <span className="agent-select-role">
+                            专属一对一对话模式
+                          </span>
+                        </div>
+                      </div>
+                    ) : (
+                      <div className="agent-selection-grid">
+                        {members.map((member) => {
+                          const isSelected = selectedMemberIds.includes(
+                            member.agentId,
+                          );
+                          return (
+                            <label
+                              className={`agent-select-card ${isSelected ? "selected" : ""}`}
+                              key={member.agentId}
+                            >
+                              <input
+                                checked={isSelected}
+                                className="agent-select-input"
+                                disabled={isSubmitting}
+                                id={`member-${member.agentId}`}
+                                onChange={(event) => {
+                                  setSelectedMemberIds((current) =>
+                                    event.target.checked
+                                      ? [...current, member.agentId]
+                                      : current.filter(
+                                          (id) => id !== member.agentId,
+                                        ),
+                                  );
+                                  if (memberError) setMemberError(null);
+                                }}
+                                type="checkbox"
+                                value={member.agentId}
+                              />
+                              <span
+                                className="agent-select-avatar"
+                                aria-hidden="true"
+                              >
+                                <Robot size={18} weight="duotone" />
+                              </span>
+                              <span className="agent-select-name">
+                                {member.name}
+                              </span>
+                              <span
+                                className="agent-select-check"
+                                aria-hidden="true"
+                              >
+                                {isSelected ? (
+                                  <Check size={13} weight="bold" />
+                                ) : (
+                                  <span className="agent-select-check-ring" />
+                                )}
+                              </span>
+                            </label>
+                          );
+                        })}
+                      </div>
+                    )}
+                    {memberError ? (
+                      <p
+                        className="error-text"
+                        id="thread-members-error"
+                        role="alert"
+                      >
+                        {memberError}
+                      </p>
+                    ) : null}
+                  </fieldset>
+
+                  {createError ? (
+                    <p className="error-text" role="alert">
+                      {createError}
+                    </p>
+                  ) : null}
+
+                  <div className="thread-create-footer">
+                    <div className="thread-create-footer-status">
+                      {submitReason ? (
+                        <p className="muted" id="thread-submit-reason">
+                          {submitReason}
+                        </p>
+                      ) : !directMode && members.length > 0 ? (
+                        <span className="thread-member-count-hint">
+                          已选 {selectedMemberIds.length}/{members.length} 名成员
+                          {selectedMemberIds.length < 2
+                            ? "（至少需 2 名）"
+                            : ""}
+                        </span>
+                      ) : null}
+                    </div>
+                    <div className="form-row thread-create-actions">
+                      <button
+                        className="button-secondary"
+                        data-thread-dialog-last="true"
+                        disabled={isSubmitting}
+                        onClick={closeDialog}
+                        onKeyDown={(event) => {
+                          if (event.key === "Tab" && !event.shiftKey) {
+                            event.preventDefault();
+                            dialogRef.current
+                              ?.querySelector<HTMLButtonElement>(
+                                '[aria-label="关闭创建对话"]',
+                              )
+                              ?.focus();
+                          }
+                        }}
+                        type="button"
+                      >
+                        取消
+                      </button>
+                      <button
+                        aria-describedby={
+                          submitReason ? "thread-submit-reason" : undefined
+                        }
+                        className="button-primary thread-create-submit"
+                        disabled={Boolean(submitReason)}
+                        type="submit"
+                      >
+                        <Plus aria-hidden="true" size={14} weight="bold" />
+                        <span>
+                          {isSubmitting ? "正在创建对话…" : "创建对话"}
+                        </span>
+                      </button>
+                    </div>
+                  </div>
+                </form>
+              </section>
+            </div>,
             document.body,
           )
         : null}
       {manageOpen && typeof document !== "undefined"
         ? createPortal(
-            <section
-              aria-labelledby="manage-tags-title"
-              aria-modal="true"
-              className="modal-surface manage-tags-dialog"
-              ref={manageDialogRef}
-              role="dialog"
-            >
-              <div className="section-heading-row">
-                <h2 id="manage-tags-title">管理标签</h2>
-                <button
-                  aria-label="关闭管理标签"
-                  className="button-ghost"
-                  onClick={closeManageDialog}
-                  type="button"
-                >
-                  关闭
-                </button>
-              </div>
-              {manageNotice ? (
-                <p aria-atomic="true" aria-live="polite" role="status">
-                  {manageNotice}
-                </p>
-              ) : null}
-              <form className="stack" onSubmit={handleCreateTag}>
-                <div className="form-field">
-                  <label htmlFor="new-thread-tag-name">新标签名称</label>
-                  <input
-                    aria-describedby={
-                      newTagError ? "new-thread-tag-error" : undefined
-                    }
-                    aria-invalid={newTagError ? "true" : undefined}
-                    disabled={creatingTag}
-                    id="new-thread-tag-name"
-                    onChange={(event) => setNewTagName(event.target.value)}
-                    placeholder="例如：发布阻塞"
-                    ref={newTagInputRef}
-                    value={newTagName}
-                  />
+            <div className="action-dialog-root" role="presentation">
+              <div
+                aria-hidden="true"
+                className="action-dialog-scrim"
+                onClick={closeManageDialog}
+              />
+              <section
+                aria-labelledby="manage-tags-title"
+                aria-modal="true"
+                className="action-dialog modal-surface manage-tags-dialog stack"
+                ref={manageDialogRef}
+                role="dialog"
+              >
+                <div className="manage-tags-header">
+                  <div className="manage-tags-header-title">
+                    <div className="manage-tags-icon-badge" aria-hidden="true">
+                      <Tag size={18} weight="bold" />
+                    </div>
+                    <div>
+                      <h2 id="manage-tags-title">管理标签</h2>
+                      <p className="manage-tags-subtitle">
+                        创建与维护项目标签，为对话分类与快速检索
+                      </p>
+                    </div>
+                  </div>
+                  <button
+                    aria-label="关闭管理标签"
+                    className="manage-dialog-close"
+                    onClick={closeManageDialog}
+                    type="button"
+                  >
+                    <X size={18} weight="bold" />
+                  </button>
+                </div>
+
+                {manageNotice ? (
+                  <div className="manage-tags-notice" aria-atomic="true" aria-live="polite" role="status">
+                    <Sparkle size={14} weight="fill" />
+                    <span>{manageNotice}</span>
+                  </div>
+                ) : null}
+
+                <form className="manage-tag-create-form" onSubmit={handleCreateTag}>
+                  <div className="manage-tag-form-row">
+                    <div className="manage-tag-input-container">
+                      <div className="manage-tag-input-label-row">
+                        <label className="manage-tag-input-label" htmlFor="new-thread-tag-name">
+                          新标签名称
+                        </label>
+                        <span className="manage-tag-input-counter" aria-hidden="true">
+                          {newTagName.trim().length}/40
+                        </span>
+                      </div>
+                      <div className="manage-tag-input-field-wrap">
+                        <Tag size={16} className="manage-tag-field-icon" aria-hidden="true" />
+                        <input
+                          aria-describedby={
+                            newTagError ? "new-thread-tag-error" : undefined
+                          }
+                          aria-invalid={newTagError ? "true" : undefined}
+                          className="manage-tag-input"
+                          disabled={creatingTag}
+                          id="new-thread-tag-name"
+                          onChange={(event) => setNewTagName(event.target.value)}
+                          placeholder="例如：发布阻塞、UI设计、架构规划"
+                          ref={newTagInputRef}
+                          value={newTagName}
+                        />
+                      </div>
+                    </div>
+                    <button
+                      className="button-primary manage-tag-create-btn"
+                      disabled={creatingTag}
+                      type="submit"
+                    >
+                      <Plus size={16} weight="bold" />
+                      <span>{creatingTag ? "正在创建…" : "创建标签"}</span>
+                    </button>
+                  </div>
                   {newTagError ? (
-                    <p className="error-text" id="new-thread-tag-error" role="alert">
+                    <p className="error-text manage-tag-error" id="new-thread-tag-error" role="alert">
                       {newTagError}
                     </p>
                   ) : null}
-                </div>
-                <button
-                  className="button-primary"
-                  disabled={creatingTag}
-                  type="submit"
-                >
-                  {creatingTag ? "正在创建…" : "创建标签"}
-                </button>
-              </form>
-              <div className="form-field">
-                <label htmlFor="manage-tag-search">搜索标签</label>
-                <input
-                  id="manage-tag-search"
-                  onChange={(event) => setTagSearchText(event.target.value)}
-                  placeholder="按名称过滤"
-                  ref={tagSearchInputRef}
-                  type="search"
-                  value={tagSearchText}
-                />
-              </div>
-              {tagsState === "loading" ? (
-                <p className="muted" role="status">
-                  正在加载标签…
-                </p>
-              ) : null}
-              {tagsState === "error" ? (
-                <div className="stack state-message">
-                  <p className="error-text" role="alert">
-                    {tagsError}
-                  </p>
-                  <button
-                    className="button-secondary"
-                    onClick={() => setTagsReloadKey((current) => current + 1)}
-                    type="button"
-                  >
-                    重试加载标签
-                  </button>
-                </div>
-              ) : null}
-              {tagsState === "ready" ? (
-                tags.length === 0 ? (
-                  <p className="muted" role="status">
-                    暂无标签。创建标签后开始整理对话。
-                  </p>
-                ) : (
-                  (() => {
-                    const query = tagSearchText.trim().toLowerCase();
-                    const visible = query
-                      ? tags.filter((tag) => tag.name.toLowerCase().includes(query))
-                      : tags;
-                    return visible.length === 0 ? (
-                      <p className="muted" role="status">
-                        无匹配标签。
+                </form>
+
+                <div className="manage-tags-list-section">
+                  <div className="manage-tags-search-header">
+                    <label className="manage-tags-search-label" htmlFor="manage-tag-search">
+                      搜索标签
+                    </label>
+                    <div className="manage-tag-search-field-wrap">
+                      <MagnifyingGlass size={15} className="manage-tag-search-icon" aria-hidden="true" />
+                      <input
+                        className="manage-tag-search-input"
+                        id="manage-tag-search"
+                        onChange={(event) => setTagSearchText(event.target.value)}
+                        placeholder="按名称过滤标签…"
+                        ref={tagSearchInputRef}
+                        type="search"
+                        value={tagSearchText}
+                      />
+                    </div>
+                  </div>
+
+                  <div className="manage-tags-list-body">
+                    {tagsState === "loading" ? (
+                      <p className="muted manage-tags-status-msg" role="status">
+                        正在加载标签…
                       </p>
-                    ) : (
-                      <ul className="stack thread-tag-manage-list">
-                        {visible.map((tag) => (
-                          <li className="thread-tag-manage-item" key={tag.id}>
-                            <span className="thread-tag-list-name">{tag.name}</span>
-                            <span className="thread-tag-count">
-                              {`已分配 ${tag.threadCount} 条对话`}
-                            </span>
-                            <button
-                              aria-label={`删除标签 ${tag.name}`}
-                              className="button-secondary"
-                              disabled={deletingTag}
-                              onClick={() => {
-                                setDeleteTagError(null);
-                                setPendingDeleteTag(tag);
-                              }}
-                              type="button"
-                            >
-                              删除
-                            </button>
-                          </li>
-                        ))}
-                      </ul>
-                    );
-                  })()
-                )
-              ) : null}
-            </section>,
+                    ) : null}
+                    {tagsState === "error" ? (
+                      <div className="stack state-message manage-tags-error-state">
+                        <p className="error-text" role="alert">
+                          {tagsError}
+                        </p>
+                        <button
+                          className="button-secondary"
+                          onClick={() => setTagsReloadKey((current) => current + 1)}
+                          type="button"
+                        >
+                          重试加载标签
+                        </button>
+                      </div>
+                    ) : null}
+                    {tagsState === "ready" ? (
+                      tags.length === 0 ? (
+                        <div className="manage-tags-empty-state" role="status">
+                          <Tag size={28} weight="duotone" className="manage-tags-empty-icon" aria-hidden="true" />
+                          <p className="manage-tags-empty-text">暂无标签。创建标签后开始整理对话。</p>
+                        </div>
+                      ) : (
+                        (() => {
+                          const query = tagSearchText.trim().toLowerCase();
+                          const visible = query
+                            ? tags.filter((tag) => tag.name.toLowerCase().includes(query))
+                            : tags;
+                          return visible.length === 0 ? (
+                            <div className="manage-tags-empty-state" role="status">
+                              <p className="muted">无匹配标签。</p>
+                            </div>
+                          ) : (
+                            <ul className="stack thread-tag-manage-list">
+                              {visible.map((tag) => (
+                                <li className="thread-tag-manage-item" key={tag.id}>
+                                  <div className="thread-tag-item-lead">
+                                    <span className="thread-tag-item-hash" aria-hidden="true">#</span>
+                                    <span className="thread-tag-list-name">{tag.name}</span>
+                                    <span className="thread-tag-count">
+                                      {`已分配 ${tag.threadCount} 条对话`}
+                                    </span>
+                                  </div>
+                                  <button
+                                    aria-label={`删除标签 ${tag.name}`}
+                                    className="button-secondary thread-tag-delete-btn"
+                                    disabled={deletingTag}
+                                    onClick={() => {
+                                      setDeleteTagError(null);
+                                      setPendingDeleteTag(tag);
+                                    }}
+                                    type="button"
+                                  >
+                                    <Trash size={14} weight="regular" />
+                                    <span>删除</span>
+                                  </button>
+                                </li>
+                              ))}
+                            </ul>
+                          );
+                        })()
+                      )
+                    ) : null}
+                  </div>
+                </div>
+              </section>
+            </div>,
             document.body,
           )
         : null}
       {pendingDeleteTag && typeof document !== "undefined"
         ? createPortal(
-            <section
-              aria-labelledby="delete-tag-title"
-              aria-modal="true"
-              className="modal-surface delete-tag-confirm"
-              ref={confirmDialogRef}
-              role="dialog"
-            >
-              <h2 id="delete-tag-title">删除标签</h2>
-              <p>
-                {`删除标签“${pendingDeleteTag.name}”将解除 ${pendingDeleteTag.threadCount} 条分配。此操作不可撤销。`}
-              </p>
-              {deleteTagError ? (
-                <p className="error-text" role="alert">
-                  {deleteTagError}
-                </p>
-              ) : null}
-              <div className="form-row">
-                <button
-                  className="button-primary"
-                  disabled={deletingTag}
-                  onClick={() => void confirmDeleteTag()}
-                  type="button"
-                >
-                  {deletingTag ? "正在删除…" : "确认删除"}
-                </button>
-                <button
-                  className="button-secondary"
-                  disabled={deletingTag}
-                  onClick={() => setPendingDeleteTag(null)}
-                  ref={deleteCancelRef}
-                  type="button"
-                >
-                  取消
-                </button>
-              </div>
-            </section>,
+            <div className="action-dialog-root" role="presentation">
+              <div
+                aria-hidden="true"
+                className="action-dialog-scrim"
+                onClick={() => {
+                  if (!deletingTag) setPendingDeleteTag(null);
+                }}
+              />
+              <section
+                aria-labelledby="delete-tag-title"
+                aria-modal="true"
+                className="action-dialog modal-surface delete-tag-confirm stack"
+                ref={confirmDialogRef}
+                role="dialog"
+              >
+                <div className="delete-tag-header">
+                  <div className="delete-tag-icon-badge" aria-hidden="true">
+                    <Warning size={20} weight="fill" />
+                  </div>
+                  <div className="delete-tag-header-text">
+                    <h2 id="delete-tag-title">删除标签</h2>
+                    <p className="delete-tag-desc">
+                      {`删除标签“${pendingDeleteTag.name}”将解除 ${pendingDeleteTag.threadCount} 条分配。此操作不可撤销。`}
+                    </p>
+                  </div>
+                </div>
+                {deleteTagError ? (
+                  <p className="error-text delete-tag-error" role="alert">
+                    {deleteTagError}
+                  </p>
+                ) : null}
+                <div className="form-row delete-tag-actions">
+                  <button
+                    className="button-secondary"
+                    disabled={deletingTag}
+                    onClick={() => setPendingDeleteTag(null)}
+                    ref={deleteCancelRef}
+                    type="button"
+                  >
+                    取消
+                  </button>
+                  <button
+                    className="button-primary delete-tag-confirm-btn"
+                    disabled={deletingTag}
+                    onClick={() => void confirmDeleteTag()}
+                    type="button"
+                  >
+                    <Trash size={15} weight="bold" />
+                    <span>{deletingTag ? "正在删除…" : "确认删除"}</span>
+                  </button>
+                </div>
+              </section>
+            </div>,
             document.body,
           )
         : null}
       {batchConfirm && typeof document !== "undefined"
         ? createPortal(
-            <section
-              aria-labelledby="batch-apply-title"
-              aria-modal="true"
-              className="modal-surface batch-apply-confirm"
-              ref={batchConfirmDialogRef}
-              role="dialog"
-            >
-              <h2 id="batch-apply-title">确认批量整理</h2>
-              <p>{batchConfirmCopy}</p>
-              {batchConfirm.removeTagIds.length > 0 ? (
-                <p className="muted">
-                  移除会立即解除这些对话上的标签分配。
-                </p>
-              ) : null}
-              <div className="form-row">
-                <button
-                  className="button-primary"
-                  disabled={batchSubmitting}
-                  onClick={() => void applyBatch(batchConfirm, crypto.randomUUID())}
-                  ref={batchConfirmApplyRef}
-                  type="button"
-                >
-                  {batchSubmitting ? "正在提交…" : "确认应用"}
-                </button>
-                <button
-                  className="button-secondary"
-                  disabled={batchSubmitting}
-                  onClick={closeBatchConfirm}
-                  type="button"
-                >
-                  取消
-                </button>
-              </div>
-            </section>,
+            <div className="action-dialog-root" role="presentation">
+              <div
+                aria-hidden="true"
+                className="action-dialog-scrim"
+                onClick={() => {
+                  if (!batchSubmitting) closeBatchConfirm();
+                }}
+              />
+              <section
+                aria-labelledby="batch-apply-title"
+                aria-modal="true"
+                className="action-dialog modal-surface batch-apply-confirm stack"
+                ref={batchConfirmDialogRef}
+                role="dialog"
+              >
+                <h2 id="batch-apply-title">确认批量整理</h2>
+                <p>{batchConfirmCopy}</p>
+                {batchConfirm.removeTagIds.length > 0 ? (
+                  <p className="muted">
+                    移除会立即解除这些对话上的标签分配。
+                  </p>
+                ) : null}
+                <div className="form-row">
+                  <button
+                    className="button-primary"
+                    disabled={batchSubmitting}
+                    onClick={() => void applyBatch(batchConfirm, crypto.randomUUID())}
+                    ref={batchConfirmApplyRef}
+                    type="button"
+                  >
+                    {batchSubmitting ? "正在提交…" : "确认应用"}
+                  </button>
+                  <button
+                    className="button-secondary"
+                    disabled={batchSubmitting}
+                    onClick={closeBatchConfirm}
+                    type="button"
+                  >
+                    取消
+                  </button>
+                </div>
+              </section>
+            </div>,
             document.body,
           )
         : null}

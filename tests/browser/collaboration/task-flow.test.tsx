@@ -395,4 +395,53 @@ describe("project URL routing", () => {
 
     expect(pushMock).toHaveBeenCalledWith("/");
   });
+
+  it("renders hero empty state and dispatches open-create-thread when thread list is empty", async () => {
+    const titleRef = { current: null };
+    const editorRef = { current: null };
+    const editorCloseRef = { current: null };
+    const contextRef = { current: null };
+    const contextCloseRef = { current: null };
+    const openCreateThreadListener = vi.fn();
+    window.addEventListener("cool-ai:open-create-thread", openCreateThreadListener);
+    const user = userEvent.setup();
+
+    render(
+      <TaskPanel
+        contextCloseRef={contextCloseRef}
+        contextOpen={false}
+        contextSurfaceRef={contextRef}
+        currentProjectName={project.name}
+        currentProjectTitleRef={titleRef}
+        editorCloseRef={editorCloseRef}
+        editorOpen={false}
+        editorSurfaceRef={editorRef}
+        legacyTasksEnabled={false}
+        narrow={false}
+        onCloseContext={() => undefined}
+        onCloseEditor={() => undefined}
+        onSelectProject={() => undefined}
+        projectError={null}
+        projectId={project.id}
+        projectLoading={false}
+        threadListState="empty"
+      />,
+    );
+
+    expect(await screen.findByRole("heading", { name: "开启项目协作" })).toBeInTheDocument();
+    expect(
+      screen.getByText("创建新对话与 Agent 团队协同，或从常用指令快速开始。"),
+    ).toBeInTheDocument();
+    const cta = screen.getByRole("button", { name: "创建新对话" });
+    expect(cta).toBeInTheDocument();
+    await user.click(cta);
+    expect(openCreateThreadListener).toHaveBeenCalled();
+
+    const suggestion = screen.getByRole("button", { name: /规划项目目标/ });
+    expect(suggestion).toBeInTheDocument();
+    await user.click(suggestion);
+    expect(openCreateThreadListener).toHaveBeenCalledTimes(2);
+
+    window.removeEventListener("cool-ai:open-create-thread", openCreateThreadListener);
+  });
 });

@@ -9,7 +9,14 @@ import {
   type KeyboardEvent,
   type RefObject,
 } from "react";
-import { ArrowLeft } from "@phosphor-icons/react";
+import {
+  ArrowLeft,
+  CheckCircle,
+  Lightning,
+  Plus,
+  Sparkle,
+  TreeStructure,
+} from "@phosphor-icons/react";
 
 import { CollaborationPanel } from "@/components/collaboration/collaboration-panel";
 import type { GovernanceView } from "@/components/activity-bar";
@@ -606,7 +613,105 @@ export function TaskPanel({
               threadId={collaborationTarget?.threadId}
             />
           ) : null
-        ) : threadListState === "empty" ? null : (
+        ) : threadListState === "empty" ? (
+          <div className="chat-empty-hero">
+            <div aria-hidden="true" className="chat-empty-hero-icon">
+              <Sparkle size={28} weight="fill" />
+            </div>
+            <h3 className="chat-empty-hero-title">开启项目协作</h3>
+            <p className="chat-empty-hero-desc">
+              创建新对话与 Agent 团队协同，或从常用指令快速开始。
+            </p>
+            <button
+              className="button-primary chat-empty-hero-cta"
+              onClick={() => {
+                if (typeof window !== "undefined") {
+                  window.dispatchEvent(
+                    new CustomEvent("cool-ai:open-create-thread"),
+                  );
+                }
+              }}
+              type="button"
+            >
+              <Plus aria-hidden="true" size={16} weight="bold" />
+              <span>创建新对话</span>
+              <kbd aria-hidden="true" className="chat-empty-hero-kbd">
+                ⌘N
+              </kbd>
+            </button>
+            <div className="chat-empty-hero-suggestions">
+              <button
+                className="chat-empty-suggestion-card"
+                onClick={() => {
+                  if (typeof window !== "undefined") {
+                    window.dispatchEvent(
+                      new CustomEvent("cool-ai:open-create-thread"),
+                    );
+                  }
+                }}
+                type="button"
+              >
+                <div aria-hidden="true" className="chat-empty-suggestion-icon">
+                  <TreeStructure size={18} weight="duotone" />
+                </div>
+                <div className="chat-empty-suggestion-content">
+                  <span className="chat-empty-suggestion-title">
+                    规划项目目标
+                  </span>
+                  <span className="chat-empty-suggestion-desc">
+                    梳理项目架构与执行切片
+                  </span>
+                </div>
+              </button>
+              <button
+                className="chat-empty-suggestion-card"
+                onClick={() => {
+                  if (typeof window !== "undefined") {
+                    window.dispatchEvent(
+                      new CustomEvent("cool-ai:open-create-thread"),
+                    );
+                  }
+                }}
+                type="button"
+              >
+                <div aria-hidden="true" className="chat-empty-suggestion-icon">
+                  <Lightning size={18} weight="duotone" />
+                </div>
+                <div className="chat-empty-suggestion-content">
+                  <span className="chat-empty-suggestion-title">
+                    代码与工程构建
+                  </span>
+                  <span className="chat-empty-suggestion-desc">
+                    分析代码实现与依赖状态
+                  </span>
+                </div>
+              </button>
+              <button
+                className="chat-empty-suggestion-card"
+                onClick={() => {
+                  if (typeof window !== "undefined") {
+                    window.dispatchEvent(
+                      new CustomEvent("cool-ai:open-create-thread"),
+                    );
+                  }
+                }}
+                type="button"
+              >
+                <div aria-hidden="true" className="chat-empty-suggestion-icon">
+                  <CheckCircle size={18} weight="duotone" />
+                </div>
+                <div className="chat-empty-suggestion-content">
+                  <span className="chat-empty-suggestion-title">
+                    质量与安全复核
+                  </span>
+                  <span className="chat-empty-suggestion-desc">
+                    评估交付成果与测试覆盖
+                  </span>
+                </div>
+              </button>
+            </div>
+          </div>
+        ) : (
           <>
               <CollaborationPanel
                 modalBackgroundRef={editorSurfaceRef}
