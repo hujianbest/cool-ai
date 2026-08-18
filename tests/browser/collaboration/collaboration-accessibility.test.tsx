@@ -237,6 +237,9 @@ describe("narrow collaboration cockpit accessibility", () => {
     const editor = screen.getByRole("dialog", { name: "任务编辑" });
     expect(within(editor).queryByRole("tab", { name: "运行详情" })).toBeNull();
     const composer = within(editor).getByLabelText("发送给项目对话");
+    expect(composer.tagName).toBe("TEXTAREA");
+    expect(composer).not.toHaveAttribute("aria-autocomplete");
+    expect(composer).not.toHaveAttribute("aria-expanded");
     composer.focus();
     expect(composer).toHaveFocus();
     expect(within(editor).queryByRole("button", { name: "停止" })).toBeNull();
@@ -304,7 +307,7 @@ describe("narrow collaboration cockpit accessibility", () => {
     expect(tokens).toContain("--surface: var(--color-on-primary)");
     expect(tokens).toContain("--text-muted: var(--text-subtle)");
     expect(cockpit).toMatch(
-      /\.composer\s*\{[^}]*background:\s*var\(--color-card-strong\)[^}]*border-radius:\s*var\(--rounded-lg\)[^}]*box-shadow:\s*var\(--shadow-1\),\s*var\(--shadow-2\)/s,
+      /\.composer\s*\{[^}]*background:\s*var\(--color-surface-pearl\)[^}]*border-radius:\s*var\(--rounded-md\)[^}]*box-shadow:\s*var\(--shadow-product\)/s,
     );
     expect(cockpit).toMatch(
       /\.cockpit-flow \.panel-heading\s*\{[^}]*background:\s*var\(--surface-panel\)[^}]*border-bottom:[^;]*var\(--border-subtle\)/s,

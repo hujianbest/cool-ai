@@ -8,7 +8,7 @@ import { join } from "node:path";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
 import { GET as getProjects } from "@/app/api/projects/route";
-import { ProjectPanel } from "@/components/project-panel";
+import { ProjectSetupPanel } from "@/components/project-context/project-setup-panel";
 import { createProject } from "@/src/adapters/outbound/sqlite/project-workspace/projects";
 
 let rootDirectory: string;
@@ -74,6 +74,12 @@ function installAppFetch(projectId: string) {
         },
       });
     }
+    if (url.pathname === "/api/providers") {
+      return Response.json({ providers: [] });
+    }
+    if (url.pathname === `/api/projects/${projectId}/workspace/files`) {
+      return Response.json({ entries: [], path: "." });
+    }
     if (url.pathname === `/api/projects/${projectId}/workspace`) {
       const route = await workspaceRoute();
       const request = new Request(url, init);
@@ -98,7 +104,7 @@ describe("workspace binding vertical slice", () => {
     const fetchMock = installAppFetch(project.id);
     const user = userEvent.setup();
 
-    const firstRender = render(<ProjectPanel />);
+    const firstRender = render(<ProjectSetupPanel projectId={project.id} />);
     await screen.findByText("尚未绑定本地工作区。");
 
     await user.click(screen.getByRole("button", { name: "绑定工作区" }));
@@ -121,8 +127,8 @@ describe("workspace binding vertical slice", () => {
     expect(await screen.findByText(canonicalPath)).toBeInTheDocument();
     firstRender.unmount();
 
-    render(<ProjectPanel />);
-    await screen.findByRole("heading", { name: "Workspace project" });
+    render(<ProjectSetupPanel projectId={project.id} />);
+    await screen.findByRole("heading", { name: "项目设置" });
     expect(await screen.findByText(canonicalPath)).toBeInTheDocument();
   });
 });

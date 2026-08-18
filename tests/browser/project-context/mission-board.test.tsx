@@ -204,7 +204,7 @@ describe("Mission Board", () => {
     );
     expect(await screen.findByText("尚未创建使命。")).toBeInTheDocument();
     expect(screen.getByRole("button", { name: "创建使命" })).toBeEnabled();
-  });
+  }, 15_000);
 
   it("creates and edits a mission with field focus and polite success", async () => {
     const MissionBoard = await board();

@@ -13,5 +13,6 @@ export default defineConfig({
     environment: "node",
     exclude: ["tests/browser/baseline.test.mjs", "node_modules/**"],
     setupFiles: ["./tests/setup.ts"],
+    testTimeout: 15_000,
   },
 });

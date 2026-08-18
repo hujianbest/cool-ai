@@ -311,11 +311,15 @@ async function restartAppServer() {
 
 async function createSkill(page) {
   await page.getByRole("tab", { name: "技能" }).click();
-  await page.getByRole("button", { name: "创建新技能" }).click();
-  await page.getByLabel("技能名称").fill("Review Smoke Skill");
-  await page.getByLabel("技能说明").fill("Public review smoke instructions");
-  await page.getByLabel("指令正文").fill("Read the supplied public body before deciding.");
-  await page.getByRole("button", { name: "创建技能" }).click();
+  await page.waitForURL((url) => url.searchParams.get("section") === "skills");
+  await page.getByText("暂无技能。", { exact: true }).waitFor();
+  await page.locator("#skill-resource-panel").getByRole("button", { name: "创建新技能" }).click();
+  const editor = page.getByRole("dialog", { name: "创建技能" });
+  await editor.waitFor();
+  await editor.getByLabel("技能名称").fill("Review Smoke Skill");
+  await editor.getByLabel("技能说明").fill("Public review smoke instructions");
+  await editor.getByLabel("指令正文").fill("Read the supplied public body before deciding.");
+  await editor.getByRole("button", { name: "创建技能", exact: true }).click();
   await page.getByRole("heading", { name: "Review Smoke Skill" }).waitFor();
 }
 
@@ -389,16 +393,35 @@ async function createMissionViaApi(page, title, goal) {
   assert.equal(payload.mission.title, title);
 }
 
+async function assignMembersViaApi(page, agentNames) {
+  const result = await page.evaluate(async (names) => {
+    const projectId = new URL(window.location.href).pathname.split("/").at(-1);
+    const agents = (await (await fetch("/api/agents")).json()).agents;
+    const agentIds = agents
+      .filter(({ name }) => names.includes(name))
+      .map(({ id }) => id);
+    const current = await (await fetch(`/api/projects/${projectId}/members`)).json();
+    const response = await fetch(`/api/projects/${projectId}/members`, {
+      body: JSON.stringify({
+        agentIds,
+        expectedProjectVersion: current.projectVersion,
+      }),
+      headers: { "content-type": "application/json" },
+      method: "PUT",
+    });
+    const body = await response.json();
+    if (!response.ok) throw new Error(JSON.stringify(body));
+    return body;
+  }, agentNames);
+  assert.equal(result.members.length, agentNames.length);
+}
+
 async function createProject(page) {
   await page.goto(baseUrl, { waitUntil: "networkidle" });
   await openFolderProject(page, "workspace");
   projectPath = new URL(page.url()).pathname;
   await page.getByRole("heading", { name: "workspace" }).waitFor();
-  const members = page.getByRole("group", { name: "平等项目成员" });
-  await members.getByRole("checkbox", { name: /Review Executor/ }).check();
-  await members.getByRole("checkbox", { name: /Review Verifier/ }).check();
-  await page.getByRole("button", { name: "保存成员" }).click();
-  await page.getByText("项目成员已保存。", { exact: true }).waitFor();
+  await assignMembersViaApi(page, ["Review Executor", "Review Verifier"]);
   await createMissionViaApi(
     page,
     "Review Smoke Mission",

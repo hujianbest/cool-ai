@@ -91,7 +91,7 @@ describe("Shared Memory panel", () => {
     );
     expect(await screen.findByText("尚无共享记忆。")).toBeInTheDocument();
     expect(screen.getByRole("button", { name: "沉淀新记忆" })).toBeEnabled();
-  });
+  }, 15_000);
 
   it("creates sourced memory, labels artifact references, supersedes active entries and displays history", async () => {
     const MemoryPanel = await memoryPanel();

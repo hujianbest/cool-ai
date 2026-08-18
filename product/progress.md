@@ -12,10 +12,10 @@
 | 项 | 状态 |
 |---|---|
 | 产品文档 | 七件套：规格 / 词汇表 / 架构 / 特性分解 / 开发计划 / 进展 / UI 设计 |
-| P0 暖金壳层 | 051/S-61 已 ship：图标轨、会话侧栏、居中聊天、空状态、亮暗令牌与 UCD 主路径收口 |
+| P0 暖金壳层 | 051/S-61 已 ship：T-01～T-06 在目标 Windows x64 收口，tsc/build 绿，全量 2790/2791，`npm run smoke` 绿 |
 | P1 阶段 1 驾驶舱 | 050/S-60 已 ship：原生选夹、三名自带 Agent、聊天优先、GET `/api/home` 只读 |
 | P2–P5 既有切片 | 计划中列出的会话/整理/执行/知识核心能力已 ship；规划中加厚项见特性分解清单 |
-| 环境性失败 | 全量 2587/2719：失败归因 macOS 非目标 Windows x64 与沙箱端口限制，非本次回归 |
+| 环境/IA 残留 | `review-browser-full-chain` 因 UCD §9.5 未挂载（A-387）；`smoke:onboarding` 引导按钮被时间线条目挡住 |
 | 未交付高风险切片 | 受控编辑/Git、终端预览、救援、MCP/CLI、语音、知识集合/图谱等仍规划中（见特性分解清单） |
 
 ## 状态记录
@@ -81,4 +81,5 @@
 - 2026-08-18 按 UCD §9.1.1 落地消息「复制」：Owner/Agent 气泡悬停复制纯文本，成功显示「已复制」。不引入 Markdown（A-383）。collaboration-chat 9/9。演示 auto-approved 2026-08-18。
 - 2026-08-18 按 UCD §9.1.2 落地 Proposal 焦点内 `A` 批准 / `R` 驳回（A-384）。structured-decision 12/12。演示 auto-approved 2026-08-18。
 - 2026-08-18 按 UCD §9.1.1 落地闭合围栏代码块与块内复制；无高亮、无其余 Markdown（A-385）。collaboration-chat 10/10。演示 auto-approved 2026-08-18。
+- 2026-08-18 051 T-06 在目标 Windows x64（Node 24.14 / npm 11.9）收口：`tsc`/`build` 绿；全量 303/304 文件、2790/2791；`npm run smoke` 绿（A-386）。团队编辑器改为 `modal-surface`；Composer textarea 去掉非法 combobox ARIA。残留：`review-browser-full-chain`（A-387）、`smoke:onboarding` 引导钮被时间线挡住。演示 auto-approved。
 - 2026-08-18 ship 050/S-60 与 051/S-61：阶段 1 驾驶舱与暖金会话优先壳层勾选为已交付；当前无活跃在途切片。UCD 主路径不伪造 DTO 的缺口已收口。未交付高风险能力仍规划中。

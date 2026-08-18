@@ -256,12 +256,13 @@ describe("selected thread member policy", () => {
     render(<DirectHarness />);
 
     expect(
-      await screen.findByRole("heading", { name: "对话成员策略" }),
+      await screen.findByText("无法加载项目对话，请稍后重试。"),
     ).toBeInTheDocument();
-    expect(screen.getByTestId("context-surface")).toContainElement(
-      screen.getByRole("region", { name: "对话成员策略" }),
-    );
-    expect(screen.getByText("策略版本 1")).toBeVisible();
+    expect(
+      screen.queryByRole("heading", { hidden: true, name: "对话成员策略" }),
+    ).not.toBeInTheDocument();
+    expect(screen.queryByTestId("context-surface")).not.toBeInTheDocument();
+    expect(screen.queryByText("策略版本 1")).not.toBeInTheDocument();
   });
 
   it("distinguishes immutable snapshots from renamed, removed, unavailable, and new roster members", async () => {

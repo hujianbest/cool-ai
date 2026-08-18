@@ -271,7 +271,7 @@ export function SkillPanel() {
       <aside
         aria-labelledby="skill-editor-title"
         aria-modal="true"
-        className="cockpit-context"
+        className="cockpit-context modal-surface"
         data-open="true"
         onKeyDown={(event) => trapModalFocus(event, closeEditor)}
         ref={dialogRef}

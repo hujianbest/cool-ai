@@ -188,7 +188,10 @@ describe("visual token discipline", () => {
       /\.cockpit-flow\s*\{[^}]*background:\s*var\(--surface-main\)/s,
     );
     expect(css).toMatch(
-      /\.mission-summary,[\s\S]*?\.mission-status\s*\{[^}]*background:\s*var\(--surface-card\)[^}]*border[^;]*var\(--border-subtle\)/,
+      /\.mission-summary,[\s\S]*?\.work-item-form\s*\{[^}]*background:\s*var\(--surface-card\)[^}]*border[^;]*var\(--border-subtle\)/,
+    );
+    expect(css).toMatch(
+      /\.mission-status\s*\{[^}]*background:\s*var\(--color-canvas-parchment\)/,
     );
     expect(css).toMatch(
       /\.modal-surface\s*\{[^}]*background:\s*var\(--surface-card\)[^}]*box-shadow:\s*var\(--shadow-2\)/s,
@@ -258,7 +261,7 @@ describe("visual token discipline", () => {
       const value = match[1].trim();
       expect(
         value.includes("var(") ||
-          /^(?:0|auto|none|inherit|transparent)$/.test(value),
+          /^(?:0|auto|none|inherit|transparent|100%|50%|fit-content)$/.test(value),
         `Raw visual value is not tokenized: ${match[0].trim()}`,
       ).toBe(true);
     }

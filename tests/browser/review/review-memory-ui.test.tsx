@@ -240,7 +240,7 @@ describe("review memory UI", () => {
     await act(async () => resolveLoad(Response.json({ memories: [] })));
     expect(await screen.findByText("尚无共享记忆。")).toBeInTheDocument();
 
-    await user.click(screen.getByRole("button", { name: "添加记忆" }));
+    await user.click(screen.getByRole("button", { name: "沉淀新记忆" }));
     expect(screen.getByRole("radio", { name: "目标" })).toBeInTheDocument();
     expect(screen.queryByRole("radio", { name: /Agent|review confirmation/i })).toBeNull();
     await user.click(screen.getByRole("radio", { name: "经验" }));
@@ -284,7 +284,7 @@ describe("review memory UI", () => {
     expect(await screen.findByRole("alert")).toHaveTextContent("无法加载共享记忆");
     await user.click(screen.getByRole("button", { name: "重试加载共享记忆" }));
     await screen.findByText("尚无共享记忆。");
-    await user.click(screen.getByRole("button", { name: "添加记忆" }));
+    await user.click(screen.getByRole("button", { name: "沉淀新记忆" }));
     const content = screen.getByLabelText("记忆正文");
     content.focus();
     await user.type(content, "Draft survives", { skipClick: true });

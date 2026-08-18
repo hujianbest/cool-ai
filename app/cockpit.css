@@ -182,6 +182,15 @@ ol {
   min-height: 0;
 }
 
+.cockpit-context {
+  grid-column: 3;
+  grid-row: 1 / span 2;
+  z-index: 4;
+  width: min(var(--context-width), 100%);
+  max-height: var(--viewport-height);
+  justify-self: end;
+}
+
 .cockpit-header {
   display: flex;
   grid-column: 3;
@@ -318,6 +327,11 @@ ol {
   padding: var(--space-6);
   background: var(--surface-card);
   box-shadow: var(--shadow-2);
+}
+
+.modal-surface .drawer-close,
+.modal-surface .drawer-close.icon-button {
+  display: grid;
 }
 
 .cockpit-flow {

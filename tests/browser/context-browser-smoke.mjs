@@ -484,13 +484,17 @@ async function createTeamPrerequisites(page) {
   await page.getByText("模型服务已保存。", { exact: true }).waitFor();
 
   await page.getByRole("tab", { name: "技能" }).click();
+  await page.waitForURL((url) => url.searchParams.get("section") === "skills");
+  await page.getByText("暂无技能。", { exact: true }).waitFor();
   await page.getByRole("button", { name: "创建新技能" }).click();
-  await page.getByLabel("技能名称").fill("Context Skill");
-  await page.getByLabel("技能说明").fill("Context browser acceptance skill");
-  await page
+  const editor = page.getByRole("dialog", { name: "创建技能" });
+  await editor.waitFor();
+  await editor.getByLabel("技能名称").fill("Context Skill");
+  await editor.getByLabel("技能说明").fill("Context browser acceptance skill");
+  await editor
     .getByLabel("指令正文")
     .fill("Keep project context deterministic and sourced.");
-  await page.getByRole("button", { name: "创建技能" }).click();
+  await editor.getByRole("button", { name: "创建技能", exact: true }).click();
   await page.getByRole("heading", { name: "Context Skill" }).waitFor();
 
   await page.getByRole("tab", { name: "Agent" }).click();

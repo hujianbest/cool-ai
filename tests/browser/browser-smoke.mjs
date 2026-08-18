@@ -162,42 +162,33 @@ try {
   await assertAxeCriticalFree(page, "/");
   await page.getByRole("button", { name: "打开文件夹" }).click();
   await page.waitForURL(/\/projects\/[^/]+$/);
-  await page.getByRole("heading", { name: "real-workspace" }).waitFor();
-  await page.getByText("real-workspace", { exact: false }).waitFor();
+  await page
+    .locator(".cockpit-header-context")
+    .filter({ hasText: "real-workspace" })
+    .waitFor();
   assert.equal(await workbenchHeading.count(), 1);
   assert.equal(await workbenchHeading.isVisible(), true);
   await assertAxeCriticalFree(page, "/projects/<id>");
 
-  await page.getByLabel("任务目标").fill("Verify the walking skeleton");
-  await page.getByRole("button", { name: "运行任务" }).click();
-  await page.getByText("任务已完成。", { exact: true }).waitFor();
-
-  for (const message of ["任务已排队。", "任务已开始。", "任务已完成。"]) {
-    await page.getByText(message, { exact: true }).waitFor();
-  }
-  const statuses = await page.locator(".status-label").allTextContents();
-  assert.deepEqual(statuses, ["排队中", "运行中", "已完成"]);
+  await page.getByRole("button", { name: "新对话" }).waitFor();
+  await page.getByText("暂无对话。创建对话后开始协作。").waitFor();
 
   await page.screenshot({ path: smokeScreenshot, fullPage: true });
   await page.screenshot({ path: currentDesktopScreenshot, fullPage: true });
 
   await page.reload({ waitUntil: "networkidle" });
-  await page.getByRole("button", { name: "real-workspace" }).waitFor();
-  await page.getByText("任务已完成。", { exact: true }).waitFor();
-  assert.deepEqual(await page.locator(".status-label").allTextContents(), [
-    "排队中",
-    "运行中",
-    "已完成",
-  ]);
+  await page
+    .locator(".cockpit-header-context")
+    .filter({ hasText: "real-workspace" })
+    .waitFor();
+  await page.getByRole("button", { name: "新对话" }).waitFor();
 
   await page.screenshot({ path: demoScreenshot, fullPage: true });
   await page.screenshot({ path: currentDesktopDemoScreenshot, fullPage: true });
 
   await page.setViewportSize({ width: 390, height: 844 });
   await page.reload({ waitUntil: "networkidle" });
-  await page
-    .getByText("任务已完成。", { exact: true })
-    .waitFor({ state: "attached" });
+  await page.getByRole("button", { name: "打开编辑" }).waitFor({ state: "attached" });
 
   const overflow = await page.evaluate(() => ({
     clientWidth: document.documentElement.clientWidth,
@@ -223,9 +214,7 @@ try {
   await page.screenshot({ path: currentNarrowDemoScreenshot, fullPage: true });
   await page.getByRole("button", { name: "关闭任务编辑" }).click();
   await page.reload({ waitUntil: "networkidle" });
-  await page
-    .getByText("任务已完成。", { exact: true })
-    .waitFor({ state: "attached" });
+  await page.getByRole("button", { name: "打开编辑" }).waitFor({ state: "attached" });
 
   await page.evaluate(() => {
     if (document.activeElement instanceof HTMLElement) document.activeElement.blur();
@@ -280,7 +269,7 @@ try {
   assert.equal(await teamHeading.isVisible(), true);
   await assertAxeCriticalFree(page, "/team");
 
-  console.log(`SMOKE PASS: real project/task persistence verified at ${baseUrl}`);
+  console.log(`SMOKE PASS: folder project and UCD shell verified at ${baseUrl}`);
   console.log("AXE PASS: /, /projects/<id>, and /team have no critical violations");
   console.log(`SMOKE SCREENSHOT: ${smokeScreenshot}`);
   console.log(`NARROW SCREENSHOT: ${narrowScreenshot}`);

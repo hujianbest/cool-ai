@@ -495,7 +495,7 @@ export function AgentPanel({
     <aside
       aria-labelledby="agent-editor-title"
       aria-modal="true"
-      className="cockpit-context agent-editor"
+      className="cockpit-context agent-editor modal-surface"
       data-open="true"
       onKeyDown={(event) => trapModalFocus(event, closeEditor)}
       ref={dialogRef}

@@ -3955,15 +3955,7 @@ export function CollaborationPanel({
                 type="file"
               />
               <textarea
-                aria-activedescendant={
-                  mentionOpen && !directAgentName && activeMentionMember
-                    ? `${listboxId}-${activeMentionMember.agentId}`
-                    : undefined
-                }
-                aria-autocomplete={directAgentName ? undefined : "list"}
-                aria-controls={!directAgentName ? listboxId : undefined}
                 aria-describedby={fieldError ? fieldErrorId : undefined}
-                aria-expanded={!directAgentName ? mentionOpen : undefined}
                 aria-invalid={fieldError ? "true" : undefined}
                 disabled={sending || loading || !threadId}
                 id={`collaboration-message-${projectId}`}

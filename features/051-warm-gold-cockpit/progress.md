@@ -48,6 +48,7 @@
 - 2026-08-18 按 UCD §9.1.1 落地消息「复制」：悬停/焦点显现，写入纯文本，成功「已复制」。不引入 Markdown（A-383）。collaboration-chat 9/9。演示 auto-approved 2026-08-18。项目级 review 豁免（纯 UI）。
 - 2026-08-18 按 UCD §9.1.2 落地 Proposal 焦点内 `A`/`R`（A-384）。structured-decision 12/12。演示 auto-approved 2026-08-18。项目级 review 豁免（纯 UI）。
 - 2026-08-18 按 UCD §9.1.1 落地闭合围栏代码块与块内复制；无高亮、无其余 Markdown（A-385）。collaboration-chat 10/10。演示 auto-approved 2026-08-18。项目级 review 豁免（纯 UI）。
+- 2026-08-18 T-06 在目标 Windows x64 收口：`npx tsc --noEmit`、`npm run build` 绿；全量 2790/2791（唯 `review-browser-full-chain`，A-387）；`npm run smoke` 绿并写出截图（A-386）。`smoke:onboarding` 仍被时间线条目挡住点击，不阻塞 P0 壳层勾选。演示 auto-approved。
 - 2026-08-18 ship：T-01～T-06 勾选完成；UCD 主路径不伪造 DTO 的缺口已收口。回写 `product/backlog.md` S-61。完整 Markdown / 迷你头像 / Thinking / 重命名 / 回收站总数 / 审批 TTL·Diff 仍不伪造。未交付高风险能力需独立立项。
 
 ## 任务票

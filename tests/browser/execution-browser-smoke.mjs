@@ -422,11 +422,15 @@ function scalar(database, sql, ...parameters) {
 
 async function createSkill(page, name, instructions) {
   await page.getByRole("tab", { name: "技能" }).click();
+  await page.waitForURL((url) => url.searchParams.get("section") === "skills");
+  await page.getByText("暂无技能。", { exact: true }).waitFor();
   await page.getByRole("button", { name: "创建新技能" }).click();
-  await page.getByLabel("技能名称").fill(name);
-  await page.getByLabel("技能说明").fill("Execution smoke private instructions");
-  await page.getByLabel("指令正文").fill(instructions);
-  await page.getByRole("button", { name: "创建技能" }).click();
+  const editor = page.getByRole("dialog", { name: "创建技能" });
+  await editor.waitFor();
+  await editor.getByLabel("技能名称").fill(name);
+  await editor.getByLabel("技能说明").fill("Execution smoke private instructions");
+  await editor.getByLabel("指令正文").fill(instructions);
+  await editor.getByRole("button", { name: "创建技能", exact: true }).click();
   await page.getByRole("heading", { name }).waitFor();
 }
 

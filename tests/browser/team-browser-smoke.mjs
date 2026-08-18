@@ -257,12 +257,15 @@ try {
   assert.equal(await page.getByLabel("API key").count(), 0);
 
   await page.getByRole("tab", { name: "技能" }).click();
+  await page.waitForURL((url) => url.searchParams.get("section") === "skills");
   await page.getByText("暂无技能。", { exact: true }).waitFor();
   await page.getByRole("button", { name: "创建新技能" }).click();
-  await page.getByLabel("技能名称").fill("Smoke Skill");
-  await page.getByLabel("技能说明").fill("Initial browser skill");
-  await page.getByLabel("指令正文").fill("Plan and verify each browser step.");
-  await page.getByRole("button", { name: "创建技能" }).click();
+  const editor = page.getByRole("dialog", { name: "创建技能" });
+  await editor.waitFor();
+  await editor.getByLabel("技能名称").fill("Smoke Skill");
+  await editor.getByLabel("技能说明").fill("Initial browser skill");
+  await editor.getByLabel("指令正文").fill("Plan and verify each browser step.");
+  await editor.getByRole("button", { name: "创建技能", exact: true }).click();
   await page.getByRole("heading", { name: "Smoke Skill" }).waitFor();
   await page.getByRole("button", { name: "编辑 Smoke Skill" }).click();
   await page.getByLabel("技能说明").fill("Edited browser skill");
