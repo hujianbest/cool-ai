@@ -285,6 +285,29 @@ function seedEntries(): Record<string, HistorySeed[]> {
 }
 
 describe("input history panel", () => {
+  it("opens from an empty composer with ArrowUp and leaves draft text alone", async () => {
+    installFetch({ seedHistory: seedEntries(), seedMessages: [ownerMessage()] });
+    const user = userEvent.setup();
+    renderPanel();
+    const composer = await screen.findByLabelText("发送给项目对话");
+    const entry = screen.getByRole("button", { name: "输入历史" });
+    expect(entry).toHaveAttribute("aria-expanded", "false");
+
+    composer.focus();
+    await user.keyboard("{ArrowUp}");
+    expect(entry).toHaveAttribute("aria-expanded", "true");
+    expect(screen.getByRole("region", { name: "输入历史" })).toBeInTheDocument();
+
+    await user.click(entry);
+    expect(entry).toHaveAttribute("aria-expanded", "false");
+    await user.type(composer, "draft stays");
+    await user.keyboard("{ArrowUp}");
+    expect(entry).toHaveAttribute("aria-expanded", "false");
+    expect(screen.queryByRole("region", { name: "输入历史" }))
+      .not.toBeInTheDocument();
+    expect(composer).toHaveValue("draft stays");
+  });
+
   it("opens from the composer toolbar, lists entries with time, and fills the composer on click", async () => {
     let release!: () => void;
     const gate = new Promise<void>((resolve) => {

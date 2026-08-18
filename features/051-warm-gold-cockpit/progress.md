@@ -4,7 +4,7 @@
 - 当前阶段: implement（P0 壳层已实现并验证；收尾项：全量套件与冒烟）
 - 执行模式: auto
 - 已加载: hf-ui-design
-- 下一步: Composer 占位已对齐 UCD；继续主路径未伪造项之外的可落地缺口。
+- 下一步: 空 Composer ↑ 已落地；开始消息复制按钮（纯文本，不伪造 Markdown）。
 
 ## 状态记录
 
@@ -41,6 +41,8 @@
 - 2026-08-17 按 UCD §9.2 收口治理视图：全宽 `.gov-view-header` + `btn-back-chat`、去掉 eyebrow、内层标题 sr-only、看板泳道 parchment + 计数、任务卡 pearl/hairline。文案：新建任务、沉淀新记忆、批准执行/驳回。浏览器核对任务/记忆/审批空态（无项目时引导打开文件夹）。聚焦测试 cockpit-layout / mission-board / memory / approval / audit 69/69，后文案与 HelpTip 相关套件续绿。演示 auto-approved 2026-08-17。Thinking/迷你头像/回收站总数/审批 TTL·Diff 不伪造（A-367～A-373）。
 - 2026-08-18 按 UCD §9.1.5 落地会话项「更多」菜单：悬停/焦点显现三点按钮；菜单含「打标」（预选进入批量整理）与「移入回收站」。不展示「重命名」（A-379）。迷你头像/呼吸点仍不伪造（A-368/A-380）。聚焦 persistent-thread-list / recycle / tags 46/46，`tsc` 绿。演示 auto-approved 2026-08-18。
 - 2026-08-18 按 UCD §9.1.1 收口欢迎卡：标题「欢迎使用 Cool AI」；1:1 空态写打开文件夹与直聊；无 Agent 仍引导配置。collaboration-chat / cockpit-layout 21/21。演示 auto-approved 2026-08-18。
+- 2026-08-18 Composer 占位对齐 UCD：1:1「与助手直接对话」；项目「@ 提及 Agent 发起协作」。Enter 仍走既有发送键。collaboration-chat + placeholder 契约 9/9。演示 auto-approved 2026-08-18。
+- 2026-08-18 按 UCD §9.1.4 落地空 Composer `↑` 打开输入历史；有草稿不拦截（A-382）。input-history 8/8。演示 auto-approved 2026-08-18。项目级 review 豁免（纯 UI）。
 
 ## 任务票
 

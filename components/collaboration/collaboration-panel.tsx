@@ -2192,6 +2192,11 @@ export function CollaborationPanel({
         return;
       }
     }
+    if (event.key === "ArrowUp" && !event.currentTarget.value.trim()) {
+      event.preventDefault();
+      setHistoryOpen(true);
+      return;
+    }
     if (event.key === "Enter" && !event.shiftKey) {
       event.preventDefault();
       if (!event.currentTarget.value.trim()) return;

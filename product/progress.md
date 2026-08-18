@@ -4,8 +4,8 @@
 - 当前阶段: ready
 - 执行模式: auto
 - 已加载扩展: 无
-- 当前主切片: 051/S-61 Composer 占位已对齐 UCD
-- 下一步: 继续 UCD 主路径可落地缺口（不伪造迷你头像/Thinking/重命名）。演示 auto-approved 须呈上驾驶舱与 UCD 原型对照。
+- 当前主切片: 051/S-61 空 Composer ↑ 打开输入历史
+- 下一步: 消息复制按钮（UCD §9.1.1 纯文本，不伪造 Markdown/高亮）。演示 auto-approved 须呈上驾驶舱与 UCD 原型对照。
 
 ## 当前快照（2026-08-15）
 
@@ -76,3 +76,4 @@
 - 2026-08-18 按 UCD §9.1.5 落地会话项「更多」菜单（打标进批量整理、移入回收站；不展示重命名 A-379）。聚焦线程列表/回收站/标签 46/46，`tsc` 绿。演示 auto-approved 2026-08-18。
 - 2026-08-18 按 UCD §9.1.1 收口欢迎卡：「欢迎使用 Cool AI」+ 打开文件夹/1:1 直聊。collaboration-chat / cockpit-layout 21/21。演示 auto-approved 2026-08-18。
 - 2026-08-18 Composer 占位对齐 UCD：1:1「与助手直接对话」；项目「@ 提及 Agent 发起协作」。Enter 仍走既有发送键，不写进占位。collaboration-chat + placeholder 契约 9/9。演示 auto-approved 2026-08-18。
+- 2026-08-18 按 UCD §9.1.4 落地空 Composer `↑` 打开输入历史；有草稿不拦截。可见「历史」按钮保留（A-373/A-382）。input-history 8/8。演示 auto-approved 2026-08-18。
