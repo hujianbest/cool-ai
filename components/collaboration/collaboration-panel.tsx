@@ -1291,6 +1291,7 @@ export function CollaborationPanel({
   const [selectedMember, setSelectedMember] = useState<ProjectMember | null>(null);
   const [focusMessageId, setFocusMessageId] = useState<string | null>(null);
   const [replyJumpMessageId, setReplyJumpMessageId] = useState<string | null>(null);
+  const [copiedMessageId, setCopiedMessageId] = useState<string | null>(null);
   const [locateMessageId, setLocateMessageId] = useState<string | null>(null);
   const [highlightMessageId, setHighlightMessageId] = useState<string | null>(null);
   const [requestedMessageNotice, setRequestedMessageNotice] = useState(false);
@@ -1362,6 +1363,7 @@ export function CollaborationPanel({
   const draftGuard = useTargetRequestGuard(targetKey);
   const inputHistoryRecording = useInputHistoryRecording();
   const draftSaveTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const copiedResetRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const attachmentInputRef = useRef<HTMLInputElement>(null);
   const attachmentUploadsRef = useRef(new Map<number, { abort: () => void }>());
   const composerAttachmentsRef = useRef(composerAttachments);
@@ -2679,6 +2681,31 @@ export function CollaborationPanel({
     });
   }
 
+  async function copySpokenMessage(messageId: string, text: string) {
+    if (!text) return;
+    try {
+      await navigator.clipboard.writeText(text);
+    } catch {
+      return;
+    }
+    setCopiedMessageId(messageId);
+    if (copiedResetRef.current !== null) {
+      clearTimeout(copiedResetRef.current);
+    }
+    copiedResetRef.current = setTimeout(() => {
+      setCopiedMessageId((current) => (current === messageId ? null : current));
+      copiedResetRef.current = null;
+    }, 2000);
+  }
+
+  useEffect(() => {
+    return () => {
+      if (copiedResetRef.current !== null) {
+        clearTimeout(copiedResetRef.current);
+      }
+    };
+  }, []);
+
   function clearComposerDraftState() {
     cancelPendingDraftSave();
     setDraft("");
@@ -3667,6 +3694,30 @@ export function CollaborationPanel({
                       />
                     ))}
                     {entry.messageId ? (
+                      <div className="msg-actions">
+                      {spokenMessage && entry.text ? (
+                        <button
+                          aria-label={
+                            copiedMessageId === entry.messageId
+                              ? `已复制 ${entry.actorLabel} 的消息`
+                              : `复制 ${entry.actorLabel} 的消息：${draftExcerpt(entry.text)}`
+                          }
+                          className={
+                            copiedMessageId === entry.messageId
+                              ? "msg-copy is-copied"
+                              : "msg-copy"
+                          }
+                          onClick={() => {
+                            const messageId = entry.messageId;
+                            const text = entry.text;
+                            if (!messageId || !text) return;
+                            void copySpokenMessage(messageId, text);
+                          }}
+                          type="button"
+                        >
+                          {copiedMessageId === entry.messageId ? "已复制" : "复制"}
+                        </button>
+                      ) : null}
                       <button
                         aria-label={
                           entry.text
@@ -3686,6 +3737,7 @@ export function CollaborationPanel({
                       >
                         回复
                       </button>
+                      </div>
                     ) : null}
                     </div>
                   </li>

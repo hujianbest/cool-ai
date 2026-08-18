@@ -578,4 +578,56 @@ describe("collaboration chat composer", () => {
     expect(screen.getByText("Ask @renamed text")).toBeInTheDocument();
     expect(screen.queryByText("@renamed")).not.toBeInTheDocument();
   });
+
+  it("copies spoken message text from a hover copy control", async () => {
+    const user = userEvent.setup();
+    const writeText = vi.fn().mockResolvedValue(undefined);
+    Object.defineProperty(navigator, "clipboard", {
+      configurable: true,
+      value: { writeText },
+    });
+    installFetch((url) =>
+      url.endsWith("/collaboration")
+        ? Response.json({
+            ...emptyRead,
+            projectMessagesPage: {
+              items: [
+                ownerMessage({
+                  content: "Plan the release",
+                  runId: null,
+                }),
+                ownerMessage({
+                  authorAgentId: "agent-a",
+                  authorDisplayName: "Alpha",
+                  authorType: "agent",
+                  content: "I will draft the checklist.",
+                  id: "message-2",
+                  runId: null,
+                  sequence: 2,
+                }),
+              ],
+              nextAfter: null,
+            },
+          })
+        : Response.json(members),
+    );
+    render(createElement(CollaborationPanel, {
+      projectId: "project-1",
+      surface: "chat",
+      threadId: TEST_THREAD_ID,
+    }));
+
+    const copyOwner = await screen.findByRole("button", {
+      name: "复制 项目所有者 的消息：Plan the release",
+    });
+    const copyAgent = screen.getByRole("button", {
+      name: "复制 Alpha 的消息：I will draft the checklist.",
+    });
+    await user.click(copyAgent);
+    expect(writeText).toHaveBeenCalledWith("I will draft the checklist.");
+    expect(copyAgent).toHaveAccessibleName("已复制 Alpha 的消息");
+    expect(copyOwner).toHaveAccessibleName(
+      "复制 项目所有者 的消息：Plan the release",
+    );
+  });
 });

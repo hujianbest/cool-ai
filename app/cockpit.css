@@ -2139,6 +2139,13 @@ ol {
   font-size: var(--text-fine-print);
 }
 
+.msg-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--space-1);
+}
+
+.message-row .msg-copy,
 .message-row .msg-reply {
   align-self: flex-start;
   min-height: auto;
@@ -2150,8 +2157,11 @@ ol {
   opacity: 0;
 }
 
+.message-row:hover .msg-copy,
+.message-row:focus-within .msg-copy,
 .message-row:hover .msg-reply,
-.message-row:focus-within .msg-reply {
+.message-row:focus-within .msg-reply,
+.message-row .msg-copy.is-copied {
   opacity: 1;
 }
 
