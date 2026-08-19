@@ -397,3 +397,8 @@ agent 替用户做的默认选择。遇到欠定点的标准动作: 提出带默
 - A-385 2026-08-18 [生效] 发言气泡只解析闭合围栏代码块（```lang）并提供块内复制；不解析其余 Markdown，也不做语法高亮。未闭合围栏保持纯文本。默认理由: UCD §9.1.1 代码块可落地，完整 Markdown 另立切片。
 - A-386 2026-08-18 [生效] `npm run smoke` 不再走 walking-skeleton「任务目标」表单：生产 `legacyTasksEnabled={false}`，无 Provider 时打开文件夹也不入组。冒烟改为核对选夹后 Header 项目名、空对话与窄屏壳层。默认理由: UCD 主路径是会话，演示 Agent 任务表已卸出驾驶舱。
 - A-387 2026-08-18 [生效] 独立复核工作台（UCD §9.5）暂不接线到图标轨/任务卡：`ExecutionPanel` 已移出页面树，「打开复核闭环」无挂载点。`review-browser-full-chain` 留待复核表面切片，不在 P0 壳层验收伪造入口。默认理由: 不把已卸下的第四栏执行面板装回主路径。
+- A-388 2026-08-18 [生效] S-42 编辑会话按单文件隔离，不提供多文件工作区树写入。默认理由: 最小可演示 owner 结果，复用既有单文件 staged / MergeJournal。
+- A-389 2026-08-18 [生效] S-42 公开会话 status 用规格词 `editing`/`ready_to_stage`/`stale`/`conflicted`/`staged`/`awaiting_approval`/`merging`/`merged`/`abandoned`；同一项目至多一条活跃会话；创建必须带 `operationId`（重放返回同一会话）；编辑上限与只读预览文本相同（512KiB）；编辑面用 textarea 不引入 Monaco。默认理由: 与 FR 验收词对齐。
+- A-390 2026-08-18 [生效] S-42 T-03 审批事实落在 `workspace_edit_approvals`（project-workspace owner），不伪造 `executions` 行。T-04 再把待决项并入统一审批中心列表。默认理由: 架构禁止放宽 execution 外键。
+- A-391 2026-08-18 [生效] S-42 合入必须走 `writeNativeVerifiedFile`（无则失败关闭）；审批消费、journal 与 `merged` 同事务。canonical 已是 stagedHash 时跳过写盘只补 journal。read/write native 共用一份 Koffi 绑定；write 根目录句柄不请求 DELETE，否则根级 POSIX rename 在本机返回 0xc0000043。默认理由: 安全评审否决 `writeFileSync` 合入；verified-handle 是唯一写入口。
+- A-392 2026-08-18 [生效] S-42 T-04「申请合入」走 PUT+diff+stage；待决项尚未并入统一审批中心列表（A-390）。合入仍须 `approveWorkspaceEditMerge` 后 merge。默认理由: 先把预览「编辑」入口落地，避免本票改审批中心枚举契约。

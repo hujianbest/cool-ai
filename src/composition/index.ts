@@ -31,6 +31,7 @@ export * as membershipService from "@/src/adapters/outbound/sqlite/project-works
 export * as projects from "@/src/adapters/outbound/sqlite/project-workspace/projects";
 export * as validationPolicyService from "@/src/adapters/outbound/sqlite/project-workspace/validation-policy-service";
 export * as workspaceBrowseService from "@/src/adapters/outbound/sqlite/project-workspace/workspace-browse-service";
+export * as workspaceEditService from "@/src/adapters/outbound/sqlite/project-workspace/workspace-edit-service";
 export * as workspaceService from "@/src/adapters/outbound/sqlite/project-workspace/workspace-service";
 
 // public-collaboration

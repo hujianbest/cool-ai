@@ -5,6 +5,7 @@ import { isAbsolute, resolve } from "node:path";
 import * as koffi from "koffi";
 
 import { WindowsNativeError } from "@/src/modules/safe-execution";
+import { getWindowsNativeKoffiFunctions } from "@/src/adapters/outbound/workspace/windows-native-koffi";
 import {
   WINDOWS_NATIVE_ABI,
   WINDOWS_NATIVE_CONSTANTS,
@@ -49,15 +50,6 @@ type ReadAdapterHooks = {
 
 type ReadAdapterOptions = {
   hooks?: ReadAdapterHooks;
-};
-
-type KoffiLibrary = {
-  func(
-    convention: string,
-    name: string,
-    result: string,
-    parameters: unknown[],
-  ): (...args: unknown[]) => unknown;
 };
 
 type NativeFunctions = {
@@ -140,94 +132,8 @@ function guarded<T>(message: string, action: () => T): T {
   }
 }
 
-function bind(
-  library: KoffiLibrary,
-  name: string,
-  result: string,
-  parameters: unknown[],
-): (...args: unknown[]) => unknown {
-  return library.func("__stdcall", name, result, parameters);
-}
-
 function loadFunctions(): NativeFunctions {
-  if (process.platform !== "win32" || process.arch !== "x64") {
-    fail("The native read adapter requires Windows x64.");
-  }
-
-  const unicodeString = koffi.struct(null, {
-    Length: "uint16_t",
-    MaximumLength: "uint16_t",
-    Buffer: "void *",
-  });
-  const objectAttributes = koffi.struct(null, {
-    Length: "uint32_t",
-    RootDirectory: "void *",
-    ObjectName: koffi.pointer(unicodeString),
-    Attributes: "uint32_t",
-    SecurityDescriptor: "void *",
-    SecurityQualityOfService: "void *",
-  });
-  const ioStatusBlock = koffi.struct(null, {
-    StatusOrPointer: "uintptr_t",
-    Information: "uintptr_t",
-  });
-  if (
-    koffi.sizeof(unicodeString) !== WINDOWS_NATIVE_ABI.structs.UNICODE_STRING.size
-    || koffi.sizeof(objectAttributes) !== WINDOWS_NATIVE_ABI.structs.OBJECT_ATTRIBUTES.size
-    || koffi.sizeof(ioStatusBlock) !== WINDOWS_NATIVE_ABI.structs.IO_STATUS_BLOCK.size
-  ) {
-    fail("The native read adapter ABI is unavailable.");
-  }
-
-  const kernel32 = koffi.load("kernel32.dll") as KoffiLibrary;
-  const ntdll = koffi.load("ntdll.dll") as KoffiLibrary;
-  return {
-    closeHandle: bind(kernel32, "CloseHandle", "bool", ["void *"]) as NativeFunctions["closeHandle"],
-    createFileW: bind(kernel32, "CreateFileW", "void *", [
-      "str16", "uint32_t", "uint32_t", "void *", "uint32_t", "uint32_t", "void *",
-    ]) as NativeFunctions["createFileW"],
-    getFileInformationByHandleEx: bind(
-      kernel32,
-      "GetFileInformationByHandleEx",
-      "bool",
-      ["void *", "int32_t", "void *", "uint32_t"],
-    ) as NativeFunctions["getFileInformationByHandleEx"],
-    getFinalPathNameByHandleW: bind(
-      kernel32,
-      "GetFinalPathNameByHandleW",
-      "uint32_t",
-      ["void *", "void *", "uint32_t", "uint32_t"],
-    ) as NativeFunctions["getFinalPathNameByHandleW"],
-    ntCreateFile: bind(ntdll, "NtCreateFile", "int32_t", [
-      koffi.out(koffi.pointer("void *")),
-      "uint32_t",
-      koffi.pointer(objectAttributes),
-      koffi.inout(koffi.pointer(ioStatusBlock)),
-      "void *",
-      "uint32_t",
-      "uint32_t",
-      "uint32_t",
-      "uint32_t",
-      "void *",
-      "uint32_t",
-    ]) as NativeFunctions["ntCreateFile"],
-    ntQueryDirectoryFile: bind(ntdll, "NtQueryDirectoryFile", "int32_t", [
-      "void *",
-      "void *",
-      "void *",
-      "void *",
-      koffi.inout(koffi.pointer(ioStatusBlock)),
-      "void *",
-      "uint32_t",
-      "uint32_t",
-      "bool",
-      "void *",
-      "bool",
-    ]) as NativeFunctions["ntQueryDirectoryFile"],
-    readFile: bind(kernel32, "ReadFile", "bool", [
-      "void *", "void *", "uint32_t", koffi.out(koffi.pointer("uint32_t")), "void *",
-    ]) as NativeFunctions["readFile"],
-  };
+  return getWindowsNativeKoffiFunctions();
 }
 
 function requireOpen(handle: NativeHandle): void {

@@ -27,7 +27,9 @@ export type WorkspaceErrorCode =
   | "WORKSPACE_PATH_REJECTED"
   | "WORKSPACE_NOT_PREVIEWABLE"
   | "WORKSPACE_FILE_TOO_LARGE"
-  | "WORKSPACE_BROWSE_UNAVAILABLE";
+  | "WORKSPACE_BROWSE_UNAVAILABLE"
+  | "WORKSPACE_NOT_EDITABLE"
+  | "WORKSPACE_EDIT_NOT_FOUND";
 
 export class WorkspaceError extends Error {
   constructor(

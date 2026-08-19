@@ -81,7 +81,7 @@
 | S-26 / 043 | SOP 状态投影 | 已 ship |
 | S-27 / 044 | 任务租约与派发控制面 | 已 ship |
 | S-39 / 047 | 跨任务运行时间轴 | 已 ship |
-| S-42 | 受控工作区编辑与 Git 合入 | 规划中（高风险） |
+| S-42 | 受控工作区编辑与 Git 合入 | 已交付 |
 | S-43 | 策略内终端与浏览器预览 | 规划中（高风险） |
 | S-44 | 领域化运维命令与救援 | 规划中（高风险） |
 
@@ -137,7 +137,7 @@ Capability ID 是稳定治理标识；owner 是唯一逻辑子系统，不等于
 ### Safe Execution 与 Governance
 
 - `CAP-EXE-01` Safe Execution Core — owner: Safe Execution — 状态: 已交付核心 — 证据/建立切片: S-5；`src/adapters/outbound/sqlite/safe-execution/execution-service.ts`、`src/adapters/outbound/workspace/windows-verified-execution-adapter.ts`、`tests/adapters/sqlite/safe-execution/execution-security-integration.test.ts`
-- `CAP-EXE-02` Controlled Workspace Mutation — owner: Safe Execution — 状态: 规划中 — 建立切片: S-42
+- `CAP-EXE-02` Controlled Workspace Mutation — owner: Safe Execution — 状态: 已交付核心 — 证据/建立切片: S-42 [`progress.md`](../features/052-controlled-workspace-edit/progress.md)（单文件 sandbox 编辑、stage/审批合入、`writeNativeVerifiedFile` journal）
 - `CAP-EXE-03` Interactive Process & Preview — owner: Safe Execution — 状态: 规划中 — 建立切片: S-43
 - `CAP-EXE-04` Recovery Operations — owner: Safe Execution — 状态: 规划中 — 建立切片: S-44
 - `CAP-EXE-05` Public Execution Events — owner: Safe Execution — 状态: 已交付核心（execution_events 15 写入点同事务白名单 outbox）— 证据/建立切片: S-23 AUD-MVP [`progress.md`](../features/028-audit-projection-mvp/progress.md)
@@ -237,8 +237,8 @@ S-9～S-12 的 `依赖: S-*` 是原历史文字，只说明当时切片记录；
   - 编号规则: `AUD-*` 是拆分草案标识；进入 `to-spec/implement` 前为每个实现片分配新的未占用 `S-*`，S-23 保留为发布追踪别名，不复用为多 owner 实现片。
 - [x] S-24 跨域统一审批中心（CI-4.3） — 主子系统: Governance；主 Capability: `CAP-GOV-02`；票据: [`features/029.../tickets.md`](../features/029-unified-approval-center/tickets.md)；Ship: 2026-08-10（零 schema/零新写路由：listPendingApprovals 跨域聚合+GET approvals/pending；审批 tab 分派既有裁决路由；续接端到端 7 场景零断裂；smoke:execution 69 断言 / 5 axe 状态 0 违规，顺手修复执行时间线 role=log 列表语义既有缺陷；全量绿、tsc/build 通过）；演示判据: owner 能在单一入口查看执行、内联决策等高风险请求的来源、影响与失效状态，批准或拒绝后原流程准确续接且过期请求失败关闭（"交棒"专门审批后续切片接入本中心）；约束: 工作区=显示精确目标，verified-handle=文件动作必需，sandbox=执行审批不解除隔离，凭据=请求内容脱敏，审批=本片核心且不可旁路，独立复核=交付必需（review 豁免记录于 progress），审计=裁决不可变；不复制 Clowder 品牌、源码或资产
   - 准入: 已交付前置: `CAP-EXE-01`、`CAP-COL-01`；`CAP-GOV-01` 只提供 Safe Execution scoped 现状证据，不是本片的通用 Governance 前置；阻塞: `CAP-OPS-01`/`CAP-OPS-02` 须由 S-23 拆分片建立；待验证: `CAP-COL-03` 高风险卡片来源（S-13 未 ship）；本片建立: `CAP-GOV-02` 的跨域 Approval 查询、裁决与来源 Workflow 续接（规划中）。
-- [ ] S-42 受控工作区编辑与 Git 合入（CI-3.5）【高风险安全切片】 — 主子系统: Safe Execution；主 Capability: `CAP-EXE-02`；票据: 未创建；演示判据: owner 能从只读预览发起编辑，在 sandbox 查看 diff、处理 stale/冲突并经审批安全合入 canonical workspace，越界或不可逆 Git 动作失败关闭；约束: 工作区=仅绑定范围，verified-handle=所有路径必需，sandbox=强制，凭据=禁止读取/写入秘密，审批=合入与破坏性 Git 必需，独立复核=结果合入前必需，审计=StagedChange/MergeJournal 完整；不复制 Clowder 品牌、源码或资产
-  - 准入: 已交付前置: `CAP-PWS-01`、`CAP-EXE-01`、`CAP-REV-01`（已交付）与 `CAP-GOV-01`（仅同一冻结 Safe Execution/staged-merge 路径部分可用）；阻塞: `CAP-PWS-02`（S-22）、`CAP-OPS-01`/`CAP-OPS-02`（S-23 拆分片）规划中；本片建立: `CAP-EXE-02` 的受控编辑、Git stale/conflict 和批准后合入（规划中）。
+- [x] S-42 受控工作区编辑与 Git 合入（CI-3.5）【高风险安全切片】 — 主子系统: Safe Execution；主 Capability: `CAP-EXE-02`；票据: [`features/052-controlled-workspace-edit/tickets.md`](../features/052-controlled-workspace-edit/tickets.md)；Ship: 2026-08-18（schema 26、sandbox 编辑会话、stage/审批合入走 `writeNativeVerifiedFile`、预览「编辑」；T-01～T-05；hf-code-review PASS；全量 2808/2810，A-387 残留）；演示判据: owner 能从只读预览发起编辑，在 sandbox 查看 diff、处理 stale/冲突并经审批安全合入 canonical workspace，越界或不可逆 Git 动作失败关闭；约束: 工作区=仅绑定范围，verified-handle=所有路径必需，sandbox=强制，凭据=禁止读取/写入秘密，审批=合入与破坏性 Git 必需，独立复核=结果合入前必需，审计=StagedChange/MergeJournal 完整；不复制 Clowder 品牌、源码或资产
+  - 准入: 已交付前置: `CAP-PWS-01`、`CAP-PWS-02`（S-22）、`CAP-EXE-01`、`CAP-REV-01`、`CAP-GOV-01`（同一冻结 Safe Execution/staged-merge 路径）、`CAP-OPS-01`/`CAP-OPS-02`（S-23 子片已 ship）；本片建立: `CAP-EXE-02` 的受控编辑、Git stale/conflict 和批准后合入。
 - [ ] S-43 策略内 Web 终端与浏览器预览（CI-3.6）【高风险安全切片】 — 主子系统: Safe Execution；主 Capability: `CAP-EXE-03`；票据: 未创建；演示判据: owner 能在任务内运行精确许可命令并查看本地预览，命令、网络、端口和超时政策可见；越界、未许可命令或外部发布被阻止并要求审批；约束: 工作区=仅绑定范围，verified-handle=工作目录必需，sandbox=强制，凭据=环境秘密隔离，审批=网络/破坏性/外部动作必需，独立复核=执行结果必需，审计=命令、输出摘要和退出码可追溯；不复制 Clowder 品牌、源码或资产
   - 准入: 已交付前置: `CAP-EXE-01`、`CAP-PWS-01`（已交付）与 `CAP-GOV-01`（仅同一冻结 Safe Execution 命令路径部分可用）；阻塞: `CAP-PWS-02`（S-22）、`CAP-OPS-01`/`CAP-OPS-02`（S-23 拆分片）规划中；本片建立: `CAP-EXE-03` 的策略内进程、端口、网络和预览生命周期（规划中）。
 

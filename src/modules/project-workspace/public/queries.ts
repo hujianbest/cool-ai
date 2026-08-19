@@ -4,6 +4,8 @@ import type {
   ValidationPolicy,
   ValidationPolicyAudit,
   WorkspaceDirectoryListing,
+  WorkspaceEditDiff,
+  WorkspaceEditSession,
   WorkspaceFilePreview,
   WorkspaceState,
 } from "./dto";
@@ -32,4 +34,14 @@ export interface ProjectWorkspaceQueries {
     databasePath: string,
     projectId: string,
   ) => ValidationPolicy[];
+  getWorkspaceEdit: (
+    databasePath: string,
+    projectId: string,
+    sessionId: string,
+  ) => WorkspaceEditSession;
+  getWorkspaceEditDiff: (
+    databasePath: string,
+    projectId: string,
+    sessionId: string,
+  ) => Promise<WorkspaceEditDiff>;
 }

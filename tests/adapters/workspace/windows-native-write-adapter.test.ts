@@ -284,4 +284,51 @@ describe("Windows handle-relative write adapter", () => {
       expect(readFileSync(join(directory, "parent", "safe.txt"), "utf8")).toBe("old");
     }
   });
+
+  it("replaces after the native read adapter is also constructed", async () => {
+    mkdirSync(join(directory, "parent"));
+    writeFileSync(join(directory, "parent", "safe.txt"), "old");
+    const readModuleId = "@/src/adapters/outbound/workspace/windows-native-read-adapter";
+    const read = await import(/* @vite-ignore */ readModuleId) as {
+      createWindowsNativeReadAdapter(): unknown;
+    };
+    read.createWindowsNativeReadAdapter();
+    const adapter = native.createWindowsNativeWriteAdapter();
+    adapter.writeVerifiedFile(directory, ["parent", "safe.txt"], Buffer.from("new"), hash("old"));
+    expect(readFileSync(join(directory, "parent", "safe.txt"), "utf8")).toBe("new");
+  });
+
+  it("replaces after a native read of the same file", async () => {
+    mkdirSync(join(directory, "parent"));
+    writeFileSync(join(directory, "parent", "safe.txt"), "old");
+    const readModuleId = "@/src/adapters/outbound/workspace/windows-native-read-adapter";
+    const read = await import(/* @vite-ignore */ readModuleId) as {
+      createWindowsNativeReadAdapter(): {
+        readVerifiedFile(rootPath: string, segments: string[], maximumBytes: number): Uint8Array;
+      };
+    };
+    read.createWindowsNativeReadAdapter().readVerifiedFile(
+      directory,
+      ["parent", "safe.txt"],
+      1024,
+    );
+    native.createWindowsNativeWriteAdapter().writeVerifiedFile(
+      directory,
+      ["parent", "safe.txt"],
+      Buffer.from("new"),
+      hash("old"),
+    );
+    expect(readFileSync(join(directory, "parent", "safe.txt"), "utf8")).toBe("new");
+  });
+
+  it("replaces a file in the verified root directory", () => {
+    writeFileSync(join(directory, "root.txt"), "old");
+    native.createWindowsNativeWriteAdapter().writeVerifiedFile(
+      directory,
+      ["root.txt"],
+      Buffer.from("new"),
+      hash("old"),
+    );
+    expect(readFileSync(join(directory, "root.txt"), "utf8")).toBe("new");
+  });
 });

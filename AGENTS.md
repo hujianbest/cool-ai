@@ -25,7 +25,7 @@ Cool AI 是一个本地优先、单 owner 的多 Agent 协作驾驶舱。
 - `tests/`：目标上按 Module owner、Workflow、Adapter、browser、architecture 与 owner fixture 分治。
 - `product/`：七份关键文档——产品规格说明书（`product.md`）、领域词汇表（`词汇表.md`）、产品架构设计说明书（`architecture.md`）、特性分解清单（`backlog.md`）、开发计划（`development-plan.md`，交付顺序单一事实源）、开发进展（`progress.md`）、UI 设计（`ui/UI设计.md` + `ui/DESIGN.md` 令牌）。决策与假设台账为附录。
 - `features/`：特性规格、架构、任务票、评审与进度。
-- `.cursor/skills/`：当前 UI/UX 设计技能（`ui-ux-pro-max`）。
+- `.cursor/skills/`：UI/UX 设计（`ui-ux-pro-max`）；持续按计划开发（`continuous-plan-dev`，完成一项后立刻进入下一项，不中途停下总结）。
 
 ### 架构约定
 
@@ -48,7 +48,7 @@ Cool AI 是一个本地优先、单 owner 的多 Agent 协作驾驶舱。
 
 ### Auto 开发模式
 
-当用户要求 **auto 开发模式**，或 `product/progress.md` / 当前特性 `progress.md` 的执行模式为 `auto` 时：人不在电脑前。智能体持续完成剩余全部任务，过程中不停下来、不询问人。欠定点按本文件与产品文档默认选择并写入 `product/assumptions.md` 后继续；用户可感知的演示验收记为 auto-approved，下次交互再呈上。
+当用户要求 **auto 开发模式**，或 `product/progress.md` / 当前特性 `progress.md` 的执行模式为 `auto` 时：人不在电脑前。智能体持续完成剩余全部任务，过程中不停下来、不询问人。勾完一张票或一个切片不是回合终点——立刻按 `product/development-plan.md` 取下一项并开工，不要停下来总结。欠定点按本文件与产品文档默认选择并写入 `product/assumptions.md` 后继续；用户可感知的演示验收记为 auto-approved，下次交互再呈上。循环纪律见 `.cursor/skills/continuous-plan-dev/SKILL.md`。
 
 ### TDD 与测试
 

@@ -306,7 +306,7 @@ describe("workspace file preview", () => {
     expect(calls).toBe(2);
   });
 
-  it("exposes no editing, deleting or renaming affordances in any state", async () => {
+  it("offers 编辑 for text files and no delete or rename controls", async () => {
     const WorkspaceFilePreview = await filePreview();
     vi.stubGlobal(
       "fetch",
@@ -326,10 +326,48 @@ describe("workspace file preview", () => {
     const region = await screen.findByRole("region", { name: "文件预览" });
     await within(region).findByText("1 行 · 4 B");
     expect(within(region).queryByRole("textbox")).toBeNull();
-    expect(within(region).queryAllByRole("button")).toHaveLength(0);
+    expect(within(region).getByRole("button", { name: "编辑" })).toBeInTheDocument();
+    expect(within(region).queryByRole("button", { name: /删除|重命名/ })).toBeNull();
     expect(within(region).queryByRole("link")).toBeNull();
     expect(region.querySelector("[contenteditable]")).toBeNull();
-    expect(region.querySelector("input, textarea, select")).toBeNull();
+  });
+
+  it("opens a sandbox editor from 编辑 and keeps canonical preview copy until saved", async () => {
+    const WorkspaceFilePreview = await filePreview();
+    vi.stubGlobal(
+      "fetch",
+      vi.fn(async (input: RequestInfo | URL, init?: RequestInit) => {
+        const url = String(input);
+        if (url.includes("/workspace/file?")) {
+          return Response.json({
+            content: "hello owner",
+            kind: "text",
+            lineCount: 1,
+            sizeBytes: 11,
+            truncated: false,
+          });
+        }
+        if (url.endsWith("/workspace/edits") && init?.method === "POST") {
+          return Response.json({
+            expectedHash: "a".repeat(64),
+            path: "notes.txt",
+            sessionId: "11111111-1111-4111-8111-111111111111",
+            stagedHash: null,
+            status: "editing",
+            version: 1,
+          }, { status: 201 });
+        }
+        throw new Error(`Unexpected request: ${url} ${init?.method ?? "GET"}`);
+      }),
+    );
+    const user = userEvent.setup();
+    render(<WorkspaceFilePreview filePath="notes.txt" projectId="project-1" />);
+    const region = await screen.findByRole("region", { name: "文件预览" });
+    await user.click(within(region).getByRole("button", { name: "编辑" }));
+    const dialog = await screen.findByRole("dialog", { name: "编辑文件" });
+    expect(within(dialog).getByRole("textbox", { name: "文件内容" })).toHaveValue("hello owner");
+    expect(within(dialog).getByRole("button", { name: "放弃" })).toBeInTheDocument();
+    expect(within(dialog).getByRole("button", { name: "申请合入" })).toBeInTheDocument();
   });
 
   it("keeps the preview styling on design tokens with monospace content", () => {

@@ -96,7 +96,7 @@ afterEach(() => {
 
 describe("runtime audit outbox schema", () => {
   it("bootstraps identity 25 and accepts only the canonical runtime source", () => {
-    expect(database.prepare("PRAGMA user_version").get()).toEqual({ user_version: 25 });
+    expect(database.prepare("PRAGMA user_version").get()).toEqual({ user_version: 26 });
     database.prepare(`
       INSERT INTO audit_event_outbox(
         id,project_id,source,event_type,payload_json,occurred_at,outbox_seq

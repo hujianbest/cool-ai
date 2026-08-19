@@ -109,3 +109,44 @@ export type ValidationPolicyAudit = {
   sequence: number;
   warningAccepted: boolean;
 };
+
+export type WorkspaceEditStatus =
+  | "abandoned"
+  | "awaiting_approval"
+  | "conflicted"
+  | "editing"
+  | "merged"
+  | "merging"
+  | "ready_to_stage"
+  | "staged"
+  | "stale";
+
+export type WorkspaceEditSession = {
+  expectedHash: string;
+  path: string;
+  sessionId: string;
+  stagedHash: string | null;
+  status: WorkspaceEditStatus;
+  version: number;
+};
+
+export type CreateWorkspaceEditInput = {
+  operationId: string;
+  relativePath: string;
+};
+
+export type PutWorkspaceEditDraftInput = {
+  content: string;
+  expectedHash: string;
+  expectedVersion: number;
+  operationId: string;
+};
+
+export type WorkspaceEditDiffStatus = "conflicted" | "editing" | "ready_to_stage" | "stale";
+
+export type WorkspaceEditDiff = {
+  diff: string;
+  path: string;
+  sessionId: string;
+  status: WorkspaceEditDiffStatus;
+};

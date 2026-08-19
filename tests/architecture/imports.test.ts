@@ -96,6 +96,10 @@ const TRANSITIONAL_ADAPTER_EDGES: Array<{ file: string; specifier: string }> = [
     file: "src/adapters/outbound/sqlite/project-workspace/workspace-browse-service.ts",
     specifier: "@/src/adapters/outbound/workspace/workspace-browse-adapter",
   },
+  {
+    file: "src/adapters/outbound/sqlite/project-workspace/workspace-edit-service.ts",
+    specifier: "@/src/adapters/outbound/workspace/workspace-browse-adapter",
+  },
   // T-12 transition: sqlite 各 owner Adapter 跨技术读 model-runtime 的
   // provider-verifier/openai-chat-client（迁移前同经 src/server legacy 路径）；
   // T-13 收编为显式能力后移除。

@@ -102,9 +102,11 @@ export function formatWorkspaceFileSize(bytes: number): string {
 }
 
 function PreviewBody({
+  onEdit,
   path,
   preview,
 }: {
+  onEdit?: () => void;
   path: string;
   preview: WorkspaceFilePreviewDto;
 }) {
@@ -120,6 +122,13 @@ function PreviewBody({
           <p className="workspace-preview-meta muted">
             {preview.lineCount} 行 · {formatWorkspaceFileSize(preview.sizeBytes)}
           </p>
+          {onEdit && !preview.truncated ? (
+            <div>
+              <button onClick={onEdit} type="button">
+                编辑
+              </button>
+            </div>
+          ) : null}
           <pre className="workspace-preview-content">{preview.content}</pre>
         </>
       );
@@ -151,6 +160,14 @@ export function WorkspaceFilePreview({
 }: WorkspaceFilePreviewProps) {
   const [state, setState] = useState<PreviewState>({ status: "idle" });
   const [reloadKey, setReloadKey] = useState(0);
+  const [editor, setEditor] = useState<{
+    content: string;
+    expectedHash: string;
+    sessionId: string;
+    version: number;
+  } | null>(null);
+  const [editorError, setEditorError] = useState<string | null>(null);
+  const [busy, setBusy] = useState(false);
   const epochRef = useRef(0);
 
   useEffect(() => {
@@ -185,6 +202,109 @@ export function WorkspaceFilePreview({
       controller.abort();
     };
   }, [filePath, projectId, reloadKey]);
+
+  async function startEdit(path: string, content: string): Promise<void> {
+    setEditorError(null);
+    setBusy(true);
+    try {
+      const response = await fetch(`/api/projects/${projectId}/workspace/edits`, {
+        body: JSON.stringify({ operationId: crypto.randomUUID(), path }),
+        headers: { "content-type": "application/json" },
+        method: "POST",
+      });
+      const payload: unknown = await response.json().catch(() => null);
+      if (!response.ok || typeof payload !== "object" || payload === null) {
+        throw new Error("edit-open-failed");
+      }
+      const session = payload as Record<string, unknown>;
+      if (
+        typeof session.sessionId !== "string"
+        || typeof session.expectedHash !== "string"
+        || typeof session.version !== "number"
+      ) {
+        throw new Error("edit-open-failed");
+      }
+      setEditor({
+        content,
+        expectedHash: session.expectedHash,
+        sessionId: session.sessionId,
+        version: session.version,
+      });
+    } catch {
+      setEditorError("无法开始编辑。");
+    } finally {
+      setBusy(false);
+    }
+  }
+
+  async function abandonEdit(): Promise<void> {
+    if (!editor) return;
+    setBusy(true);
+    try {
+      await fetch(
+        `/api/projects/${projectId}/workspace/edits/${editor.sessionId}/abandon`,
+        {
+          body: JSON.stringify({
+            expectedVersion: editor.version,
+            operationId: crypto.randomUUID(),
+          }),
+          headers: { "content-type": "application/json" },
+          method: "POST",
+        },
+      );
+    } finally {
+      setBusy(false);
+      setEditor(null);
+    }
+  }
+
+  async function requestMerge(): Promise<void> {
+    if (!editor) return;
+    setEditorError(null);
+    setBusy(true);
+    try {
+      const put = await fetch(
+        `/api/projects/${projectId}/workspace/edits/${editor.sessionId}`,
+        {
+          body: JSON.stringify({
+            content: editor.content,
+            expectedHash: editor.expectedHash,
+            expectedVersion: editor.version,
+            operationId: crypto.randomUUID(),
+          }),
+          headers: { "content-type": "application/json" },
+          method: "PUT",
+        },
+      );
+      const putBody: unknown = await put.json().catch(() => null);
+      if (!put.ok || typeof putBody !== "object" || putBody === null) {
+        throw new Error("edit-put-failed");
+      }
+      const version = (putBody as { version?: unknown }).version;
+      if (typeof version !== "number") throw new Error("edit-put-failed");
+      await fetch(
+        `/api/projects/${projectId}/workspace/edits/${editor.sessionId}/diff`,
+      );
+      const staged = await fetch(
+        `/api/projects/${projectId}/workspace/edits/${editor.sessionId}/stage`,
+        {
+          body: JSON.stringify({
+            expectedVersion: version,
+            operationId: crypto.randomUUID(),
+          }),
+          headers: { "content-type": "application/json" },
+          method: "POST",
+        },
+      );
+      if (!staged.ok) throw new Error("edit-stage-failed");
+      setEditor(null);
+      setReloadKey((current) => current + 1);
+    } catch {
+      setEditorError("无法申请合入。");
+    } finally {
+      setBusy(false);
+    }
+  }
 
   const visible: PreviewState =
     filePath === null
@@ -223,10 +343,84 @@ export function WorkspaceFilePreview({
             </>
           ) : null}
           {visible.status === "ready" ? (
-            <PreviewBody path={visible.path} preview={visible.preview} />
+            <PreviewBody
+              onEdit={
+                visible.preview.kind === "text" && !visible.preview.truncated
+                  ? () => {
+                      const content = visible.preview.kind === "text"
+                        ? visible.preview.content
+                        : "";
+                      void startEdit(visible.path, content);
+                    }
+                  : undefined
+              }
+              path={visible.path}
+              preview={visible.preview}
+            />
           ) : null}
         </>
       )}
+      {editorError ? (
+        <p className="error-text" role="alert">
+          {editorError}
+        </p>
+      ) : null}
+      {editor ? (
+        <div
+          aria-labelledby="workspace-edit-title"
+          aria-modal="true"
+          className="cockpit-context modal-surface workspace-edit-dialog"
+          role="dialog"
+        >
+          <div className="panel-heading">
+            <h3 id="workspace-edit-title">编辑文件</h3>
+            <button
+              aria-label="关闭编辑"
+              className="button-ghost drawer-close"
+              disabled={busy}
+              onClick={() => {
+                void abandonEdit();
+              }}
+              type="button"
+            >
+              关闭
+            </button>
+          </div>
+          <label className="stack" htmlFor="workspace-edit-content">
+            文件内容
+            <textarea
+              id="workspace-edit-content"
+              onChange={(event) => {
+                setEditor((current) =>
+                  current ? { ...current, content: event.target.value } : current,
+                );
+              }}
+              value={editor.content}
+            />
+          </label>
+          <div className="cluster">
+            <button
+              disabled={busy}
+              onClick={() => {
+                void abandonEdit();
+              }}
+              type="button"
+            >
+              放弃
+            </button>
+            <button
+              className="button-primary"
+              disabled={busy}
+              onClick={() => {
+                void requestMerge();
+              }}
+              type="button"
+            >
+              申请合入
+            </button>
+          </div>
+        </div>
+      ) : null}
     </section>
   );
 }

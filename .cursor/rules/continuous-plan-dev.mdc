@@ -1,0 +1,12 @@
+---
+description: After finishing a ticket or slice, immediately start the next item in the product plan. Do not stop to summarize or ask to continue.
+alwaysApply: true
+---
+
+# 持续按计划开发
+
+`product/` 已经明确了要开发的内容和开发计划。agent 持续按计划开发就行，不应该停下来。
+
+完成一张票、一个切片或一次验收之后，立刻读 `product/development-plan.md` 与 `product/progress.md`，开始下一项。不要停下来总结，不要问是否继续。
+
+只在计划穷尽、硬阻塞、或用户明确说停时结束回合。完整循环见 `.cursor/skills/continuous-plan-dev/SKILL.md`。

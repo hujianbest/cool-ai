@@ -12,7 +12,7 @@ export type CurrentSchemaManifest = {
 
 const CURRENT_SCHEMA_DEFINITION = {
   "identity": {
-    "userVersion": 25
+    "userVersion": 26
   },
   "objects": [
     {
@@ -61,6 +61,24 @@ const CURRENT_SCHEMA_DEFINITION = {
       "kind": "table",
       "name": "project_memberships",
       "createSql": "CREATE TABLE project_memberships (\n    project_id TEXT NOT NULL REFERENCES projects(id) ON DELETE CASCADE,\n    agent_id TEXT NOT NULL REFERENCES agents(id),\n    joined_at TEXT NOT NULL,\n    PRIMARY KEY(project_id, agent_id)\n  )",
+      "dependsOn": []
+    },
+    {
+      "kind": "table",
+      "name": "workspace_edit_sessions",
+      "createSql": "CREATE TABLE workspace_edit_sessions(\n id TEXT PRIMARY KEY,\n project_id TEXT NOT NULL REFERENCES projects(id) ON DELETE CASCADE,\n relative_path TEXT NOT NULL CHECK(length(CAST(relative_path AS BLOB)) BETWEEN 1 AND 4096),\n path_key TEXT NOT NULL CHECK(length(CAST(path_key AS BLOB)) BETWEEN 1 AND 4096),\n status TEXT NOT NULL CHECK(status IN ('editing','ready_to_stage','stale','conflicted','staged','awaiting_approval','merging','merged','abandoned')),\n expected_mtime TEXT NOT NULL CHECK(expected_mtime GLOB '????-??-??T??:??:??.???Z'),\n baseline_hash TEXT NOT NULL CHECK(length(baseline_hash)=64 AND baseline_hash NOT GLOB '*[^0-9a-f]*'),\n staged_hash TEXT CHECK(staged_hash IS NULL OR (length(staged_hash)=64 AND staged_hash NOT GLOB '*[^0-9a-f]*')),\n draft_locator_json TEXT NOT NULL CHECK(json_valid(draft_locator_json) AND length(CAST(draft_locator_json AS BLOB))<=16384),\n version INTEGER NOT NULL DEFAULT 1 CHECK(version>=1),\n latest_operation_id TEXT NOT NULL CHECK(length(CAST(latest_operation_id AS BLOB)) BETWEEN 1 AND 128),\n created_at TEXT NOT NULL CHECK(created_at GLOB '????-??-??T??:??:??.???Z'),\n updated_at TEXT NOT NULL CHECK(updated_at GLOB '????-??-??T??:??:??.???Z'),\n UNIQUE(project_id, latest_operation_id)\n)",
+      "dependsOn": []
+    },
+    {
+      "kind": "table",
+      "name": "workspace_edit_approvals",
+      "createSql": "CREATE TABLE workspace_edit_approvals(\n id TEXT PRIMARY KEY,\n project_id TEXT NOT NULL REFERENCES projects(id) ON DELETE CASCADE,\n session_id TEXT NOT NULL REFERENCES workspace_edit_sessions(id) ON DELETE CASCADE,\n staged_hash TEXT NOT NULL CHECK(length(staged_hash)=64 AND staged_hash NOT GLOB '*[^0-9a-f]*'),\n status TEXT NOT NULL CHECK(status IN ('pending','approved','consumed','rejected')),\n operation_id TEXT NOT NULL CHECK(length(CAST(operation_id AS BLOB)) BETWEEN 1 AND 128),\n created_at TEXT NOT NULL CHECK(created_at GLOB '????-??-??T??:??:??.???Z'),\n updated_at TEXT NOT NULL CHECK(updated_at GLOB '????-??-??T??:??:??.???Z'),\n UNIQUE(project_id, operation_id),\n UNIQUE(session_id, staged_hash)\n)",
+      "dependsOn": []
+    },
+    {
+      "kind": "table",
+      "name": "workspace_edit_merge_journals",
+      "createSql": "CREATE TABLE workspace_edit_merge_journals(\n id TEXT PRIMARY KEY,\n project_id TEXT NOT NULL REFERENCES projects(id) ON DELETE CASCADE,\n session_id TEXT NOT NULL REFERENCES workspace_edit_sessions(id) ON DELETE CASCADE,\n approval_id TEXT NOT NULL REFERENCES workspace_edit_approvals(id),\n operation_id TEXT NOT NULL CHECK(length(CAST(operation_id AS BLOB)) BETWEEN 1 AND 128),\n staged_hash TEXT NOT NULL CHECK(length(staged_hash)=64 AND staged_hash NOT GLOB '*[^0-9a-f]*'),\n status TEXT NOT NULL CHECK(status IN ('completed','abandoned')),\n created_at TEXT NOT NULL CHECK(created_at GLOB '????-??-??T??:??:??.???Z'),\n UNIQUE(project_id, operation_id),\n UNIQUE(session_id)\n)",
       "dependsOn": []
     },
     {
@@ -667,6 +685,14 @@ const CURRENT_SCHEMA_DEFINITION = {
       "createSql": "CREATE UNIQUE INDEX execution_one_project_merge ON execution_merge_journals(project_id) WHERE status IN ('prepared','applying','db_committed','rolling_back','rolling_forward','manual_recovery')",
       "dependsOn": [
         "execution_merge_journals"
+      ]
+    },
+    {
+      "kind": "index",
+      "name": "workspace_edit_one_active",
+      "createSql": "CREATE UNIQUE INDEX workspace_edit_one_active ON workspace_edit_sessions(project_id) WHERE status IN ('editing','ready_to_stage','stale','conflicted','staged','awaiting_approval','merging')",
+      "dependsOn": [
+        "workspace_edit_sessions"
       ]
     },
     {

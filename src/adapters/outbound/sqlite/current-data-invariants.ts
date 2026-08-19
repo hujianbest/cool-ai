@@ -144,6 +144,25 @@ export const CURRENT_DATA_INVARIANTS = [
       OR (h.state='completed' AND NOT EXISTS(
           SELECT 1 FROM mission_deliveries d WHERE d.id=h.current_delivery_id
             AND d.mission_id=h.mission_id AND d.project_id=h.project_id))`,
+  `SELECT s.id FROM workspace_edit_sessions s
+   WHERE NOT EXISTS(SELECT 1 FROM projects p WHERE p.id=s.project_id)
+      OR json_extract(s.draft_locator_json,'$.kind')<>'workspace_edit_draft'
+      OR json_extract(s.draft_locator_json,'$.sessionId')<>s.id
+      OR typeof(json_extract(s.draft_locator_json,'$.path'))<>'text'
+      OR json_extract(s.draft_locator_json,'$.path')<>s.relative_path
+      OR instr(lower(s.draft_locator_json), ':\\')>0
+      OR instr(s.draft_locator_json, ':/')>0
+      OR (s.staged_hash IS NOT NULL AND s.status NOT IN ('staged','awaiting_approval','merging','merged'))
+      OR (s.status IN ('staged','awaiting_approval','merging','merged') AND s.staged_hash IS NULL)`,
+  `SELECT a.id FROM workspace_edit_approvals a
+   WHERE NOT EXISTS(SELECT 1 FROM workspace_edit_sessions s
+                    WHERE s.id=a.session_id AND s.project_id=a.project_id)
+      OR (a.status IN ('approved','consumed') AND a.staged_hash<>(
+            SELECT staged_hash FROM workspace_edit_sessions s WHERE s.id=a.session_id))`,
+  `SELECT j.id FROM workspace_edit_merge_journals j
+   WHERE NOT EXISTS(SELECT 1 FROM workspace_edit_approvals a
+                    WHERE a.id=j.approval_id AND a.session_id=j.session_id)
+      OR j.staged_hash<>(SELECT staged_hash FROM workspace_edit_sessions s WHERE s.id=j.session_id)`,
   `SELECT p.id FROM projects p LEFT JOIN collaboration_project_thread_sequences s
      ON s.project_id=p.id
    WHERE EXISTS(SELECT 1 FROM collaboration_threads t WHERE t.project_id=p.id)

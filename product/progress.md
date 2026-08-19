@@ -4,8 +4,8 @@
 - 当前阶段: ready
 - 执行模式: auto
 - 已加载扩展: 无
-- 当前主切片: 无（050/S-60 与 051/S-61 已 ship）
-- 下一步: 未交付高风险能力（受控编辑/Git、终端预览、救援、MCP/CLI、语音、知识集合）需独立立项后再开。完整 Markdown / 迷你头像 / Thinking / 重命名 / 回收站总数 / 审批 TTL·Diff 仍不伪造。演示 auto-approved 须呈上驾驶舱与 UCD 原型对照。
+- 当前主切片: 053/S-43 策略内终端与浏览器预览
+- 下一步: 053/S-43 立项（grill-with-docs / spec）。
 
 ## 当前快照（2026-08-18）
 
@@ -16,7 +16,7 @@
 | P1 阶段 1 驾驶舱 | 050/S-60 已 ship：原生选夹、三名自带 Agent、聊天优先、GET `/api/home` 只读 |
 | P2–P5 既有切片 | 计划中列出的会话/整理/执行/知识核心能力已 ship；规划中加厚项见特性分解清单 |
 | 环境/IA 残留 | `review-browser-full-chain` 因 UCD §9.5 未挂载（A-387）；`smoke:onboarding` 引导按钮被时间线条目挡住 |
-| 未交付高风险切片 | 受控编辑/Git、终端预览、救援、MCP/CLI、语音、知识集合/图谱等仍规划中（见特性分解清单） |
+| 未交付高风险切片 | S-42 已 ship；下一片 S-43 策略内终端/预览 |
 
 ## 状态记录
 
@@ -83,3 +83,4 @@
 - 2026-08-18 按 UCD §9.1.1 落地闭合围栏代码块与块内复制；无高亮、无其余 Markdown（A-385）。collaboration-chat 10/10。演示 auto-approved 2026-08-18。
 - 2026-08-18 051 T-06 在目标 Windows x64（Node 24.14 / npm 11.9）收口：`tsc`/`build` 绿；全量 303/304 文件、2790/2791；`npm run smoke` 绿（A-386）。团队编辑器改为 `modal-surface`；Composer textarea 去掉非法 combobox ARIA。残留：`review-browser-full-chain`（A-387）、`smoke:onboarding` 引导钮被时间线挡住。演示 auto-approved。
 - 2026-08-18 ship 050/S-60 与 051/S-61：阶段 1 驾驶舱与暖金会话优先壳层勾选为已交付；当前无活跃在途切片。UCD 主路径不伪造 DTO 的缺口已收口。未交付高风险能力仍规划中。
+- 2026-08-18 052/S-42 受控工作区编辑完成 implement + ship：schema 26、sandbox 编辑/diff/stage、审批后 `writeNativeVerifiedFile` 合入、预览「编辑」。安全评审 HIGH/MEDIUM 已修（A-391）；hf-code-review PASS；`tsc`/`build` 绿；全量 2808/2810（A-387）。演示 auto-approved。下一步 S-43。

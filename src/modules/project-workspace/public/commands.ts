@@ -1,11 +1,14 @@
 import type {
   BindWorkspaceInput,
+  CreateWorkspaceEditInput,
   MembershipState,
   Project,
+  PutWorkspaceEditDraftInput,
   ReplaceMembersInput,
   ResolvedExecutable,
   SaveValidationPolicyInput,
   SaveValidationPolicyResult,
+  WorkspaceEditSession,
   WorkspaceFs,
   WorkspaceOperation,
   WorkspaceState,
@@ -43,4 +46,15 @@ export interface ProjectWorkspaceCommands {
     input: SaveValidationPolicyInput,
     options?: { resolveExecutable?: (executable: string) => ResolvedExecutable },
   ) => SaveValidationPolicyResult;
+  createWorkspaceEdit: (
+    databasePath: string,
+    projectId: string,
+    input: CreateWorkspaceEditInput,
+  ) => Promise<WorkspaceEditSession>;
+  putWorkspaceEditDraft: (
+    databasePath: string,
+    projectId: string,
+    sessionId: string,
+    input: PutWorkspaceEditDraftInput,
+  ) => Promise<WorkspaceEditSession>;
 }

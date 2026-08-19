@@ -2860,6 +2860,17 @@ button.source-tag:hover:not(:disabled) {
   background: var(--surface);
 }
 
+.workspace-edit-dialog {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-3);
+}
+
+.workspace-edit-dialog textarea {
+  min-height: calc(var(--control-min) * 6);
+  font: var(--text-sm) var(--font-mono);
+}
+
 .context-status {
   color: var(--text-muted);
 }

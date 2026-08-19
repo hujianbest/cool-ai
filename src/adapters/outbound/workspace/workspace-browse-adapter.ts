@@ -93,6 +93,17 @@ function validateBrowsePath(relativePath: string): { path: string; segments: str
   }
 }
 
+export function workspaceEditPathSegments(relativePath: string): string[] {
+  const segments = validateBrowsePath(relativePath).segments;
+  if (segments.length === 0) {
+    throw new WorkspaceError(
+      "WORKSPACE_PATH_REJECTED",
+      "Workspace path cannot be verified inside the binding root.",
+    );
+  }
+  return segments;
+}
+
 async function openVerifiedRoot<Handle>(
   fs: SandboxFileHandleAdapter<Handle>,
   workspaceRoot: string,
@@ -381,6 +392,82 @@ export async function readWorkspacePreview<Handle>(input: {
       return browseUnavailable();
     }
     return classifyPreview(bytes, size);
+  } finally {
+    await closeAll(fs, owned);
+  }
+}
+
+export const WORKSPACE_EDIT_TEXT_BYTES = WORKSPACE_PREVIEW_TEXT_BYTES;
+
+export type VerifiedWorkspaceTextFile = {
+  bytes: Uint8Array;
+  path: string;
+  sizeBytes: number;
+};
+
+export async function readVerifiedWorkspaceTextFile<Handle>(input: {
+  fs: SandboxFileHandleAdapter<Handle>;
+  relativePath: string;
+  workspaceRoot: string;
+}): Promise<VerifiedWorkspaceTextFile> {
+  const validated = validateBrowsePath(input.relativePath);
+  if (validated.segments.length === 0) {
+    throw new WorkspaceError("WORKSPACE_NOT_EDITABLE", "Directories cannot be edited.");
+  }
+  if (isSensitiveWorkspacePath(validated.segments)) {
+    return pathRejected();
+  }
+  const { fs } = input;
+  const owned: Handle[] = [];
+  try {
+    const { root, rootFinalPath } = await openVerifiedRoot(fs, input.workspaceRoot);
+    owned.push(root);
+    const parent = await traverseToDirectory(
+      fs,
+      root,
+      rootFinalPath,
+      validated.segments.slice(0, -1),
+      owned,
+    );
+    const name = validated.segments.at(-1)!;
+    const listed = await fs.list(parent).catch(() => null);
+    if (!listed) return browseUnavailable();
+    const entry = listed.find((candidate) => candidate.name === name);
+    if (!entry) return entryNotFound();
+    const file = await verifiedChild(fs, parent, name, entry.identity, rootFinalPath);
+    owned.push(file.handle);
+    if (file.identity.kind === "directory") {
+      throw new WorkspaceError("WORKSPACE_NOT_EDITABLE", "Directories cannot be edited.");
+    }
+    if (file.identity.kind !== "file") return pathRejected();
+    if (!Number.isSafeInteger(file.identity.size) || file.identity.size < 0) {
+      return browseUnavailable();
+    }
+    const size = file.identity.size;
+    if (size > WORKSPACE_EDIT_TEXT_BYTES) {
+      throw new WorkspaceError(
+        "WORKSPACE_FILE_TOO_LARGE",
+        "File exceeds the workspace edit limit.",
+      );
+    }
+    const bytes = await fs.readFromHandle(file.handle, WORKSPACE_EDIT_TEXT_BYTES + 1).catch(() => null);
+    if (!bytes) return browseUnavailable();
+    const after = await fs.currentIdentity(file.handle).catch(() => null);
+    if (
+      !after
+      || !sameIdentity(file.identity, after)
+      || bytes.byteLength !== size
+    ) {
+      return browseUnavailable();
+    }
+    if (detectImageContentType(bytes)) {
+      throw new WorkspaceError("WORKSPACE_NOT_EDITABLE", "Only text files can be edited.");
+    }
+    const content = decodeTextPrefix(bytes, false);
+    if (content === null || content.includes("\0")) {
+      throw new WorkspaceError("WORKSPACE_NOT_EDITABLE", "Only text files can be edited.");
+    }
+    return { bytes, path: validated.path, sizeBytes: size };
   } finally {
     await closeAll(fs, owned);
   }
