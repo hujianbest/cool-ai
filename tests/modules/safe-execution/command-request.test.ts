@@ -123,6 +123,7 @@ describe("command request classification and durable facts", () => {
         attemptId: ATTEMPT_ID,
         attemptNo: 1,
         classifierVersion: CLASSIFIER_VERSION,
+        consumer: "execution_action",
         contextHash: CONTEXT_HASH,
         executable: command.executable,
         executableIdentity: command.executableIdentity,

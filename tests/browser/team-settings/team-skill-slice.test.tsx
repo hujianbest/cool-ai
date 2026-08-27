@@ -8,6 +8,8 @@ import userEvent from "@testing-library/user-event";
 import type { ReactElement } from "react";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
+import { serviceHealthResponse } from "@/tests/fixtures/browser/service-health";
+
 type RouteModule = {
   GET: () => Promise<Response>;
   POST: (request: Request) => Promise<Response>;
@@ -49,6 +51,8 @@ describe("/team skill vertical slice", () => {
     const route = await loadRoute();
     const { default: TeamPage } = await loadPage();
     vi.stubGlobal("fetch", async (input: RequestInfo | URL, init?: RequestInit) => {
+      const health = serviceHealthResponse(input);
+      if (health) return health;
       const url = input.toString();
       if (url !== "/api/skills") throw new Error(`Unexpected request: ${url}`);
       if (init?.method === "POST") {

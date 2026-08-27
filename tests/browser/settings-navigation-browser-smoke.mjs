@@ -42,6 +42,14 @@ const resultsPath = join(
   evidenceDirectory,
   "settings-navigation-results.json",
 );
+const memoryEvidenceDirectory = resolve(
+  "features",
+  "054-memory-index-health",
+  "evidence",
+);
+const memoryDesktopScreenshot = join(memoryEvidenceDirectory, "memory-index-desktop.png");
+const memoryDarkScreenshot = join(memoryEvidenceDirectory, "memory-index-dark.png");
+const memoryNarrowScreenshot = join(memoryEvidenceDirectory, "memory-index-narrow.png");
 const generatedConfigSnapshots = ["next-env.d.ts", "tsconfig.json"]
   .map((path) => resolve(path))
   .filter(existsSync)
@@ -53,6 +61,7 @@ const browserExecutable = [
 ].find((candidate) => candidate && existsSync(candidate));
 
 mkdirSync(evidenceDirectory, { recursive: true });
+mkdirSync(memoryEvidenceDirectory, { recursive: true });
 mkdirSync(workspaceDirectory);
 for (const stablePath of [desktopScreenshot, narrowScreenshot, resultsPath]) {
   rmSync(stablePath, { force: true });
@@ -199,12 +208,83 @@ try {
   await assertAxeCriticalFree(page, "desktop project");
   recordStep("created-real-project", { projectPath });
 
-  await page.getByTitle("团队").click();
+  const memoryCreated = await page.evaluate(async ({ projectId }) => {
+    const response = await fetch(`/api/projects/${projectId}/memories`, {
+      body: JSON.stringify({
+        content: "Browser verified memory source",
+        sourceRef: "Owner browser acceptance",
+        sourceType: "owner_input",
+        type: "fact",
+      }),
+      headers: { "content-type": "application/json" },
+      method: "POST",
+    });
+    return response.ok;
+  }, { projectId });
+  assert.equal(memoryCreated, true);
+  await page.getByRole("button", { name: "记忆", exact: true }).click();
+  await page.getByRole("heading", { exact: true, name: "共享记忆" }).waitFor();
+  await page.getByText("索引已追平 · 1/1 有效").waitFor();
+  await page.getByRole("button", { name: "重建索引" }).click();
+  const memoryRebuild = page.getByRole("dialog", { name: "重建记忆索引" });
+  await memoryRebuild.waitFor();
+  assert.equal(
+    await memoryRebuild.getByRole("button", { name: "取消" }).evaluate(
+      (element) => element === document.activeElement,
+    ),
+    true,
+  );
+  await memoryRebuild.getByRole("button", { name: "确认重建" }).click();
+  await memoryRebuild.waitFor({ state: "detached" });
+  await page.getByText("索引已追平 · 1/1 有效").waitFor();
+  await page.getByRole("heading", { name: "Browser verified memory source" }).waitFor();
+  await assertAxeCriticalFree(page, "desktop light memory index health");
+  await page.screenshot({ fullPage: true, path: memoryDesktopScreenshot });
+  await page.getByRole("button", { name: "当前为明色主题，切换到暗色主题" }).click();
+  await assertAxeCriticalFree(page, "desktop dark memory index health");
+  await page.screenshot({ fullPage: true, path: memoryDarkScreenshot });
+  await page.setViewportSize({ height: 844, width: 390 });
+  await assertAxeCriticalFree(page, "narrow dark memory index health");
+  await page.screenshot({ fullPage: true, path: memoryNarrowScreenshot });
+  await page.setViewportSize({ height: 1000, width: 1440 });
+  await page.getByRole("button", { name: "当前为暗色主题，切换到明色主题" }).click();
+  await page.getByRole("link", { name: "对话" }).click();
+  recordStep("memory-index-health-rebuild-light-dark-narrow");
+
+  await page.getByRole("link", { name: "团队" }).click();
   await page.waitForURL((url) =>
     url.pathname === "/team"
     && url.searchParams.get("section") === "skills"
     && url.searchParams.get("returnTo") === projectPath);
   await page.getByRole("search").waitFor();
+  const healthRegion = page.getByRole("region", { name: "服务健康" });
+  await healthRegion.waitFor();
+  await healthRegion.getByRole("heading", { name: "应用" }).waitFor();
+  await healthRegion.getByRole("heading", { name: "模型服务" }).waitFor();
+  await healthRegion.getByRole("heading", { name: "记忆索引" }).waitFor();
+  await healthRegion.getByRole("heading", { name: "执行" }).waitFor();
+  assert.equal(
+    await healthRegion.getByRole("link", { name: "打开记忆" }).getAttribute("href"),
+    projectPath,
+  );
+  recordStep("service-health-region-from-project");
+  const usageRegion = page.getByRole("region", { name: "用量与配额" });
+  await usageRegion.waitFor();
+  await usageRegion.getByText("基础用量不是账单").waitFor();
+  await usageRegion.getByRole("heading", { name: "本项目" }).waitFor();
+  assert.equal(
+    await usageRegion.getByRole("link", { name: "配置 Agent" }).getAttribute("href"),
+    `/team?section=agents&returnTo=${encodeURIComponent(projectPath)}`,
+  );
+  recordStep("usage-quota-region-from-project");
+  const contributionRegion = page.getByRole("region", { name: "协作贡献" });
+  await contributionRegion.waitFor();
+  await contributionRegion.getByText("这不是排行榜").waitFor();
+  assert.equal(
+    await contributionRegion.getByRole("link", { name: "打开任务" }).getAttribute("href"),
+    projectPath,
+  );
+  recordStep("contribution-insight-region-from-project");
   const notificationRegion = page.getByRole("region", { name: "通知" });
   await notificationRegion.waitFor();
   const approvalSwitch = notificationRegion.getByRole("switch", {
@@ -229,7 +309,7 @@ try {
   recordStep("notification-region-toggle-and-manifest");
 
   await assertSearchOpens(page, "  模型  ", "打开模型服务设置", "providers");
-  await page.getByRole("heading", { exact: true, name: "模型服务" }).waitFor();
+  await page.getByRole("heading", { exact: true, level: 2, name: "模型服务" }).waitFor();
   recordStep("searched-and-opened-chinese-section");
 
   await assertSearchOpens(page, "  AGENT  ", "打开 Agent 设置", "agents");

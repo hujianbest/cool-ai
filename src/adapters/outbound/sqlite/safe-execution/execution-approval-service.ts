@@ -155,6 +155,7 @@ function commandFactsMatch(row: ApprovalRow): boolean {
     "attemptId",
     "attemptNo",
     "classifierVersion",
+    "consumer",
     "contextHash",
     "executable",
     "executableIdentity",
@@ -592,6 +593,8 @@ export function consumeApprovedCommand(input: {
     const currentApproval = input.database.prepare(`
       SELECT id FROM execution_approvals
       WHERE execution_id=? AND kind='command' AND status='approved'
+        AND COALESCE(json_extract(public_request_json,'$.consumer'),'execution_action')
+            ='execution_action'
     `).get(input.executionId) as { id: string } | undefined;
     if (!currentApproval) {
       throw new ExecutionError(
@@ -627,6 +630,8 @@ export function consumeApprovedCommand(input: {
        AND attempt.id=approval.attempt_id
       WHERE approval.execution_id=? AND approval.kind='command'
         AND approval.status='approved'
+        AND COALESCE(json_extract(approval.public_request_json,'$.consumer'),'execution_action')
+            ='execution_action'
         AND approval.input_hash=tool.before_sandbox_hash
         AND approval.input_hash=attempt.sandbox_manifest_hash
         AND execution.status='waiting_approval' AND execution.version=?

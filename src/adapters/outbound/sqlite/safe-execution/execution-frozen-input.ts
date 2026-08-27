@@ -260,7 +260,9 @@ export function captureExecutionFrozenInput(
   if (!policy) throw new Error("Execution validation policy is unavailable.");
   const policyRows = database.prepare(`
     SELECT position,id,executable,executable_identity AS executableIdentity,
-           args_json AS argsJson,workdir,required,tuple_hash AS tupleHash
+           args_json AS argsJson,workdir,required,purpose,
+           timeout_seconds AS timeoutSeconds,network,preview_port AS port,
+           preview_open_path AS openPath,tuple_hash AS tupleHash
     FROM project_validation_policy_entries
     WHERE project_id=? AND revision_id=? ORDER BY position,id
   `).all(input.projectId, policy.revisionId) as Array<{
@@ -268,8 +270,13 @@ export function captureExecutionFrozenInput(
     executable: string;
     executableIdentity: string;
     id: string;
+    network: "loopback_only" | null;
+    openPath: string | null;
     position: number;
+    port: number | null;
+    purpose: "preview" | "validation";
     required: number;
+    timeoutSeconds: number;
     tupleHash: string;
     workdir: string;
   }>;

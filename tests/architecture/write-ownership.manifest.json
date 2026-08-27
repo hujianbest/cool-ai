@@ -14,6 +14,7 @@
     "audit_outbox_governance": "feature 037: governance joins the audit_event_outbox shared append seam — all 11 approval lifecycle write points in approval-store.ts (request inserts, verdict, single/execution/project-scope expires as one row per call site, consumes) append source='governance' rows atomically inside the caller's transaction; payloads carry only whitelisted enum/identity keys (approvalId/executionId as navigation anchors), centralized in governance/audit-event-outbox.ts",
     "audit_outbox_runtime": "feature 041: runtime joins the audit_event_outbox shared append seam — collaboration, execution, and review model-call terminal writes append source='runtime' rows in the same transaction; per-domain *_model_calls ownership remains unchanged and payload extraction is centralized in runtime/audit-event-outbox.ts",
     "thread_search_index": "feature 031: derived search projection (thread titles + persisted public message bodies) owned by the operations-projection consumer (thread-search-index); no FKs by design (A-140 projection semantics), index⊆fact-source enforced by reopen data invariants",
+    "memory_search_index": "feature 054: project-scoped active-memory search projection and dedicated watermark/state owned by operations-projection; canonical memory search remains on knowledge-provenance source facts and index rows are constrained to active source heads",
     "thread_tags": "feature 032: project-scoped thread tag facts (thread_tags), assignment edges (thread_tag_edges), and versioned batch receipts (thread_tag_operations) owned by public-collaboration; tag delete clears edges explicitly in the same transaction (FK CASCADE is only the thread-cascade backstop), edges⊆threads/tags enforced by reopen data invariants; the T-03 batch command writes receipts through the insertThreadTagOperationReceiptTx anchor registered in thread-tag-service.ts",
     "thread_purge_markers": "feature 033: transaction-local purge exemption markers (inserted at purge start, deleted before commit) owned by public-collaboration; no FK to collaboration_threads by design (the row is about to disappear), projects CASCADE is the only lifecycle backstop, empty-table enforced by reopen data invariants",
     "thread_message_queue": "feature 034: per-thread pending owner-message queue (enqueue/cancel/reorder/steer commands, run-window head consumption) owned by public-collaboration; thread tuple CASCADE is the lifecycle backstop, status vocabulary (pending/consumed/cancelled) and position uniqueness enforced by CHECK/UNIQUE constraints and reopen data invariants",
@@ -102,6 +103,8 @@
       "execution_staged_blockers",
       "execution_validation_results",
       "execution_validation_output_chunks",
+      "execution_policy_processes",
+      "execution_policy_process_output_chunks",
       "execution_merge_journals",
       "execution_merge_files",
       "audit_event_outbox"
@@ -112,7 +115,9 @@
     "operations-projection": [
       "audit_event_projection",
       "audit_projection_checkpoints",
-      "thread_search_index"
+      "thread_search_index",
+      "memory_search_index",
+      "memory_search_index_state"
     ],
     "review-delivery": [
       "review_attempts",
@@ -129,6 +134,8 @@
     ],
     "knowledge-provenance": [
       "memory_entries",
+      "memory_collections",
+      "memory_collection_members",
       "review_memory_candidates",
       "review_memory_associations"
     ]

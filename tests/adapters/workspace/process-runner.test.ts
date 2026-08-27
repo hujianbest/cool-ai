@@ -85,6 +85,10 @@ type RunnerModule = {
     clock?: Clock;
     executable: string;
     heartbeat: () => boolean | Promise<boolean>;
+    onOutputSnapshot?: (
+      stream: "stderr" | "stdout",
+      output: ProcessResult["stdout"],
+    ) => void;
     processAdapter?: ProcessAdapter;
     sandboxRoot: string;
     secretValues?: string[];
@@ -478,6 +482,7 @@ describe("direct process runner", () => {
 
   it("caps each stream at 1 MiB, redacts secrets, marks truncation, hashes, and emits UTF-8-safe 64 KiB chunks", async () => {
     const secret = "provider-live-secret";
+    const snapshots: string[] = [];
     const childScript = script("large-output.mjs", `
       const secret = ${JSON.stringify(secret)};
       process.stdout.write("Authorization: Bearer " + secret + "\\n");
@@ -491,6 +496,9 @@ describe("direct process runner", () => {
       authorizationSource: "one_shot",
       executable: process.execPath,
       heartbeat: () => true,
+      onOutputSnapshot(_stream, output) {
+        snapshots.push(JSON.stringify(output));
+      },
       sandboxRoot,
       secretValues: [secret],
       workdir: ".",
@@ -513,6 +521,9 @@ describe("direct process runner", () => {
       expect(stream.sha256).toMatch(/^[0-9a-f]{64}$/u);
     }
     const persisted = JSON.stringify(result);
+    expect(snapshots.length).toBeGreaterThan(0);
+    expect(snapshots.every((snapshot) => !snapshot.includes(secret))).toBe(true);
+    expect(snapshots.some((snapshot) => snapshot.includes("[REDACTED:CREDENTIAL]"))).toBe(true);
     expect(persisted).not.toContain(secret);
     expect(persisted).toContain("[REDACTED:CREDENTIAL]");
     expect(persisted).toContain("[TRUNCATED]");

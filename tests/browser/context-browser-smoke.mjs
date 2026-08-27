@@ -1241,6 +1241,28 @@ try {
   assert.equal(await page.getByRole("button", { name: "打开记忆检索" }).count(), 0);
   console.log("MEMORY SEARCH ACCEPTANCE PASS: assertions=3");
 
+  await page.getByRole("button", { name: "记忆", exact: true }).click();
+  await page.getByRole("heading", { exact: true, name: "共享记忆" }).waitFor();
+  await page.getByText(/索引已追平 · \d+\/\d+ 有效/u).waitFor();
+  await page.getByRole("button", { name: "重建索引" }).click();
+  const rebuildDialog = page.getByRole("dialog", { name: "重建记忆索引" });
+  await rebuildDialog.waitFor();
+  assert.equal(
+    await rebuildDialog.getByRole("button", { name: "取消" }).evaluate(
+      (element) => element === document.activeElement,
+    ),
+    true,
+  );
+  await rebuildDialog.getByRole("button", { name: "确认重建" }).click();
+  await rebuildDialog.waitFor({ state: "detached" });
+  await page.getByText(/索引已追平 · \d+\/\d+ 有效/u).waitFor();
+  assert.equal(
+    await page.getByRole("heading", { name: "Current context goal" }).count(),
+    1,
+  );
+  await page.getByRole("link", { name: "对话" }).click();
+  console.log("MEMORY INDEX HEALTH PASS: caught-up, confirmed rebuild, source preserved");
+
   const snapshots = await page.evaluate(
     async ({ projectId }) => {
       const memberState = await (

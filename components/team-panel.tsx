@@ -28,6 +28,9 @@ import {
   useSettingsPreferences,
 } from "@/components/settings-preferences-store";
 import { NotificationSettingsRegion } from "@/components/notifications/notification-settings-region";
+import { ServiceHealthRegion } from "@/components/team-settings/service-health-region";
+import { ContributionInsightRegion } from "@/components/team-settings/contribution-insight-region";
+import { UsageQuotaRegion } from "@/components/team-settings/usage-quota-region";
 import { SkillPanel } from "@/components/skill-panel";
 
 const resources: SettingsSectionId[] = ["skills", "providers", "agents"];
@@ -312,6 +315,9 @@ export function TeamPanel({
             <p className="muted">固定分区后，变更记录会显示在这里。</p>
           )}
         </section>
+        <ServiceHealthRegion returnTo={returnTo} />
+        <UsageQuotaRegion returnTo={returnTo} />
+        <ContributionInsightRegion returnTo={returnTo} />
         <NotificationSettingsRegion />
         <div
           aria-label="团队资源"

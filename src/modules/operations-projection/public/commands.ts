@@ -1,6 +1,8 @@
 import type {
   AuditProjectionCatchUpResult,
   AuditProjectionRebuildResult,
+  MemorySearchIndexCatchUpResult,
+  MemoryIndexRebuildResult,
   ThreadSearchIndexCatchUpResult,
   ThreadSearchIndexRebuildResult,
 } from "./dto";
@@ -13,7 +15,20 @@ import type {
  */
 export interface OperationsProjectionCommands {
   catchUpAuditProjection: (databasePath: string) => AuditProjectionCatchUpResult;
+  catchUpMemorySearchIndex: (
+    databasePath: string,
+    projectId: string,
+  ) => MemorySearchIndexCatchUpResult;
   catchUpThreadSearchIndex: (databasePath: string) => ThreadSearchIndexCatchUpResult;
   rebuildAuditProjection: (databasePath: string) => AuditProjectionRebuildResult;
+  rebuildMemorySearchIndex: (
+    databasePath: string,
+    projectId: string,
+    input: {
+      confirmation: string;
+      expectedVersion: number;
+      operationId: string;
+    },
+  ) => MemoryIndexRebuildResult;
   rebuildThreadSearchIndex: (databasePath: string) => ThreadSearchIndexRebuildResult;
 }

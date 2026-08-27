@@ -143,7 +143,7 @@ describe("review product wiring", () => {
 
     expect(page).toContain("<ProjectPanel");
     expect(project).toContain("<TaskPanel");
-    expect(task).not.toContain("<ExecutionPanel");
+    expect(task).toContain("<ExecutionPanel");
     expect(task).toContain("<MissionBoard");
     expect(execution).toContain("<ReviewProductSurface");
     expect(execution).toContain("打开复核闭环");

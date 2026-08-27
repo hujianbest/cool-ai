@@ -118,6 +118,38 @@ function validateEntry(input: ValidationPolicyEntryInput): void {
   ) {
     throw new ValidationPolicyError("INVALID_INPUT", "Validation policy entry is invalid.");
   }
+  const purpose = input.purpose ?? "validation";
+  const timeoutSeconds = input.timeoutSeconds ?? 120;
+  if (
+    !["preview", "validation"].includes(purpose)
+    || !Number.isInteger(timeoutSeconds)
+    || timeoutSeconds < 30
+    || timeoutSeconds > 900
+  ) {
+    throw new ValidationPolicyError("INVALID_PREVIEW_POLICY", "Process policy boundary is invalid.");
+  }
+  if (purpose === "validation") {
+    if (input.network !== undefined || input.openPath !== undefined || input.port !== undefined) {
+      throw new ValidationPolicyError("INVALID_PREVIEW_POLICY", "Validation entries cannot expose a preview.");
+    }
+  } else if (
+    input.required
+    || input.network !== "loopback_only"
+    || !Number.isInteger(input.port)
+    || input.port! < 1024
+    || input.port! > 65_535
+    || typeof input.openPath !== "string"
+    || Buffer.byteLength(input.openPath, "utf8") < 1
+    || Buffer.byteLength(input.openPath, "utf8") > 2048
+    || !input.openPath.startsWith("/")
+    || input.openPath.startsWith("//")
+    || input.openPath.includes("\\")
+    || input.openPath.includes("\0")
+    || input.openPath.includes("://")
+    || input.openPath.split("/").includes("..")
+  ) {
+    throw new ValidationPolicyError("INVALID_PREVIEW_POLICY", "Preview policy boundary is invalid.");
+  }
   let argumentBytes = 0;
   for (const argument of input.args) {
     if (typeof argument !== "string" || Buffer.byteLength(argument, "utf8") > 4096) {
@@ -137,7 +169,9 @@ function entryRows(
 ): ValidationPolicyEntry[] {
   return database.prepare(
     `SELECT id,position,executable,executable_identity AS executableIdentity,
-            args_json AS argsJson,workdir,required,tuple_hash AS tupleHash
+            args_json AS argsJson,workdir,required,purpose,
+            timeout_seconds AS timeoutSeconds,network,preview_port AS port,
+            preview_open_path AS openPath,tuple_hash AS tupleHash
      FROM project_validation_policy_entries
      WHERE project_id=? AND revision_id=? ORDER BY position`,
   ).all(projectId, revisionId).map((row) => {
@@ -146,8 +180,13 @@ function entryRows(
       executable: string;
       executableIdentity: string;
       id: string;
+      network: "loopback_only" | null;
+      openPath: string | null;
       position: number;
+      port: number | null;
+      purpose: "preview" | "validation";
       required: number;
+      timeoutSeconds: number;
       tupleHash: string;
       workdir: string;
     };
@@ -156,8 +195,13 @@ function entryRows(
       executable: value.executable,
       executableIdentity: value.executableIdentity,
       id: value.id,
+      network: value.network,
+      openPath: value.openPath,
       position: value.position,
+      port: value.port,
+      purpose: value.purpose,
       required: value.required === 1,
+      timeoutSeconds: value.timeoutSeconds,
       tupleHash: value.tupleHash,
       workdir: value.workdir,
     };
@@ -281,7 +325,12 @@ function normalizeEntries(
       args: [...input.args],
       executable: resolved.executable.replaceAll("\\", "/"),
       executableIdentity: resolved.executableIdentity,
+      network: input.purpose === "preview" ? "loopback_only" as const : null,
+      openPath: input.purpose === "preview" ? input.openPath! : null,
+      port: input.purpose === "preview" ? input.port! : null,
+      purpose: input.purpose ?? "validation",
       required: input.required,
+      timeoutSeconds: input.timeoutSeconds ?? 120,
       workdir: normalizeRelativeWorkdir(input.workdir),
     };
     const classification = classifyPolicyEntry(normalized, policyContext(normalized.executable));
@@ -298,7 +347,12 @@ function normalizeEntries(
     classifierVersion: CLASSIFIER_VERSION,
     executable: value.executable,
     executableIdentity: value.executableIdentity,
+    network: value.network,
+    openPath: value.openPath,
+    port: value.port,
+    purpose: value.purpose,
     required: value.required,
+    timeoutSeconds: value.timeoutSeconds,
     workdir: value.workdir,
   })));
   return {
@@ -530,8 +584,9 @@ export function saveValidationPolicy(
       const insertEntry = database.prepare(
         `INSERT INTO project_validation_policy_entries (
            id,project_id,revision_id,position,executable,executable_identity,args_json,
-           workdir,required,tuple_hash
-         ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+           workdir,required,purpose,timeout_seconds,network,preview_port,
+           preview_open_path,tuple_hash
+         ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
       );
       normalized!.entries.forEach((entry, position) => {
         insertEntry.run(
@@ -544,6 +599,11 @@ export function saveValidationPolicy(
           JSON.stringify(entry.args),
           entry.workdir,
           entry.required ? 1 : 0,
+          entry.purpose,
+          entry.timeoutSeconds,
+          entry.network,
+          entry.port,
+          entry.openPath,
           entry.tupleHash,
         );
       });

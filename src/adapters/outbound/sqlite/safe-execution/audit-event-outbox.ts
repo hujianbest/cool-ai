@@ -16,7 +16,7 @@ const PUBLIC_PAYLOAD_KEYS: ReadonlySet<string> = new Set([
   "kind", "limit", "manifestHash", "mergeFileCount", "mergeFinalBytes",
   "mismatchPhase", "modelCallId", "observedFinalBytes", "observedManifestHash",
   "observedPathCount", "oldManifestHash", "operationId", "otherExecutionIds",
-  "overallDeadlineAt", "pathCount", "policyEntryId", "postManifestHash",
+  "overallDeadlineAt", "pathCount", "policyEntryId", "postManifestHash", "processId",
   "promptTokens", "reasonCode", "recovery", "reported", "requestHash",
   "required", "resolution", "resultId", "resumeTarget", "riskReasons", "round",
   "sandboxManifestHash", "stagedHash", "stagedId", "status", "succeeded", "to",

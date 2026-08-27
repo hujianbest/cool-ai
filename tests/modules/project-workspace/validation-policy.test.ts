@@ -11,7 +11,12 @@ import { memoryDatabasePath } from "@/tests/fixtures/sqlite/memory-database";
 type PolicyEntryInput = {
   args: string[];
   executable: string;
+  network?: "loopback_only";
+  openPath?: string;
+  port?: number;
+  purpose?: "preview" | "validation";
   required: boolean;
+  timeoutSeconds?: number;
   workdir: string;
 };
 type Policy = {
@@ -249,6 +254,43 @@ describe("append-only validation policy", () => {
       operationId: operationId(7),
       warningAccepted: true,
     }, resolver)).toThrow(expect.objectContaining({ code: "POLICY_SIZE_LIMIT_EXCEEDED" }));
+  });
+
+  it("persists explicit preview boundaries and rejects unsafe preview policy", () => {
+    const project = createProject("Preview policy", databasePath);
+    const saved = policy.saveValidationPolicy(databasePath, project.id, {
+      entries: [entry({
+        args: ["run", "dev", "--", "--host", "127.0.0.1", "--port", "4173"],
+        network: "loopback_only",
+        openPath: "/app",
+        port: 4173,
+        purpose: "preview",
+        required: false,
+        timeoutSeconds: 600,
+      })],
+      expectedVersion: 1,
+      operationId: operationId(11),
+      warningAccepted: true,
+    }, resolver);
+
+    expect(saved.policy.entries[0]).toEqual(expect.objectContaining({
+      network: "loopback_only",
+      openPath: "/app",
+      port: 4173,
+      purpose: "preview",
+      timeoutSeconds: 600,
+    }));
+    expect(() => policy.saveValidationPolicy(databasePath, project.id, {
+      entries: [entry({
+        openPath: "https://example.invalid",
+        port: 80,
+        purpose: "preview",
+        timeoutSeconds: 901,
+      })],
+      expectedVersion: 2,
+      operationId: operationId(12),
+      warningAccepted: true,
+    }, resolver)).toThrow(expect.objectContaining({ code: "INVALID_PREVIEW_POLICY" }));
   });
 
   it("retains history and frozen references across restart until project deletion", () => {

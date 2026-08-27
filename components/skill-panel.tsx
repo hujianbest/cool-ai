@@ -225,7 +225,7 @@ export function SkillPanel() {
             tabIndex={-1}
           >
             <p>{loadError}</p>
-            <button onClick={() => void loadSkills()} type="button">
+            <button className="button-secondary" onClick={() => void loadSkills()} type="button">
               重试加载技能
             </button>
           </div>
@@ -250,6 +250,7 @@ export function SkillPanel() {
                   </div>
                   <button
                     aria-label={`编辑 ${skill.name}`}
+                    className="button-secondary"
                     onClick={(event) => startEdit(skill, event.currentTarget)}
                     type="button"
                   >
@@ -344,7 +345,7 @@ export function SkillPanel() {
               </p>
             ) : null}
           </div>
-          <button disabled={isSubmitting} type="submit">
+          <button className="button-primary" disabled={isSubmitting} type="submit">
             {isSubmitting
               ? "正在保存技能…"
               : editingSkill

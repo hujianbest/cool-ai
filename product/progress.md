@@ -4,8 +4,8 @@
 - 当前阶段: ready
 - 执行模式: auto
 - 已加载扩展: 无
-- 当前主切片: 053/S-43 策略内终端与浏览器预览
-- 下一步: 053/S-43 立项（grill-with-docs / spec）。
+- 当前主切片: 无（S-32 阻塞）
+- 下一步: S-32 Agent 署名提炼阻塞于 `CAP-GOV-02` 非执行域发布治理；不进入 S-45 族。
 
 ## 当前快照（2026-08-18）
 
@@ -15,8 +15,8 @@
 | P0 暖金壳层 | 051/S-61 已 ship：T-01～T-06 在目标 Windows x64 收口，tsc/build 绿，全量 2790/2791，`npm run smoke` 绿 |
 | P1 阶段 1 驾驶舱 | 050/S-60 已 ship：原生选夹、三名自带 Agent、聊天优先、GET `/api/home` 只读 |
 | P2–P5 既有切片 | 计划中列出的会话/整理/执行/知识核心能力已 ship；规划中加厚项见特性分解清单 |
-| 环境/IA 残留 | `review-browser-full-chain` 因 UCD §9.5 未挂载（A-387）；`smoke:onboarding` 引导按钮被时间线条目挡住 |
-| 未交付高风险切片 | S-42 已 ship；下一片 S-43 策略内终端/预览 |
+| 环境/IA 残留 | `review-browser-full-chain` 因 UCD §9.5 未挂载（A-387）；`smoke:onboarding` 引导按钮被时间线条目挡住；`smoke:context` 桌面主路径等待已卸下的工作区绑定条（A-401）；`smoke:execution` P1 IA + 既有 color-contrast（A-412） |
+| 未交付高风险切片 | S-42、S-43、S-35、S-44、S-36、S-37、S-38、S-40、S-30、S-31 已 ship；下一非高风险为 S-32（阻塞于 S-24）；S-34 仍规划中；高风险为 S-45 族 |
 
 ## 状态记录
 
@@ -84,3 +84,21 @@
 - 2026-08-18 051 T-06 在目标 Windows x64（Node 24.14 / npm 11.9）收口：`tsc`/`build` 绿；全量 303/304 文件、2790/2791；`npm run smoke` 绿（A-386）。团队编辑器改为 `modal-surface`；Composer textarea 去掉非法 combobox ARIA。残留：`review-browser-full-chain`（A-387）、`smoke:onboarding` 引导钮被时间线挡住。演示 auto-approved。
 - 2026-08-18 ship 050/S-60 与 051/S-61：阶段 1 驾驶舱与暖金会话优先壳层勾选为已交付；当前无活跃在途切片。UCD 主路径不伪造 DTO 的缺口已收口。未交付高风险能力仍规划中。
 - 2026-08-18 052/S-42 受控工作区编辑完成 implement + ship：schema 26、sandbox 编辑/diff/stage、审批后 `writeNativeVerifiedFile` 合入、预览「编辑」。安全评审 HIGH/MEDIUM 已修（A-391）；hf-code-review PASS；`tsc`/`build` 绿；全量 2808/2810（A-387）。演示 auto-approved。下一步 S-43。
+- 2026-08-19 053/S-43 完成 grill-with-docs：spec/architecture/6 张纵向票与 UCD §9.4.4 落盘；策略终端收窄为任务内精确命令选择器 + 只读脱敏输出，本地预览仅由冻结 loopback policy 生成（A-393～A-396）。进入 implement T-01。
+- 2026-08-19 053/S-43 完成 implement + ship：schema 27、冻结策略命令目录、exact/deny/one-shot Approval、Policy Process 生命周期与脱敏增量输出、loopback preview、任务内终端 UI 全部落地；code/security review 发现已收口；`tsc`/`build` 绿，全量 308/309 文件、2820/2821 用例（唯一失败为既有 A-387）；演示 auto-approved。下一片按未交付依赖顺序进入 054/S-29。
+- 2026-08-19 054/S-29 完成 grill-with-docs：专用 index/state watermark、不切换 S-28 canonical search、active-head coverage/hash 健康口径、强确认 SQLite 投影重建（A-397～A-400）；spec/architecture/5 张票与 UCD §9.2.4 落盘，进入 implement T-01。
+- 2026-08-21 054/S-29 完成 implement + ship：schema 28、memory index/state、health GET、强确认 rebuild、记忆视图健康条；code review 收口跨 owner 写与正文泄漏；`tsc`/`build` 绿，`smoke:settings` 含亮/暗/窄屏健康条，全量 2826/2827（A-387）；`smoke:context` 记 A-401。演示 auto-approved。下一片按未交付依赖顺序进入 055/S-35。
+- 2026-08-21 055/S-35 完成 grill-with-docs：`/team` 健康 region、零 schema 组合信号、GET 不探测 Provider、unknown 不映射 ok（A-402～A-405）；spec/architecture/5 张票与 UCD §9.3.6 落盘，进入 implement T-01。
+- 2026-08-21 055/S-35 完成 implement + ship：GET `/api/health` 聚合应用/Provider/索引/执行；`/team` 健康四卡与深链；`tsc`/`build` 绿，`smoke:settings` 20 steps，全量 2832/2833（A-387）。演示 auto-approved。S-44 健康阻塞解除。
+- 2026-08-21 056/S-44 完成 grill-with-docs：冻结目录、只读预览、execute/undo、Execution「救援」表面与 UCD §9.4.5（A-406～A-408）。进入 implement T-01。
+- 2026-08-21 056/S-44 完成 implement + ship：冻结救援目录、preview/execute/undo（confirmation + version CAS，高权限经既有 Approval）、任务治理 Execution 卡片「救援」；ExecutionPanel 挂在图标轨任务视图（A-411）。`tsc`/`build` 绿；全量 318/319、2853/2854（A-387）；`smoke:execution` 记 A-412。演示 auto-approved。下一片 S-36 用量与配额看板。
+- 2026-08-21 057/S-36 完成 grill-with-docs：零 schema 用量投影、GET `/api/usage`、`/team` §9.3.7、估算不是账单（A-413～A-416）。进入 implement T-01。
+- 2026-08-21 058/S-37 完成 grill-with-docs：按职责贡献投影、GET `/api/contribution`、`/team` §9.3.8、不是排行榜（A-417～A-420）。进入 implement T-01。
+- 2026-08-21 058/S-37 完成 implement + ship：零 schema GET `/api/contribution`；`/team`「协作贡献」按职责展示工作项/复核，声明不是排行榜，证据深链既有任务/复核入口。`tsc`/`build` 绿；`smoke:settings` 22 steps；全量 324/325、2868/2869（A-387）。演示 auto-approved。下一片 S-38 脱敏导出。
+- 2026-08-21 059/S-38 完成 grill-with-docs：当前项目脱敏导出、GET `/api/projects/:id/export`、审计「导出脱敏包」、浏览器下载（A-421～A-425）。进入 implement T-01。
+- 2026-08-21 059/S-38 完成 implement + ship：零 schema GET `/api/projects/:id/export`；审计确认后下载脱敏 JSON（版本/范围/hash）；不写工作区。`tsc`/`build` 绿；全量 326/327、2873/2874（A-387）。演示 auto-approved。下一片 S-40 交付回放。
+- 2026-08-21 060/S-40 完成 grill-with-docs：时间轴只读回放、GET `/api/projects/:id/replay`、不重放动作（A-426～A-428）。进入 implement T-01。
+- 2026-08-21 060/S-40 完成 implement + ship：零 schema GET `/api/projects/:id/replay`；时间轴「打开回放」；来源 href 复用审计面板。`tsc`/`build` 绿；全量 328/329、2878/2879（A-387）。演示 auto-approved。下一片 S-30 知识集合。
+- 2026-08-21 061/S-30 完成 grill-with-docs：集合目录、schema 29、删除保留来源（A-429～A-431）。进入 implement T-01。
+- 2026-08-21 061/S-30 完成 implement + ship：schema 29 集合表；记忆视图目录；删除不删来源。`tsc`/`build` 绿；全量 328/330、2881/2883（A-387；composer-draft 偶发已复跑通过）。演示 auto-approved。下一片 S-31 知识图谱。
+- 2026-08-21 062/S-31 完成 implement + ship：零 schema GET `/api/projects/:id/knowledge-graph`；记忆「关系列表」；supersedes 与集合共现；缺节点边不渲染。`tsc`/`build` 绿；全量 331/332、2887/2888（A-387）。演示 auto-approved。`CAP-KNW-03` 已交付核心。下一片 S-32 阻塞于 S-24 非执行域发布治理。

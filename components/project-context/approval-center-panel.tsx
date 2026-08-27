@@ -290,7 +290,7 @@ export function ApprovalCenterPanel({ projectId }: { projectId: string }) {
       ) : (
         <>
           <div>
-            <button onClick={refresh} type="button">
+            <button className="button-secondary" onClick={refresh} type="button">
               刷新列表
             </button>
           </div>
@@ -330,6 +330,7 @@ export function ApprovalCenterPanel({ projectId }: { projectId: string }) {
                       <div className="approval-center-actions">
                         <button
                           aria-label={`批准执行 ${displayTitle}`}
+                          className="button-primary"
                           disabled={decidingId === item.approvalId}
                           onClick={() => void decide(item, "approve")}
                           type="button"
@@ -338,6 +339,7 @@ export function ApprovalCenterPanel({ projectId }: { projectId: string }) {
                         </button>
                         <button
                           aria-label={`驳回 ${displayTitle}`}
+                          className="button-secondary"
                           disabled={decidingId === item.approvalId}
                           onClick={() => void decide(item, "reject")}
                           type="button"
@@ -354,6 +356,7 @@ export function ApprovalCenterPanel({ projectId }: { projectId: string }) {
                     <div className="approval-center-actions">
                       {item.sourceRef.executionId ? (
                         <button
+                          className="button-ghost"
                           onClick={() => locateExecution(item.sourceRef.executionId!)}
                           type="button"
                         >
@@ -361,7 +364,7 @@ export function ApprovalCenterPanel({ projectId }: { projectId: string }) {
                         </button>
                       ) : null}
                       {item.sourceRef.threadId ? (
-                        <a href={sourceThreadHref(projectId, item.sourceRef)}>
+                        <a className="button-ghost" href={sourceThreadHref(projectId, item.sourceRef)}>
                           查看来源消息
                         </a>
                       ) : null}

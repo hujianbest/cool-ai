@@ -675,12 +675,18 @@ export function MissionBoard({
       ) : !insight || insight.portraits.length === 0 ? (
         <p className="state-message">暂无项目成员能力画像。</p>
       ) : (
-        <ul aria-label="成员能力画像" className="stack mission-capability-portraits">
+        <ul aria-label="成员能力画像" className="mission-capability-portraits">
           {insight.portraits.map((portrait) => (
-            <li className="stack" key={portrait.agentId}>
-              <p>{portrait.name}</p>
+            <li className="capability-portrait-card" key={portrait.agentId}>
+              <div className="capability-portrait-header">
+                <strong>{portrait.name}</strong>
+              </div>
               {portrait.skillNames.length > 0 ? (
-                <p>{portrait.skillNames.join("、")}</p>
+                <div className="capability-portrait-skills">
+                  {portrait.skillNames.map((skill) => (
+                    <span className="status-label" key={skill}>{skill}</span>
+                  ))}
+                </div>
               ) : (
                 <p className="muted">未配置技能</p>
               )}
@@ -976,6 +982,8 @@ export function MissionBoard({
             </h3>
             <p>{mission.goal}</p>
             <button
+              aria-label="编辑使命"
+              className="button-ghost icon-button"
               onClick={() => {
                 resetOperationState();
                 setMissionDraft({
@@ -987,7 +995,7 @@ export function MissionBoard({
               }}
               type="button"
             >
-              <PencilSimple aria-hidden="true" size={20} weight="regular" />
+              <PencilSimple aria-hidden="true" size={16} weight="regular" />
               <span className="sr-only">编辑使命</span>
             </button>
           </header>

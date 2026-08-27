@@ -251,6 +251,12 @@ export function cockpitFetch(responses: QueuedResponse[]) {
     if (/\/api\/projects\/[^/]+\/memories\?includeInactive=[01]$/.test(url)) {
       return Promise.resolve(Response.json({ memories: [] }));
     }
+    if (/\/api\/projects\/[^/]+\/memory-collections$/.test(url)) {
+      return Promise.resolve(Response.json({ collections: [] }));
+    }
+    if (/\/api\/projects\/[^/]+\/knowledge-graph$/.test(url)) {
+      return Promise.resolve(Response.json({ edges: [], nodes: [] }));
+    }
     if (/\/api\/projects\/[^/]+\/collaboration$/.test(url)) {
       return Promise.resolve(
         Response.json({

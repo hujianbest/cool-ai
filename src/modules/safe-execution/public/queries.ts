@@ -1,6 +1,7 @@
 import type {
   ExecutionApprovalDto,
   ExecutionDto,
+  RecoveryActionDto,
   RecoveryFileDto,
 } from "./dto";
 
@@ -89,4 +90,9 @@ export interface SafeExecutionQueries {
     executionId: string,
     query: SafeExecutionReadQuery,
   ): Promise<SafeExecutionPage<RecoveryFileDto>>;
+  listRecoveryActions(
+    databasePath: string,
+    projectId: string,
+    executionId: string,
+  ): RecoveryActionDto[];
 }

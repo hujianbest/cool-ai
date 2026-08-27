@@ -1996,5 +1996,131 @@ describe("Audit panel timeline view", () => {
     expect(await screen.findByText("尚无运行轨迹。")).toBeInTheDocument();
     expect(screen.queryByRole("list", { name: "运行轨迹" })).toBeNull();
   });
+
+  it("opens a read-only replay for a timeline run and disables items without a run", async () => {
+    const AuditPanel = await auditPanel();
+    const fetchMock = vi.fn((input: RequestInfo | URL) => {
+      const url = String(input);
+      if (url.includes("/replay")) {
+        return Promise.resolve(Response.json({
+          formatVersion: 1,
+          items: [
+            timelineItem({
+              eventType: "owner_message",
+              id: "replay-1",
+              payload: { runId: "run-1", threadId: "thread-1" },
+            }),
+          ],
+          replayHash: "b".repeat(64),
+          scope: { detail: "只读回放", projectId: "project-1", runId: "run-1" },
+        }));
+      }
+      if (url.includes("/timeline")) {
+        return Promise.resolve(Response.json(timelinePage([
+          timelineItem({
+            eventType: "owner_message",
+            id: "timeline-run",
+            payload: { runId: "run-1", threadId: "thread-1" },
+          }),
+          timelineItem({
+            eventType: "project_created",
+            id: "timeline-no-run",
+            payload: { projectName: "Replay A" },
+          }),
+        ])));
+      }
+      return Promise.resolve(Response.json(page([])));
+    });
+    vi.stubGlobal("fetch", fetchMock);
+    const user = userEvent.setup();
+    render(<AuditPanel projectId="project-1" />);
+    await user.click(screen.getByRole("button", { name: "时间轴" }));
+    const timelineList = await screen.findByRole("list", { name: "运行轨迹" });
+    const replayButtons = within(timelineList).getAllByRole("button", { name: "打开回放" });
+    expect(replayButtons).toHaveLength(2);
+    expect(replayButtons[1]).toBeDisabled();
+    expect(fetchMock.mock.calls.some(([url]) => String(url).includes("/replay"))).toBe(false);
+
+    await user.click(replayButtons[0]);
+    const dialog = await screen.findByRole("dialog", { name: "只读回放" });
+    await waitFor(() => {
+      expect(fetchMock.mock.calls.some(
+        ([url]) => String(url) === "/api/projects/project-1/replay?runId=run-1",
+      )).toBe(true);
+    });
+    expect(within(dialog).getByRole("list", { name: "回放顺序" })).toBeInTheDocument();
+  });
+
+  it("lets replay items jump to existing audit sources", async () => {
+    const AuditPanel = await auditPanel();
+    const fetchMock = vi.fn((input: RequestInfo | URL) => {
+      const url = String(input);
+      if (url.includes("/replay")) {
+        return Promise.resolve(Response.json({
+          formatVersion: 1,
+          items: [
+            timelineItem({
+              eventType: "owner_message",
+              id: "replay-1",
+              payload: { runId: "run-1", threadId: "thread-1" },
+            }),
+          ],
+          replayHash: "b".repeat(64),
+          scope: { detail: "只读回放", projectId: "project-1", runId: "run-1" },
+        }));
+      }
+      if (url.includes("/timeline")) {
+        return Promise.resolve(Response.json(timelinePage([
+          timelineItem({
+            eventType: "owner_message",
+            id: "timeline-run",
+            payload: { runId: "run-1", threadId: "thread-1" },
+          }),
+        ])));
+      }
+      return Promise.resolve(Response.json(page([])));
+    });
+    vi.stubGlobal("fetch", fetchMock);
+    const user = userEvent.setup();
+    render(<AuditPanel projectId="project-1" />);
+    await user.click(screen.getByRole("button", { name: "时间轴" }));
+    const timelineList = await screen.findByRole("list", { name: "运行轨迹" });
+    await user.click(within(timelineList).getByRole("button", { name: "打开回放" }));
+    const dialog = await screen.findByRole("dialog", { name: "只读回放" });
+    const source = await within(dialog).findByRole("link", { name: "定位来源对话" });
+    expect(source).toHaveAttribute("href", "/projects/project-1?thread=thread-1&run=run-1");
+  });
+
+  it("confirms the current project scope before downloading a redacted export", async () => {
+    const AuditPanel = await auditPanel();
+    const fetchMock = vi.fn((input: RequestInfo | URL) => {
+      const url = String(input);
+      if (url.includes("/export")) {
+        return Promise.resolve(Response.json({
+          contentHash: "a".repeat(64),
+          events: [],
+          exportedAt: "2026-08-21T08:00:00.000Z",
+          formatVersion: 1,
+          messages: [],
+          scope: { detail: "当前项目", projectId: "project-1", threadId: null },
+        }));
+      }
+      return Promise.resolve(Response.json(page([])));
+    });
+    vi.stubGlobal("fetch", fetchMock);
+    const user = userEvent.setup();
+    render(<AuditPanel projectId="project-1" />);
+    await screen.findByRole("button", { name: "列表" });
+
+    await user.click(screen.getByRole("button", { name: "导出脱敏包" }));
+    const dialog = screen.getByRole("dialog", { name: "导出脱敏包" });
+    expect(within(dialog).getByText("当前项目")).toBeInTheDocument();
+    expect(fetchMock.mock.calls.some(([url]) => String(url).includes("/export"))).toBe(false);
+
+    await user.click(within(dialog).getByRole("button", { name: "确认导出" }));
+    await waitFor(() => {
+      expect(fetchMock.mock.calls.some(([url]) => String(url) === "/api/projects/project-1/export")).toBe(true);
+    });
+  });
 });
 

@@ -10,6 +10,7 @@ import RootLayout from "@/app/layout";
 import { NOTIFICATION_PREFS_KEY } from "@/components/notifications/browser-notification-adapter";
 import { __settingsPreferencesStoreTest } from "@/components/settings-preferences-store";
 import { TeamPanel } from "@/components/team-panel";
+import { serviceHealthResponse } from "@/tests/fixtures/browser/service-health";
 
 class MockNotification {
   static permission: NotificationPermission = "default";
@@ -27,6 +28,8 @@ function stubTeamResources() {
   vi.stubGlobal(
     "fetch",
     vi.fn(async (input: RequestInfo | URL) => {
+      const health = serviceHealthResponse(input);
+      if (health) return health;
       const payloads: Record<string, unknown> = {
         "/api/agent-templates": { templates: [] },
         "/api/agents": { agents: [] },

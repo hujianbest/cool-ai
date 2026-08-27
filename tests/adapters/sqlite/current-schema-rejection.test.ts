@@ -71,7 +71,7 @@ const cases: Array<{
   },
   {
     expectedCode: "SCHEMA_UNSUPPORTED",
-    input: { kind: "unsupported-identity", userVersion: 27 },
+    input: { kind: "unsupported-identity", userVersion: 30 },
     label: "unsupported future identity",
   },
   {

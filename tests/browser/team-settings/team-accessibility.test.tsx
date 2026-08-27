@@ -4,6 +4,7 @@ import userEvent from "@testing-library/user-event";
 import { afterEach, describe, expect, it, vi } from "vitest";
 
 import { TeamPanel } from "@/components/team-panel";
+import { serviceHealthResponse } from "@/tests/fixtures/browser/service-health";
 
 const emptyPayloads: Record<string, unknown> = {
   "/api/agent-templates": {
@@ -62,6 +63,8 @@ const emptyPayloads: Record<string, unknown> = {
 
 function stubFetch() {
   vi.stubGlobal("fetch", vi.fn(async (input: RequestInfo | URL) => {
+    const health = serviceHealthResponse(input);
+    if (health) return health;
     const payload = emptyPayloads[input.toString()];
     if (!payload) throw new Error(`Unexpected request: ${input.toString()}`);
     return Response.json(payload);

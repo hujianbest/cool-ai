@@ -23,6 +23,7 @@ import type { GovernanceView } from "@/components/activity-bar";
 import { ApprovalCenterPanel } from "@/components/project-context/approval-center-panel";
 import { AuditPanel } from "@/components/project-context/audit-panel";
 import { MemoryPanel } from "@/components/project-context/memory-panel";
+import { ExecutionPanel } from "@/components/execution/execution-panel";
 import { MissionBoard } from "@/components/project-context/mission-board";
 import { OnboardingGuide } from "@/components/onboarding-guide";
 import {
@@ -441,7 +442,7 @@ export function TaskPanel({
         }
         data-open={editorOpen || Boolean(onboarding) || Boolean(governance)}
         data-testid="editor-surface"
-        hidden={narrow && !editorOpen && !onboarding}
+        hidden={narrow && !editorOpen && !onboarding && !governance}
         id="task-editor-surface"
         ref={editorSurfaceRef}
         role={narrow && editorOpen && !nestedModalOpen ? "dialog" : undefined}
@@ -479,7 +480,10 @@ export function TaskPanel({
             </div>
             {governance.projectId ? (
               governance.view === "mission" ? (
-                <MissionBoard projectId={governance.projectId} />
+                <>
+                  <MissionBoard projectId={governance.projectId} />
+                  <ExecutionPanel projectId={governance.projectId} />
+                </>
               ) : governance.view === "memory" ? (
                 <MemoryPanel projectId={governance.projectId} />
               ) : governance.view === "approvals" ? (
@@ -585,21 +589,26 @@ export function TaskPanel({
               </button>
             </div>
           ) : homeState?.kind === "needs_agent" ? (
-            <div className="chat-welcome">
-              <p className="empty-guide-title">欢迎使用 Cool AI</p>
-              <p>先配置一个 Agent，即可开始个人对话。</p>
-              <Link
-                className="button-primary"
-                href="/team?section=agents&returnTo=/"
-              >
-                配置 Agent
-              </Link>
-              <Link
-                className="button-secondary"
-                href="/team?section=providers&guide=provider&returnTo=/"
-              >
-                首次使用引导
-              </Link>
+            <div className="chat-welcome chat-empty-hero">
+              <div aria-hidden="true" className="chat-empty-hero-icon">
+                <Sparkle size={28} weight="fill" />
+              </div>
+              <p className="chat-empty-hero-title">欢迎使用 Cool AI</p>
+              <p className="chat-empty-hero-desc">先配置一个 Agent，即可开始个人对话。</p>
+              <div className="chat-welcome-actions">
+                <Link
+                  className="button-primary"
+                  href="/team?section=agents&returnTo=/"
+                >
+                  配置 Agent
+                </Link>
+                <Link
+                  className="button-secondary"
+                  href="/team?section=providers&guide=provider&returnTo=/"
+                >
+                  首次使用引导
+                </Link>
+              </div>
             </div>
           ) : homeState?.kind === "ready" ? (
             <CollaborationPanel

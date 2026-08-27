@@ -20,6 +20,21 @@ export type CreateMemoryInput = {
   supersedesId?: string;
 };
 
+export type MemoryCollectionDto = {
+  id: string;
+  name: string;
+  projectId: string;
+};
+
+export type MemoryCollectionMemberDto = {
+  chainId: string;
+  memoryId: string;
+};
+
+export type MemoryCollectionCatalogDto = MemoryCollectionDto & {
+  members: MemoryCollectionMemberDto[];
+};
+
 export type ReviewMemoryCandidate = {
   content: string;
   id: string;
@@ -67,4 +82,9 @@ export type SearchMemoriesOptions = {
 export type MemorySearchHit = {
   memory: MemoryEntryV6;
   snippet: string;
+};
+
+export type KnowledgeGraphDto = {
+  edges: Array<{ fromId: string; kind: "collection" | "supersedes"; toId: string }>;
+  nodes: Array<{ id: string; title: string }>;
 };

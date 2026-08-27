@@ -229,10 +229,53 @@ describe("T-27 append-only validation policy UI", () => {
     expect(savedBody).toMatchObject({
       expectedVersion: 1,
       warningAccepted: true,
-      entries: [{ args: ["test"], executable: "node", required: true, workdir: "." }],
+      entries: [{
+        args: ["test"],
+        executable: "node",
+        purpose: "validation",
+        required: true,
+        timeoutSeconds: 120,
+        workdir: ".",
+      }],
     });
     const success = await screen.findByText("验证政策已保存为修订 #2。");
     expect(success).toHaveAttribute("aria-live", "polite");
     expect(screen.getByRole("heading", { name: "验证政策" })).toHaveFocus();
+  });
+
+  it("configures preview entries with visible loopback, port, path, and timeout boundaries", async () => {
+    const user = userEvent.setup();
+    let savedBody: { entries?: Array<Record<string, unknown>> } | undefined;
+    installBaseFetch((url, init) => {
+      if (!url.pathname.endsWith("/validation-policy") || init?.method !== "PUT") return undefined;
+      savedBody = JSON.parse(String(init.body)) as { entries?: Array<Record<string, unknown>> };
+      return Response.json({
+        outcome: "saved",
+        policy: { ...emptyPolicy, entries: savedBody.entries, revisionId: "revision-2", revisionNo: 2, version: 2 },
+        reasonCode: null,
+      });
+    });
+
+    render(createElement(ExecutionPanel, {
+      projectId: PROJECT_ID,
+      sourceTuple: SOURCE_TUPLE,
+    }));
+    await user.click(screen.getByRole("button", { name: "管理验证政策" }));
+    await user.click(await screen.findByRole("button", { name: "添加持续批准" }));
+    await user.type(screen.getByRole("textbox", { name: "可执行文件" }), "npm");
+    await user.selectOptions(screen.getByRole("combobox", { name: "用途" }), "preview");
+
+    expect(screen.getByText("网络：仅本机 loopback")).toBeInTheDocument();
+    expect(screen.getByRole("checkbox", { name: "必需验证" })).toBeDisabled();
+    await user.click(screen.getByRole("checkbox", { name: /hostile OS sandbox/ }));
+    await user.click(screen.getByRole("button", { name: "保存验证政策" }));
+    expect(savedBody?.entries?.[0]).toMatchObject({
+      network: "loopback_only",
+      openPath: "/",
+      port: 4173,
+      purpose: "preview",
+      required: false,
+      timeoutSeconds: 600,
+    });
   });
 });

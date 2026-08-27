@@ -812,7 +812,7 @@ export function AgentPanel({
             <p className="error-text" id="agent-accent-error">{fieldErrors.accentToken}</p>
           ) : null}
         </div>
-        <button disabled={!fieldsReady || isSaving} type="submit">
+        <button className="button-primary" disabled={!fieldsReady || isSaving} type="submit">
           {isSaving ? "正在保存 Agent…" : "保存 Agent"}
         </button>
         {formError ? (
@@ -873,6 +873,7 @@ export function AgentPanel({
           <div className="stack error-text" ref={errorRef} role="alert" tabIndex={-1}>
             <p>{loadError}</p>
             <button
+              className="button-secondary"
               onClick={() => setReloadKey((current) => current + 1)}
               type="button"
             >
@@ -886,6 +887,7 @@ export function AgentPanel({
               <p className="muted">请先创建并验证模型服务。</p>
             ) : null}
             <button
+              className="button-secondary"
               onClick={() => setReloadKey((current) => current + 1)}
               type="button"
             >
@@ -924,6 +926,7 @@ export function AgentPanel({
                   </p>
                   <button
                     aria-label={`编辑 ${agent.name}`}
+                    className="button-secondary"
                     onClick={(event) => startEdit(agent, event.currentTarget)}
                     type="button"
                   >

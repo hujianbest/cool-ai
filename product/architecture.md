@@ -154,7 +154,7 @@ Cool AI 保持一个本地优先、单进程、单 SQLite 的**领域模块化�
 
 - Project Memory、类型、actor、来源、版本、active/supersedes 链和集合关系。
 - 可引用证据身份、知识来源边及提炼发布状态。
-- 知识索引任务的领域状态；检索结果本身是可重建投影。S-28 检索直接查询 `memory_entries`（active 链头）；专用索引生命周期属 S-29。
+- 知识索引任务的领域状态；检索结果本身是可重建投影。S-28 检索直接查询 `memory_entries`（active 链头）；专用索引生命周期属 S-29。S-31 知识图谱只读投影 supersedes 与集合共现，零 schema。
 
 不拥有：
 
@@ -458,7 +458,7 @@ tests/
 - **Safe Execution 边界保持**：Windows verified-handle、sandbox、Validation、Staged Change、Approval、冲突检查与 Merge 路径按 owner/技术接缝归位；`execution_approvals` 写 SQL 已提取为 Governance approval-store 能力。证据索引：`src/adapters/outbound/workspace/windows-verified-execution-adapter.ts`、`src/adapters/outbound/sqlite/safe-execution/execution-service.ts`、`src/adapters/outbound/sqlite/governance/approval-store.ts`、`tests/adapters/sqlite/safe-execution/execution-security-integration.test.ts`、`tests/modules/safe-execution/execution-approvals.test.ts`。
 - **公开 Thread Fact 流、S-12 tuple 与 S-13 结构化消息已交付**：`collaboration_thread_facts` 由 current canonical schema 和唯一 writer seam 支撑；block/decision 持久化位于 public-collaboration owner 与其 SQLite Adapter。阶段与票据状态以 feature 记录为准。证据索引：`src/adapters/outbound/sqlite/public-collaboration/thread-fact-store.ts`、`src/adapters/outbound/sqlite/public-collaboration/structured-message-store.ts`、`src/adapters/outbound/sqlite/public-collaboration/inline-decision-service.ts`、`features/014-persistent-project-threads/progress.md`、`features/015-structured-messages-inline-decisions/progress.md`。
 - **机械约束已阻断化**：import 边界、写表 owner、运行时 writer、依赖图与测试分区检查已进入 `tests/architecture/` 并阻断回退。证据索引：`tests/architecture/imports.test.ts`、`tests/architecture/ownership.test.ts`、`tests/architecture/writers.test.ts`、`tests/architecture/dependency-graph.test.ts`、`tests/architecture/test-partition.test.ts`。
-- **选择性 outbox 与 Operations Projection 已交付核心**：S-23 拆分片建立 `CAP-OPS-01/02` 与各 source-owner 公开事件；投影只读，不回写命令事实。健康/用量/导出回放（`CAP-OPS-03/04`）仍规划中。
+- **选择性 outbox 与 Operations Projection 已交付核心**：S-23 拆分片建立 `CAP-OPS-01/02` 与各 source-owner 公开事件；投影只读，不回写命令事实。`CAP-OPS-03` 记忆索引健康（S-29）、统一服务健康（S-35）、用量看板（S-36）与贡献视图（S-37）已交付；`CAP-OPS-04` 脱敏导出（S-38）与交付回放（S-40）已交付。
 - **第三方通用插件宿主未交付**：产品/ADR 继续禁止任意进程内插件；`CAP-RUN-04` 保持规划中，不能作为现有能力。
 
 后续功能切片必须直接落在目标结构上：新命令事实先登记唯一 owner 与写表清单，跨 owner 结果新增命名 Workflow，禁止在 route 内重建编排、跨域 deep import 或绕过机械约束。
@@ -496,7 +496,7 @@ tests/
 2. **公开协作接力**（已交付 S-4、S-12）：owner 在 Thread 公开发言/@Agent → Collaboration Run 受理、Turn/Attempt、结构化交棒与 owner 决策请求/回答（Public Collaboration）→ 暂停/恢复与可恢复时间线。治理点：凭据拒绝、Project/Thread/Run tuple、预算与轮次上限。验证特征：AC-1（公开事实流与冻结来源）、AC-2（凭据拒绝失败关闭）、AC-5（lease 暂停/恢复、重启不自动重放）。
 3. **受控执行与合入**（已交付 S-5）：Resolve Effective Runtime Grant（配置权限 ∩ 项目范围 ∩ Approval → Runtime 投影，第 2 节）→ Safe Execution acquire/checkpoint/finalize → sandbox 内工具动作与验证 → Staged Change 冲突/陈旧检查 → Merge Journal 原子合入或失败关闭。验证特征：AC-2（grant 求交、sandbox、Approval 组合）、AC-5（三阶段崩溃恢复）、AC-1（基线冻结与合入事实唯一）。
 4. **独立复核与交付**（已交付 S-6）：owner 显式发起、合格非执行者 Agent 复核裁决（Review & Delivery）→ 署名记忆候选沉淀（Knowledge & Provenance）→ Delivery 持久化 → Mission 完成门槛判定（Mission & Work）。验证特征：AC-1（冻结材料复核、署名来源、完成门槛单一口径）。
-5. **脱敏运维读侧**（已交付 S-23 拆分片核心；健康/用量/导出仍规划中）：source owner 在命令事务内提交公开事件 envelope → Operations Projection 幂等消费、checkpoint/rebuild 与 freshness → owner 只读查询并跳回精确来源；投影永不回写命令事实（第 5 节）。验证特征：AC-3（读侧扩展不改命令侧）、AC-1（精确来源导航）、AC-2（强制脱敏）。
+5. **脱敏运维读侧**（已交付 S-23 拆分片核心、S-35 健康、S-36 用量、S-37 贡献、S-38 导出与 S-40 回放）：source owner 在命令事务内提交公开事件 envelope → Operations Projection 幂等消费、checkpoint/rebuild 与 freshness → owner 只读查询并跳回精确来源；投影永不回写命令事实（第 5 节）。验证特征：AC-3（读侧扩展不改命令侧）、AC-1（精确来源导航）、AC-2（强制脱敏）。
 
 ## 12. 横切约定
 

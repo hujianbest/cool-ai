@@ -43,6 +43,20 @@ function deferred<T>() {
   return { promise, resolve };
 }
 
+function memoryIndexHealthResponse(overrides: Record<string, unknown> = {}) {
+  return Response.json({
+    coverage: { active: 1, indexed: 1, ratio: 1, valid: 1 },
+    freshness: { pending: 0, status: "caught_up" },
+    lastErrorCode: null,
+    projectId: "project-1",
+    searchMode: "source_fallback",
+    status: "caught_up",
+    updatedAt: "2026-08-19T00:00:00.000Z",
+    version: 1,
+    ...overrides,
+  });
+}
+
 async function memoryPanel() {
   const load = modules["../../../components/project-context/memory-panel.tsx"];
   expect(load, "the shared memory panel must exist").toBeTypeOf("function");
@@ -61,7 +75,18 @@ describe("Shared Memory panel", () => {
     let calls = 0;
     vi.stubGlobal(
       "fetch",
-      vi.fn(() => {
+      vi.fn((input: RequestInfo | URL) => {
+        if (String(input).includes("/memory-index/health")) {
+          return Promise.resolve(memoryIndexHealthResponse({
+            coverage: { active: 0, indexed: 0, ratio: 1, valid: 0 },
+          }));
+        }
+        if (String(input).includes("/memory-collections")) {
+          return Promise.resolve(Response.json({ collections: [] }));
+        }
+        if (String(input).includes("/knowledge-graph")) {
+          return Promise.resolve(Response.json({ edges: [], nodes: [] }));
+        }
         calls += 1;
         return calls === 1
           ? first.promise
@@ -106,6 +131,13 @@ describe("Shared Memory panel", () => {
     const fetchMock = vi.fn(
       async (input: RequestInfo | URL, init?: RequestInit) => {
         const url = String(input);
+        if (url.includes("/memory-index/health")) return memoryIndexHealthResponse();
+        if (url.includes("/memory-collections")) {
+          return Response.json({ collections: [] });
+        }
+        if (url.includes("/knowledge-graph")) {
+          return Response.json({ edges: [], nodes: [] });
+        }
         if (init?.method === "POST") return save.promise;
         if (url.endsWith("includeInactive=1")) {
           return Response.json({ memories: [oldGoal, activeGoal, created] });
@@ -175,6 +207,13 @@ describe("memory panel search", () => {
     const fetchMock = vi.fn(
       async (input: RequestInfo | URL, init?: RequestInit) => {
         const url = String(input);
+        if (url.includes("/memory-index/health")) return memoryIndexHealthResponse();
+        if (url.includes("/memory-collections")) {
+          return Response.json({ collections: [] });
+        }
+        if (url.includes("/knowledge-graph")) {
+          return Response.json({ edges: [], nodes: [] });
+        }
         if (url.includes("/memories/search")) return search.promise;
         if (init?.method === "POST") {
           return Response.json({ memory: activeGoal }, { status: 201 });
@@ -260,6 +299,13 @@ describe("memory panel search", () => {
       "fetch",
       vi.fn(async (input: RequestInfo | URL) => {
         const url = String(input);
+        if (url.includes("/memory-index/health")) return memoryIndexHealthResponse();
+        if (url.includes("/memory-collections")) {
+          return Promise.resolve(Response.json({ collections: [] }));
+        }
+        if (url.includes("/knowledge-graph")) {
+          return Promise.resolve(Response.json({ edges: [], nodes: [] }));
+        }
         if (url.includes("/memories/search")) {
           searchCalls += 1;
           return searchCalls === 1
@@ -293,6 +339,148 @@ describe("memory panel search", () => {
     await user.click(screen.getByRole("button", { name: "检索" }));
     expect(await screen.findByText("没有匹配的记忆。")).toBeInTheDocument();
     expect(screen.getByRole("heading", { name: "Current goal" })).toBeInTheDocument();
+  });
+});
+
+describe("memory index health", () => {
+  it("shows coverage and strongly confirms a rebuild while source memories remain available", async () => {
+    const MemoryPanel = await memoryPanel();
+    let version = 1;
+    const fetchMock = vi.fn(async (input: RequestInfo | URL, init?: RequestInit) => {
+      const url = String(input);
+      if (url.includes("/memory-index/rebuild")) {
+        version = 2;
+        return Response.json({
+          operationId: "operation",
+          replayed: 1,
+          status: "caught_up",
+          version,
+        });
+      }
+      if (url.includes("/memory-index/health")) {
+        return Response.json({
+          coverage: { active: 1, indexed: 0, ratio: 0, valid: 0 },
+          freshness: { pending: 1, status: "behind" },
+          lastErrorCode: null,
+          projectId: "project-1",
+          searchMode: "source_fallback",
+          status: "behind",
+          updatedAt: "2026-08-19T00:00:00.000Z",
+          version,
+        });
+      }
+      if (url.includes("/memory-collections")) {
+        return Response.json({ collections: [] });
+      }
+      if (url.includes("/knowledge-graph")) {
+        return Response.json({ edges: [], nodes: [] });
+      }
+      if (init?.method === "POST") {
+        return Response.json({ memory: activeGoal }, { status: 201 });
+      }
+      return Response.json({ memories: [activeGoal] });
+    });
+    vi.stubGlobal("fetch", fetchMock);
+    const user = userEvent.setup();
+    render(<MemoryPanel projectId="project-1" />);
+
+    expect(await screen.findByText("索引落后 1 条")).toBeInTheDocument();
+    expect(screen.getByText("来源记忆与检索仍可用。")).toBeInTheDocument();
+    expect(screen.getByRole("heading", { name: "Current goal" })).toBeInTheDocument();
+    await user.click(screen.getByRole("button", { name: "重建索引" }));
+    expect(screen.getByRole("dialog", { name: "重建记忆索引" })).toBeInTheDocument();
+    expect(screen.getByRole("button", { name: "取消" })).toHaveFocus();
+    await user.click(screen.getByRole("button", { name: "确认重建" }));
+    await waitFor(() => expect(fetchMock).toHaveBeenCalledWith(
+      "/api/projects/project-1/memory-index/rebuild",
+      expect.objectContaining({
+        body: expect.stringContaining("\"expectedVersion\":1"),
+        method: "POST",
+      }),
+    ));
+    expect(await screen.findByText("索引已追平 · 1/1 有效")).toBeInTheDocument();
+  });
+});
+
+describe("memory collection directory", () => {
+  it("lists collections and only deletes after confirm", async () => {
+    const MemoryPanel = await memoryPanel();
+    const fetchMock = vi.fn(async (input: RequestInfo | URL, init?: RequestInit) => {
+      const url = String(input);
+      if (url.includes("/memory-index/health")) return memoryIndexHealthResponse();
+      if (url.includes("/memory-collections")) {
+        if (init?.method === "DELETE") {
+          return new Response(null, { status: 204 });
+        }
+        return Response.json({
+          collections: [{
+            id: "collection-1",
+            members: [],
+            name: "架构决策",
+            projectId: "project-1",
+          }],
+        });
+      }
+      if (url.includes("/knowledge-graph")) {
+        return Response.json({ edges: [], nodes: [] });
+      }
+      return Response.json({ memories: [] });
+    });
+    vi.stubGlobal("fetch", fetchMock);
+    const user = userEvent.setup();
+    render(<MemoryPanel projectId="project-1" />);
+
+    const directory = await screen.findByRole("region", { name: "知识集合" });
+    expect(within(directory).getByText("架构决策")).toBeInTheDocument();
+    await user.click(within(directory).getByRole("button", { name: "删除集合 架构决策" }));
+    const dialog = screen.getByRole("dialog", { name: "删除集合" });
+    expect(within(dialog).getByText("不会删除来源记忆。")).toBeInTheDocument();
+    await user.click(within(dialog).getByRole("button", { name: "取消" }));
+    expect(fetchMock.mock.calls.some(([, init]) => init?.method === "DELETE")).toBe(false);
+
+    await user.click(within(directory).getByRole("button", { name: "删除集合 架构决策" }));
+    await user.click(screen.getByRole("button", { name: "确认删除" }));
+    await waitFor(() => {
+      expect(fetchMock).toHaveBeenCalledWith(
+        "/api/projects/project-1/memory-collections/collection-1",
+        expect.objectContaining({ method: "DELETE" }),
+      );
+    });
+  });
+});
+
+describe("knowledge graph relation list", () => {
+  it("lists sourced supersedes edges and jumps to the memory card", async () => {
+    const MemoryPanel = await memoryPanel();
+    const fetchMock = vi.fn(async (input: RequestInfo | URL) => {
+      const url = String(input);
+      if (url.includes("/memory-index/health")) return memoryIndexHealthResponse();
+      if (url.includes("/memory-collections")) {
+        return Response.json({ collections: [] });
+      }
+      if (url.includes("/knowledge-graph")) {
+        return Response.json({
+          edges: [
+            { fromId: activeGoal.id, kind: "supersedes", toId: oldGoal.id },
+            { fromId: "ghost", kind: "collection", toId: activeGoal.id },
+          ],
+          nodes: [
+            { id: activeGoal.id, title: activeGoal.content },
+            { id: oldGoal.id, title: oldGoal.content },
+          ],
+        });
+      }
+      return Response.json({ memories: [activeGoal] });
+    });
+    vi.stubGlobal("fetch", fetchMock);
+    const user = userEvent.setup();
+    render(<MemoryPanel projectId="project-1" />);
+
+    const relations = await screen.findByRole("region", { name: "关系列表" });
+    expect(within(relations).getByText("Current goal 取代 Old goal")).toBeInTheDocument();
+    expect(within(relations).queryByText(/ghost/i)).toBeNull();
+    await user.click(within(relations).getByRole("button", { name: "定位记忆 Current goal" }));
+    expect(screen.getByRole("heading", { name: "Current goal" })).toHaveFocus();
   });
 });
 

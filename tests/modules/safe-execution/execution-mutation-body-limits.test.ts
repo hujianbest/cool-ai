@@ -6,6 +6,8 @@ import { POST as postAdvance } from "@/app/api/executions/[executionId]/advance/
 import { POST as postApproval } from "@/app/api/executions/[executionId]/approvals/[approvalId]/route";
 import { POST as postControl } from "@/app/api/executions/[executionId]/control/route";
 import { POST as postMerge } from "@/app/api/executions/[executionId]/merge/route";
+import { POST as postRecoveryExecute } from "@/app/api/executions/[executionId]/recovery-actions/[actionId]/execute/route";
+import { POST as postRecoveryUndo } from "@/app/api/executions/[executionId]/recovery-actions/[actionId]/undo/route";
 import { POST as postRecoveryResolve } from "@/app/api/executions/[executionId]/recovery/resolve/route";
 import { POST as postStart } from "@/app/api/projects/[projectId]/executions/route";
 import { PUT as putValidationPolicy } from "@/app/api/projects/[projectId]/validation-policy/route";
@@ -76,6 +78,26 @@ const routes: MutationRoute[] = [
     }),
     name: "merge",
     schemaMessage: "Merge input is invalid.",
+  },
+  {
+    invoke: (request) => postRecoveryExecute(request, {
+      params: Promise.resolve({
+        actionId: "resume_queued",
+        executionId: "missing-execution",
+      }),
+    }),
+    name: "recovery execute",
+    schemaMessage: "Recovery input is invalid.",
+  },
+  {
+    invoke: (request) => postRecoveryUndo(request, {
+      params: Promise.resolve({
+        actionId: "resume_queued",
+        executionId: "missing-execution",
+      }),
+    }),
+    name: "recovery undo",
+    schemaMessage: "Recovery input is invalid.",
   },
 ];
 

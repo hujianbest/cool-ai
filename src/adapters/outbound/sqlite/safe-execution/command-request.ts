@@ -15,6 +15,7 @@ import {
 } from "@/src/modules/safe-execution/internal/command-policy";
 
 type CommandRequestInput = {
+  actorType?: "agent" | "owner";
   command: {
     args: string[];
     executable: string;
@@ -24,6 +25,7 @@ type CommandRequestInput = {
   };
   completedResponseBody?: unknown;
   contextHash: string;
+  consumer?: "execution_action" | "policy_process";
   database: DatabaseSync;
   deniedResponseBody?: unknown;
   executionId?: string;
@@ -192,6 +194,7 @@ function loadStandingEntries(
 function insertEvent(
   database: DatabaseSync,
   input: {
+    actorType: "agent" | "owner";
     attemptNo: number;
     executionId: string;
     payload: unknown;
@@ -205,7 +208,7 @@ function insertEvent(
     INSERT INTO execution_events (
       id,project_id,execution_id,sequence,attempt_no,type,actor_type,
       actor_id,payload_json,created_at
-    ) VALUES (?, ?, ?, ?, ?, ?, 'agent', NULL, ?,
+    ) VALUES (?, ?, ?, ?, ?, ?, ?, NULL, ?,
       strftime('%Y-%m-%dT%H:%M:%fZ','now'))
   `).run(
     eventId,
@@ -214,11 +217,12 @@ function insertEvent(
     input.sequence,
     input.attemptNo,
     input.type,
+    input.actorType,
     JSON.stringify(input.payload),
   );
   appendExecutionAuditOutboxRow(database, {
     actorId: null,
-    actorType: "agent",
+    actorType: input.actorType,
     attemptNo: input.attemptNo,
     eventId,
     eventType: input.type,
@@ -322,6 +326,7 @@ export function requestExecutionCommand(input: CommandRequestInput): CommandRequ
       attemptNo: row.attemptNo,
       classifierVersion: classification.classifierVersion,
       contextHash: input.contextHash,
+      consumer: input.consumer ?? "execution_action",
       executable: command.executable,
       executableIdentity: command.executableIdentity,
       expectedEffect: command.expectedEffect,
@@ -425,6 +430,7 @@ export function requestExecutionCommand(input: CommandRequestInput): CommandRequ
       `).run(input.projectId, row.executionId, row.executionVersion);
       if (updated.changes !== 1) throw new CommandRequestError("EXECUTION_STATE_CONFLICT", "Execution changed.");
       insertEvent(input.database, {
+        actorType: input.actorType ?? "agent",
         attemptNo: row.attemptNo,
         executionId: row.executionId,
         payload: {
@@ -504,6 +510,7 @@ export function requestExecutionCommand(input: CommandRequestInput): CommandRequ
     `).run(input.projectId, row.executionId, row.executionVersion);
     if (updated.changes !== 1) throw new CommandRequestError("EXECUTION_STATE_CONFLICT", "Execution changed.");
     insertEvent(input.database, {
+      actorType: input.actorType ?? "agent",
       attemptNo: row.attemptNo,
       executionId: row.executionId,
       payload: {
@@ -516,6 +523,7 @@ export function requestExecutionCommand(input: CommandRequestInput): CommandRequ
       type: "tool_requested",
     });
     insertEvent(input.database, {
+      actorType: input.actorType ?? "agent",
       attemptNo: row.attemptNo,
       executionId: row.executionId,
       payload: {

@@ -402,3 +402,48 @@ agent 替用户做的默认选择。遇到欠定点的标准动作: 提出带默
 - A-390 2026-08-18 [生效] S-42 T-03 审批事实落在 `workspace_edit_approvals`（project-workspace owner），不伪造 `executions` 行。T-04 再把待决项并入统一审批中心列表。默认理由: 架构禁止放宽 execution 外键。
 - A-391 2026-08-18 [生效] S-42 合入必须走 `writeNativeVerifiedFile`（无则失败关闭）；审批消费、journal 与 `merged` 同事务。canonical 已是 stagedHash 时跳过写盘只补 journal。read/write native 共用一份 Koffi 绑定；write 根目录句柄不请求 DELETE，否则根级 POSIX rename 在本机返回 0xc0000043。默认理由: 安全评审否决 `writeFileSync` 合入；verified-handle 是唯一写入口。
 - A-392 2026-08-18 [生效] S-42 T-04「申请合入」走 PUT+diff+stage；待决项尚未并入统一审批中心列表（A-390）。合入仍须 `approveWorkspaceEditMerge` 后 merge。默认理由: 先把预览「编辑」入口落地，避免本票改审批中心枚举契约。
+- A-393 2026-08-19 [生效] S-43 不提供自由 shell；“终端”是只读输出与结构化命令选择器。默认理由: 满足 Owner 运行政策命令的主结果，同时不绕过 exact tuple。
+- A-394 2026-08-19 [生效] 本地预览使用受控 loopback 新窗口，不做代理任意 URL，也不内嵌第三方 origin iframe。默认理由: 避免 SSRF、同源与焦点风险。
+- A-395 2026-08-19 [生效] 既有 Validation Policy 条目缺省为 `validation`；只有显式 `preview` 条目声明 port/openPath/network。默认理由: 兼容既有事实且不从命令文本猜端口。
+- A-396 2026-08-19 [生效] Policy Process 在应用重启后不恢复；非终态会话对账为 `interrupted`，由 Owner 显式重试。默认理由: 符合 acquire/checkpoint/finalize 与 0 自动重放外部动作。
+- A-397 2026-08-19 [生效] S-29 新建普通 SQLite `memory_search_index` 与专用 `memory_search_index_state`，按不可变 `memory_entries` 扫描增量维护；不复用语义不匹配的 `audit_projection_checkpoints.last_outbox_seq`，也不扩展 Knowledge outbox。默认理由: Memory 当前无公开 outbox，专用 watermark 能保持 owner 与 checkpoint 语义清晰。
+- A-398 2026-08-19 [生效] S-29 不切换 S-28 的 canonical 记忆检索；索引落后、重建或失败时继续直接查询来源记忆，并显式显示降级。默认理由: 本片先交付可观测生命周期，不能让新投影降低已交付检索可用性。
+- A-399 2026-08-19 [生效] S-29 的 recall health 定义为 active chain head 覆盖率与内容 hash 一致性，不伪造语义召回率、相关性分数或 ML 指标。默认理由: 当前无 ground-truth 评测集。
+- A-400 2026-08-19 [生效] SQLite 内部索引重建使用强确认对话框与幂等 operation/version，不扩展统一 Approval 域，也不启动 sandbox；未来文件索引修复另行应用 verified-handle/sandbox。默认理由: 本片重建只丢弃并重建可恢复投影，不执行外部动作或删除来源事实。
+- A-401 2026-08-21 [生效] `smoke:context` 仍假设桌面主路径挂载 WorkspaceSetup（工作区绑定状态/文件树/成员表）。P1 后这些只在窄屏或引导步出现（A-358）。S-29 浏览器证据改走 `smoke:settings` 记忆健康条；不在本片把工作区 chrome 装回主路径。默认理由: 与 UCD 会话优先一致，避免为旧冒烟回退 IA。
+- A-402 2026-08-21 [生效] S-35 健康中心放在 `/team` 独立 region「服务健康」，不新增 SETTINGS_SECTIONS id。默认理由: 与 A-340 一致，避免 pinned-settings 机械迁移。
+- A-403 2026-08-21 [生效] S-35 零 schema，只组合已公开信号：schema 可打开、Provider `verified_at`、S-29 索引健康、项目 Execution 计数。默认理由: 统一视图是投影，不是第二事实源。
+- A-404 2026-08-21 [生效] GET `/api/health` 不发起 Provider HTTP、进程或索引重建以外的既有 catch-up；恢复只深链既有动作。默认理由: 健康查询不能变成隐藏外部动作或新命令面。
+- A-405 2026-08-21 [生效] 健康状态词固定为 `ok|degraded|failed|unknown`；缺项目或缺信号必须是 unknown/failed，不得映射 ok。默认理由: 演示判据禁止未知伪造成功。
+- A-406 2026-08-21 [生效] S-44 救援目录由代码冻结，按 Execution `status+reason_code` 过滤；不提供自由命令或用户自定义动作。默认理由: 高风险切片必须拒绝未知路径。
+- A-407 2026-08-21 [生效] S-44 首批不含文件写，因此不申请 verified-handle/sandbox 豁免；未来文件救援必须单独过安全门槛。默认理由: 避免把 S-29 投影重建豁免误继承到执行救援。
+- A-408 2026-08-21 [生效] S-44 高权限动作复用既有 Approval 域与 Execution version CAS，不新开 Approval 域或 schema（除非现有 operation 无法安全落 receipt）。默认理由: 保持单一审批入口与切片规模。
+- A-409 2026-08-21 [生效] `smoke:execution` 组队改为 `PUT /api/projects/:id/members`，不再点击桌面主路径「平等项目成员」。默认理由: 与 A-358/A-401 一致，不把 ProjectSetup 装回桌面主路径。
+- A-410 2026-08-21 [生效] S-44 UI 用公开冻结目录决定入口与预览文案，execute/undo 仍走 API + confirmation/CAS。默认理由: 静态目录不必往返，写路径仍失败关闭。
+- A-411 2026-08-21 [生效] ExecutionPanel 挂在图标轨「任务」治理视图（UCD §9.4），不装回对话主路径第四栏。A-387 的「无挂载点」仅针对主路径；独立复核入口仍留待复核切片。默认理由: S-44/S-43 卡片必须在任务治理可见，且不回退会话优先 IA。
+- A-412 2026-08-21 [生效] `smoke:execution` 仍按 P1 前的编辑器「运行详情」tab / 右栏 `.cockpit-context` 审批验收；现已不匹配会话优先 IA，且对话表面存在既有 color-contrast（needs-me、线程 tab、时间戳、composer-hint）。S-44 浏览器证据以 jsdom 救援 dialog 与任务视图挂载为准，不在本片修复整份执行冒烟或回退 IA。默认理由: 与 A-401 同类，避免为旧冒烟回退信息架构。
+- A-413 2026-08-21 [生效] S-36 用量看板放在 `/team` 独立 region「用量与配额」，不新增 SETTINGS_SECTIONS id，不新增图标轨项。默认理由: 与 A-402 一致，观测面留在团队页。
+- A-414 2026-08-21 [生效] S-36 零 schema，只组合 Collaboration / Execution / Review 已落库的模型调用与 Agent 配置上限。默认理由: 统一视图是投影，不是第二套计量事实。
+- A-415 2026-08-21 [生效] 缺失或不一致的 Provider usage 只计入 unreported/invalid，不估算 token 数；对照上限的剩余/占比带 `not_invoice`。默认理由: A-43 禁止伪造用量；产品规格禁止把基础用量当成账单。
+- A-416 2026-08-21 [生效] S-36 不提供预算写 API；「配置 Agent」深链既有 Identity 确认路径。默认理由: backlog 的预算确认属于既有配置变更，不是新的 Operations 命令。
+- A-417 2026-08-21 [生效] S-37 贡献视图不把 S-36 用量/token 当作贡献分数或排名。默认理由: 演示判据禁止无上下文活跃度竞赛。
+- A-418 2026-08-21 [生效] S-37 放在 `/team` 独立 region「协作贡献」，不新增 SETTINGS_SECTIONS 或图标轨项。默认理由: 与健康/用量同属观测面。
+- A-419 2026-08-21 [生效] S-37 零 schema，只读聚合 Work Item 负责人状态与复核裁决；证据每角色最多 5 条。默认理由: 投影不是第二套任务列表。
+- A-420 2026-08-21 [生效] 贡献投影不得调用派发、复核或 Identity 写命令；UI 无调权控件。默认理由: 指标不能改变平等角色与独立复核门槛。
+- A-421 2026-08-21 [生效] S-38 首片只导出当前打开项目；不提供跨项目或「全部对话」大范围导出。默认理由: S-24 未扩展非执行域大范围导出 Approval；当前项目 + 确认对话框即可满足演示且不新造治理域。
+- A-422 2026-08-21 [生效] S-38 用浏览器下载落盘，不写入项目工作区、不调用 DirectoryPicker。默认理由: 下载即 owner 选择的落点；把导出包写进工作区会混入项目文件。
+- A-423 2026-08-21 [生效] S-38 零 schema；`GET /api/projects/:projectId/export` 只读组装已公开消息与审计投影；可选 `threadId` 收窄对话。默认理由: 导出不是命令事实，不得回写 Collaboration / Audit。
+- A-424 2026-08-21 [生效] 导出包只含用户可见消息块、脱敏审计事件、范围/版本与内容 hash；不含凭据、提示词、隐藏推理、原始 Provider 响应或宿主绝对路径。默认理由: backlog 与 AC-2 强制脱敏。
+- A-425 2026-08-21 [生效] 「导出脱敏包」放在审计治理视图工具条，确认范围后再下载；不新增图标轨项。默认理由: UCD 行 12 把导出挂在审计中心，与时间轴同面。
+- A-426 2026-08-21 [生效] S-40 回放挂在审计时间轴，不依赖未挂载的复核工作台（A-387）。默认理由: 演示判据是只读顺序与来源跳转，时间轴已有公开事件。
+- A-427 2026-08-21 [生效] S-40 零 schema；`GET /api/projects/:projectId/replay` 必填 `runId`，复用时间轴公开事件，顺序冻结并带 `replayHash`。默认理由: 回放不是命令重放，不得另造事件。
+- A-428 2026-08-21 [生效] 回放只读、不执行工具、不重放 Provider 调用。默认理由: backlog sandbox=只读且不重放动作。
+- A-429 2026-08-21 [生效] S-30 集合是项目内目录标签，不复制记忆正文，不以集合为第二事实源。默认理由: Knowledge 唯一 owner 仍是 memory_entries。
+- A-430 2026-08-21 [生效] 删除集合只移除成员关系，永不删除 memory_entries。默认理由: backlog 删除集合不会静默删除来源事实。
+- A-431 2026-08-21 [生效] 破坏性删除集合用确认对话框，不新造非执行 Approval 域。默认理由: S-24 仍未扩展该域；确认即可满足演示。
+- A-432 2026-08-21 [生效] S-31 零 schema；图边只投影 supersedes、集合成员与已有 source tuple，不补造无来源推断。默认理由: 演示禁止把缺少来源的推断显示为事实。
+- A-433 2026-08-21 [生效] 图谱主路径是可访问列表；图形化仅为增强，不能替代列表。默认理由: backlog 要求列表替代视图。
+
+
+
+

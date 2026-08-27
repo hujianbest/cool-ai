@@ -170,7 +170,7 @@ try {
   assert.equal(await workbenchHeading.isVisible(), true);
   await assertAxeCriticalFree(page, "/projects/<id>");
 
-  await page.getByRole("button", { name: "新对话" }).waitFor();
+  await page.getByRole("button", { exact: true, name: "新对话" }).waitFor();
   await page.getByText("暂无对话。创建对话后开始协作。").waitFor();
 
   await page.screenshot({ path: smokeScreenshot, fullPage: true });
@@ -181,7 +181,7 @@ try {
     .locator(".cockpit-header-context")
     .filter({ hasText: "real-workspace" })
     .waitFor();
-  await page.getByRole("button", { name: "新对话" }).waitFor();
+  await page.getByRole("button", { exact: true, name: "新对话" }).waitFor();
 
   await page.screenshot({ path: demoScreenshot, fullPage: true });
   await page.screenshot({ path: currentDesktopDemoScreenshot, fullPage: true });

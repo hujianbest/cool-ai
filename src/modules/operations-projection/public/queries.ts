@@ -1,8 +1,14 @@
 import type {
   AuditProjectionFreshness,
+  ProjectMemoryIndexHealthDto,
   ProjectAuditEventsPageDto,
   ProjectThreadSearchPageDto,
   ProjectTimelinePageDto,
+  ServiceHealthDto,
+  UsageQuotaDto,
+  ContributionInsightDto,
+  RedactedExportDto,
+  DeliveryReplayDto,
 } from "./dto";
 
 export interface ListProjectAuditEventsOptions {
@@ -32,6 +38,23 @@ export interface SearchProjectThreadsOptions {
 }
 
 export interface OperationsProjectionQueries {
+  getServiceHealth: (databasePath: string, projectId?: string) => ServiceHealthDto;
+  getUsageQuota: (databasePath: string, projectId?: string) => UsageQuotaDto;
+  getContributionInsight: (databasePath: string, projectId?: string) => ContributionInsightDto;
+  getRedactedExport: (
+    databasePath: string,
+    projectId: string,
+    options?: { now?: string; threadId?: string },
+  ) => RedactedExportDto;
+  getDeliveryReplay: (
+    databasePath: string,
+    projectId: string,
+    options: { runId: string },
+  ) => DeliveryReplayDto;
+  getProjectMemoryIndexHealth: (
+    databasePath: string,
+    projectId: string,
+  ) => ProjectMemoryIndexHealthDto;
   getAuditProjectionFreshness: (databasePath: string) => AuditProjectionFreshness;
   /**
    * Newest-first audit page for one project. The MVP read path synchronously

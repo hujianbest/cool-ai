@@ -10,6 +10,7 @@ import {
   PINNED_SETTINGS_KEY,
 } from "@/components/settings-preferences-store";
 import { TeamPanel } from "@/components/team-panel";
+import { serviceHealthResponse } from "@/tests/fixtures/browser/service-health";
 
 vi.mock("next/navigation", () => ({
   useRouter: () => ({ push: vi.fn() }),
@@ -19,6 +20,8 @@ function stubResources() {
   vi.stubGlobal(
     "fetch",
     vi.fn(async (input: RequestInfo | URL) => {
+      const health = serviceHealthResponse(input);
+      if (health) return health;
       const payloads: Record<string, unknown> = {
         "/api/agent-templates": { templates: [] },
         "/api/agents": { agents: [] },

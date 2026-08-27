@@ -4,6 +4,7 @@ import userEvent from "@testing-library/user-event";
 import { afterEach, describe, expect, it, vi } from "vitest";
 
 import { TeamPanel } from "@/components/team-panel";
+import { serviceHealthResponse } from "@/tests/fixtures/browser/service-health";
 
 function skill(overrides: Record<string, unknown> = {}) {
   return {
@@ -36,6 +37,8 @@ describe("Skill panel", () => {
     const firstLoad = deferred<Response>();
     let gets = 0;
     vi.stubGlobal("fetch", vi.fn((input: RequestInfo | URL, init?: RequestInit) => {
+      const health = serviceHealthResponse(input);
+      if (health) return Promise.resolve(health);
       if (input.toString() !== "/api/skills" || init?.method) {
         throw new Error(`Unexpected request: ${input.toString()}`);
       }
@@ -67,6 +70,8 @@ describe("Skill panel", () => {
     let current = skill();
     let patchBody: Record<string, unknown> | undefined;
     vi.stubGlobal("fetch", vi.fn(async (input: RequestInfo | URL, init?: RequestInit) => {
+      const health = serviceHealthResponse(input);
+      if (health) return health;
       const url = input.toString();
       if (url === "/api/skills" && !init?.method) {
         return Response.json({ skills: [current] });
@@ -112,6 +117,8 @@ describe("Skill panel", () => {
 
   it("preserves a failed draft and supports a keyboard-only create path", async () => {
     vi.stubGlobal("fetch", vi.fn(async (input: RequestInfo | URL, init?: RequestInit) => {
+      const health = serviceHealthResponse(input);
+      if (health) return health;
       const url = input.toString();
       if (url === "/api/skills" && !init?.method) {
         return Response.json({ skills: [] });

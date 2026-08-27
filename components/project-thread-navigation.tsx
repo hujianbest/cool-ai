@@ -2649,7 +2649,7 @@ export function ProjectThreadNavigation({
         </nav>
         )}
         {batchNotice ?? createNotice ? (
-          <p aria-atomic="true" aria-live="polite" role="status">
+          <p aria-atomic="true" aria-live="polite" className="status-notice-text" role="status">
             {batchNotice ?? createNotice}
           </p>
         ) : null}

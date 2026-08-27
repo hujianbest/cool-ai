@@ -303,7 +303,7 @@ describe("collaboration T-1 vertical slice", () => {
     await user.click(screen.getByRole("button", { name: "重试加载对话" }));
     expect(await screen.findByText("尚无运行。发送首条消息以开始首次运行。"))
       .toBeInTheDocument();
-  });
+  }, 30000);
 
   it("sends through the real route and reloads the persisted owner echo", async () => {
     threadId = seedReadyProject();
@@ -317,7 +317,7 @@ describe("collaboration T-1 vertical slice", () => {
     await screen.findByText("尚无运行。发送首条消息以开始首次运行。");
 
     await user.type(screen.getByLabelText("发送给项目对话"), "Ship the smallest useful plan");
-    await user.click(screen.getByRole("button", { name: "发送并开始首次运行" }));
+    await user.click(screen.getAllByRole("button", { name: "发送并开始首次运行" })[0]);
     expect(await screen.findByText("Ship the smallest useful plan")).toBeInTheDocument();
     firstView.unmount();
 

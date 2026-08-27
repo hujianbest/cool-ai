@@ -253,7 +253,7 @@ describe("selected thread member policy", () => {
       }),
     );
 
-    render(<DirectHarness />);
+    render(<Harness />);
 
     expect(
       await screen.findByText("无法加载项目对话，请稍后重试。"),

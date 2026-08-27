@@ -108,6 +108,36 @@ function agentMemory(
   };
 }
 
+function memoryIndexHealthResponse() {
+  return Response.json({
+    coverage: { active: 0, indexed: 0, ratio: 1, valid: 0 },
+    freshness: { pending: 0, status: "caught_up" },
+    lastErrorCode: null,
+    projectId: "project-1",
+    searchMode: "source_fallback",
+    status: "caught_up",
+    updatedAt: "2026-08-19T00:00:00.000Z",
+    version: 1,
+  });
+}
+
+function fetchWithoutIndexHealth(
+  handler: (input: RequestInfo | URL, init?: RequestInit) => unknown,
+) {
+  return (input: RequestInfo | URL, init?: RequestInit) => {
+    if (String(input).includes("/memory-index/")) {
+      return Promise.resolve(memoryIndexHealthResponse());
+    }
+    if (String(input).includes("/memory-collections")) {
+      return Promise.resolve(Response.json({ collections: [] }));
+    }
+    if (String(input).includes("/knowledge-graph")) {
+      return Promise.resolve(Response.json({ edges: [], nodes: [] }));
+    }
+    return Promise.resolve(handler(input, init));
+  };
+}
+
 afterEach(() => {
   vi.unstubAllGlobals();
   vi.restoreAllMocks();
@@ -123,7 +153,10 @@ describe("review memory UI", () => {
       agentMemory("experience-1", "experience", "validation"),
       agentMemory("review-1", "fact", "review"),
     ];
-    vi.stubGlobal("fetch", vi.fn().mockResolvedValue(Response.json({ memories })));
+    vi.stubGlobal(
+      "fetch",
+      vi.fn(fetchWithoutIndexHealth(() => Response.json({ memories }))),
+    );
 
     render(<MemoryPanel projectId="project-1" />);
 
@@ -158,12 +191,12 @@ describe("review memory UI", () => {
       supersedesId: oldMemory.id,
       version: 2,
     });
-    const fetchMock = vi.fn(async (input: RequestInfo | URL) =>
+    const fetchMock = vi.fn(fetchWithoutIndexHealth(async (input: RequestInfo | URL) =>
       Response.json({
         memories: String(input).endsWith("includeInactive=1")
           ? [currentMemory, oldMemory]
           : [currentMemory],
-      }));
+      })));
     vi.stubGlobal("fetch", fetchMock);
 
     render(<MemoryPanel projectId="project-1" />);
@@ -228,9 +261,11 @@ describe("review memory UI", () => {
       resolveLoad = resolve;
     });
     const created = ownerMemory("experience-owner", "experience", "Keep review evidence");
-    const fetchMock = vi.fn()
+    const memoriesFetch = vi.fn()
       .mockImplementationOnce(() => pendingLoad)
       .mockResolvedValueOnce(Response.json({ memory: created }, { status: 201 }));
+    const fetchMock = vi.fn(fetchWithoutIndexHealth((input, init) =>
+      memoriesFetch(input, init)));
     vi.stubGlobal("fetch", fetchMock);
     const user = userEvent.setup();
 
@@ -267,7 +302,7 @@ describe("review memory UI", () => {
   });
 
   it("preserves the draft on load/save errors and offers keyboard-reachable retry", async () => {
-    const fetchMock = vi.fn()
+    const memoriesFetch = vi.fn()
       .mockResolvedValueOnce(Response.json(
         { error: { code: "STORAGE_UNAVAILABLE" } },
         { status: 503 },
@@ -277,6 +312,8 @@ describe("review memory UI", () => {
         { error: { code: "RESOURCE_CONFLICT" } },
         { status: 409 },
       ));
+    const fetchMock = vi.fn(fetchWithoutIndexHealth((input, init) =>
+      memoriesFetch(input, init)));
     vi.stubGlobal("fetch", fetchMock);
     const user = userEvent.setup();
 

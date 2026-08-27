@@ -5,6 +5,8 @@ import type {
   ExecutionControlResponse,
   MergeExecutionInput,
   MergeExecutionResponse,
+  RecoveryExecuteInput,
+  RecoveryExecuteResponse,
   SandboxExecutor,
   StartExecutionRejection,
   StartExecutionResponse,
@@ -52,4 +54,16 @@ export interface SafeExecutionCommands {
     executionId: string,
     input: MergeExecutionInput,
   ): Promise<SafeExecutionCommandResult<MergeExecutionResponse>>;
+  executeRecoveryAction(
+    databasePath: string,
+    projectId: string,
+    executionId: string,
+    input: RecoveryExecuteInput,
+  ): RecoveryExecuteResponse;
+  undoRecoveryAction(
+    databasePath: string,
+    projectId: string,
+    executionId: string,
+    input: RecoveryExecuteInput,
+  ): RecoveryExecuteResponse;
 }

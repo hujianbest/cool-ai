@@ -14,6 +14,8 @@ export * as skillService from "@/src/adapters/outbound/sqlite/identity-capabilit
 
 // knowledge-provenance
 export * as memoryService from "@/src/adapters/outbound/sqlite/knowledge-provenance/memory-service";
+export * as memoryCollections from "@/src/adapters/outbound/sqlite/knowledge-provenance/memory-collections";
+export * as knowledgeGraph from "@/src/adapters/outbound/sqlite/knowledge-provenance/knowledge-graph";
 
 // mission-work
 export * as missionWork from "@/src/adapters/outbound/sqlite/mission-work/mission-service";
@@ -24,7 +26,14 @@ export * as missionWorkTasks from "@/src/adapters/outbound/sqlite/mission-work/t
 // operations-projection
 export * as auditProjectionConsumer from "@/src/adapters/outbound/sqlite/operations-projection/audit-projection-consumer";
 export * as auditProjectionQueries from "@/src/adapters/outbound/sqlite/operations-projection/audit-projection-queries";
+export * as memoryIndexHealth from "@/src/adapters/outbound/sqlite/operations-projection/memory-index-health";
+export * as memoryIndexRebuild from "@/src/adapters/outbound/sqlite/operations-projection/memory-index-rebuild";
+export * as serviceHealth from "@/src/adapters/outbound/sqlite/operations-projection/service-health";
 export * as threadSearchQueries from "@/src/adapters/outbound/sqlite/operations-projection/thread-search-queries";
+export * as contributionInsight from "@/src/adapters/outbound/sqlite/operations-projection/contribution-insight";
+export * as redactedExport from "@/src/adapters/outbound/sqlite/operations-projection/redacted-export";
+export * as deliveryReplay from "@/src/adapters/outbound/sqlite/operations-projection/delivery-replay";
+export * as usageQuota from "@/src/adapters/outbound/sqlite/operations-projection/usage-quota";
 
 // project-workspace
 export * as membershipService from "@/src/adapters/outbound/sqlite/project-workspace/membership-service";
@@ -63,7 +72,10 @@ export * as actionOrchestrator from "@/src/adapters/outbound/sqlite/safe-executi
 export * as executionApprovalService from "@/src/adapters/outbound/sqlite/safe-execution/execution-approval-service";
 export * as executionControlService from "@/src/adapters/outbound/sqlite/safe-execution/execution-control-service";
 export * as executionReadService from "@/src/adapters/outbound/sqlite/safe-execution/execution-read-service";
+export * as policyProcessService from "@/src/adapters/outbound/sqlite/safe-execution/policy-process-service";
+export * as policyProcessReconciliation from "@/src/adapters/outbound/sqlite/safe-execution/policy-process-reconciliation";
 export * as executionService from "@/src/adapters/outbound/sqlite/safe-execution/execution-service";
+export * as recoveryActions from "@/src/adapters/outbound/sqlite/safe-execution/recovery-actions";
 
 // sqlite 技术边界（connection/lifecycle 能力）
 export * as sqliteConnection from "@/src/adapters/outbound/sqlite/connection";

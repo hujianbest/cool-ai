@@ -1,3 +1,26 @@
+export type RecoveryActionDto = {
+  approvalRequired: boolean;
+  id: string;
+  reversible: boolean;
+  title: string;
+};
+
+export type RecoveryExecuteInput = {
+  actionId: string;
+  confirmation: string;
+  expectedVersion: number;
+  operationId: string;
+};
+
+export type RecoveryExecuteResponse = {
+  actionId: string;
+  executionId: string;
+  fromStatus: string;
+  toStatus: string;
+  version: number;
+  writesFiles: false;
+};
+
 export type {
   AdvanceExecutionInput,
   AdvanceExecutionResponse,

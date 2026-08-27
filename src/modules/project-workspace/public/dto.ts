@@ -8,14 +8,27 @@ export type {
 export type ValidationPolicyEntryInput = {
   args: string[];
   executable: string;
+  network?: "loopback_only";
+  openPath?: string;
+  port?: number;
+  purpose?: "preview" | "validation";
   required: boolean;
+  timeoutSeconds?: number;
   workdir: string;
 };
 
-export type ValidationPolicyEntry = ValidationPolicyEntryInput & {
+export type ValidationPolicyEntry = Omit<
+  ValidationPolicyEntryInput,
+  "network" | "openPath" | "port" | "purpose" | "timeoutSeconds"
+> & {
   executableIdentity: string;
   id: string;
+  network: "loopback_only" | null;
+  openPath: string | null;
   position: number;
+  port: number | null;
+  purpose: "preview" | "validation";
+  timeoutSeconds: number;
   tupleHash: string;
 };
 

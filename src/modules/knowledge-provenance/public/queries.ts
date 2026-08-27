@@ -1,5 +1,7 @@
 import type { TransactionContext } from "@/src/application/transaction-context";
 import type {
+  KnowledgeGraphDto,
+  MemoryCollectionCatalogDto,
   MemoryEntryV6,
   MemorySearchHit,
   ResolvedMemorySource,
@@ -27,4 +29,12 @@ export interface KnowledgeProvenanceQueries {
     projectId: string,
     options: SearchMemoriesOptions,
   ) => MemorySearchHit[];
+  listMemoryCollections: (
+    databasePath: string,
+    projectId: string,
+  ) => MemoryCollectionCatalogDto[];
+  getKnowledgeGraph: (
+    databasePath: string,
+    projectId: string,
+  ) => KnowledgeGraphDto;
 }

@@ -12,7 +12,12 @@ const inputSchema = z.object({
   entries: z.array(z.object({
     args: z.array(z.string().max(4096)).max(64),
     executable: z.string().min(1).max(4096),
+    network: z.literal("loopback_only").optional(),
+    openPath: z.string().min(1).max(2048).optional(),
+    port: z.number().int().min(1024).max(65_535).optional(),
+    purpose: z.enum(["preview", "validation"]).optional(),
     required: z.boolean(),
+    timeoutSeconds: z.number().int().min(30).max(900).optional(),
     workdir: z.string().min(1).max(4096),
   }).strict()).max(50),
   expectedVersion: z.number().int().positive(),

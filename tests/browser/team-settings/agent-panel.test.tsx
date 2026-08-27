@@ -4,6 +4,7 @@ import userEvent from "@testing-library/user-event";
 import { afterEach, describe, expect, it, vi } from "vitest";
 
 import { TeamPanel } from "@/components/team-panel";
+import { EMPTY_CONTRIBUTION_INSIGHT, EMPTY_SERVICE_HEALTH, EMPTY_USAGE_QUOTA } from "@/tests/fixtures/browser/service-health";
 
 const templates = [
   {
@@ -94,6 +95,9 @@ function agent(overrides: Record<string, unknown> = {}) {
 }
 
 function jsonForGet(url: string, agents: unknown[] = []) {
+  if (url.includes("/api/health")) return EMPTY_SERVICE_HEALTH;
+  if (url.includes("/api/usage")) return EMPTY_USAGE_QUOTA;
+  if (url.includes("/api/contribution")) return EMPTY_CONTRIBUTION_INSIGHT;
   if (url === "/api/agent-templates") return { templates };
   if (url === "/api/providers") return { providers };
   if (url === "/api/skills") return { skills };

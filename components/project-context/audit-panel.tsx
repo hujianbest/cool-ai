@@ -2,6 +2,8 @@
 
 import { useEffect, useRef, useState } from "react";
 
+import { ActionDialog } from "@/components/ui/action-dialog";
+
 import {
   ApiDisplayError,
   apiErrorCopy,
@@ -556,33 +558,43 @@ function EventSourceControls({
     ? runtimeSourceHref(projectId, event.payload)
     : null;
   return (
-    <>
+    <div className="audit-source-controls">
       {domain === "execution" && executionId ? (
         <button
+          className="button-ghost"
           onClick={() => onLocateExecution(executionId)}
           type="button"
         >
           定位来源执行
         </button>
       ) : null}
-      {sourceHref ? <a href={sourceHref}>定位来源对话</a> : null}
+      {sourceHref ? <a className="button-ghost" href={sourceHref}>定位来源对话</a> : null}
       {missionSource
-        ? <a href={missionSource.href}>{missionSource.label}</a>
+        ? <a className="button-ghost" href={missionSource.href}>{missionSource.label}</a>
         : null}
       {projectSource
-        ? <a href={projectSource}>定位来源项目</a>
+        ? <a className="button-ghost" href={projectSource}>定位来源项目</a>
         : null}
       {governanceSource
-        ? <a href={governanceSource}>定位来源审批</a>
+        ? <a className="button-ghost" href={governanceSource}>定位来源审批</a>
         : null}
       {runtimeSource
-        ? <a href={runtimeSource}>定位来源运行时</a>
+        ? <a className="button-ghost" href={runtimeSource}>定位来源运行时</a>
         : null}
-    </>
+    </div>
   );
 }
 
 type AuditPanelView = "list" | "timeline";
+
+function replayIdentity(event: AuditEventListItemDto): string | null {
+  const payloadRun = event.payload.runId;
+  const payloadExec = event.payload.executionId;
+  for (const candidate of [payloadRun, payloadExec, event.executionId]) {
+    if (typeof candidate === "string" && candidate !== "") return candidate;
+  }
+  return null;
+}
 
 export function AuditPanel({ projectId }: { projectId: string }) {
   const [events, setEvents] = useState<AuditEventListItemDto[]>([]);
@@ -603,6 +615,15 @@ export function AuditPanel({ projectId }: { projectId: string }) {
   const [isTimelineLoading, setIsTimelineLoading] = useState(false);
   const [timelineError, setTimelineError] = useState<string | null>(null);
   const [timelineReloadKey, setTimelineReloadKey] = useState(0);
+  const [exportOpen, setExportOpen] = useState(false);
+  const [isExporting, setIsExporting] = useState(false);
+  const [exportError, setExportError] = useState<string | null>(null);
+  const [replayRunId, setReplayRunId] = useState<string | null>(null);
+  const [replayItems, setReplayItems] = useState<TimelineEventItemDto[]>([]);
+  const [replayError, setReplayError] = useState<string | null>(null);
+  const [isReplayLoading, setIsReplayLoading] = useState(false);
+  const exportCancelRef = useRef<HTMLButtonElement>(null);
+  const replayEpochRef = useRef(0);
   const epochRef = useRef(0);
   const timelineEpochRef = useRef(0);
 
@@ -612,6 +633,9 @@ export function AuditPanel({ projectId }: { projectId: string }) {
     setTimelineItems([]);
     setTimelineFreshness(null);
     setTimelineError(null);
+    setReplayRunId(null);
+    setReplayItems([]);
+    setReplayError(null);
   }, [projectId]);
 
   useEffect(() => {
@@ -687,6 +711,77 @@ export function AuditPanel({ projectId }: { projectId: string }) {
       });
     return () => controller.abort();
   }, [projectId, timelineReloadKey, view]);
+
+  useEffect(() => {
+    if (replayRunId === null) return;
+    const epoch = ++replayEpochRef.current;
+    const controller = new AbortController();
+    setIsReplayLoading(true);
+    setReplayError(null);
+    setReplayItems([]);
+    void fetch(
+      `/api/projects/${encodeURIComponent(projectId)}/replay?runId=${encodeURIComponent(replayRunId)}`,
+      { signal: controller.signal },
+    )
+      .then(async (response) => {
+        if (!response.ok) throw new Error("replay");
+        const payload: unknown = await response.json();
+        if (
+          typeof payload !== "object"
+          || payload === null
+          || !("items" in payload)
+          || !Array.isArray(payload.items)
+        ) {
+          throw new Error("replay");
+        }
+        const items: TimelineEventItemDto[] = [];
+        for (const entry of payload.items) {
+          if (
+            typeof entry !== "object"
+            || entry === null
+            || !("id" in entry)
+            || !("eventType" in entry)
+            || !("occurredAt" in entry)
+            || typeof entry.id !== "string"
+            || typeof entry.eventType !== "string"
+            || typeof entry.occurredAt !== "string"
+          ) {
+            throw new Error("replay");
+          }
+          items.push({
+            actorType: "actorType" in entry && typeof entry.actorType === "string"
+              ? entry.actorType
+              : null,
+            eventType: entry.eventType,
+            executionId: "executionId" in entry && typeof entry.executionId === "string"
+              ? entry.executionId
+              : null,
+            id: entry.id,
+            occurredAt: entry.occurredAt,
+            outboxSeq: "outboxSeq" in entry && typeof entry.outboxSeq === "number"
+              ? entry.outboxSeq
+              : 0,
+            payload: "payload" in entry
+              && typeof entry.payload === "object"
+              && entry.payload !== null
+              && !Array.isArray(entry.payload)
+              ? entry.payload as Record<string, unknown>
+              : {},
+            sourceMissing: "sourceMissing" in entry && entry.sourceMissing === true,
+          });
+        }
+        if (replayEpochRef.current !== epoch) return;
+        setReplayItems(items);
+      })
+      .catch((cause: unknown) => {
+        if (controller.signal.aborted || replayEpochRef.current !== epoch) return;
+        setReplayError(caughtApiErrorCopy(cause, "无法加载回放。"));
+      })
+      .finally(() => {
+        if (replayEpochRef.current === epoch) setIsReplayLoading(false);
+      });
+    return () => controller.abort();
+  }, [projectId, replayRunId]);
 
   async function loadMore() {
     if (nextBeforeSeq === null || isLoadingMore) return;
@@ -780,6 +875,16 @@ export function AuditPanel({ projectId }: { projectId: string }) {
         >
           时间轴
         </button>
+        <button
+          className="button-secondary"
+          onClick={() => {
+            setExportError(null);
+            setExportOpen(true);
+          }}
+          type="button"
+        >
+          导出脱敏包
+        </button>
       </div>
       {showFreshness && shownFreshness ? (
         <p className="audit-freshness">
@@ -801,6 +906,7 @@ export function AuditPanel({ projectId }: { projectId: string }) {
               {timelineError}
             </p>
             <button
+              className="button-secondary"
               onClick={() => setTimelineReloadKey((current) => current + 1)}
               type="button"
             >
@@ -854,6 +960,18 @@ export function AuditPanel({ projectId }: { projectId: string }) {
                       projectId={projectId}
                     />
                   )}
+                  <button
+                    className="button-secondary"
+                    disabled={replayIdentity(event) === null}
+                    onClick={() => {
+                      const runId = replayIdentity(event);
+                      if (runId === null) return;
+                      setReplayRunId(runId);
+                    }}
+                    type="button"
+                  >
+                    打开回放
+                  </button>
                 </li>
               );
             })}
@@ -869,6 +987,7 @@ export function AuditPanel({ projectId }: { projectId: string }) {
             {error}
           </p>
           <button
+            className="button-secondary"
             onClick={() => setReloadKey((current) => current + 1)}
             type="button"
           >
@@ -956,6 +1075,7 @@ export function AuditPanel({ projectId }: { projectId: string }) {
           ) : null}
           {nextBeforeSeq !== null ? (
             <button
+              className="button-secondary"
               disabled={isLoadingMore}
               onClick={() => void loadMore()}
               type="button"
@@ -969,6 +1089,115 @@ export function AuditPanel({ projectId }: { projectId: string }) {
         <p aria-live="polite" className="muted" role="status">
           {locateMessage}
         </p>
+      ) : null}
+      <ActionDialog
+        closeLabel="关闭导出确认"
+        initialFocusRef={exportCancelRef}
+        onClose={() => {
+          if (!isExporting) setExportOpen(false);
+        }}
+        open={exportOpen}
+        title="导出脱敏包"
+        titleId={`audit-export-title-${projectId}`}
+      >
+        <div className="stack">
+          <p>当前项目</p>
+          {exportError ? (
+            <p className="error-text" role="alert">{exportError}</p>
+          ) : null}
+          <div className="form-row">
+            <button
+              className="button-primary"
+              disabled={isExporting}
+              onClick={() => {
+                void (async () => {
+                  setIsExporting(true);
+                  setExportError(null);
+                  try {
+                    const response = await fetch(
+                      `/api/projects/${encodeURIComponent(projectId)}/export`,
+                    );
+                    if (!response.ok) throw new Error("export");
+                    const payload: unknown = await response.json();
+                    const blob = new Blob([JSON.stringify(payload)], {
+                      type: "application/json",
+                    });
+                    if (typeof URL.createObjectURL === "function") {
+                      const objectUrl = URL.createObjectURL(blob);
+                      const link = document.createElement("a");
+                      link.href = objectUrl;
+                      link.download = `cool-ai-export-${projectId}.json`;
+                      document.body.append(link);
+                      link.click();
+                      link.remove();
+                      URL.revokeObjectURL(objectUrl);
+                    }
+                    setExportOpen(false);
+                  } catch {
+                    setExportError("无法导出脱敏包。");
+                  } finally {
+                    setIsExporting(false);
+                  }
+                })();
+              }}
+              type="button"
+            >
+              {isExporting ? "正在导出…" : "确认导出"}
+            </button>
+            <button
+              className="button-secondary"
+              disabled={isExporting}
+              onClick={() => setExportOpen(false)}
+              ref={exportCancelRef}
+              type="button"
+            >
+              取消
+            </button>
+          </div>
+        </div>
+      </ActionDialog>
+      {replayRunId !== null ? (
+        <section
+          aria-labelledby={`audit-replay-title-${projectId}`}
+          className="stack"
+          role="dialog"
+        >
+          <h2 id={`audit-replay-title-${projectId}`}>只读回放</h2>
+          <p>只读回放</p>
+          {isReplayLoading ? (
+            <p aria-busy="true" className="state-message">正在加载回放…</p>
+          ) : replayError ? (
+            <p className="error-text" role="alert">{replayError}</p>
+          ) : replayItems.length === 0 ? (
+            <p className="state-message">这次运行没有可回放的公开事件。</p>
+          ) : (
+            <ol aria-label="回放顺序" className="stack audit-event-list">
+              {replayItems.map((item) => (
+                <li className="task-summary stack" key={item.id}>
+                  <h3>{auditEventTypeCopy(item.eventType)}</h3>
+                  <time dateTime={item.occurredAt}>{item.occurredAt}</time>
+                  {item.sourceMissing ? (
+                    <p className="muted">来源缺失</p>
+                  ) : (
+                    <EventSourceControls
+                      event={item}
+                      onLocateExecution={locateExecution}
+                      projectId={projectId}
+                    />
+                  )}
+                </li>
+              ))}
+            </ol>
+          )}
+          <button
+            className="button-secondary"
+            disabled={isReplayLoading}
+            onClick={() => setReplayRunId(null)}
+            type="button"
+          >
+            关闭
+          </button>
+        </section>
       ) : null}
     </section>
   );

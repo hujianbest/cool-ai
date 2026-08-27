@@ -480,7 +480,11 @@ export function ProviderPanel({
             <p className="error-text" ref={errorRef} role="alert" tabIndex={-1}>
               {loadError}
             </p>
-            <button onClick={() => setReloadKey((current) => current + 1)} type="button">
+            <button
+              className="button-secondary"
+              onClick={() => setReloadKey((current) => current + 1)}
+              type="button"
+            >
               重试加载服务
             </button>
           </div>
@@ -503,6 +507,7 @@ export function ProviderPanel({
                   <p>{provider.apiKeyMask}</p>
                   <button
                     aria-label={`编辑 ${provider.name}`}
+                    className="button-secondary"
                     onClick={(event) => startEdit(provider, event.currentTarget)}
                     type="button"
                   >
@@ -665,13 +670,14 @@ export function ProviderPanel({
           ) : null}
           <div className="form-row">
             <button
+              className="button-secondary"
               disabled={!fieldsReady || isVerifying || isSaving}
               onClick={verify}
               type="button"
             >
               {isVerifying ? "正在验证…" : "验证连接"}
             </button>
-            <button disabled={!canSave} type="submit">
+            <button className="button-primary" disabled={!canSave} type="submit">
               {isSaving ? "正在保存…" : "保存服务"}
             </button>
           </div>

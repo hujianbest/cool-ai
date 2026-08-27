@@ -4,6 +4,7 @@ import userEvent from "@testing-library/user-event";
 import { afterEach, describe, expect, it, vi } from "vitest";
 
 import { TeamPanel } from "@/components/team-panel";
+import { serviceHealthResponse } from "@/tests/fixtures/browser/service-health";
 
 function stubMobile() {
   vi.stubGlobal(
@@ -20,6 +21,8 @@ function stubMobile() {
 function stubResources() {
   vi.stubGlobal("fetch", vi.fn(async (input: RequestInfo | URL, init?: RequestInit) => {
     if (init?.method) throw new Error(`Unexpected mutation: ${input.toString()}`);
+    const health = serviceHealthResponse(input);
+    if (health) return health;
     const payloads: Record<string, unknown> = {
       "/api/agent-templates": { templates: [] },
       "/api/agents": { agents: [] },

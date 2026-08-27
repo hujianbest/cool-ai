@@ -16,6 +16,7 @@ import { IconButton } from "@/components/ui/icon-button";
 
 type ActionDialogProps = {
   children: ReactNode;
+  className?: string;
   closeLabel: string;
   initialFocusRef?: RefObject<HTMLElement | null>;
   onClose: () => void;
@@ -26,6 +27,7 @@ type ActionDialogProps = {
 
 export function ActionDialog({
   children,
+  className,
   closeLabel,
   initialFocusRef,
   onClose,
@@ -92,7 +94,7 @@ export function ActionDialog({
       <section
         aria-labelledby={titleId}
         aria-modal="true"
-        className="action-dialog stack"
+        className={className ? `action-dialog stack ${className}` : "action-dialog stack"}
         onKeyDown={(event) => trapModalFocus(event, handleClose)}
         ref={dialogRef}
         role="dialog"

@@ -12,6 +12,8 @@ import { createPortal } from "react-dom";
 
 import { ExecutionReview } from "@/components/execution/execution-review";
 import { ManualRecoverySurface } from "@/components/execution/manual-recovery-surface";
+import { PolicyTerminalSurface } from "@/components/execution/policy-terminal-surface";
+import { RecoveryOperationsSurface } from "@/components/execution/recovery-operations-surface";
 import { useModalSurface, useNarrowMode } from "@/components/mobile-dialog";
 import { ReviewProductSurface } from "@/components/review/review-product-surface";
 import { ValidationPolicyPanel } from "@/components/execution/validation-policy-panel";
@@ -258,6 +260,14 @@ function ExecutionCard({
           onMerge={onMerge}
         />
       ) : null}
+      {!execution.manualRecoveryRequired ? (
+        <PolicyTerminalSurface
+          executionId={execution.id}
+          executionRunnable={execution.status === "running"}
+          executionVersion={execution.version}
+          taskTitle={execution.workItem.title}
+        />
+      ) : null}
       {!execution.manualRecoveryRequired
       && execution.status === "merged"
       && missionId ? (
@@ -300,6 +310,10 @@ function ExecutionCard({
         <p className="error-text" role="alert">{asyncState.refreshError}</p>
       ) : null}
       <div className="execution-card-controls">
+        <RecoveryOperationsSurface
+          execution={execution}
+          onExecuted={onExecutionChanged}
+        />
         {controls.map((action) => (
           <button
             disabled={asyncState.controlPending}

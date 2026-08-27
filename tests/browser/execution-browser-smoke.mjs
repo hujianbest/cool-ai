@@ -54,11 +54,16 @@ const governanceAuditScreenshot = join(governanceAuditEvidenceDirectory, "govern
 const runtimeAuditEvidenceDirectory = resolve("features", "041-runtime-audit-events", "evidence");
 const runtimeAuditScreenshot = join(runtimeAuditEvidenceDirectory, "runtime-audit-desktop-light.png");
 const runtimeAuditResultsPath = join(runtimeAuditEvidenceDirectory, "runtime-audit-acceptance-results.json");
+const recoveryEvidenceDirectory = resolve("features", "056-recovery-operations", "evidence");
+const recoveryDesktopLightScreenshot = join(recoveryEvidenceDirectory, "rescue-desktop-light.png");
+const recoveryDesktopDarkScreenshot = join(recoveryEvidenceDirectory, "rescue-desktop-dark.png");
+const recoveryNarrowScreenshot = join(recoveryEvidenceDirectory, "rescue-narrow-light.png");
 mkdirSync(evidenceDirectory, { recursive: true });
 mkdirSync(auditEvidenceDirectory, { recursive: true });
 mkdirSync(approvalCenterEvidenceDirectory, { recursive: true });
 mkdirSync(governanceAuditEvidenceDirectory, { recursive: true });
 mkdirSync(runtimeAuditEvidenceDirectory, { recursive: true });
+mkdirSync(recoveryEvidenceDirectory, { recursive: true });
 
 const browserExecutable = [
   process.env.PLAYWRIGHT_CHROMIUM_EXECUTABLE,
@@ -423,7 +428,6 @@ function scalar(database, sql, ...parameters) {
 async function createSkill(page, name, instructions) {
   await page.getByRole("tab", { name: "技能" }).click();
   await page.waitForURL((url) => url.searchParams.get("section") === "skills");
-  await page.getByText("暂无技能。", { exact: true }).waitFor();
   await page.getByRole("button", { name: "创建新技能" }).click();
   const editor = page.getByRole("dialog", { name: "创建技能" });
   await editor.waitFor();
@@ -498,14 +502,33 @@ async function createMissionViaApi(page, title, goal) {
   assert.equal(payload.mission.title, title);
 }
 
+async function assignMembersViaApi(page, agentNames) {
+  const result = await page.evaluate(async (names) => {
+    const projectId = new URL(window.location.href).pathname.split("/").at(-1);
+    const agents = (await (await fetch("/api/agents")).json()).agents;
+    const agentIds = agents
+      .filter(({ name }) => names.includes(name))
+      .map(({ id }) => id);
+    const current = await (await fetch(`/api/projects/${projectId}/members`)).json();
+    const response = await fetch(`/api/projects/${projectId}/members`, {
+      body: JSON.stringify({
+        agentIds,
+        expectedProjectVersion: current.projectVersion,
+      }),
+      headers: { "content-type": "application/json" },
+      method: "PUT",
+    });
+    const body = await response.json();
+    if (!response.ok) throw new Error(JSON.stringify(body));
+    return body;
+  }, agentNames);
+  assert.equal(result.members.length, agentNames.length);
+}
+
 async function createProject(page) {
   await page.goto(baseUrl, { waitUntil: "networkidle" });
   await openFolderProject(page, "workspace");
-  const members = page.getByRole("group", { name: "平等项目成员" });
-  await members.getByRole("checkbox", { name: /Execution Alpha/ }).check();
-  await members.getByRole("checkbox", { name: /Execution Beta/ }).check();
-  await page.getByRole("button", { name: "保存成员" }).click();
-  await page.getByText("项目成员已保存。", { exact: true }).waitFor();
+  await assignMembersViaApi(page, ["Execution Alpha", "Execution Beta"]);
   await createMissionViaApi(
     page,
     "Execution Smoke Mission",
@@ -520,7 +543,9 @@ async function createProject(page) {
     const agents = (await (await fetch("/api/agents")).json()).agents;
     const threadResponse = await fetch(`/api/projects/${project.id}/threads`, {
       body: JSON.stringify({
-        memberAgentIds: agents.map((agent) => agent.id),
+        memberAgentIds: agents
+          .filter(({ name }) => ["Execution Alpha", "Execution Beta"].includes(name))
+          .map(({ id }) => id),
         operationId: crypto.randomUUID(),
         title: "Execution smoke thread",
       }),
@@ -639,13 +664,20 @@ async function startPlannedExecutions(page, source, workItemCount = 2) {
 }
 
 async function openRunTab(page) {
-  const heading = page.getByRole("heading", { name: "选择并执行" });
+  const heading = page.getByRole("heading", { name: "运行详情" });
   if (await heading.isVisible().catch(() => false)) return;
-  const runTab = page.getByRole("tab", { name: "运行详情" });
-  await runTab.waitFor();
-  await runTab.focus();
-  await page.keyboard.press("Enter");
+  await page.getByRole("navigation", { name: "主导航" })
+    .getByRole("button", { name: "任务", exact: true })
+    .click();
   await heading.waitFor();
+}
+
+async function closeRunTab(page) {
+  const back = page.getByRole("button", { name: "返回对话" });
+  if (await back.isVisible().catch(() => false)) {
+    await back.click();
+    await page.getByRole("heading", { name: "运行详情" }).waitFor({ state: "hidden" });
+  }
 }
 
 async function saveStandingPolicy(page) {
@@ -984,6 +1016,7 @@ try {
   await grantExecutionPermissions(page, [alpha, beta]);
   await openRunTab(page);
   await saveStandingPolicy(page);
+  await closeRunTab(page);
   const sourceRunId = await planExecutableTasks(
     page,
     context.projectId,
@@ -1213,6 +1246,8 @@ try {
   ]) {
     acOk(!acCenterApiText.includes(value), "center API payload must not leak forbidden markers");
   }
+
+  await closeRunTab(page);
 
   const acPanel = page.locator(".cockpit-context");
   await axeApprovalCenter("desktop light memory tab baseline before approval center");
@@ -1795,6 +1830,45 @@ process.exit(2);`,
 
   await page.reload({ waitUntil: "networkidle" });
   await openRunTab(page);
+  const staleCardTitle = await page.evaluate(async (executionId) => {
+    const body = await (await fetch(`/api/executions/${executionId}`, { cache: "no-store" })).json();
+    return body.execution.workItem.title;
+  }, lapsedExecutionId);
+  const staleCard = page.getByRole("region", { name: staleCardTitle });
+  await staleCard.getByRole("button", { name: "救援" }).click();
+  const rescueDialog = page.getByRole("dialog", { name: new RegExp(`救援 · 任务「${staleCardTitle}」`, "u") });
+  await rescueDialog.waitFor();
+  assert.equal(await rescueDialog.getByRole("textbox").count(), 0);
+  await rescueDialog.getByRole("button", { name: "预览" }).click();
+  await rescueDialog.getByText("不改工作区文件").waitFor();
+  assert.equal(await rescueDialog.getByRole("button", { name: "撤销" }).isDisabled(), true);
+  await page.screenshot({ fullPage: true, path: recoveryDesktopLightScreenshot });
+  await axeScan("rescue dialog desktop light");
+  await rescueDialog.getByRole("button", { name: "关闭" }).click();
+  await rescueDialog.waitFor({ state: "hidden" });
+  await page
+    .getByRole("button", { name: "当前为明色主题，切换到暗色主题" })
+    .evaluate((button) => button.click());
+  assert.equal(await page.evaluate(() => document.documentElement.dataset.theme), "dark");
+  await staleCard.getByRole("button", { name: "救援" }).click();
+  await rescueDialog.waitFor();
+  await page.screenshot({ fullPage: true, path: recoveryDesktopDarkScreenshot });
+  await axeScan("rescue dialog desktop dark");
+  await rescueDialog.getByRole("button", { name: "关闭" }).click();
+  await rescueDialog.waitFor({ state: "hidden" });
+  await page
+    .getByRole("button", { name: "当前为暗色主题，切换到明色主题" })
+    .evaluate((button) => button.click());
+  await page.setViewportSize({ height: 844, width: 390 });
+  await staleCard.getByRole("button", { name: "救援" }).click();
+  await rescueDialog.waitFor();
+  await page.screenshot({ fullPage: true, path: recoveryNarrowScreenshot });
+  await axeScan("rescue dialog narrow light");
+  await rescueDialog.getByRole("button", { name: "关闭" }).click();
+  await rescueDialog.waitFor({ state: "hidden" });
+  await page.setViewportSize({ height: 1100, width: 1600 });
+  console.log("S-44 RESCUE UI PASS: catalog dialog preview, no free command, undo disabled, light/dark/narrow");
+  await closeRunTab(page);
   const acLapsedPanel = page.locator(".cockpit-context");
   const acLapsedTab = acLapsedPanel.getByRole("tab", { name: "审批" });
   await acLapsedTab.click();
@@ -2525,8 +2599,28 @@ process.exit(2);`,
   }
   console.log(`RUN TIMELINE ACCEPTANCE PASS: assertions=${runTimelineAcceptance.assertions}`);
 
+  const terminalTrigger = page.getByRole("button", { name: "终端与预览", exact: true }).first();
+  await terminalTrigger.focus();
+  await page.keyboard.press("Enter");
+  const terminalSurface = page.getByRole("region", { name: /终端与预览/ }).first();
+  await terminalSurface.waitFor();
+  const terminalText = await terminalSurface.innerText();
+  assert.match(terminalText, /冻结政策/);
+  assert.match(terminalText, /node(?:\.exe)? --version/i);
+  assert.doesNotMatch(terminalText, new RegExp(temporaryDirectory.replaceAll("\\", "\\\\"), "i"));
+  const terminalControls = await terminalSurface.locator("button,select,input,textarea").evaluateAll(
+    (elements) => elements.map((element) => {
+      const bounds = element.getBoundingClientRect();
+      return { height: bounds.height, width: bounds.width };
+    }),
+  );
+  assert.ok(
+    terminalControls.every(({ height, width }) => height >= 44 && width >= 44),
+    JSON.stringify(terminalControls),
+  );
   desktopFacingText = await page.locator("html").innerText();
   await page.screenshot({ fullPage: true, path: desktopScreenshot });
+  await terminalSurface.getByRole("button", { name: "关闭" }).click();
 
   await page.setViewportSize({ height: 844, width: 390 });
   await page.reload({ waitUntil: "networkidle" });
@@ -2705,7 +2799,10 @@ process.exit(2);`,
     }\n${readFileSync(approvalCenterLapsedDarkScreenshot).toString("latin1")
     }\n${readFileSync(approvalCenterNarrowScreenshot).toString("latin1")
     }\n${readFileSync(governanceAuditScreenshot).toString("latin1")
-    }\n${readFileSync(runtimeAuditScreenshot).toString("latin1")}`,
+    }\n${readFileSync(runtimeAuditScreenshot).toString("latin1")
+    }\n${readFileSync(recoveryDesktopLightScreenshot).toString("latin1")
+    }\n${readFileSync(recoveryDesktopDarkScreenshot).toString("latin1")
+    }\n${readFileSync(recoveryNarrowScreenshot).toString("latin1")}`,
   };
   const forbidden = [
     apiKey,

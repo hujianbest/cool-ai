@@ -394,10 +394,15 @@ export async function runDirectProcess(input: {
   clock?: ProcessRunnerClock;
   executable: string;
   heartbeat: () => boolean | Promise<boolean>;
+  onOutputSnapshot?: (
+    stream: "stderr" | "stdout",
+    output: ProcessOutput,
+  ) => void;
   processAdapter?: ProcessRunnerAdapter;
   registerTerminationRequest?: (request: (() => void) | null) => void;
   sandboxRoot: string;
   secretValues?: string[];
+  timeoutMs?: number;
   workdir: string;
 }): Promise<DirectProcessResult> {
   if (!input.executable || !Array.isArray(input.args) || input.args.some((value) => typeof value !== "string")) {
@@ -416,8 +421,23 @@ export async function runDirectProcess(input: {
     stdio: ["ignore", "pipe", "pipe"],
     windowsHide: true,
   });
-  child.stdout.on("data", (chunk) => stdout.append(chunk as Buffer));
-  child.stderr.on("data", (chunk) => stderr.append(chunk as Buffer));
+  child.stdout.on("data", (chunk) => {
+    stdout.append(chunk as Buffer);
+    try {
+      input.onOutputSnapshot?.("stdout", stdout.finish(input.secretValues ?? []));
+    } catch {
+      // Finalization persists the complete bounded snapshot; a transient
+      // checkpoint failure must not escape an EventEmitter callback.
+    }
+  });
+  child.stderr.on("data", (chunk) => {
+    stderr.append(chunk as Buffer);
+    try {
+      input.onOutputSnapshot?.("stderr", stderr.finish(input.secretValues ?? []));
+    } catch {
+      // See stdout checkpoint handling above.
+    }
+  });
   const exit = waitForExit(child);
   let stopping: Promise<DirectProcessResult> | null = null;
   let intervalHandle: unknown;
@@ -462,7 +482,7 @@ export async function runDirectProcess(input: {
   const deadline = new Promise<DirectProcessResult>((resolvePromise) => {
     timeoutHandle = clock.setTimeout(() => {
       void stop("timed_out").then(resolvePromise);
-    }, OVERALL_DEADLINE_MS);
+  }, input.timeoutMs ?? OVERALL_DEADLINE_MS);
   });
 
   try {

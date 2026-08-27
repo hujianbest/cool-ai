@@ -12,7 +12,7 @@ export type CurrentSchemaManifest = {
 
 const CURRENT_SCHEMA_DEFINITION = {
   "identity": {
-    "userVersion": 26
+    "userVersion": 29
   },
   "objects": [
     {
@@ -108,7 +108,7 @@ const CURRENT_SCHEMA_DEFINITION = {
     {
       "kind": "table",
       "name": "project_validation_policy_entries",
-      "createSql": "CREATE TABLE project_validation_policy_entries(\n id TEXT PRIMARY KEY, project_id TEXT NOT NULL, revision_id TEXT NOT NULL,\n position INTEGER NOT NULL CHECK(position BETWEEN 0 AND 49),\n executable TEXT NOT NULL CHECK(length(CAST(executable AS BLOB)) BETWEEN 1 AND 4096),\n executable_identity TEXT NOT NULL CHECK(length(executable_identity)=64 AND executable_identity NOT GLOB '*[^0-9a-f]*'),\n args_json TEXT NOT NULL CHECK(json_valid(args_json) AND length(CAST(args_json AS BLOB))<=32768),\n workdir TEXT NOT NULL CHECK(length(CAST(workdir AS BLOB)) BETWEEN 1 AND 4096),\n required INTEGER NOT NULL CHECK(required IN (0,1)),\n tuple_hash TEXT NOT NULL CHECK(length(tuple_hash)=64 AND tuple_hash NOT GLOB '*[^0-9a-f]*'),\n UNIQUE(project_id,revision_id,position), UNIQUE(project_id,revision_id,id),\n FOREIGN KEY(project_id,revision_id) REFERENCES project_validation_policy_revisions(project_id,id) ON DELETE CASCADE\n)",
+      "createSql": "CREATE TABLE project_validation_policy_entries(\n id TEXT PRIMARY KEY, project_id TEXT NOT NULL, revision_id TEXT NOT NULL,\n position INTEGER NOT NULL CHECK(position BETWEEN 0 AND 49),\n executable TEXT NOT NULL CHECK(length(CAST(executable AS BLOB)) BETWEEN 1 AND 4096),\n executable_identity TEXT NOT NULL CHECK(length(executable_identity)=64 AND executable_identity NOT GLOB '*[^0-9a-f]*'),\n args_json TEXT NOT NULL CHECK(json_valid(args_json) AND length(CAST(args_json AS BLOB))<=32768),\n workdir TEXT NOT NULL CHECK(length(CAST(workdir AS BLOB)) BETWEEN 1 AND 4096),\n required INTEGER NOT NULL CHECK(required IN (0,1)),\n purpose TEXT NOT NULL DEFAULT 'validation' CHECK(purpose IN ('validation','preview')),\n timeout_seconds INTEGER NOT NULL DEFAULT 120 CHECK(timeout_seconds BETWEEN 30 AND 900),\n network TEXT CHECK(network IS NULL OR network='loopback_only'),\n preview_port INTEGER CHECK(preview_port IS NULL OR preview_port BETWEEN 1024 AND 65535),\n preview_open_path TEXT CHECK(preview_open_path IS NULL OR (length(CAST(preview_open_path AS BLOB)) BETWEEN 1 AND 2048)),\n tuple_hash TEXT NOT NULL CHECK(length(tuple_hash)=64 AND tuple_hash NOT GLOB '*[^0-9a-f]*'),\n UNIQUE(project_id,revision_id,position), UNIQUE(project_id,revision_id,id),\n FOREIGN KEY(project_id,revision_id) REFERENCES project_validation_policy_revisions(project_id,id) ON DELETE CASCADE,\n CHECK((purpose='validation' AND network IS NULL AND preview_port IS NULL AND preview_open_path IS NULL) OR (purpose='preview' AND required=0 AND network='loopback_only' AND preview_port IS NOT NULL AND preview_open_path IS NOT NULL))\n)",
       "dependsOn": []
     },
     {
@@ -157,6 +157,18 @@ const CURRENT_SCHEMA_DEFINITION = {
       "kind": "table",
       "name": "execution_approvals",
       "createSql": "CREATE TABLE execution_approvals(\n id TEXT PRIMARY KEY, project_id TEXT NOT NULL, execution_id TEXT NOT NULL, attempt_id TEXT NOT NULL, tool_call_id TEXT,\n kind TEXT NOT NULL CHECK(kind IN ('command','staged_merge')),\n status TEXT NOT NULL CHECK(status IN ('pending','approved','consumed','rejected','revoked','replaced','expired')),\n request_hash TEXT NOT NULL CHECK(length(request_hash)=64 AND request_hash NOT GLOB '*[^0-9a-f]*'),\n input_hash TEXT NOT NULL CHECK(length(input_hash)=64 AND input_hash NOT GLOB '*[^0-9a-f]*'),\n staged_hash TEXT CHECK(staged_hash IS NULL OR (length(staged_hash)=64 AND staged_hash NOT GLOB '*[^0-9a-f]*')),\n public_request_json TEXT NOT NULL CHECK(json_valid(public_request_json) AND length(CAST(public_request_json AS BLOB))<=131072),\n decided_at TEXT CHECK(decided_at IS NULL OR decided_at GLOB '????-??-??T??:??:??.???Z'),\n consumed_at TEXT CHECK(consumed_at IS NULL OR consumed_at GLOB '????-??-??T??:??:??.???Z'),\n created_at TEXT NOT NULL CHECK(created_at GLOB '????-??-??T??:??:??.???Z'),\n FOREIGN KEY(project_id,execution_id,attempt_id) REFERENCES execution_attempts(project_id,execution_id,id) ON DELETE CASCADE,\n FOREIGN KEY(project_id,execution_id,attempt_id,tool_call_id) REFERENCES execution_tool_calls(project_id,execution_id,attempt_id,id),\n CHECK((kind='command')=(tool_call_id IS NOT NULL)), CHECK((kind='staged_merge')=(staged_hash IS NOT NULL))\n)",
+      "dependsOn": []
+    },
+    {
+      "kind": "table",
+      "name": "execution_policy_processes",
+      "createSql": "CREATE TABLE execution_policy_processes(\n id TEXT PRIMARY KEY, project_id TEXT NOT NULL, execution_id TEXT NOT NULL, attempt_id TEXT NOT NULL,\n policy_revision_id TEXT NOT NULL, policy_entry_id TEXT, approval_id TEXT,\n operation_id TEXT NOT NULL,request_hash TEXT NOT NULL CHECK(length(request_hash)=64 AND request_hash NOT GLOB '*[^0-9a-f]*'),\n executable_identity TEXT NOT NULL CHECK(length(executable_identity)=64 AND executable_identity NOT GLOB '*[^0-9a-f]*'),\n authorization_source TEXT NOT NULL CHECK(authorization_source IN ('standing_policy','one_shot')),\n status TEXT NOT NULL CHECK(status IN ('starting','running','ready','stopping','completed','failed','timed_out','stopped','interrupted','termination_unconfirmed')),\n public_request_json TEXT NOT NULL CHECK(json_valid(public_request_json) AND length(CAST(public_request_json AS BLOB))<=131072),\n sandbox_manifest_hash TEXT NOT NULL CHECK(length(sandbox_manifest_hash)=64 AND sandbox_manifest_hash NOT GLOB '*[^0-9a-f]*'),\n deadline_at TEXT NOT NULL CHECK(deadline_at GLOB '????-??-??T??:??:??.???Z'),\n preview_ready_at TEXT CHECK(preview_ready_at IS NULL OR preview_ready_at GLOB '????-??-??T??:??:??.???Z'),\n exit_code INTEGER,reason_code TEXT,\n stdout_bytes INTEGER CHECK(stdout_bytes IS NULL OR stdout_bytes BETWEEN 0 AND 1048576),\n stderr_bytes INTEGER CHECK(stderr_bytes IS NULL OR stderr_bytes BETWEEN 0 AND 1048576),\n stdout_sha256 TEXT CHECK(stdout_sha256 IS NULL OR (length(stdout_sha256)=64 AND stdout_sha256 NOT GLOB '*[^0-9a-f]*')),\n stderr_sha256 TEXT CHECK(stderr_sha256 IS NULL OR (length(stderr_sha256)=64 AND stderr_sha256 NOT GLOB '*[^0-9a-f]*')),\n stdout_truncated INTEGER CHECK(stdout_truncated IS NULL OR stdout_truncated IN (0,1)),\n stderr_truncated INTEGER CHECK(stderr_truncated IS NULL OR stderr_truncated IN (0,1)),\n version INTEGER NOT NULL DEFAULT 1 CHECK(version>=1),\n created_at TEXT NOT NULL CHECK(created_at GLOB '????-??-??T??:??:??.???Z'),\n updated_at TEXT NOT NULL CHECK(updated_at GLOB '????-??-??T??:??:??.???Z'),\n finished_at TEXT CHECK(finished_at IS NULL OR finished_at GLOB '????-??-??T??:??:??.???Z'),\n UNIQUE(project_id,operation_id),UNIQUE(project_id,execution_id,id),UNIQUE(approval_id),\n FOREIGN KEY(project_id,execution_id,attempt_id) REFERENCES execution_attempts(project_id,execution_id,id) ON DELETE CASCADE,\n FOREIGN KEY(project_id,policy_revision_id,policy_entry_id) REFERENCES project_validation_policy_entries(project_id,revision_id,id),\n FOREIGN KEY(approval_id) REFERENCES execution_approvals(id),\n CHECK((authorization_source='standing_policy' AND policy_entry_id IS NOT NULL AND approval_id IS NULL) OR (authorization_source='one_shot' AND policy_entry_id IS NULL AND approval_id IS NOT NULL)),\n CHECK((status IN ('starting','running','ready','stopping') AND finished_at IS NULL) OR (status NOT IN ('starting','running','ready','stopping') AND finished_at IS NOT NULL))\n)",
+      "dependsOn": []
+    },
+    {
+      "kind": "table",
+      "name": "execution_policy_process_output_chunks",
+      "createSql": "CREATE TABLE execution_policy_process_output_chunks(\n process_id TEXT NOT NULL REFERENCES execution_policy_processes(id) ON DELETE CASCADE,\n stream TEXT NOT NULL CHECK(stream IN ('stdout','stderr')),chunk_index INTEGER NOT NULL CHECK(chunk_index BETWEEN 0 AND 16),\n byte_offset INTEGER NOT NULL CHECK(byte_offset BETWEEN 0 AND 1048575),byte_length INTEGER NOT NULL CHECK(byte_length BETWEEN 1 AND 65536),\n text TEXT NOT NULL CHECK(length(CAST(text AS BLOB))=byte_length),\n sha256 TEXT NOT NULL CHECK(length(sha256)=64 AND sha256 NOT GLOB '*[^0-9a-f]*'),\n PRIMARY KEY(process_id,stream,chunk_index),UNIQUE(process_id,stream,byte_offset)\n)",
       "dependsOn": []
     },
     {
@@ -239,6 +251,26 @@ const CURRENT_SCHEMA_DEFINITION = {
     },
     {
       "kind": "table",
+      "name": "memory_search_index",
+      "createSql": "CREATE TABLE memory_search_index(\n project_id TEXT NOT NULL,\n memory_id TEXT NOT NULL,\n chain_id TEXT NOT NULL,\n memory_version INTEGER NOT NULL CHECK(memory_version>=1),\n memory_type TEXT NOT NULL CHECK(memory_type IN ('goal','decision','fact','artifact','experience')),\n search_text TEXT NOT NULL CHECK(length(search_text)>=1),\n content_sha256 TEXT NOT NULL CHECK(length(content_sha256)=64 AND content_sha256 NOT GLOB '*[^0-9a-f]*'),\n source_created_at TEXT NOT NULL,\n indexed_at TEXT NOT NULL CHECK(indexed_at GLOB '????-??-??T??:??:??.???Z'),\n PRIMARY KEY(project_id,memory_id)\n)",
+      "dependsOn": []
+    },
+    {
+      "kind": "table",
+      "name": "memory_search_index_state",
+      "createSql": "CREATE TABLE memory_search_index_state(\n project_id TEXT PRIMARY KEY,\n status TEXT NOT NULL CHECK(status IN ('idle','rebuilding','failed')),\n version INTEGER NOT NULL CHECK(version>=1),\n source_created_at TEXT,\n source_memory_id TEXT,\n active_count INTEGER NOT NULL CHECK(active_count>=0),\n indexed_count INTEGER NOT NULL CHECK(indexed_count>=0),\n last_error_code TEXT,\n operation_id TEXT,\n operation_hash TEXT CHECK(operation_hash IS NULL OR (length(operation_hash)=64 AND operation_hash NOT GLOB '*[^0-9a-f]*')),\n operation_result_json TEXT CHECK(operation_result_json IS NULL OR json_valid(operation_result_json)),\n updated_at TEXT NOT NULL CHECK(updated_at GLOB '????-??-??T??:??:??.???Z'),\n CHECK((source_created_at IS NULL)=(source_memory_id IS NULL)),\n CHECK((operation_id IS NULL AND operation_hash IS NULL AND operation_result_json IS NULL)\n    OR (operation_id IS NOT NULL AND operation_hash IS NOT NULL))\n)",
+      "dependsOn": []
+    },
+    {
+      "kind": "index",
+      "name": "memory_search_index_project_idx",
+      "createSql": "CREATE INDEX memory_search_index_project_idx ON memory_search_index(project_id,source_created_at,memory_id)",
+      "dependsOn": [
+        "memory_search_index"
+      ]
+    },
+    {
+      "kind": "table",
       "name": "execution_merge_journals",
       "createSql": "CREATE TABLE execution_merge_journals(\n id TEXT PRIMARY KEY, project_id TEXT NOT NULL, execution_id TEXT NOT NULL, attempt_id TEXT NOT NULL,\n staged_result_id TEXT NOT NULL UNIQUE, merge_action_id TEXT NOT NULL UNIQUE, operation_id TEXT NOT NULL,\n status TEXT NOT NULL CHECK(status IN ('prepared','applying','db_committed','rolling_back','rolling_forward','manual_recovery','completed','resolved_old','resolved_new','abandoned')),\n next_file_position INTEGER NOT NULL DEFAULT 0 CHECK(next_file_position>=0),\n old_manifest_hash TEXT NOT NULL CHECK(length(old_manifest_hash)=64 AND old_manifest_hash NOT GLOB '*[^0-9a-f]*'),\n post_manifest_hash TEXT NOT NULL CHECK(length(post_manifest_hash)=64 AND post_manifest_hash NOT GLOB '*[^0-9a-f]*'),\n observed_manifest_hash TEXT CHECK(observed_manifest_hash IS NULL OR (length(observed_manifest_hash)=64 AND observed_manifest_hash NOT GLOB '*[^0-9a-f]*')),\n mismatch_phase TEXT, mismatch_path_key TEXT,\n journal_root TEXT NOT NULL CHECK(length(CAST(journal_root AS BLOB)) BETWEEN 1 AND 32767), error_code TEXT,\n created_at TEXT NOT NULL CHECK(created_at GLOB '????-??-??T??:??:??.???Z'),\n updated_at TEXT NOT NULL CHECK(updated_at GLOB '????-??-??T??:??:??.???Z'),\n UNIQUE(project_id,id),\n FOREIGN KEY(project_id,execution_id,attempt_id,staged_result_id) REFERENCES execution_staged_results(project_id,execution_id,attempt_id,id),\n FOREIGN KEY(project_id,execution_id,attempt_id,merge_action_id) REFERENCES execution_actions(project_id,execution_id,attempt_id,id),\n FOREIGN KEY(project_id,operation_id) REFERENCES execution_operations(project_id,id),\n FOREIGN KEY(project_id,operation_id,merge_action_id) REFERENCES execution_actions(project_id,operation_id,id),\n CHECK(status<>'manual_recovery' OR observed_manifest_hash IS NOT NULL)\n)",
       "dependsOn": []
@@ -290,6 +322,18 @@ const CURRENT_SCHEMA_DEFINITION = {
       "name": "memory_entries",
       "createSql": "CREATE TABLE memory_entries(\n id TEXT PRIMARY KEY, project_id TEXT NOT NULL REFERENCES projects(id) ON DELETE CASCADE,\n chain_id TEXT NOT NULL, version INTEGER NOT NULL CHECK(version>=1),\n type TEXT NOT NULL CHECK(type IN ('goal','decision','fact','artifact','experience')),\n content TEXT NOT NULL, dedupe_hash TEXT NOT NULL CHECK(length(dedupe_hash)=64 AND dedupe_hash NOT GLOB '*[^0-9a-f]*'),\n source_type TEXT NOT NULL CHECK(source_type IN ('owner_input','work_item','artifact_path','task','result','review','validation','artifact')),\n source_id TEXT NOT NULL, source_version TEXT,\n proposer_actor_type TEXT NOT NULL CHECK(proposer_actor_type IN ('owner','agent')),\n proposer_actor_id TEXT, confirming_review_attempt_id TEXT,\n persistence_actor TEXT NOT NULL CHECK(persistence_actor='platform'), supersedes_id TEXT,\n created_at TEXT NOT NULL,\n UNIQUE(project_id,id), UNIQUE(chain_id,version), UNIQUE(project_id,supersedes_id),\n FOREIGN KEY(project_id,supersedes_id) REFERENCES memory_entries(project_id,id),\n FOREIGN KEY(confirming_review_attempt_id) REFERENCES review_attempts(id),\n CHECK((proposer_actor_type='owner' AND proposer_actor_id IS NULL AND confirming_review_attempt_id IS NULL)\n    OR (proposer_actor_type='agent' AND proposer_actor_id IS NOT NULL\n      AND confirming_review_attempt_id IS NOT NULL AND source_version IS NOT NULL))\n)",
       "dependsOn": []
+    },
+    {
+      "kind": "table",
+      "name": "memory_collections",
+      "createSql": "CREATE TABLE memory_collections(\n id TEXT PRIMARY KEY,\n project_id TEXT NOT NULL REFERENCES projects(id) ON DELETE CASCADE,\n name TEXT NOT NULL CHECK(length(name)>=1 AND name=trim(name)),\n name_fold TEXT NOT NULL CHECK(length(name_fold)>=1),\n version INTEGER NOT NULL CHECK(version>=1),\n created_at TEXT NOT NULL CHECK(created_at GLOB '????-??-??T??:??:??.???Z'),\n updated_at TEXT NOT NULL CHECK(updated_at GLOB '????-??-??T??:??:??.???Z'),\n UNIQUE(project_id,id), UNIQUE(project_id,name_fold)\n)",
+      "dependsOn": ["projects"]
+    },
+    {
+      "kind": "table",
+      "name": "memory_collection_members",
+      "createSql": "CREATE TABLE memory_collection_members(\n collection_id TEXT NOT NULL,\n project_id TEXT NOT NULL,\n chain_id TEXT NOT NULL,\n added_at TEXT NOT NULL CHECK(added_at GLOB '????-??-??T??:??:??.???Z'),\n PRIMARY KEY(collection_id,chain_id),\n FOREIGN KEY(project_id,collection_id) REFERENCES memory_collections(project_id,id) ON DELETE CASCADE\n)",
+      "dependsOn": ["memory_collections"]
     },
     {
       "kind": "table",
@@ -518,6 +562,14 @@ const CURRENT_SCHEMA_DEFINITION = {
       "name": "thread_message_queue",
       "createSql": "CREATE TABLE thread_message_queue(\n id TEXT PRIMARY KEY,project_id TEXT NOT NULL,thread_id TEXT NOT NULL,\n content TEXT NOT NULL CHECK(length(content)>=1),\n position INTEGER NOT NULL CHECK(position>=1),\n status TEXT NOT NULL CHECK(status IN('pending','consumed','cancelled')),\n operation_id TEXT NOT NULL,\n created_at TEXT NOT NULL CHECK(created_at GLOB '????-??-??T??:??:??.???Z'),\n updated_at TEXT NOT NULL CHECK(updated_at GLOB '????-??-??T??:??:??.???Z'),\n UNIQUE(project_id,thread_id,position),\n FOREIGN KEY(project_id,thread_id) REFERENCES collaboration_threads(project_id,id) ON DELETE CASCADE\n)",
       "dependsOn": []
+    },
+    {
+      "kind": "index",
+      "name": "execution_policy_process_active_idx",
+      "createSql": "CREATE UNIQUE INDEX execution_policy_process_active_idx\n ON execution_policy_processes(project_id,execution_id)\n WHERE status IN ('starting','running','ready','stopping')",
+      "dependsOn": [
+        "execution_policy_processes"
+      ]
     },
     {
       "kind": "index",

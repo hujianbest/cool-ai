@@ -291,6 +291,20 @@ export const CURRENT_DATA_INVARIANTS = [
    WHERE i.kind='message' AND NOT EXISTS(
      SELECT 1 FROM collaboration_messages m
      WHERE (m.project_id,m.thread_id,m.id)=(i.project_id,i.thread_id,i.message_id))`,
+  // Feature 054: the memory search index is a derived active-head subset.
+  `SELECT i.project_id FROM memory_search_index i
+   WHERE NOT EXISTS(
+     SELECT 1 FROM memory_entries m
+     WHERE (m.project_id,m.id,m.chain_id,m.version,m.type,m.content,m.created_at)
+          =(i.project_id,i.memory_id,i.chain_id,i.memory_version,i.memory_type,
+            i.search_text,i.source_created_at)
+       AND NOT EXISTS(
+         SELECT 1 FROM memory_entries successor
+         WHERE successor.project_id=m.project_id AND successor.supersedes_id=m.id
+       )
+   )`,
+  `SELECT s.project_id FROM memory_search_index_state s
+   WHERE NOT EXISTS(SELECT 1 FROM projects p WHERE p.id=s.project_id)`,
   // Feature 033: purge markers live only inside the purge transaction; a row
   // visible in a consistent snapshot means a marker leaked its transaction.
   `SELECT m.project_id FROM thread_purge_markers m`,

@@ -4,6 +4,7 @@ import userEvent from "@testing-library/user-event";
 import { afterEach, describe, expect, it, vi } from "vitest";
 
 import { TeamPanel } from "@/components/team-panel";
+import { serviceHealthResponse } from "@/tests/fixtures/browser/service-health";
 
 const API_KEY = "ui-provider-secret-DO-NOT-LEAK-ABCD";
 
@@ -41,6 +42,8 @@ describe("Provider configuration panel", () => {
     const providerLoad = deferred<Response>();
     let providerGets = 0;
     vi.stubGlobal("fetch", vi.fn((input: RequestInfo | URL, init?: RequestInit) => {
+      const health = serviceHealthResponse(input);
+      if (health) return Promise.resolve(health);
       const url = input.toString();
       if (url === "/api/skills") return Promise.resolve(Response.json({ skills: [] }));
       if (url === "/api/providers" && !init?.method) {
@@ -89,6 +92,8 @@ describe("Provider configuration panel", () => {
     const calls: Array<{ body?: Record<string, unknown>; method?: string; url: string }> = [];
     let verifyCount = 0;
     vi.stubGlobal("fetch", vi.fn(async (input: RequestInfo | URL, init?: RequestInit) => {
+      const health = serviceHealthResponse(input);
+      if (health) return health;
       const url = input.toString();
       const body = init?.body ? JSON.parse(String(init.body)) as Record<string, unknown> : undefined;
       calls.push({ body, method: init?.method, url });
@@ -175,6 +180,8 @@ describe("Provider configuration panel", () => {
     const verifyBodies: Array<Record<string, unknown>> = [];
     let current = provider();
     vi.stubGlobal("fetch", vi.fn(async (input: RequestInfo | URL, init?: RequestInit) => {
+      const health = serviceHealthResponse(input);
+      if (health) return health;
       const url = input.toString();
       const body = init?.body ? JSON.parse(String(init.body)) as Record<string, unknown> : {};
       if (url === "/api/skills") return Response.json({ skills: [] });
@@ -233,6 +240,8 @@ describe("Provider configuration panel", () => {
   it("maps errors to Chinese, focuses alerts and preserves the draft for retry", async () => {
     let verifyFails = true;
     vi.stubGlobal("fetch", vi.fn(async (input: RequestInfo | URL, init?: RequestInit) => {
+      const health = serviceHealthResponse(input);
+      if (health) return health;
       const url = input.toString();
       if (url === "/api/skills") return Response.json({ skills: [] });
       if (url === "/api/providers" && !init?.method) return Response.json({ providers: [] });
@@ -289,6 +298,8 @@ describe("Provider configuration panel", () => {
     vi.stubGlobal(
       "fetch",
       vi.fn(async (input: RequestInfo | URL, init?: RequestInit) => {
+        const health = serviceHealthResponse(input);
+        if (health) return health;
         const url = input.toString();
         const method = init?.method ?? "GET";
         calls.push({ method, url });
@@ -326,6 +337,8 @@ describe("Provider configuration panel", () => {
     vi.stubGlobal(
       "fetch",
       vi.fn(async (input: RequestInfo | URL, init?: RequestInit) => {
+        const health = serviceHealthResponse(input);
+        if (health) return health;
         const url = input.toString();
         const method = init?.method ?? "GET";
         calls.push({ method, url });

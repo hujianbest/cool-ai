@@ -14,6 +14,11 @@ import { IconButton } from "@/components/ui/icon-button";
 
 import type { ApiError } from "@/src/shared/contracts";
 import type {
+  KnowledgeGraphDto,
+  MemoryCollectionCatalogDto,
+} from "@/src/modules/knowledge-provenance";
+import type { ProjectMemoryIndexHealthDto } from "@/src/modules/operations-projection";
+import type {
   MemoryEntryV6,
   MemorySourceType,
   MemoryType,
@@ -64,6 +69,30 @@ const SOURCE_LABELS: Record<MemorySourceType, string> = {
   task: "task",
   validation: "validation",
 };
+
+function sourcedGraphEdges(graph: KnowledgeGraphDto) {
+  const nodes = new Map(graph.nodes.map((node) => [node.id, node]));
+  return graph.edges.flatMap((edge) => {
+    const from = nodes.get(edge.fromId);
+    const to = nodes.get(edge.toId);
+    if (
+      from === undefined
+      || to === undefined
+      || (edge.kind !== "supersedes" && edge.kind !== "collection")
+    ) {
+      return [];
+    }
+    return [{
+      from,
+      key: `${edge.kind}:${edge.fromId}:${edge.toId}`,
+      kind: edge.kind,
+      label: edge.kind === "supersedes"
+        ? `${from.title} 取代 ${to.title}`
+        : `${from.title} 与 ${to.title} 同属一集合`,
+      to,
+    }];
+  });
+}
 
 function isV6(memory: MemoryEntry): memory is MemoryEntryV6 {
   return "actor" in memory && "source" in memory && "version" in memory;
@@ -145,6 +174,20 @@ export function MemoryPanel({ projectId }: { projectId: string }) {
   }> | null>(null);
   const [isSearching, setIsSearching] = useState(false);
   const [searchError, setSearchError] = useState<string | null>(null);
+  const [indexHealth, setIndexHealth] = useState<ProjectMemoryIndexHealthDto | null>(null);
+  const [indexHealthError, setIndexHealthError] = useState(false);
+  const [indexHealthReloadKey, setIndexHealthReloadKey] = useState(0);
+  const [rebuildOpen, setRebuildOpen] = useState(false);
+  const [isRebuilding, setIsRebuilding] = useState(false);
+  const rebuildCancelRef = useRef<HTMLButtonElement>(null);
+  const [collections, setCollections] = useState<MemoryCollectionCatalogDto[]>([]);
+  const [collectionsReloadKey, setCollectionsReloadKey] = useState(0);
+  const [deleteCollection, setDeleteCollection] = useState<MemoryCollectionCatalogDto | null>(null);
+  const [isDeletingCollection, setIsDeletingCollection] = useState(false);
+  const [newCollectionName, setNewCollectionName] = useState("");
+  const [isCreatingCollection, setIsCreatingCollection] = useState(false);
+  const [graph, setGraph] = useState<KnowledgeGraphDto>({ edges: [], nodes: [] });
+  const deleteCollectionCancelRef = useRef<HTMLButtonElement>(null);
 
   useEffect(() => {
     let active = true;
@@ -177,6 +220,74 @@ export function MemoryPanel({ projectId }: { projectId: string }) {
       active = false;
     };
   }, [includeHistory, projectId, reloadKey]);
+
+  useEffect(() => {
+    let active = true;
+    setIndexHealthError(false);
+    void fetch(`/api/projects/${projectId}/memory-index/health`)
+      .then(async (response) => {
+        const payload = await response.json() as Partial<ProjectMemoryIndexHealthDto>;
+        if (
+          !response.ok
+          || payload.projectId !== projectId
+          || typeof payload.version !== "number"
+          || typeof payload.coverage?.active !== "number"
+          || typeof payload.coverage?.valid !== "number"
+        ) {
+          throw new Error("invalid_health");
+        }
+        return payload as ProjectMemoryIndexHealthDto;
+      })
+      .then((health) => {
+        if (active) setIndexHealth(health);
+      })
+      .catch(() => {
+        if (active) setIndexHealthError(true);
+      });
+    return () => {
+      active = false;
+    };
+  }, [indexHealthReloadKey, projectId]);
+
+  useEffect(() => {
+    let active = true;
+    void fetch(`/api/projects/${projectId}/memory-collections`)
+      .then(async (response) => {
+        const payload = await response.json() as { collections?: MemoryCollectionCatalogDto[] };
+        if (!response.ok || !Array.isArray(payload.collections)) return [];
+        return payload.collections;
+      })
+      .then((loaded) => {
+        if (active) setCollections(loaded);
+      })
+      .catch(() => {
+        if (active) setCollections([]);
+      });
+    return () => {
+      active = false;
+    };
+  }, [collectionsReloadKey, projectId]);
+
+  useEffect(() => {
+    let active = true;
+    void fetch(`/api/projects/${projectId}/knowledge-graph`)
+      .then(async (response) => {
+        const payload = await response.json() as Partial<KnowledgeGraphDto>;
+        if (!response.ok || !Array.isArray(payload.edges) || !Array.isArray(payload.nodes)) {
+          return { edges: [], nodes: [] } satisfies KnowledgeGraphDto;
+        }
+        return { edges: payload.edges, nodes: payload.nodes };
+      })
+      .then((loaded) => {
+        if (active) setGraph(loaded);
+      })
+      .catch(() => {
+        if (active) setGraph({ edges: [], nodes: [] });
+      });
+    return () => {
+      active = false;
+    };
+  }, [projectId]);
 
   useEffect(() => {
     if (!focusMemoryId) return;
@@ -234,6 +345,7 @@ export function MemoryPanel({ projectId }: { projectId: string }) {
       setWriteOpen(false);
       setSuccess("共享记忆已保存。");
       setFocusMemoryId(created.id);
+      setIndexHealthReloadKey((current) => current + 1);
     } catch (cause) {
       setError(
         cause instanceof Error
@@ -243,6 +355,58 @@ export function MemoryPanel({ projectId }: { projectId: string }) {
       contentRef.current?.focus();
     } finally {
       setIsSaving(false);
+    }
+  }
+
+  async function rebuildIndex() {
+    if (!indexHealth || isRebuilding) return;
+    setIsRebuilding(true);
+    setIndexHealthError(false);
+    try {
+      const response = await fetch(`/api/projects/${projectId}/memory-index/rebuild`, {
+        body: JSON.stringify({
+          confirmation: "重建记忆索引",
+          expectedVersion: indexHealth.version,
+          operationId: crypto.randomUUID(),
+        }),
+        headers: { "content-type": "application/json" },
+        method: "POST",
+      });
+      const payload = await response.json() as {
+        replayed?: number;
+        status?: string;
+        version?: number;
+      };
+      if (
+        !response.ok
+        || payload.status !== "caught_up"
+        || typeof payload.replayed !== "number"
+        || typeof payload.version !== "number"
+      ) {
+        throw new Error("rebuild_failed");
+      }
+      const replayed = payload.replayed;
+      const nextVersion = payload.version;
+      setIndexHealth((current) => current === null
+        ? current
+        : {
+            ...current,
+            coverage: {
+              active: replayed,
+              indexed: replayed,
+              ratio: 1,
+              valid: replayed,
+            },
+            freshness: { pending: 0, status: "caught_up" },
+            lastErrorCode: null,
+            status: "caught_up",
+            version: nextVersion,
+          });
+      setRebuildOpen(false);
+    } catch {
+      setIndexHealthError(true);
+    } finally {
+      setIsRebuilding(false);
     }
   }
 
@@ -299,6 +463,7 @@ export function MemoryPanel({ projectId }: { projectId: string }) {
       .filter((memory) => memory.supersedesId !== null)
       .map((memory) => [memory.supersedesId!, memory]),
   );
+  const relationEdges = sourcedGraphEdges(graph);
 
   return (
     <section aria-labelledby={`memory-title-${projectId}`} className="stack">
@@ -324,6 +489,217 @@ export function MemoryPanel({ projectId }: { projectId: string }) {
           只收录带来源的目标、决策、事实与产物；原始聊天不会自动变成记忆。
         </HelpTip>
       </header>
+      {indexHealth ? (
+        <section
+          aria-label="记忆索引健康"
+          className="task-summary memory-index-health"
+        >
+          <div>
+            <strong>
+              {indexHealth.status === "caught_up"
+                ? `索引已追平 · ${indexHealth.coverage.valid}/${indexHealth.coverage.active} 有效`
+                : indexHealth.status === "behind"
+                  ? `索引落后 ${indexHealth.freshness.pending} 条`
+                  : indexHealth.status === "rebuilding"
+                    ? "索引重建中"
+                    : "索引需要修复"}
+            </strong>
+            {indexHealth.status !== "caught_up" ? (
+              <p className="muted">来源记忆与检索仍可用。</p>
+            ) : null}
+          </div>
+          <button
+            className="button-secondary"
+            disabled={isRebuilding || indexHealth.status === "rebuilding"}
+            onClick={() => setRebuildOpen(true)}
+            type="button"
+          >
+            重建索引
+          </button>
+        </section>
+      ) : indexHealthError ? (
+        <div className="state-message">
+          <p>索引状态暂不可用；来源记忆与检索仍可用。</p>
+          <button
+            className="button-secondary"
+            onClick={() => setIndexHealthReloadKey((current) => current + 1)}
+            type="button"
+          >
+            重试索引状态
+          </button>
+        </div>
+      ) : (
+        <p aria-busy="true" className="state-message">正在检查记忆索引…</p>
+      )}
+      <section
+        aria-label="知识集合"
+        className="stack task-summary"
+      >
+        <h3>知识集合</h3>
+        {collections.length === 0 ? (
+          <p className="muted">尚无集合。</p>
+        ) : (
+          <ul className="stack">
+            {collections.map((collection) => (
+              <li className="form-row" key={collection.id}>
+                <span>{collection.name}</span>
+                <button
+                  className="button-secondary"
+                  onClick={() => setDeleteCollection(collection)}
+                  type="button"
+                >
+                  删除集合 {collection.name}
+                </button>
+              </li>
+            ))}
+          </ul>
+        )}
+        <form
+          className="form-row"
+          onSubmit={(event) => {
+            event.preventDefault();
+            const name = newCollectionName.trim();
+            if (name.length < 1 || isCreatingCollection) return;
+            setIsCreatingCollection(true);
+            void fetch(`/api/projects/${encodeURIComponent(projectId)}/memory-collections`, {
+              body: JSON.stringify({ name }),
+              headers: { "content-type": "application/json" },
+              method: "POST",
+            })
+              .then((response) => {
+                if (!response.ok) throw new Error("create");
+                setNewCollectionName("");
+                setCollectionsReloadKey((current) => current + 1);
+              })
+              .finally(() => {
+                setIsCreatingCollection(false);
+              });
+          }}
+        >
+          <label className="stack">
+            集合名称
+            <input
+              onChange={(event) => setNewCollectionName(event.target.value)}
+              placeholder="例如：架构决策"
+              value={newCollectionName}
+            />
+          </label>
+          <button
+            className="button-secondary"
+            disabled={isCreatingCollection}
+            type="submit"
+          >
+            新建集合
+          </button>
+        </form>
+      </section>
+      <section
+        aria-label="关系列表"
+        className="stack task-summary"
+      >
+        <h3>关系列表</h3>
+        {relationEdges.length === 0 ? (
+          <p className="muted">尚无有来源的关系。</p>
+        ) : (
+          <ul className="stack">
+            {relationEdges.map((edge) => (
+              <li className="form-row" key={edge.key}>
+                <span>{edge.label}</span>
+                <button
+                  className="button-secondary"
+                  onClick={() => setFocusMemoryId(edge.from.id)}
+                  type="button"
+                >
+                  定位记忆 {edge.from.title}
+                </button>
+              </li>
+            ))}
+          </ul>
+        )}
+      </section>
+      <ActionDialog
+        closeLabel="关闭删除集合确认"
+        initialFocusRef={deleteCollectionCancelRef}
+        onClose={() => {
+          if (!isDeletingCollection) setDeleteCollection(null);
+        }}
+        open={deleteCollection !== null}
+        title="删除集合"
+        titleId={`memory-collection-delete-title-${projectId}`}
+      >
+        <div className="stack">
+          <p>不会删除来源记忆。</p>
+          <div className="form-row">
+            <button
+              className="button-primary"
+              disabled={isDeletingCollection}
+              onClick={() => {
+                if (deleteCollection === null) return;
+                const target = deleteCollection;
+                setIsDeletingCollection(true);
+                void fetch(
+                  `/api/projects/${encodeURIComponent(projectId)}/memory-collections/${encodeURIComponent(target.id)}`,
+                  { method: "DELETE" },
+                )
+                  .then((response) => {
+                    if (!response.ok) throw new Error("delete");
+                    setCollections((current) => current.filter((entry) => entry.id !== target.id));
+                    setDeleteCollection(null);
+                    setCollectionsReloadKey((current) => current + 1);
+                  })
+                  .finally(() => {
+                    setIsDeletingCollection(false);
+                  });
+              }}
+              type="button"
+            >
+              {isDeletingCollection ? "正在删除…" : "确认删除"}
+            </button>
+            <button
+              className="button-secondary"
+              disabled={isDeletingCollection}
+              onClick={() => setDeleteCollection(null)}
+              ref={deleteCollectionCancelRef}
+              type="button"
+            >
+              取消
+            </button>
+          </div>
+        </div>
+      </ActionDialog>
+      <ActionDialog
+        closeLabel="关闭重建索引确认"
+        initialFocusRef={rebuildCancelRef}
+        onClose={() => {
+          if (!isRebuilding) setRebuildOpen(false);
+        }}
+        open={rebuildOpen}
+        title="重建记忆索引"
+        titleId={`memory-index-rebuild-title-${projectId}`}
+      >
+        <div className="stack">
+          <p>只会丢弃并重建可恢复的索引投影，不会修改或删除来源记忆。</p>
+          <div className="form-row">
+            <button
+              className="button-primary"
+              disabled={isRebuilding}
+              onClick={() => void rebuildIndex()}
+              type="button"
+            >
+              {isRebuilding ? "正在重建…" : "确认重建"}
+            </button>
+            <button
+              className="button-secondary"
+              disabled={isRebuilding}
+              onClick={() => setRebuildOpen(false)}
+              ref={rebuildCancelRef}
+              type="button"
+            >
+              取消
+            </button>
+          </div>
+        </div>
+      </ActionDialog>
       <ActionDialog
         closeLabel="关闭记忆编辑器"
         initialFocusRef={contentRef}
@@ -562,6 +938,7 @@ export function MemoryPanel({ projectId }: { projectId: string }) {
               <li key={hit.memory.id}>
                 <button
                   aria-label={`定位记忆 ${hit.memory.content}`}
+                  className="button-ghost"
                   onClick={() => locateMemory(hit.memory.id)}
                   type="button"
                 >
@@ -573,6 +950,7 @@ export function MemoryPanel({ projectId }: { projectId: string }) {
         ) : null}
       </section>
       <button
+        className="button-secondary"
         disabled={isLoading}
         onClick={() => setIncludeHistory((current) => !current)}
         type="button"

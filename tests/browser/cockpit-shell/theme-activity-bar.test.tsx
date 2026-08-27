@@ -8,6 +8,7 @@ import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { ActivityBar } from "@/components/activity-bar";
 import { ProjectPanel } from "@/components/project-panel";
 import { TeamPanel } from "@/components/team-panel";
+import { serviceHealthResponse } from "@/tests/fixtures/browser/service-health";
 
 vi.mock("@/components/project-context/project-setup-panel", () => ({
   ProjectSetupPanel: () => <section>项目设置</section>,
@@ -36,6 +37,8 @@ beforeEach(() => {
   vi.stubGlobal(
     "fetch",
     vi.fn(async (input: RequestInfo | URL) => {
+      const health = serviceHealthResponse(input);
+      if (health) return health;
       if (input.toString() === "/api/projects") {
         return Response.json({ projects: [] });
       }

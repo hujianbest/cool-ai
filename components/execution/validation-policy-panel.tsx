@@ -9,11 +9,27 @@ import {
 } from "@/src/shared/api-error-copy";
 import type { ApiError } from "@/src/shared/contracts";
 
-type PolicyEntry = {
+type PolicyEntryInput = {
   args: string[];
   executable: string;
+  network?: "loopback_only";
+  openPath?: string;
+  port?: number;
+  purpose?: "preview" | "validation";
   required: boolean;
+  timeoutSeconds?: number;
   workdir: string;
+};
+
+type PolicyEntry = Omit<
+  PolicyEntryInput,
+  "network" | "openPath" | "port" | "purpose" | "timeoutSeconds"
+> & {
+  network: "loopback_only" | null;
+  openPath: string | null;
+  port: number | null;
+  purpose: "preview" | "validation";
+  timeoutSeconds: number;
 };
 
 type ValidationPolicy = {
@@ -27,7 +43,7 @@ type ValidationPolicy = {
   warningAccepted: boolean;
 };
 
-type DraftEntry = PolicyEntry & { key: string };
+type DraftEntry = PolicyEntryInput & { key: string };
 type Preview = {
   code: string | null;
   parseResult: "known" | "unknown_non_path" | "unknown_path_syntax";
@@ -49,7 +65,12 @@ function draftEntry(entry?: PolicyEntry): DraftEntry {
     args: entry ? [...entry.args] : [],
     executable: entry?.executable ?? "",
     key: operationId(),
+    network: entry?.network ?? undefined,
+    openPath: entry?.openPath ?? undefined,
+    port: entry?.port ?? undefined,
+    purpose: entry?.purpose ?? "validation",
     required: entry?.required ?? false,
+    timeoutSeconds: entry?.timeoutSeconds ?? 120,
     workdir: entry?.workdir ?? ".",
   };
 }
@@ -59,7 +80,7 @@ function executableBase(executable: string): string {
   return normalized.slice(normalized.lastIndexOf("/") + 1).replace(/\.exe$/i, "").toLowerCase();
 }
 
-function classify(entry: PolicyEntry): Preview {
+function classify(entry: PolicyEntryInput): Preview {
   const base = executableBase(entry.executable);
   if (SHELLS.has(base)) return { code: "SHELL_EXECUTABLE_DENIED", parseResult: "known" };
   if (/\.(?:bat|cmd|ps1|sh)$/i.test(entry.executable)) {
@@ -152,6 +173,19 @@ export function ValidationPolicyPanel({ projectId }: { projectId: string }) {
   );
   const denialCode = previews.find((preview) => preview?.code)?.code ?? null;
   const hasIncompleteEntry = draft.some(({ executable, workdir }) => !executable.trim() || !workdir.trim());
+  const invalidPreviewBoundary = draft.some((entry) =>
+    entry.purpose === "preview"
+    && (
+      entry.required
+      || entry.network !== "loopback_only"
+      || !Number.isInteger(entry.port)
+      || entry.port! < 1024
+      || entry.port! > 65_535
+      || !entry.openPath?.startsWith("/")
+      || entry.openPath.startsWith("//")
+      || entry.openPath.includes("\\")
+      || entry.openPath.split("/").includes("..")
+    ));
   const canonicalBytes = new TextEncoder().encode(JSON.stringify(
     draft.map(({ key: _key, ...entry }) => entry),
   )).byteLength;
@@ -161,7 +195,7 @@ export function ValidationPolicyPanel({ projectId }: { projectId: string }) {
       ? "验证政策草稿超过 64 KiB。"
       : null;
 
-  function updateEntry(index: number, patch: Partial<PolicyEntry>) {
+  function updateEntry(index: number, patch: Partial<PolicyEntryInput>) {
     setDraft((current) => current.map((entry, position) =>
       position === index ? { ...entry, ...patch } : entry));
     setSaveError(null);
@@ -297,8 +331,74 @@ export function ValidationPolicyPanel({ projectId }: { projectId: string }) {
                     />
                   </label>
                   <label>
+                    用途
+                    <select
+                      onChange={(event) => {
+                        const purpose = event.target.value as "preview" | "validation";
+                        updateEntry(index, purpose === "preview"
+                          ? {
+                              network: "loopback_only",
+                              openPath: "/",
+                              port: 4173,
+                              purpose,
+                              required: false,
+                              timeoutSeconds: 600,
+                            }
+                          : {
+                              network: undefined,
+                              openPath: undefined,
+                              port: undefined,
+                              purpose,
+                              timeoutSeconds: 120,
+                            });
+                      }}
+                      value={entry.purpose ?? "validation"}
+                    >
+                      <option value="validation">验证</option>
+                      <option value="preview">本地预览</option>
+                    </select>
+                  </label>
+                  <label>
+                    超时（秒）
+                    <input
+                      max={900}
+                      min={30}
+                      onChange={(event) => updateEntry(index, {
+                        timeoutSeconds: Number(event.target.value),
+                      })}
+                      type="number"
+                      value={entry.timeoutSeconds ?? 120}
+                    />
+                  </label>
+                  {entry.purpose === "preview" ? (
+                    <>
+                      <p>网络：仅本机 loopback</p>
+                      <label>
+                        本地端口
+                        <input
+                          max={65_535}
+                          min={1024}
+                          onChange={(event) => updateEntry(index, {
+                            port: Number(event.target.value),
+                          })}
+                          type="number"
+                          value={entry.port ?? 4173}
+                        />
+                      </label>
+                      <label>
+                        打开路径
+                        <input
+                          onChange={(event) => updateEntry(index, { openPath: event.target.value })}
+                          placeholder="/"
+                          value={entry.openPath ?? "/"}
+                        />
+                      </label>
+                    </>
+                  ) : null}
+                  <label>
                     <input
                       checked={entry.required}
+                      disabled={entry.purpose === "preview"}
                       onChange={(event) => updateEntry(index, { required: event.target.checked })}
                       type="checkbox"
                     />
@@ -331,7 +431,7 @@ export function ValidationPolicyPanel({ projectId }: { projectId: string }) {
             </button>
           </div>
           <p>
-            保存将创建新的不可变修订；exact tuple 包含 executable、ordered args、workdir 和 required。
+            保存将创建新的不可变修订；exact tuple 包含 executable、ordered args、workdir、用途与运行边界。
             当前草稿 {draft.length}/50 项，{canonicalBytes}/65536 bytes。
           </p>
           <label>
@@ -348,7 +448,10 @@ export function ValidationPolicyPanel({ projectId }: { projectId: string }) {
           {success ? <p aria-live="polite">{success}</p> : null}
           <button
             disabled={
-              saving || !warningAccepted || Boolean(denialCode || limitError || hasIncompleteEntry)
+              saving
+              || !warningAccepted
+              || invalidPreviewBoundary
+              || Boolean(denialCode || limitError || hasIncompleteEntry)
             }
             onClick={() => void save()}
             style={CONTROL_STYLE}

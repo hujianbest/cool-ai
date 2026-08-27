@@ -5,6 +5,7 @@ import { afterEach, describe, expect, it, vi } from "vitest";
 
 import TeamPage from "@/app/team/page";
 import { TeamPanel } from "@/components/team-panel";
+import { serviceHealthResponse } from "@/tests/fixtures/browser/service-health";
 
 const pushMock = vi.fn();
 
@@ -16,6 +17,8 @@ function stubResources() {
   vi.stubGlobal(
     "fetch",
     vi.fn(async (input: RequestInfo | URL) => {
+      const health = serviceHealthResponse(input);
+      if (health) return health;
       const payloads: Record<string, unknown> = {
         "/api/agent-templates": { templates: [] },
         "/api/agents": { agents: [] },
