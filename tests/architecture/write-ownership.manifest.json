@@ -134,6 +134,8 @@
     ],
     "knowledge-provenance": [
       "memory_entries",
+      "memory_curation_candidates",
+      "memory_curation_sources",
       "memory_collections",
       "memory_collection_members",
       "review_memory_candidates",

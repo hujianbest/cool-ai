@@ -46,6 +46,7 @@ describe("Team browser developer loop and security contract", () => {
       "getByRole(\"dialog\"",
       "Escape",
       "打开团队资源",
+      "规则与注入检查",
       "关闭模型服务编辑器",
       "关闭技能编辑器",
       "关闭 Agent 编辑器",

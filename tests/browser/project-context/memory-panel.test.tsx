@@ -5,6 +5,8 @@ import userEvent from "@testing-library/user-event";
 import { afterEach, describe, expect, it, vi } from "vitest";
 import type { ComponentType } from "react";
 
+import type { CurationCandidateListItemDto } from "@/src/modules/knowledge-provenance";
+import type { MemoryEntryV6 } from "@/src/shared/memory-contracts";
 import type { MemoryEntry } from "@/src/shared/project-context-contracts";
 
 type MemoryPanelModule = {
@@ -34,6 +36,55 @@ const oldGoal: MemoryEntry = {
   active: false,
   createdAt: "2026-07-29T00:00:00.000Z",
 };
+const pendingCandidate: CurationCandidateListItemDto = {
+  agentId: "agent-curator",
+  agentName: "Curator Lin",
+  content: "Adopt durable retries",
+  createdAt: "2026-08-27T12:00:00.000Z",
+  diff: [
+    { kind: "removed", text: "Retry once" },
+    { kind: "added", text: "Retry with bounded backoff" },
+  ],
+  id: "candidate-1",
+  projectId: "project-1",
+  sources: [{
+    href: null,
+    id: "work-item-7",
+    type: "work_item",
+    version: null,
+  }],
+  status: "pending",
+  supersedesId: null,
+  type: "decision",
+};
+const publishedAgentMemory: MemoryEntryV6 = {
+  active: true,
+  actor: {
+    confirmer: null,
+    persistedBy: "platform",
+    proposerAgent: {
+      accentToken: "gold",
+      avatarText: "C",
+      id: "agent-curator",
+      name: "Curator Lin",
+    },
+    proposerType: "agent",
+  },
+  chainId: "memory-curated",
+  content: pendingCandidate.content,
+  createdAt: "2026-08-27T12:01:00.000Z",
+  id: "memory-curated",
+  projectId: "project-1",
+  source: {
+    href: null,
+    id: "work-item-7",
+    type: "work_item",
+    version: null,
+  },
+  supersedesId: null,
+  type: "decision",
+  version: 1,
+};
 
 function deferred<T>() {
   let resolve!: (value: T) => void;
@@ -57,6 +108,12 @@ function memoryIndexHealthResponse(overrides: Record<string, unknown> = {}) {
   });
 }
 
+function emptyCurationResponse(input: RequestInfo | URL): Response | null {
+  return String(input).includes("/memory-curation-candidates")
+    ? Response.json({ candidates: [] })
+    : null;
+}
+
 async function memoryPanel() {
   const load = modules["../../../components/project-context/memory-panel.tsx"];
   expect(load, "the shared memory panel must exist").toBeTypeOf("function");
@@ -69,6 +126,268 @@ afterEach(() => {
 });
 
 describe("Shared Memory panel", () => {
+  it("shows candidate loading then an actionable Agent-signed diff", async () => {
+    const MemoryPanel = await memoryPanel();
+    const candidates = deferred<Response>();
+    vi.stubGlobal(
+      "fetch",
+      vi.fn((input: RequestInfo | URL) => {
+        const url = String(input);
+        if (url.includes("/memory-curation-candidates")) return candidates.promise;
+        if (url.includes("/memory-index/health")) {
+          return Promise.resolve(memoryIndexHealthResponse());
+        }
+        if (url.includes("/memory-collections")) {
+          return Promise.resolve(Response.json({ collections: [] }));
+        }
+        if (url.includes("/knowledge-graph")) {
+          return Promise.resolve(Response.json({ edges: [], nodes: [] }));
+        }
+        return Promise.resolve(Response.json({ memories: [] }));
+      }),
+    );
+    render(<MemoryPanel projectId="project-1" />);
+
+    const region = screen.getByRole("region", { name: "提炼候选" });
+    const loading = within(region).getByRole("status", {
+      name: "正在加载提炼候选…",
+    });
+    expect(loading).toHaveAttribute("aria-busy", "true");
+    expect(loading).toHaveClass("memory-curation-skeleton");
+    expect(within(region).getByText("正在加载提炼候选…")).toHaveClass("sr-only");
+    await act(async () => {
+      candidates.resolve(Response.json({ candidates: [pendingCandidate] }));
+    });
+
+    expect(await within(region).findByText(/Curator Lin/)).toBeInTheDocument();
+    expect(within(region).getByText("Adopt durable retries")).toBeInTheDocument();
+    const sources = within(region).getByRole("list", {
+      name: "Adopt durable retries 来源",
+    });
+    expect(within(sources).getByText("work-item-7")).toBeInTheDocument();
+    expect(within(sources).getByText("原有来源（无版本）")).toBeInTheDocument();
+    expect(within(sources).queryByRole("link")).toBeNull();
+    expect(within(region).getByText("+ Retry with bounded backoff"))
+      .toHaveClass("memory-curation-diff-added");
+    expect(within(region).getByRole("button", { name: "批准发布" })).toBeEnabled();
+    expect(within(region).getByRole("button", { name: "驳回" })).toBeEnabled();
+  });
+
+  it("shows the candidate empty state without an Agent proposal action", async () => {
+    const MemoryPanel = await memoryPanel();
+    let candidateLoads = 0;
+    vi.stubGlobal(
+      "fetch",
+      vi.fn(async (input: RequestInfo | URL) => {
+        const url = String(input);
+        if (url.includes("/memory-curation-candidates")) {
+          candidateLoads += 1;
+          return Response.json({ candidates: [] });
+        }
+        if (url.includes("/memory-index/health")) return memoryIndexHealthResponse();
+        if (url.includes("/memory-collections")) {
+          return Response.json({ collections: [] });
+        }
+        if (url.includes("/knowledge-graph")) {
+          return Response.json({ edges: [], nodes: [] });
+        }
+        return Response.json({ memories: [] });
+      }),
+    );
+    const user = userEvent.setup();
+    render(<MemoryPanel projectId="project-1" />);
+
+    const region = await screen.findByRole("region", { name: "提炼候选" });
+    expect(await within(region).findByText("暂无待发布的提炼候选。"))
+      .toHaveClass("muted");
+    expect(within(region).queryByRole("button", { name: "批准发布" })).toBeNull();
+    expect(within(region).queryByRole("button", { name: /提议|新建候选/ })).toBeNull();
+    const refresh = within(region).getByRole("button", { name: "刷新提炼候选" });
+    expect(refresh).toHaveClass("memory-curation-action");
+    await user.click(refresh);
+    await waitFor(() => expect(candidateLoads).toBe(2));
+  });
+
+  it("publishes a candidate, reloads memories and focuses the approved Agent memory", async () => {
+    const MemoryPanel = await memoryPanel();
+    const decision = deferred<Response>();
+    const calls: Array<{ body?: unknown; method: string; url: string }> = [];
+    let candidateLoads = 0;
+    let memoryLoads = 0;
+    vi.stubGlobal(
+      "fetch",
+      vi.fn(async (input: RequestInfo | URL, init?: RequestInit) => {
+        const url = String(input);
+        const method = init?.method ?? "GET";
+        calls.push({
+          ...(init?.body ? { body: JSON.parse(String(init.body)) } : {}),
+          method,
+          url,
+        });
+        if (url.includes("/memory-curation-candidates")) {
+          if (method === "POST") return decision.promise;
+          candidateLoads += 1;
+          return Response.json({
+            candidates: candidateLoads === 1 ? [pendingCandidate] : [],
+          });
+        }
+        if (url.includes("/memory-index/health")) return memoryIndexHealthResponse();
+        if (url.includes("/memory-collections")) {
+          return Response.json({ collections: [] });
+        }
+        if (url.includes("/knowledge-graph")) {
+          return Response.json({ edges: [], nodes: [] });
+        }
+        memoryLoads += 1;
+        return Response.json({
+          memories: memoryLoads === 1 ? [] : [publishedAgentMemory],
+        });
+      }),
+    );
+    vi.spyOn(crypto, "randomUUID").mockReturnValue(
+      "63000000-0000-4000-8000-000000000501",
+    );
+    const user = userEvent.setup();
+    render(<MemoryPanel projectId="project-1" />);
+
+    const region = await screen.findByRole("region", { name: "提炼候选" });
+    await within(region).findByText("Adopt durable retries");
+    const publish = within(region).getByRole("button", { name: "批准发布" });
+    await user.click(publish);
+    const busyPublish = within(region).getByRole("button", { name: "正在发布…" });
+    expect(busyPublish).toBeDisabled();
+    expect(within(region).getByRole("button", { name: "驳回" })).toBeDisabled();
+    expect(busyPublish.closest(".memory-curation-actions"))
+      .toHaveAttribute("aria-busy", "true");
+    expect(calls).toContainEqual({
+      body: { operationId: "63000000-0000-4000-8000-000000000501" },
+      method: "POST",
+      url: "/api/projects/project-1/memory-curation-candidates/candidate-1/publish",
+    });
+
+    await act(async () => {
+      decision.resolve(Response.json({
+        candidate: { ...pendingCandidate, status: "published" },
+        memory: publishedAgentMemory,
+      }));
+    });
+
+    expect(await within(region).findByText("暂无待发布的提炼候选。"))
+      .toBeInTheDocument();
+    const memoryHeading = await screen.findByRole("heading", {
+      name: "Adopt durable retries",
+    });
+    expect(memoryHeading).toHaveFocus();
+    expect(screen.getByText(
+      "Agent Curator Lin 提议 · Owner 经审批发布 · 平台持久化",
+    )).toBeInTheDocument();
+    expect(screen.getByRole("status")).toHaveTextContent("提炼候选已发布。");
+  });
+
+  it("rejects a candidate, leaves memories unchanged and focuses the region", async () => {
+    const MemoryPanel = await memoryPanel();
+    const decision = deferred<Response>();
+    const calls: Array<{ body?: unknown; method: string; url: string }> = [];
+    let candidateLoads = 0;
+    vi.stubGlobal(
+      "fetch",
+      vi.fn(async (input: RequestInfo | URL, init?: RequestInit) => {
+        const url = String(input);
+        const method = init?.method ?? "GET";
+        calls.push({
+          ...(init?.body ? { body: JSON.parse(String(init.body)) } : {}),
+          method,
+          url,
+        });
+        if (url.includes("/memory-curation-candidates")) {
+          if (method === "POST") return decision.promise;
+          candidateLoads += 1;
+          return Response.json({
+            candidates: candidateLoads === 1 ? [pendingCandidate] : [],
+          });
+        }
+        if (url.includes("/memory-index/health")) return memoryIndexHealthResponse();
+        if (url.includes("/memory-collections")) {
+          return Response.json({ collections: [] });
+        }
+        if (url.includes("/knowledge-graph")) {
+          return Response.json({ edges: [], nodes: [] });
+        }
+        return Response.json({ memories: [activeGoal] });
+      }),
+    );
+    vi.spyOn(crypto, "randomUUID").mockReturnValue(
+      "63000000-0000-4000-8000-000000000502",
+    );
+    const user = userEvent.setup();
+    render(<MemoryPanel projectId="project-1" />);
+
+    const region = await screen.findByRole("region", { name: "提炼候选" });
+    await within(region).findByText("Adopt durable retries");
+    await user.click(within(region).getByRole("button", { name: "驳回" }));
+    const busyReject = within(region).getByRole("button", { name: "正在驳回…" });
+    expect(busyReject).toBeDisabled();
+    expect(within(region).getByRole("button", { name: "批准发布" })).toBeDisabled();
+    expect(busyReject.closest(".memory-curation-actions"))
+      .toHaveAttribute("aria-busy", "true");
+
+    await act(async () => {
+      decision.resolve(Response.json({
+        candidate: { ...pendingCandidate, status: "rejected" },
+        memory: null,
+      }));
+    });
+
+    expect(await within(region).findByText("暂无待发布的提炼候选。"))
+      .toBeInTheDocument();
+    expect(screen.getByRole("status")).toHaveTextContent("提炼候选已驳回。");
+    expect(screen.getByRole("heading", { name: "Current goal" })).toBeInTheDocument();
+    expect(region).toHaveFocus();
+    expect(calls).toContainEqual({
+      body: { operationId: "63000000-0000-4000-8000-000000000502" },
+      method: "POST",
+      url: "/api/projects/project-1/memory-curation-candidates/candidate-1/reject",
+    });
+  });
+
+  it("shows a sanitized candidate load error and retries", async () => {
+    const MemoryPanel = await memoryPanel();
+    let candidateLoads = 0;
+    vi.stubGlobal(
+      "fetch",
+      vi.fn(async (input: RequestInfo | URL) => {
+        const url = String(input);
+        if (url.includes("/memory-curation-candidates")) {
+          candidateLoads += 1;
+          return candidateLoads === 1
+            ? Response.json(
+                { error: { code: "STORAGE_UNAVAILABLE", message: "raw path" } },
+                { status: 503 },
+              )
+            : Response.json({ candidates: [] });
+        }
+        if (url.includes("/memory-index/health")) return memoryIndexHealthResponse();
+        if (url.includes("/memory-collections")) {
+          return Response.json({ collections: [] });
+        }
+        if (url.includes("/knowledge-graph")) {
+          return Response.json({ edges: [], nodes: [] });
+        }
+        return Response.json({ memories: [] });
+      }),
+    );
+    const user = userEvent.setup();
+    render(<MemoryPanel projectId="project-1" />);
+
+    const region = await screen.findByRole("region", { name: "提炼候选" });
+    const alert = await within(region).findByRole("alert");
+    expect(alert).toHaveTextContent("无法加载提炼候选，请稍后重试。");
+    expect(alert).not.toHaveTextContent("raw path");
+    await user.click(within(region).getByRole("button", { name: "重试加载提炼候选" }));
+    expect(await within(region).findByText("暂无待发布的提炼候选。"))
+      .toBeInTheDocument();
+  });
+
   it("shows loading, load error, retry and actionable empty states", async () => {
     const MemoryPanel = await memoryPanel();
     const first = deferred<Response>();
@@ -76,6 +395,8 @@ describe("Shared Memory panel", () => {
     vi.stubGlobal(
       "fetch",
       vi.fn((input: RequestInfo | URL) => {
+        const curation = emptyCurationResponse(input);
+        if (curation) return Promise.resolve(curation);
         if (String(input).includes("/memory-index/health")) {
           return Promise.resolve(memoryIndexHealthResponse({
             coverage: { active: 0, indexed: 0, ratio: 1, valid: 0 },
@@ -131,6 +452,8 @@ describe("Shared Memory panel", () => {
     const fetchMock = vi.fn(
       async (input: RequestInfo | URL, init?: RequestInit) => {
         const url = String(input);
+        const curation = emptyCurationResponse(input);
+        if (curation) return curation;
         if (url.includes("/memory-index/health")) return memoryIndexHealthResponse();
         if (url.includes("/memory-collections")) {
           return Response.json({ collections: [] });
@@ -207,6 +530,8 @@ describe("memory panel search", () => {
     const fetchMock = vi.fn(
       async (input: RequestInfo | URL, init?: RequestInit) => {
         const url = String(input);
+        const curation = emptyCurationResponse(input);
+        if (curation) return curation;
         if (url.includes("/memory-index/health")) return memoryIndexHealthResponse();
         if (url.includes("/memory-collections")) {
           return Response.json({ collections: [] });
@@ -299,6 +624,8 @@ describe("memory panel search", () => {
       "fetch",
       vi.fn(async (input: RequestInfo | URL) => {
         const url = String(input);
+        const curation = emptyCurationResponse(input);
+        if (curation) return curation;
         if (url.includes("/memory-index/health")) return memoryIndexHealthResponse();
         if (url.includes("/memory-collections")) {
           return Promise.resolve(Response.json({ collections: [] }));
@@ -348,6 +675,8 @@ describe("memory index health", () => {
     let version = 1;
     const fetchMock = vi.fn(async (input: RequestInfo | URL, init?: RequestInit) => {
       const url = String(input);
+      const curation = emptyCurationResponse(input);
+      if (curation) return curation;
       if (url.includes("/memory-index/rebuild")) {
         version = 2;
         return Response.json({
@@ -407,6 +736,8 @@ describe("memory collection directory", () => {
     const MemoryPanel = await memoryPanel();
     const fetchMock = vi.fn(async (input: RequestInfo | URL, init?: RequestInit) => {
       const url = String(input);
+      const curation = emptyCurationResponse(input);
+      if (curation) return curation;
       if (url.includes("/memory-index/health")) return memoryIndexHealthResponse();
       if (url.includes("/memory-collections")) {
         if (init?.method === "DELETE") {
@@ -454,6 +785,8 @@ describe("knowledge graph relation list", () => {
     const MemoryPanel = await memoryPanel();
     const fetchMock = vi.fn(async (input: RequestInfo | URL) => {
       const url = String(input);
+      const curation = emptyCurationResponse(input);
+      if (curation) return curation;
       if (url.includes("/memory-index/health")) return memoryIndexHealthResponse();
       if (url.includes("/memory-collections")) {
         return Response.json({ collections: [] });

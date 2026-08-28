@@ -72,7 +72,7 @@ describe("memory search index consumer", () => {
 
     const database = openDatabase(databasePath);
     try {
-      expect(database.prepare("PRAGMA user_version").get()).toEqual({ user_version: 29 });
+      expect(database.prepare("PRAGMA user_version").get()).toEqual({ user_version: 30 });
       expect(database.prepare(`
         SELECT project_id AS projectId,search_text AS searchText,memory_version AS memoryVersion
         FROM memory_search_index

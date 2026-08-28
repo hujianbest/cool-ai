@@ -14,6 +14,8 @@ import { IconButton } from "@/components/ui/icon-button";
 
 import type { ApiError } from "@/src/shared/contracts";
 import type {
+  CurationCandidateListItemDto,
+  CurationDecisionResultDto,
   KnowledgeGraphDto,
   MemoryCollectionCatalogDto,
 } from "@/src/modules/knowledge-provenance";
@@ -125,6 +127,9 @@ function actorCopy(memory: MemoryEntry): string {
   if (!isV6(memory) || memory.actor.proposerType === "owner") {
     return "Owner 提议 · 平台持久化";
   }
+  if (memory.actor.confirmer === null) {
+    return `Agent ${memory.actor.proposerAgent.name} 提议 · Owner 经审批发布 · 平台持久化`;
+  }
   return `Agent ${memory.actor.proposerAgent.name} 提议 · 通过裁决 ${
     memory.actor.confirmer.decisionId
   } 确认 · 平台持久化`;
@@ -188,6 +193,22 @@ export function MemoryPanel({ projectId }: { projectId: string }) {
   const [isCreatingCollection, setIsCreatingCollection] = useState(false);
   const [graph, setGraph] = useState<KnowledgeGraphDto>({ edges: [], nodes: [] });
   const deleteCollectionCancelRef = useRef<HTMLButtonElement>(null);
+  const [curationCandidates, setCurationCandidates] = useState<
+    CurationCandidateListItemDto[]
+  >([]);
+  const [curationReloadKey, setCurationReloadKey] = useState(0);
+  const [isCurationLoading, setIsCurationLoading] = useState(true);
+  const [curationError, setCurationError] = useState<string | null>(null);
+  const [curationNotice, setCurationNotice] = useState<string | null>(null);
+  const [decidingCandidateActions, setDecidingCandidateActions] = useState<
+    Record<string, "publish" | "reject">
+  >({});
+  const [curationDecisionErrors, setCurationDecisionErrors] = useState<
+    Record<string, string>
+  >({});
+  const [focusCurationRegion, setFocusCurationRegion] = useState(false);
+  const curationEpochRef = useRef(0);
+  const curationRegionRef = useRef<HTMLElement>(null);
 
   useEffect(() => {
     let active = true;
@@ -250,6 +271,41 @@ export function MemoryPanel({ projectId }: { projectId: string }) {
   }, [indexHealthReloadKey, projectId]);
 
   useEffect(() => {
+    const epoch = ++curationEpochRef.current;
+    const controller = new AbortController();
+    setIsCurationLoading(true);
+    setCurationError(null);
+    setCurationCandidates([]);
+    void fetch(
+      `/api/projects/${encodeURIComponent(projectId)}/memory-curation-candidates`,
+      { cache: "no-store", signal: controller.signal },
+    )
+      .then(async (response) => {
+        const payload = await response.json() as {
+          candidates?: CurationCandidateListItemDto[];
+        };
+        if (!response.ok || !Array.isArray(payload.candidates)) {
+          throw new Error("invalid_curation_candidates");
+        }
+        return payload.candidates;
+      })
+      .then((candidates) => {
+        if (curationEpochRef.current === epoch) {
+          setCurationCandidates(candidates);
+        }
+      })
+      .catch(() => {
+        if (!controller.signal.aborted && curationEpochRef.current === epoch) {
+          setCurationError("无法加载提炼候选，请稍后重试。");
+        }
+      })
+      .finally(() => {
+        if (curationEpochRef.current === epoch) setIsCurationLoading(false);
+      });
+    return () => controller.abort();
+  }, [curationReloadKey, projectId]);
+
+  useEffect(() => {
     let active = true;
     void fetch(`/api/projects/${projectId}/memory-collections`)
       .then(async (response) => {
@@ -291,9 +347,17 @@ export function MemoryPanel({ projectId }: { projectId: string }) {
 
   useEffect(() => {
     if (!focusMemoryId) return;
-    headingRefs.current.get(focusMemoryId)?.focus();
+    const heading = headingRefs.current.get(focusMemoryId);
+    if (!heading) return;
+    heading.focus();
     setFocusMemoryId(null);
   }, [focusMemoryId, memories]);
+
+  useEffect(() => {
+    if (!focusCurationRegion || isCurationLoading) return;
+    curationRegionRef.current?.focus();
+    setFocusCurationRegion(false);
+  }, [curationCandidates, focusCurationRegion, isCurationLoading]);
 
   async function saveMemory(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
@@ -410,6 +474,68 @@ export function MemoryPanel({ projectId }: { projectId: string }) {
     }
   }
 
+  async function decideCurationCandidate(
+    candidate: CurationCandidateListItemDto,
+    action: "publish" | "reject",
+  ) {
+    if (decidingCandidateActions[candidate.id] !== undefined) return;
+    const epoch = curationEpochRef.current;
+    setDecidingCandidateActions((current) => ({
+      ...current,
+      [candidate.id]: action,
+    }));
+    setCurationNotice(null);
+    setCurationDecisionErrors((current) => {
+      const next = { ...current };
+      delete next[candidate.id];
+      return next;
+    });
+    try {
+      const response = await fetch(
+        `/api/projects/${encodeURIComponent(projectId)}`
+          + `/memory-curation-candidates/${encodeURIComponent(candidate.id)}`
+          + `/${action === "publish" ? "publish" : "reject"}`,
+        {
+          body: JSON.stringify({ operationId: crypto.randomUUID() }),
+          headers: { "content-type": "application/json" },
+          method: "POST",
+        },
+      );
+      const payload = await response.json() as Partial<CurationDecisionResultDto>;
+      if (!response.ok || payload.candidate?.id !== candidate.id) {
+        throw new Error("curation_decision_failed");
+      }
+      if (curationEpochRef.current !== epoch) return;
+      setCurationCandidates((current) =>
+        current.filter((entry) => entry.id !== candidate.id));
+      setCurationNotice(
+        action === "publish" ? "提炼候选已发布。" : "提炼候选已驳回。",
+      );
+      if (action === "publish" && payload.memory?.id) {
+        setFocusMemoryId(payload.memory.id);
+      } else {
+        setFocusCurationRegion(true);
+      }
+      setCurationReloadKey((current) => current + 1);
+      setReloadKey((current) => current + 1);
+      setIndexHealthReloadKey((current) => current + 1);
+    } catch {
+      if (curationEpochRef.current !== epoch) return;
+      setCurationDecisionErrors((current) => ({
+        ...current,
+        [candidate.id]: "无法完成提炼候选裁决，请稍后重试。",
+      }));
+    } finally {
+      if (curationEpochRef.current === epoch) {
+        setDecidingCandidateActions((current) => {
+          const next = { ...current };
+          delete next[candidate.id];
+          return next;
+        });
+      }
+    }
+  }
+
   async function submitSearch(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
     const query = searchQuery.trim();
@@ -464,6 +590,9 @@ export function MemoryPanel({ projectId }: { projectId: string }) {
       .map((memory) => [memory.supersedesId!, memory]),
   );
   const relationEdges = sourcedGraphEdges(graph);
+  const pendingCurationCandidates = curationCandidates.filter(
+    (candidate) => candidate.status === "pending",
+  );
 
   return (
     <section aria-labelledby={`memory-title-${projectId}`} className="stack">
@@ -531,6 +660,136 @@ export function MemoryPanel({ projectId }: { projectId: string }) {
       ) : (
         <p aria-busy="true" className="state-message">正在检查记忆索引…</p>
       )}
+      <section
+        aria-label="提炼候选"
+        className="stack task-summary memory-curation"
+        ref={curationRegionRef}
+        tabIndex={-1}
+      >
+        <h3>提炼候选</h3>
+        {isCurationLoading ? (
+          <div
+            aria-busy="true"
+            aria-label="正在加载提炼候选…"
+            className="memory-curation-skeleton"
+            role="status"
+          >
+            <span className="sr-only">正在加载提炼候选…</span>
+          </div>
+        ) : curationError ? (
+          <div className="stack">
+            <p className="error-text" role="alert">{curationError}</p>
+            <button
+              className="button-secondary memory-curation-action"
+              onClick={() => setCurationReloadKey((current) => current + 1)}
+              type="button"
+            >
+              重试加载提炼候选
+            </button>
+          </div>
+        ) : pendingCurationCandidates.length === 0 ? (
+          <div className="stack">
+            <p className="muted">暂无待发布的提炼候选。</p>
+            <button
+              className="button-secondary memory-curation-action"
+              onClick={() => setCurationReloadKey((current) => current + 1)}
+              type="button"
+            >
+              刷新提炼候选
+            </button>
+          </div>
+        ) : (
+          <ul aria-label="待发布提炼候选" className="stack memory-curation-list">
+            {pendingCurationCandidates.map((candidate) => {
+              const decidingAction = decidingCandidateActions[candidate.id];
+              const deciding = decidingAction !== undefined;
+              const decisionError = curationDecisionErrors[candidate.id];
+              return (
+                <li className="stack memory-curation-item" key={candidate.id}>
+                  <h4>{candidate.content}</h4>
+                  <p>
+                    Agent {candidate.agentName} · {
+                      MEMORY_TYPES.find((type) => type.value === candidate.type)?.label
+                    }
+                  </p>
+                  <ul aria-label={`${candidate.content} 来源`} className="stack">
+                    {candidate.sources.map((candidateSource, index) => {
+                      const sourceLabel = SOURCE_LABELS[candidateSource.type];
+                      return (
+                        <li key={`${candidate.id}-source-${index}`}>
+                          {candidateSource.href && candidateSource.version ? (
+                            <a
+                              aria-label={
+                                `${candidateSource.type} · ${candidateSource.id}`
+                                + ` · version ${candidateSource.version}`
+                              }
+                              href={candidateSource.href}
+                            >
+                              {sourceLabel} · <code>{candidateSource.id}</code>
+                              {" · version "}<code>{candidateSource.version}</code>
+                            </a>
+                          ) : (
+                            <span>
+                              {sourceLabel} · <code>{candidateSource.id}</code>
+                              {candidateSource.version === null ? (
+                                <>{" · "}<span>原有来源（无版本）</span></>
+                              ) : null}
+                            </span>
+                          )}
+                        </li>
+                      );
+                    })}
+                  </ul>
+                  <pre
+                    aria-label={`${candidate.content} 文本差异`}
+                    className="memory-curation-diff"
+                  >
+                    {candidate.diff.map((line, index) => (
+                      <span
+                        className={`memory-curation-diff-${line.kind}`}
+                        key={`${candidate.id}-diff-${index}`}
+                      >
+                        {line.kind === "added" ? "+ " : line.kind === "removed" ? "- " : "  "}
+                        {line.text}
+                        {"\n"}
+                      </span>
+                    ))}
+                  </pre>
+                  <div
+                    aria-busy={deciding || undefined}
+                    className="memory-curation-actions"
+                  >
+                    <button
+                      className="button-primary memory-curation-action"
+                      disabled={deciding}
+                      onClick={() => void decideCurationCandidate(candidate, "publish")}
+                      type="button"
+                    >
+                      {decidingAction === "publish" ? "正在发布…" : "批准发布"}
+                    </button>
+                    <button
+                      className="button-secondary memory-curation-action"
+                      disabled={deciding}
+                      onClick={() => void decideCurationCandidate(candidate, "reject")}
+                      type="button"
+                    >
+                      {decidingAction === "reject" ? "正在驳回…" : "驳回"}
+                    </button>
+                  </div>
+                  {decisionError ? (
+                    <p className="error-text" role="alert">{decisionError}</p>
+                  ) : null}
+                </li>
+              );
+            })}
+          </ul>
+        )}
+        {curationNotice ? (
+          <p aria-live="polite" className="muted" role="status">
+            {curationNotice}
+          </p>
+        ) : null}
+      </section>
       <section
         aria-label="知识集合"
         className="stack task-summary"

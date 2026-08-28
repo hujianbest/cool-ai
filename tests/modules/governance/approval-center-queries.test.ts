@@ -4,6 +4,12 @@ import type { DatabaseSync } from "node:sqlite";
 import { afterEach, beforeEach, describe, expect, it } from "vitest";
 
 import { openDatabase } from "@/src/adapters/outbound/sqlite/connection";
+import {
+  decideCuration,
+  proposeCuration,
+} from "@/src/adapters/outbound/sqlite/knowledge-provenance/memory-curation";
+import { createMemory } from "@/src/adapters/outbound/sqlite/knowledge-provenance/memory-service";
+import { createProject } from "@/src/adapters/outbound/sqlite/project-workspace/projects";
 import { decideInline } from "@/src/adapters/outbound/sqlite/public-collaboration/inline-decision-service";
 import { appendStructuredMessage } from "@/src/adapters/outbound/sqlite/public-collaboration/structured-message-store";
 import { seedCurrentAdvanceFixture } from "@/tests/fixtures/collaboration/current-advance";
@@ -14,11 +20,13 @@ type ApprovalCenterItem = {
   approvalId: string;
   createdAt: string;
   decisionHint: "expired" | "replaced" | "revoked" | null;
-  domain: "execution" | "inline_decision";
+  domain: "execution" | "inline_decision" | "knowledge";
   impactSummary: string | null;
-  kind: "command" | "staged_merge" | "proposal";
+  kind: "command" | "staged_merge" | "proposal" | "memory_publish";
   sourceRef: {
+    candidateId: string | null;
     executionId: string | null;
+    memoryId: string | null;
     messageId: string | null;
     runId: string | null;
     threadId: string | null;
@@ -449,6 +457,101 @@ describe("listPendingApprovals cross-domain aggregation", () => {
     expect(caught).toMatchObject({ code: "PROJECT_NOT_FOUND", name: "GovernanceError" });
   });
 
+  it("maps a project curation candidate into a knowledge publish approval", async () => {
+    const { listPendingApprovals } = await service();
+    const candidate = proposeCuration(databasePath, PROJECT_ID, {
+      agentId: AGENT_ID,
+      content: "知".repeat(90),
+      operationId: "63000000-0000-4000-8000-000000000201",
+      sources: [{ id: "Owner brief", type: "owner_input" }],
+      type: "fact",
+    });
+    const other = createProject("Approval center other", databasePath);
+
+    expect(listPendingApprovals(databasePath, PROJECT_ID)).toEqual([{
+      approvalId: candidate.id,
+      createdAt: candidate.createdAt,
+      decisionHint: null,
+      domain: "knowledge",
+      impactSummary: "新建",
+      kind: "memory_publish",
+      sourceRef: {
+        candidateId: candidate.id,
+        executionId: null,
+        memoryId: null,
+        messageId: null,
+        runId: null,
+        threadId: null,
+      },
+      status: "pending",
+      title: `${"知".repeat(79)}…`,
+    }]);
+    expect(listPendingApprovals(databasePath, other.id)).toEqual([]);
+  });
+
+  it("removes a published curation from the approval center", async () => {
+    const { listPendingApprovals } = await service();
+    const candidate = proposeCuration(databasePath, PROJECT_ID, {
+      agentId: AGENT_ID,
+      content: "Publish this memory",
+      operationId: "63000000-0000-4000-8000-000000000202",
+      sources: [{ id: "Owner brief", type: "owner_input" }],
+      type: "fact",
+    });
+    expect(listPendingApprovals(databasePath, PROJECT_ID).map(({ approvalId }) => approvalId))
+      .toEqual([candidate.id]);
+
+    decideCuration(databasePath, PROJECT_ID, candidate.id, {
+      action: "publish",
+      operationId: "63000000-0000-4000-8000-000000000203",
+    });
+    expect(listPendingApprovals(databasePath, PROJECT_ID)).toEqual([]);
+  });
+
+  it("keeps a replaced curation visible but non-actionable", async () => {
+    const { listPendingApprovals } = await service();
+    const target = createMemory(databasePath, PROJECT_ID, {
+      content: "Original decision",
+      sourceRef: "Owner brief",
+      sourceType: "owner_input",
+      type: "decision",
+    });
+    const candidate = proposeCuration(databasePath, PROJECT_ID, {
+      agentId: AGENT_ID,
+      content: "Agent replacement",
+      operationId: "63000000-0000-4000-8000-000000000204",
+      sources: [{ id: "Owner follow-up", type: "owner_input" }],
+      supersedesId: target.id,
+      type: "decision",
+    });
+    createMemory(databasePath, PROJECT_ID, {
+      content: "Owner replacement",
+      sourceRef: "Owner brief",
+      sourceType: "owner_input",
+      supersedesId: target.id,
+      type: "decision",
+    });
+    expect(() => decideCuration(databasePath, PROJECT_ID, candidate.id, {
+      action: "publish",
+      operationId: "63000000-0000-4000-8000-000000000205",
+    })).toThrowError(expect.objectContaining({ code: "MEMORY_NOT_ACTIVE" }));
+
+    expect(listPendingApprovals(databasePath, PROJECT_ID)).toEqual([
+      expect.objectContaining({
+        approvalId: candidate.id,
+        decisionHint: "replaced",
+        domain: "knowledge",
+        impactSummary: "将取代 V1",
+        kind: "memory_publish",
+        sourceRef: expect.objectContaining({
+          candidateId: candidate.id,
+          memoryId: target.id,
+        }),
+        status: "replaced",
+      }),
+    ]);
+  });
+
   it("aggregates pending execution approvals and inline proposals newest-first", async () => {
     const { listPendingApprovals } = await service();
     insertCommandApproval({
@@ -484,7 +587,9 @@ describe("listPendingApprovals cross-domain aggregation", () => {
         impactSummary: "Run the build",
         kind: "command",
         sourceRef: {
+          candidateId: null,
           executionId: EXECUTION_ID,
+          memoryId: null,
           messageId: null,
           runId: null,
           threadId: null,
@@ -500,7 +605,9 @@ describe("listPendingApprovals cross-domain aggregation", () => {
         impactSummary: "Ship it.",
         kind: "proposal",
         sourceRef: {
+          candidateId: null,
           executionId: null,
+          memoryId: null,
           messageId: "message-proposal-1",
           runId: RUN_ID,
           threadId,
@@ -516,7 +623,9 @@ describe("listPendingApprovals cross-domain aggregation", () => {
         impactSummary: null,
         kind: "staged_merge",
         sourceRef: {
+          candidateId: null,
           executionId: "execution-ac-merge",
+          memoryId: null,
           messageId: null,
           runId: null,
           threadId: null,

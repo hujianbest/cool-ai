@@ -1,5 +1,7 @@
 import type { TransactionContext } from "@/src/application/transaction-context";
 import type {
+  CurationApprovalProjectionDto,
+  CurationCandidateListItemDto,
   KnowledgeGraphDto,
   MemoryCollectionCatalogDto,
   MemoryEntryV6,
@@ -10,6 +12,14 @@ import type {
 } from "./dto";
 
 export interface KnowledgeProvenanceQueries {
+  listPendingCurationApprovals: (
+    databasePath: string,
+    projectId: string,
+  ) => CurationApprovalProjectionDto[];
+  listCurationCandidates: (
+    databasePath: string,
+    projectId: string,
+  ) => CurationCandidateListItemDto[];
   listMemories: (
     databasePath: string,
     projectId: string,

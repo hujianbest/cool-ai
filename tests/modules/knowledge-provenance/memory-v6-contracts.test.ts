@@ -114,6 +114,47 @@ describe("memory v6 strict contracts", () => {
     });
   });
 
+  it("allows owner-approved Agent curation to preserve a versionless legacy source", async () => {
+    const { memoryEntryV6Schema } = await contracts();
+    const ownerApproved = {
+      active: true,
+      actor: {
+        confirmer: null,
+        persistedBy: "platform",
+        proposerAgent: {
+          accentToken: "sage",
+          avatarText: "C",
+          id: "curator-1",
+          name: "Curator",
+        },
+        proposerType: "agent",
+      },
+      chainId: "memory-curated",
+      content: "An owner-approved curation",
+      createdAt: "2026-08-27T09:00:00.000Z",
+      id: "memory-curated",
+      projectId: "project-1",
+      source: {
+        href: null,
+        id: "Owner brief",
+        type: "owner_input",
+        version: null,
+      },
+      supersedesId: null,
+      type: "fact",
+      version: 1,
+    } as const;
+
+    expect(memoryEntryV6Schema.parse(ownerApproved).source.version).toBeNull();
+    expect(memoryEntryV6Schema.safeParse({
+      ...ownerApproved,
+      actor: {
+        ...ownerApproved.actor,
+        confirmer: { decisionId: "decision-1", reviewAttemptId: "attempt-1" },
+      },
+    }).success).toBe(false);
+  });
+
   it.each([
     ["unknown memory type", { type: "unknown" }],
     ["unknown source type", { source: { type: "unknown" } }],

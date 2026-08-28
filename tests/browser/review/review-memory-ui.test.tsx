@@ -125,6 +125,9 @@ function fetchWithoutIndexHealth(
   handler: (input: RequestInfo | URL, init?: RequestInit) => unknown,
 ) {
   return (input: RequestInfo | URL, init?: RequestInit) => {
+    if (String(input).includes("/memory-curation-candidates")) {
+      return Promise.resolve(Response.json({ candidates: [] }));
+    }
     if (String(input).includes("/memory-index/")) {
       return Promise.resolve(memoryIndexHealthResponse());
     }

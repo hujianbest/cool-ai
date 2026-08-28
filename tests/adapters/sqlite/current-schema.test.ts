@@ -71,10 +71,20 @@ describe("current canonical schema", () => {
     }
   });
 
-  it("bootstraps a missing database directly at identity 29", () => {
+  it("bootstraps a missing database directly at identity 30", () => {
     const database = openDatabase(databasePath());
     try {
-      expect(database.prepare("PRAGMA user_version").get()).toEqual({ user_version: 29 });
+      expect(database.prepare("PRAGMA user_version").get()).toEqual({ user_version: 30 });
+      expect(database.prepare(`
+        SELECT name FROM sqlite_master
+        WHERE type='table' AND name IN (
+          'memory_curation_candidates','memory_curation_sources'
+        )
+        ORDER BY name
+      `).all()).toEqual([
+        { name: "memory_curation_candidates" },
+        { name: "memory_curation_sources" },
+      ]);
     } finally {
       database.close();
     }
@@ -90,10 +100,39 @@ describe("current canonical schema", () => {
     missing.close();
     const empty = openDatabase(emptyPath);
     try {
-      expect(empty.prepare("PRAGMA user_version").get()).toEqual({ user_version: 29 });
+      expect(empty.prepare("PRAGMA user_version").get()).toEqual({ user_version: 30 });
       expect(schemaRows(empty)).toEqual(expected);
     } finally {
       empty.close();
+    }
+  });
+
+  it("allows an owner-approved Agent memory to preserve a versionless legacy source", () => {
+    const database = openDatabase(databasePath());
+    try {
+      database.exec(`
+        INSERT INTO projects(id,name,created_at,version)
+        VALUES ('project-agent-memory','Agent memory','2026-08-27T00:00:00.000Z',1);
+        INSERT INTO memory_entries(
+          id,project_id,chain_id,version,type,content,dedupe_hash,
+          source_type,source_id,source_version,proposer_actor_type,
+          proposer_actor_id,confirming_review_attempt_id,persistence_actor,
+          supersedes_id,created_at
+        ) VALUES (
+          'memory-agent','project-agent-memory','memory-agent',1,'fact',
+          'Agent-authored fact',
+          'aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa',
+          'owner_input','Owner source',NULL,'agent','agent-proposer',NULL,
+          'platform',NULL,'2026-08-27T00:00:00.000Z'
+        );
+      `);
+      expect(database.prepare(`
+        SELECT proposer_actor_type AS proposerType,
+               confirming_review_attempt_id AS confirmer
+        FROM memory_entries WHERE id='memory-agent'
+      `).get()).toEqual({ confirmer: null, proposerType: "agent" });
+    } finally {
+      database.close();
     }
   });
 
@@ -255,7 +294,7 @@ describe("current canonical schema", () => {
     }
     const recovered = openDatabase(path);
     try {
-      expect(recovered.prepare("PRAGMA user_version").get()).toEqual({ user_version: 29 });
+      expect(recovered.prepare("PRAGMA user_version").get()).toEqual({ user_version: 30 });
     } finally {
       recovered.close();
     }

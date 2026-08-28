@@ -15,6 +15,7 @@ export * as skillService from "@/src/adapters/outbound/sqlite/identity-capabilit
 // knowledge-provenance
 export * as memoryService from "@/src/adapters/outbound/sqlite/knowledge-provenance/memory-service";
 export * as memoryCollections from "@/src/adapters/outbound/sqlite/knowledge-provenance/memory-collections";
+export * as memoryCuration from "@/src/adapters/outbound/sqlite/knowledge-provenance/memory-curation";
 export * as knowledgeGraph from "@/src/adapters/outbound/sqlite/knowledge-provenance/knowledge-graph";
 
 // mission-work

@@ -44,7 +44,7 @@ const agentActorSchema = z.object({
   confirmer: z.object({
     decisionId: z.string().min(1),
     reviewAttemptId: z.string().min(1),
-  }).strict(),
+  }).strict().nullable(),
   persistedBy: z.literal("platform"),
   proposerAgent: proposerAgentSchema,
   proposerType: z.literal("agent"),
@@ -100,12 +100,21 @@ export const memoryEntryV6Schema = z.object({
   if (
     memory.actor.proposerType === "agent"
     && (
-      legacySource
-      || memory.source.version === null
-      || memory.source.href === null
-      || memory.createdBy !== undefined
+      memory.createdBy !== undefined
       || memory.sourceRef !== undefined
       || memory.sourceType !== undefined
+      || (
+        memory.actor.confirmer !== null
+        && (
+          legacySource
+          || memory.source.href === null
+          || memory.source.version === null
+        )
+      )
+      || (
+        memory.actor.confirmer === null
+        && (!legacySource || memory.source.href !== null)
+      )
     )
   ) {
     context.addIssue({

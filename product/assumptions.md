@@ -443,6 +443,25 @@ agent 替用户做的默认选择。遇到欠定点的标准动作: 提出带默
 - A-431 2026-08-21 [生效] 破坏性删除集合用确认对话框，不新造非执行 Approval 域。默认理由: S-24 仍未扩展该域；确认即可满足演示。
 - A-432 2026-08-21 [生效] S-31 零 schema；图边只投影 supersedes、集合成员与已有 source tuple，不补造无来源推断。默认理由: 演示禁止把缺少来源的推断显示为事实。
 - A-433 2026-08-21 [生效] 图谱主路径是可访问列表；图形化仅为增强，不能替代列表。默认理由: backlog 要求列表替代视图。
+- A-434 2026-08-27 [生效] S-32 准入以 Capability 现状为准：`CAP-GOV-02` 统一审批中心已由 S-24 交付；本片建立 knowledge 发布域并接入该中心，不再等待单独的 S-24 扩展片。默认理由: 与 A-318 相同，不沿用过期「规划中」字样。
+- A-435 2026-08-27 [生效] 提炼候选与发布请求由 Knowledge 拥有；不复用 Review 的 `review_memory_candidates`。Governance 只经 Knowledge 公开查询缝聚合 pending。默认理由: S-24 对 Collaboration proposal 的同构，避免跨 owner 深读表。
+- A-436 2026-08-27 [生效] 本片不启动模型提炼、sandbox 或 verified-handle 文件读。候选由 Knowledge 命令写入，署名绑定项目内真实 Agent；来源跳转复用已有 href。默认理由: 先闭环署名发布，自动提炼另开切片。
+- A-437 2026-08-27 [生效] Agent 不能自发布。Owner 批准即本片独立确认；不强制再开 ReviewAttempt。默认理由: 与 S-6 工作项复核区分，避免把本片做成第二套复核工作台。
+- A-438 2026-08-27 [生效] 记忆视图与审批中心共用 `decideCuration`，不设第二套裁决状态机。默认理由: 单一治理入口。
+- A-439 2026-08-27 [生效] UI 只挂图标轨记忆视图与既有审批中心，不装回 §9.5 复核工作台。默认理由: A-387/A-426。
+- A-440 2026-08-27 [生效] `createMemory` 保持 owner 提议；Agent 署名记忆只经候选→批准。默认理由: 禁止旁路治理。
+- A-441 2026-08-27 [生效] knowledge 发布无 TTL；supersedes 目标不再 active 则候选 `replaced` 且不可裁决。默认理由: 知识发布不是短时命令窗口。
+- A-442 2026-08-27 [生效] S-32 拆 6 张纵向票。默认理由: schema、发布写与中心聚合需要独立红绿，仍 ≤8 票。
+- A-443 2026-08-27 [生效] Governance 聚合 Knowledge 沿用 S-24 从 Collaboration sqlite adapter 导入 `listPendingProposals` 的既有模式；Knowledge 的公开查询函数 `listPendingCurationApprovals` 是聚合缝，sqlite-to-sqlite import 是本仓库已建立的模式，不经 composition 重接以避免循环依赖。默认理由: 保持跨 owner 公开查询缝，同时遵守既有 adapter 聚合方向。
+- A-444 2026-08-27 [生效] 候选来源跳转复用 MemoryEntryV6 href 规则；本片允许的 legacy 来源 href 恒为空，UI 展示身份文本（与已发布记忆卡相同），不编造任务深链。默认理由: owner_input、work_item 与 artifact_path 在 confirmer-null 路径没有可验证版本与导航目标。
+- A-445 2026-08-27 [生效] S-34 准入以 Capability 现状为准：`CAP-PWS-02`（S-22）与 `CAP-OPS-01`（S-23）已交付；`CAP-GOV-02` 统一审批中心已交付。本片先做只读规则/注入检查，不把「全局规则变更 Approval」当作未交付阻塞。默认理由: 与 A-318/A-434 相同。
+- A-446 2026-08-27 [生效] S-34 首片零 schema、只读。不引入可写项目规则表或全局规则 Approval 写路径；越权覆盖以检查发现项呈现。默认理由: 演示判据是查看范围/冲突/注入风险与拒绝原因，先闭环再变厚。
+- A-447 2026-08-27 [生效] 检查对象仅 Identity 已持久化的 Agent `system_prompt` 与 Skill `instructions`（项目成员可见配置）。本片不读工作区 AGENTS.md / 规则文件（verified-handle 文件规则留后续片）。默认理由: 先用已有事实源，避免本片展开 sandbox 读文件。
+- A-448 2026-08-27 [生效] 响应与 UI 不得回传 prompt/instructions 全文或凭据；发现项只用脱敏短摘录与稳定 code。默认理由: 046 已禁止画像含 systemPrompt 全文。
+- A-449 2026-08-27 [生效] 冻结安全边界：提示不得要求绕过独立复核、提升未配置的写文件/跑命令权限、索取或回显凭据。命中则 `severity=block` 并给出拒绝原因。默认理由: backlog「项目规则不能越权覆盖安全边界」。
+- A-450 2026-08-27 [生效] 注入检查为确定性启发式（忽略先前指令、角色劫持、隐藏覆盖），不是模型分类器。默认理由: 与 S-33 确定性打分同构，可测、无 Provider 调用。
+- A-451 2026-08-27 [生效] UI 挂 `/team` 独立 region「规则与注入检查」，不新增图标轨项。默认理由: 与健康/用量/贡献同属团队观测面。
+- A-452 2026-08-27 [生效] S-34 拆 4 张纵向票；安全边界只读检查须 hf-code-review。默认理由: 注入检查属安全边界，虽零 schema 且无跨 owner 写。
 
 
 

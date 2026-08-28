@@ -416,7 +416,8 @@ Cool AI 专为追求极致生产力、拥有全栈实现能力的独立创造者
 │     ├── 9.3.5 渐进式首次使用引导流程（Onboarding Guide Overlay）        │
 │     ├── 9.3.6 服务健康与可观察性（Service Health Region）               │
 │     ├── 9.3.7 用量与配额看板（Usage & Quota Region）                   │
-│     └── 9.3.8 平等协作贡献（Contribution Insight Region）              │
+│     ├── 9.3.8 平等协作贡献（Contribution Insight Region）              │
+│     └── 9.3.9 规则与注入检查（Rule & Injection Insight Region）        │
 ├────────────────────────────────────────────────────────────────────────┤
 │ 9.4 项目专属配置与工作区管理视图                                       │
 │     ├── 9.4.1 工作区绑定与文件树只读浏览（Workspace Tree & Preview）     │
@@ -681,6 +682,7 @@ Cool AI 专为追求极致生产力、拥有全栈实现能力的独立创造者
   4. **记忆修订模态框**：创建新版本并自动建立 Supersedes 链接，保留不可变历史链条。
   5. **知识集合目录**：创建项目内集合、把记忆移入/移出、按集合筛选；删除集合须确认，且不删除来源记忆。
   6. **关系列表**：只展示有证据的取代与集合共现关系；可定位到记忆卡片；缺少两端节点的边不出现，不得把无来源推断显示为事实。
+  7. **提炼候选**：列出项目内 Agent 署名、带来源的待发布提案；对照链头展示文本 diff；「批准发布 / 驳回」与审批中心同一裁决；无来源或未批准的内容不得出现在记忆卡片中。空态文案「暂无待发布的提炼候选」。
 
 ---
 
@@ -710,7 +712,7 @@ Cool AI 专为追求极致生产力、拥有全栈实现能力的独立创造者
 
 - **功能区域与主要组件**：
   1. **待办审批流卡片**：
-     - 审批类型徽标（执行 Command、Proposal、Staged 合入）；
+     - 审批类型徽标（执行 Command、Proposal、Staged 合入、知识发布）；
      - 倒计时器（TTL 过期自动标记失效关闭）；
      - 详细 Diff 比较器（红绿语法高亮）；
      - 风险与影响评估说明。
@@ -894,6 +896,18 @@ Cool AI 专为追求极致生产力、拥有全栈实现能力的独立创造者
   - 每名成员一张职责卡：工作项计数；复核角色另显示通过/未通过。
   - 「打开任务」深链任务治理视图；无项目时 disabled。
   - 不展示 token 或发言次数作为贡献分。
+
+---
+
+#### 9.3.9 规则与注入检查（Rule & Injection Insight Region）
+- **页面目标与 JTBD**：让 Owner 查看当前项目成员 Agent 提示与技能说明的作用域、冲突与注入风险，且不展示提示全文或凭据。
+- **主要元素与交互**：
+  - 无项目：提示打开项目后再检查。
+  - Loading：`aria-busy`「正在检查规则与注入风险…」
+  - Empty：「未发现规则冲突或注入风险。」+「重新检查」
+  - Error：`role=alert` +「重新检查」
+  - 发现项按 Agent 分组；显示 code、严重度（警告/阻断）、拒绝原因、脱敏摘录、来源名（Agent 或 Skill）；阻断 `role=alert`
+  - 不提供编辑 prompt 的 CTA；编辑仍走 §9.3.2。
 
 ---
 
@@ -1268,7 +1282,7 @@ Cool AI 专为追求极致生产力、拥有全栈实现能力的独立创造者
 | **7** | **提案与就地决策卡片** | Proposal 卡片（ID、标题、变更摘要、冻结来源链接、就地「批准/修改」按钮） | `Public Collaboration` | `CAP-COL-03`<br>**S-13 / 015**<br>(结构化块与就地决策)<br>**S-17 / 017**<br>(消息完整性) | **P2**<br>已交付核心 | `POST /api/projects/[id]/threads/[id]/runs/[id]/decisions/[id]/answer` | 严格 Schema 校验；决策生成 Operation Receipt 与 Version 租约；拒绝陈旧覆盖 |
 | **8** | **浮动 Composer & `@` 提及** | 自适应多行文本框、`@` 呼出 Agent 建议列表 (`mention-popup`)、附件按钮 | `Public Collaboration` | `CAP-COL-01`<br>**S-15 / 023** (草稿)<br>**S-16 / 024** (附件)<br>**S-4 / 004** (@编排) | **P2**<br>已交付核心 | `/api/projects/[id]/threads/[id]/draft`<br>`/api/projects/[id]/threads/[id]/attachments` | 跨页面切换与刷新草稿幂等恢复；附件带安全校验与类型限制；`@` 解析对应真实 Agent 身份 |
 | **9** | **使命与任务看板** | 从图标轨展开四列看板（待办/进行中/阻塞/完成）、任务负责人、依赖 DAG、租约倒计时 | `Mission & Work` | `CAP-MSW-01`<br>`CAP-MSW-02`<br>**S-3 / 003** (任务)<br>**S-25 / 026** (依赖全景)<br>**S-27 / 044** (租约控制) | **P4**<br>已交付核心 | `GET/POST /api/missions`<br>`GET/POST /api/work-items`<br>`POST /api/work-items/[id]/heartbeat` | 任务状态机闭环；跨时占有使用 Dispatch Lease（Token/TTL/Heartbeat 租约）；执行者不可单方面宣称完成 |
-| **10** | **共享记忆与知识沉淀** | 从图标轨展开记忆卡片（架构决策/业务事实、版本号 V1/V2、提议 Agent、冻结来源）与索引健康条 | `Memory & Knowledge`<br>`Operations Projection` | `CAP-MEM-01`<br>`CAP-OPS-03`<br>**S-6 / 006** (记忆沉淀)<br>**S-28 / 045** (记忆检索)<br>**S-29 / 054** (索引健康)<br>**S-30 / 061** (集合) | **P4 / P5**<br>已交付核心 | `GET/POST /api/projects/[id]/memories`<br>`GET /api/projects/[id]/memories/search`<br>`GET /api/projects/[id]/memory-index/health`<br>`POST /api/projects/[id]/memory-index/rebuild`<br>`GET/POST /api/projects/[id]/memory-collections` | 不可变溯源：每条记忆绑定生成它的 Session/Run/Decision ID；仅限被复核或 Owner 确认的经验沉淀；索引降级时仍直查来源；删除集合不删来源记忆 |
+| **10** | **共享记忆与知识沉淀** | 从图标轨展开记忆卡片（架构决策/业务事实、版本号 V1/V2、提议 Agent、冻结来源）、索引健康条与提炼候选（署名、来源、链头 diff、批准发布/驳回） | `Memory & Knowledge`<br>`Operations Projection`<br>`Governance` | `CAP-KNW-01`<br>`CAP-KNW-04`<br>`CAP-OPS-03`<br>**S-6 / 006** (记忆沉淀)<br>**S-28 / 045** (记忆检索)<br>**S-29 / 054** (索引健康)<br>**S-30 / 061** (集合)<br>**S-32 / 063** (署名提炼) | **P4 / P5**<br>S-32 已交付 | `GET/POST /api/projects/[id]/memories`<br>`GET /api/projects/[id]/memories/search`<br>`GET /api/projects/[id]/memory-index/health`<br>`POST /api/projects/[id]/memory-index/rebuild`<br>`GET/POST /api/projects/[id]/memory-collections`<br>`GET/POST /api/projects/[id]/memory-curation-candidates` | 不可变溯源：每条记忆绑定生成它的 Session/Run/Decision ID；Agent 署名记忆只经提炼候选 + Owner 治理确认；无来源不得发布；索引降级时仍直查来源；删除集合不删来源记忆 |
 | **11** | **统一审批中心 & Diff 查看** | Header Needs Me 角标直达、审批卡片（风险等级、TTL 倒计时、内嵌代码 Diff、批准/驳回） | `Governance`<br>`Safe Execution` | `CAP-GOV-01`<br>`CAP-EXE-01`<br>**S-24 / 029** (审批中心)<br>**S-5 / 005** (安全执行) | **P4**<br>已交付核心 | `GET /api/projects/[id]/approvals/pending`<br>`POST /api/executions/[id]/approvals/[id]`<br>`GET /api/executions/[id]/staged/[id]/diff` | 越界文件写入/危险命令必须挂起等待；沙箱内 Staged Changes 隔离生成 Unified Diff；超时自动 Fail-Closed |
 | **12** | **统一审计与时间轴** | 从图标轨展开不可变审计流（毫秒时间、治理/协作/项目/执行事件分类、日志导出） | `Operational Governance` | `CAP-OPS-01`<br>`CAP-OPS-02`<br>**S-23 审计系列**<br>(036/037/041/042)<br>**S-38 / 040** (导出) | **P4 / P5**<br>已交付核心 | `GET /api/projects/[id]/audit-events`<br>`GET /api/projects/[id]/timeline` | 同事务 Outbox 机制保障事实不丢；所有宿主路径与敏感信息严格脱敏；审计事件只读追加 |
 | **13** | **团队管理与 Provider 设置** | 从图标轨直达 `/team`，查看/配置规划、实施、复核 Agent 的模型绑定、工具权限 | `Identity & Capability` | `CAP-IDC-01`<br>**S-2 / 002**<br>(小队与模型配置) | **P1**<br>已交付核心 | `GET/POST /api/providers`<br>`POST /api/providers/verify`<br>`GET/POST /api/agents` | 凭据本地加密存储；Provider 连通性测试校验；Agent 工具权限范围（提案/受限写/复核裁决）显式声明 |

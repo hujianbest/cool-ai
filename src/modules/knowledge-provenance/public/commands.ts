@@ -2,9 +2,13 @@ import type { TransactionContext } from "@/src/application/transaction-context";
 import type {
   CommitReviewMemoryCandidateInput,
   CreateMemoryInput,
+  CurationCandidateDto,
+  CurationDecisionResultDto,
+  DecideCurationInput,
   MemoryCollectionCatalogDto,
   MemoryCollectionDto,
   MemoryEntryV6,
+  ProposeCurationInput,
   ReviewMemoryAssociation,
 } from "./dto";
 
@@ -36,6 +40,17 @@ export interface KnowledgeProvenanceCommands {
     collectionId: string,
     input: { memoryId: string },
   ) => void;
+  proposeCuration: (
+    databasePath: string,
+    projectId: string,
+    input: ProposeCurationInput,
+  ) => CurationCandidateDto;
+  decideCuration: (
+    databasePath: string,
+    projectId: string,
+    candidateId: string,
+    input: DecideCurationInput,
+  ) => CurationDecisionResultDto;
 }
 
 export interface ReviewMemoryCommitCapability {

@@ -92,6 +92,24 @@ _Avoid_：成功提示、审计事件、可变状态
 对高风险、破坏性或外部副作用动作的正式授权边界；Structured Message Block 只能关联或导航到它，不能替代它。
 _Avoid_：Inline Decision、确认按钮、建议
 
+## 知识
+
+**记忆（Memory）**：
+带来源的结构化条目（目标、决策、事实、产物、经验）；一经发布不可变，后续以 supersedes 链表达。
+_Avoid_：原始聊天、无来源模型推断
+
+**提炼候选（Curation candidate）**：
+项目内 Agent 署名、带来源、尚未成为共享记忆的提案。
+_Avoid_：Memory、复核候选、聊天草稿
+
+**知识发布（Memory publish）**：
+Owner 经治理确认把提炼候选写入共享记忆的裁决。
+_Avoid_：Agent 自发布、手工 createMemory、Inline Decision
+
+**规则洞察（Rule insight）**：
+对项目成员 Agent 提示与技能说明的只读范围、冲突与注入检查。
+_Avoid_：可写规则表、模型分类器、提示全文
+
 ## 领域不变量
 
 - Project 是数据与权限隔离边界；对话（Session，代码标识 Thread）、Run、Message、Block、Decision、Receipt 与来源必须属于同一精确 Project 关系。

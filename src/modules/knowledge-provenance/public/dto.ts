@@ -20,6 +20,67 @@ export type CreateMemoryInput = {
   supersedesId?: string;
 };
 
+export type CurationSourceInput = {
+  id: string;
+  type: MemorySourceType;
+  version?: string | null;
+};
+
+export type ProposeCurationInput = {
+  agentId: string;
+  content: string;
+  operationId: string;
+  sources: CurationSourceInput[];
+  supersedesId?: string;
+  type: MemoryType;
+};
+
+export type CurationCandidateDto = {
+  agentId: string;
+  content: string;
+  createdAt: string;
+  id: string;
+  projectId: string;
+  sources: Array<{
+    href: string | null;
+    id: string;
+    type: MemorySourceType;
+    version: string | null;
+  }>;
+  status: "pending" | "published" | "rejected" | "replaced";
+  supersedesId: string | null;
+  type: MemoryType;
+};
+
+export type CurationDiffLineDto = {
+  kind: "added" | "removed" | "unchanged";
+  text: string;
+};
+
+export type CurationCandidateListItemDto = CurationCandidateDto & {
+  agentName: string;
+  diff: CurationDiffLineDto[];
+};
+
+export type DecideCurationInput = {
+  action: "publish" | "reject";
+  operationId: string;
+};
+
+export type CurationDecisionResultDto = {
+  candidate: CurationCandidateListItemDto;
+  memory: MemoryEntryV6 | null;
+};
+
+export type CurationApprovalProjectionDto = {
+  content: string;
+  createdAt: string;
+  id: string;
+  status: "pending" | "replaced";
+  supersedesId: string | null;
+  supersedesVersion: number | null;
+};
+
 export type MemoryCollectionDto = {
   id: string;
   name: string;

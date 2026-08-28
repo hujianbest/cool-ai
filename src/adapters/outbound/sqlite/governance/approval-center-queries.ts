@@ -1,6 +1,7 @@
 import type { DatabaseSync } from "node:sqlite";
 
 import { openDatabase } from "@/src/adapters/outbound/sqlite/connection";
+import { listPendingCurationApprovals } from "@/src/adapters/outbound/sqlite/knowledge-provenance/memory-curation";
 import { listPendingProposals } from "@/src/adapters/outbound/sqlite/public-collaboration/structured-message-store";
 import {
   approvalCenterItemDtoSchema,
@@ -16,6 +17,8 @@ type ExecutionApprovalRow = {
   publicRequestJson: string;
   status: string;
 };
+
+const segmenter = new Intl.Segmenter("zh-CN", { granularity: "grapheme" });
 
 function ensureProject(database: DatabaseSync, projectId: string): void {
   if (!database.prepare("SELECT 1 FROM projects WHERE id=?").get(projectId)) {
@@ -47,6 +50,13 @@ function summarizeCommand(publicRequestJson: string): {
     ? request.expectedEffect
     : null;
   return { impactSummary, title };
+}
+
+function curationTitle(content: string): string {
+  const graphemes = Array.from(segmenter.segment(content), ({ segment }) => segment);
+  return graphemes.length <= 80
+    ? content
+    : `${graphemes.slice(0, 79).join("")}…`;
 }
 
 /**
@@ -82,7 +92,9 @@ export function listPendingApprovals(
         impactSummary: summary.impactSummary,
         kind: row.kind,
         sourceRef: {
+          candidateId: null,
           executionId: row.executionId,
+          memoryId: null,
           messageId: null,
           runId: null,
           threadId: null,
@@ -103,7 +115,9 @@ export function listPendingApprovals(
       impactSummary: proposal.body,
       kind: "proposal",
       sourceRef: {
+        candidateId: null,
         executionId: null,
+        memoryId: null,
         messageId: proposal.messageId,
         runId: proposal.runId,
         threadId: proposal.threadId,
@@ -112,7 +126,31 @@ export function listPendingApprovals(
       title: proposal.title,
     })
   );
-  return [...executionItems, ...proposalItems].sort((left, right) => {
+  const knowledgeItems = listPendingCurationApprovals(databasePath, projectId).map((candidate) =>
+    approvalCenterItemDtoSchema.parse({
+      approvalId: candidate.id,
+      createdAt: candidate.createdAt,
+      decisionHint: candidate.status === "pending" ? null : "replaced",
+      domain: "knowledge",
+      impactSummary: candidate.supersedesId === null
+        ? "新建"
+        : candidate.supersedesVersion === null
+          ? "将取代"
+          : `将取代 V${candidate.supersedesVersion}`,
+      kind: "memory_publish",
+      sourceRef: {
+        candidateId: candidate.id,
+        executionId: null,
+        memoryId: candidate.supersedesId,
+        messageId: null,
+        runId: null,
+        threadId: null,
+      },
+      status: candidate.status,
+      title: curationTitle(candidate.content),
+    })
+  );
+  return [...executionItems, ...proposalItems, ...knowledgeItems].sort((left, right) => {
     if (left.createdAt !== right.createdAt) {
       return left.createdAt < right.createdAt ? 1 : -1;
     }

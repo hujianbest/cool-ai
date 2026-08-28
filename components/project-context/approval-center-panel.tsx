@@ -22,15 +22,18 @@ import type { ApiError } from "@/src/shared/contracts";
 const DOMAIN_COPY: Record<ApprovalCenterDomain, string> = {
   execution: "执行",
   inline_decision: "内联决策",
+  knowledge: "知识",
 };
 
 const DOMAIN_VARIANT: Record<ApprovalCenterDomain, string> = {
   execution: "status-running",
   inline_decision: "status-queued",
+  knowledge: "status-queued",
 };
 
 const KIND_COPY: Record<ApprovalCenterItemKind, string> = {
   command: "命令",
+  memory_publish: "知识发布",
   proposal: "Proposal",
   staged_merge: "Staged 合入",
 };
@@ -216,6 +219,17 @@ export function ApprovalCenterPanel({ projectId }: { projectId: string }) {
             expectedVersion,
             operationId: globalThis.crypto.randomUUID(),
           },
+        );
+      } else if (item.domain === "knowledge") {
+        const candidateId = item.sourceRef.candidateId;
+        if (!candidateId || candidateId !== item.approvalId) {
+          throw new ApiDisplayError(DECIDE_INVALID);
+        }
+        await postJson(
+          `/api/projects/${encodeURIComponent(projectId)}`
+            + `/memory-curation-candidates/${encodeURIComponent(candidateId)}`
+            + `/${action === "approve" ? "publish" : "reject"}`,
+          { operationId: globalThis.crypto.randomUUID() },
         );
       } else {
         const { messageId, runId, threadId } = item.sourceRef;

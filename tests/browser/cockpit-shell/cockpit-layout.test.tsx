@@ -352,7 +352,9 @@ describe("desktop collaboration cockpit", () => {
       impactSummary: "Run the build",
       kind: "command",
       sourceRef: {
+        candidateId: null,
         executionId: "exec-1",
+        memoryId: null,
         messageId: null,
         runId: null,
         threadId: null,

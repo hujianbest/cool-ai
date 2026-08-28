@@ -116,7 +116,9 @@ describe("GET /api/projects/:projectId/approvals/pending", () => {
           impactSummary: "Ship the newer plan.",
           kind: "proposal",
           sourceRef: {
+            candidateId: null,
             executionId: null,
+            memoryId: null,
             messageId: "message-api-proposal-newer",
             runId: RUN_ID,
             threadId,
@@ -132,7 +134,9 @@ describe("GET /api/projects/:projectId/approvals/pending", () => {
           impactSummary: "Ship the older plan.",
           kind: "proposal",
           sourceRef: {
+            candidateId: null,
             executionId: null,
+            memoryId: null,
             messageId: "message-api-proposal-older",
             runId: RUN_ID,
             threadId,

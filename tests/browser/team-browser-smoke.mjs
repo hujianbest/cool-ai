@@ -207,6 +207,15 @@ try {
   await page.goto(`${baseUrl}/team`, { waitUntil: "networkidle" });
   assert.equal(await page.locator("html").getAttribute("lang"), "zh-CN");
 
+  const ruleInsightRegion = page.getByRole("region", { name: "规则与注入检查" });
+  await ruleInsightRegion.waitFor();
+  assert.equal(
+    await ruleInsightRegion
+      .getByText("打开项目后可检查该项目成员的提示与技能。")
+      .isVisible(),
+    true,
+  );
+
   const notificationRegion = page.getByRole("region", { name: "通知" });
   await notificationRegion.waitFor();
   const approvalSwitch = notificationRegion.getByRole("switch", { name: "审批通知" });

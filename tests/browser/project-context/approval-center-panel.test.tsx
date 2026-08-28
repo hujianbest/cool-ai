@@ -37,7 +37,14 @@ function item(overrides: Partial<ApprovalCenterItemDto>): ApprovalCenterItemDto 
     domain: "execution",
     impactSummary: "Run the build",
     kind: "command",
-    sourceRef: { executionId: "exec-1", messageId: null, runId: null, threadId: null },
+    sourceRef: {
+      candidateId: null,
+      executionId: "exec-1",
+      memoryId: null,
+      messageId: null,
+      runId: null,
+      threadId: null,
+    },
     status: "pending",
     title: "node -v",
     ...overrides,
@@ -52,12 +59,33 @@ function inlineItem(overrides: Partial<ApprovalCenterItemDto> = {}): ApprovalCen
     impactSummary: "Ship it.",
     kind: "proposal",
     sourceRef: {
+      candidateId: null,
       executionId: null,
+      memoryId: null,
       messageId: "message-1",
       runId: "run-1",
       threadId: "thread-1",
     },
     title: "Adopt plan",
+    ...overrides,
+  });
+}
+
+function knowledgeItem(overrides: Partial<ApprovalCenterItemDto> = {}): ApprovalCenterItemDto {
+  return item({
+    approvalId: "candidate-1",
+    domain: "knowledge",
+    impactSummary: "新建",
+    kind: "memory_publish",
+    sourceRef: {
+      candidateId: "candidate-1",
+      executionId: null,
+      memoryId: null,
+      messageId: null,
+      runId: null,
+      threadId: null,
+    },
+    title: "Remember this",
     ...overrides,
   });
 }
@@ -122,7 +150,9 @@ describe("Approval center panel", () => {
         impactSummary: null,
         kind: "staged_merge",
         sourceRef: {
+          candidateId: null,
           executionId: "exec-merge",
+          memoryId: null,
           messageId: null,
           runId: null,
           threadId: null,
@@ -316,6 +346,58 @@ describe("Approval center panel", () => {
     });
   });
 
+  it("dispatches a knowledge approval through the curation publish route", async () => {
+    const ApprovalCenterPanel = await approvalCenterPanel();
+    const calls: Array<{ body?: unknown; method: string; url: string }> = [];
+    let listCalls = 0;
+    vi.stubGlobal(
+      "fetch",
+      vi.fn((input: RequestInfo | URL, init?: RequestInit) => {
+        const url = String(input);
+        const method = init?.method ?? "GET";
+        calls.push({
+          ...(init?.body ? { body: JSON.parse(String(init.body)) } : {}),
+          method,
+          url,
+        });
+        if (method === "GET" && url === "/api/projects/project-1/approvals/pending") {
+          listCalls += 1;
+          return Promise.resolve(page(listCalls === 1 ? [knowledgeItem()] : []));
+        }
+        if (
+          method === "POST"
+          && url === "/api/projects/project-1/memory-curation-candidates/candidate-1/publish"
+        ) {
+          return Promise.resolve(Response.json({ candidate: {}, memory: {} }));
+        }
+        throw new Error(`Unexpected request: ${method} ${url}`);
+      }),
+    );
+    vi.spyOn(crypto, "randomUUID").mockReturnValue(
+      "00000000-0000-4000-8000-0000000000d3",
+    );
+    const user = userEvent.setup();
+    render(<ApprovalCenterPanel projectId="project-1" />);
+
+    const list = await screen.findByRole("list", { name: "待裁决请求" });
+    expect(within(list).getByText("知识")).toHaveClass("status-queued");
+    expect(within(list).getByText("知识发布")).toBeInTheDocument();
+    await user.click(
+      within(list).getByRole("button", { name: "批准执行 Remember this" }),
+    );
+
+    expect(await screen.findByText("没有待裁决的请求。")).toBeInTheDocument();
+    expect(calls).toEqual([
+      { method: "GET", url: "/api/projects/project-1/approvals/pending" },
+      {
+        body: { operationId: "00000000-0000-4000-8000-0000000000d3" },
+        method: "POST",
+        url: "/api/projects/project-1/memory-curation-candidates/candidate-1/publish",
+      },
+      { method: "GET", url: "/api/projects/project-1/approvals/pending" },
+    ]);
+  });
+
   it("shows a sanitized inline error and re-enables the buttons when the decision fails", async () => {
     const ApprovalCenterPanel = await approvalCenterPanel();
     let listCalls = 0;
@@ -382,7 +464,9 @@ describe("Approval center panel", () => {
             approvalId: "block-orphan",
             createdAt: "2026-08-10T04:00:00.002Z",
             sourceRef: {
+              candidateId: null,
               executionId: null,
+              memoryId: null,
               messageId: "message-orphan",
               runId: null,
               threadId: "thread-orphan",

@@ -30,6 +30,7 @@ import {
 import { NotificationSettingsRegion } from "@/components/notifications/notification-settings-region";
 import { ServiceHealthRegion } from "@/components/team-settings/service-health-region";
 import { ContributionInsightRegion } from "@/components/team-settings/contribution-insight-region";
+import { RuleInsightRegion } from "@/components/team-settings/rule-insight-region";
 import { UsageQuotaRegion } from "@/components/team-settings/usage-quota-region";
 import { SkillPanel } from "@/components/skill-panel";
 
@@ -318,6 +319,7 @@ export function TeamPanel({
         <ServiceHealthRegion returnTo={returnTo} />
         <UsageQuotaRegion returnTo={returnTo} />
         <ContributionInsightRegion returnTo={returnTo} />
+        <RuleInsightRegion returnTo={returnTo} />
         <NotificationSettingsRegion />
         <div
           aria-label="团队资源"

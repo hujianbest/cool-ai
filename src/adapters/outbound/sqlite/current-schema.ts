@@ -12,7 +12,7 @@ export type CurrentSchemaManifest = {
 
 const CURRENT_SCHEMA_DEFINITION = {
   "identity": {
-    "userVersion": 29
+    "userVersion": 30
   },
   "objects": [
     {
@@ -320,8 +320,20 @@ const CURRENT_SCHEMA_DEFINITION = {
     {
       "kind": "table",
       "name": "memory_entries",
-      "createSql": "CREATE TABLE memory_entries(\n id TEXT PRIMARY KEY, project_id TEXT NOT NULL REFERENCES projects(id) ON DELETE CASCADE,\n chain_id TEXT NOT NULL, version INTEGER NOT NULL CHECK(version>=1),\n type TEXT NOT NULL CHECK(type IN ('goal','decision','fact','artifact','experience')),\n content TEXT NOT NULL, dedupe_hash TEXT NOT NULL CHECK(length(dedupe_hash)=64 AND dedupe_hash NOT GLOB '*[^0-9a-f]*'),\n source_type TEXT NOT NULL CHECK(source_type IN ('owner_input','work_item','artifact_path','task','result','review','validation','artifact')),\n source_id TEXT NOT NULL, source_version TEXT,\n proposer_actor_type TEXT NOT NULL CHECK(proposer_actor_type IN ('owner','agent')),\n proposer_actor_id TEXT, confirming_review_attempt_id TEXT,\n persistence_actor TEXT NOT NULL CHECK(persistence_actor='platform'), supersedes_id TEXT,\n created_at TEXT NOT NULL,\n UNIQUE(project_id,id), UNIQUE(chain_id,version), UNIQUE(project_id,supersedes_id),\n FOREIGN KEY(project_id,supersedes_id) REFERENCES memory_entries(project_id,id),\n FOREIGN KEY(confirming_review_attempt_id) REFERENCES review_attempts(id),\n CHECK((proposer_actor_type='owner' AND proposer_actor_id IS NULL AND confirming_review_attempt_id IS NULL)\n    OR (proposer_actor_type='agent' AND proposer_actor_id IS NOT NULL\n      AND confirming_review_attempt_id IS NOT NULL AND source_version IS NOT NULL))\n)",
+      "createSql": "CREATE TABLE memory_entries(\n id TEXT PRIMARY KEY, project_id TEXT NOT NULL REFERENCES projects(id) ON DELETE CASCADE,\n chain_id TEXT NOT NULL, version INTEGER NOT NULL CHECK(version>=1),\n type TEXT NOT NULL CHECK(type IN ('goal','decision','fact','artifact','experience')),\n content TEXT NOT NULL, dedupe_hash TEXT NOT NULL CHECK(length(dedupe_hash)=64 AND dedupe_hash NOT GLOB '*[^0-9a-f]*'),\n source_type TEXT NOT NULL CHECK(source_type IN ('owner_input','work_item','artifact_path','task','result','review','validation','artifact')),\n source_id TEXT NOT NULL, source_version TEXT,\n proposer_actor_type TEXT NOT NULL CHECK(proposer_actor_type IN ('owner','agent')),\n proposer_actor_id TEXT, confirming_review_attempt_id TEXT,\n persistence_actor TEXT NOT NULL CHECK(persistence_actor='platform'), supersedes_id TEXT,\n created_at TEXT NOT NULL,\n UNIQUE(project_id,id), UNIQUE(chain_id,version), UNIQUE(project_id,supersedes_id),\n FOREIGN KEY(project_id,supersedes_id) REFERENCES memory_entries(project_id,id),\n FOREIGN KEY(confirming_review_attempt_id) REFERENCES review_attempts(id),\n CHECK((proposer_actor_type='owner' AND proposer_actor_id IS NULL AND confirming_review_attempt_id IS NULL)\n    OR (proposer_actor_type='agent' AND proposer_actor_id IS NOT NULL\n      AND ((confirming_review_attempt_id IS NULL AND source_type IN ('owner_input','work_item','artifact_path'))\n        OR (confirming_review_attempt_id IS NOT NULL AND source_version IS NOT NULL))))\n)",
       "dependsOn": []
+    },
+    {
+      "kind": "table",
+      "name": "memory_curation_candidates",
+      "createSql": "CREATE TABLE memory_curation_candidates(\n id TEXT PRIMARY KEY,\n project_id TEXT NOT NULL REFERENCES projects(id) ON DELETE CASCADE,\n agent_id TEXT NOT NULL REFERENCES agents(id),\n agent_name TEXT NOT NULL,\n agent_avatar_text TEXT NOT NULL,\n agent_accent_token TEXT NOT NULL,\n type TEXT NOT NULL CHECK(type IN ('goal','decision','fact','artifact','experience')),\n content TEXT NOT NULL CHECK(length(content)>=1 AND content=trim(content)),\n supersedes_id TEXT,\n status TEXT NOT NULL DEFAULT 'pending' CHECK(status IN ('pending','published','rejected','replaced')),\n published_memory_id TEXT,\n operation_id TEXT NOT NULL,\n request_hash TEXT NOT NULL CHECK(length(request_hash)=64 AND request_hash NOT GLOB '*[^0-9a-f]*'),\n decision_operation_id TEXT,\n decision_request_hash TEXT CHECK(decision_request_hash IS NULL OR (length(decision_request_hash)=64 AND decision_request_hash NOT GLOB '*[^0-9a-f]*')),\n version INTEGER NOT NULL CHECK(version>=1),\n created_at TEXT NOT NULL CHECK(created_at GLOB '????-??-??T??:??:??.???Z'),\n decided_at TEXT CHECK(decided_at IS NULL OR decided_at GLOB '????-??-??T??:??:??.???Z'),\n UNIQUE(project_id,id), UNIQUE(project_id,operation_id), UNIQUE(project_id,decision_operation_id),\n FOREIGN KEY(project_id,supersedes_id) REFERENCES memory_entries(project_id,id),\n FOREIGN KEY(project_id,published_memory_id) REFERENCES memory_entries(project_id,id),\n CHECK((status='pending' AND published_memory_id IS NULL AND decided_at IS NULL AND decision_operation_id IS NULL AND decision_request_hash IS NULL)\n    OR (status='published' AND published_memory_id IS NOT NULL AND decided_at IS NOT NULL AND decision_operation_id IS NOT NULL AND decision_request_hash IS NOT NULL)\n    OR (status IN ('rejected','replaced') AND published_memory_id IS NULL AND decided_at IS NOT NULL AND decision_operation_id IS NOT NULL AND decision_request_hash IS NOT NULL))\n)",
+      "dependsOn": ["projects", "agents", "memory_entries"]
+    },
+    {
+      "kind": "table",
+      "name": "memory_curation_sources",
+      "createSql": "CREATE TABLE memory_curation_sources(\n candidate_id TEXT NOT NULL REFERENCES memory_curation_candidates(id) ON DELETE CASCADE,\n position INTEGER NOT NULL CHECK(position>=0),\n source_type TEXT NOT NULL CHECK(source_type IN ('owner_input','work_item','artifact_path','task','result','review','validation','artifact')),\n source_id TEXT NOT NULL,\n source_version TEXT,\n PRIMARY KEY(candidate_id,position)\n)",
+      "dependsOn": ["memory_curation_candidates"]
     },
     {
       "kind": "table",
@@ -1089,6 +1101,38 @@ const CURRENT_SCHEMA_DEFINITION = {
       "createSql": "CREATE TRIGGER review_escalation_answer_no_delete BEFORE DELETE ON review_escalation_answers\nWHEN EXISTS(SELECT 1 FROM review_escalations WHERE id=OLD.escalation_id)\nBEGIN SELECT RAISE(ABORT,'IMMUTABLE_ESCALATION_ANSWER'); END",
       "dependsOn": [
         "review_escalation_answers"
+      ]
+    },
+    {
+      "kind": "trigger",
+      "name": "memory_curation_candidate_snapshot_no_update",
+      "createSql": "CREATE TRIGGER memory_curation_candidate_snapshot_no_update BEFORE UPDATE OF id,project_id,agent_id,agent_name,agent_avatar_text,agent_accent_token,type,content,supersedes_id,operation_id,request_hash,created_at ON memory_curation_candidates\nBEGIN SELECT RAISE(ABORT,'IMMUTABLE_CURATION_SNAPSHOT'); END",
+      "dependsOn": [
+        "memory_curation_candidates"
+      ]
+    },
+    {
+      "kind": "trigger",
+      "name": "memory_curation_candidate_no_delete",
+      "createSql": "CREATE TRIGGER memory_curation_candidate_no_delete BEFORE DELETE ON memory_curation_candidates\nWHEN EXISTS(SELECT 1 FROM projects WHERE id=OLD.project_id)\nBEGIN SELECT RAISE(ABORT,'IMMUTABLE_CURATION_CANDIDATE'); END",
+      "dependsOn": [
+        "memory_curation_candidates"
+      ]
+    },
+    {
+      "kind": "trigger",
+      "name": "memory_curation_source_no_update",
+      "createSql": "CREATE TRIGGER memory_curation_source_no_update BEFORE UPDATE ON memory_curation_sources\nBEGIN SELECT RAISE(ABORT,'IMMUTABLE_CURATION_SOURCE'); END",
+      "dependsOn": [
+        "memory_curation_sources"
+      ]
+    },
+    {
+      "kind": "trigger",
+      "name": "memory_curation_source_no_delete",
+      "createSql": "CREATE TRIGGER memory_curation_source_no_delete BEFORE DELETE ON memory_curation_sources\nWHEN EXISTS(SELECT 1 FROM memory_curation_candidates WHERE id=OLD.candidate_id)\nBEGIN SELECT RAISE(ABORT,'IMMUTABLE_CURATION_SOURCE'); END",
+      "dependsOn": [
+        "memory_curation_sources"
       ]
     },
     {

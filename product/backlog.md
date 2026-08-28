@@ -94,8 +94,8 @@
 | S-41 / 048 | 浏览器通知与 PWA | 已 ship |
 | S-29 / 054 | 记忆索引健康 | 已 ship |
 | S-30 / S-31 | 知识集合与图谱 | 已 ship |
-| S-32 | Agent 署名提炼 | 规划中 |
-| S-34～S-37 | 规则检查、健康、用量、贡献视图 | S-35/S-36/S-37 已 ship；S-34 规划中 |
+| S-32 | Agent 署名提炼 | 已 ship（063） |
+| S-34～S-37 | 规则检查、健康、用量、贡献视图 | 已 ship |
 | S-38 / S-40 | 脱敏导出与交付回放 | 已 ship |
 | S-45～S-49 | CLI/ACP、MCP、插件与能力市场 | 规划中（高风险） |
 | S-50 | 语音 | 规划中（高风险） |
@@ -109,7 +109,7 @@ Capability ID 是稳定治理标识；owner 是唯一逻辑子系统，不等于
 ### Identity & Capability
 
 - `CAP-IDC-01` Provider / Agent / Skill Core — owner: Identity & Capability — 状态: 已交付核心 — 证据/建立切片: S-2；`src/adapters/outbound/sqlite/identity-capability/provider-service.ts`、`src/adapters/outbound/sqlite/identity-capability/agent-service.ts`、`tests/modules/identity-capability/providers.service.test.ts`
-- `CAP-IDC-03` Capability & Rule Insight — owner: Identity & Capability — 状态: 部分可用（可解释能力画像与只读路由建议已交付；规则/注入检查未覆盖）— 证据/建立切片: S-33 [`progress.md`](../features/046-capability-insight/progress.md)；规则扩展 S-34
+- `CAP-IDC-03` Capability & Rule Insight — owner: Identity & Capability — 状态: 已交付核心（可解释能力画像、只读路由建议、规则/注入只读检查）— 证据/建立切片: S-33 [`progress.md`](../features/046-capability-insight/progress.md)；S-34 [`progress.md`](../features/064-auditable-rules-injection/progress.md)
 
 ### Project & Workspace
 
@@ -142,7 +142,7 @@ Capability ID 是稳定治理标识；owner 是唯一逻辑子系统，不等于
 - `CAP-EXE-04` Recovery Operations — owner: Safe Execution — 状态: 已交付核心 — 证据/建立切片: S-44 [`progress.md`](../features/056-recovery-operations/progress.md)
 - `CAP-EXE-05` Public Execution Events — owner: Safe Execution — 状态: 已交付核心（execution_events 15 写入点同事务白名单 outbox）— 证据/建立切片: S-23 AUD-MVP [`progress.md`](../features/028-audit-projection-mvp/progress.md)
 - `CAP-GOV-01` Safe Execution Approval & Operation — owner: Governance — 状态: 部分可用（只覆盖 Safe Execution 冻结 execution/staged-merge 路径，不是通用 Governance）— 证据/建立切片: S-5；`src/adapters/outbound/sqlite/safe-execution/execution-approval-service.ts`、`tests/modules/safe-execution/execution-approvals.test.ts`
-- `CAP-GOV-02` Unified Governance — owner: Governance — 状态: 已交付核心（执行+内联决策两域聚合/裁决分派/失效呈现）— 证据/建立切片: S-24 [`progress.md`](../features/029-unified-approval-center/progress.md)
+- `CAP-GOV-02` Unified Governance — owner: Governance — 状态: 已交付核心（执行+内联决策+knowledge 发布域聚合/裁决分派/失效呈现）— 证据/建立切片: S-24 [`progress.md`](../features/029-unified-approval-center/progress.md)；S-32 knowledge 域 [`progress.md`](../features/063-agent-signed-memory-curation/progress.md)
 - `CAP-GOV-03` Public Governance Events — owner: Governance — 状态: 已交付核心 — 证据/建立切片: S-23 AUD-GOV（分配实现片号 S-53）[`progress.md`](../features/037-governance-audit-events/progress.md)（5 类 Approval 生命周期事件同事务 outbox、审计中心可查询并规范 approval 身份导航，复用已交付 `CAP-OPS-01/02`）
 
 ### Review、Knowledge、Runtime 与 Projection
@@ -151,7 +151,7 @@ Capability ID 是稳定治理标识；owner 是唯一逻辑子系统，不等于
 - `CAP-KNW-01` Provenance Memory Core — owner: Knowledge & Provenance — 状态: 已交付核心 — 证据/建立切片: S-3、S-6；`src/adapters/outbound/sqlite/knowledge-provenance/memory-service.ts`、`tests/modules/knowledge-provenance/memory-source-navigation.test.ts`
 - `CAP-KNW-02` Knowledge Search & Index Lifecycle — owner: Knowledge & Provenance — 状态: 已交付核心（项目隔离记忆检索与证据定位）— 证据/建立切片: S-28 [`progress.md`](../features/045-knowledge-search/progress.md)；专用索引生命周期见 S-29 `CAP-OPS-03`
 - `CAP-KNW-03` Collections & Provenance Graph — owner: Knowledge & Provenance — 状态: 已交付核心 — 证据: S-30 [`progress.md`](../features/061-knowledge-collections/progress.md)；S-31 [`progress.md`](../features/062-knowledge-graph/progress.md)
-- `CAP-KNW-04` Agent Curation — owner: Knowledge & Provenance — 状态: 规划中 — 建立切片: S-32
+- `CAP-KNW-04` Agent Curation — owner: Knowledge & Provenance — 状态: 已交付核心 — 证据/建立切片: S-32 [`progress.md`](../features/063-agent-signed-memory-curation/progress.md)
 - `CAP-RUN-01` OpenAI Runtime Core — owner: Runtime — 状态: 已交付核心 — 证据/建立切片: S-2、S-4；`src/adapters/outbound/model-runtime/provider-verifier.ts`、`tests/adapters/model-runtime/provider-verifier.test.ts`
 - `CAP-RUN-02` External Runtime Host — owner: Runtime — 状态: 规划中 — 建立切片: S-45、S-46
 - `CAP-RUN-03` MCP Host — owner: Runtime — 状态: 规划中 — 建立切片: S-47
@@ -203,7 +203,7 @@ S-9～S-12 的 `依赖: S-*` 是原历史文字，只说明当时切片记录；
 
 ## 当前在途
 
-无活跃在途切片。UCD 主路径不伪造 DTO 的缺口已收口；未交付规划切片见各主题簇。
+- （无。非高风险规划切片已穷尽；不进入 S-45 族 / S-50。）
 
 - [ ] S-59 图标优先安静驾驶舱 — **superseded（不 ship）**；交互方向由 S-60 / D-49 取代。历史票据: [`features/049-icon-first-cockpit/tickets.md`](../features/049-icon-first-cockpit/tickets.md)
 
@@ -265,8 +265,8 @@ S-9～S-12 的 `依赖: S-*` 是原历史文字，只说明当时切片记录；
   - 准入: 已交付前置: `CAP-KNW-01`、`CAP-KNW-02` 检索（S-28）、`CAP-GOV-02`；本片建立: `CAP-KNW-03` 的集合、移动/移除和来源保留（已交付）。
 - [x] S-31 来源可追溯知识图谱（CI-5.5） — 主子系统: Knowledge & Provenance；主 Capability: `CAP-KNW-03`；票据: [`features/062-knowledge-graph/tickets.md`](../features/062-knowledge-graph/tickets.md)；Ship: 2026-08-21（零 schema GET `/knowledge-graph`、记忆「关系列表」、supersedes/集合共现；T-01～T-05；全量仅余 A-387）；演示判据: owner 能从项目知识图谱查看有证据的关系、定位来源并使用可访问的列表替代视图，缺少来源的推断不会显示为事实；约束: 工作区=项目隔离，verified-handle=文件证据跳转必需，sandbox=不适用，凭据=关系数据脱敏，审批=不适用，独立复核=交付必需，审计=边与来源不可分离；不复制 Clowder 品牌、源码或资产
   - 准入: 已交付前置: `CAP-KNW-01`、`CAP-KNW-02`（S-28）、`CAP-KNW-03` 集合（S-30）；本片建立: `CAP-KNW-03` 的证据边、图查询和可访问列表替代（已交付）。
-- [ ] S-32 Agent 署名的记忆提炼与发布（CI-5.6） — 主子系统: Knowledge & Provenance；主 Capability: `CAP-KNW-04`；票据: 未创建；演示判据: 真实 Agent 能基于精确来源提出提炼/反思结果，owner 能看到署名、差异和 supersedes 链，未经来源校验的内容不能发布为共享记忆；约束: 工作区=项目隔离，verified-handle=文件证据必需，sandbox=提炼工具隔离，凭据=输入输出脱敏，审批=发布按现有治理确认，独立复核=发布前必需，审计=模型、来源和版本可追溯；不复制 Clowder 品牌、源码或资产
-  - 准入: 已交付前置: `CAP-KNW-01`、`CAP-RUN-01`、`CAP-REV-01`、`CAP-KNW-02`（S-28）、`CAP-OPS-03` 索引健康（S-29）；阻塞: `CAP-GOV-02` 的非执行域发布治理（S-24）规划中；本片建立: `CAP-KNW-04` 的 Agent 署名候选、差异、复核发布和 supersedes（规划中）。
+- [x] S-32 Agent 署名的记忆提炼与发布（CI-5.6） — 主子系统: Knowledge & Provenance；主 Capability: `CAP-KNW-04`；票据: [`features/063-agent-signed-memory-curation/tickets.md`](../features/063-agent-signed-memory-curation/tickets.md)；Ship: 2026-08-27（schema identity 30、提炼候选/发布驳回、审批中心 knowledge 域、记忆视图署名与 diff；T-01～T-06；全量仅余 A-387）；演示判据: 真实 Agent 能基于精确来源提出提炼/反思结果，owner 能看到署名、差异和 supersedes 链，未经来源校验的内容不能发布为共享记忆；约束: 工作区=项目隔离，verified-handle=文件证据必需（本片跳转复用已有 href，A-436），sandbox=提炼工具隔离（本片不启动工具），凭据=输入输出脱敏，审批=发布按现有治理确认，独立复核=发布前必需（本片 Owner 裁决，A-437），审计=模型、来源和版本可追溯；不复制 Clowder 品牌、源码或资产
+  - 准入: 已交付前置: `CAP-KNW-01`、`CAP-RUN-01`、`CAP-REV-01`、`CAP-KNW-02`（S-28）、`CAP-OPS-03` 索引健康（S-29）；已交付阻塞: `CAP-GOV-02` 统一审批中心（S-24）；本片建立: `CAP-KNW-04` 的 Agent 署名候选、差异、治理发布和 supersedes，以及 `CAP-GOV-02` 的 knowledge 发布域聚合（已交付）。
 
 ## 主题簇五：Agent / 运维洞察
 
@@ -274,8 +274,8 @@ S-9～S-12 的 `依赖: S-*` 是原历史文字，只说明当时切片记录；
 
 - [x] S-33 可解释 Agent 能力画像与路由建议（CI-6.3） — 主子系统: Identity & Capability；主 Capability: `CAP-IDC-03`；票据: [`features/046-capability-insight/tickets.md`](../features/046-capability-insight/tickets.md)；Ship: 2026-08-15（零 schema：GET `/capability-insight` + 看板画像/建议；接受只预填负责人；`smoke:context` 4 断言；hf-code-review 豁免）；演示判据: owner 能查看基于实际配置的能力画像与路由理由，接受或忽略建议；推断绝不自动改写 Agent 角色、权限或 owner 配置；约束: 工作区=项目上下文隔离，verified-handle=不适用，sandbox=工具建议不授予权限，凭据=画像不含密钥，审批=权限变化仍需确认，独立复核=交付必需（轻量级豁免记录于 progress），审计=建议依据为配置证据标签；不复制 Clowder 品牌、源码或资产
   - 准入: 已交付前置: `CAP-IDC-01`、`CAP-RUN-01`、`CAP-REV-01`、`CAP-OPS-01`（A-322）；本片建立: `CAP-IDC-03` 的可解释能力画像与只读路由建议（已交付）。
-- [ ] S-34 可审计系统规则与提示注入检查（CI-6.5） — 主子系统: Identity & Capability；主 Capability: `CAP-IDC-03`；票据: 未创建；演示判据: owner 能查看规则生效范围、冲突和注入风险预览，项目规则不能越权覆盖安全边界且拒绝原因清晰；约束: 工作区=规则按项目隔离，verified-handle=读取规则文件必需，sandbox=规则不扩权，凭据=检查结果脱敏，审批=全局规则变更需确认，独立复核=交付必需，审计=规则版本与来源可追溯；不复制 Clowder 品牌、源码或资产
-  - 准入: 已交付前置: `CAP-IDC-01`、`CAP-PWS-01`（已交付）；阻塞: `CAP-PWS-02`（S-22）、`CAP-OPS-01`（S-23 拆分片）与 `CAP-GOV-02` 的全局规则变更治理（S-24）规划中；本片建立: `CAP-IDC-03` 的规则作用域、冲突和注入风险检查（规划中）。
+- [x] S-34 可审计系统规则与提示注入检查（CI-6.5） — 主子系统: Identity & Capability；主 Capability: `CAP-IDC-03`；票据: [`features/064-auditable-rules-injection/tickets.md`](../features/064-auditable-rules-injection/tickets.md)；Ship: 2026-08-27（零 schema GET `/rule-insight`、`/team` 规则与注入检查；T-01～T-04；全量仅余 A-387）；演示判据: owner 能查看规则生效范围、冲突和注入风险预览，项目规则不能越权覆盖安全边界且拒绝原因清晰；约束: 工作区=规则按项目隔离，verified-handle=读取规则文件必需（本片不读工作区文件，A-447），sandbox=规则不扩权，凭据=检查结果脱敏，审批=全局规则变更需确认（本片只读，A-446），独立复核=交付必需，审计=规则版本与来源可追溯；不复制 Clowder 品牌、源码或资产
+  - 准入: 已交付前置: `CAP-IDC-01`、`CAP-PWS-01`、`CAP-PWS-02`（S-22）、`CAP-OPS-01`（S-23）、`CAP-GOV-02` 中心（S-24）、`CAP-IDC-03` 画像（S-33）；本片建立: `CAP-IDC-03` 的规则作用域、冲突和注入风险只读检查（已交付，A-445～A-452）。
 - [x] S-35 服务健康与可观察性中心（CI-6.6） — 主子系统: Operations Projection；主 Capability: `CAP-OPS-03`；票据: [`features/055-service-health-center/tickets.md`](../features/055-service-health-center/tickets.md)；Ship: 2026-08-21（零 schema GET `/api/health` + `/team` 四卡深链；T-01～T-05；`tsc`/`build` 绿；`smoke:settings` 20 steps；全量 2832/2833，A-387）；演示判据: owner 能在统一视图看到应用、Provider、索引和执行服务的真实健康、失败原因与恢复入口，未知状态不伪造成成功；约束: 工作区=项目指标隔离，verified-handle=工作区检查时必需，sandbox=执行指标不开放控制，凭据=日志脱敏，审批=恢复动作按风险确认，独立复核=交付必需，审计=指标口径和来源明确；不复制 Clowder 品牌、源码或资产
   - 准入: 已交付前置: `CAP-RUN-01`、`CAP-EXE-01`、`CAP-KNW-01`、`CAP-OPS-01`、`CAP-OPS-03` 索引健康（S-29）；本片建立: `CAP-OPS-03` 的应用、Provider、索引和执行健康投影（已交付）。
 - [x] S-36 用量与配额看板（CI-6.11） — 主子系统: Operations Projection；主 Capability: `CAP-OPS-03`；票据: [`features/057-usage-quota-board/tickets.md`](../features/057-usage-quota-board/tickets.md)；Ship: 2026-08-21（零 schema GET `/api/usage` + `/team` 用量看板；T-01～T-05；`tsc`/`build` 绿；`smoke:settings` 21 steps；全量仅余 A-387）；演示判据: owner 能按项目、Run 和 Provider 查看基础用量、预算与轮次边界，估算值显式标注且不会被误解为账单；约束: 工作区=项目隔离，verified-handle=不适用，sandbox=不适用，凭据=账户信息脱敏，审批=预算变更需确认，独立复核=交付必需，审计=计量来源可追溯；不复制 Clowder 品牌、源码或资产

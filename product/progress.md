@@ -4,8 +4,8 @@
 - 当前阶段: ready
 - 执行模式: auto
 - 已加载扩展: 无
-- 当前主切片: 无（S-32 阻塞）
-- 下一步: S-32 Agent 署名提炼阻塞于 `CAP-GOV-02` 非执行域发布治理；不进入 S-45 族。
+- 当前主切片: 无
+- 下一步: 规划中仅余 S-45 族与 S-50（高风险）；不进入。
 
 ## 当前快照（2026-08-18）
 
@@ -16,7 +16,7 @@
 | P1 阶段 1 驾驶舱 | 050/S-60 已 ship：原生选夹、三名自带 Agent、聊天优先、GET `/api/home` 只读 |
 | P2–P5 既有切片 | 计划中列出的会话/整理/执行/知识核心能力已 ship；规划中加厚项见特性分解清单 |
 | 环境/IA 残留 | `review-browser-full-chain` 因 UCD §9.5 未挂载（A-387）；`smoke:onboarding` 引导按钮被时间线条目挡住；`smoke:context` 桌面主路径等待已卸下的工作区绑定条（A-401）；`smoke:execution` P1 IA + 既有 color-contrast（A-412） |
-| 未交付高风险切片 | S-42、S-43、S-35、S-44、S-36、S-37、S-38、S-40、S-30、S-31 已 ship；下一非高风险为 S-32（阻塞于 S-24）；S-34 仍规划中；高风险为 S-45 族 |
+| 未交付高风险切片 | S-42、S-43、S-35、S-44、S-36、S-37、S-38、S-40、S-30、S-31、S-32、S-34 已 ship；高风险为 S-45 族与 S-50 |
 
 ## 状态记录
 
@@ -101,4 +101,13 @@
 - 2026-08-21 060/S-40 完成 implement + ship：零 schema GET `/api/projects/:id/replay`；时间轴「打开回放」；来源 href 复用审计面板。`tsc`/`build` 绿；全量 328/329、2878/2879（A-387）。演示 auto-approved。下一片 S-30 知识集合。
 - 2026-08-21 061/S-30 完成 grill-with-docs：集合目录、schema 29、删除保留来源（A-429～A-431）。进入 implement T-01。
 - 2026-08-21 061/S-30 完成 implement + ship：schema 29 集合表；记忆视图目录；删除不删来源。`tsc`/`build` 绿；全量 328/330、2881/2883（A-387；composer-draft 偶发已复跑通过）。演示 auto-approved。下一片 S-31 知识图谱。
-- 2026-08-21 062/S-31 完成 implement + ship：零 schema GET `/api/projects/:id/knowledge-graph`；记忆「关系列表」；supersedes 与集合共现；缺节点边不渲染。`tsc`/`build` 绿；全量 331/332、2887/2888（A-387）。演示 auto-approved。`CAP-KNW-03` 已交付核心。下一片 S-32 阻塞于 S-24 非执行域发布治理。
+- 2026-08-21 062/S-31 完成 implement + ship：零 schema GET `/api/projects/:id/knowledge-graph`；记忆「关系列表」；supersedes 与集合共现；缺节点边不渲染。`tsc`/`build` 绿；全量 331/332、2887/2888（A-387）。演示 auto-approved。`CAP-KNW-03` 已交付核心。
+- 2026-08-27 063/S-32 立项并进入 implement：按 A-318 同口径重评准入——`CAP-GOV-02` 中心已交付，本片建立 knowledge 发布域（A-434～A-442）。grill/spec/architecture/tickets 同批落盘；spec/architecture 评审豁免。进入 T-01。
+- 2026-08-27 063/S-32 T-01 完成：schema identity 30 + `proposeCuration`，成员、来源、supersedes 与 project-scoped operation 均失败关闭/幂等；聚焦、知识/identity 回归与 tsc 全绿。停在 T-02 前沿。
+- 2026-08-27 063/S-32 T-02 完成：`listCurationCandidates` 提供项目隔离、Agent 署名、有序来源与链头逐行 diff；聚焦 8/8、Knowledge 66/66 与 tsc 全绿。停在 T-03 前沿。
+- 2026-08-27 063/S-32 T-03 完成：`decideCuration` 发布/驳回、Agent nullable-confirmer MemoryEntryV6 与严格 no-store HTTP 落地；聚焦 26/26、Knowledge+Review 86/86 与 tsc 全绿。停在 T-04 前沿。
+- 2026-08-27 063/S-32 T-04 完成：Knowledge pending/replaced 经公开缝接入统一审批中心，knowledge/memory_publish 契约、跨域排序与 publish/reject 分派落地；指定聚焦 45/45、cockpit fixture 13/13、tsc 与真实 Chrome 核对全绿。停在 T-05 前沿。
+- 2026-08-27 063/S-32 T-05 完成：记忆视图「提炼候选」落地 Agent/来源/diff、全态与 publish/reject，发布后同步刷新并聚焦新记忆；`memory-panel` 13/13、相关 review UI 5/5、tsc/lint 与真实 Chrome 核对全绿。停在 T-06 前沿，尚未运行全量收口。
+- 2026-08-27 063/S-32 完成 implement + ship：schema identity 30；提炼候选/发布/驳回；审批中心 knowledge 域；记忆视图署名与 diff。独立 hf-code-review 第 6 轮通过；`tsc`/`build` 绿；全量 334/2921（A-387）。演示 auto-approved。`CAP-KNW-04` 已交付核心。下一片 S-34。
+- 2026-08-27 064/S-34 立项并进入 implement：按 A-318 口径重评准入（A-445～A-452）。grill/spec/architecture/tickets 同批落盘；spec/architecture 评审豁免。进入 T-01。
+- 2026-08-27 064/S-34 完成 implement + ship：零 schema GET `/rule-insight` + `/team`「规则与注入检查」；独立 hf-code-review 通过；全量仅余 A-387。演示 auto-approved。`CAP-IDC-03` 规则/注入只读核心已交付。不进入 S-45 族。

@@ -2990,6 +2990,63 @@ button.source-tag:hover:not(:disabled) {
   margin: var(--space-1) 0 0;
 }
 
+.memory-curation-skeleton {
+  min-height: var(--control-min);
+  border: var(--border-width) solid var(--border-subtle);
+  border-radius: var(--rounded-md);
+  padding: var(--space-3);
+  background: var(--surface-muted);
+}
+
+.memory-curation-list {
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.memory-curation-item {
+  border-top: var(--border-width) solid var(--border-subtle);
+  padding-top: var(--space-3);
+}
+
+.memory-curation-diff {
+  max-width: var(--full-width);
+  overflow: auto;
+  border-radius: var(--rounded-sm);
+  padding: var(--space-3);
+  background: var(--surface-muted);
+  font-family: var(--font-mono);
+  white-space: pre-wrap;
+  overflow-wrap: anywhere;
+}
+
+.memory-curation-diff span {
+  display: block;
+}
+
+.memory-curation-diff-added {
+  color: var(--status-success-color);
+}
+
+.memory-curation-diff-removed {
+  color: var(--status-danger-color);
+}
+
+.memory-curation-diff-unchanged {
+  color: var(--text-secondary);
+}
+
+.memory-curation-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--space-2);
+}
+
+.memory-curation-action {
+  min-height: var(--control-min);
+  min-width: var(--control-min);
+}
+
 .service-health-grid {
   display: flex;
   flex-wrap: wrap;

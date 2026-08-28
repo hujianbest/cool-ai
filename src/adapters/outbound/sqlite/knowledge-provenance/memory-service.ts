@@ -255,7 +255,7 @@ function ensureProject(database: DatabaseSync, projectId: string): void {
   }
 }
 
-function validateSource(
+export function validateMemorySource(
   database: DatabaseSync,
   projectId: string,
   sourceType: SourceType,
@@ -296,23 +296,39 @@ function toMemory(database: DatabaseSync, row: MemoryRow): MemoryResult {
       || !row.proposerAgentName
       || !row.proposerAvatarText
       || !row.accentToken
-      || !row.confirmingReviewAttemptId
-      || !row.decisionId
-      || row.confirmerChoice !== "pass"
-      || row.confirmerReviewerAgentId !== row.proposerActorId
-      || !row.sourceVersion
     ) invalidSource();
-    try {
-      source = resolveMemorySource(database, {
-        confirmingReviewAttemptId: row.confirmingReviewAttemptId,
+    if (row.confirmingReviewAttemptId === null) {
+      if (
+        row.decisionId !== null
+        || row.confirmerChoice !== null
+        || row.confirmerReviewerAgentId !== null
+        || !sourceTypes.includes(row.sourceType as SourceType)
+      ) invalidSource();
+      source = {
+        href: null,
         id: row.sourceId,
-        projectId: row.projectId,
-        type: row.sourceType as "task" | "result" | "review" | "validation" | "artifact",
+        type: row.sourceType,
         version: row.sourceVersion,
-      });
-    } catch (error) {
-      if (error instanceof MemorySourceResolutionError) invalidSource();
-      throw error;
+      };
+    } else {
+      if (
+        !row.sourceVersion
+        || !row.decisionId
+        || row.confirmerChoice !== "pass"
+        || row.confirmerReviewerAgentId !== row.proposerActorId
+      ) invalidSource();
+      try {
+        source = resolveMemorySource(database, {
+          confirmingReviewAttemptId: row.confirmingReviewAttemptId,
+          id: row.sourceId,
+          projectId: row.projectId,
+          type: row.sourceType as "task" | "result" | "review" | "validation" | "artifact",
+          version: row.sourceVersion,
+        });
+      } catch (error) {
+        if (error instanceof MemorySourceResolutionError) invalidSource();
+        throw error;
+      }
     }
   } else {
     invalidSource();
@@ -328,10 +344,12 @@ function toMemory(database: DatabaseSync, row: MemoryRow): MemoryResult {
           proposerType: "owner",
         }
       : {
-          confirmer: {
-            decisionId: row.decisionId,
-            reviewAttemptId: row.confirmingReviewAttemptId,
-          },
+          confirmer: row.confirmingReviewAttemptId === null
+            ? null
+            : {
+                decisionId: row.decisionId,
+                reviewAttemptId: row.confirmingReviewAttemptId,
+              },
           persistedBy: row.persistenceActor,
           proposerAgent: {
             accentToken: row.accentToken,
@@ -361,6 +379,19 @@ function toMemory(database: DatabaseSync, row: MemoryRow): MemoryResult {
   return memory as MemoryResult;
 }
 
+const MEMORY_PROPOSER_ATTRIBUTION_SELECT = `
+  COALESCE(curation.agent_name, proposer.name) AS proposerAgentName,
+  COALESCE(curation.agent_avatar_text, proposer.avatar_text) AS proposerAvatarText,
+  COALESCE(curation.agent_accent_token, proposer.accent_token) AS accentToken
+`;
+
+const MEMORY_PROPOSER_ATTRIBUTION_JOINS = `
+  LEFT JOIN agents proposer ON proposer.id=entry.proposer_actor_id
+  LEFT JOIN memory_curation_candidates curation
+    ON curation.project_id=entry.project_id
+   AND curation.published_memory_id=entry.id
+`;
+
 function memoryById(database: DatabaseSync, memoryId: string): MemoryResult | undefined {
   const row = database
     .prepare(
@@ -376,9 +407,7 @@ function memoryById(database: DatabaseSync, memoryId: string): MemoryResult | un
          entry.source_version AS sourceVersion,
          entry.proposer_actor_type AS proposerActorType,
          entry.proposer_actor_id AS proposerActorId,
-         proposer.name AS proposerAgentName,
-         proposer.avatar_text AS proposerAvatarText,
-         proposer.accent_token AS accentToken,
+         ${MEMORY_PROPOSER_ATTRIBUTION_SELECT},
          entry.confirming_review_attempt_id AS confirmingReviewAttemptId,
          decision.id AS decisionId,
          decision.choice AS confirmerChoice,
@@ -390,7 +419,7 @@ function memoryById(database: DatabaseSync, memoryId: string): MemoryResult | un
            SELECT 1 FROM memory_entries child WHERE child.supersedes_id = entry.id
          ) THEN 0 ELSE 1 END AS active
        FROM memory_entries entry
-       LEFT JOIN agents proposer ON proposer.id=entry.proposer_actor_id
+       ${MEMORY_PROPOSER_ATTRIBUTION_JOINS}
        LEFT JOIN review_decisions decision
          ON decision.attempt_id=entry.confirming_review_attempt_id
        WHERE entry.id = ?`,
@@ -425,7 +454,7 @@ export function createMemory(
   try {
     return transaction(database, () => {
       ensureProject(database, projectId);
-      const sourceRef = validateSource(
+      const sourceRef = validateMemorySource(
         database,
         projectId,
         parsed.sourceType,
@@ -527,9 +556,7 @@ export function listMemoriesInDatabase(
            entry.source_version AS sourceVersion,
            entry.proposer_actor_type AS proposerActorType,
            entry.proposer_actor_id AS proposerActorId,
-           proposer.name AS proposerAgentName,
-           proposer.avatar_text AS proposerAvatarText,
-           proposer.accent_token AS accentToken,
+           ${MEMORY_PROPOSER_ATTRIBUTION_SELECT},
            entry.confirming_review_attempt_id AS confirmingReviewAttemptId,
            decision.id AS decisionId,
            decision.choice AS confirmerChoice,
@@ -541,7 +568,7 @@ export function listMemoriesInDatabase(
              SELECT 1 FROM memory_entries child WHERE child.supersedes_id = entry.id
            ) THEN 0 ELSE 1 END AS active
          FROM memory_entries entry
-         LEFT JOIN agents proposer ON proposer.id=entry.proposer_actor_id
+         ${MEMORY_PROPOSER_ATTRIBUTION_JOINS}
          LEFT JOIN review_decisions decision
            ON decision.attempt_id=entry.confirming_review_attempt_id
          WHERE entry.project_id = ?
@@ -567,9 +594,7 @@ const MEMORY_SEARCH_SELECT = `
     entry.source_version AS sourceVersion,
     entry.proposer_actor_type AS proposerActorType,
     entry.proposer_actor_id AS proposerActorId,
-    proposer.name AS proposerAgentName,
-    proposer.avatar_text AS proposerAvatarText,
-    proposer.accent_token AS accentToken,
+    ${MEMORY_PROPOSER_ATTRIBUTION_SELECT},
     entry.confirming_review_attempt_id AS confirmingReviewAttemptId,
     decision.id AS decisionId,
     decision.choice AS confirmerChoice,
@@ -581,7 +606,7 @@ const MEMORY_SEARCH_SELECT = `
       SELECT 1 FROM memory_entries child WHERE child.supersedes_id = entry.id
     ) THEN 0 ELSE 1 END AS active
   FROM memory_entries entry
-  LEFT JOIN agents proposer ON proposer.id=entry.proposer_actor_id
+  ${MEMORY_PROPOSER_ATTRIBUTION_JOINS}
   LEFT JOIN review_decisions decision
     ON decision.attempt_id=entry.confirming_review_attempt_id
 `;
