@@ -102,7 +102,7 @@ export function ReviewSlice({ load, start, workItemId }: ReviewSliceProps) {
   }, [loadWorkspace]);
 
   async function startSelectedReview() {
-    if (!workspace || !selectedReviewerId) return;
+    if (!workspace || !workspace.result || !selectedReviewerId) return;
     setSubmitting(true);
     setError(null);
     try {
@@ -145,6 +145,7 @@ export function ReviewSlice({ load, start, workItemId }: ReviewSliceProps) {
     );
   }
   if (!workspace) return <p>任务仍在执行或尚无已合入结果。</p>;
+  if (workspace.result == null) return null;
 
   const attempt = workspace.currentAttempt;
   const disabledReason = selectedReviewerId

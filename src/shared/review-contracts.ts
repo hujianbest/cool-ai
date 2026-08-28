@@ -526,7 +526,7 @@ export type ReviewWorkspaceDto = {
     id: string;
     source: { contextHash: string; projectId: string; runId: string; threadId: string };
     version: number;
-  };
+  } | null;
   workItem: { boardStatus?: string; id: string; title: string; version?: number };
 };
 

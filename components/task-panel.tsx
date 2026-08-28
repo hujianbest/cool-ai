@@ -148,6 +148,10 @@ export function TaskPanel({
   const [homeError, setHomeError] = useState<string | null>(null);
   const [homeLoading, setHomeLoading] = useState(false);
   const [homeReloadKey, setHomeReloadKey] = useState(0);
+  const [reviewWorkspace, setReviewWorkspace] = useState<{
+    id: string;
+    title: string;
+  } | null>(null);
   const [executionSource, setExecutionSource] = useState<{
     projectId: string;
     runId: string;
@@ -186,6 +190,12 @@ export function TaskPanel({
     window.addEventListener("popstate", updateLocation);
     return () => window.removeEventListener("popstate", updateLocation);
   }, []);
+
+  useEffect(() => {
+    if (governance?.view !== "mission") {
+      setReviewWorkspace(null);
+    }
+  }, [governance?.view]);
 
   useEffect(() => {
     if (!collaborationProjectId || typeof window === "undefined") {
@@ -473,15 +483,20 @@ export function TaskPanel({
                 返回对话
               </button>
               <h2 className="gov-view-title">
-                {currentProjectName
-                  ? `${GOVERNANCE_TITLES[governance.view]} · ${currentProjectName}`
-                  : GOVERNANCE_TITLES[governance.view]}
+                {governance.view === "mission" && reviewWorkspace
+                  ? `独立复核工作台 · ${reviewWorkspace.title}`
+                  : currentProjectName
+                    ? `${GOVERNANCE_TITLES[governance.view]} · ${currentProjectName}`
+                    : GOVERNANCE_TITLES[governance.view]}
               </h2>
             </div>
             {governance.projectId ? (
               governance.view === "mission" ? (
                 <>
-                  <MissionBoard projectId={governance.projectId} />
+                  <MissionBoard
+                    onReviewWorkspaceChange={setReviewWorkspace}
+                    projectId={governance.projectId}
+                  />
                   <ExecutionPanel projectId={governance.projectId} />
                 </>
               ) : governance.view === "memory" ? (

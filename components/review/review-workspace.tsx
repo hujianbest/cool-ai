@@ -51,6 +51,7 @@ export function ReviewWorkspace({
   const [error, setError] = useState<string | null>(null);
   const [success, setSuccess] = useState<string | null>(null);
   const decisionHeading = useRef<HTMLElement | null>(null);
+  const refreshReviewRef = useRef<HTMLButtonElement>(null);
 
   const loadWorkspace = useCallback(async () => {
     setLoading(true);
@@ -67,6 +68,12 @@ export function ReviewWorkspace({
   useEffect(() => {
     void loadWorkspace();
   }, [loadWorkspace]);
+
+  useEffect(() => {
+    if (workspace && workspace.result == null) {
+      refreshReviewRef.current?.focus();
+    }
+  }, [workspace]);
 
   async function localFinalize(attemptId: string, checkpointHash: string) {
     if (!onLocalFinalize) {
@@ -124,6 +131,21 @@ export function ReviewWorkspace({
   }
 
   if (!workspace) return <p>还没有复核 attempt。</p>;
+  if (workspace.result == null) {
+    return (
+      <section aria-label="复核工作区" className="stack">
+        <p>当前工作项无复核材料</p>
+        <button
+          onClick={() => void loadWorkspace()}
+          ref={refreshReviewRef}
+          style={{ minHeight: "var(--control-min)" }}
+          type="button"
+        >
+          刷新复核
+        </button>
+      </section>
+    );
+  }
   const currentAttempt = workspace.currentAttempt;
   const disabledReason = operationDisabledReason
     ?? (loading ? "正在刷新复核工作区" : null)

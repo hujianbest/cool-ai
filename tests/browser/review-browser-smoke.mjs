@@ -627,22 +627,17 @@ async function approveAndMerge(page, executionId, staged) {
   return merged.body.result;
 }
 
+async function openTaskGovernance(page) {
+  await page.getByRole("navigation", { name: "主导航" })
+    .getByRole("button", { name: "任务", exact: true })
+    .click();
+}
+
 async function openRunTab(page) {
-  const openEditor = page.getByRole("button", {
-    exact: true,
-    name: "打开编辑",
-  });
-  if (await openEditor.isVisible().catch(() => false)) {
-    await openEditor.focus();
-    await page.keyboard.press("Enter");
-    await page.getByRole("dialog", { name: "任务编辑" }).waitFor();
-  }
   const heading = page.getByRole("heading", { exact: true, name: "运行详情" }).first();
   if (await heading.isVisible().catch(() => false)) return;
-  const tab = page.getByRole("tab", { exact: true, name: "运行详情" }).first();
   try {
-    await tab.focus();
-    await page.keyboard.press("Enter");
+    await openTaskGovernance(page);
     await heading.waitFor();
   } catch (error) {
     throw new Error(
@@ -654,10 +649,14 @@ async function openRunTab(page) {
 
 async function openReviewThroughKeyboard(page) {
   await page.goto(`${baseUrl}${projectPath}`, { waitUntil: "networkidle" });
-  await openRunTab(page);
-  const openReview = page.getByRole("button", { name: "打开复核闭环" }).last();
-  await openReview.focus();
-  await page.keyboard.press("Enter");
+  await openTaskGovernance(page);
+  const openReview = page.getByRole("button", {
+    name: "打开复核 Implement reviewed change",
+  });
+  await openReview.click();
+  await page.getByRole("heading", {
+    name: "独立复核工作台 · Implement reviewed change",
+  }).first().waitFor();
 }
 
 async function startReviewThroughKeyboard(page, workItemId, expectedChoice) {

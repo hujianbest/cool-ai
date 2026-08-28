@@ -15,7 +15,10 @@ import { IconButton } from "@/components/ui/icon-button";
 import type { ApiError } from "@/src/shared/contracts";
 import { MissionDependencyInsightPanel } from "@/components/project-context/mission-dependency-insight";
 import { SopStatePanel } from "@/components/project-context/sop-state-panel";
-import { MissionDeliverySurface } from "@/components/review/review-product-surface";
+import {
+  MissionDeliverySurface,
+  ReviewProductSurface,
+} from "@/components/review/review-product-surface";
 import {
   capabilityInsightSchema,
   type CapabilityInsight,
@@ -203,9 +206,13 @@ function parseMissionState(value: unknown, projectId: string): MissionState | nu
 
 export function MissionBoard({
   onGoalFactChanged,
+  onReviewWorkspaceChange,
   projectId,
 }: {
   onGoalFactChanged?: () => void;
+  onReviewWorkspaceChange?: (
+    workItem: { id: string; title: string } | null,
+  ) => void;
   projectId: string;
 }) {
   const errorId = `mission-board-error-${projectId}`;
@@ -246,6 +253,22 @@ export function MissionBoard({
   const [ignoredSuggestions, setIgnoredSuggestions] = useState<Set<string>>(
     () => new Set(),
   );
+  const [reviewWorkItemId, setReviewWorkItemId] = useState<string | null>(null);
+  const reviewWorkItem =
+    reviewWorkItemId === null
+      ? null
+      : workItems.find((item) => item.id === reviewWorkItemId) ?? null;
+
+  useEffect(() => {
+    if (!reviewWorkItem) {
+      onReviewWorkspaceChange?.(null);
+      return;
+    }
+    onReviewWorkspaceChange?.({
+      id: reviewWorkItem.id,
+      title: reviewWorkItem.title,
+    });
+  }, [onReviewWorkspaceChange, reviewWorkItem]);
 
   useEffect(() => {
     let active = true;
@@ -1219,6 +1242,13 @@ export function MissionBoard({
                             >
                               {`编辑任务 ${item.title}`}
                             </button>
+                            <button
+                              onClick={() => setReviewWorkItemId(item.id)}
+                              style={{ minHeight: "var(--control-min)" }}
+                              type="button"
+                            >
+                              {`打开复核 ${item.title}`}
+                            </button>
                             <div
                               aria-label={`${item.title} 状态操作`}
                               className="form-row"
@@ -1263,6 +1293,18 @@ export function MissionBoard({
             refreshSignal={workItems}
           />
           <MissionDeliverySurface missionId={mission.id} />
+          {reviewWorkItemId ? (
+            <ReviewProductSurface
+              missionId={mission.id}
+              projectId={projectId}
+              title={
+                reviewWorkItem
+                  ? `独立复核工作台 · ${reviewWorkItem.title}`
+                  : undefined
+              }
+              workItemId={reviewWorkItemId}
+            />
+          ) : null}
         </>
       )}
       {error && !error.startsWith("无法加载") ? (

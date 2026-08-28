@@ -834,3 +834,141 @@ describe("mission board capability insight", () => {
     );
   });
 });
+
+const REVIEW_NOW = "2026-08-01T10:00:00.000Z";
+
+function reviewWorkspace() {
+  return {
+    answeredEscalations: [],
+    blockers: [],
+    candidates: [{
+      agent: {
+        accentToken: "sage",
+        avatarText: "R",
+        id: "reviewer-1",
+        name: "Reviewer",
+        role: "独立复核",
+      },
+      provider: { id: "provider-1", model: "review-model", name: "Local" },
+      qualification: ["current_member", "review_capable", "not_executor"],
+    }],
+    currentAttempt: null,
+    currentEscalation: null,
+    effectiveStatus: "pending_review",
+    headVersion: 4,
+    historyCount: 0,
+    result: {
+      createdAt: REVIEW_NOW,
+      executorAgentId: "executor-1",
+      id: "result-1",
+      version: 1,
+    },
+    workItem: {
+      boardStatus: "todo",
+      id: "item-1",
+      title: "Plan",
+      version: 1,
+    },
+  };
+}
+
+describe("mission board independent review entry", () => {
+  it("opens an independent review workspace from a work item without a merged execution", async () => {
+    const MissionBoard = await board();
+    const fetchMock = boardFetch(items, (url) => {
+      if (url === "/api/work-items/item-1/review") {
+        return Response.json(reviewWorkspace());
+      }
+      if (url === "/api/work-items/item-1/reviews?limit=20") {
+        return Response.json({ items: [], nextCursor: null });
+      }
+      if (url === "/api/projects/project-1/memories?includeInactive=0") {
+        return Response.json({ memories: [] });
+      }
+      if (url === "/api/projects/project-1/memory-index/health") {
+        return Response.json({ status: "ok" });
+      }
+      if (url.includes("/memory-curation-candidates")) {
+        return Response.json({ items: [] });
+      }
+      if (url === "/api/projects/project-1/memory-collections") {
+        return Response.json({ items: [] });
+      }
+      if (url === "/api/projects/project-1/knowledge-graph") {
+        return Response.json({ nodes: [], edges: [] });
+      }
+      return undefined;
+    });
+    vi.stubGlobal("fetch", fetchMock);
+    const user = userEvent.setup();
+    render(<MissionBoard projectId="project-1" />);
+    await screen.findByRole("heading", { name: "Plan" });
+
+    for (const title of ["Plan", "Build", "Review", "Ship"]) {
+      const openReview = screen.getByRole("button", {
+        name: `打开复核 ${title}`,
+      });
+      expect(openReview).toHaveStyle({ minHeight: "var(--control-min)" });
+    }
+    expect(
+      screen.queryByRole("heading", { name: "独立复核工作台 · Plan" }),
+    ).toBeNull();
+
+    await user.click(screen.getByRole("button", { name: "打开复核 Plan" }));
+
+    expect(
+      await screen.findByRole("heading", { name: "独立复核工作台 · Plan" }),
+    ).toBeInTheDocument();
+    expect(screen.getByRole("tab", { name: "复核" })).toBeInTheDocument();
+  });
+
+  it("shows an empty review workspace with refresh when the work item has no frozen material", async () => {
+    const MissionBoard = await board();
+    const fetchMock = boardFetch(items, (url) => {
+      if (url === "/api/work-items/item-1/review") {
+        return Response.json({ ...reviewWorkspace(), result: null });
+      }
+      if (url === "/api/work-items/item-1/reviews?limit=20") {
+        return Response.json({ items: [], nextCursor: null });
+      }
+      if (url === "/api/projects/project-1/memories?includeInactive=0") {
+        return Response.json({ memories: [] });
+      }
+      if (url === "/api/projects/project-1/memory-index/health") {
+        return Response.json({ status: "ok" });
+      }
+      if (url.includes("/memory-curation-candidates")) {
+        return Response.json({ items: [] });
+      }
+      if (url === "/api/projects/project-1/memory-collections") {
+        return Response.json({ items: [] });
+      }
+      if (url === "/api/projects/project-1/knowledge-graph") {
+        return Response.json({ nodes: [], edges: [] });
+      }
+      return undefined;
+    });
+    vi.stubGlobal("fetch", fetchMock);
+    const user = userEvent.setup();
+    render(<MissionBoard projectId="project-1" />);
+    await screen.findByRole("heading", { name: "Plan" });
+    await user.click(screen.getByRole("button", { name: "打开复核 Plan" }));
+
+    expect(
+      await screen.findByText("当前工作项无复核材料"),
+    ).toBeInTheDocument();
+    const refresh = screen.getByRole("button", { name: "刷新复核" });
+    expect(refresh).toHaveStyle({ minHeight: "var(--control-min)" });
+
+    const reviewGets = () =>
+      fetchMock.mock.calls.filter(
+        ([input, init]) =>
+          String(input) === "/api/work-items/item-1/review" && !init?.method,
+      ).length;
+    const beforeRefresh = reviewGets();
+    await user.click(refresh);
+    await waitFor(() => {
+      expect(reviewGets()).toBeGreaterThan(beforeRefresh);
+    });
+  });
+});

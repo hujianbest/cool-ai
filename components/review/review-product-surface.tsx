@@ -66,10 +66,12 @@ export async function createReworkExecution(
 export function ReviewProductSurface({
   missionId,
   projectId,
+  title: titleOverride,
   workItemId,
 }: {
   missionId: string;
   projectId: string;
+  title?: string;
   workItemId: string;
 }) {
   const [workspace, setWorkspace] = useState<ReviewWorkspaceDto | null>(null);
@@ -146,14 +148,15 @@ export function ReviewProductSurface({
   }
 
   async function startReworkExecution() {
-    const source = workspace?.result.source;
+    const source = workspace?.result?.source;
     if (!source || source.projectId !== projectId) {
       throw new Error("返工 execution 的来源协作运行不可用。");
     }
     return createReworkExecution(projectId, workItemId, source);
   }
 
-  const title = `${workspace?.workItem.title ?? "任务"} 复核闭环`;
+  const title =
+    titleOverride ?? `${workspace?.workItem.title ?? "任务"} 复核闭环`;
   const currentResult = workspace?.result
     ? { id: workspace.result.id, version: workspace.result.version }
     : { id: "尚无结果", version: 0 };

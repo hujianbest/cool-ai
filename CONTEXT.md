@@ -110,6 +110,16 @@ _Avoid_：Agent 自发布、手工 createMemory、Inline Decision
 对项目成员 Agent 提示与技能说明的只读范围、冲突与注入检查。
 _Avoid_：可写规则表、模型分类器、提示全文
 
+## 复核与交付
+
+**复核工作台（Review Workspace）**：
+按需打开的独立复核表面；展示某一工作项的冻结复核材料与 Attempt，供合格非执行者裁决。
+_Avoid_：运行详情、第四栏执行面板、审批中心
+
+**复核材料（Review Material）**：
+对某一 Result 版本冻结的目标、变更与验证证据；复核不得替换成 latest。
+_Avoid_：最新 diff、执行自检、未冻结工作区
+
 ## 领域不变量
 
 - Project 是数据与权限隔离边界；对话（Session，代码标识 Thread）、Run、Message、Block、Decision、Receipt 与来源必须属于同一精确 Project 关系。

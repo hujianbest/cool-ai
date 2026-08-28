@@ -7,16 +7,16 @@
 - 当前主切片: 无
 - 下一步: 规划中仅余 S-45 族与 S-50（高风险）；不进入。
 
-## 当前快照（2026-08-18）
+## 当前快照（2026-08-28）
 
 | 项 | 状态 |
 |---|---|
 | 产品文档 | 七件套：规格 / 词汇表 / 架构 / 特性分解 / 开发计划 / 进展 / UI 设计 |
-| P0 暖金壳层 | 051/S-61 已 ship：T-01～T-06 在目标 Windows x64 收口，tsc/build 绿，全量 2790/2791，`npm run smoke` 绿 |
-| P1 阶段 1 驾驶舱 | 050/S-60 已 ship：原生选夹、三名自带 Agent、聊天优先、GET `/api/home` 只读 |
-| P2–P5 既有切片 | 计划中列出的会话/整理/执行/知识核心能力已 ship；规划中加厚项见特性分解清单 |
-| 环境/IA 残留 | `review-browser-full-chain` 因 UCD §9.5 未挂载（A-387）；`smoke:onboarding` 引导按钮被时间线条目挡住；`smoke:context` 桌面主路径等待已卸下的工作区绑定条（A-401）；`smoke:execution` P1 IA + 既有 color-contrast（A-412） |
-| 未交付高风险切片 | S-42、S-43、S-35、S-44、S-36、S-37、S-38、S-40、S-30、S-31、S-32、S-34 已 ship；高风险为 S-45 族与 S-50 |
+| P0 暖金壳层 | 051/S-61 已 ship |
+| P1 阶段 1 驾驶舱 | 050/S-60 已 ship |
+| P2–P5 既有切片 | 计划中列出的会话/整理/执行/知识核心能力已 ship；复核工作台表面 065/S-62 已 ship |
+| 环境/IA 残留 | A-387 已由 S-62 关闭；`smoke:onboarding` 引导按钮被时间线条目挡住；`smoke:context` 桌面主路径等待已卸下的工作区绑定条（A-401）；`smoke:execution` P1 IA + 既有 color-contrast（A-412） |
+| 未交付高风险切片 | 高风险为 S-45 族与 S-50 |
 
 ## 状态记录
 
@@ -111,3 +111,5 @@
 - 2026-08-27 063/S-32 完成 implement + ship：schema identity 30；提炼候选/发布/驳回；审批中心 knowledge 域；记忆视图署名与 diff。独立 hf-code-review 第 6 轮通过；`tsc`/`build` 绿；全量 334/2921（A-387）。演示 auto-approved。`CAP-KNW-04` 已交付核心。下一片 S-34。
 - 2026-08-27 064/S-34 立项并进入 implement：按 A-318 口径重评准入（A-445～A-452）。grill/spec/architecture/tickets 同批落盘；spec/architecture 评审豁免。进入 T-01。
 - 2026-08-27 064/S-34 完成 implement + ship：零 schema GET `/rule-insight` + `/team`「规则与注入检查」；独立 hf-code-review 通过；全量仅余 A-387。演示 auto-approved。`CAP-IDC-03` 规则/注入只读核心已交付。不进入 S-45 族。
+- 2026-08-28 立项 065/S-62 独立复核工作台表面：关闭 A-387，不进入 S-45 族。grill/spec/architecture/tickets 同批落盘（A-453～A-459）；spec/architecture 评审豁免。进入 implement T-01。
+- 2026-08-28 065/S-62 完成 implement + ship：任务卡「打开复核」+ UCD chrome；`review-browser-full-chain` 改走任务视图；tsc/build 绿；全量 337/2929 全绿；A-387 关闭（A-463）。演示 auto-approved。不进入 S-45 族。

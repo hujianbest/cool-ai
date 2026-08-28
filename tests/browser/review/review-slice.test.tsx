@@ -284,6 +284,10 @@ describe("peer review slice", () => {
     const before = readReviewWorkspace(fixture.databasePath, "work");
     expect(before.candidates.map(({ agent }) => agent.id)).toEqual(["reviewer"]);
     expect(before.currentAttempt).toBeNull();
+    expect(before.result).not.toBeNull();
+    if (before.result === null) {
+      throw new Error("merged fixture must include a frozen result");
+    }
     expect(before.result.source).toMatchObject({
       contextHash: expect.stringMatching(/^[0-9a-f]{64}$/u),
       projectId: "project",

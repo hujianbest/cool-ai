@@ -33,7 +33,7 @@
 |---|---|---|
 | S-51 / 035 | DESIGN.md 设计基座与壳层（历史色板，已被暖金替换） | 已 ship |
 | S-54 / 038 | 暖陶工作台四列（色板已被 D-50 替换，IA 被会话优先取代） | 已 ship |
-| S-61 / 051 | 暖米 + 暖金会话优先壳层：52px 轨 / 240px 侧栏 / 居中聊天 / 治理收轨 | 已 ship（T-06 Windows；复核工作台接线见 A-387） |
+| S-61 / 051 | 暖米 + 暖金会话优先壳层：52px 轨 / 240px 侧栏 / 居中聊天 / 治理收轨 | 已 ship（T-06 Windows；复核工作台接线见 S-62） |
 
 
 ### P1 基本可用
@@ -84,6 +84,7 @@
 | S-42 | 受控工作区编辑与 Git 合入 | 已交付 |
 | S-43 / 053 | 策略内终端与浏览器预览 | 已 ship |
 | S-44 | 领域化运维命令与救援 | 已 ship |
+| S-62 / 065 | 独立复核工作台表面（UCD §9.5） | 已 ship |
 
 ### P5 知识与扩展
 
@@ -182,6 +183,7 @@ S-9～S-12 的 `依赖: S-*` 是原历史文字，只说明当时切片记录；
   - 准入: 已交付前置: `CAP-PWS-01` 打开文件夹、`CAP-IDC-01` Agent 模板、`CAP-COL-01` 群聊；本片建立: 原生选夹、自带 Agent ensure、阶段 1 表面卸载（已交付）。
   - 规模例外: A-359。
 - [x] S-61 暖金会话优先驾驶舱壳层 — 主子系统: 不适用；主领域 Capability: 不适用（只改变设计令牌与入站 UI Adapter，不新增领域事实）；主要架构单元: DESIGN.md + 入站 UI Adapter；消费 Capability: 已交付 UI 呈现面；票据: [`features/051-warm-gold-cockpit/feature.md`](../features/051-warm-gold-cockpit/feature.md)；Ship: 2026-08-18（暖金 DESIGN.md + tokens 亮暗投影、52px 图标轨 / 240px 侧栏 / 居中聊天 / 治理按需视图、UCD 主路径收口至围栏代码块与块内复制；视觉契约 25/25；tsc/build/聚焦测试绿；演示 auto-approved。macOS 非目标 Windows x64 与沙箱端口造成的全量失败不阻塞本片。完整 Markdown / 迷你头像 / Thinking / 重命名 / 回收站总数 / 审批 TTL·Diff 仍不伪造）；演示判据: owner 打开驾驶舱看到暖米 + 暖金三区（52px 图标轨 / 240px 会话侧栏 / 居中聊天），治理由图标轨按需打开并返回对话；约束: 不新增领域事实，不复制 Clowder 品牌或资产
+- [x] S-62 独立复核工作台表面（UCD §9.5） — 主子系统: 不适用；主领域 Capability: 不适用（只改变入站 UI Adapter，不新增领域事实）；主要架构单元: 入站 UI Adapter；消费 Capability: `CAP-REV-01`；票据: [`features/065-review-workspace-surface/tickets.md`](../features/065-review-workspace-surface/tickets.md)；Ship: 2026-08-28（任务卡「打开复核」、UCD chrome、`review-browser-full-chain` 改道；T-01～T-04；tsc/build 绿；全量 337/2929；A-387 关闭；演示 auto-approved）；演示判据: owner 能从图标轨任务视图打开某一工作项的独立复核工作台，查看冻结材料与 Attempt，并在无材料时看到明确空态；不再依赖已卸下的「运行详情」tab。约束: 工作区=项目隔离，verified-handle=材料跳转沿用既有，sandbox=只读，凭据=复核内容脱敏，审批=不适用，独立复核=本片表面，审计=不新增写事实；不复制 Clowder 品牌、源码或资产
   - 排期: 2026-08-15 用户确认暖金方向与治理收轨（D-50）；P0 主切片。
   - 准入: 已交付前置: S-51 令牌基座、S-54 壳层、S-55/S-56 选夹与直聊；本片建立: 暖金 DESIGN.md、tokens 投影、会话优先壳层（已交付）。
 - [x] S-58 统一审计浏览器按域筛选（S-23 AUD-UI） — 主子系统: 不适用；主领域 Capability: 不适用（只改变入站 UI Adapter，不新增领域事实）；主要架构单元: 入站 UI Adapter；消费 Capability: `CAP-EXE-05`、`CAP-PWS-03`、`CAP-COL-07`、`CAP-MWK-05`、`CAP-GOV-03`、`CAP-RUN-07`、`CAP-OPS-01`、`CAP-OPS-02`；票据: [`features/042-audit-browser-filters/architecture.md`](../features/042-audit-browser-filters/architecture.md)；Ship: 2026-08-15（客户端按域筛选，`smoke:execution` Runtime 23 断言 / axe 2 态 0 serious/critical）；演示判据: owner 能按执行/协作/任务/项目/治理/运行时筛选已交付审计来源并跳回精确来源；约束: 工作区=项目隔离，verified-handle=不适用，sandbox=只读，凭据=强制脱敏，审批=不适用，独立复核=交付必需（轻量级纯 UI，hf-code-review 豁免记录于 progress），审计=不新增写事实；不复制 Clowder 品牌、源码或资产
