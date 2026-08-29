@@ -2014,9 +2014,13 @@ export function ProjectThreadNavigation({
             {view === "all" && listState !== "empty" ? (
               <IconButton
                 aria-pressed={organizeMode}
-                icon={<Faders size={20} weight="regular" />}
+                className={organizeMode ? "active-toggle" : undefined}
+                icon={<Faders size={20} weight={organizeMode ? "bold" : "regular"} />}
                 label="整理对话"
-                onClick={() => setOrganizeMode(true)}
+                onClick={() => {
+                  if (organizeMode) exitOrganizeMode();
+                  else setOrganizeMode(true);
+                }}
                 ref={organizeButtonRef}
                 title="整理对话"
               />
@@ -2296,65 +2300,141 @@ export function ProjectThreadNavigation({
         )}
         {searchActive || !organizeMode ? null : (
         <section aria-label="批量整理对话" className="thread-batch-bar">
-          <button
-            className="button-secondary"
-            disabled={batchSubmitting}
-            onClick={exitOrganizeMode}
-            type="button"
-          >
-            取消整理
-          </button>
-          <p aria-atomic="true" aria-live="polite" className="muted" role="status">
-            {`已选 ${batchSelectionCount} 条对话`}
-          </p>
-          <div aria-label="添加标签" className="thread-batch-group" role="group">
-            {tags.map((tag) => (
+          <div className="thread-batch-header">
+            <div className="thread-batch-title-row">
+              <div className="thread-batch-summary">
+                <span className="thread-batch-icon" aria-hidden="true">
+                  <Faders size={15} weight="bold" />
+                </span>
+                <span className="thread-batch-title">批量整理</span>
+              </div>
               <button
-                aria-pressed={batchAddTagIds.has(tag.id)}
-                className={
-                  batchAddTagIds.has(tag.id)
-                    ? "status-label thread-tag-filter-chip active"
-                    : "status-label thread-tag-filter-chip"
-                }
+                aria-label="取消整理"
+                className="button-secondary thread-batch-cancel-btn"
                 disabled={batchSubmitting}
-                key={tag.id}
-                onClick={() => toggleBatchAddTag(tag.id)}
+                onClick={exitOrganizeMode}
+                title="取消整理"
                 type="button"
               >
-                {tag.name}
+                <X size={12} weight="bold" aria-hidden="true" />
+                <span>取消整理</span>
               </button>
-            ))}
-          </div>
-          <div aria-label="移除标签" className="thread-batch-group" role="group">
-            {tags.map((tag) => (
+            </div>
+            <div className="thread-batch-toolbar-row">
+              <p aria-atomic="true" aria-live="polite" className="thread-batch-status-text" role="status">
+                {`已选 ${batchSelectionCount} 条对话`}
+              </p>
               <button
-                aria-pressed={batchRemoveTagIds.has(tag.id)}
-                className={
-                  batchRemoveTagIds.has(tag.id)
-                    ? "status-label thread-tag-filter-chip active"
-                    : "status-label thread-tag-filter-chip"
-                }
-                disabled={batchSubmitting}
-                key={tag.id}
-                onClick={() => toggleBatchRemoveTag(tag.id)}
+                className="thread-batch-quick-btn"
+                disabled={batchSubmitting || threads.length === 0}
+                onClick={() => {
+                  if (selectedThreadIds.size === threads.length) {
+                    setSelectedThreadIds(new Set());
+                  } else {
+                    setSelectedThreadIds(new Set(threads.map((t) => t.id)));
+                  }
+                }}
                 type="button"
               >
-                {tag.name}
+                {selectedThreadIds.size === threads.length && threads.length > 0
+                  ? "取消全选"
+                  : "全选"}
               </button>
-            ))}
+            </div>
           </div>
-          <button
-            className="button-primary"
-            disabled={
-              batchSubmitting
-              || batchSelectionCount === 0
-              || batchAddCount + batchRemoveCount === 0
-            }
-            onClick={confirmBatch}
-            type="button"
-          >
-            应用更改
-          </button>
+
+          {tags.length > 0 ? (
+            <div className="thread-batch-tag-sections">
+              <div className="thread-batch-tag-block">
+                <div className="thread-batch-block-title">
+                  <Plus size={12} weight="bold" aria-hidden="true" />
+                  <span>添加标签</span>
+                </div>
+                <div aria-label="添加标签" className="thread-batch-group" role="group">
+                  {tags.map((tag) => (
+                    <button
+                      aria-pressed={batchAddTagIds.has(tag.id)}
+                      className={
+                        batchAddTagIds.has(tag.id)
+                          ? "status-label thread-tag-filter-chip active"
+                          : "status-label thread-tag-filter-chip"
+                      }
+                      disabled={batchSubmitting}
+                      key={tag.id}
+                      onClick={() => toggleBatchAddTag(tag.id)}
+                      type="button"
+                    >
+                      {batchAddTagIds.has(tag.id) ? (
+                        <Check size={11} weight="bold" aria-hidden="true" />
+                      ) : null}
+                      <span>{tag.name}</span>
+                    </button>
+                  ))}
+                </div>
+              </div>
+              <div className="thread-batch-tag-block">
+                <div className="thread-batch-block-title">
+                  <Trash size={12} weight="bold" aria-hidden="true" />
+                  <span>移除标签</span>
+                </div>
+                <div aria-label="移除标签" className="thread-batch-group" role="group">
+                  {tags.map((tag) => (
+                    <button
+                      aria-pressed={batchRemoveTagIds.has(tag.id)}
+                      className={
+                        batchRemoveTagIds.has(tag.id)
+                          ? "status-label thread-tag-filter-chip active active-remove"
+                          : "status-label thread-tag-filter-chip"
+                      }
+                      disabled={batchSubmitting}
+                      key={tag.id}
+                      onClick={() => toggleBatchRemoveTag(tag.id)}
+                      type="button"
+                    >
+                      {batchRemoveTagIds.has(tag.id) ? (
+                        <Check size={11} weight="bold" aria-hidden="true" />
+                      ) : null}
+                      <span>{tag.name}</span>
+                    </button>
+                  ))}
+                </div>
+              </div>
+            </div>
+          ) : (
+            <div className="thread-batch-empty-tags">
+              <p className="thread-batch-empty-hint">暂无标签，可创建标签后批量归类</p>
+              <button
+                className="thread-batch-manage-link"
+                onClick={openManageDialog}
+                type="button"
+              >
+                + 新建标签
+              </button>
+            </div>
+          )}
+
+          <div className="thread-batch-footer">
+            <button
+              aria-label="应用更改"
+              className="button-primary thread-batch-apply-btn"
+              disabled={
+                batchSubmitting
+                || batchSelectionCount === 0
+                || batchAddCount + batchRemoveCount === 0
+              }
+              onClick={confirmBatch}
+              title="应用更改"
+              type="button"
+            >
+              <span>应用更改</span>
+              {batchAddCount + batchRemoveCount > 0 ? (
+                <span aria-hidden="true" className="thread-batch-change-badge">
+                  {batchAddCount + batchRemoveCount}
+                </span>
+              ) : null}
+            </button>
+          </div>
+
           {batchError ? (
             <div className="thread-batch-error">
               <p className="error-text" role="alert">
@@ -2422,7 +2502,9 @@ export function ProjectThreadNavigation({
                 {recycleBin.map((item) => (
                   <li className="thread-list-item" key={item.id}>
                     <div className="thread-list-main">
-                      <p className="thread-recycle-title">{item.title}</p>
+                      <p className="thread-recycle-title" title={item.title}>
+                        {item.title}
+                      </p>
                       <p className="thread-recycle-meta">
                         删除于 {readableTime(item.deletedAt)}
                       </p>
@@ -2523,9 +2605,14 @@ export function ProjectThreadNavigation({
           ) : (
             <ul className="project-list">
               {threads.map((thread) => (
-                <li className="thread-list-item" key={thread.id}>
+                <li
+                  className="thread-list-item"
+                  data-organize-mode={organizeMode ? "true" : undefined}
+                  data-selected={organizeMode && selectedThreadIds.has(thread.id) ? "true" : undefined}
+                  key={thread.id}
+                >
                   {organizeMode ? (
-                    <label className="thread-list-select">
+                    <label className="thread-list-select" title={`选择对话 ${thread.title}`}>
                       <input
                         aria-label={`选择对话 ${thread.title}`}
                         checked={selectedThreadIds.has(thread.id)}
@@ -2554,9 +2641,12 @@ export function ProjectThreadNavigation({
                         if (element) threadButtonRefs.current.set(thread.id, element);
                         else threadButtonRefs.current.delete(thread.id);
                       }}
+                      title={thread.title}
                       type="button"
                     >
-                      <span className="thread-list-entry-title">{thread.title}</span>
+                      <span className="thread-list-entry-title" title={thread.title}>
+                        {thread.title}
+                      </span>
                       <span aria-hidden="true" className="thread-list-entry-meta">
                         {relativeActivityTime(thread.updatedAt)}
                       </span>
@@ -2572,66 +2662,73 @@ export function ProjectThreadNavigation({
                     ) : null}
                   </div>
                   {!organizeMode ? (
-                    <div className="thread-item-more">
-                      <IconButton
-                        aria-expanded={openMenuThreadId === thread.id}
-                        aria-haspopup="true"
-                        icon={<DotsThree size={20} weight="bold" />}
-                        label={`更多 ${thread.title}`}
-                        onClick={() =>
-                          setOpenMenuThreadId((current) =>
-                            current === thread.id ? null : thread.id,
-                          )
+                    <div
+                      className="thread-item-actions"
+                      data-menu-open={openMenuThreadId === thread.id ? "true" : undefined}
+                    >
+                      <div className="thread-item-more">
+                        <IconButton
+                          aria-expanded={openMenuThreadId === thread.id}
+                          aria-haspopup="true"
+                          icon={<DotsThree size={18} weight="bold" />}
+                          label={`更多 ${thread.title}`}
+                          onClick={() =>
+                            setOpenMenuThreadId((current) =>
+                              current === thread.id ? null : thread.id,
+                            )
+                          }
+                          title={`更多 ${thread.title}`}
+                        />
+                        {openMenuThreadId === thread.id ? (
+                          <div
+                            aria-label={`${thread.title} 操作`}
+                            className="thread-item-menu"
+                            role="group"
+                          >
+                            <button
+                              className="thread-item-menu-item"
+                              onClick={() => {
+                                setSelectedThreadIds(new Set([thread.id]));
+                                setOrganizeMode(true);
+                                setOpenMenuThreadId(null);
+                              }}
+                              type="button"
+                            >
+                              <Tag size={15} weight="regular" aria-hidden="true" />
+                              <span>打标</span>
+                            </button>
+                            <button
+                              aria-label={`移入回收站 ${thread.title}`}
+                              className="thread-item-menu-item thread-item-menu-danger"
+                              onClick={() => {
+                                setDeleteThreadError(null);
+                                setPendingDeleteThread(thread);
+                                setOpenMenuThreadId(null);
+                              }}
+                              type="button"
+                            >
+                              <Trash size={15} weight="regular" aria-hidden="true" />
+                              <span>移入回收站</span>
+                            </button>
+                          </div>
+                        ) : null}
+                      </div>
+                      <button
+                        aria-label={
+                          thread.isFavorite
+                            ? `取消收藏 ${thread.title}`
+                            : `收藏对话 ${thread.title}`
                         }
-                        title={`更多 ${thread.title}`}
-                      />
-                      {openMenuThreadId === thread.id ? (
-                        <div
-                          aria-label={`${thread.title} 操作`}
-                          className="thread-item-menu"
-                          role="group"
-                        >
-                          <button
-                            className="thread-item-menu-item"
-                            onClick={() => {
-                              setSelectedThreadIds(new Set([thread.id]));
-                              setOrganizeMode(true);
-                              setOpenMenuThreadId(null);
-                            }}
-                            type="button"
-                          >
-                            打标
-                          </button>
-                          <button
-                            aria-label={`移入回收站 ${thread.title}`}
-                            className="thread-item-menu-item"
-                            onClick={() => {
-                              setDeleteThreadError(null);
-                              setPendingDeleteThread(thread);
-                              setOpenMenuThreadId(null);
-                            }}
-                            type="button"
-                          >
-                            移入回收站
-                          </button>
-                        </div>
-                      ) : null}
+                        aria-pressed={thread.isFavorite}
+                        className="thread-favorite-toggle"
+                        disabled={organizeMode || pendingFavoriteIds.has(thread.id)}
+                        onClick={() => void toggleFavorite(thread)}
+                        type="button"
+                      >
+                        <StarIcon filled={thread.isFavorite} />
+                      </button>
                     </div>
                   ) : null}
-                  <button
-                    aria-label={
-                      thread.isFavorite
-                        ? `取消收藏 ${thread.title}`
-                        : `收藏对话 ${thread.title}`
-                    }
-                    aria-pressed={thread.isFavorite}
-                    className="thread-favorite-toggle"
-                    disabled={organizeMode || pendingFavoriteIds.has(thread.id)}
-                    onClick={() => void toggleFavorite(thread)}
-                    type="button"
-                  >
-                    <StarIcon filled={thread.isFavorite} />
-                  </button>
                 </li>
               ))}
             </ul>
@@ -3227,77 +3324,95 @@ export function ProjectThreadNavigation({
         : null}
       {pendingDeleteThread && typeof document !== "undefined"
         ? createPortal(
-            <section
-              aria-labelledby="thread-delete-title"
-              aria-modal="true"
-              className="modal-surface thread-delete-confirm"
-              ref={deleteThreadDialogRef}
-              role="dialog"
-            >
-              <h2 id="thread-delete-title">移入回收站</h2>
-              <p>移入后可从回收站恢复。</p>
-              {deleteThreadError ? (
-                <p className="error-text" role="alert">{deleteThreadError}</p>
-              ) : null}
-              <div className="form-row">
-                <button
-                  className="button-primary"
-                  disabled={deletingThread}
-                  onClick={() => void confirmDeleteThread()}
-                  type="button"
-                >
-                  {deletingThread ? "正在移入…" : "确认移入"}
-                </button>
-                <button
-                  className="button-secondary"
-                  disabled={deletingThread}
-                  onClick={closeDeleteThreadConfirm}
-                  ref={deleteThreadCancelRef}
-                  type="button"
-                >
-                  取消
-                </button>
-              </div>
-            </section>,
+            <div className="action-dialog-root" role="presentation">
+              <div
+                aria-hidden="true"
+                className="action-dialog-scrim"
+                onClick={() => {
+                  if (!deletingThread) closeDeleteThreadConfirm();
+                }}
+              />
+              <section
+                aria-labelledby="thread-delete-title"
+                aria-modal="true"
+                className="action-dialog modal-surface thread-delete-confirm stack"
+                ref={deleteThreadDialogRef}
+                role="dialog"
+              >
+                <h2 id="thread-delete-title">移入回收站</h2>
+                <p>移入后可从回收站恢复。</p>
+                {deleteThreadError ? (
+                  <p className="error-text" role="alert">{deleteThreadError}</p>
+                ) : null}
+                <div className="form-row">
+                  <button
+                    className="button-primary"
+                    disabled={deletingThread}
+                    onClick={() => void confirmDeleteThread()}
+                    type="button"
+                  >
+                    {deletingThread ? "正在移入…" : "确认移入"}
+                  </button>
+                  <button
+                    className="button-secondary"
+                    disabled={deletingThread}
+                    onClick={closeDeleteThreadConfirm}
+                    ref={deleteThreadCancelRef}
+                    type="button"
+                  >
+                    取消
+                  </button>
+                </div>
+              </section>
+            </div>,
             document.body,
           )
         : null}
       {pendingPurgeThread && typeof document !== "undefined"
         ? createPortal(
-            <section
-              aria-labelledby="thread-purge-title"
-              aria-modal="true"
-              className="modal-surface thread-purge-confirm"
-              ref={purgeThreadDialogRef}
-              role="dialog"
-            >
-              <h2 id="thread-purge-title">永久删除对话</h2>
-              <p>
-                {`将永久删除 ${pendingPurgeThread.messageCount} 条消息、${pendingPurgeThread.attachmentCount} 个附件。此操作不可恢复；删除操作会记录在审计日志中。`}
-              </p>
-              {purgeThreadError ? (
-                <p className="error-text" role="alert">{purgeThreadError}</p>
-              ) : null}
-              <div className="form-row">
-                <button
-                  className="button-primary"
-                  disabled={purgingThread}
-                  onClick={() => void confirmPurgeThread()}
-                  type="button"
-                >
-                  {purgingThread ? "正在删除…" : "永久删除"}
-                </button>
-                <button
-                  className="button-secondary"
-                  disabled={purgingThread}
-                  onClick={closePurgeThreadConfirm}
-                  ref={purgeThreadCancelRef}
-                  type="button"
-                >
-                  取消
-                </button>
-              </div>
-            </section>,
+            <div className="action-dialog-root" role="presentation">
+              <div
+                aria-hidden="true"
+                className="action-dialog-scrim"
+                onClick={() => {
+                  if (!purgingThread) closePurgeThreadConfirm();
+                }}
+              />
+              <section
+                aria-labelledby="thread-purge-title"
+                aria-modal="true"
+                className="action-dialog modal-surface thread-purge-confirm stack"
+                ref={purgeThreadDialogRef}
+                role="dialog"
+              >
+                <h2 id="thread-purge-title">永久删除对话</h2>
+                <p>
+                  {`将永久删除 ${pendingPurgeThread.messageCount} 条消息、${pendingPurgeThread.attachmentCount} 个附件。此操作不可恢复；删除操作会记录在审计日志中。`}
+                </p>
+                {purgeThreadError ? (
+                  <p className="error-text" role="alert">{purgeThreadError}</p>
+                ) : null}
+                <div className="form-row">
+                  <button
+                    className="button-primary"
+                    disabled={purgingThread}
+                    onClick={() => void confirmPurgeThread()}
+                    type="button"
+                  >
+                    {purgingThread ? "正在删除…" : "永久删除"}
+                  </button>
+                  <button
+                    className="button-secondary"
+                    disabled={purgingThread}
+                    onClick={closePurgeThreadConfirm}
+                    ref={purgeThreadCancelRef}
+                    type="button"
+                  >
+                    取消
+                  </button>
+                </div>
+              </section>
+            </div>,
             document.body,
           )
         : null}

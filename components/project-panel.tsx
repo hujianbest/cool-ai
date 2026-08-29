@@ -68,6 +68,24 @@ function directoryPickerResult(
   return { kind: "invalid" };
 }
 
+const DEFAULT_SIDEBAR_WIDTH = 260;
+const MIN_SIDEBAR_WIDTH = 200;
+const MAX_SIDEBAR_WIDTH = 520;
+
+function readSavedSidebarWidth(): number {
+  if (typeof window === "undefined") return DEFAULT_SIDEBAR_WIDTH;
+  try {
+    const saved = localStorage.getItem("cockpit_sidebar_width");
+    if (saved) {
+      const parsed = parseInt(saved, 10);
+      if (!Number.isNaN(parsed) && parsed >= MIN_SIDEBAR_WIDTH && parsed <= MAX_SIDEBAR_WIDTH) {
+        return parsed;
+      }
+    }
+  } catch {}
+  return DEFAULT_SIDEBAR_WIDTH;
+}
+
 export function ProjectPanel({
   returnTo,
 }: {
@@ -106,6 +124,80 @@ export function ProjectPanel({
     null,
   );
   const [sidebarCollapsed, setSidebarCollapsed] = useState(false);
+  const [sidebarWidth, setSidebarWidth] = useState<number>(readSavedSidebarWidth);
+  const [isResizing, setIsResizing] = useState(false);
+  const sidebarWidthRef = useRef(sidebarWidth);
+  sidebarWidthRef.current = sidebarWidth;
+
+  const handleResizerPointerDown = useCallback((event: React.PointerEvent) => {
+    event.preventDefault();
+    event.stopPropagation();
+    const startX = event.clientX;
+    const startWidth = sidebarWidthRef.current;
+    setIsResizing(true);
+
+    const onPointerMove = (moveEvent: PointerEvent) => {
+      const delta = moveEvent.clientX - startX;
+      const maxAllowed = Math.max(MIN_SIDEBAR_WIDTH, Math.min(window.innerWidth * 0.45, MAX_SIDEBAR_WIDTH));
+      const newWidth = Math.min(
+        Math.max(startWidth + delta, MIN_SIDEBAR_WIDTH),
+        maxAllowed,
+      );
+      setSidebarWidth(Math.round(newWidth));
+    };
+
+    const onPointerUp = (upEvent: PointerEvent) => {
+      const delta = upEvent.clientX - startX;
+      const maxAllowed = Math.max(MIN_SIDEBAR_WIDTH, Math.min(window.innerWidth * 0.45, MAX_SIDEBAR_WIDTH));
+      const finalWidth = Math.round(
+        Math.min(
+          Math.max(startWidth + delta, MIN_SIDEBAR_WIDTH),
+          maxAllowed,
+        ),
+      );
+      setSidebarWidth(finalWidth);
+      setIsResizing(false);
+      try {
+        localStorage.setItem("cockpit_sidebar_width", String(finalWidth));
+      } catch {}
+      window.removeEventListener("pointermove", onPointerMove);
+      window.removeEventListener("pointerup", onPointerUp);
+      window.removeEventListener("pointercancel", onPointerUp);
+    };
+
+    window.addEventListener("pointermove", onPointerMove);
+    window.addEventListener("pointerup", onPointerUp);
+    window.addEventListener("pointercancel", onPointerUp);
+  }, []);
+
+  const handleResizerDoubleClick = useCallback(() => {
+    setSidebarWidth(DEFAULT_SIDEBAR_WIDTH);
+    try {
+      localStorage.setItem("cockpit_sidebar_width", String(DEFAULT_SIDEBAR_WIDTH));
+    } catch {}
+  }, []);
+
+  const handleResizerKeyDown = useCallback((event: React.KeyboardEvent) => {
+    let nextWidth: number | null = null;
+    if (event.key === "ArrowLeft") {
+      nextWidth = Math.max(sidebarWidthRef.current - 16, MIN_SIDEBAR_WIDTH);
+    } else if (event.key === "ArrowRight") {
+      nextWidth = Math.min(sidebarWidthRef.current + 16, MAX_SIDEBAR_WIDTH);
+    } else if (event.key === "Home") {
+      nextWidth = MIN_SIDEBAR_WIDTH;
+    } else if (event.key === "End") {
+      nextWidth = MAX_SIDEBAR_WIDTH;
+    } else if (event.key === "Enter" || event.key === " ") {
+      nextWidth = DEFAULT_SIDEBAR_WIDTH;
+    }
+    if (nextWidth !== null) {
+      event.preventDefault();
+      setSidebarWidth(nextWidth);
+      try {
+        localStorage.setItem("cockpit_sidebar_width", String(nextWidth));
+      } catch {}
+    }
+  }, []);
   const pendingApprovalCount = usePendingApprovalCount(currentProjectId);
   const [homeState, setHomeState] = useState<HomeState | null>(null);
   const [settingsReturnTo, setSettingsReturnTo] = useState<ProjectReturnTo>(
@@ -531,9 +623,19 @@ export function ProjectPanel({
     setConversationTitle((current) => (current === title ? current : title));
   }, []);
 
+  useEffect(() => {
+    if (!cockpitRef.current) return;
+    if (!narrow && !sidebarCollapsed) {
+      cockpitRef.current.style.setProperty("--sidebar-width", `${sidebarWidth}px`);
+    } else {
+      cockpitRef.current.style.removeProperty("--sidebar-width");
+    }
+  }, [narrow, sidebarCollapsed, sidebarWidth]);
+
   return (
     <main
       className="collaboration-cockpit"
+      data-resizing={isResizing ? "true" : undefined}
       data-sidebar-collapsed={!narrow && sidebarCollapsed ? "true" : undefined}
       data-testid="collaboration-cockpit"
       ref={cockpitRef}
@@ -772,6 +874,24 @@ export function ProjectPanel({
           />
         ) : null}
       </aside>
+      {!narrow && !sidebarCollapsed ? (
+        <div
+          aria-label="调整侧栏宽度"
+          aria-orientation="vertical"
+          aria-valuemax={MAX_SIDEBAR_WIDTH}
+          aria-valuemin={MIN_SIDEBAR_WIDTH}
+          aria-valuenow={sidebarWidth}
+          className="cockpit-sidebar-resizer"
+          data-resizing={isResizing ? "true" : undefined}
+          data-testid="sidebar-resizer"
+          onDoubleClick={handleResizerDoubleClick}
+          onKeyDown={handleResizerKeyDown}
+          onPointerDown={handleResizerPointerDown}
+          role="separator"
+          tabIndex={0}
+          title="拖动调整宽度，双击恢复默认"
+        />
+      ) : null}
       <TaskPanel
         contextCloseRef={contextCloseRef}
         contextOpen={mobileSurface === "context"}
