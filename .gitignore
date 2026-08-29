@@ -16,3 +16,12 @@ knowledge/
 
 # macOS
 .DS_Store
+
+# Python
+__pycache__/
+*.pyc
+
+# Test Artifacts & Visual Audits
+tests/browser/test-artifacts/
+visual-audit-*/
+
