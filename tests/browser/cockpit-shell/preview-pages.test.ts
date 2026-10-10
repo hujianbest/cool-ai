@@ -3,8 +3,8 @@ import { join } from "node:path";
 import { describe, expect, it } from "vitest";
 
 const root = process.cwd();
-const previewPath = join(root, "app", "preview.html");
-const previewDarkPath = join(root, "app", "preview-dark.html");
+const previewPath = join(root, "public", "preview.html");
+const previewDarkPath = join(root, "public", "preview-dark.html");
 
 describe("DESIGN.md preview pages", () => {
   it("creates preview.html with design token catalog", () => {

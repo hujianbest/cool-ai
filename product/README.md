@@ -30,4 +30,9 @@
 - [`ui/archive/`](./ui/archive/) — 已 superseded 的视觉分析。
 - [`phases.md`](./phases.md) — 重定向到开发计划，保留旧链接。
 
+## UI 原型与预览页的放置约定
+
+- [`ui/preview-ucd.html`](./ui/preview-ucd.html) — UCD 高保真原型的 **canonical 源**；`public/preview-ucd.html` 只是供浏览器打开核对的服务副本，改动源文件后必须同步覆盖。
+- `public/preview.html` / `public/preview-dark.html` — DESIGN.md 令牌目录页，唯一副本即存于 `public/`（浏览器可打开 `/preview.html`，视觉契约测试直接读该路径），不在 `app/` 或 `product/ui/` 另留副本。
+
 `features/` 仍是各切片规格、架构、票据、评审与进度的工作区；切片 ship 后回写特性分解清单与开发进展，不把 feature 目录当成产品定义。
