@@ -14,6 +14,8 @@ import { spawn, spawnSync } from "node:child_process";
 import AxeBuilder from "@axe-core/playwright";
 import { chromium } from "playwright";
 
+import { assertMatchesVisualBaseline } from "./visual-baseline.mjs";
+
 const host = "127.0.0.1";
 const port = 4100 + (process.pid % 500);
 const baseUrl = `http://${host}:${port}`;
@@ -175,6 +177,11 @@ try {
 
   await page.screenshot({ path: smokeScreenshot, fullPage: true });
   await page.screenshot({ path: currentDesktopScreenshot, fullPage: true });
+  assertMatchesVisualBaseline({
+    runner: "browser-smoke",
+    name: "cockpit-desktop-empty",
+    screenshotPath: smokeScreenshot,
+  });
 
   await page.reload({ waitUntil: "networkidle" });
   await page
@@ -185,6 +192,11 @@ try {
 
   await page.screenshot({ path: demoScreenshot, fullPage: true });
   await page.screenshot({ path: currentDesktopDemoScreenshot, fullPage: true });
+  assertMatchesVisualBaseline({
+    runner: "browser-smoke",
+    name: "cockpit-desktop-reloaded",
+    screenshotPath: demoScreenshot,
+  });
 
   await page.setViewportSize({ width: 390, height: 844 });
   await page.reload({ waitUntil: "networkidle" });
@@ -208,6 +220,11 @@ try {
     `narrow viewport must not overflow horizontally: ${JSON.stringify(overflow)}`,
   );
   await page.screenshot({ path: narrowScreenshot, fullPage: true });
+  assertMatchesVisualBaseline({
+    runner: "browser-smoke",
+    name: "cockpit-narrow",
+    screenshotPath: narrowScreenshot,
+  });
   await page.getByRole("button", { name: "打开编辑" }).click();
   await page.getByRole("dialog", { name: "任务编辑" }).waitFor();
   await page.screenshot({ path: currentNarrowScreenshot, fullPage: true });

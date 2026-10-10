@@ -45,6 +45,7 @@ Cool AI 是一个本地优先、单 owner 的多 Agent 协作驾驶舱。
 5. 设计、构建或评审界面时，先读 `product/ui/UI设计.md`（UCD）与 `product/ui/DESIGN.md`（令牌），再按需加载 `.cursor/skills/ui-ux-pro-max` 技能；其设计系统/可访问性/交互/排版等指导与检索数据优先于本文件的通用表述。
 6. **产品开发以 UCD 为基准**：完成产品界面时，页面、视图、信息架构、交互流与全态必须对照 `product/ui/UI设计.md` 落地，视觉令牌对照 `product/ui/DESIGN.md`；不得另造未在 UCD 中规定的主路径控件、布局或文案。UCD 与 `product/development-plan.md` 冲突时，先更新文档再实现，不在代码里静默偏离。
 7. **前端改动必须在真实浏览器里核对**：凡改页面、视图、布局、交互或视觉样式，不得只靠测试绿宣称完成。聚焦测试通过后，在本机开发服务器打开对应页面，对照 UCD 核对可见效果（布局、选中态、快捷键、空态、文案与主路径交互）。发现问题当场修，再进入下一切片。仓库内浏览器证据仍只能由测试或冒烟运行器生成，不得手写或把核对截图提交进 git。
+8. **视觉回归与视觉模型评审**：会改变页面视觉的前端切片，冒烟截图必须过像素基线 diff（共享模块 `tests/browser/visual-baseline.mjs`；基线按平台存于 `tests/browser/baselines/`，只能由冒烟运行器生成，有意改视觉时以 `UPDATE_VISUAL_BASELINES=1` 随切片再生成并提交；diff 超阈值为失败，产物落 `tests/browser/test-artifacts/` 不提交）。配置了视觉评审 Provider（`COCKPIT_VISUAL_REVIEW_*`，OpenAI 兼容多模态端点）时，收尾用 `npm run review:visual` 对冒烟截图做对照 UCD 的视觉模型评审并落盘报告；未配置或调用失败按失败关闭处理，不得伪造通过；评审未执行时在票或 `progress.md` 记录「视觉评审未执行（Provider 未配置）」。
 
 ### Auto 开发模式
 
@@ -60,6 +61,7 @@ Cool AI 是一个本地优先、单 owner 的多 Agent 协作驾驶舱。
 - 不得引入依赖墙钟等待的用例；I/O 重型用例必须设置用例级 timeout。
 - 聚焦测试是默认反馈环；全量套件只在收尾与最终确认运行。
 - 前端切片在聚焦测试通过后，还必须在真实浏览器打开对应页面核对可见效果；未做浏览器核对不得宣称该切片完成。
+- 前端视觉改动的收尾双闸：像素基线 diff 必须通过；已配置视觉评审 Provider 时 `npm run review:visual` 的报告必须为 pass（Provider 缺失或失败关闭时不得宣称评审通过）。
 
 常用命令：
 
@@ -75,6 +77,7 @@ npm run smoke:review
 npm run smoke:settings
 npm run smoke:onboarding
 npm run smoke:threads
+npm run review:visual
 ```
 
 聚焦测试：`npm test -- tests/<target>.test.ts`
@@ -103,4 +106,5 @@ npm run smoke:threads
 - 只有用户或活跃交付流程明确要求时，才能 commit 或 push。
 - 提交前检查状态、完整差异、未跟踪文件和近期提交风格；排除秘密与生成噪声。
 - 不得提交 `.next/`、`node_modules/`、缓存、`__pycache__/`、临时数据库或生成的 `next-env.d.ts` 变动。
+- 像素基线（`tests/browser/baselines/`）只能由冒烟运行器生成或以 `UPDATE_VISUAL_BASELINES=1` 再生成后提交，不得手改；diff 产物、视觉评审报告与冒烟证据不提交。
 - 浏览器证据必须由测试或冒烟运行器生成，不得手写。

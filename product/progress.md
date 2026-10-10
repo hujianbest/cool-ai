@@ -113,3 +113,4 @@
 - 2026-08-27 064/S-34 完成 implement + ship：零 schema GET `/rule-insight` + `/team`「规则与注入检查」；独立 hf-code-review 通过；全量仅余 A-387。演示 auto-approved。`CAP-IDC-03` 规则/注入只读核心已交付。不进入 S-45 族。
 - 2026-08-28 立项 065/S-62 独立复核工作台表面：关闭 A-387，不进入 S-45 族。grill/spec/architecture/tickets 同批落盘（A-453～A-459）；spec/architecture 评审豁免。进入 implement T-01。
 - 2026-08-28 065/S-62 完成 implement + ship：任务卡「打开复核」+ UCD chrome；`review-browser-full-chain` 改走任务视图；tsc/build 绿；全量 337/2929 全绿；A-387 关闭（A-463）。演示 auto-approved。不进入 S-45 族。
+- 2026-10-11 按用户指示新增视觉回归与视觉模型评审测试设施（测试基础设施/流程规则修订，非产品行为切片，按 2026-08-14 流程规则修订先例不立 feature）：`tests/browser/visual-baseline.mjs` 像素基线 diff 接入 `browser-smoke` 三视图（desktop-empty / desktop-reloaded / narrow），darwin 基线已生成并复跑 0 px 通过；`tests/browser/visual-review.mjs` + `npm run review:visual` 对照 UCD 的视觉模型评审（`COCKPIT_VISUAL_REVIEW_*` Provider，未配置失败关闭，报告不提交）；AGENTS.md 写入第 8 条规则与收尾双闸；默认选择记录 A-471。

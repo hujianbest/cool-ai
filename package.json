@@ -16,7 +16,8 @@
     "smoke:settings": "node tests/browser/settings-navigation-browser-smoke.mjs",
     "smoke:structured": "node tests/browser/structured-messages-browser-smoke.mjs",
     "smoke:onboarding": "node tests/browser/onboarding-browser-smoke.mjs",
-    "smoke:threads": "node tests/browser/persistent-threads-browser-smoke.mjs"
+    "smoke:threads": "node tests/browser/persistent-threads-browser-smoke.mjs",
+    "review:visual": "node tests/browser/visual-review.mjs"
   },
   "dependencies": {
     "@phosphor-icons/react": "^2.1.10",
@@ -40,7 +41,9 @@
     "@types/react-dom": "^19.2.3",
     "@vitejs/plugin-react": "^6.0.4",
     "jsdom": "^29.1.1",
+    "pixelmatch": "^8.0.0",
     "playwright": "^1.62.0",
+    "pngjs": "^7.0.0",
     "typescript": "^6.0.3",
     "vitest": "^4.1.10"
   }
