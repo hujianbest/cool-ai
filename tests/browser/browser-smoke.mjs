@@ -145,6 +145,17 @@ try {
     ...(browserExecutable ? { executablePath: browserExecutable } : {}),
   });
   const context = await browser.newContext({ viewport: { width: 1440, height: 1000 } });
+  // Smoke screenshots feed committed pixel baselines and the vision review;
+  // the Next.js dev-server indicator (nextjs-portal) must not appear in them.
+  await context.addInitScript(() => {
+    const inject = () => {
+      const style = document.createElement("style");
+      style.textContent = "nextjs-portal { display: none !important; }";
+      document.documentElement.appendChild(style);
+    };
+    if (document.documentElement) inject();
+    else document.addEventListener("DOMContentLoaded", inject, { once: true });
+  });
   const page = await context.newPage();
 
   await page.goto(baseUrl, { waitUntil: "networkidle" });

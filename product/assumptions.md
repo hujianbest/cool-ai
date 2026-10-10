@@ -475,3 +475,5 @@ agent 替用户做的默认选择。遇到欠定点的标准动作: 提出带默
 
 
 - A-471 2026-10-11 [生效] 视觉回归与视觉评审默认选择：像素基线按 `process.platform` 分目录（跨平台渲染差异不互比）；diff 阈值默认 0.2% 像素（`VISUAL_DIFF_THRESHOLD` 可调）；基线缺失首跑自动建立；视觉评审为可选 Provider（`COCKPIT_VISUAL_REVIEW_*`），未配置或调用失败按失败关闭、不伪造通过、不阻塞本地开发；当前仅 `browser-smoke` 三视图接入基线，其余冒烟触及视觉时逐步接入。默认理由: 跨平台像素 diff 误报高；外部 Provider 依赖必须失败关闭。
+- A-472 2026-10-11 [生效] 视觉评审成对对照升级：评审前以无头 Chromium 渲染 `product/ui/preview-ucd.html` 截参考图（`--refs` 指定视图、默认 `chat`，1440×1000，隐藏 `.prototype-bar`，落 `tests/browser/test-artifacts/ucd-references/` 不提交），与实现截图 + UCD 节选成对发送；`--capture-only` 免 Provider。像素基线 diff 语义不变（应用自回归），原型对照只走视觉语义层。默认理由: 不同 DOM/动态内容下裸像素 diff 必然全量噪声；design-to-code 符合性对照按业界惯例走语义评审。
+- A-473 2026-10-11 [生效] 视觉评审实测收口：`review:visual` 支持 `COCKPIT_VISUAL_REVIEW_API_STYLE`=openai（默认）|anthropic 双格式；实测用当前 agent 的 DeepSeek provider（deepseek-flash 多模态，供评审）；冒烟上下文注入 `nextjs-portal { display: none !important; }` 隐藏 Next.js dev 指示器（dev 工件不得进入证据、基线与评审对照），基线随之重建。默认理由: 适配本机实际可用 Provider；dev 指示器是开发工件非产品 UI，曾致视觉评审误报。
