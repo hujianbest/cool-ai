@@ -11,14 +11,14 @@ import {
 import { createWorkItem } from "@/src/adapters/outbound/sqlite/mission-work/mission-service";
 import { createProject } from "@/src/adapters/outbound/sqlite/project-workspace/projects";
 import { bindWorkspace } from "@/src/adapters/outbound/sqlite/project-workspace/workspace-service";
-import { createWindowsVerifiedExecutionAdapters } from "@/src/adapters/outbound/workspace/windows-verified-execution-adapter";
+import { createPlatformVerifiedExecutionAdapters } from "@/src/adapters/outbound/workspace/windows-verified-execution-adapter";
 import { workspaceBrowseService } from "@/src/composition";
 import { createMission } from "@/src/composition/mission-commands";
 import { memoryDatabasePath } from "@/tests/fixtures/sqlite/memory-database";
 
 vi.mock("server-only", () => ({}));
 
-const fileAdapter = createWindowsVerifiedExecutionAdapters().fileAdapter;
+const fileAdapter = createPlatformVerifiedExecutionAdapters().fileAdapter;
 
 const temporaryDirectories: string[] = [];
 

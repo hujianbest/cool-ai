@@ -434,11 +434,12 @@ async function provisionProviderAndAgents(page) {
 
 async function createThread(page, title, memberNames) {
   const previousThreadId = new URL(page.url()).searchParams.get("thread");
-  const openers = page.getByRole("button", { exact: true, name: "创建线程" });
+  // UCD §9.1.5：侧栏头「新对话」是常驻入口，列表非空时没有空态按钮。
+  const openers = page.getByRole("button", { exact: true, name: "新对话" });
   await openers.first().click();
-  const dialog = page.getByRole("dialog", { name: "创建线程" });
+  const dialog = page.getByRole("dialog", { name: "创建对话" });
   await dialog.waitFor();
-  await dialog.getByRole("textbox", { name: "线程标题" }).fill(title);
+  await dialog.getByRole("textbox", { name: "对话标题" }).fill(title);
   for (const name of memberNames) {
     let checked = false;
     for (let attempt = 0; attempt < 3; attempt += 1) {
@@ -454,7 +455,7 @@ async function createThread(page, title, memberNames) {
     }
     assert.equal(checked, true);
   }
-  await dialog.getByRole("button", { name: "创建线程", exact: true }).click();
+  await dialog.getByRole("button", { name: "创建对话", exact: true }).click();
   await dialog.waitFor({ state: "detached" });
   await page.waitForURL((url) => {
     const selected = url.searchParams.get("thread");
@@ -618,28 +619,46 @@ try {
 
   const { alpha, beta } = await provisionProviderAndAgents(page);
   assert.equal(providerCalls, 1);
+  // P1 IA（A-358/A-401）：工作区绑定界面只在引导步出现；对已有对话的
+  // 项目，自动选对话会改写 URL，无法以 guide 参数直达。本冒烟考的是对话
+  // 行为而非绑定 UI（027 已覆盖），因此经公开 API 完成绑定。
+  const legacyWorkspace = await api(page, "/api/projects/legacy-project/workspace");
+  const legacyBind = await api(page, "/api/projects/legacy-project/workspace", {
+    body: JSON.stringify({
+      confirmRebind: true,
+      expectedVersion: legacyWorkspace.body.projectVersion,
+      path: workspaceDirectory,
+    }),
+    headers: { "content-type": "application/json" },
+    method: "PUT",
+  });
+  assert.equal(legacyBind.status, 200, JSON.stringify(legacyBind.body));
+  // 使命经公开 API 创建（引导步只负责工作区/成员绑定）。
+  const legacyMission = await api(page, "/api/projects/legacy-project/mission", {
+    body: JSON.stringify({
+      expectedVersion: 0,
+      goal: "Verify persistent project threads end to end",
+      operationId: crypto.randomUUID(),
+      title: "Persistent Threads Mission",
+    }),
+    headers: { "content-type": "application/json" },
+    method: "POST",
+  });
+  assert.ok(
+    legacyMission.status === 201 || legacyMission.status === 200,
+    JSON.stringify(legacyMission.body),
+  );
   await page.goto(`${baseUrl}/projects/legacy-project`, { waitUntil: "networkidle" });
-  await page.getByRole("heading", { name: "Persistent Threads Legacy" }).waitFor();
-  await page.getByRole("button", { name: "绑定工作区" }).click();
-  await page.getByLabel("本地工作区路径").fill(workspaceDirectory);
-  await page.getByRole("button", { name: "绑定工作区" }).click();
-  await page.getByText("工作区已保存。", { exact: true }).waitFor();
-  await page.getByRole("button", { name: "创建使命" }).click();
-  await page.getByLabel("使命标题").fill("Persistent Threads Mission");
   await page
-    .getByLabel("使命目标")
-    .fill("Verify persistent project threads end to end");
-  await page.getByRole("button", { name: "创建使命" }).click();
-  await page
-    .getByRole("heading", { name: "Persistent Threads Mission" })
+    .getByRole("heading", { name: "Persistent Threads Legacy" })
     .waitFor();
   const persisted = await api(page, "/api/projects/legacy-project/threads?limit=100");
   assert.equal(persisted.status, 200);
   assert.equal(persisted.body.threads.length, 1);
   assert.equal(persisted.body.threads[0].title, "历史协作");
   const legacyThreadId = persisted.body.threads[0].id;
-  // A-237 same-wave pin: current canonical schema identity is userVersion 25.
-  assert.equal(inspectDatabase().version, 25);
+  // Current canonical schema identity pin (CURRENT_SCHEMA identity.userVersion).
+  assert.equal(inspectDatabase().version, 30);
   pass("current-persistent-default-thread", { legacyThreadId });
   await axe(page, "current persistent project");
 
@@ -712,7 +731,7 @@ try {
   pass("url-settings-history-navigation");
 
   await page.goto(`${baseUrl}${firstHref}`, { waitUntil: "networkidle" });
-  const composer = page.getByLabel("发送给项目群聊");
+  const composer = page.getByLabel("发送给项目对话");
   await composer.fill("Owner message isolated in first thread.");
   const startButton = page.getByRole("button", { name: "发送并开始首次运行" });
   assert.equal(await startButton.isEnabled(), true);
@@ -749,18 +768,25 @@ try {
     `${baseUrl}/projects/legacy-project?thread=${secondThread}`,
     { waitUntil: "networkidle" },
   );
-  const returnLink = await page.getByRole("link", {
-    name: `返回活动线程 ${activeRun.id}`,
+  // P1 IA：会话面不再渲染 run 表面的「返回活动对话」链接；该深链契约改由
+  // 直接导航验证（同一 href 导航后选中该运行），对话框中的活动运行以
+  // 下方提示如实呈现。
+  const canonicalActiveRunHref =
+    `/projects/legacy-project?thread=${firstThread}&run=${activeRun.id}`;
+  await page.goto(`${baseUrl}${canonicalActiveRunHref}`, {
+    waitUntil: "networkidle",
   });
-  assert.equal(
-    await returnLink.getAttribute("href"),
-    `/projects/legacy-project?thread=${firstThread}&run=${activeRun.id}`,
+  await page.waitForURL((url) => url.searchParams.get("run") === activeRun.id);
+  await page.goto(
+    `${baseUrl}/projects/legacy-project?thread=${secondThread}`,
+    { waitUntil: "networkidle" },
   );
-  const secondThreadComposer = page.getByLabel("发送给项目群聊");
+  const secondThreadComposer = page.getByLabel("发送给项目对话");
   await secondThreadComposer.fill("Second-thread owner note.");
   await page.waitForFunction(() =>
     [...document.querySelectorAll("button")].some(
-      (button) => button.textContent?.trim() === "发送消息" && !button.disabled,
+      (button) =>
+        button.getAttribute("aria-label") === "发送消息" && !button.disabled,
     )
   );
   assert.equal(
@@ -768,7 +794,7 @@ try {
     true,
   );
   await page.getByText(
-    "另一线程有活动运行；可发送线程消息，但不能在此启动新一轮。",
+    "另一对话有活动运行；可发送对话消息，但不能在此启动新一轮。",
     { exact: true },
   ).waitFor();
   const secondThreadMessageResponse = page.waitForResponse((response) =>
@@ -779,18 +805,16 @@ try {
   assert.equal((await secondThreadMessageResponse).status(), 201);
   await page.getByText("Second-thread owner note.", { exact: true }).waitFor();
   assert.equal(inspectDatabase().activeRuns, 1);
-  await returnLink.focus();
-  await page.keyboard.press("Enter");
-  try {
-    await page.waitForURL(
-      (url) => url.searchParams.get("run") === activeRun.id,
-      { timeout: 10_000 },
-    );
-  } catch {
-    await returnLink.focus();
-    await page.keyboard.press("Enter");
-    await page.waitForURL((url) => url.searchParams.get("run") === activeRun.id);
-  }
+  // P1 IA：会话面无 run 表面的返还链接；经规范深链导航回活动运行所在对话并
+  // 选中该运行（与上方 href 契约同一目标）。
+  await page.goto(`${baseUrl}${canonicalActiveRunHref}`, {
+    waitUntil: "networkidle",
+  });
+  await page.waitForURL(
+    (url) =>
+      url.searchParams.get("thread") === firstThread
+      && url.searchParams.get("run") === activeRun.id,
+  );
   pass("thread-isolation-single-active-safe-return", { activeRunId: activeRun.id });
   await axe(page, "active thread selected run");
   await page.screenshot({ fullPage: true, path: evidence.desktop });
@@ -819,7 +843,7 @@ try {
     `${baseUrl}/projects/legacy-project?thread=${legacyThreadId}`,
     { waitUntil: "networkidle" },
   );
-  const runSelector = page.getByRole("combobox", { name: "选择线程运行" });
+  const runSelector = page.getByRole("combobox", { name: "选择对话运行" });
   await runSelector.selectOption("legacy-run-stopped");
   await page.waitForURL((url) =>
     url.searchParams.get("run") === "legacy-run-stopped"
@@ -850,17 +874,17 @@ try {
   assert.equal(removal.status, 200);
   await page.goto(`${baseUrl}${firstHref}`, { waitUntil: "networkidle" });
   await page.getByText(/需要修复/).first().waitFor();
-  await page.getByRole("button", { name: "修复线程成员策略" }).click();
-  const repairDialog = page.getByRole("dialog", { name: "编辑线程成员策略" });
+  await page.getByRole("button", { name: "修复对话成员策略" }).click();
+  const repairDialog = page.getByRole("dialog", { name: "编辑对话成员策略" });
   await repairDialog.getByLabel("Legacy Alpha").check();
   await repairDialog.getByRole("button", { name: "保存成员策略" }).click();
   await page.getByRole("status").filter({ hasText: /策略版本/ }).waitFor();
   await axe(page, "repaired policy success");
   await page.screenshot({ fullPage: true, path: evidence.policy });
 
-  const editPolicy = page.getByRole("button", { name: "编辑线程成员策略" });
+  const editPolicy = page.getByRole("button", { name: "编辑对话成员策略" });
   await editPolicy.click();
-  const staleDialog = page.getByRole("dialog", { name: "编辑线程成员策略" });
+  const staleDialog = page.getByRole("dialog", { name: "编辑对话成员策略" });
   const staleDetail = await readThread(page, "legacy-project", firstThread);
   const externalPolicy = await api(
     page,
@@ -1172,7 +1196,7 @@ try {
   await page.keyboard.press("Enter");
   const narrowEditor = page.getByRole("dialog", { name: "任务编辑" });
   await narrowEditor.waitFor();
-  await narrowEditor.getByRole("tab", { name: "群聊" }).click();
+  // P1 IA: 聊天流直接挂在任务编辑表面上，无「群聊」tab。
   const narrowReplyChip = narrowEditor.getByRole("button", { name: replyChipName });
   await narrowReplyChip.waitFor();
   const narrowUnavailable = narrowEditor.getByRole("button", { name: unavailableName });
@@ -1189,7 +1213,7 @@ try {
   await narrowEditor.waitFor({ state: "detached" });
   await page.setViewportSize({ height: 1050, width: 1500 });
   await page.goto(`${baseUrl}${firstHref}`, { waitUntil: "networkidle" });
-  const draftComposer = page.getByLabel("发送给项目群聊");
+  const draftComposer = page.getByLabel("发送给项目对话");
   await draftComposer.waitFor();
   const draftText = "Draft continuity smoke note.";
   const attachmentName = "smoke-notes.png";
@@ -1304,7 +1328,7 @@ try {
     0,
   );
 
-  const draftRunSelector = page.getByRole("combobox", { name: "选择线程运行" });
+  const draftRunSelector = page.getByRole("combobox", { name: "选择对话运行" });
   await draftRunSelector.selectOption(activeRun.id);
   await page.waitForURL((url) => url.searchParams.get("run") === activeRun.id);
   await page.waitForFunction((expected) => {
@@ -1415,7 +1439,7 @@ try {
   await draftEditorOpener.focus();
   await page.keyboard.press("Enter");
   const draftEditor = page.getByRole("dialog", { name: "任务编辑" });
-  await draftEditor.getByRole("tab", { name: "群聊" }).click();
+  // P1 IA: 聊天流直接挂在任务编辑表面上，无「群聊」tab。
   const narrowHistoryEntry = draftEditor.getByRole("button", { name: "输入历史" });
   await narrowHistoryEntry.click();
   const narrowHistoryRegion = draftEditor.getByRole("region", { name: "输入历史" });
@@ -1507,7 +1531,7 @@ try {
   await page.goto(`${baseUrl}${firstHref}&run=${liveRunId}`, {
     waitUntil: "networkidle",
   });
-  const attachComposer = page.getByLabel("发送给项目群聊");
+  const attachComposer = page.getByLabel("发送给项目对话");
   await attachComposer.waitFor();
 
   const attachmentPosts = [];
@@ -1827,7 +1851,7 @@ try {
   const attachmentEditorOpener = page.getByRole("button", { name: "打开编辑" });
   await attachmentEditorOpener.click();
   const attachmentEditor = page.getByRole("dialog", { name: "任务编辑" });
-  await attachmentEditor.getByRole("tab", { name: "群聊" }).click();
+  // P1 IA: 聊天流直接挂在任务编辑表面上，无「群聊」tab。
   const narrowImage = attachmentEditor.getByRole("img", {
     exact: true,
     name: acceptName,
@@ -1845,7 +1869,7 @@ try {
   await narrowAddButton.scrollIntoViewIfNeeded();
   const narrowAddBox = await narrowAddButton.boundingBox();
   assert.ok(narrowAddBox && narrowAddBox.height >= 44 && narrowAddBox.width >= 44);
-  await attachmentEditor.getByLabel("发送给项目群聊").focus();
+  await attachmentEditor.getByLabel("发送给项目对话").focus();
   let addButtonFocused = false;
   for (let attempt = 0; attempt < 15 && !addButtonFocused; attempt += 1) {
     await page.keyboard.press("Tab");
@@ -1864,9 +1888,9 @@ try {
   await page.goto(`${baseUrl}${firstHref}`, { waitUntil: "networkidle" });
   const threadsList = page.getByRole("navigation", {
     exact: true,
-    name: "项目线程",
+    name: "项目对话",
   });
-  const viewTabs = page.getByRole("tablist", { name: "线程视图" });
+  const viewTabs = page.getByRole("tablist", { name: "对话视图" });
   const allViewTab = viewTabs.getByRole("tab", { name: "全部" });
   const favoritesViewTab = viewTabs.getByRole("tab", { name: "收藏" });
   await allViewTab.waitFor();
@@ -1900,7 +1924,7 @@ try {
     name: "Distinct title",
   });
   const thirdStar = threadsList.getByRole("button", {
-    name: "收藏线程 Distinct title",
+    name: "收藏对话 Distinct title",
   });
   await thirdStar.waitFor();
   assert.equal(await thirdStar.getAttribute("aria-pressed"), "false");
@@ -1945,7 +1969,7 @@ try {
   assert.equal(await thirdUnstar.getAttribute("aria-pressed"), "true");
 
   const legacyStar = threadsList.getByRole("button", {
-    name: "收藏线程 历史协作",
+    name: "收藏对话 历史协作",
   });
   await legacyStar.waitFor();
   await legacyStar.focus();
@@ -2004,7 +2028,7 @@ try {
   );
   assert.equal(new URL(page.url()).searchParams.get("thread"), firstThread);
   assert.equal(
-    await page.getByText(/所选线程无效/).count(),
+    await page.getByText(/所选对话无效/).count(),
     0,
     "favorites view must keep the current thread context without selection errors",
   );
@@ -2148,9 +2172,9 @@ try {
     run_retried: "运行已重试",
     run_started: "运行已开始",
     run_stopped: "运行已停止",
-    thread_deleted: "线程已移入回收站",
-    thread_purged: "线程已永久删除",
-    thread_restored: "线程已恢复",
+    thread_deleted: "对话已移入回收站",
+    thread_purged: "对话已永久删除",
+    thread_restored: "对话已恢复",
     task_claimed: "任务已认领",
     tasks_created: "任务已创建",
   };
@@ -2370,13 +2394,13 @@ try {
     "message events must render the truncated public excerpt",
   );
   const stoppedLink = auditRows.nth(auditEvents.indexOf(stoppedEvent))
-    .getByRole("link", { name: "定位来源线程" });
+    .getByRole("link", { name: "定位来源对话" });
   assert.equal(
     await stoppedLink.getAttribute("href"),
     `/projects/legacy-project?thread=${firstThread}&run=${activeRun.id}`,
   );
   const noteLink = auditRows.nth(auditEvents.indexOf(secondThreadNote))
-    .getByRole("link", { name: "定位来源线程" });
+    .getByRole("link", { name: "定位来源对话" });
   assert.equal(
     await noteLink.getAttribute("href"),
     `/projects/legacy-project?thread=${secondThread}`,
@@ -2407,7 +2431,7 @@ try {
       && url.searchParams.get("run") === activeRun.id
     );
   }
-  const landedRunSelector = page.getByRole("combobox", { name: "选择线程运行" });
+  const landedRunSelector = page.getByRole("combobox", { name: "选择对话运行" });
   await landedRunSelector.waitFor();
   assert.equal(
     await landedRunSelector.inputValue(),
@@ -2475,7 +2499,7 @@ try {
     "Owner message with image attachments.",
   );
   const narrowLocateLink = narrowRows.nth(auditEvents.indexOf(stoppedEvent))
-    .getByRole("link", { name: "定位来源线程" });
+    .getByRole("link", { name: "定位来源对话" });
   assert.equal(
     await narrowLocateLink.getAttribute("href"),
     `/projects/legacy-project?thread=${firstThread}&run=${activeRun.id}`,
@@ -2545,7 +2569,7 @@ try {
       body: JSON.stringify({
         memberAgentIds: [alpha.id, beta.id],
         operationId: randomUUID(),
-        title: "外部隔离线程",
+        title: "外部隔离对话",
       }),
       headers: { "content-type": "application/json" },
       method: "POST",
@@ -2673,11 +2697,11 @@ try {
   pass("thread-search-api-kinds-snippet-cross-project-isolation");
 
   await page.goto(`${baseUrl}${firstHref}`, { waitUntil: "networkidle" });
-  const threadSearchInput = page.getByLabel("搜索线程");
+  const threadSearchInput = page.getByLabel("搜索对话");
   await threadSearchInput.waitFor();
   await threadSearchInput.click();
   await threadSearchInput.pressSequentially("quokka");
-  const searchRegion = page.getByRole("region", { name: "线程搜索结果" });
+  const searchRegion = page.getByRole("region", { name: "对话搜索结果" });
   await searchRegion.waitFor();
   const quokkaResult = searchRegion.locator(".thread-search-result", {
     hasText: "quokka",
@@ -2808,11 +2832,11 @@ try {
   await searchNavOpener.click();
   const searchDrawer = page.getByRole("dialog", { name: "项目导航" });
   await searchDrawer.waitFor();
-  const narrowSearchInput = searchDrawer.getByLabel("搜索线程");
+  const narrowSearchInput = searchDrawer.getByLabel("搜索对话");
   await narrowSearchInput.click();
   await narrowSearchInput.pressSequentially("quokka");
   const narrowSearchRegion = searchDrawer.getByRole("region", {
-    name: "线程搜索结果",
+    name: "对话搜索结果",
   });
   await narrowSearchRegion.waitFor();
   const narrowResult = narrowSearchRegion.locator(".thread-search-result", {
@@ -2883,7 +2907,7 @@ try {
   await page.getByRole("button", { name: "打开编辑" }).click();
   const searchEditorDrawer = page.getByRole("dialog", { name: "任务编辑" });
   await searchEditorDrawer.waitFor();
-  await searchEditorDrawer.getByRole("tab", { name: "群聊" }).click();
+  // P1 IA: 聊天流直接挂在任务编辑表面上，无「群聊」tab。
   await searchEditorDrawer
     .getByText("上线前再核对 quokka 检查单。", { exact: true })
     .waitFor();
@@ -4578,7 +4602,7 @@ try {
   await page.keyboard.press("Enter");
   const queueEditorDrawer = page.getByRole("dialog", { name: "任务编辑" });
   await queueEditorDrawer.waitFor();
-  await queueEditorDrawer.getByRole("tab", { name: "群聊" }).click();
+  // P1 IA: 聊天流直接挂在任务编辑表面上，无「群聊」tab。
   await queueEditorDrawer
     .getByRole("button", { name: "展开待处理消息队列" })
     .click();

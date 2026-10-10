@@ -113,16 +113,16 @@ describe("ActivityBar theme toggle", () => {
     );
   });
 
-  it("renders a non-claiming disabled loading control before hydration", () => {
+  it("renders a non-claiming loading control before hydration", () => {
     const html = renderToString(<ActivityBar activePath="/" />);
+    const toggle = html.match(/<button[^>]*aria-label="切换主题"[^>]*>/)?.[0] ?? "";
 
     expect(html).toContain('class="activity-bar-item"');
-    expect(html).toContain('aria-label="主题偏好加载中"');
-    expect(html).toContain('aria-busy="true"');
-    expect(html).toContain("disabled");
+    expect(toggle).toContain('aria-busy="true"');
+    expect(toggle).not.toContain("aria-pressed");
+    expect(toggle).not.toContain("disabled");
     expect(html).toContain(">·<");
-    expect(html).not.toMatch(/>[夜日]</);
-    expect(html).not.toMatch(/aria-label="主题偏好加载中"[^>]*aria-pressed/);
+    expect(html).not.toMatch(/当前为[明暗]色主题/);
   });
 
   it("switches immediately by pointer and keyboard while keeping root and ARIA synchronized", async () => {
@@ -168,9 +168,10 @@ describe("ActivityBar theme toggle", () => {
 
     // jsdom Storage instances do not honor own-property setItem overrides for
     // window.localStorage writes, so the failure must be injected on the
-    // Storage prototype (verified by focused probe).
+    // prototype the active storage actually uses (jsdom Storage on Node 24,
+    // the Node built-in WebStorage prototype on Node 26+).
     const setItemSpy = vi
-      .spyOn(Storage.prototype, "setItem")
+      .spyOn(Object.getPrototypeOf(window.localStorage), "setItem")
       .mockImplementation(() => {
         throw new Error("storage unavailable");
       });

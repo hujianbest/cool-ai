@@ -25,7 +25,7 @@ Cool AI 保持一个本地优先、单进程、单 SQLite 的**领域模块化�
 - 跨子系统只能调用公开 Interface；不得导入对方私有服务、直接读写对方表或把 React/HTTP 状态当成领域契约。
 - 涉及多个 owner 的用户结果由 Application Workflow 协调。需要强一致时，Workflow 在同一 SQLite 事务中调用各子系统事务内 Interface，维持共同不变量。
 - 读投影可由同库 outbox 中的选择性公开事件构建；读投影不是命令事实源，也不能反向推导或修补业务事实。
-- UI、HTTP、SQLite、Windows verified-handle、Provider、CLI、MCP 都是 Adapter；领域能力不以某个 Adapter 的形态定义。
+- UI、HTTP、SQLite、verified-handle（macOS posix / Windows 双原生层）、Provider、CLI、MCP 都是 Adapter；领域能力不以某个 Adapter 的形态定义。
 
 这不是微服务规划。逻辑边界先在单体内变得清楚、可测试、可机械约束；没有独立部署、扩缩容、数据驻留或故障隔离证据时不拆进程。
 
@@ -285,7 +285,7 @@ Workflow 只拥有流程 operation、步骤/checkpoint 和补偿状态，不拥�
 
 - **入站 Adapter**：HTTP route、React server/client action、CLI 管理入口；负责传输限制、身份/项目上下文组装和错误映射，不包含领域决定。
 - **持久化 Adapter**：SQLite repository、transaction、canonical schema bootstrap/validation、outbox；SQLite schema 是实现细节，但复合约束和原子性必须兑现领域不变量。首次发布前不保留版本间 migration。
-- **工作区 Adapter**：Windows verified-handle、文件系统、Git、进程与本地预览；只实现 Safe Execution/Project & Workspace 所授予的窄能力。
+- **工作区 Adapter**：verified-handle（目标平台 macOS posix 原生层，保留 Windows 原生层）、文件系统、Git、进程与本地预览；只实现 Safe Execution/Project & Workspace 所授予的窄能力。
 - **模型与外部运行时 Adapter**：OpenAI-compatible Provider、原生 CLI/ACP、MCP；外部返回始终不可信，经严格 schema、大小、凭据和来源校验后才能成为业务事实。
 - **通知与媒体 Adapter**：浏览器通知/PWA、未来受控语音；默认最小内容、显式同意、可撤销，不代替 Approval。
 

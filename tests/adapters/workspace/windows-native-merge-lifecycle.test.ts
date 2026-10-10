@@ -137,7 +137,11 @@ afterEach(() => {
   rmSync(join(canonical, ".."), { force: true, recursive: true });
 });
 
-describe("Windows merge-owned lifecycle", () => {
+// The Windows native layer only exists on Windows; its acceptance tests run
+// there. The macOS equivalents live in posix-native-*.test.ts.
+const describeWindows = process.platform === "win32" ? describe : describe.skip;
+
+describeWindows("Windows merge-owned lifecycle", () => {
   it("closes prepared handles and lets a new adapter reopen the complete descriptor", () => {
     const closes = new Map<unknown, number>();
     const adapter = native.createWindowsNativeMergeLifecycleAdapter({

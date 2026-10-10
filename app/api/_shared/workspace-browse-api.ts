@@ -95,7 +95,7 @@ export async function workspaceBrowseFilesGet(
     const { projectId } = await context.params;
     const parsed = parseBrowsePath(request);
     if ("response" in parsed) return parsed.response;
-    const adapters = windowsVerifiedExecution.createWindowsVerifiedExecutionAdapters();
+    const adapters = windowsVerifiedExecution.createPlatformVerifiedExecutionAdapters();
     const listing = await workspaceBrowseService.listWorkspaceDirectory(
       databasePath(),
       projectId,
@@ -116,7 +116,7 @@ export async function workspaceBrowseFileGet(
     const { projectId } = await context.params;
     const parsed = parseBrowsePath(request);
     if ("response" in parsed) return parsed.response;
-    const adapters = windowsVerifiedExecution.createWindowsVerifiedExecutionAdapters();
+    const adapters = windowsVerifiedExecution.createPlatformVerifiedExecutionAdapters();
     const preview = await workspaceBrowseService.readWorkspaceFilePreview(
       databasePath(),
       projectId,

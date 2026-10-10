@@ -83,7 +83,11 @@ afterAll(() => {
   rmSync(directory, { force: true, recursive: true });
 });
 
-describe("Windows x64 native loader ABI", () => {
+// The Windows native layer only exists on Windows; its acceptance tests run
+// there. The macOS equivalents live in posix-native-*.test.ts.
+const describeWindows = process.platform === "win32" ? describe : describe.skip;
+
+describeWindows("Windows x64 native loader ABI", () => {
   it("keeps the static default factory resolvable and Koffi server-external", () => {
     expect(createDefaultSandboxFsAdapter).toBeTypeOf("function");
     expect(nextConfig.serverExternalPackages).toContain("koffi");
@@ -205,7 +209,7 @@ describe("Windows x64 native loader ABI", () => {
   });
 });
 
-describe("Windows root handle capability", () => {
+describeWindows("Windows root handle capability", () => {
   it("opens a real supported root and proves identity, attributes, final path, and close", () => {
     const loader = native.createWindowsNativeLoader();
     expect(loader.capability(directory)).toEqual({

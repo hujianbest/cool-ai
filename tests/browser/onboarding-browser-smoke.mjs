@@ -241,6 +241,34 @@ async function setTheme(page, theme) {
   );
 }
 
+// The workspace form lives inside a 「保存工作区」 dialog (the opener has the
+// same label). Opening the 「确认改绑工作区」 confirmation therefore needs the
+// opener click plus the in-dialog submit.
+async function submitWorkspacePath(page, value) {
+  await page.getByRole("button", { name: "保存工作区" }).click();
+  const bindDialog = page.getByRole("dialog", { name: "保存工作区" });
+  await bindDialog.waitFor();
+  if (value !== undefined) {
+    await bindDialog.getByLabel("本地工作区路径").fill(value);
+  }
+  await bindDialog.getByRole("button", { name: "保存工作区" }).click();
+}
+
+// Accessibility scans assert settled states: CSS transitions (e.g. the
+// suggestion-card background-color transition on theme switches) would
+// otherwise be sampled mid-flight and report transient colors.
+async function settleAnimations(page) {
+  await page.evaluate(() =>
+    Promise.race([
+      Promise.all(
+        document.getAnimations().map((animation) =>
+          animation.finished.catch(() => undefined)),
+      ),
+      new Promise((resolve) => setTimeout(resolve, 400)),
+    ]),
+  );
+}
+
 async function assertAccessibleSurface(page, label) {
   const scope = await page.evaluate(() => {
     const visible = (element) => {
@@ -272,6 +300,7 @@ async function assertAccessibleSurface(page, label) {
       title: document.title,
     };
   });
+  await settleAnimations(page);
   const results = await new AxeBuilder({ page }).analyze();
   const severity = {
     critical: 0,
@@ -827,12 +856,15 @@ try {
 
   await page.setViewportSize({ height: 1000, width: 1440 });
   await page.goto(baseUrl, { waitUntil: "networkidle" });
-  const entry = page.getByRole("link", { name: "首次使用引导" });
-  await entry.focus();
-  assert.equal(await entry.evaluate((node) => document.activeElement === node), true);
-  await page.keyboard.press("Enter");
-  await page.waitForURL(
+  // Since S-60, verified providers imply starter agents, so the seeded home is
+  // ready and the welcome hero (with its guide entry link) only exists before
+  // any agent is configured. Assert the ready home, then re-enter the guide
+  // through its URL surface.
+  const homeStateAfterSeed = await (await page.request.get(`${baseUrl}/api/home`)).json();
+  assert.equal(homeStateAfterSeed.kind, "ready");
+  await page.goto(
     `${baseUrl}/team?section=providers&guide=provider&returnTo=/`,
+    { waitUntil: "networkidle" },
   );
   await page
     .getByRole("region", { name: "Provider 首次使用引导" })
@@ -946,14 +978,15 @@ try {
       await rebindDialog.waitFor({ state: "detached" });
     },
     open: async () => {
-      await page.getByRole("button", { name: "保存工作区" }).click();
+      await submitWorkspacePath(page);
       await rebindDialog.waitFor();
     },
   });
-  await page.getByRole("button", { name: "保存工作区" }).click();
+  await submitWorkspacePath(page);
   await rebindDialog.getByRole("button", { name: "确认改绑" }).click();
   await page.getByText("工作区已保存。", { exact: true }).waitFor();
-  const canonicalReboundWorkspacePath = await workspaceInput.inputValue();
+  const canonicalReboundWorkspacePath =
+    (await page.getByLabel("工作区绑定状态").locator("code").textContent()) ?? "";
   assert.equal((await workspaceGuide.innerText()).includes(reboundWorkspacePath), false);
 
   let conflictPuts = 0;
@@ -975,16 +1008,20 @@ try {
     }
     await route.continue();
   });
-  await workspaceInput.fill(workspacePath);
-  await page.getByRole("button", { name: "保存工作区" }).click();
+  await submitWorkspacePath(page, workspacePath);
   await rebindDialog.getByRole("button", { name: "确认改绑" }).click();
   await page.getByRole("alert").filter({ hasText: "项目已更新" }).waitFor();
   await page.getByRole("button", { name: "重新加载工作区" }).click();
+  await page.getByRole("button", { name: "保存工作区" }).click();
   await page.waitForFunction(
     (expected) =>
       document.querySelector("[name=workspacePath]")?.value === expected,
     canonicalReboundWorkspacePath,
   );
+  await page.keyboard.press("Escape");
+  await page
+    .getByRole("dialog", { name: "保存工作区" })
+    .waitFor({ state: "detached" });
   assert.equal(conflictPuts, 1);
   await page.unroute(`**/api/projects/${projectId}/workspace`);
 
@@ -1000,7 +1037,7 @@ try {
     if (uncertainWorkspacePuts > 0) reconciliationWorkspaceGets += 1;
     await route.continue();
   });
-  await page.getByRole("button", { name: "保存工作区" }).click();
+  await submitWorkspacePath(page);
   await page
     .getByText("已通过事实核对确认工作区已保存。", { exact: true })
     .waitFor();
@@ -1166,8 +1203,17 @@ try {
     await route.continue();
   });
   await guide.getByRole("button", { name: "创建使命目标" }).click();
-  assert.equal(await page.getByLabel("使命标题").count(), 0);
-  assert.equal(await page.getByRole("heading", { name: "使命看板" }).count(), 0);
+  // The goal step hands off to the existing mission governance surface (A-378)
+  // instead of hosting an inline mission form of its own: the board opens and
+  // the create form takes focus.
+  await page
+    .getByRole("heading", { name: "使命看板" })
+    .waitFor({ state: "attached" });
+  await page.getByLabel("使命标题").waitFor({ state: "visible" });
+  await page.waitForFunction(
+    (expected) => document.activeElement?.id === expected,
+    `mission-title-${projectId}`,
+  );
   await page.evaluate(async (id) => {
     const members = await (await fetch(`/api/projects/${id}/members`)).json();
     try {
@@ -1264,8 +1310,8 @@ try {
     }
     await route.fallback();
   });
-  await guide.getByRole("button", { name: "在项目群聊启动协作" }).click();
-  const composer = page.getByLabel("发送给项目群聊");
+  await guide.getByRole("button", { name: "在项目对话启动协作" }).click();
+  const composer = page.getByLabel("发送给项目对话");
   await page.waitForFunction(
     () => document.activeElement?.id.startsWith("collaboration-message-"),
   );

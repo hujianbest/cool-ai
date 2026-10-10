@@ -348,6 +348,10 @@ async function createProject(page) {
   await page.goto(baseUrl, { waitUntil: "networkidle" });
   await openFolderProject(page, "workspace");
   const projectId = new URL(page.url()).pathname.split("/").at(-1);
+  // P1 IA（A-358/A-401）：成员与工作区设置在引导步表面，桌面主路径不挂载。
+  await page.goto(`${baseUrl}/projects/${projectId}?guide=members`, {
+    waitUntil: "networkidle",
+  });
   const members = page.getByRole("group", { name: "平等项目成员" });
   await members.getByRole("checkbox", { name: /Structured Alpha/ }).check();
   await members.getByRole("checkbox", { name: /Structured Beta/ }).check();
@@ -358,16 +362,20 @@ async function createProject(page) {
     "Structured Browser Mission",
     "Verify immutable structured messages",
   );
+  // 回到项目主路径，后续会话流程在聊天优先表面继续。
+  await page.goto(`${baseUrl}/projects/${projectId}`, {
+    waitUntil: "networkidle",
+  });
   return projectId;
 }
 
 async function createThread(page) {
-  await page.getByRole("button", { name: "创建线程" }).first().click();
-  const dialog = page.getByRole("dialog", { name: "创建线程" });
-  await dialog.getByRole("textbox", { name: "线程标题" }).fill("Structured smoke thread");
+  await page.getByRole("button", { name: "创建对话" }).first().click();
+  const dialog = page.getByRole("dialog", { name: "创建对话" });
+  await dialog.getByRole("textbox", { name: "对话标题" }).fill("Structured smoke thread");
   await dialog.getByLabel("Structured Alpha").check();
   await dialog.getByLabel("Structured Beta").check();
-  await dialog.getByRole("button", { name: "创建线程", exact: true }).click();
+  await dialog.getByRole("button", { name: "创建对话", exact: true }).click();
   await dialog.waitFor({ state: "detached" });
   await page.waitForURL((url) => Boolean(url.searchParams.get("thread")));
   return new URL(page.url()).searchParams.get("thread");
@@ -508,11 +516,11 @@ try {
   const emptyThread = await api(page, `/api/projects/${projectId}/threads/${threadId}`);
   assert.deepEqual(emptyThread.body.runs, []);
   pass("empty-state");
-  const composer = page.getByLabel("发送给项目群聊");
+  const composer = page.getByLabel("发送给项目对话");
   try {
     await composer.waitFor({ timeout: 10_000 });
   } catch (error) {
-    for (const name of ["重试加载运行", "重试加载群聊"]) {
+    for (const name of ["重试加载运行", "重试加载对话"]) {
       const retry = page.getByRole("button", { name });
       if (await retry.count() > 0 && await retry.first().isVisible()) {
         await retry.first().click();
@@ -813,7 +821,7 @@ try {
   try {
     await recoveredDiff.waitFor({ timeout: 10_000 });
   } catch {
-    for (const name of ["重试加载运行", "重试加载群聊"]) {
+    for (const name of ["重试加载运行", "重试加载对话"]) {
       const retry = page.getByRole("button", { name });
       if (await retry.count() > 0 && await retry.first().isVisible()) {
         await retry.first().click();
@@ -838,8 +846,7 @@ try {
   await editorOpener.focus();
   await page.keyboard.press("Enter");
   const editor = page.getByRole("dialog", { name: "任务编辑" });
-  await editor.getByRole("tab", { name: "群聊" }).focus();
-  await page.keyboard.press("Enter");
+  // P1 IA：窄屏主表面即任务编辑（含聊天流），结构化块直接渲染，不再有「群聊」tab。
   await editor.getByRole("heading", { name: "Frozen Diff Preview" }).waitFor();
   await editor.getByText("safe-report.txt", { exact: true }).first().waitFor();
   const layout = await editor.evaluate((surface) => ({

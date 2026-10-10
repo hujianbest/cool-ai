@@ -433,7 +433,7 @@ export function ProviderPanel({
     <>
       <main
         aria-labelledby="provider-resource-tab"
-        className="cockpit-flow"
+        className="cockpit-flow cockpit-flow-scrollable"
         id="provider-resource-panel"
         role="tabpanel"
       >

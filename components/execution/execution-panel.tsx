@@ -675,9 +675,25 @@ export function ExecutionPanel({
     };
   }, []);
 
+  // 列表接口按 created_at 升序做游标分页；「运行详情」只承载最近的两次执行
+  // （与定位提示「仅展示最近的执行」一致），因此按创建时间降序取前两条。
+  // 同一时刻创建的执行保持接口序（稳定排序），不引入额外次序假设。
+  const recentExecutions = useMemo(
+    () => [...executions]
+      .sort((left, right) => (
+        left.createdAt === right.createdAt
+          ? 0
+          : left.createdAt < right.createdAt
+            ? 1
+            : -1
+      ))
+      .slice(0, 2),
+    [executions],
+  );
+
   useEffect(() => {
     if (loading || error) return;
-    for (const execution of executions.slice(0, 2)) {
+    for (const execution of recentExecutions) {
       if (
         canAutoAdvance(execution)
         && !advanceOperationRef.current.has(execution.id)
@@ -685,7 +701,7 @@ export function ExecutionPanel({
         void advanceExecution(execution);
       }
     }
-  }, [advanceExecution, error, executions, loading]);
+  }, [advanceExecution, error, loading, recentExecutions]);
 
   const doneIds = new Set(
     workItems.filter(({ status }) => status === "done").map(({ id }) => id),
@@ -895,7 +911,7 @@ export function ExecutionPanel({
             ref={mobileSwitcherRef}
             role="list"
           >
-            {executions.slice(0, 2).map((execution) => (
+            {recentExecutions.map((execution) => (
               <li key={execution.id}>
                 <button
                   aria-haspopup="dialog"
@@ -957,7 +973,7 @@ export function ExecutionPanel({
         </>
       ) : (
         <div className="run-details">
-          {executions.slice(0, 2).map((execution, index) => (
+          {recentExecutions.map((execution, index) => (
             <ExecutionCard
               asyncState={cardStates[execution.id] ?? {}}
               execution={execution}

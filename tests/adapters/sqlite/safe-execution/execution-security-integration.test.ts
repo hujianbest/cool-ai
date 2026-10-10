@@ -4,6 +4,7 @@ import {
   mkdirSync,
   mkdtempSync,
   readFileSync,
+  realpathSync,
   rmSync,
   writeFileSync,
 } from "node:fs";
@@ -98,7 +99,9 @@ describe("execution security integration", () => {
       cwd: string;
       env: Record<string, string>;
     };
-    expect(resolve(child.cwd)).toBe(resolve(sandboxA));
+    // macOS resolves /var → /private/var in the child's getcwd, so compare
+    // canonical paths (identity on Windows).
+    expect(realpathSync(child.cwd)).toBe(realpathSync(sandboxA));
     expect(child.env.PATH ?? "").toBe("");
     expect(child.env.PATHEXT ?? "").toBe("");
     expect(child.env.COMSPEC ?? "").toBe("");

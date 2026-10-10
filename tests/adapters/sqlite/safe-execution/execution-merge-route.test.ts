@@ -13,7 +13,7 @@ import {
   setMergeExecutionHooksForTests,
 } from "@/src/adapters/outbound/sqlite/safe-execution/merge-service";
 import { ExecutionError } from "@/src/modules/safe-execution";
-import { createWindowsVerifiedMergeAdapter } from "@/src/adapters/outbound/workspace/merge-verified-adapter";
+import { createVerifiedMergeAdapter } from "@/src/adapters/outbound/workspace/merge-verified-adapter";
 import { saveValidationPolicy } from "@/src/adapters/outbound/sqlite/project-workspace/validation-policy-service";
 import { recoveryMergeFileStatuses } from "@/src/shared/execution-contracts";
 import { execV7Fixture } from "@/tests/fixtures/execution/current-graph";
@@ -520,7 +520,7 @@ describe("T-45 production merge route", () => {
 
   it("turns repeatable capability preflight failure into one completed 422 receipt", async () => {
     const staged = await createRealStagedExecution();
-    const base = createWindowsVerifiedMergeAdapter();
+    const base = createVerifiedMergeAdapter();
     let preflights = 0;
     let release!: () => void;
     const bothEntered = new Promise<void>((resolve) => {

@@ -57,7 +57,7 @@
 Cool AI 是**本地优先、单 owner、无认证**的应用。只应在受信任本机使用，不要把开发服务器或 API 暴露到不可信网络。模型请求及任务所需上下文会发送给 owner 配置的 Provider，因此“本地优先”不等于“完全离线”。
 
 - **Web、配置与协作：**面向本地桌面浏览器。某个平台能启动这些界面，不代表它已具备 verified file execution 支持。
-- **完整 verified execution：**仅支持 Windows 10+ 或 Windows Server 2016+ x64、x64 Node.js 和本地 NTFS/ReFS 卷。其他操作系统、架构或文件系统上的文件 execution 会以 `SANDBOX_UNVERIFIABLE` 失败关闭。
+- **完整 verified execution：**目标平台 macOS（Apple Silicon / Intel，Node.js 24.x+，默认大小写不敏感 APFS/HFS+ 卷）；Windows 10+ / Windows Server 2016+ x64（x64 Node.js、本地 NTFS/ReFS 卷）作为保留平台继续支持。其他操作系统、架构或文件系统上的文件 execution 会以 `SANDBOX_UNVERIFIABLE` 失败关闭。
 - **Guardrail 不是 OS 沙箱：**隔离、verified handle、权限、审批、资源限制、验证和冲突检查可降低误操作风险，但 owner 批准的本地 executable 仍可能访问网络、系统资源、进程、服务、文件或凭据。处理敌对代码应使用虚拟机、容器或 OS 安全策略。
 - **Provider 契约：**仅承诺 `GET /models` 与 `POST /chat/completions`；chat 内容必须是 JSON object，usage 必须合法、非负且算术一致。
 - **生命周期：**每项目最多两个 active execution，同一 Agent 最多一个。应用没有后台 worker；关闭浏览器或重启应用后，不会无人值守继续或重放任务。
@@ -66,7 +66,7 @@ Cool AI 是**本地优先、单 owner、无认证**的应用。只应在受信�
 
 ## 快速开始
 
-环境要求：Node.js 24.x、npm 11.x。
+环境要求：macOS 上 Node.js 24.x+（24 与 26 已验证）、npm 11.x；Windows 上 Node.js 24.x。
 
 ```powershell
 npm install

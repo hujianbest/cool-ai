@@ -79,7 +79,7 @@ function identityKey(identity: unknown): string {
 
 function comparablePath(path: string): string {
   const normalized = resolve(path).replace(/[\\/]+$/, "");
-  return process.platform === "win32"
+  return process.platform === "win32" || process.platform === "darwin"
     ? normalized.toLocaleLowerCase("en-US")
     : normalized;
 }

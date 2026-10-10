@@ -212,9 +212,9 @@ describe("verified-handle bounded list", () => {
     let adapterLoaded = false;
     try {
       const adapter = await import(/* @vite-ignore */ moduleId) as {
-        createWindowsVerifiedExecutionAdapters?: unknown;
+        createPlatformVerifiedExecutionAdapters?: unknown;
       };
-      adapterLoaded = typeof adapter.createWindowsVerifiedExecutionAdapters === "function";
+      adapterLoaded = typeof adapter.createPlatformVerifiedExecutionAdapters === "function";
     } catch {
       adapterLoaded = false;
     }
@@ -225,7 +225,7 @@ describe("verified-handle bounded list", () => {
 
     expect({
       adapterLoaded,
-      nativeFactoryWired: route.includes("createWindowsVerifiedExecutionAdapters"),
+      nativeFactoryWired: route.includes("createPlatformVerifiedExecutionAdapters"),
       nodeFallbackRemoved: !route.includes("nodeFileToolAdapter"),
     }).toEqual({
       adapterLoaded: true,

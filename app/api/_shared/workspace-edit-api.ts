@@ -138,7 +138,7 @@ export async function workspaceEditsPost(
     const parsed = parseCreateBody(body);
     if ("response" in parsed) return parsed.response;
     const dbPath = databasePath();
-    const adapters = windowsVerifiedExecution.createWindowsVerifiedExecutionAdapters();
+    const adapters = windowsVerifiedExecution.createPlatformVerifiedExecutionAdapters();
     const session = await workspaceEditService.createWorkspaceEdit(
       dbPath,
       projectId,
@@ -250,7 +250,7 @@ export async function workspaceEditPut(
     const parsed = parsePutBody(body);
     if ("response" in parsed) return parsed.response;
     const dbPath = databasePath();
-    const adapters = windowsVerifiedExecution.createWindowsVerifiedExecutionAdapters();
+    const adapters = windowsVerifiedExecution.createPlatformVerifiedExecutionAdapters();
     const session = await workspaceEditService.putWorkspaceEditDraft(
       dbPath,
       projectId,
@@ -272,7 +272,7 @@ export async function workspaceEditDiffGet(
     const { projectId, editId } = await context.params;
     if (!editId) return invalidInput([{ code: "required", field: "editId" }]);
     const dbPath = databasePath();
-    const adapters = windowsVerifiedExecution.createWindowsVerifiedExecutionAdapters();
+    const adapters = windowsVerifiedExecution.createPlatformVerifiedExecutionAdapters();
     const diff = await workspaceEditService.getWorkspaceEditDiff(
       dbPath,
       projectId,
@@ -328,7 +328,7 @@ function parseVersionedBody(body: unknown):
 
 function runtime() {
   const dbPath = databasePath();
-  const adapters = windowsVerifiedExecution.createWindowsVerifiedExecutionAdapters();
+  const adapters = windowsVerifiedExecution.createPlatformVerifiedExecutionAdapters();
   return { dbPath, edit: { editRoot: editRoot(dbPath), fs: adapters.fileAdapter } };
 }
 

@@ -152,7 +152,7 @@ export function ActivityBar({
             ? themePreference.theme === "light"
               ? "当前为明色主题，切换到暗色主题"
               : "当前为暗色主题，切换到明色主题"
-            : "当前为明色主题，切换到暗色主题"
+            : "切换主题"
         }
         aria-pressed={
           themePreference.hydrated
@@ -165,7 +165,7 @@ export function ActivityBar({
             ? themePreference.theme === "light"
               ? "切换到暗色主题"
               : "切换到明色主题"
-            : "切换到暗色主题"
+            : "切换主题"
         }
         onClick={() =>
           setThemePreference(

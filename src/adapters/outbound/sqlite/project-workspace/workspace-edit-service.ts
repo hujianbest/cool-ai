@@ -40,7 +40,7 @@ type SessionRow = {
 };
 
 function pathKeyFor(relativePath: string): string {
-  return process.platform === "win32"
+  return process.platform === "win32" || process.platform === "darwin"
     ? relativePath.toLocaleLowerCase("en-US")
     : relativePath;
 }
@@ -99,10 +99,10 @@ function draftFilePath(editRoot: string, sessionId: string, relativePath: string
   const root = resolve(editRoot);
   const target = resolve(join(root, sessionId, ...relativePath.split("/")));
   const prefix = root.endsWith(sep) ? root : `${root}${sep}`;
-  const comparableTarget = process.platform === "win32"
+  const comparableTarget = process.platform === "win32" || process.platform === "darwin"
     ? target.toLocaleLowerCase("en-US")
     : target;
-  const comparablePrefix = process.platform === "win32"
+  const comparablePrefix = process.platform === "win32" || process.platform === "darwin"
     ? prefix.toLocaleLowerCase("en-US")
     : prefix;
   if (!comparableTarget.startsWith(comparablePrefix)) {

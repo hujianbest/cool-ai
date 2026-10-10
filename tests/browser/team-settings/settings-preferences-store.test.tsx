@@ -348,7 +348,10 @@ describe("settings preferences bounded LWW store", () => {
     localStorage.setItem(store.PINNED_SETTINGS_KEY, JSON.stringify(value));
     testing.hydrate();
     const before = testing.getSnapshot();
-    const writes = vi.spyOn(Storage.prototype, "setItem");
+    const writes = vi.spyOn(
+      Object.getPrototypeOf(window.localStorage),
+      "setItem",
+    );
     window.dispatchEvent(
       new StorageEvent("storage", {
         key: store.PINNED_SETTINGS_KEY,
@@ -372,9 +375,10 @@ describe("settings preferences bounded LWW store", () => {
     });
     testing.hydrate();
     const before = testing.getSnapshot().preference;
-    vi.spyOn(Storage.prototype, "setItem").mockImplementation(() => {
-      throw new Error("quota");
-    });
+    vi.spyOn(Object.getPrototypeOf(window.localStorage), "setItem")
+      .mockImplementation(() => {
+        throw new Error("quota");
+      });
 
     expect(store.pinSettingsSection("skills")).toBe(false);
     expect(testing.getSnapshot().preference).toBe(before);

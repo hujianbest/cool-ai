@@ -9,7 +9,7 @@ import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { openDatabase } from "@/src/adapters/outbound/sqlite/connection";
 import { ExecutionError } from "@/src/modules/safe-execution";
 import {
-  createWindowsVerifiedMergeAdapter,
+  createVerifiedMergeAdapter,
   type MergeVerifiedAdapter,
 } from "@/src/adapters/outbound/workspace/merge-verified-adapter";
 import { execV7Fixture } from "@/tests/fixtures/execution/current-graph";
@@ -267,7 +267,7 @@ describe("merge DB commit and restart recovery", () => {
       },
     })).rejects.toThrow("restart");
     fixture.restart();
-    const base = createWindowsVerifiedMergeAdapter();
+    const base = createVerifiedMergeAdapter();
     await expect(mergeModule.recoverIncompleteMergeJournals({
       database: fixture.database,
       fs: {

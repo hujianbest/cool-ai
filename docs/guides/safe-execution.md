@@ -4,7 +4,7 @@ execution（执行）让 Agent 在项目工作区之外的独立 staging sandbox
 
 ## 支持前提
 
-完整 verified execution 只支持 Windows 10+/Windows Server 2016+ x64、Node.js x64 和 NTFS/ReFS 本地卷。其他 OS、架构或文件系统上的文件执行会失败关闭为 `SANDBOX_UNVERIFIABLE`，不会降级成只检查字符串路径。基础 Web、配置和协作可用不代表完整执行受支持。
+完整 verified execution 支持目标平台 macOS（Apple Silicon / Intel，Node.js 24.x+，默认大小写不敏感 APFS/HFS+ 本地卷），并保留 Windows 10+/Windows Server 2016+ x64（x64 Node.js、NTFS/ReFS 本地卷）支持。其他 OS、架构或文件系统上的文件执行会失败关闭为 `SANDBOX_UNVERIFIABLE`，不会降级成只检查字符串路径。基础 Web、配置和协作可用不代表完整执行受支持。
 
 ## 启动条件与并发
 

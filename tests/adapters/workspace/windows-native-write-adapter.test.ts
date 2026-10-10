@@ -91,7 +91,11 @@ afterEach(() => {
   rmSync(directory, { force: true, recursive: true });
 });
 
-describe("Windows handle-relative write adapter", () => {
+// The Windows native layer only exists on Windows; its acceptance tests run
+// there. The macOS equivalents live in posix-native-*.test.ts.
+const describeWindows = process.platform === "win32" ? describe : describe.skip;
+
+describeWindows("Windows handle-relative write adapter", () => {
   it("creates an exclusive owned temp and loops short WriteFile transfers before atomic replace", () => {
     mkdirSync(join(directory, "parent"));
     writeFileSync(join(directory, "parent", "safe.txt"), "old");

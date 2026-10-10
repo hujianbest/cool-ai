@@ -4,10 +4,10 @@
 - 当前阶段: ready
 - 执行模式: auto
 - 已加载扩展: 无
-- 当前主切片: 无
-- 下一步: 规划中仅余 S-45 族与 S-50（高风险）；不进入。
+- 当前主切片: 066-posix-verified-workspace（implement 完成，代码门评审中）
+- 下一步: 规划中仅余 S-45 族与 S-50（高风险）；不进入。冒烟尾随（collaboration/threads/structured 的 run 表面段落）待独立工作流。
 
-## 当前快照（2026-08-28）
+## 当前快照（2026-10-11）
 
 | 项 | 状态 |
 |---|---|
@@ -15,7 +15,9 @@
 | P0 暖金壳层 | 051/S-61 已 ship |
 | P1 阶段 1 驾驶舱 | 050/S-60 已 ship |
 | P2–P5 既有切片 | 计划中列出的会话/整理/执行/知识核心能力已 ship；复核工作台表面 065/S-62 已 ship |
-| 环境/IA 残留 | A-387 已由 S-62 关闭；`smoke:onboarding` 引导按钮被时间线条目挡住；`smoke:context` 桌面主路径等待已卸下的工作区绑定条（A-401）；`smoke:execution` P1 IA + 既有 color-contrast（A-412） |
+| 目标平台 | macOS（Apple Silicon/Intel、Node 24/26、默认大小写不敏感 APFS/HFS+）为交付目标；Windows x64 为保留平台。posix 原生 verified-handle 层（066）落地 |
+| 三条冒烟残留 | 全部关闭：`smoke:onboarding`、`smoke:context`（A-401）、`smoke:execution`（A-412）在终态构建全绿 |
+| 冒烟全景 | smoke / team / review / settings / onboarding / context / execution 全绿；collaboration（run 表面决策 UI）、threads / structured（run 表面尾段）登记为 A-479 缺口，待独立工作流 |
 | 未交付高风险切片 | 高风险为 S-45 族与 S-50 |
 
 ## 状态记录
@@ -116,3 +118,5 @@
 - 2026-10-11 按用户指示新增视觉回归与视觉模型评审测试设施（测试基础设施/流程规则修订，非产品行为切片，按 2026-08-14 流程规则修订先例不立 feature）：`tests/browser/visual-baseline.mjs` 像素基线 diff 接入 `browser-smoke` 三视图（desktop-empty / desktop-reloaded / narrow），darwin 基线已生成并复跑 0 px 通过；`tests/browser/visual-review.mjs` + `npm run review:visual` 对照 UCD 的视觉模型评审（`COCKPIT_VISUAL_REVIEW_*` Provider，未配置失败关闭，报告不提交）；AGENTS.md 写入第 8 条规则与收尾双闸；默认选择记录 A-471。
 - 2026-10-11 `review:visual` 升级为 UCD 原型成对对照：无头 Chromium 自动截取 `product/ui/preview-ucd.html` 参考视图（`--refs` 指定、默认 `chat`，隐藏原型控制横幅），评审请求改为「参考视图 + 实现截图 + UCD 节选」成对发送，prompt 显式忽略动态内容与渲染级差异、只裁结构性/视觉方向偏离；`--capture-only` 免 Provider 生成参考图（chat/tasks/memory 三视图实测并经视觉确认渲染正确）；像素基线 diff 语义不变（应用自回归），原型对照只发生在视觉评审层；AGENTS.md 第 8 条同步；默认选择 A-472。
 - 2026-10-11 视觉评审用当前 agent 环境实测并收口两处设施缺陷：(1) `review:visual` 增加 `COCKPIT_VISUAL_REVIEW_API_STYLE`（openai/anthropic）双 wire format，用当前 agent 的 DeepSeek provider（`deepseek-flash`，Anthropic 端点）跑通正式路径，两张桌面截图 PASS（报告落盘、exit 0）；(2) 冒烟 `npm run dev` 的 Next.js dev 指示器（nextjs-portal）污染证据/基线截图且被视觉模型误判为 UI 差异（深色「N」徽标），`browser-smoke` 上下文注入隐藏样式后重建三张 darwin 基线、复跑 0 px 通过；AGENTS.md 同步 `_API_STYLE` 与 dev 工件禁令。评审发现并确定性核验：图标轨「团队/设置」未按 UCD §7.1 底部分组贴底（仅主题贴底、无分割线）——真实偏离，涉及 `components/activity-bar.tsx`/`app/cockpit.css`（并行平台任务在改），留 owner 处置；空态无 Composer、Tab 胶囊选中态、回收站形态、Needs Me 缺失均属 UCD 规定的状态差异（UCD §7.1 明确胶囊 Tab、§9.1.1 空态流），非缺陷。默认选择 A-473。
+- 2026-10-11 完成 UI 一致性审计（用户指示逐屏 + 逐个按钮点击后状态对比 UCD）：自包含审计运行器（`tests/browser/test-artifacts/ui-audit-runner.mjs`，gitignored，含 mock 结构化 Provider）驱动 27 个屏/交互状态全截图；发现 18 项差异（P0：首页 1:1 发送被 409 THREAD_POLICY_REPAIR_REQUIRED 阻断；P1 含任务看板缺使命卡/顶栏缺新建任务、记忆视图信息架构与 §9.2.4 不符、审批中心缺状态筛选与历史归档、系统事实大卡片、图标轨底部分组未贴底、项目首条消息需使命且无引导等），全部记录于 `product/ui/UI一致性差异清单.md`（U-01～U-18，含证据截图路径与修复方向），待主任务修复；覆盖限制与已核验非缺陷项同文件标注。
+- 2026-10-11 用户指示「清掉三条冒烟残留，然后切换目标平台为 macOS」：立项 066/S-posix-verified-workspace 并完成 implement。平台侧：新增 posix 原生层（libSystem openat/fstatat/getdirentries/renameat/mkdirat/unlinkat/lseek，koffi FFI）镜像 Windows verified-handle 协议（身份 hex(dev):hex(ino)、O_NOFOLLOW 相对打开、独占 temp、同父 renameat 原子替换、目录 fsync、逐步自证、失败关闭分类）；验证执行面参数化为平台中性工厂 + `createPlatformVerifiedExecutionAdapters`/`createVerifiedMergeAdapter`/`createPlatformNativeReadAdapter` 路由（8 处路由接点）；darwin 路径键与 win32 一致大小写折叠（A-465）。验证：全量 339 文件/2942 用例（335 文件 2890 例通过、52 例为 Windows 门控 skip；偶发时序用例单跑即过）、`tsc`/`build` 绿、`review-browser-full-chain` 真实执行链在 macOS 过。冒烟侧：三条残留全绿（引导卡 flex 修复与团队面板滚动、4 项对比度、axe settle、陈旧断言与术语现代化、onFocusMission 冷路径聚焦）；伴随产品修复 A-474～A-478（定位降级、最近两条执行、Escape 嵌套守卫、测试现代化模式、对比度与令牌收口）；smoke/team/review/settings 同时保持全绿；collaboration/threads/structured 登记为 A-479 待独立工作流。平台文档（README×2、docs×2、AGENTS、product.md、architecture.md）与假设 A-464～A-479 落盘。视觉双闸（AGENTS.md 规则 8）：像素基线 diff 通过（`npm run smoke` 三视图 0 px）；视觉评审未执行（Provider 未配置，`review:visual` 失败关闭）。演示 auto-approved。

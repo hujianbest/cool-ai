@@ -113,9 +113,10 @@ describe("settings pinning UI", () => {
       name: "固定模型服务",
     });
     await waitFor(() => expect(pinProvider).toBeEnabled());
-    vi.spyOn(Storage.prototype, "setItem").mockImplementation(() => {
-      throw new Error("quota");
-    });
+    vi.spyOn(Object.getPrototypeOf(window.localStorage), "setItem")
+      .mockImplementation(() => {
+        throw new Error("quota");
+      });
 
     pinProvider.focus();
     await user.click(pinProvider);

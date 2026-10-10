@@ -37,7 +37,9 @@ export function normalizeCanonicalRelativePath(
   }
   if (segments.length === 0) throw new Error("Expected a canonical relative path.");
   const normalized = segments.join("/");
-  return platform === "win32" ? normalized.toLocaleLowerCase("en-US") : normalized;
+  return platform === "win32" || platform === "darwin"
+    ? normalized.toLocaleLowerCase("en-US")
+    : normalized;
 }
 
 function compareUtf8(left: string, right: string): number {

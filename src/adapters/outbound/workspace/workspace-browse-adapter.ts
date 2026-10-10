@@ -51,7 +51,9 @@ function sameIdentity(left: HandleIdentity, right: HandleIdentity): boolean {
 
 function comparablePath(path: string): string {
   const normalized = path.replaceAll("\\", "/").replace(/\/+$/u, "");
-  return process.platform === "win32" ? normalized.toLocaleLowerCase("en-US") : normalized;
+  return process.platform === "win32" || process.platform === "darwin"
+    ? normalized.toLocaleLowerCase("en-US")
+    : normalized;
 }
 
 function isInsideRoot(path: string, root: string): boolean {

@@ -13,7 +13,7 @@ import type { DatabaseSync } from "node:sqlite";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
 import { openDatabase } from "@/src/adapters/outbound/sqlite/connection";
-import { createWindowsVerifiedMergeAdapter } from "@/src/adapters/outbound/workspace/merge-verified-adapter";
+import { createVerifiedMergeAdapter } from "@/src/adapters/outbound/workspace/merge-verified-adapter";
 import { execV7Fixture } from "@/tests/fixtures/execution/current-graph";
 import { refreshExecutionFrozenFixture } from "@/tests/fixtures/execution/frozen-input";
 
@@ -159,7 +159,7 @@ describe("external-writer merge recovery", () => {
         writeFileSync(originalPath, "old-a");
         await unlink(oldPath);
         await rename(originalPath, oldPath);
-        const oldTarget = (await createWindowsVerifiedMergeAdapter().readFile({
+        const oldTarget = (await createVerifiedMergeAdapter().readFile({
           maximumBytes: 1_048_576,
           pathSegments: ["src", "a.txt"],
           root: fixture.workspaceRoot,
@@ -178,7 +178,7 @@ describe("external-writer merge recovery", () => {
         const target = join(fixture.workspaceRoot, "src/a.txt");
         await unlink(target);
         await rename(durableNew.finalPath, target);
-        const postTarget = (await createWindowsVerifiedMergeAdapter().readFile({
+        const postTarget = (await createVerifiedMergeAdapter().readFile({
           maximumBytes: 1_048_576,
           pathSegments: ["src", "a.txt"],
           root: fixture.workspaceRoot,

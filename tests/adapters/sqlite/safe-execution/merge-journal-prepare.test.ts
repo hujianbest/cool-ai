@@ -14,7 +14,7 @@ import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
 import { openDatabase } from "@/src/adapters/outbound/sqlite/connection";
 import {
-  createWindowsVerifiedMergeAdapter,
+  createVerifiedMergeAdapter,
   type MergeVerifiedAdapter,
 } from "@/src/adapters/outbound/workspace/merge-verified-adapter";
 import {
@@ -95,7 +95,7 @@ describe("merge journal prepare and conditional apply", () => {
       await expect(mergeModule.executeMergePrepare({
         ...fixture.input,
         fs: {
-          ...createWindowsVerifiedMergeAdapter(),
+          ...createVerifiedMergeAdapter(),
           async assertCapability() {
             throw Object.assign(new Error("native capability unavailable"), {
               code: "SANDBOX_UNVERIFIABLE",
@@ -119,7 +119,7 @@ describe("merge journal prepare and conditional apply", () => {
 
   it("turns a post-journal native uncertainty into a zero-result manual barrier", async () => {
     const fixture = await createFixture("native-uncertain");
-    const native = createWindowsVerifiedMergeAdapter();
+    const native = createVerifiedMergeAdapter();
     try {
       await expect(mergeModule.executeMergePrepare({
         ...fixture.input,

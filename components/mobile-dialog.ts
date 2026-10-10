@@ -115,6 +115,9 @@ export function useModalSurface(
       const latest = optionsRef.current;
       if (event.key === "Escape" && latest) {
         event.preventDefault();
+        // 嵌套弹窗消费 Escape 后不得再冒泡到窗口级处理（否则治理视图会被
+        // 连带收回对话）。
+        event.stopPropagation();
         latest.onClose();
         return;
       }
@@ -173,6 +176,7 @@ export function trapModalFocus(
 ): void {
   if (event.key === "Escape") {
     event.preventDefault();
+    event.stopPropagation();
     close();
     return;
   }

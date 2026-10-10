@@ -6,12 +6,12 @@ import { afterEach, describe, expect, it, vi } from "vitest";
 import { createProject } from "@/src/adapters/outbound/sqlite/project-workspace/projects";
 import { bindWorkspace } from "@/src/adapters/outbound/sqlite/project-workspace/workspace-service";
 import * as workspaceEditService from "@/src/adapters/outbound/sqlite/project-workspace/workspace-edit-service";
-import { createWindowsVerifiedExecutionAdapters } from "@/src/adapters/outbound/workspace/windows-verified-execution-adapter";
+import { createPlatformVerifiedExecutionAdapters } from "@/src/adapters/outbound/workspace/windows-verified-execution-adapter";
 import { memoryDatabasePath } from "@/tests/fixtures/sqlite/memory-database";
 
 vi.mock("server-only", () => ({}));
 
-const fileAdapter = createWindowsVerifiedExecutionAdapters().fileAdapter;
+const fileAdapter = createPlatformVerifiedExecutionAdapters().fileAdapter;
 
 const temporaryDirectories: string[] = [];
 

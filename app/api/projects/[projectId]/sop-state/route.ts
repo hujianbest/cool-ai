@@ -37,7 +37,7 @@ export async function GET(request: Request, context: RouteContext): Promise<Resp
   const params = await context.params;
   try {
     const projectId = projectIdFrom(request, params);
-    const adapters = windowsVerifiedExecution.createWindowsVerifiedExecutionAdapters();
+    const adapters = windowsVerifiedExecution.createPlatformVerifiedExecutionAdapters();
     return Response.json(
       await missionWorkSopStateProjection.getSopStateProjection(
         databasePath(),

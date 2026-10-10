@@ -17,7 +17,7 @@ import {
   assertManualRecoveryNotRequired,
 } from "@/src/adapters/outbound/sqlite/safe-execution/execution-service";
 import {
-  createWindowsVerifiedMergeAdapter,
+  createVerifiedMergeAdapter,
   type MergeVerifiedAdapter,
   type MergeVerifiedState,
 } from "@/src/adapters/outbound/workspace/merge-verified-adapter";
@@ -72,7 +72,7 @@ type MergeInput = {
 };
 
 function mergeAdapter(input?: MergeVerifiedAdapter): MergeVerifiedAdapter {
-  return input ?? createWindowsVerifiedMergeAdapter();
+  return input ?? createVerifiedMergeAdapter();
 }
 
 function sandboxRootForExecution(
@@ -214,8 +214,10 @@ function comparablePath(value: string): string {
 function isWithin(root: string, candidate: string): boolean {
   const normalizedRoot = comparablePath(root);
   const normalizedCandidate = comparablePath(candidate);
-  const rootKey = process.platform === "win32" ? normalizedRoot.toLowerCase() : normalizedRoot;
-  const candidateKey = process.platform === "win32"
+  const rootKey = process.platform === "win32" || process.platform === "darwin"
+    ? normalizedRoot.toLowerCase()
+    : normalizedRoot;
+  const candidateKey = process.platform === "win32" || process.platform === "darwin"
     ? normalizedCandidate.toLowerCase()
     : normalizedCandidate;
   return candidateKey === rootKey || candidateKey.startsWith(`${rootKey}${sep}`);

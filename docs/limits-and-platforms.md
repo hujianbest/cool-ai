@@ -6,12 +6,11 @@
 
 完整 verified execution 当前只支持：
 
-- Windows 10 或更高版本，或 Windows Server 2016 或更高版本；
-- x64 操作系统与 x64 Node.js；
-- NTFS 或 ReFS 本地卷；
+- macOS（目标平台）：Apple Silicon 与 Intel，默认大小写不敏感 APFS/HFS+ 本地卷，Node.js 24.x+（24 与 26 已验证）；
+- Windows 10 或更高版本，或 Windows Server 2016 或更高版本（保留平台）：x64 操作系统与 x64 Node.js，NTFS 或 ReFS 本地卷；
 - 可由应用安全读写的 canonical workspace 与 `COCKPIT_EXECUTION_ROOT`。
 
-Linux、macOS、ARM、其他文件系统或 native verified-handle 能力不可用时，文件 execution 会失败关闭为 `SANDBOX_UNVERIFIABLE`，不会退回普通字符串路径检查。跨平台 verified execution 尚未实现。
+两个平台各自拥有原生 verified-handle 层（macOS 经 libSystem `openat`/`fstatat`/`getdirentries`/`renameat`；Windows 经 kernel32/ntdll），其余 Linux 发行版、其他文件系统或 native verified-handle 能力不可用时，文件 execution 会失败关闭为 `SANDBOX_UNVERIFIABLE`，不会退回普通字符串路径检查。
 
 ## 调度与生命周期限制
 

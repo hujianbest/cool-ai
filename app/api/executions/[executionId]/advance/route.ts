@@ -29,7 +29,7 @@ export async function POST(
     );
   }
   try {
-    const adapters = windowsVerifiedExecution.createWindowsVerifiedExecutionAdapters();
+    const adapters = windowsVerifiedExecution.createPlatformVerifiedExecutionAdapters();
     const result = await actionOrchestrator.advanceExecution(
       databasePath(),
       executionId,

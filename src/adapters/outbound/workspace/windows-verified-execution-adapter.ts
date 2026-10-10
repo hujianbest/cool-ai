@@ -23,12 +23,59 @@ export type {
 import { ExecutionError } from "@/src/modules/safe-execution";
 import { createWindowsNativeReadAdapter } from "@/src/adapters/outbound/workspace/windows-native-read-adapter";
 import { createWindowsNativeWriteAdapter } from "@/src/adapters/outbound/workspace/windows-native-write-adapter";
+import {
+  createPosixNativeReadAdapter,
+} from "@/src/adapters/outbound/workspace/posix-native-read-adapter";
+import {
+  createPosixNativeWriteAdapter,
+} from "@/src/adapters/outbound/workspace/posix-native-write-adapter";
 
 type NativeReadAdapter = ReturnType<typeof createWindowsNativeReadAdapter>;
-type NativeHandle = ReturnType<NativeReadAdapter["openRootDirectory"]>;
 
-export type WindowsVerifiedFileAdapter =
-  SandboxFileHandleAdapter<NativeHandle> & {
+/**
+ * The verified execution surface is platform-neutral: it walks and manifests
+ * through the structural read/write adapter contracts that the Windows and
+ * macOS native layers both implement.
+ */
+export type VerifiedAdapterCore<Handle> = {
+  identityKey(identity: { fileId: string; volumeSerialNumber: string }): string;
+  read: {
+    attributes(handle: Handle): {
+      directory: boolean;
+      reparsePoint: boolean;
+      size: number;
+    };
+    close(handle: Handle): void;
+    identity(handle: Handle): { fileId: string; volumeSerialNumber: string };
+    list(handle: Handle): Array<{
+      attributes: { directory: boolean; reparsePoint: boolean };
+      identity: { fileId: string; volumeSerialNumber: string };
+      name: string;
+      size: number;
+    }>;
+    finalPath(handle: Handle): string;
+    openChildDirectoryNoFollow(parent: Handle, name: string): Handle;
+    openFileNoFollow(parent: Handle, name: string): Handle;
+    openRootDirectory(root: string): Handle;
+    readFromHandle(handle: Handle, maximumBytes: number): Uint8Array;
+  };
+  write: {
+    deleteVerifiedFile(
+      rootPath: string,
+      segments: string[],
+      expectedHash: string,
+    ): void;
+    writeVerifiedFile(
+      rootPath: string,
+      segments: string[],
+      bytes: Uint8Array,
+      expectedHash: string | null,
+    ): { hash: string; identity: { fileId: string; volumeSerialNumber: string } };
+  };
+};
+
+export type VerifiedFileAdapter =
+  SandboxFileHandleAdapter<unknown> & {
     deleteNativeVerifiedFile(input: {
       expectedHash: string;
       pathSegments: string[];
@@ -45,18 +92,22 @@ export type WindowsVerifiedFileAdapter =
     }): Promise<VerifiedSandboxManifest>;
   };
 
+/** Back-compat alias: the verified file surface is platform-neutral. */
+export type WindowsVerifiedFileAdapter = VerifiedFileAdapter;
+
 function identityKey(identity: { fileId: string; volumeSerialNumber: string }): string {
   return `${identity.volumeSerialNumber}:${identity.fileId}`;
 }
 
-function toIdentity(
-  native: NativeReadAdapter,
-  handle: NativeHandle,
+function toIdentity<Handle>(
+  native: VerifiedAdapterCore<Handle>["read"],
+  identityKeyOf: VerifiedAdapterCore<Handle>["identityKey"],
+  handle: Handle,
 ): SandboxHandleIdentity {
   const attributes = native.attributes(handle);
   return {
     finalPath: native.finalPath(handle),
-    identity: identityKey(native.identity(handle)),
+    identity: identityKeyOf(native.identity(handle)),
     kind: attributes.reparsePoint
       ? "reparse"
       : attributes.directory
@@ -66,22 +117,37 @@ function toIdentity(
   };
 }
 
-function createFileAdapter(): WindowsVerifiedFileAdapter {
-  const read = createWindowsNativeReadAdapter();
-  const write = createWindowsNativeWriteAdapter();
-  return {
+function createFileAdapter<Handle>(
+  core: VerifiedAdapterCore<Handle>,
+): VerifiedFileAdapter {
+  const read = core.read;
+  const write = core.write;
+  const adapter: SandboxFileHandleAdapter<Handle> & {
+    deleteNativeVerifiedFile(input: {
+      expectedHash: string;
+      pathSegments: string[];
+      sandboxRoot: string;
+    }): void;
+    writeNativeVerifiedFile(input: {
+      bytes: Uint8Array;
+      expectedHash: string | null;
+      pathSegments: string[];
+      sandboxRoot: string;
+    }): { hash: string; identity: string };
+    refreshSandboxManifest(input: { sandboxRoot: string }): Promise<VerifiedSandboxManifest>;
+  } = {
     async close(handle) {
       read.close(handle);
     },
     async currentIdentity(handle) {
-      return toIdentity(read, handle);
+      return toIdentity(read, core.identityKey, handle);
     },
     async identity(handle) {
-      return toIdentity(read, handle);
+      return toIdentity(read, core.identityKey, handle);
     },
     async list(handle): Promise<SandboxDirectoryEntry[]> {
       return read.list(handle).map((entry) => ({
-        identity: identityKey(entry.identity),
+        identity: core.identityKey(entry.identity),
         name: entry.name,
       }));
     },
@@ -126,10 +192,13 @@ function createFileAdapter(): WindowsVerifiedFileAdapter {
       );
       return {
         hash: result.hash,
-        identity: identityKey(result.identity),
+        identity: core.identityKey(result.identity),
       };
     },
   };
+  // Method bivariance makes the Handle-typed surface assignable to the
+  // platform-neutral unknown-handle contract.
+  return adapter;
 }
 
 function failStage(message: string): never {
@@ -161,10 +230,10 @@ async function* walkVerifiedTree(
 ): AsyncIterable<StagingEntry> {
   const rootHandle = await fileAdapter.openRootDirectory(root).catch(() => null);
   if (!rootHandle) return failStage("The staged root could not be opened.");
-  const owned: NativeHandle[] = [rootHandle];
+  const owned: unknown[] = [rootHandle];
   try {
     const walk = async function* (
-      directory: NativeHandle,
+      directory: unknown,
       relativeDirectory: string,
     ): AsyncIterable<StagingEntry> {
       const before = await fileAdapter.currentIdentity(directory);
@@ -314,7 +383,7 @@ async function readVerifiedAbsoluteFile(
   const name = basename(path);
   const parent = await fileAdapter.openRootDirectory(root).catch(() => null);
   if (!parent) return failStage("A verified manifest parent could not be opened.");
-  let file: NativeHandle | null = null;
+  let file: unknown = null;
   try {
     const listed = await fileAdapter.list(parent);
     const expected = listed.find((entry) => entry.name === name);
@@ -339,11 +408,13 @@ async function readVerifiedAbsoluteFile(
   }
 }
 
-export function createWindowsVerifiedExecutionAdapters(): {
-  fileAdapter: WindowsVerifiedFileAdapter;
+export function createVerifiedExecutionAdapters<Handle>(
+  core: VerifiedAdapterCore<Handle>,
+): {
+  fileAdapter: VerifiedFileAdapter;
   stagingAdapter: ExecutionStagingAdapter;
 } {
-  const fileAdapter = createFileAdapter();
+  const fileAdapter = createFileAdapter(core);
   const stagingAdapter: ExecutionStagingAdapter = {
     baselineEntries(input) {
       return verifiedManifestEntries(fileAdapter, input.baselineManifestPath, "baseline");
@@ -365,4 +436,31 @@ export function createWindowsVerifiedExecutionAdapters(): {
     },
   };
   return { fileAdapter, stagingAdapter };
+}
+
+export function createWindowsVerifiedExecutionAdapters() {
+  return createVerifiedExecutionAdapters({
+    identityKey,
+    read: createWindowsNativeReadAdapter(),
+    write: createWindowsNativeWriteAdapter(),
+  });
+}
+
+export function createPosixVerifiedExecutionAdapters() {
+  return createVerifiedExecutionAdapters({
+    identityKey,
+    read: createPosixNativeReadAdapter(),
+    write: createPosixNativeWriteAdapter(),
+  });
+}
+
+/**
+ * Platform router for the verified execution surface: macOS uses the posix
+ * native layer; Windows keeps its own; other platforms fail closed inside the
+ * native adapters with SANDBOX_UNVERIFIABLE.
+ */
+export function createPlatformVerifiedExecutionAdapters() {
+  return process.platform === "darwin"
+    ? createPosixVerifiedExecutionAdapters()
+    : createWindowsVerifiedExecutionAdapters();
 }

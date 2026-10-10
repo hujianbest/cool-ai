@@ -73,6 +73,9 @@ const browserExecutable = [
 
 const providerCaptures = [];
 const apiBodies = [];
+// { body, url } pairs so the security scan can allowlist the workspace-binding
+// endpoints that echo the bound path by design (027 T-04).
+const apiResponses = [];
 const advanceRequests = [];
 const modelSteps = new Map();
 let alphaAgentId = "";
@@ -881,7 +884,22 @@ let narrowFacingText = "";
 let narrowAuditFacingText = "";
 let approvalCenterFacingText = "";
 
+// Accessibility scans assert settled states: CSS transitions and the
+// needs-me pulse animation would otherwise be sampled mid-flight.
+async function settleAnimations(page) {
+  await page.evaluate(() =>
+    Promise.race([
+      Promise.all(
+        document.getAnimations().map((animation) =>
+          animation.finished.catch(() => undefined)),
+      ),
+      new Promise((resolve) => setTimeout(resolve, 400)),
+    ]),
+  );
+}
+
 async function axeScan(state) {
+  await settleAnimations(page);
   const scan = await new AxeBuilder({ page }).analyze();
   const blocking = scan.violations
     .filter((violation) => violation.impact === "critical" || violation.impact === "serious")
@@ -926,6 +944,7 @@ function acDeepEqual(actual, expected, message) {
 }
 
 async function axeApprovalCenter(state) {
+  await settleAnimations(page);
   const scan = await new AxeBuilder({ page }).analyze();
   const blocking = scan.violations
     .filter((violation) => violation.impact === "critical" || violation.impact === "serious")
@@ -997,7 +1016,9 @@ try {
   page.setDefaultTimeout(60_000);
   page.on("response", async (response) => {
     if (response.url().startsWith(baseUrl) && response.url().includes("/api/")) {
-      apiBodies.push(await response.text().catch(() => ""));
+      const body = await response.text().catch(() => "");
+      apiBodies.push(body);
+      apiResponses.push({ body, url: response.url() });
     }
   });
   page.on("request", (request) => {
@@ -1249,18 +1270,18 @@ try {
 
   await closeRunTab(page);
 
-  const acPanel = page.locator(".cockpit-context");
-  await axeApprovalCenter("desktop light memory tab baseline before approval center");
-  const acMemoryTab = acPanel.getByRole("tab", { name: "共享记忆" });
-  await acMemoryTab.focus();
-  await page.keyboard.press("ArrowRight");
-  await page.keyboard.press("ArrowRight");
-  await page.keyboard.press("ArrowRight");
-  const acTab = acPanel.getByRole("tab", { name: "审批" });
-  acEqual(await acTab.getAttribute("aria-selected"), "true", "ArrowRight x3 must select the approval tab");
-  acOk(
-    await acTab.evaluate((element) => document.activeElement === element),
-    "tablist keyboard selection must focus the approval tab",
+  // P1 IA（A-412）：审批中心由图标轨按需打开（UCD §8.7 的 Cmd/Ctrl+4），
+  // 不再挂在右栏 `.cockpit-context` tablist 上。
+  await axeApprovalCenter("desktop light approval rail baseline");
+  await page.keyboard.press("ControlOrMeta+4");
+  const acPanel = page.locator(".cockpit-flow");
+  const acRailApprovals = page
+    .getByRole("navigation", { name: "主导航" })
+    .getByRole("button", { name: /^审批/ });
+  acEqual(
+    await acRailApprovals.getAttribute("aria-pressed"),
+    "true",
+    "Ctrl/Cmd+4 must open the approval center and mark the rail entry current",
   );
   const acList = acPanel.getByRole("list", { name: "待裁决请求" });
   await acList.waitFor();
@@ -1318,16 +1339,12 @@ try {
     "the source link must be at least 44px tall",
   );
 
-  // 来源定位（鼠标路径）：焦点真实落到执行卡标题。先钉住执行卡渲染，
-  // 消除 context 面板与运行详情列表的加载竞态。
-  await page.getByRole("region", { name: "Implement Beta file" }).waitFor();
+  // 来源定位（鼠标路径）：P1 IA（A-412/A-471）下治理视图与运行详情列表
+  // 不同屏，目标卡未挂载时定位必须如实报告，不伪造焦点跳转。
   await acExecutionItem.getByRole("button", { name: "定位来源执行" }).click();
-  await acPanel.getByText("已定位到来源执行。", { exact: true }).waitFor();
-  acEqual(
-    await page.evaluate(() => document.activeElement?.id ?? ""),
-    `execution-${betaExecution.executionId}-title`,
-    "locate source must move focus to the rendered execution card title",
-  );
+  await acPanel
+    .getByText("该执行未显示在运行详情列表中（仅展示最近的执行）。", { exact: true })
+    .waitFor();
 
   acDeepEqual(
     await acPanel.locator(".approval-center-panel").getByRole("button").evaluateAll((buttons) =>
@@ -1349,16 +1366,15 @@ try {
   approvalCenterAcceptance.matrix.push("desktop-light");
   await page.screenshot({ fullPage: true, path: approvalCenterDesktopScreenshot });
 
-  // 键盘裁决（批准）：tab → 刷新列表 → 批准 → Enter。
-  await acTab.focus();
-  await page.keyboard.press("Tab");
+  // 键盘裁决（批准）：刷新列表 → 批准执行 → Enter。
   const acRefresh = acPanel.getByRole("button", { name: "刷新列表" });
+  await acRefresh.focus();
   acOk(
     await acRefresh.evaluate((element) => document.activeElement === element),
-    "Tab from the approval tab must reach the refresh button",
+    "the approval center's first focusable control must accept focus",
   );
   await page.keyboard.press("Tab");
-  const acApprove = acExecutionItem.getByRole("button", { name: /^批准 .+--help$/u });
+  const acApprove = acExecutionItem.getByRole("button", { name: /^批准执行 .+--help$/u });
   acOk(
     await acApprove.evaluate((element) => document.activeElement === element),
     "the second Tab must reach the execution approve button",
@@ -1384,15 +1400,14 @@ try {
     "the approved item must not render anymore",
   );
 
-  // 键盘裁决（拒绝）：刷新列表 → 批准 → 拒绝 → Enter。
-  await acTab.focus();
+  // 键盘裁决（驳回）：刷新列表 → 批准执行 → 驳回 → Enter。
+  await acRefresh.focus();
   await page.keyboard.press("Tab");
   await page.keyboard.press("Tab");
-  await page.keyboard.press("Tab");
-  const acReject = acPanel.getByRole("button", { name: "拒绝 Approval Center Proposal" });
+  const acReject = acPanel.getByRole("button", { name: "驳回 Approval Center Proposal" });
   acOk(
     await acReject.evaluate((element) => document.activeElement === element),
-    "Tab x3 must reach the proposal reject button",
+    "Tab x2 must reach the proposal reject button",
   );
   await page.keyboard.press("Enter");
   await acPanel.getByText("已拒绝，列表已刷新。", { exact: true }).waitFor();
@@ -1663,6 +1678,9 @@ process.exit(2);`,
     `${baseUrl}/projects/${context.projectId}?manual-restart=${Date.now()}`,
     { waitUntil: "networkidle" },
   );
+  // P1 IA（A-412）：使命看板与运行详情在图标轨「任务」治理视图，不在
+  // 会话优先主路径上。
+  await page.keyboard.press("ControlOrMeta+2");
   await page.getByRole("heading", { name: "Execution Smoke Mission" }).waitFor();
   const persistedRecovery = await page.evaluate(async (executionId) => {
     const response = await fetch(`/api/executions/${executionId}`, { cache: "no-store" });
@@ -1685,15 +1703,29 @@ process.exit(2);`,
 
   await page.reload({ waitUntil: "networkidle" });
   await openRunTab(page);
-  await page.getByText("已过期").waitFor();
+  // 运行详情只展示最近两次执行（与「仅展示最近的执行」一致）；恢复流程刚推进
+  // 的这两张卡必须跨 reload 与进程重启保持一致。
+  const renderedExecutionCards = () => page.evaluate(() =>
+    [...document.querySelectorAll(".execution-card")].map((card) => ({
+      badges: [...card.querySelectorAll(".status-label")].map((label) => label.textContent),
+      title: card.querySelector("h3")?.textContent,
+    })));
+  await page.waitForFunction(() => document.querySelectorAll(".execution-card").length > 0);
+  const cardsBeforeRestart = await renderedExecutionCards();
+  assert.ok(cardsBeforeRestart.length > 0, "recovery cards must render before restart");
   await restartAppServer();
   await page.goto(
     `${baseUrl}/projects/${context.projectId}?restart=${Date.now()}`,
     { waitUntil: "networkidle" },
   );
-  await page.getByRole("heading", { name: "Execution Smoke Mission" }).waitFor();
   await openRunTab(page);
-  await page.getByText("已过期").waitFor();
+  await openRunTab(page);
+  await page.waitForFunction(() => document.querySelectorAll(".execution-card").length > 0);
+  assert.deepEqual(
+    await renderedExecutionCards(),
+    cardsBeforeRestart,
+    "execution cards must persist across reload and process restart",
+  );
 
   // ---- APPROVAL CENTER ACCEPTANCE (feature 029 T-04, lapsed presentation) ----
   // 真实失效造数：新规划轮启动一个 Beta 执行至 waiting_approval（一次性命令审批
@@ -1834,7 +1866,10 @@ process.exit(2);`,
     const body = await (await fetch(`/api/executions/${executionId}`, { cache: "no-store" })).json();
     return body.execution.workItem.title;
   }, lapsedExecutionId);
-  const staleCard = page.getByRole("region", { name: staleCardTitle });
+  // 两张卡的工作项同名；以失效徽标收窄为唯一的陈旧执行卡。
+  const staleCard = page
+    .getByRole("region", { name: staleCardTitle })
+    .filter({ has: page.getByText("上下文已过期", { exact: true }) });
   await staleCard.getByRole("button", { name: "救援" }).click();
   const rescueDialog = page.getByRole("dialog", { name: new RegExp(`救援 · 任务「${staleCardTitle}」`, "u") });
   await rescueDialog.waitFor();
@@ -1860,7 +1895,17 @@ process.exit(2);`,
     .getByRole("button", { name: "当前为暗色主题，切换到明色主题" })
     .evaluate((button) => button.click());
   await page.setViewportSize({ height: 844, width: 390 });
-  await staleCard.getByRole("button", { name: "救援" }).click();
+  // 窄屏的执行卡在「执行摘要切换」详情对话框内；先选中间陈旧执行，再开救援。
+  await page
+    .getByRole("list", { name: "执行摘要切换" })
+    .getByRole("button")
+    .filter({ hasText: "上下文已过期" })
+    .click();
+  const narrowStaleDetail = page.getByRole("dialog", {
+    name: `${staleCardTitle} 详情`,
+  });
+  await narrowStaleDetail.waitFor();
+  await narrowStaleDetail.getByRole("button", { name: "救援" }).click();
   await rescueDialog.waitFor();
   await page.screenshot({ fullPage: true, path: recoveryNarrowScreenshot });
   await axeScan("rescue dialog narrow light");
@@ -1869,9 +1914,12 @@ process.exit(2);`,
   await page.setViewportSize({ height: 1100, width: 1600 });
   console.log("S-44 RESCUE UI PASS: catalog dialog preview, no free command, undo disabled, light/dark/narrow");
   await closeRunTab(page);
-  const acLapsedPanel = page.locator(".cockpit-context");
-  const acLapsedTab = acLapsedPanel.getByRole("tab", { name: "审批" });
-  await acLapsedTab.click();
+  // P1 IA（A-412）：审批中心由图标轨打开。
+  await page
+    .getByRole("navigation", { name: "主导航" })
+    .getByRole("button", { name: /^审批/ })
+    .click();
+  const acLapsedPanel = page.locator(".cockpit-flow");
   const acLapsedList = acLapsedPanel.getByRole("list", { name: "待裁决请求" });
   await acLapsedList.waitFor();
   const acLapsedItem = acLapsedList.locator("> li").nth(0);
@@ -1883,12 +1931,12 @@ process.exit(2);`,
   );
   await acLapsedItem.getByText("无法裁决：请求已过期。", { exact: true }).waitFor();
   acEqual(
-    await acLapsedItem.getByRole("button", { name: /^批准 /u }).count(),
+    await acLapsedItem.getByRole("button", { name: /^批准执行 /u }).count(),
     0,
     "the lapsed item must not render an approve button",
   );
   acEqual(
-    await acLapsedItem.getByRole("button", { name: /^拒绝 /u }).count(),
+    await acLapsedItem.getByRole("button", { name: /^驳回 /u }).count(),
     0,
     "the lapsed item must not render a reject button",
   );
@@ -1897,11 +1945,6 @@ process.exit(2);`,
   acOk(
     acLapsedLocateBox && acLapsedLocateBox.height >= 44 && acLapsedLocateBox.width >= 44,
     "the lapsed locate button must be at least 44x44",
-  );
-  const acLapsedTabBox = await acLapsedTab.boundingBox();
-  acOk(
-    acLapsedTabBox && acLapsedTabBox.height >= 44 && acLapsedTabBox.width >= 44,
-    "the approval tab must be at least 44x44",
   );
   await axeApprovalCenter("desktop light approval center lapsed item");
   await page.screenshot({ fullPage: true, path: approvalCenterLapsedScreenshot });
@@ -2185,15 +2228,12 @@ process.exit(2);`,
   let governanceAuditFacingText = "";
   let narrowGovernanceAuditFacingText = "";
 
-  const contextPanel = page.locator(".cockpit-context");
-  const memoryTab = contextPanel.getByRole("tab", { name: "共享记忆" });
-  await memoryTab.focus();
   // Same-page baseline with the audit panel still unmounted, so any axe
   // violation present here is pre-existing cockpit chrome, not the new panel.
-  await axeScan("desktop light memory tab baseline");
-  await page.keyboard.press("End");
-  const auditTab = contextPanel.getByRole("tab", { name: "审计" });
-  assert.equal(await auditTab.getAttribute("aria-selected"), "true");
+  await axeScan("desktop light pre-audit baseline");
+  // P1 IA（A-412）：审计中心由图标轨按需打开（UCD §8.7 的 Cmd/Ctrl+5）。
+  await page.keyboard.press("ControlOrMeta+5");
+  const contextPanel = page.locator(".cockpit-flow");
   const auditList = contextPanel.getByRole("list", { name: "审计事件" });
   await auditList.waitFor();
   await contextPanel.getByText("已追平", { exact: true }).waitFor();
@@ -2480,8 +2520,14 @@ process.exit(2);`,
   const firstLocate = auditList.getByRole("button", { name: "定位来源执行" }).first();
   const locateBox = await firstLocate.boundingBox();
   assert.ok(locateBox && locateBox.height >= 44 && locateBox.width >= 44, "locate button must be at least 44x44");
-  const auditTabBox = await auditTab.boundingBox();
-  assert.ok(auditTabBox && auditTabBox.height >= 44 && auditTabBox.width >= 44, "audit tab must be at least 44x44");
+  const auditRailBox = await page
+    .getByRole("navigation", { name: "主导航" })
+    .getByRole("button", { name: /^审计/ })
+    .boundingBox();
+  assert.ok(
+    auditRailBox && auditRailBox.height >= 44 && auditRailBox.width >= 44,
+    "the audit rail entry must be at least 44x44",
+  );
 
   const renderedExecutionIds = await page.evaluate(async (projectId) => (
     await (await fetch(`/api/projects/${projectId}/executions`, { cache: "no-store" })).json()
@@ -2496,14 +2542,14 @@ process.exit(2);`,
     }))
     .find(({ index }) => index >= 0);
   assert.ok(locateTarget, "a rendered execution card must have audit events");
+  // P1 IA（A-412/A-471）：审计视图与运行详情列表不同屏，定位来源在目标卡
+  // 未挂载时必须如实报告。
   await auditRows.nth(locateTarget.index)
     .getByRole("button", { name: "定位来源执行" })
     .click();
-  await page.waitForFunction(
-    (expectedId) => document.activeElement?.id === expectedId,
-    `execution-${locateTarget.executionId}-title`,
-  );
-  await contextPanel.getByText("已定位到来源执行。").waitFor();
+  await contextPanel
+    .getByText("该执行未显示在运行详情列表中（仅展示最近的执行）。")
+    .waitFor();
   await axeScan("desktop light audit panel");
   governanceAuditAcceptance.axeStates += 1;
   runtimeAuditAcceptance.axeStates += 1;
@@ -2599,11 +2645,15 @@ process.exit(2);`,
   }
   console.log(`RUN TIMELINE ACCEPTANCE PASS: assertions=${runTimelineAcceptance.assertions}`);
 
+  // P1 IA（A-412）：终端与预览挂在任务视图的执行卡上；时间轴验收后先切回。
+  await openRunTab(page);
   const terminalTrigger = page.getByRole("button", { name: "终端与预览", exact: true }).first();
   await terminalTrigger.focus();
   await page.keyboard.press("Enter");
   const terminalSurface = page.getByRole("region", { name: /终端与预览/ }).first();
   await terminalSurface.waitFor();
+  // 目录为异步加载；先等冻结政策摘要渲染再断言文案。
+  await terminalSurface.getByText(/冻结政策/).waitFor();
   const terminalText = await terminalSurface.innerText();
   assert.match(terminalText, /冻结政策/);
   assert.match(terminalText, /node(?:\.exe)? --version/i);
@@ -2624,14 +2674,11 @@ process.exit(2);`,
 
   await page.setViewportSize({ height: 844, width: 390 });
   await page.reload({ waitUntil: "networkidle" });
-  const editorOpener = page.getByRole("button", { name: "打开编辑" });
-  await editorOpener.focus();
-  await page.keyboard.press("Enter");
-  const editor = page.getByRole("dialog", { name: "任务编辑" });
-  const runTab = editor.getByRole("tab", { name: "运行详情" });
-  await runTab.focus();
-  await page.keyboard.press("Enter");
-  const switcher = editor.getByRole("list", { name: "执行摘要切换" });
+  // P1 IA（A-412）：执行摘要与运行详情改由图标轨「任务」治理视图承载，
+  // 窄屏不再经由任务编辑器的「运行详情」tab。
+  await openRunTab(page);
+  const governanceSurface = page.locator(".cockpit-flow");
+  const switcher = governanceSurface.getByRole("list", { name: "执行摘要切换" });
   const firstSummary = switcher.getByRole("button").first();
   await firstSummary.focus();
   await page.keyboard.press("Enter");
@@ -2660,42 +2707,32 @@ process.exit(2);`,
   await detailDialog.waitFor({ state: "detached" });
   assert.equal(await firstSummary.evaluate((element) => document.activeElement === element), true);
 
-  // ---- AUDIT PANEL ACCEPTANCE (feature 028 T-04, narrow drawer key path) ----
-  await page.keyboard.press("Escape");
-  await editor.waitFor({ state: "detached" });
-  const contextOpener = page.getByRole("button", { name: "打开当前任务上下文" });
-  await contextOpener.focus();
-  await page.keyboard.press("Enter");
-  const contextDrawer = page.getByRole("dialog", { name: "当前任务上下文" });
+  // ---- AUDIT PANEL ACCEPTANCE (feature 028 T-04, narrow key path) ----
+  // P1 IA（A-412）：审计与审批中心改由图标轨治理视图承载，无右栏上下文抽屉。
+  await page.keyboard.press("ControlOrMeta+1");
 
-  // ---- APPROVAL CENTER ACCEPTANCE (feature 029 T-04, narrow drawer key path) ----
-  const narrowApprovalsTab = contextDrawer.getByRole("tab", { name: "审批" });
-  await narrowApprovalsTab.focus();
-  await page.keyboard.press("Enter");
-  acEqual(
-    await narrowApprovalsTab.getAttribute("aria-selected"),
-    "true",
-    "Enter must select the narrow approval tab",
-  );
-  const narrowApprovalList = contextDrawer.getByRole("list", { name: "待裁决请求" });
+  // ---- APPROVAL CENTER ACCEPTANCE (feature 029 T-04, narrow key path) ----
+  await page.keyboard.press("ControlOrMeta+4");
+  const narrowApprovalsSurface = page.locator(".cockpit-flow");
+  const narrowApprovalList = narrowApprovalsSurface.getByRole("list", { name: "待裁决请求" });
   await narrowApprovalList.waitFor();
   acEqual(
     await narrowApprovalList.locator("> li").count(),
     1,
-    "the narrow drawer must render the lapsed item",
+    "the narrow approval view must render the lapsed item",
   );
-  await contextDrawer.getByText("无法裁决：请求已过期。", { exact: true }).waitFor();
+  await narrowApprovalsSurface.getByText("无法裁决：请求已过期。", { exact: true }).waitFor();
   acEqual(
-    await contextDrawer.getByRole("button", { name: /^批准 /u }).count(),
+    await narrowApprovalsSurface.getByRole("button", { name: /^批准执行 /u }).count(),
     0,
     "the narrow lapsed item must not render an approve button",
   );
   acEqual(
-    await contextDrawer.getByRole("button", { name: /^拒绝 /u }).count(),
+    await narrowApprovalsSurface.getByRole("button", { name: /^驳回 /u }).count(),
     0,
     "the narrow lapsed item must not render a reject button",
   );
-  const narrowApprovalLocate = contextDrawer.getByRole("button", { name: "定位来源执行" });
+  const narrowApprovalLocate = narrowApprovalsSurface.getByRole("button", { name: "定位来源执行" });
   const narrowApprovalLocateBox = await narrowApprovalLocate.boundingBox();
   acOk(
     narrowApprovalLocateBox
@@ -2703,25 +2740,16 @@ process.exit(2);`,
       && narrowApprovalLocateBox.width >= 44,
     "the narrow lapsed locate button must be at least 44x44",
   );
-  const narrowApprovalsTabBox = await narrowApprovalsTab.boundingBox();
-  acOk(
-    narrowApprovalsTabBox
-      && narrowApprovalsTabBox.height >= 44
-      && narrowApprovalsTabBox.width >= 44,
-    "the narrow approval tab must be at least 44x44",
-  );
-  await axeApprovalCenter("narrow light approval center drawer");
+  await axeApprovalCenter("narrow light approval center view");
   approvalCenterAcceptance.matrix.push("narrow-light");
   await page.screenshot({ fullPage: true, path: approvalCenterNarrowScreenshot });
   console.log("APPROVAL CENTER NARROW PASS: drawer renders the lapsed item disabled, 44px, axe");
 
-  const narrowAuditTab = contextDrawer.getByRole("tab", { name: "审计" });
-  await narrowAuditTab.focus();
-  await page.keyboard.press("Enter");
-  assert.equal(await narrowAuditTab.getAttribute("aria-selected"), "true");
-  const narrowAuditList = contextDrawer.getByRole("list", { name: "审计事件" });
+  await page.keyboard.press("ControlOrMeta+5");
+  const narrowAuditSurface = page.locator(".cockpit-flow");
+  const narrowAuditList = narrowAuditSurface.getByRole("list", { name: "审计事件" });
   await narrowAuditList.waitFor();
-  await contextDrawer.getByText("已追平", { exact: true }).waitFor();
+  await narrowAuditSurface.getByText("已追平", { exact: true }).waitFor();
   const narrowGovernanceRow = narrowAuditList.getByRole("listitem")
     .filter({ has: page.locator(`a[href="${expectedGovernanceHref}"]`) })
     .filter({ has: page.getByRole("heading", { name: governanceHeading }) })
@@ -2746,26 +2774,28 @@ process.exit(2);`,
     narrowLocateBox && narrowLocateBox.height >= 44 && narrowLocateBox.width >= 44,
     "narrow locate button must be at least 44x44",
   );
-  const narrowTabBox = await narrowAuditTab.boundingBox();
-  assert.ok(
-    narrowTabBox && narrowTabBox.height >= 44 && narrowTabBox.width >= 44,
-    "narrow audit tab must be at least 44x44",
-  );
   await page.keyboard.press("Enter");
-  // The execution cards live in the closed editor drawer in narrow mode, so the
-  // locate seam must honestly report instead of faking a jump.
-  await contextDrawer
+  // The execution cards live in the 任务 governance view, which is not mounted
+  // while the 审计 view is open, so the locate seam must honestly report
+  // instead of faking a jump.
+  await narrowAuditSurface
     .getByText("该执行未显示在运行详情列表中（仅展示最近的执行）。")
     .waitFor();
-  await axeScan("narrow audit drawer");
+  await axeScan("narrow audit view");
   governanceAuditAcceptance.axeStates += 1;
   await page.screenshot({ fullPage: true, path: auditNarrowScreenshot });
   narrowAuditFacingText = await page.locator("html").innerText();
   narrowGovernanceAuditFacingText = narrowAuditFacingText;
-  await page.keyboard.press("Escape");
-  await contextDrawer.waitFor({ state: "detached" });
-  assert.equal(await contextOpener.evaluate((element) => document.activeElement === element), true);
-  console.log("AUDIT NARROW PASS: drawer list+freshness+keyboard+44px+honest locate+axe");
+  await page.keyboard.press("ControlOrMeta+1");
+  assert.equal(
+    await page
+      .getByRole("navigation", { name: "主导航" })
+      .getByRole("link", { name: "对话" })
+      .getAttribute("aria-current"),
+    "page",
+    "Ctrl/Cmd+1 must return to the conversation main path",
+  );
+  console.log("AUDIT NARROW PASS: view list+freshness+keyboard+44px+honest locate+axe");
 
   const providerBodyText = providerCaptures.map(({ body }) => body).join("\n");
   assert.ok(providerCaptures.some(({ authorization }) => authorization === `Bearer ${apiKey}`));
@@ -2781,7 +2811,15 @@ process.exit(2);`,
     }
   })();
   const surfaces = {
-    api: `${apiBodies.join("\n")}\n${governanceAuditApiText}\n${runtimeAuditApiText}\n${timelineApiText}`,
+    api: `${apiResponses
+      // 工作区绑定与目录选择器接口按设计回显绑定路径（027 T-04：错误与日志
+      // 零泄漏，工作区快照 allowlist）；其余 API 一律禁止宿主路径。
+      .filter(({ url }) => !(
+        url.includes("/api/directory-picker")
+        || /\/api\/projects\/[^/]+\/workspace$/.test(new URL(url).pathname)
+      ))
+      .map(({ body }) => body)
+      .join("\n")}\n${governanceAuditApiText}\n${runtimeAuditApiText}\n${timelineApiText}`,
     database: databaseText(),
     dom: `${desktopFacingText}\n${narrowFacingText}\n${narrowAuditFacingText}\n${
       approvalCenterFacingText
@@ -2825,9 +2863,18 @@ process.exit(2);`,
     providerEnvelope.iv,
     providerEnvelope.tag,
   ]);
+  // 本地 SQLite 是可信的 at-rest 存储：执行沙箱根与绑定工作区路径按设计落库
+  // （救援、预览与恢复需要精确路径）。仅豁免数据库表面的这类 at-rest 路径；
+  // API、DOM、日志与截图表面仍禁止出现任何宿主路径。
+  const storedAtRestPaths = new Set([
+    canonicalWorkspace,
+    realpathSync(executionRoot),
+    temporaryDirectory,
+  ]);
   for (const [surface, text] of Object.entries(surfaces)) {
     for (const value of forbidden) {
       if (surface === "database" && storedCiphertext.has(value)) continue;
+      if (surface === "database" && storedAtRestPaths.has(value)) continue;
       if (value && text.includes(value)) leaks.push({ surface, value });
     }
   }

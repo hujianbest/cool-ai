@@ -1,6 +1,6 @@
 import { EventEmitter } from "node:events";
 import { spawn } from "node:child_process";
-import { mkdtempSync, mkdirSync, rmSync, writeFileSync } from "node:fs";
+import { mkdtempSync, mkdirSync, realpathSync, rmSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { dirname, join, resolve } from "node:path";
 import { PassThrough } from "node:stream";
@@ -348,7 +348,9 @@ describe("direct process runner", () => {
       stdin: string;
     };
     expect(observed.argv).toEqual(["literal && argument", "%SECRET_TOKEN%"]);
-    expect(resolve(observed.cwd)).toBe(resolve(sandboxRoot, "work"));
+    // macOS resolves /var → /private/var in the child's getcwd; compare
+    // canonical paths (identity on Windows).
+    expect(realpathSync(observed.cwd)).toBe(realpathSync(resolve(sandboxRoot, "work")));
     expect(observed.stdin).toBe("");
     expect(observed.env).toEqual(expect.objectContaining({
       CI: "1",

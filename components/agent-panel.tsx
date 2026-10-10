@@ -828,7 +828,7 @@ export function AgentPanel({
     <>
       <main
         aria-labelledby="agent-resource-tab"
-        className="cockpit-flow"
+        className="cockpit-flow cockpit-flow-scrollable"
         id="agent-resource-panel"
         role="tabpanel"
       >

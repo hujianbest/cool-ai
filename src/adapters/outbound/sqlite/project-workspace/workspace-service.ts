@@ -124,7 +124,12 @@ async function canonicalDirectory(inputPath: string, workspaceFs: WorkspaceFs): 
 }
 
 function workspaceKey(canonicalPath: string): string {
-  return process.platform === "win32" ? canonicalPath.toLowerCase() : canonicalPath;
+  // macOS default filesystems (APFS/HFS+) are case-insensitive like NTFS:
+  // compare case-insensitively so case variants of one directory stay bound
+  // to a single project.
+  return process.platform === "win32" || process.platform === "darwin"
+    ? canonicalPath.toLowerCase()
+    : canonicalPath;
 }
 
 function rollback(database: DatabaseSync): void {

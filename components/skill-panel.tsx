@@ -197,7 +197,7 @@ export function SkillPanel() {
     <>
       <main
         aria-labelledby="skill-resource-tab"
-        className="cockpit-flow"
+        className="cockpit-flow cockpit-flow-scrollable"
         id="skill-resource-panel"
         role="tabpanel"
       >

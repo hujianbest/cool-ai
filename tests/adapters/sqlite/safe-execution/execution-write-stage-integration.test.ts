@@ -24,7 +24,7 @@ import { ExecutionError } from "@/src/modules/safe-execution";
 import { executeWriteToolAction } from "@/src/adapters/outbound/workspace/file-tools";
 import { executeCommandProcessAction } from "@/src/adapters/outbound/workspace/process-runner";
 import {
-  createWindowsVerifiedExecutionAdapters,
+  createPlatformVerifiedExecutionAdapters,
   refreshSandboxManifest,
 } from "@/src/adapters/outbound/workspace/windows-verified-execution-adapter";
 import { execV7Fixture } from "@/tests/fixtures/execution/current-graph";
@@ -245,7 +245,7 @@ function expectNoStageOrphans(database: DatabaseSync, operation: string): void {
 }
 
 async function persistBaselineAndCurrent(
-  adapters: ReturnType<typeof createWindowsVerifiedExecutionAdapters>,
+  adapters: ReturnType<typeof createPlatformVerifiedExecutionAdapters>,
 ) {
   const baseline = await refreshSandboxManifest({
     fileAdapter: adapters.fileAdapter,
@@ -263,7 +263,7 @@ async function persistBaselineAndCurrent(
 
 describe("verified sandbox manifest lifecycle", () => {
   it("persists strict baseline and current manifest identities across reopen", async () => {
-    const adapters = createWindowsVerifiedExecutionAdapters();
+    const adapters = createPlatformVerifiedExecutionAdapters();
     const { baseline, current } = await persistBaselineAndCurrent(adapters);
     expect(current.entries[0]).toEqual(expect.objectContaining({
       identity: expect.any(String),
@@ -306,7 +306,7 @@ describe("verified sandbox manifest lifecycle", () => {
   });
 
   it("marks same bytes with a new canonical identity stale after reopen", async () => {
-    const adapters = createWindowsVerifiedExecutionAdapters();
+    const adapters = createPlatformVerifiedExecutionAdapters();
     const { baseline, current } = await persistBaselineAndCurrent(adapters);
     const database = seedDatabase(current.hash);
     seedStagedDecision(database);
@@ -350,7 +350,7 @@ describe("verified sandbox manifest lifecycle", () => {
         },
         operationId(420),
         "4".repeat(64),
-        createWindowsVerifiedExecutionAdapters().stagingAdapter,
+        createPlatformVerifiedExecutionAdapters().stagingAdapter,
       );
       expect(result.status).toBe(409);
       expect(reopened.prepare(
@@ -362,7 +362,7 @@ describe("verified sandbox manifest lifecycle", () => {
   });
 
   it("terminalizes acquired stage actions and receipts when the adapter throws", { timeout: 15_000 }, async () => {
-    const adapters = createWindowsVerifiedExecutionAdapters();
+    const adapters = createPlatformVerifiedExecutionAdapters();
     const initial = await refreshSandboxManifest({
       fileAdapter: adapters.fileAdapter,
       sandboxRoot: sandbox,
@@ -441,7 +441,7 @@ describe("verified sandbox manifest lifecycle", () => {
       mkdirSync(sandbox);
       writeFileSync(join(workspace, "README.md"), "before\n");
       writeFileSync(join(sandbox, "README.md"), "before\n");
-      const adapters = createWindowsVerifiedExecutionAdapters();
+      const adapters = createPlatformVerifiedExecutionAdapters();
       const initial = await refreshSandboxManifest({
         fileAdapter: adapters.fileAdapter,
         sandboxRoot: sandbox,
@@ -497,7 +497,7 @@ describe("verified sandbox manifest lifecycle", () => {
   });
 
   it("fails closed on strict manifest parse without orphaning stage facts", async () => {
-    const adapters = createWindowsVerifiedExecutionAdapters();
+    const adapters = createPlatformVerifiedExecutionAdapters();
     const initial = await refreshSandboxManifest({
       fileAdapter: adapters.fileAdapter,
       sandboxRoot: sandbox,
@@ -561,7 +561,7 @@ describe("verified sandbox manifest lifecycle", () => {
       mkdirSync(sandbox);
       writeFileSync(join(workspace, "README.md"), "before\n");
       writeFileSync(join(sandbox, "README.md"), "before\n");
-      const adapters = createWindowsVerifiedExecutionAdapters();
+      const adapters = createPlatformVerifiedExecutionAdapters();
       const initial = await refreshSandboxManifest({
         fileAdapter: adapters.fileAdapter,
         sandboxRoot: sandbox,
@@ -659,7 +659,7 @@ describe("verified sandbox manifest lifecycle", () => {
   });
 
   it("closes every production refresh handle exactly once on failure", async () => {
-    const adapters = createWindowsVerifiedExecutionAdapters();
+    const adapters = createPlatformVerifiedExecutionAdapters();
     const initial = await refreshSandboxManifest({
       fileAdapter: adapters.fileAdapter,
       sandboxRoot: sandbox,
@@ -705,7 +705,7 @@ describe("verified sandbox manifest lifecycle", () => {
   });
 
   it("refreshes a real write before/after and stages the refreshed tree exactly once", async () => {
-    const adapters = createWindowsVerifiedExecutionAdapters();
+    const adapters = createPlatformVerifiedExecutionAdapters();
     const initial = await refreshSandboxManifest({
       fileAdapter: adapters.fileAdapter,
       sandboxRoot: sandbox,
@@ -830,7 +830,7 @@ writeFileSync(new URL("./COMMAND.md", import.meta.url), "command\\n");
 process.exit(${exitCode});
 `,
       );
-      const adapters = createWindowsVerifiedExecutionAdapters();
+      const adapters = createPlatformVerifiedExecutionAdapters();
       const initial = await refreshSandboxManifest({
         fileAdapter: adapters.fileAdapter,
         sandboxRoot: sandbox,
@@ -887,7 +887,7 @@ process.exit(${exitCode});
   it("post-refreshes a timed-out command only after confirmed tree termination", async () => {
     const scriptPath = join(sandbox, "timeout.mjs");
     writeFileSync(scriptPath, "setInterval(() => {}, 1000);\n");
-    const adapters = createWindowsVerifiedExecutionAdapters();
+    const adapters = createPlatformVerifiedExecutionAdapters();
     const initial = await refreshSandboxManifest({
       fileAdapter: adapters.fileAdapter,
       sandboxRoot: sandbox,
@@ -970,7 +970,7 @@ process.exit(${exitCode});
   });
 
   it("drops a refreshed stage when the cached manifest CAS loses", async () => {
-    const adapters = createWindowsVerifiedExecutionAdapters();
+    const adapters = createPlatformVerifiedExecutionAdapters();
     const initial = await refreshSandboxManifest({
       fileAdapter: adapters.fileAdapter,
       sandboxRoot: sandbox,

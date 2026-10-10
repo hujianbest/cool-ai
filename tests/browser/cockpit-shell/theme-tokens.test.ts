@@ -258,7 +258,9 @@ describe("visual token discipline", () => {
     const visualDeclaration =
       /^\s*(?:color|background(?:-color)?|border(?:-color|-radius)?|font(?:-size)?|line-height|gap|padding(?:-[a-z]+)?|margin(?:-[a-z]+)?|box-shadow|min-height|min-width|width|grid-template-columns)\s*:\s*([^;]+);/gim;
     for (const match of css.matchAll(visualDeclaration)) {
-      const value = match[1].trim();
+      // `!important` is a cascade mechanism, not a visual value; the token
+      // discipline only governs the value itself.
+      const value = match[1].trim().replace(/\s*!important$/i, "");
       expect(
         value.includes("var(") ||
           /^(?:0|auto|none|inherit|transparent|100%|50%|fit-content)$/.test(value),

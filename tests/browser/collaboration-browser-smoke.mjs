@@ -302,10 +302,13 @@ async function navigateAfterRestart(page, href) {
   throw lastError;
 }
 
-async function createSkill(page, name, description, instructions) {
+async function createSkill(page, name, description, instructions, { expectEmpty = false } = {}) {
   await page.getByRole("tab", { name: "技能" }).click();
   await page.waitForURL((url) => url.searchParams.get("section") === "skills");
-  await page.getByText("暂无技能。", { exact: true }).waitFor();
+  // 空态只在首次创建前断言；后续创建时列表已非空。
+  if (expectEmpty) {
+    await page.getByText("暂无技能。", { exact: true }).waitFor();
+  }
   await page.getByRole("button", { name: "创建新技能" }).click();
   const editor = page.getByRole("dialog", { name: "创建技能" });
   await editor.waitFor();
@@ -362,6 +365,7 @@ async function createTeam(page) {
     "Alpha Collaboration Skill",
     "Private planning instructions",
     `Plan the mission using ${alphaPrivate}.`,
+    { expectEmpty: true },
   );
   await createSkill(
     page,
@@ -424,6 +428,8 @@ async function createMissionViaApi(page, title, goal) {
 async function createProjectContext(page) {
   await page.goto(baseUrl, { waitUntil: "networkidle" });
   await openFolderProject(page, "workspace");
+  // P1 IA（A-358/A-401）：成员与工作区设置在引导步表面，桌面主路径不挂载。
+  await page.goto(`${page.url()}?guide=members`, { waitUntil: "networkidle" });
 
   const members = page.getByRole("group", { name: "平等项目成员" });
   await members
@@ -441,8 +447,13 @@ async function createProjectContext(page) {
     "Produce a verified two-agent implementation plan",
   );
 
-  return page.evaluate(() =>
+  const projectId = await page.evaluate(() =>
     new URL(window.location.href).pathname.split("/").at(-1));
+  // 回到项目主路径：引导步 URL 会把设置面板挂进侧栏，协作流程不再需要。
+  await page.goto(`${baseUrl}/projects/${projectId}`, {
+    waitUntil: "networkidle",
+  });
+  return projectId;
 }
 
 async function createThread(page, title, memberNames) {

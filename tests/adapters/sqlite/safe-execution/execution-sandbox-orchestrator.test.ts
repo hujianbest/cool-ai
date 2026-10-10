@@ -13,7 +13,7 @@ import {
 } from "@/src/adapters/outbound/workspace/sandbox-executor";
 import { startExecution } from "@/src/adapters/outbound/sqlite/safe-execution/execution-service";
 import { cleanupOwnedSandbox } from "@/src/adapters/outbound/workspace/sandbox-snapshot";
-import { createWindowsNativeReadAdapter } from "@/src/adapters/outbound/workspace/windows-native-read-adapter";
+import { createPlatformNativeReadAdapter } from "@/src/adapters/outbound/workspace/sandbox-preflight";
 import {
   execV7Fixture,
   execV7TupleStatements,
@@ -346,7 +346,7 @@ describe("production sandbox executor orchestration", () => {
   });
 
   it("persists the exact preflight failure without exposing a partial success", async () => {
-    const base = createWindowsNativeReadAdapter();
+    const base = createPlatformNativeReadAdapter();
     const result = await startWith(createProductionSandboxExecutor({
       async createAdapter() {
         return {
@@ -405,7 +405,7 @@ describe("production sandbox executor orchestration", () => {
 
     const before = sandboxFacts();
     expect(existsSync(before.sandboxRoot)).toBe(true);
-    const adapter = createWindowsNativeReadAdapter();
+    const adapter = createPlatformNativeReadAdapter();
     const handle = adapter.openRootDirectory(before.sandboxRoot);
     const identity = adapter.identity(handle);
     adapter.close(handle);
@@ -477,7 +477,7 @@ describe("production sandbox executor orchestration", () => {
     const late = startWith(executor);
     await hold.enteredPromise;
     const before = sandboxFacts();
-    const adapter = createWindowsNativeReadAdapter();
+    const adapter = createPlatformNativeReadAdapter();
     const handle = adapter.openRootDirectory(before.sandboxRoot);
     const identity = adapter.identity(handle);
     adapter.close(handle);

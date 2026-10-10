@@ -221,7 +221,13 @@ export function ProjectPanel({
   useEffect(() => {
     function onKeyDown(event: KeyboardEvent) {
       if (event.key === "Escape") {
-        if (threadDialogOpen || workspaceConfirmationOpen) {
+        if (
+          threadDialogOpen
+          || workspaceConfirmationOpen
+          // 嵌套弹窗（执行详情、救援、终端等）优先消费 Escape；窗口级处理
+          // 只应在没有更内层表面时把治理视图收回对话。
+          || document.querySelector('[aria-modal="true"]') !== null
+        ) {
           return;
         }
         setGovernanceView(null);

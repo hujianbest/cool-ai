@@ -108,6 +108,7 @@
   --sr-only-size: 1px;
   --space-hairline: 2px;
   --menu-min-width: 10rem;
+  --menu-width: max-content;
   --avatar-size: 36px;
   --leading-prose: 1.6;
   --mission-board-columns: repeat(4, minmax(0, 1fr));

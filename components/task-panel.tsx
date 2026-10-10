@@ -548,22 +548,28 @@ export function TaskPanel({
               if (!projectId) return;
               onOpenGovernance?.("mission");
               const titleSelector = `#mission-title-${projectId}`;
-              if (!document.querySelector(titleSelector)) {
-                document
-                  .querySelector<HTMLButtonElement>(
-                    '#mission-board [aria-label="创建使命"]',
-                  )
-                  ?.click();
-              }
+              // The board mounts on the next render, so the create-form
+              // handoff must be retried inside the focus poll instead of a
+              // synchronous query that misses the not-yet-mounted button.
               let attempts = 0;
+              let createRequested = false;
               const focusWhenReady = () => {
                 const target = document.querySelector<HTMLElement>(titleSelector);
                 if (target) {
                   target.focus();
                   return;
                 }
+                if (!createRequested) {
+                  const createButton = document.querySelector<HTMLButtonElement>(
+                    '#mission-board [aria-label="创建使命"]',
+                  );
+                  if (createButton) {
+                    createRequested = true;
+                    createButton.click();
+                  }
+                }
                 attempts += 1;
-                if (attempts < 20) window.setTimeout(focusWhenReady, 50);
+                if (attempts < 40) window.setTimeout(focusWhenReady, 50);
               };
               focusWhenReady();
             }}

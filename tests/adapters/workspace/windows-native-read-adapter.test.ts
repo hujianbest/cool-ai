@@ -72,7 +72,11 @@ afterEach(() => {
   rmSync(directory, { force: true, recursive: true });
 });
 
-describe("Windows handle-relative read adapter", () => {
+// The Windows native layer only exists on Windows; its acceptance tests run
+// there. The macOS equivalents live in posix-native-*.test.ts.
+const describeWindows = process.platform === "win32" ? describe : describe.skip;
+
+describeWindows("Windows handle-relative read adapter", () => {
   it("lists with NtQueryDirectoryFile and reads every short ReadFile transfer", () => {
     mkdirSync(join(directory, "folder"));
     writeFileSync(join(directory, "folder", "alpha.txt"), "abcdefghij");

@@ -57,7 +57,7 @@ Building with multiple Agents often turns the owner into a human router: copying
 Cool AI is a **local-first, single-owner application with no authentication**. Use it only on a trusted machine and do not expose the development server or APIs to an untrusted network. Model requests and the context needed for a task are sent to the Provider configured by the owner, so local-first does not mean fully offline.
 
 - **Web, configuration, and collaboration:** designed for a local desktop browser. Running these surfaces on a platform does not establish verified file-execution support.
-- **Full verified execution:** supported only on Windows 10+ or Windows Server 2016+ x64, with x64 Node.js and local NTFS/ReFS volumes. File execution on other operating systems, architectures, or file systems fails closed with `SANDBOX_UNVERIFIABLE`.
+- **Full verified execution:** supported on macOS (target platform; Apple Silicon or Intel, Node.js 24.x+ on default case-insensitive APFS/HFS+ volumes) and retained on Windows 10+ / Windows Server 2016+ x64 with x64 Node.js and local NTFS/ReFS volumes. File execution on other operating systems, architectures, or file systems fails closed with `SANDBOX_UNVERIFIABLE`.
 - **Guardrail, not an OS sandbox:** isolation, verified handles, permissions, approvals, limits, validation, and conflict checks reduce accidental damage. An owner-approved local executable may still access the network, system resources, processes, services, files, or credentials. Use a VM, container, or OS policy for hostile code.
 - **Provider contract:** compatibility is limited to `GET /models` and `POST /chat/completions`; chat content must be a JSON object and usage must be valid, non-negative, and arithmetically consistent.
 - **Lifecycle:** each project allows at most two active executions, and each Agent at most one. There is no background worker; closing the browser or restarting the app does not continue or replay unattended work.
@@ -66,7 +66,7 @@ Read [Security](./docs/security.md), [Platforms and limits](./docs/limits-and-pl
 
 ## Quick start
 
-Requirements: Node.js 24.x and npm 11.x.
+Requirements: Node.js 24.x+ (24 and 26 verified) and npm 11.x on macOS; Node.js 24.x on Windows.
 
 ```powershell
 npm install

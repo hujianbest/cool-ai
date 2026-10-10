@@ -185,7 +185,9 @@ function comparePath(left: string, right: string): number {
 
 function pathKey(path: string): string {
   const normalized = path.normalize("NFC");
-  return process.platform === "win32" ? normalized.toLocaleLowerCase("en-US") : normalized;
+  return process.platform === "win32" || process.platform === "darwin"
+    ? normalized.toLocaleLowerCase("en-US")
+    : normalized;
 }
 
 function assertEntry(entry: StagingEntry): void {

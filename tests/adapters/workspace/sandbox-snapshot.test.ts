@@ -9,13 +9,13 @@ vi.mock("server-only", () => ({}));
 
 import { openDatabase } from "@/src/adapters/outbound/sqlite/connection";
 import { preflightSandbox, type SandboxPreflightResult } from "@/src/adapters/outbound/workspace/sandbox-preflight";
-import { createWindowsNativeReadAdapter } from "@/src/adapters/outbound/workspace/windows-native-read-adapter";
+import { createPlatformNativeReadAdapter } from "@/src/adapters/outbound/workspace/sandbox-preflight";
 import { execV7Fixture } from "@/tests/fixtures/execution/current-graph";
 
 type SnapshotModule = typeof import("@/src/adapters/outbound/workspace/sandbox-snapshot") & {
   cleanupOwnedSandbox(input: {
     expectedRootIdentity: string;
-    platform?: ReturnType<typeof createWindowsNativeReadAdapter>;
+    platform?: ReturnType<typeof createPlatformNativeReadAdapter>;
     sandboxRoot: string;
   }): Promise<boolean>;
 };
@@ -217,7 +217,7 @@ describe("verified-handle sandbox snapshot", () => {
   it("rejects link, reparse, special, parent-chain, and after-read identity races", async () => {
     write("nested/file.txt", "ordinary");
     const preflight = await manifest();
-    const base = createWindowsNativeReadAdapter();
+    const base = createPlatformNativeReadAdapter();
     for (const kind of ["link", "reparse", "special"] as const) {
       await expect(snapshot.buildSandboxSnapshot({
         preflight,
@@ -309,7 +309,7 @@ describe("durable sandbox action lifecycle", () => {
     let database = seedSandboxAction({ actionId: "expired-action", deadlineModifier: "-1 second", operationId: "00000000-0000-4000-8000-000000000702", status: "running" });
     mkdirSync(sandboxRoot, { recursive: true });
     writeFileSync(join(sandboxRoot, "partial"), "owned");
-    const adapter = createWindowsNativeReadAdapter();
+    const adapter = createPlatformNativeReadAdapter();
     const handle = adapter.openRootDirectory(sandboxRoot);
     const identity = adapter.identity(handle);
     adapter.close(handle);

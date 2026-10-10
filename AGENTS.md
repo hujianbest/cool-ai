@@ -9,8 +9,8 @@ Cool AI 是一个本地优先、单 owner 的多 Agent 协作驾驶舱。
 - 技术栈：Next.js 16 App Router、React 19、严格 TypeScript、SQLite（`node:sqlite`）。
 - 界面：桌面优先的响应式驾驶舱，使用亮色/暗色设计令牌。
 - 测试：Vitest、Testing Library、Playwright 和 axe。
-- 运行时：Node.js 24.x 与 npm 11.x。
-- 安全模型：可信本机、无身份验证、API 失败关闭、受保护的 Windows 工作区执行。
+- 运行时：macOS（目标平台）Node.js 24.x+（24 与 26 已验证）与 npm 11.x；Windows x64 Node.js 24.x 为保留平台。
+- 安全模型：可信本机、无身份验证、API 失败关闭、受保护的工作区执行（macOS posix 与 Windows 双原生 verified-handle 层）。
 
 ## 架构地图
 

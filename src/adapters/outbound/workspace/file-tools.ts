@@ -186,7 +186,7 @@ function sameIdentity(
 
 function comparablePath(path: string): string {
   const normalized = path.replaceAll("\\", "/").replace(/\/+$/u, "");
-  return process.platform === "win32"
+  return process.platform === "win32" || process.platform === "darwin"
     ? normalized.toLocaleLowerCase("en-US")
     : normalized;
 }

@@ -4,14 +4,55 @@ import { dirname } from "node:path";
 import { ExecutionError } from "@/src/modules/safe-execution";
 import {
   createWindowsVerifiedExecutionAdapters,
-  type WindowsVerifiedFileAdapter,
+  createPosixVerifiedExecutionAdapters,
+  type VerifiedFileAdapter,
 } from "@/src/adapters/outbound/workspace/windows-verified-execution-adapter";
 import {
   createWindowsNativeMergeLifecycleAdapter,
-  type ExpectedCanonicalFile,
-  type NativeMutationResult,
-  type VerifiedOwnedFileRef,
 } from "@/src/adapters/outbound/workspace/windows-native-merge-lifecycle";
+import {
+  createPosixNativeMergeLifecycleAdapter,
+} from "@/src/adapters/outbound/workspace/posix-native-write-adapter";
+import type {
+  ExpectedCanonicalFile,
+  NativeMutationResult,
+  VerifiedOwnedFileRef,
+} from "@/src/adapters/outbound/workspace/windows-native-merge-lifecycle";
+
+type MergeLifecycle = {
+  conditionalCleanupOwned(
+    roots: MergeRoots,
+    ref: VerifiedOwnedFileRef,
+  ): NativeMutationResult<{ deleted: true }>;
+  conditionalDelete(
+    roots: MergeRoots,
+    expectedTarget: ExpectedCanonicalFile,
+  ): NativeMutationResult<{ deleted: true }>;
+  conditionalReplacePrepared(
+    roots: MergeRoots,
+    expectedTarget: ExpectedCanonicalFile,
+    preparedCanonicalTemp: VerifiedOwnedFileRef,
+  ): NativeMutationResult<ExpectedCanonicalFile>;
+  prepareCanonicalTempFromOwned(
+    roots: MergeRoots,
+    sourceRef: VerifiedOwnedFileRef,
+    targetParentSegments: string[],
+    tempName: string,
+    ownerId: string,
+  ): NativeMutationResult<VerifiedOwnedFileRef>;
+  prepareOwnedFile(
+    rootKind: "journal" | "canonical",
+    root: string,
+    parentSegments: string[],
+    name: string,
+    ownerId: string,
+    bytes: Uint8Array,
+  ): NativeMutationResult<VerifiedOwnedFileRef>;
+  reopenOwnedFile(
+    roots: MergeRoots,
+    ref: VerifiedOwnedFileRef,
+  ): NativeMutationResult<VerifiedOwnedFileRef>;
+};
 
 export type MergeVerifiedState = {
   bytes: Buffer | null;
@@ -94,7 +135,7 @@ function validateSegments(pathSegments: string[]): void {
 }
 
 async function closeAll(
-  adapter: WindowsVerifiedFileAdapter,
+  adapter: VerifiedFileAdapter,
   handles: unknown[],
   previous?: unknown,
 ): Promise<void> {
@@ -109,15 +150,10 @@ async function closeAll(
   if (failure !== undefined) unavailable("A merge handle close was uncertain.", failure);
 }
 
-export function createWindowsVerifiedMergeAdapter(): MergeVerifiedAdapter {
-  let adapter: WindowsVerifiedFileAdapter;
-  let lifecycle: ReturnType<typeof createWindowsNativeMergeLifecycleAdapter>;
-  try {
-    adapter = createWindowsVerifiedExecutionAdapters().fileAdapter;
-    lifecycle = createWindowsNativeMergeLifecycleAdapter();
-  } catch (error) {
-    return unavailable("The Windows verified merge lifecycle is unavailable.", error);
-  }
+function createVerifiedMergeAdapterWith(
+  lifecycle: MergeLifecycle,
+  adapter: VerifiedFileAdapter,
+): MergeVerifiedAdapter {
 
   async function verifyRoot(root: string): Promise<void> {
     const handle = await adapter.openRootDirectory(root).catch((error) =>
@@ -216,4 +252,36 @@ export function createWindowsVerifiedMergeAdapter(): MergeVerifiedAdapter {
     },
     reopenOwnedFile: lifecycle.reopenOwnedFile,
   };
+}
+
+
+export function createWindowsVerifiedMergeAdapter(): MergeVerifiedAdapter {
+  try {
+    return createVerifiedMergeAdapterWith(
+      createWindowsNativeMergeLifecycleAdapter(),
+      createWindowsVerifiedExecutionAdapters().fileAdapter,
+    );
+  } catch (error) {
+    return unavailable("The Windows verified merge lifecycle is unavailable.", error);
+  }
+}
+
+export function createPosixVerifiedMergeAdapter(): MergeVerifiedAdapter {
+  try {
+    return createVerifiedMergeAdapterWith(
+      createPosixNativeMergeLifecycleAdapter(),
+      createPosixVerifiedExecutionAdapters().fileAdapter,
+    );
+  } catch (error) {
+    return unavailable("The macOS verified merge lifecycle is unavailable.", error);
+  }
+}
+
+/**
+ * Platform router: macOS uses the posix native layer, Windows keeps its own.
+ */
+export function createVerifiedMergeAdapter(): MergeVerifiedAdapter {
+  return process.platform === "darwin"
+    ? createPosixVerifiedMergeAdapter()
+    : createWindowsVerifiedMergeAdapter();
 }

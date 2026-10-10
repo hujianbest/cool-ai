@@ -325,7 +325,7 @@ ol {
   border: var(--border-width) solid var(--interactive-primary);
   border-radius: var(--rounded-pill);
   background: var(--interactive-accent-soft);
-  color: var(--interactive-primary);
+  color: var(--color-primary-focus);
   font-size: var(--text-fine-print);
   font-weight: 600;
 }
@@ -421,7 +421,7 @@ ol {
   overflow-y: auto;
 }
 
-.cockpit-flow > section.stack,
+.cockpit-flow > section.stack:not(.onboarding-guide),
 .cockpit-flow .chat-column {
   display: flex;
   flex: 1;
@@ -430,6 +430,12 @@ ol {
   max-width: var(--chat-flow-max-width);
   margin-inline: auto;
   flex-direction: column;
+}
+
+/* Team resource panels hold stacked guide + list content that must scroll as
+   one column; chat keeps its own internal chat-body scrolling. */
+.cockpit-flow-scrollable {
+  overflow-y: auto;
 }
 
 .cockpit-flow .chat-column > .chat-surface {
@@ -730,7 +736,7 @@ ol {
 }
 
 .composer-hint {
-  color: var(--color-ink-muted-48);
+  color: var(--text-secondary);
   font-size: var(--text-fine-print);
 }
 
@@ -1320,7 +1326,7 @@ ol {
 
 .thread-view-tabs [role="tab"][aria-selected="true"] {
   background: var(--interactive-accent-soft);
-  color: var(--interactive-primary);
+  color: var(--color-primary-focus);
   font-weight: 600;
 }
 
@@ -1456,7 +1462,7 @@ ol {
 }
 
 .thread-list-entry-meta {
-  color: var(--color-ink-muted-48);
+  color: var(--text-secondary);
   font-size: var(--text-fine-print);
 }
 
@@ -1540,7 +1546,7 @@ ol {
   flex-direction: column;
   gap: var(--space-xxs);
   min-width: var(--menu-min-width);
-  width: max-content;
+  width: var(--menu-width);
   max-width: 12rem;
   padding: var(--space-xxs);
   border: var(--border-width) solid var(--color-divider-soft);
@@ -1556,7 +1562,7 @@ ol {
   align-items: center !important;
   gap: var(--space-2) !important;
   width: 100% !important;
-  min-height: 2rem !important;
+  min-height: var(--control-min) !important;
   padding: var(--space-1) var(--space-2) !important;
   border: none !important;
   border-radius: var(--rounded-xs) !important;
@@ -3040,13 +3046,13 @@ ol {
   padding: 1px var(--space-2);
   border-radius: var(--rounded-xs);
   background: var(--interactive-accent-soft);
-  color: var(--interactive-primary);
+  color: var(--color-primary-focus);
   font-size: var(--text-fine-print);
   font-weight: 500;
 }
 
 .msg-time {
-  color: var(--color-ink-muted-48);
+  color: var(--text-secondary);
   font-size: var(--text-fine-print);
 }
 
@@ -3237,7 +3243,7 @@ ol {
   padding: var(--space-1) var(--space-2);
   border-radius: var(--rounded-xs);
   background: var(--interactive-accent-soft);
-  color: var(--interactive-primary);
+  color: var(--color-primary-focus);
   font-size: var(--text-fine-print);
   font-weight: 600;
   letter-spacing: 0.04em;

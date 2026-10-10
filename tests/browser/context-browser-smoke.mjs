@@ -348,6 +348,7 @@ function depDeepEqual(actual, expected, message) {
 }
 
 async function axeDependencies(page, state) {
+  await settleAnimations(page);
   const scan = await new AxeBuilder({ page }).analyze();
   const blocking = scan.violations
     .filter(
@@ -389,7 +390,23 @@ function browseDeepEqual(actual, expected, message) {
   assert.deepEqual(actual, expected, message);
 }
 
+// Accessibility scans assert settled states: CSS transitions (e.g. suggestion
+// card background-color on theme switches) would otherwise be sampled
+// mid-flight and report transient colors.
+async function settleAnimations(page) {
+  await page.evaluate(() =>
+    Promise.race([
+      Promise.all(
+        document.getAnimations().map((animation) =>
+          animation.finished.catch(() => undefined)),
+      ),
+      new Promise((resolve) => setTimeout(resolve, 400)),
+    ]),
+  );
+}
+
 async function axeWorkspaceBrowse(page, state) {
+  await settleAnimations(page);
   const scan = await new AxeBuilder({ page }).analyze();
   const blocking = scan.violations
     .filter(
@@ -579,6 +596,13 @@ try {
   await page.goto(baseUrl, { waitUntil: "networkidle" });
   await openFolderProject(page, "real-workspace");
   await assertPhase1Cockpit(page);
+
+  // P1 IA（A-358/A-401）：工作区只读浏览面只在窄屏或引导步挂载，桌面验收从
+  // 工作区引导步进入该表面，不把工作区 chrome 装回会话优先主路径。
+  await page.goto(`${page.url()}?guide=workspace`, {
+    waitUntil: "networkidle",
+  });
+  await page.getByLabel("工作区绑定状态").waitFor();
 
   boundWorkspacePath =
     (await page.getByLabel("工作区绑定状态").locator("code").textContent()) ??
@@ -1382,7 +1406,12 @@ try {
     true,
   );
 
+  // The bind form now lives in its own 「保存工作区」 dialog, so the rebind
+  // confirmation needs the opener plus the in-dialog submit.
   await rebindOpener.click();
+  const reboundBindForm = page.getByRole("dialog", { name: "保存工作区" });
+  await reboundBindForm.waitFor();
+  await reboundBindForm.getByRole("button", { name: "保存工作区" }).click();
   rebindConfirmation = page.getByRole("dialog", {
     name: "确认改绑工作区",
   });
@@ -1529,6 +1558,7 @@ try {
     assert.equal(actual, expected, message);
   };
   const axeMissionWorkAudit = async (state) => {
+    await settleAnimations(page);
     const scan = await new AxeBuilder({ page }).analyze();
     const blocking = scan.violations
       .filter(
@@ -2057,11 +2087,13 @@ try {
     ]),
   );
   database.close();
+  // S-60 起，打开文件夹项目会幂等落地规划/实施/复核三名自带 Agent 并自动入组；
+  // 计数仍按精确值断言，防止夹具之外的隐藏写入。
   assert.deepEqual(counts, {
-    agents: 2,
+    agents: 5,
     memory_entries: 5,
     missions: 2,
-    project_memberships: 3,
+    project_memberships: 9,
     projects: 3,
     providers: 1,
     work_items: 4,
@@ -2108,6 +2140,7 @@ try {
     assert.deepEqual(actual, expected, message);
   };
   const axeProjectWorkspaceAudit = async (state) => {
+    await settleAnimations(page);
     const scan = await new AxeBuilder({ page }).analyze();
     const blocking = scan.violations
       .filter(
@@ -2291,8 +2324,8 @@ try {
     Object.hasOwn(PROJECT_WORKSPACE_AUDIT_EVENT_TYPE_COPY, event.eventType));
   projectAuditEqual(
     projectDomainEvents.length,
-    8,
-    "project domain trail must be created/bound/rebound + 3 joins + 1 remove + 1 policy change",
+    11,
+    "project domain trail must be created/bound/rebound + 3 joins + 3 starter joins + 1 remove + 1 policy change",
   );
   projectAuditEqual(
     projectAuditApi.pages[0].freshness.status,
@@ -2342,8 +2375,15 @@ try {
     .sort();
   projectAuditDeepEqual(
     joinedNames,
-    ["Audit Temp Agent", "Context Builder", "Context Planner"],
-    "member joins must carry redacted display names",
+    [
+      "Audit Temp Agent",
+      "Context Builder",
+      "Context Planner",
+      "复核",
+      "实施",
+      "规划",
+    ],
+    "member joins must carry redacted display names (including S-60 starter agents)",
   );
   const removedEvents = projectDomainEvents.filter(
     (event) => event.eventType === "member_removed",
@@ -2442,6 +2482,10 @@ try {
     ]),
     [
       ["mission_created", "Empty Mission"],
+      // S-60：打开文件夹幂等落地三名自带 Agent 并自动入组，产生三条成员加入事件。
+      ["member_joined", undefined],
+      ["member_joined", undefined],
+      ["member_joined", undefined],
       ["workspace_bound", "context-empty-workspace"],
       ["project_created", "context-empty-workspace"],
     ],

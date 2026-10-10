@@ -2,6 +2,7 @@ import { isAbsolute, relative, resolve, sep } from "node:path";
 
 import { SandboxPreflightError } from "@/src/modules/safe-execution";
 import { createWindowsNativeReadAdapter } from "@/src/adapters/outbound/workspace/windows-native-read-adapter";
+import { createPosixNativeReadAdapter } from "@/src/adapters/outbound/workspace/posix-native-read-adapter";
 
 export { SandboxPreflightError } from "@/src/modules/safe-execution";
 
@@ -94,7 +95,9 @@ function failUnverifiable(message: string): never {
 
 function comparablePath(path: string): string {
   const normalized = resolve(path);
-  return process.platform === "win32" ? normalized.toLocaleLowerCase("en-US") : normalized;
+  return process.platform === "win32" || process.platform === "darwin"
+    ? normalized.toLocaleLowerCase("en-US")
+    : normalized;
 }
 
 function isSameOrDescendant(path: string, possibleAncestor: string): boolean {
@@ -156,11 +159,40 @@ function isSandboxUnverifiable(error: unknown): error is { code: "SANDBOX_UNVERI
     && error.code === "SANDBOX_UNVERIFIABLE";
 }
 
+/**
+ * Synchronous platform router for callers that need the full native read API
+ * (fault injection, identity probing). The macOS adapter satisfies the
+ * Windows-native surface structurally; this seam is the single cast point.
+ */
+export function createPlatformNativeReadAdapter(): ReturnType<
+  typeof createWindowsNativeReadAdapter
+> {
+  if (process.platform === "darwin") {
+    return createPosixNativeReadAdapter() as unknown as ReturnType<
+      typeof createWindowsNativeReadAdapter
+    >;
+  }
+  return createWindowsNativeReadAdapter();
+}
+
 export async function createDefaultSandboxFsAdapter(
   options: DefaultSandboxFsAdapterOptions = {},
 ): Promise<SandboxFsAdapter> {
-  if ((options.platform ?? process.platform) !== "win32") {
-    return failUnverifiable("The Windows verified-handle adapter requires Windows.");
+  const platform = options.platform ?? process.platform;
+  if (platform === "darwin") {
+    try {
+      return (options.factory ?? createPosixNativeReadAdapter()) as SandboxFsAdapter;
+    } catch (error) {
+      if (isSandboxUnverifiable(error)) throw error;
+      throw new SandboxPreflightError(
+        "SANDBOX_UNVERIFIABLE",
+        "The macOS verified-handle adapter construction failed.",
+        { cause: error },
+      );
+    }
+  }
+  if (platform !== "win32") {
+    return failUnverifiable("The verified-handle adapter requires macOS or Windows.");
   }
   if ((options.arch ?? process.arch) !== "x64") {
     return failUnverifiable("The Windows verified-handle adapter requires x64 Node.");
@@ -354,7 +386,7 @@ export async function preflightSandbox(
       const relativePath = relativeDirectory
         ? `${relativeDirectory}/${listed.name.normalize("NFC")}`
         : listed.name.normalize("NFC");
-      const pathKey = process.platform === "win32"
+      const pathKey = process.platform === "win32" || process.platform === "darwin"
         ? relativePath.toLocaleLowerCase("en-US")
         : relativePath;
       if (pathKeys.has(pathKey)) {
