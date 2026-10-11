@@ -5,12 +5,11 @@
 // mock OpenAI-compatible provider. Screenshots land in
 // tests/browser/test-artifacts/ui-audit/ (gitignored).
 import assert from "node:assert/strict";
-import { spawn, spawnSync } from "node:child_process";
+import { spawn } from "node:child_process";
 import { createServer } from "node:http";
 import {
   mkdirSync,
   mkdtempSync,
-  readFileSync,
   readdirSync,
   rmSync,
   writeFileSync,
@@ -19,6 +18,8 @@ import { tmpdir } from "node:os";
 import { join, resolve } from "node:path";
 
 import { chromium } from "playwright";
+
+import { stopServerTree } from "./runner-process.mjs";
 
 const host = "127.0.0.1";
 const port = 4600 + (process.pid % 300);
@@ -38,11 +39,8 @@ try {
 } catch {
   // 目录首次创建时不存在。
 }
-// dev server 会重写受版本管理的生成文件；运行前后按原字节还原，避免污染工作树。
-const generatedFiles = ["next-env.d.ts", "tsconfig.json"].map((file) => ({
-  content: readFileSync(file, "utf8"),
-  file,
-}));
+// 纪律（执行策略 5）：测试期间绝不回滚 tsconfig.json / next-env.d.ts；
+// 全部运行结束后由操作者统一 `git checkout -- tsconfig.json next-env.d.ts` 一次。
 mkdirSync(artifactDirectory, { recursive: true });
 mkdirSync(workspaceDirectory, { recursive: true });
 
@@ -142,12 +140,8 @@ server.stdout.on("data", (chunk) => (serverOutput += chunk.toString()));
 server.stderr.on("data", (chunk) => (serverOutput += chunk.toString()));
 
 function stopServer() {
-  if (!server.pid) return;
-  if (process.platform === "win32") {
-    spawnSync("taskkill", ["/pid", String(server.pid), "/T", "/F"], { stdio: "ignore" });
-  } else {
-    server.kill("SIGTERM");
-  }
+  // posix 下 SIGTERM 父进程后按端口反查兜底，避免孤儿 next 进程占端口。
+  stopServerTree(server, { label: "audit-dev-server", port });
 }
 
 async function waitForServer() {
@@ -710,11 +704,4 @@ try {
   mockProvider.close();
   rmSync(resolve(auditDistDirectory), { force: true, recursive: true });
   rmSync(temporaryDirectory, { force: true, recursive: true });
-  for (const { content, file } of generatedFiles) {
-    try {
-      if (readFileSync(file, "utf8") !== content) writeFileSync(file, content);
-    } catch {
-      // 生成文件缺席不阻塞收尾。
-    }
-  }
 }
