@@ -80,6 +80,14 @@ const planReadyDispositionSchema = z
   })
   .strict();
 
+// 个人对话（1:1 单 Agent）的收束回合：直接回答 owner，不涉及任务/交棒/使命。
+const replyDispositionSchema = z
+  .object({
+    type: z.literal("reply"),
+    summary: boundedText(500),
+  })
+  .strict();
+
 export const agentTurnSchema = z
   .object({
     message: boundedText(20_000),
@@ -92,6 +100,7 @@ export const agentTurnSchema = z
       handoffDispositionSchema,
       decisionRequestDispositionSchema,
       planReadyDispositionSchema,
+      replyDispositionSchema,
     ]),
   })
   .strict()
@@ -107,7 +116,8 @@ export const agentTurnSchema = z
       });
     }
     if (
-      turn.disposition.type === "decision_request" &&
+      (turn.disposition.type === "decision_request"
+        || turn.disposition.type === "reply") &&
       (turn.tasks.length !== 0 || turn.claim !== null)
     ) {
       context.addIssue({
@@ -135,8 +145,8 @@ export const AGENT_TURN_SCHEMA_INSTRUCTIONS = [
   'ProposedTask: {"clientKey":string(1..64, /^[A-Za-z0-9_-]+$/),"title":string(1..160 graphemes),"description":string(0..5000 graphemes),"dependsOnKeys":clientKey[0..20]}.',
   'ExistingClaim: {"source":"existing","workItemId":non-empty string}.',
   'ProposedClaim: {"source":"proposed","clientKey":clientKey}.',
-  'Disposition is exactly one of {"type":"handoff","targetAgentId":non-empty string,"summary":string(1..5000 graphemes),"reason":string(1..5000 graphemes)}, {"type":"decision_request","question":string(1..1000 graphemes),"options":unique trimmed string[2..8], each 1..500 graphemes}, or {"type":"plan_ready"}.',
-  "For decision_request, tasks must be [] and claim must be null.",
+  'Disposition is exactly one of {"type":"handoff","targetAgentId":non-empty string,"summary":string(1..5000 graphemes),"reason":string(1..5000 graphemes)}, {"type":"decision_request","question":string(1..1000 graphemes),"options":unique trimmed string[2..8], each 1..500 graphemes}, {"type":"plan_ready"}, or {"type":"reply","summary":string(1..500 graphemes)} (direct 1:1 conversations only).',
+  "For decision_request or reply, tasks must be [] and claim must be null.",
   "Unknown keys are forbidden at every object level.",
 ].join("\n");
 

@@ -31,6 +31,7 @@ import {
   type CredentialEnvelope,
 } from "@/src/modules/identity-capability";
 import { openDatabase } from "@/src/adapters/outbound/sqlite/connection";
+import { isDirectChatProject } from "@/src/adapters/outbound/sqlite/public-collaboration/direct-chat";
 import { readPublicStructuredBlocksTx } from "@/src/adapters/outbound/sqlite/public-collaboration/structured-message-store";
 import { assertPublicProjectionText } from "@/src/adapters/outbound/sqlite/public-collaboration/verified-source-projection";
 import { appendCollaborationAuditOutboxRow } from "@/src/adapters/outbound/sqlite/public-collaboration/audit-event-outbox";
@@ -824,15 +825,21 @@ function missingProjectFactsFromDatabase(
     .get(projectId) as { workspacePath: string | null } | undefined;
   if (!project) resourceNotFound();
   const missing: string[] = [];
-  if (!project.workspacePath) missing.push("workspace");
   const memberCount = (
     database
       .prepare("SELECT count(*) AS count FROM project_memberships WHERE project_id=?")
       .get(projectId) as { count: number }
   ).count;
-  if (memberCount < 2) missing.push("members");
-  if (!database.prepare("SELECT 1 FROM missions WHERE project_id=?").get(projectId)) {
-    missing.push("mission");
+  if (memberCount < 1) missing.push("members");
+  else if (!isDirectChatProject(database, projectId) && memberCount < 2) {
+    missing.push("members");
+  }
+  // 个人对话不要求工作区与使命；绑定工作区的项目保持多 Agent 口径。
+  if (!isDirectChatProject(database, projectId)) {
+    if (!project.workspacePath) missing.push("workspace");
+    if (!database.prepare("SELECT 1 FROM missions WHERE project_id=?").get(projectId)) {
+      missing.push("mission");
+    }
   }
   return missing;
 }
@@ -1070,8 +1077,15 @@ function readThreadPolicyFromDatabase(
   const unavailableMemberIds = rows
     .filter(({ live }) => live === "removed")
     .map(({ agentId }) => agentId);
+  // 个人对话线程按单 Agent 策略合法；多 Agent 项目线程仍要求至少 2 名成员。
+  const minimumMembers =
+    rows.length === 1
+    && rows[0] !== undefined
+    && allowsSingleMemberThread(database, projectId, rows[0].agentId)
+      ? 1
+      : 2;
   const availability =
-    rows.length >= 2
+    rows.length >= minimumMembers
     && new Set(rows.map(({ agentId }) => agentId)).size === rows.length
     && unavailableMemberIds.length === 0
       ? "ready"
@@ -1878,6 +1892,18 @@ export function writeOwnerThreadMessage(
         timestamp,
       });
       hooks.fault?.("after_receipt");
+
+      // 个人对话：休息在 waiting_owner 的直聊运行在收到新的 owner 消息后恢复推进
+      // （协作运行保持原语义：必须经决策答复恢复）。
+      if (isDirectChatProject(database, projectId)) {
+        database
+          .prepare(
+            `UPDATE collaboration_runs
+             SET status='running', version=version+1, updated_at=?
+             WHERE project_id=? AND thread_id=? AND status='waiting_owner'`,
+          )
+          .run(timestamp, projectId, threadId);
+      }
 
       database
         .prepare(

@@ -1,7 +1,7 @@
 # UI 一致性差异清单（应用 vs UCD）
 
 - 日期: 2026-10-11
-- 状态: 待修复（由主任务执行）；本清单为只读发现记录，不代表已修复
+- 状态: 修复中（由主任务按批次执行）；本清单为追踪台账，逐条原位更新状态与证据
 - 基准: `product/ui/UI设计.md`（UCD，唯一基准）+ `product/ui/preview-ucd.html`（高保真原型）
 - 方法: 自包含审计运行器驱动真实应用（独立 dev server + 临时库 + 脚本化选夹 + mock OpenAI 兼容 Provider + 结构化回合回复），覆盖 27 个屏/交互状态与全部按钮点击后的界面；截图与逐步状态见 `tests/browser/test-artifacts/ui-audit/`（gitignored），原型参考图见 `tests/browser/test-artifacts/ucd-references/`（7 视图）。重跑：`node tests/browser/test-artifacts/ui-audit-runner.mjs`
 - 严重级别: **P0** 阻断主路径 / **P1** 与 UCD 明确不符 / **P2** 文案与细节
@@ -14,6 +14,7 @@
 - **证据**: `ui-audit/11c-mention-send-result.png`、`ui-audit/11b-chat-reply.png`；运行日志 `API ERROR 409 ... THREAD_POLICY_REPAIR_REQUIRED`。
 - **修复方向**: 为直聊线程提供单 Agent 运行路径（放宽 ≥2 策略成员约束或直聊专用运行校验）；错误文案按场景细分。
 
+- **修复（2026-10-11 批次 A）**: 新增直聊单 Agent 运行路径——`direct-chat.ts` 范围判定 + run 启动/上下文快照/动作提交/回合 schema（新增 `reply` 收束，schema identity 31）逐层放行，协作项目语义不变（失败关闭保持）。证据：`ui-audit/11b-chat-reply.png`（发出＋AI 回复）、`ui-audit/11e-new-round-direct-send.png`；测试 `tests/modules/public-collaboration/direct-chat-run.test.ts`（5 例）。
 ## P1 — 与 UCD 明确不符
 
 ### U-02 项目对话首条消息要求先有使命，且无引导
@@ -22,18 +23,21 @@
 - **证据**: `ui-audit/16b-project-chat-reply.png`（首轮失败态）、API 日志。
 - **修复方向**: 二选一——空对话状态给出「先创建使命」明确入口（并解释原因）；或运行启动时自动确保最小上下文。错误提示补充可操作指引。
 
+- **修复（2026-10-11 批次 A）**: 采用「明确入口」方案——发送被失败关闭时 Composer 下方给出可操作文案与「创建使命」主按钮，进入任务视图并在数据就绪后直接打开使命创建表单并聚焦（意图驱动，无固定时长轮询）。证据：`ui-audit/16a-project-chat-needs-mission.png`、`ui-audit/16b-mission-created-from-chat.png`、`ui-audit/16c-project-chat-reply.png`；UCD §9.1.4 已同步该状态。
 ### U-03 图标轨「团队/设置」未按 UCD 收进底部分组
 - **UCD 依据**: §7.1「底部分组（经分割线隔离）：6 团队 7 设置 8 主题」。
 - **现状**: 团队、设置紧跟在审计图标之后停在轨道上半段（约 y=281/333），下方大片空白，仅主题（月亮）贴底；无分割线。
 - **证据**: `ui-audit/` 基线截图左侧轨道裁剪（`test-artifacts/rail-full-crop.png`）；任意项目截图可见。
 - **修复方向**: 将团队/设置/主题合并为贴底分组并加分割线（注意与固定设置入口的布局关系）。
 
+- **修复（2026-10-11 批次 B）**: 分割线改为吸附底部分组起点（`margin-top: auto`），团队/设置/固定入口/主题经分割线隔离贴底（UCD §7.1 区域 A）。证据：`ui-audit/01-home-no-provider.png` 左侧轨道；`npm run smoke` 像素基线 0px。
 ### U-04 消息流系统事实以大卡片渲染，淹没对话
 - **UCD 依据**: §9.1.2/§9.1.3 协作时间线以 Owner 气泡、Agent 消息与结构化卡片为主体；系统事实应为安静的次要样式（历史实现口径「系统事实安静行」）。
 - **现状**: 「对话已创建 / 协作成员策略已更新 / 运行已关联 / 协作已启动 / 正在调用模型 / 模型调用已完成」等系统事实每条渲染为约 90px 高的大边框卡片，视觉重量超过 Owner 气泡，消息流被系统卡片主导。
 - **证据**: `ui-audit/16b-project-chat-reply.png`、`ui-audit/22b-recycle-bin.png`、`ui-audit/23b-batch-bar.png`。
 - **修复方向**: 系统事实改安静行（单行文案 + 弱化时间），仅结构化决策类事实保留卡片。
 
+- **修复（2026-10-11 批次 B）**: 恢复历史交付口径的「系统事实安静行」（无卡片铬、弱化文字与时间），结构化决策卡保留卡片形态。证据：`ui-audit/16c-project-chat-reply.png`、`ui-audit/11b-chat-reply.png`。
 ### U-05 任务看板缺使命卡片（Mission Banner）
 - **UCD 依据**: §9.2.1 第 2 条「使命卡片：展示项目核心目标、验收条件与当前整体完成百分比进度条」。
 - **现状**: 看板无使命 banner；使命内容只有在点击「编辑使命」后才以表单出现。已创建使命（标题+目标）后看板不展示目标与完成度。
@@ -70,12 +74,14 @@
 - **证据**: `ui-audit/09-home-direct-chat.png`、`ui-audit/23b-batch-bar.png`。
 - **修复方向**: 按运行状态给出可操作文案（如「上一轮已结束，发送新消息开始新一轮」并保证可发送）。
 
+- **修复（2026-10-11 批次 C）**: 移除「请先选择历史运行…」内部术语；历史运行结束后可直接发送开始新一轮，主按钮文案为「发送并开始新一轮」；首页直聊首条发送自动创建个人对话（`ui-audit/11e-new-round-direct-send.png` 断言无该提示文案）。
 ### U-11 首页欢迎卡提示与 Composer 实际能力矛盾
 - **UCD 依据**: §9.1.1 欢迎卡「或直接在下方输入框开始 1:1 直聊」；§9.1.1 占位文字「输入消息，与助手直接对话…」。
 - **现状**: 欢迎卡提示可直接直聊，但 Composer 禁用、占位为「新建对话后即可输入…」——需先手动新建对话；占位文案与 UCD 不一致。
 - **证据**: `ui-audit/09-home-direct-chat.png`。
 - **修复方向**: 二选一——允许首页直接输入（自动创建个人对话）；或修正欢迎卡文案与占位，明确「先新建对话」。
 
+- **修复（2026-10-11 批次 C）**: 采用「允许首页直接输入」方案——无对话时 Composer 可输入（占位「输入消息，与助手直接对话…」），首条发送自动创建个人对话并启动首轮运行（UCD §9.1.1）。证据：`ui-audit/09-home-direct-chat.png`、`tests/browser/collaboration/collaboration-chat.test.tsx` 新增用例。
 ## P2 — 文案与细节
 
 ### U-12 无 Provider 空态文案与引导目标
@@ -84,6 +90,7 @@
 - **证据**: `ui-audit/01-home-no-provider.png`。
 - **修复方向**: 文案与按钮对齐 UCD；或修订 UCD。侧栏缺失是否有意需产品确认。
 
+- **修复（2026-10-11 批次 B）**: 文案与按钮对齐 UCD 场景 1——「欢迎使用 Cool AI。配置模型 Provider 后即可开始。」+ 主按钮「配置 Provider」（/team providers）+ 次级「查看引导」。侧栏在无项目时不渲染：UCD §9.1.1 组件清单未含侧栏（ASCII 线框为示意），按文本基准保持现状，记录于假设台账。证据：`ui-audit/01-home-no-provider.png`。
 ### U-13 视图标题与泳道文案偏差
 - **UCD/原型依据**: 原型「使命与任务看板 · <项目>」「共享记忆与知识库 · <项目>」；UCD §9.2.6「统一审计中心」；原型泳道「待办(Todo)/进行中 (In Progress)/阻塞 (Blocked)/完成 (Done)」。
 - **现状**: 「任务看板 · <项目>」「共享记忆 · <项目>」「审计中心 · <项目>」；泳道仅中文（待办/进行中/阻塞/完成）；空泳道有「暂无进行中任务。」等文案（原型空泳道无文案）。

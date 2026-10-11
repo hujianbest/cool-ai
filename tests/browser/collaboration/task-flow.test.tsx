@@ -196,10 +196,10 @@ describe("task event flow", () => {
     expect(screen.queryByLabelText("文件夹路径")).toBeNull();
 
     expect(
-      await screen.findByText("先配置一个 Agent，即可开始个人对话。"),
+      await screen.findByText("配置模型 Provider 后即可开始。"),
     ).toBeInTheDocument();
     expect(screen.queryByRole("complementary", { name: "当前任务上下文" })).toBeNull();
-    expect(screen.getByRole("link", { name: "配置 Agent" })).toBeInTheDocument();
+    expect(screen.getByRole("link", { name: "配置 Provider" })).toBeInTheDocument();
   });
 
   it("calls create, start, and execute in order while rendering each persisted state", async () => {

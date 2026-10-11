@@ -161,13 +161,13 @@ try {
   await page.goto(baseUrl, { waitUntil: "networkidle" });
   assert.equal(await page.locator("html").getAttribute("lang"), "zh-CN");
   await page
-    .getByText("先配置一个 Agent，即可开始个人对话。", { exact: true })
+    .getByText("配置模型 Provider 后即可开始。", { exact: true })
     .waitFor();
   assert.equal(
     await page
-      .getByRole("link", { name: "配置 Agent" })
+      .getByRole("link", { name: "配置 Provider" })
       .getAttribute("href"),
-    "/team?section=agents&returnTo=/",
+    "/team?section=providers&returnTo=/",
   );
   const workbenchHeading = page.getByRole("heading", { level: 1, name: "协作工作台" });
   assert.equal(await workbenchHeading.count(), 1);

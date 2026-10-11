@@ -7,7 +7,7 @@
 import assert from "node:assert/strict";
 import { spawn, spawnSync } from "node:child_process";
 import { createServer } from "node:http";
-import { mkdirSync, mkdtempSync, rmSync, writeFileSync } from "node:fs";
+import { mkdirSync, mkdtempSync, readFileSync, rmSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join, resolve } from "node:path";
 
@@ -23,6 +23,11 @@ const databasePath = join(temporaryDirectory, "audit.sqlite");
 const workspaceDirectory = join(temporaryDirectory, "audit-workspace");
 const auditDistDirectory = `.next-audit-${process.pid}`;
 const artifactDirectory = resolve("tests", "browser", "test-artifacts", "ui-audit");
+// dev server 会重写受版本管理的生成文件；运行前后按原字节还原，避免污染工作树。
+const generatedFiles = ["next-env.d.ts", "tsconfig.json"].map((file) => ({
+  content: readFileSync(file, "utf8"),
+  file,
+}));
 mkdirSync(artifactDirectory, { recursive: true });
 mkdirSync(workspaceDirectory, { recursive: true });
 
@@ -61,6 +66,27 @@ const mockProvider = createServer((request, response) => {
     let body = "";
     request.on("data", (chunk) => (body += chunk));
     request.on("end", () => {
+      // 个人对话（1:1 直聊）的回合以 reply 收束；协作回合用 decision_request
+      // （无参与者门槛，并可点亮 Needs Me）。平台提示词声明直聊范围。
+      let turn = MOCK_TURN;
+      try {
+        const parsed = JSON.parse(body);
+        const messages = Array.isArray(parsed?.messages) ? parsed.messages : [];
+        const directChat = messages.some(
+          (message) =>
+            message?.role === "system"
+            && typeof message?.content === "string"
+            && message.content.includes("direct 1:1 conversation"),
+        );
+        if (directChat) {
+          turn = {
+            ...MOCK_TURN,
+            disposition: { summary: "已完成拆解并给出直聊答复。", type: "reply" },
+          };
+        }
+      } catch {
+        // 非法请求体按协作回合处理。
+      }
       response.writeHead(200, { "content-type": "application/json" });
       response.end(
         JSON.stringify({
@@ -71,7 +97,7 @@ const mockProvider = createServer((request, response) => {
           choices: [
             {
               index: 0,
-              message: { role: "assistant", content: JSON.stringify(MOCK_TURN) },
+              message: { role: "assistant", content: JSON.stringify(turn) },
               finish_reason: "stop",
             },
           ],
@@ -121,6 +147,8 @@ async function waitForServer() {
 }
 
 const steps = [];
+const pageDiagnostics = [];
+let activePage;
 let page;
 
 async function shot(name) {
@@ -129,13 +157,36 @@ async function shot(name) {
 }
 
 async function step(id, title, fn) {
+  pageDiagnostics.length = 0;
   try {
     await fn();
     steps.push({ id, title, status: "PASS" });
     console.log(`[PASS] ${id} ${title}`);
   } catch (error) {
-    steps.push({ id, title, status: "FAIL", error: String(error?.message ?? error).slice(0, 300) });
+    let failureShot = null;
+    try {
+      failureShot = `${id}-failure`;
+      await shot(failureShot);
+    } catch {
+      failureShot = null;
+    }
+    let url = null;
+    try {
+      url = activePage?.url() ?? null;
+    } catch {
+      url = null;
+    }
+    steps.push({
+      id,
+      title,
+      status: "FAIL",
+      error: String(error?.message ?? error).slice(0, 300),
+      failureShot,
+      url,
+      diagnostics: [...pageDiagnostics].slice(-8),
+    });
     console.log(`[FAIL] ${id} ${title}: ${String(error?.message ?? error).slice(0, 200)}`);
+    for (const line of pageDiagnostics.slice(-5)) console.log(`  diag ${line}`);
   }
 }
 
@@ -156,7 +207,14 @@ try {
     else document.addEventListener("DOMContentLoaded", inject, { once: true });
   });
   page = await context.newPage();
-  page.setDefaultTimeout(15_000);
+  activePage = page;
+  page.on("console", (message) => {
+    if (message.type() === "error") pageDiagnostics.push(`console: ${message.text().slice(0, 200)}`);
+  });
+  page.on("pageerror", (error) => pageDiagnostics.push(`pageerror: ${String(error).slice(0, 200)}`));
+  // dev 模式首屏编译可达数十秒：放宽默认等待，不把加载态误判为缺陷。
+  page.setDefaultTimeout(45_000);
+  page.setDefaultNavigationTimeout(90_000);
   page.on("response", async (response) => {
     if (response.status() >= 400) {
       const body = await response.text().catch(() => "");
@@ -167,7 +225,7 @@ try {
   // ---------- S01-S02: first open without provider ----------
   await step("S01", "首页无 Provider 引导态", async () => {
     await page.goto(baseUrl, { waitUntil: "networkidle" });
-    await page.getByText("先配置一个 Agent，即可开始个人对话。", { exact: true }).waitFor();
+    await page.getByText("配置模型 Provider 后即可开始。", { exact: true }).waitFor();
     await shot("01-home-no-provider");
   });
 
@@ -279,9 +337,66 @@ try {
     await shot("11c-mention-send-result");
     await composer.fill("请拆解登录模块的改造方案。");
     await send.click();
-    await page.getByText("完成拆解", { exact: false }).first().waitFor({ timeout: 15_000 }).catch(() => {});
+    await page.getByText("完成拆解", { exact: false }).first().waitFor({ timeout: 60_000 });
     await page.waitForTimeout(800);
     await shot("11b-chat-reply");
+  });
+
+  await step("S11b", "历史运行结束后直接发送开始新一轮（U-10）", async () => {
+    // 结束当前运行（waiting_owner → stopped），再直接发送。
+    const threadId = new URL(page.url()).searchParams.get("thread");
+    if (!threadId) throw new Error("对话未选中");
+    // 首页直聊的项目 id 不在路径里：从 home 读接口取当前项目。
+    const projectId = await page.evaluate(async () => {
+      const home = await (await fetch("/api/home")).json();
+      return home?.project?.id ?? null;
+    });
+    if (!projectId) throw new Error("未找到当前个人对话项目");
+    const stopped = await page.evaluate(async ({ pid, tid }) => {
+      // 运行版本可能因推进变化：读到的 currentVersion 用于重试。
+      let expectedVersion = null;
+      for (let attempt = 0; attempt < 4; attempt += 1) {
+        const detail = await (await fetch(`/api/projects/${pid}/threads/${tid}`)).json();
+        const run = (detail.runs ?? []).at(-1);
+        if (!run) return { ok: false, reason: "no run" };
+        expectedVersion =
+          expectedVersion ?? run.version;
+        const response = await fetch(
+          `/api/projects/${pid}/threads/${tid}/runs/${run.id}/control`,
+          {
+            body: JSON.stringify({
+              action: "stop",
+              expectedVersion,
+              operationId: crypto.randomUUID(),
+            }),
+            headers: { "content-type": "application/json" },
+            method: "POST",
+          },
+        );
+        if (response.ok) return { ok: true, status: response.status };
+        const body = await response.json().catch(() => null);
+        if (body?.error?.currentVersion === undefined) {
+          return { ok: false, status: response.status, body: JSON.stringify(body) };
+        }
+        expectedVersion = body.error.currentVersion;
+      }
+      return { ok: false, reason: "stop retries exhausted" };
+    }, { pid: projectId, tid: threadId });
+    if (!stopped.ok) throw new Error(`停止运行失败: ${JSON.stringify(stopped)}`);
+    await page.reload({ waitUntil: "networkidle" });
+    await page.waitForTimeout(1200);
+    await shot("11d-after-stop");
+
+    // 不再要求先选择历史运行：发送即可开始新一轮，且不出现内部术语提示。
+    const composer = page.locator("textarea").first();
+    await composer.click();
+    await composer.fill("停止后直接开始新一轮。");
+    const send = page.locator('button.composer-send, button[aria-label*="发送"]').first();
+    await send.click();
+    await page.waitForTimeout(2500);
+    const termHintCount = await page.getByText("请先选择历史运行", { exact: false }).count();
+    if (termHintCount !== 0) throw new Error("Composer 仍出现历史运行内部术语提示");
+    await shot("11e-new-round-direct-send");
   });
 
   await step("S12", "Cmd+K 搜索浮层与结果", async () => {
@@ -336,22 +451,8 @@ try {
     await shot("15-project-empty");
   });
 
-  await step("S16", "项目内新对话与群聊发送", async () => {
+  await step("S16", "项目内新对话、无使命首发送引导与群聊发送", async () => {
     if (!projectUrl) throw new Error("项目未打开");
-    await page.evaluate(async () => {
-      const projectId = new URL(window.location.href).pathname.split("/").at(-1);
-      const response = await fetch(`/api/projects/${projectId}/mission`, {
-        body: JSON.stringify({
-          expectedVersion: 0,
-          goal: "完成 JWT 登录模块的改造与验证。",
-          operationId: crypto.randomUUID(),
-          title: "登录模块改造",
-        }),
-        headers: { "content-type": "application/json" },
-        method: "POST",
-      });
-      if (!response.ok) throw new Error(await response.text());
-    });
     await page.getByRole("button", { name: "新对话" }).first().click();
     await page.waitForTimeout(500);
     await page.fill("#thread-title", "登录模块改造协作");
@@ -363,13 +464,37 @@ try {
     await page.locator(".thread-create-form").waitFor({ state: "detached", timeout: 20_000 }).catch(() => {});
     await page.waitForTimeout(1200);
     await shot("16-project-conversation");
+
+    // U-02：项目尚无使命时的首条发送必须给出可操作的「创建使命」入口（真实浏览器）。
+    const needsMissionComposer = page.locator("textarea").first();
+    await needsMissionComposer.click();
+    await needsMissionComposer.fill("@规划搭档 请给出登录模块改造的第一步。");
+    await page.locator('button.composer-send, button[aria-label*="发送"]').first().click();
+    await page
+      .getByText("当前对话还没有使命。先创建使命，再在对话中发起协作。", { exact: true })
+      .waitFor({ timeout: 20_000 });
+    await shot("16a-project-chat-needs-mission");
+
+    // 入口按钮把用户带到使命创建表单；创建后回到对话再发送。
+    await page.getByRole("button", { name: "创建使命" }).first().click();
+    const projectId = new URL(projectUrl).pathname.split("/").at(-1);
+    const missionTitle = page.locator(`#mission-title-${projectId}`);
+    await missionTitle.waitFor({ timeout: 20_000 });
+    await missionTitle.fill("登录模块改造");
+    await page.locator(`#mission-goal-${projectId}`).fill("完成 JWT 登录模块的改造与验证。");
+    await page.getByRole("button", { name: "创建使命", exact: true }).first().click();
+    await page.getByText("使命已创建。", { exact: false }).first().waitFor({ timeout: 30_000 });
+    await shot("16b-mission-created-from-chat");
+    await page.keyboard.press("Meta+1");
+    await page.waitForTimeout(1200);
+
     const composer = page.locator("textarea").first();
     await composer.click();
     await composer.fill("@规划搭档 请给出登录模块改造的第一步。");
     await page.locator('button.composer-send, button[aria-label*="发送"]').first().click();
-    await page.getByText("完成拆解", { exact: false }).first().waitFor({ timeout: 60_000 }).catch(() => {});
+    await page.getByText("完成拆解", { exact: false }).first().waitFor({ timeout: 60_000 });
     await page.waitForTimeout(1200);
-    await shot("16b-project-chat-reply");
+    await shot("16c-project-chat-reply");
   });
 
   // ---------- S17-S21: governance views ----------
@@ -555,4 +680,11 @@ try {
   mockProvider.close();
   rmSync(resolve(auditDistDirectory), { force: true, recursive: true });
   rmSync(temporaryDirectory, { force: true, recursive: true });
+  for (const { content, file } of generatedFiles) {
+    try {
+      if (readFileSync(file, "utf8") !== content) writeFileSync(file, content);
+    } catch {
+      // 生成文件缺席不阻塞收尾。
+    }
+  }
 }

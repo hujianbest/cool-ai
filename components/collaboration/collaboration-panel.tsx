@@ -65,7 +65,10 @@ type CollaborationPanelProps = {
   threadId?: string | null;
   modalBackgroundRef?: RefObject<HTMLElement | null>;
   onNestedModalChange?: (open: boolean) => void;
+  onEnsureDirectThread?: () => Promise<string | null>;
   onGoalFactChanged?: () => void;
+  onOpenMission?: () => void;
+  onOpenThread?: (threadId: string) => void;
   onRequestChat?: () => void;
   startOnly?: boolean;
 };
@@ -79,6 +82,8 @@ class CollaborationResponseError extends ApiDisplayError {
     message: string,
     readonly status: number,
     readonly reason: "thread_deleted" | null = null,
+    readonly code: string | null = null,
+    readonly fields: Record<string, string> | null = null,
   ) {
     super(message);
   }
@@ -124,7 +129,23 @@ async function readApiResponse<T>(response: Response, fallback: string): Promise
     ) {
       throw new ThreadDeletedError();
     }
-    throw new CollaborationResponseError(apiErrorCopy(payload, fallback), response.status);
+    const error = (payload as { error?: { code?: unknown; fields?: unknown } }).error;
+    const code = typeof error?.code === "string" ? error.code : null;
+    const fields =
+      error?.fields && typeof error.fields === "object" && !Array.isArray(error.fields)
+        ? Object.fromEntries(
+            Object.entries(error.fields as Record<string, unknown>).filter(
+              (entry): entry is [string, string] => typeof entry[1] === "string",
+            ),
+          )
+        : null;
+    throw new CollaborationResponseError(
+      apiErrorCopy(payload, fallback),
+      response.status,
+      null,
+      code,
+      fields,
+    );
   }
   return payload;
 }
@@ -1250,8 +1271,11 @@ function RunControls({
 export function CollaborationPanel({
   directAgentName,
   modalBackgroundRef,
+  onEnsureDirectThread,
   onGoalFactChanged,
   onNestedModalChange,
+  onOpenMission,
+  onOpenThread,
   onRequestChat,
   projectId,
   requestedMessageId = null,
@@ -1269,6 +1293,8 @@ export function CollaborationPanel({
   const [draftSensitiveHint, setDraftSensitiveHint] = useState(false);
   const [loadError, setLoadError] = useState<string | null>(null);
   const [sendError, setSendError] = useState<string | null>(null);
+  // 项目运行因缺少使命被失败关闭时，给出可操作的「创建使命」入口（U-02）。
+  const [missionRequired, setMissionRequired] = useState(false);
   const [loading, setLoading] = useState(true);
   const [sending, setSending] = useState(false);
   const [reloadKey, setReloadKey] = useState(0);
@@ -1595,6 +1621,7 @@ export function CollaborationPanel({
     setStartReceipt(null);
     setMessageReceipt(null);
     setSendError(null);
+    setMissionRequired(false);
     setFieldError(null);
     setStartNotice(startNoticeAfterNavigationRef.current ?? "");
     startNoticeAfterNavigationRef.current = null;
@@ -2262,15 +2289,16 @@ export function CollaborationPanel({
       operationId: string;
     },
     expected?: { messageId?: string; runId?: string },
+    targetThreadId: string | null = threadId,
   ): Promise<boolean> {
     const request = targetGuard.capture();
     try {
-      if (!threadId) return false;
+      if (!targetThreadId) return false;
       let resolvedExpected = expected;
       if (!resolvedExpected?.runId) {
         const lookupResponse = await fetch(
           `/api/projects/${encodeURIComponent(projectId)}/threads/${encodeURIComponent(
-            threadId,
+            targetThreadId,
           )}/operations/${encodeURIComponent(receipt.operationId)}`,
           { signal: request.signal },
         );
@@ -2291,7 +2319,7 @@ export function CollaborationPanel({
         ) {
           return false;
         }
-        const ids = mutationIds(lookup.response, "start", projectId, threadId);
+        const ids = mutationIds(lookup.response, "start", projectId, targetThreadId);
         if (!ids?.runId) return false;
         resolvedExpected = { messageId: ids.messageId, runId: ids.runId };
       }
@@ -2299,7 +2327,7 @@ export function CollaborationPanel({
         resolvedExpected.runId ?? onboardingSelectedRunIdRef.current;
       const result = await readOnboardingThread(
         projectId,
-        threadId,
+        targetThreadId,
         targetRunId,
         request.signal,
         true,
@@ -2309,7 +2337,7 @@ export function CollaborationPanel({
         parseCollaborationGuideEnvelope(
           result.envelope,
           projectId,
-          threadId,
+          targetThreadId,
           targetRunId,
         ).kind === "invalid"
       ) {
@@ -2331,7 +2359,7 @@ export function CollaborationPanel({
       setStartNotice(notice);
       startNoticeAfterNavigationRef.current = notice;
       const url = new URL(window.location.href);
-      url.searchParams.set("thread", threadId);
+      url.searchParams.set("thread", targetThreadId);
       url.searchParams.set("run", confirmed.run.id);
       window.history.replaceState(
         window.history.state,
@@ -2341,7 +2369,7 @@ export function CollaborationPanel({
       window.dispatchEvent(new PopStateEvent("popstate"));
       onGoalFactChanged?.();
       return true;
-    } catch {
+    } catch (error) {
       return false;
     }
   }
@@ -2356,7 +2384,8 @@ export function CollaborationPanel({
       mentionAgentId?: string;
       operationId: string;
     },
-  ) {
+    targetThreadId: string | null = threadId,
+  ): Promise<boolean> {
     const request = targetGuard.capture();
     const receipt = existingReceipt ?? {
       baselineMessageIds:
@@ -2367,13 +2396,14 @@ export function CollaborationPanel({
     };
     setSending(true);
     setSendError(null);
+    setMissionRequired(false);
     setStartNotice("");
     setStartReceipt(null);
     let responseReceived = false;
     try {
-      if (!threadId) throw new Error("thread tuple required");
+      if (!targetThreadId) throw new Error("thread tuple required");
       const response = await fetch(
-        `/api/projects/${projectId}/threads/${threadId}/runs`,
+        `/api/projects/${projectId}/threads/${targetThreadId}/runs`,
         {
         body: JSON.stringify({
           message,
@@ -2391,30 +2421,42 @@ export function CollaborationPanel({
         response,
         "无法启动协作，请稍后重试。",
       );
-      const ids = mutationIds(result, "start", projectId, threadId);
-      if (!request.isCurrent()) return;
+      const ids = mutationIds(result, "start", projectId, targetThreadId);
+      if (!request.isCurrent()) return false;
       const reconciled = await reconcileStart(
         receipt,
         ids?.runId
           ? { messageId: ids.messageId, runId: ids.runId }
           : undefined,
+        targetThreadId,
       );
-      if (reconciled) return;
+      if (reconciled) return true;
     } catch (cause) {
-      if (!request.isCurrent()) return;
+      if (!request.isCurrent()) return false;
       if (responseReceived && cause instanceof ApiDisplayError) {
-        setSendError(caughtApiErrorCopy(cause, "无法启动协作，请稍后重试。"));
-        return;
+        const requiresMission =
+          cause instanceof CollaborationResponseError
+          && cause.code === "CONTEXT_NOT_READY"
+          && cause.fields?.mission === "required"
+          && Boolean(onOpenMission);
+        setMissionRequired(requiresMission);
+        setSendError(
+          requiresMission
+            ? "当前对话还没有使命。先创建使命，再在对话中发起协作。"
+            : caughtApiErrorCopy(cause, "无法启动协作，请稍后重试。"),
+        );
+        return false;
       }
-      if (await reconcileStart(receipt)) return;
+      if (await reconcileStart(receipt, undefined, targetThreadId)) return true;
     } finally {
       if (request.isCurrent()) setSending(false);
     }
-    if (!request.isCurrent()) return;
+    if (!request.isCurrent()) return false;
     setStartReceipt(receipt);
     setSendError(
       `无法唯一确认协作是否已启动。operation receipt：${logicalOperationId}。请仅重新核对，或明确选择使用同一 receipt 重试；不会自动重发。`,
     );
+    return false;
   }
 
   async function retryStartReconciliation() {
@@ -2734,11 +2776,19 @@ export function CollaborationPanel({
       && runSelection.runs.length === 0
       && !runSelection.activeRun,
     );
+    const terminalRunsAvailable = Boolean(
+      runSelection
+      && !runSelection.activeRun
+      && runSelection.runs.some((run) => terminalRunStatuses.has(run.status)),
+    );
+    const autoThreadSubmit = Boolean(!threadId && directAgentName && onEnsureDirectThread);
     if (
       !state?.run
       && !selectedTerminalRun
       && !firstRunAvailable
+      && !terminalRunsAvailable
       && !activeRunInOtherThread
+      && !autoThreadSubmit
     ) return;
     setFieldError(null);
     const uploadedAttachmentIds = composerAttachments.flatMap((attachment) =>
@@ -2762,6 +2812,31 @@ export function CollaborationPanel({
       return;
     }
     cancelPendingDraftSave();
+    if (autoThreadSubmit) {
+      // U-11：首页直聊首条发送——先创建个人对话，再在其上启动首轮运行，
+      // 成功后把 URL 切到该对话。
+      setFieldError(null);
+      setSendError(null);
+      let created: string | null = null;
+      try {
+        created = await onEnsureDirectThread!();
+      } catch {
+        created = null;
+      }
+      if (!created) {
+        setSendError("无法创建个人对话，请稍后重试。");
+        return;
+      }
+      const started = await startCollaboration(
+        message,
+        operationId(),
+        selectedMember?.agentId,
+        undefined,
+        created,
+      );
+      if (started) onOpenThread?.(created);
+      return;
+    }
     if (activeRunInOtherThread) {
       await submitActiveMessage({
         attachmentIds: uploadedAttachmentIds.length > 0 ? uploadedAttachmentIds : undefined,
@@ -2877,11 +2952,12 @@ export function CollaborationPanel({
       setFocusMessageId(matches[0].id);
       setMessageReceipt(null);
       setSendError(null);
+      setMissionRequired(false);
       setStartNotice("已通过事实核对确认消息已发送。");
       setAdvanceError(null);
       setAdvanceCycle((cycle) => cycle + 1);
       return true;
-    } catch {
+    } catch (error) {
       return false;
     }
   }
@@ -2889,6 +2965,7 @@ export function CollaborationPanel({
   async function submitActiveMessage(receipt: CollaborationWriteReceipt) {
     const request = targetGuard.capture();
     setSendError(null);
+    setMissionRequired(false);
     setStartNotice("");
     setMessageReceipt(null);
     setSending(true);
@@ -3003,8 +3080,21 @@ export function CollaborationPanel({
     && runSelection.runs.length === 0
     && !runSelection.activeRun,
   );
+  // U-10：上一轮已结束时不再要求先勾选历史运行——直接发送即开始新一轮。
+  const hasTerminalRuns = Boolean(
+    runSelection
+    && !runSelection.activeRun
+    && runSelection.runs.some((run) => terminalRunStatuses.has(run.status)),
+  );
+  // U-11：首页直聊无对话时，发送将先创建个人对话（无需手动新建）。
+  const autoDirectThread = Boolean(!threadId && directAgentName && onEnsureDirectThread);
   const canSubmitMessage = Boolean(
-    state?.run || selectedTerminalRun || canStartFirstRun || activeRunInOtherThread,
+    state?.run
+    || selectedTerminalRun
+    || canStartFirstRun
+    || hasTerminalRuns
+    || activeRunInOtherThread
+    || autoDirectThread,
   );
   const queuePendingItems = (queueItems ?? []).filter((item) => item.status === "pending");
   const queueSteerDisabled = !state?.readiness.ready || activeRunInOtherThread;
@@ -3957,7 +4047,7 @@ export function CollaborationPanel({
               <textarea
                 aria-describedby={fieldError ? fieldErrorId : undefined}
                 aria-invalid={fieldError ? "true" : undefined}
-                disabled={sending || loading || !threadId}
+                disabled={sending || loading || (!threadId && !autoDirectThread)}
                 id={`collaboration-message-${projectId}`}
                 onChange={(event) => {
                   handleDraftChange(event.target.value);
@@ -3970,11 +4060,13 @@ export function CollaborationPanel({
                 onKeyDown={handleComposerKeyDown}
                 onPaste={handleComposerPaste}
                 placeholder={
-                  !threadId
-                    ? "新建对话后即可输入…"
-                    : directAgentName
-                      ? "输入消息，与助手直接对话…"
-                      : "输入消息，@ 提及 Agent 发起协作…"
+                  !threadId && autoDirectThread
+                    ? "输入消息，与助手直接对话…"
+                    : !threadId
+                      ? "新建对话后即可输入…"
+                      : directAgentName
+                        ? "输入消息，与助手直接对话…"
+                        : "输入消息，@ 提及 Agent 发起协作…"
                 }
                 ref={composerRef}
                 rows={1}
@@ -3988,7 +4080,7 @@ export function CollaborationPanel({
                       ? "发送消息"
                       : state?.run && activeRunStatuses.has(state.run.status)
                         ? "发送消息"
-                        : selectedTerminalRun
+                        : selectedTerminalRun || hasTerminalRuns
                           ? "发送并开始新一轮"
                           : "发送并开始首次运行"
                 }
@@ -4112,7 +4204,7 @@ export function CollaborationPanel({
               <p className="muted">
                 {activeRunInOtherThread
                   ? "另一对话有活动运行；可发送对话消息，但不能在此启动新一轮。"
-                  : "请先选择历史运行，以继续查看或从已结束运行开始新一轮。"}
+                  : "正在核对对话状态；稍后即可发送。"}
               </p>
             ) : null}
           </form>
@@ -4134,6 +4226,21 @@ export function CollaborationPanel({
               <p className="error-text" role="alert">
                 {sendError}
               </p>
+              {missionRequired && onOpenMission ? (
+                <div className="form-row">
+                  <button
+                    className="button-primary"
+                    onClick={() => {
+                      setMissionRequired(false);
+                      setSendError(null);
+                      onOpenMission();
+                    }}
+                    type="button"
+                  >
+                    创建使命
+                  </button>
+                </div>
+              ) : null}
               {startReceipt ? (
                 <div className="form-row">
                   <button

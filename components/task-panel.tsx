@@ -134,6 +134,7 @@ export function TaskPanel({
   const [tasks, setTasks] = useState<TaskRun[]>([]);
   const [events, setEvents] = useState<TaskEvent[]>([]);
   const [goalFactsVersion, setGoalFactsVersion] = useState(0);
+  const [missionCreateIntent, setMissionCreateIntent] = useState(0);
   const [goal, setGoal] = useState("");
   const [error, setError] = useState<string | null>(null);
   const [isLoading, setIsLoading] = useState(false);
@@ -180,6 +181,46 @@ export function TaskPanel({
         }
       : null;
   });
+  // U-11：首页直聊的首条发送自动创建个人对话（1:1 单成员线程）。
+  const ensureDirectThread = async (): Promise<string | null> => {
+    if (!homeState || homeState.kind !== "ready") return null;
+    try {
+      const response = await fetch(
+        `/api/projects/${encodeURIComponent(homeState.project.id)}/threads`,
+        {
+          body: JSON.stringify({
+            memberAgentIds: [homeState.agent.id],
+            operationId: crypto.randomUUID(),
+            title: "个人对话",
+          }),
+          headers: { "content-type": "application/json" },
+          method: "POST",
+        },
+      );
+      if (!response.ok) return null;
+      const payload = (await response.json()) as {
+        thread?: { id?: unknown };
+      };
+      const created = payload?.thread?.id;
+      return typeof created === "string" && created.length > 0 ? created : null;
+    } catch {
+      return null;
+    }
+  };
+
+  const openThread = (threadId: string) => {
+    const href = `${window.location.pathname}?thread=${encodeURIComponent(threadId)}`;
+    window.history.replaceState(window.history.state, "", href);
+    window.dispatchEvent(new PopStateEvent("popstate"));
+  };
+
+  const focusMissionCreate = () => {
+    if (!projectId) return;
+    onOpenGovernance?.("mission");
+    // 意图交给看板在数据就绪后消费（避免固定时长轮询竞态，U-02）。
+    setMissionCreateIntent((current) => current + 1);
+  };
+
   const collaborationTabRefs = useRef(new Map<string, HTMLButtonElement>());
   const taskGoalInputRef = useRef<HTMLInputElement>(null);
   const collaborationProjectId =
@@ -495,6 +536,7 @@ export function TaskPanel({
                 <>
                   <MissionBoard
                     onReviewWorkspaceChange={setReviewWorkspace}
+                    openMissionIntent={missionCreateIntent}
                     projectId={governance.projectId}
                   />
                   <ExecutionPanel projectId={governance.projectId} />
@@ -544,35 +586,7 @@ export function TaskPanel({
                 );
               }
             }}
-            onFocusMission={() => {
-              if (!projectId) return;
-              onOpenGovernance?.("mission");
-              const titleSelector = `#mission-title-${projectId}`;
-              // The board mounts on the next render, so the create-form
-              // handoff must be retried inside the focus poll instead of a
-              // synchronous query that misses the not-yet-mounted button.
-              let attempts = 0;
-              let createRequested = false;
-              const focusWhenReady = () => {
-                const target = document.querySelector<HTMLElement>(titleSelector);
-                if (target) {
-                  target.focus();
-                  return;
-                }
-                if (!createRequested) {
-                  const createButton = document.querySelector<HTMLButtonElement>(
-                    '#mission-board [aria-label="创建使命"]',
-                  );
-                  if (createButton) {
-                    createRequested = true;
-                    createButton.click();
-                  }
-                }
-                attempts += 1;
-                if (attempts < 40) window.setTimeout(focusWhenReady, 50);
-              };
-              focusWhenReady();
-            }}
+            onFocusMission={focusMissionCreate}
             onSelectProject={onboarding.onSelectProject}
             onSkip={onboarding.onSkip}
             projectId={projectId}
@@ -615,19 +629,19 @@ export function TaskPanel({
                 <Sparkle size={28} weight="fill" />
               </div>
               <p className="chat-empty-hero-title">欢迎使用 Cool AI</p>
-              <p className="chat-empty-hero-desc">先配置一个 Agent，即可开始个人对话。</p>
+              <p className="chat-empty-hero-desc">配置模型 Provider 后即可开始。</p>
               <div className="chat-welcome-actions">
                 <Link
                   className="button-primary"
-                  href="/team?section=agents&returnTo=/"
+                  href="/team?section=providers&returnTo=/"
                 >
-                  配置 Agent
+                  配置 Provider
                 </Link>
                 <Link
                   className="button-secondary"
                   href="/team?section=providers&guide=provider&returnTo=/"
                 >
-                  首次使用引导
+                  查看引导
                 </Link>
               </div>
             </div>
@@ -635,7 +649,9 @@ export function TaskPanel({
             <CollaborationPanel
               directAgentName={homeState.agent.name}
               modalBackgroundRef={editorSurfaceRef}
+              onEnsureDirectThread={ensureDirectThread}
               onNestedModalChange={setNestedModalOpen}
+              onOpenThread={openThread}
               projectId={homeState.project.id}
               requestedMessageId={collaborationTarget?.messageId}
               selectedRunId={collaborationTarget?.selectedRunId}
@@ -749,6 +765,7 @@ export function TaskPanel({
                   setGoalFactsVersion((current) => current + 1)
                 }
                 onNestedModalChange={setNestedModalOpen}
+                onOpenMission={focusMissionCreate}
                 projectId={projectId}
                 requestedMessageId={collaborationTarget?.messageId}
                 selectedRunId={collaborationTarget?.selectedRunId}

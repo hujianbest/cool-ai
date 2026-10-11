@@ -81,7 +81,11 @@ function ownerMessage(overrides: Partial<ProjectMessage> = {}): ProjectMessage {
 function installFetch(
   handler?: (url: string, init?: RequestInit) => Promise<Response> | Response,
 ) {
-  async function strictRead(url: string, init?: RequestInit): Promise<Response> {
+  async function strictRead(
+    url: string,
+    threadId: string = TEST_THREAD_ID,
+    init?: RequestInit,
+  ): Promise<Response> {
     const legacyResponse = handler
       ? await handler("/api/projects/project-1/collaboration", init)
       : Response.json(emptyRead);
@@ -92,7 +96,7 @@ function installFetch(
       attachments: [],
       projectId: "project-1",
       replyTo: null,
-      threadId: TEST_THREAD_ID,
+      threadId,
     }));
     const facts = [
       ...messages.map((item, index) => ({
@@ -109,7 +113,7 @@ function installFetch(
         runEventId: null,
         runId: item.runId,
         sequence: index + 1,
-        threadId: TEST_THREAD_ID,
+        threadId,
         type: item.authorType === "owner" ? "owner_message" : "agent_message",
       })),
       ...read.timelinePage.items
@@ -128,7 +132,7 @@ function installFetch(
           runEventId: item.id,
           runId: item.runId,
           sequence: messages.length + index + 1,
-          threadId: TEST_THREAD_ID,
+          threadId,
           type: "run_event",
         })),
     ];
@@ -143,14 +147,14 @@ function installFetch(
         items: read.timelinePage.items.map((item) => ({
           ...item,
           projectId: "project-1",
-          threadId: TEST_THREAD_ID,
+          threadId,
         })),
         nextAfter: null,
       });
     }
-    const run = read.run ? { ...read.run, threadId: TEST_THREAD_ID } : null;
+    const run = read.run ? { ...read.run, threadId: threadId } : null;
     return Response.json({
-      activeRun: run ? { runId: run.id, threadId: TEST_THREAD_ID } : null,
+      activeRun: run ? { runId: run.id, threadId: threadId } : null,
       readiness: {
         dispatch: "ready",
         missingProjectFacts: [],
@@ -160,6 +164,7 @@ function installFetch(
       selectedRun: url.includes("?run=") ? run : null,
       thread: {
         ...threadSummary("project-1"),
+        id: threadId,
         policy: threadPolicy(),
       },
     });
@@ -167,8 +172,9 @@ function installFetch(
   const fetchMock = vi.fn(
     async (input: RequestInfo | URL, init?: RequestInit): Promise<Response> => {
       const url = String(input);
-      if (url.includes(`/threads/${TEST_THREAD_ID}`) && init?.method !== "POST") {
-        return strictRead(url, init);
+      const threadMatch = url.match(/\/threads\/([^/?]+)/);
+      if (threadMatch && init?.method !== "POST") {
+        return strictRead(url, threadMatch[1], init);
       }
       if (handler) {
         const response = await handler(url, init);
@@ -282,6 +288,112 @@ describe("collaboration chat composer", () => {
     ).not.toBeInTheDocument();
   });
 
+  it("creates the personal conversation on the first home message and opens it", async () => {
+    const onEnsureDirectThread = vi.fn(async () => "thread-new");
+    const onOpenThread = vi.fn();
+    const startUrls: string[] = [];
+    const readNewThread: CollaborationReadResponse = {
+      ...emptyRead,
+      projectMessagesPage: {
+        items: [
+          ownerMessage({
+            content: "你好，直聊",
+            id: "message-new",
+            runId: "run-new",
+          }),
+        ],
+        nextAfter: null,
+      },
+      run: {
+        createdAt: "2026-07-30T00:00:00.000Z",
+        currentAgentId: "agent-a",
+        id: "run-new",
+        pauseCategory: null,
+        projectId: "project-1",
+        roundCount: 0,
+        status: "running",
+        updatedAt: "2026-07-30T00:00:00.000Z",
+        version: 1,
+      },
+      timelinePage: {
+        items: [
+          {
+            actorId: "agent-a",
+            actorType: "agent",
+            createdAt: "2026-07-30T00:00:00.000Z",
+            id: "event-started",
+            payload: {},
+            runId: "run-new",
+            sequence: 1,
+            type: "run_started",
+          } as never,
+        ],
+        nextAfter: null,
+      },
+    };
+    installFetch((url, init) => {
+      if (url.endsWith("/runs")) {
+        startUrls.push(url);
+        const body = JSON.parse(String(init?.body)) as Record<string, unknown>;
+        return Response.json(
+          {
+            created: true,
+            facts: [],
+            message: {
+              ...ownerMessage({
+                content: String(body.message),
+                id: "message-new",
+                runId: "run-new",
+              }),
+              projectId: "project-1",
+              replyTo: null,
+              threadId: "thread-new",
+            },
+            run: {
+              createdAt: "2026-07-30T00:00:00.000Z",
+              currentAgentId: "agent-a",
+              id: "run-new",
+              pauseCategory: null,
+              projectId: "project-1",
+              roundCount: 0,
+              status: "running",
+              threadId: "thread-new",
+              updatedAt: "2026-07-30T00:00:00.000Z",
+              version: 1,
+            },
+          },
+          { status: 201 },
+        );
+      }
+      if (url.endsWith("/collaboration")) return Response.json(readNewThread);
+      return Response.json(members);
+    });
+    const user = userEvent.setup();
+    render(createElement(CollaborationPanel, {
+      directAgentName: "Alpha",
+      onEnsureDirectThread,
+      onOpenThread,
+      projectId: "project-1",
+      surface: "chat",
+      threadId: null,
+    }));
+
+    const composer = await screen.findByLabelText("发送给 Alpha");
+    expect(composer).toBeEnabled();
+    expect(composer).toHaveAttribute("placeholder", "输入消息，与助手直接对话…");
+    await user.type(composer, "你好，直聊");
+    await user.click(screen.getByRole("button", { name: "发送并开始首次运行" }));
+
+    await waitFor(() => expect(onEnsureDirectThread).toHaveBeenCalledTimes(1));
+    await waitFor(() => expect(startUrls).toHaveLength(1));
+    expect(startUrls[0]).toContain("/threads/thread-new/runs");
+    await waitFor(() => expect(onOpenThread).toHaveBeenCalledWith("thread-new")).catch(async () => {
+      const alerts = screen.queryAllByRole("alert").map((element) => element.textContent);
+      console.log("DEBUG_ALERTS", JSON.stringify(alerts));
+      throw new Error("open thread not called");
+    });
+  });
+
   it("preserves the draft while sending and on sanitized API failure", async () => {
     let finishSend!: (response: Response) => void;
     const pendingSend = new Promise<Response>((resolve) => {
@@ -315,6 +427,43 @@ describe("collaboration chat composer", () => {
     expect(composer).toBeEnabled();
     expect(composer).toHaveValue("Keep this draft");
     expect(screen.queryByText("raw membership detail")).not.toBeInTheDocument();
+  });
+
+  it("offers a clear mission entry when a project run requires a mission", async () => {
+    const onOpenMission = vi.fn();
+    installFetch((url) => {
+      if (url.endsWith("/runs")) {
+        return Response.json(
+          {
+            error: {
+              code: "CONTEXT_NOT_READY",
+              fields: { mission: "required" },
+              message: "Collaboration context is not ready.",
+            },
+          },
+          { status: 409 },
+        );
+      }
+      if (url.endsWith("/collaboration")) return Response.json(emptyRead);
+      return Response.json(members);
+    });
+    const user = userEvent.setup();
+    render(createElement(CollaborationPanel, {
+      onOpenMission,
+      projectId: "project-1",
+      threadId: TEST_THREAD_ID,
+    }));
+    const composer = await screen.findByLabelText("发送给项目对话");
+    await user.type(composer, "Start the project run");
+    await user.click(screen.getByRole("button", { name: "发送并开始首次运行" }));
+
+    expect(
+      await screen.findByRole("alert"),
+    ).toHaveTextContent("当前对话还没有使命。先创建使命，再在对话中发起协作。");
+    expect(screen.queryByText("项目协作上下文尚未就绪。")).not.toBeInTheDocument();
+    const missionEntry = screen.getByRole("button", { name: "创建使命" });
+    await user.click(missionEntry);
+    expect(onOpenMission).toHaveBeenCalledTimes(1);
   });
 
   it("uses one keyboard-operable member combobox and sends the stable agent id", async () => {

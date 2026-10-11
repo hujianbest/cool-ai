@@ -252,12 +252,21 @@ function currentAgent(
   };
 }
 
+// 个人对话（direct chat）：未绑定工作区且恰一名成员。与运行链路、线程创建
+// 侧同口径；该范围不要求 workspace/≥2 成员/使命。
+function isDirectChatScope(project: ProjectRow, memberCount: number): boolean {
+  return project.workspacePath === null && memberCount === 1;
+}
+
 function missingContext(
   project: ProjectRow,
   memberCount: number,
   mission: Mission | undefined,
+  directChat: boolean,
 ): MissingContext[] {
   const missing: MissingContext[] = [];
+  if (memberCount < 1) missing.push("members");
+  if (directChat) return missing;
   if (!project.workspacePath) missing.push("workspace");
   if (memberCount < 2) missing.push("members");
   if (!mission) missing.push("mission");
@@ -325,7 +334,8 @@ export function createContextSnapshotFromDatabase(
 
   const projectRoster = roster(database, projectId);
   const mission = missionForProject(database, projectId);
-  const missing = missingContext(project, projectRoster.length, mission);
+  const directChat = isDirectChatScope(project, projectRoster.length);
+  const missing = missingContext(project, projectRoster.length, mission, directChat);
   if (missing.length > 0) {
     throw new ContextSnapshotError(
       "CONTEXT_NOT_READY",
@@ -334,7 +344,7 @@ export function createContextSnapshotFromDatabase(
       missing,
     );
   }
-  if (!mission || !project.workspacePath) {
+  if (!directChat && (!mission || !project.workspacePath)) {
     throw new Error("Context readiness invariant failed.");
   }
 
@@ -343,14 +353,14 @@ export function createContextSnapshotFromDatabase(
     schemaVersion: 1,
     shared: {
       memories: activeMemories(database, projectId),
-      mission,
+      mission: mission ?? null,
       project: {
         id: project.id,
         name: project.name,
         workspacePath: project.workspacePath,
       },
       roster: projectRoster,
-      workItems: workItems(database, mission.id),
+      workItems: mission ? workItems(database, mission.id) : [],
     },
   };
 }

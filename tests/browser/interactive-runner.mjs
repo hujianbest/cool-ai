@@ -117,12 +117,12 @@ async function run() {
 
     const content = await page.textContent("body");
     assert(content.includes("欢迎使用 Cool AI"), "首页应有欢迎标题");
-    assert(content.includes("先配置一个 Agent，即可开始个人对话。"), "首页应有引导文案");
+    assert(content.includes("配置模型 Provider 后即可开始。"), "首页应有引导文案");
   });
 
   // TC-02: 导航至团队/设置配置页
   await step("TC-02: 导航至团队/设置配置页", async () => {
-    const configBtn = page.locator('a:has-text("配置 Agent")');
+    const configBtn = page.locator('a:has-text("配置 Provider")');
     await configBtn.click();
     await page.waitForURL(/.*section=agents.*/, { timeout: 5000 });
     await page.waitForTimeout(600);

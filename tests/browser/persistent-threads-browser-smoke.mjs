@@ -658,7 +658,7 @@ try {
   assert.equal(persisted.body.threads[0].title, "历史协作");
   const legacyThreadId = persisted.body.threads[0].id;
   // Current canonical schema identity pin (CURRENT_SCHEMA identity.userVersion).
-  assert.equal(inspectDatabase().version, 30);
+  assert.equal(inspectDatabase().version, 31);
   pass("current-persistent-default-thread", { legacyThreadId });
   await axe(page, "current persistent project");
 

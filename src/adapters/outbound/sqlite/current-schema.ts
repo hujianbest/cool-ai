@@ -12,7 +12,7 @@ export type CurrentSchemaManifest = {
 
 const CURRENT_SCHEMA_DEFINITION = {
   "identity": {
-    "userVersion": 30
+    "userVersion": 31
   },
   "objects": [
     {
@@ -482,7 +482,7 @@ const CURRENT_SCHEMA_DEFINITION = {
     {
       "kind": "table",
       "name": "collaboration_turns",
-      "createSql": "CREATE TABLE collaboration_turns(\n id TEXT PRIMARY KEY,project_id TEXT NOT NULL,thread_id TEXT NOT NULL,attempt_id TEXT NOT NULL,\n run_id TEXT NOT NULL,agent_id TEXT NOT NULL,round_number INTEGER NOT NULL CHECK(round_number>=1),\n message_id TEXT NOT NULL,disposition TEXT NOT NULL CHECK(disposition IN('handoff','decision_request','plan_ready')),\n created_at TEXT NOT NULL CHECK(created_at GLOB '????-??-??T??:??:??.???Z'),\n UNIQUE(project_id,thread_id,id),UNIQUE(project_id,thread_id,run_id,id),\n UNIQUE(attempt_id),UNIQUE(message_id),UNIQUE(run_id,round_number),\n FOREIGN KEY(project_id,thread_id,run_id,attempt_id)\n  REFERENCES collaboration_attempts(project_id,thread_id,run_id,id) ON DELETE NO ACTION,\n FOREIGN KEY(project_id,thread_id,run_id) REFERENCES collaboration_runs(project_id,thread_id,id) ON DELETE CASCADE,\n FOREIGN KEY(project_id,thread_id,run_id,message_id)\n  REFERENCES collaboration_messages(project_id,thread_id,run_id,id) ON DELETE NO ACTION,\n FOREIGN KEY(agent_id) REFERENCES agents(id) ON DELETE NO ACTION\n)",
+      "createSql": "CREATE TABLE collaboration_turns(\n id TEXT PRIMARY KEY,project_id TEXT NOT NULL,thread_id TEXT NOT NULL,attempt_id TEXT NOT NULL,\n run_id TEXT NOT NULL,agent_id TEXT NOT NULL,round_number INTEGER NOT NULL CHECK(round_number>=1),\n message_id TEXT NOT NULL,disposition TEXT NOT NULL CHECK(disposition IN('handoff','decision_request','plan_ready','reply')),\n created_at TEXT NOT NULL CHECK(created_at GLOB '????-??-??T??:??:??.???Z'),\n UNIQUE(project_id,thread_id,id),UNIQUE(project_id,thread_id,run_id,id),\n UNIQUE(attempt_id),UNIQUE(message_id),UNIQUE(run_id,round_number),\n FOREIGN KEY(project_id,thread_id,run_id,attempt_id)\n  REFERENCES collaboration_attempts(project_id,thread_id,run_id,id) ON DELETE NO ACTION,\n FOREIGN KEY(project_id,thread_id,run_id) REFERENCES collaboration_runs(project_id,thread_id,id) ON DELETE CASCADE,\n FOREIGN KEY(project_id,thread_id,run_id,message_id)\n  REFERENCES collaboration_messages(project_id,thread_id,run_id,id) ON DELETE NO ACTION,\n FOREIGN KEY(agent_id) REFERENCES agents(id) ON DELETE NO ACTION\n)",
       "dependsOn": []
     },
     {

@@ -8,6 +8,7 @@ import {
   CollaborationError,
 } from "@/src/modules/public-collaboration";
 import { openDatabase } from "@/src/adapters/outbound/sqlite/connection";
+import { isDirectChatProject } from "@/src/adapters/outbound/sqlite/public-collaboration/direct-chat";
 
 const MAX_PUBLIC_MESSAGES = 30;
 const MAX_PUBLIC_MESSAGE_CHARACTERS = 60_000;
@@ -16,6 +17,15 @@ const PLATFORM_SYSTEM_PROMPT = [
   "You are participating in an auditable collaboration turn.",
   "Return only visible conclusions and structured actions; do not provide hidden chain-of-thought.",
   "The response must be a JSON object that follows the collaboration turn contract.",
+].join("\n");
+
+// 个人对话（1:1 单 Agent）没有多 Agent 接力/任务/使命语义：平台指令覆盖该口径。
+const DIRECT_CHAT_SYSTEM_PROMPT = [
+  "You are the owner's personal assistant in a direct 1:1 conversation.",
+  "Answer the owner's latest message directly, completely and helpfully.",
+  "Do not plan multi-agent handoffs, create tasks, or request structured decisions;",
+  "ignore any earlier instructions about handing off or planning for other agents.",
+  'Respond with one strict JSON object following the turn contract where disposition is {"type":"reply","summary":string(1..500 graphemes)} with tasks [] and claim null.',
 ].join("\n");
 
 export type PublicMessageRow = {
@@ -38,7 +48,7 @@ export type PromptSafeSharedContext = {
   project: {
     id: string;
     name: string;
-    workspaceBound: true;
+    workspaceBound: boolean;
   };
   roster: Array<{
     agentId: string;
@@ -63,7 +73,7 @@ export type PromptSafeSharedContext = {
     version: number;
     createdAt: string;
     updatedAt: string;
-  };
+  } | null;
   workItems: Array<{
     id: string;
     missionId: string;
@@ -198,9 +208,13 @@ function promptMessages(
     policyVersion: number;
     threadId: string;
   },
+  directChat = false,
 ): PromptMessage[] {
   const messages: PromptMessage[] = [
-    { content: PLATFORM_SYSTEM_PROMPT, role: "system" },
+    {
+      content: directChat ? DIRECT_CHAT_SYSTEM_PROMPT : PLATFORM_SYSTEM_PROMPT,
+      role: "system",
+    },
     {
       content: JSON.stringify({
         currentAgent,
@@ -313,8 +327,9 @@ export function buildCollaborationPromptFromDatabase(
     credentialGeneration: number | null;
     verifiedAt: string | null;
   }>;
+  const minimumPolicyMembers = isDirectChatProject(database, projectId) ? 1 : 2;
   if (
-    policyRows.length < 2
+    policyRows.length < minimumPolicyMembers
     || policyRows.some(
       ({ agentVersion, joinedAt, providerId }) =>
         joinedAt === null || agentVersion === null || providerId === null,
@@ -365,11 +380,12 @@ export function buildCollaborationPromptFromDatabase(
   };
   const sharedContext: PromptSafeSharedContext = {
     memories: context.shared.memories.map((memory) => ({ ...memory })),
-    mission: { ...context.shared.mission },
+    // 个人对话没有使命与工作区：如实告知模型，不伪造占位事实。
+    mission: context.shared.mission ? { ...context.shared.mission } : null,
     project: {
       id: context.shared.project.id,
       name: context.shared.project.name,
-      workspaceBound: true,
+      workspaceBound: context.shared.project.workspacePath !== null,
     },
     roster: policyRoster.map((member) => ({
       ...member,
@@ -387,7 +403,13 @@ export function buildCollaborationPromptFromDatabase(
     policyVersion: thread.policyVersion,
     threadId,
   };
-  const messages = promptMessages(currentAgent, sharedContext, publicMessages, scope);
+  const messages = promptMessages(
+    currentAgent,
+    sharedContext,
+    publicMessages,
+    scope,
+    isDirectChatProject(database, projectId),
+  );
   const contextHash = canonicalPromptHash({
     currentAgent,
     policyConfiguration: policyRows,

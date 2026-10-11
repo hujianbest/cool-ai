@@ -207,12 +207,16 @@ function parseMissionState(value: unknown, projectId: string): MissionState | nu
 export function MissionBoard({
   onGoalFactChanged,
   onReviewWorkspaceChange,
+  openMissionIntent = 0,
   projectId,
 }: {
   onGoalFactChanged?: () => void;
   onReviewWorkspaceChange?: (
     workItem: { id: string; title: string } | null,
   ) => void;
+  // 递增意图：外部（引导/会话入口）请求打开使命创建表单或聚焦使命。
+  // 在数据加载完成后消费，避免固定时长轮询竞态（U-02）。
+  openMissionIntent?: number;
   projectId: string;
 }) {
   const errorId = `mission-board-error-${projectId}`;
@@ -356,6 +360,21 @@ export function MissionBoard({
     missionHeadingRef.current?.focus();
     setFocusMission(false);
   }, [focusMission, mission]);
+
+  const consumedMissionIntentRef = useRef(0);
+  useEffect(() => {
+    if (openMissionIntent <= 0 || consumedMissionIntentRef.current === openMissionIntent) {
+      return;
+    }
+    if (isLoading || error !== null) return;
+    consumedMissionIntentRef.current = openMissionIntent;
+    if (mission) {
+      missionHeadingRef.current?.focus();
+      return;
+    }
+    setEditingMission(true);
+    queueMicrotask(() => missionTitleInputRef.current?.focus());
+  }, [error, isLoading, mission, openMissionIntent]);
 
   useEffect(() => {
     if (!focusWorkItemId) return;

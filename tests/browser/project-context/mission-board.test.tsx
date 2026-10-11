@@ -14,7 +14,10 @@ import type {
 } from "@/src/shared/project-context-contracts";
 
 type MissionBoardModule = {
-  MissionBoard: ComponentType<{ projectId: string }>;
+  MissionBoard: ComponentType<{
+    openMissionIntent?: number;
+    projectId: string;
+  }>;
 };
 
 const boardModules =
@@ -205,6 +208,60 @@ describe("Mission Board", () => {
     expect(await screen.findByText("尚未创建使命。")).toBeInTheDocument();
     expect(screen.getByRole("button", { name: "创建使命" })).toBeEnabled();
   }, 15_000);
+
+  it("consumes an open-mission intent after the board finishes loading", async () => {
+    const MissionBoard = await board();
+    let releaseMission!: () => void;
+    const missionGate = new Promise<void>((resolve) => {
+      releaseMission = resolve;
+    });
+    vi.stubGlobal(
+      "fetch",
+      vi.fn(async (input: RequestInfo | URL, init?: RequestInit) => {
+        const url = String(input);
+        if (url.endsWith("/members")) {
+          return Response.json({ members, projectVersion: 3 });
+        }
+        if (url.endsWith("/capability-insight") && !init?.method) {
+          return insightResponse();
+        }
+        if (url.endsWith("/mission") && !init?.method) {
+          await missionGate;
+          return Response.json({ mission: null, workItems: [] });
+        }
+        if (url.endsWith("/dependencies") && !init?.method) {
+          return Response.json({
+            nodes: [],
+            edges: [],
+            cycles: [],
+            hasDependencies: false,
+          });
+        }
+        if (url.endsWith("/sop-state") && !init?.method) {
+          return Response.json({
+            workspaceBound: true,
+            readAt: "2026-08-15T00:00:00.000Z",
+            items: [],
+          });
+        }
+        throw new Error(`Unexpected request: ${url}`);
+      }),
+    );
+    const user = userEvent.setup();
+    render(<MissionBoard openMissionIntent={1} projectId="project-1" />);
+
+    // 意图在数据仍在加载时不消费、不抢焦点。
+    expect(await screen.findByText("正在加载使命看板…")).toBeInTheDocument();
+    expect(screen.queryByLabelText("使命标题")).toBeNull();
+    await act(async () => {
+      releaseMission();
+    });
+
+    // 加载完成后消费意图：直接打开创建表单并聚焦标题输入。
+    const titleInput = await screen.findByLabelText("使命标题");
+    await waitFor(() => expect(titleInput).toHaveFocus());
+    void user;
+  });
 
   it("creates and edits a mission with field focus and polite success", async () => {
     const MissionBoard = await board();

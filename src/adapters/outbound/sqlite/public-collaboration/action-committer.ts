@@ -39,7 +39,7 @@ export type CommitAgentTaskActionsResult = {
 type CommitContext = {
   agentDisplayName: string;
   includedMessageSequence: number;
-  missionId: string;
+  missionId: string | null;
   projectId: string;
   threadId: string;
   roundCount: number;
@@ -122,7 +122,7 @@ function commitContext(
        JOIN project_memberships AS memberships
          ON memberships.project_id = runs.project_id
         AND memberships.agent_id = runs.current_agent_id
-       JOIN missions ON missions.project_id = runs.project_id
+       LEFT JOIN missions ON missions.project_id = runs.project_id
        WHERE runs.id = ?`,
     )
     .get(attemptId, runId) as
@@ -310,12 +310,33 @@ function validateHandoff(
   if (limits.current >= limits.maximum) throw boundaryReached();
 }
 
+// 个人对话（无使命）只接受 reply 收束；协作运行拒绝 reply，保持既有语义。
+function validateDirectChatTurn(
+  context: CommitContext,
+  input: CommitAgentTaskActionsInput,
+): void {
+  if (context.missionId === null) {
+    if (
+      input.turn.disposition.type !== "reply"
+      || input.turn.tasks.length !== 0
+      || input.turn.claim !== null
+    ) {
+      throw actionInvalid({ disposition: "unsupported_in_direct_chat" });
+    }
+    return;
+  }
+  if (input.turn.disposition.type === "reply") {
+    throw actionInvalid({ disposition: "invalid_reply" });
+  }
+}
+
 function validatePlanReady(
   database: DatabaseSync,
   context: CommitContext,
   input: CommitAgentTaskActionsInput,
 ): void {
   if (input.turn.disposition.type !== "plan_ready") return;
+  if (context.missionId === null) throw actionInvalid({ disposition: "invalid_plan_ready" });
   const existingAgents = database
     .prepare(
       `SELECT DISTINCT agent_id AS agentId
@@ -431,13 +452,19 @@ export function commitAgentTaskActionsTx(
   }, structuredBlocks);
 
   try {
-    const taskIdsByClientKey = createWorkItemBatchTx(
-      database,
-      context.projectId,
-      context.missionId,
-      input.turn.tasks,
-      { type: "agent", agentId: input.agentId },
-    );
+    if (context.missionId === null && input.turn.tasks.length > 0) {
+      throw actionInvalid({ disposition: "unsupported_in_direct_chat" });
+    }
+    // 无任务时不需要触碰使命：个人对话（无使命）与空批次的协作回合都跳过批次写入。
+    const taskIdsByClientKey = input.turn.tasks.length > 0
+      ? createWorkItemBatchTx(
+          database,
+          context.projectId,
+          context.missionId!,
+          input.turn.tasks,
+          { type: "agent", agentId: input.agentId },
+        )
+      : {};
     const messageId = randomUUID();
     const turnId = randomUUID();
     const messageSequence = commitStructuredMessageTx(database, {
@@ -610,6 +637,15 @@ export function commitAgentTaskActionsTx(
         .run(input.timestamp, input.runId, input.agentId);
       if (updated.changes !== 1) throw actionConflict();
       consumeIncludedOwnerMessages(database, context, input.timestamp);
+    } else if (input.turn.disposition.type === "reply") {
+      const updated = database
+        .prepare(
+          `UPDATE collaboration_runs
+           SET status = 'waiting_owner', version = version + 1, updated_at = ?
+           WHERE id = ? AND status = 'running' AND current_agent_id = ?`,
+        )
+        .run(input.timestamp, input.runId, input.agentId);
+      if (updated.changes !== 1) throw actionConflict();
     } else if (input.turn.disposition.type === "plan_ready") {
       if (!ownerRace.hasPendingMessages) {
         appendEvent(

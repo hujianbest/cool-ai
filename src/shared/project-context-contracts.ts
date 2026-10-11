@@ -84,9 +84,11 @@ export type MemoryEntry = {
 export type ProjectContextSnapshot = {
   schemaVersion: 1;
   shared: {
-    project: { id: string; name: string; workspacePath: string };
+    // 个人对话（未绑定工作区、单成员）没有工作区与使命：这两个槽位如实为 null，
+    // 由消费方呈现空态，而不是伪造占位事实。
+    project: { id: string; name: string; workspacePath: string | null };
     roster: ProjectMember[];
-    mission: Mission;
+    mission: Mission | null;
     workItems: WorkItem[];
     memories: MemoryEntry[];
   };

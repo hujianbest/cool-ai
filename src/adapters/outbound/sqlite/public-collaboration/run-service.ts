@@ -22,6 +22,7 @@ import {
 import { createCredentialVault } from "@/src/modules/identity-capability/internal/credential-vault";
 import { type CredentialEnvelope } from "@/src/modules/identity-capability";
 import { openDatabase } from "@/src/adapters/outbound/sqlite/connection";
+import { isDirectChatProject } from "@/src/adapters/outbound/sqlite/public-collaboration/direct-chat";
 import { readMessageAttachmentRefsTx } from "@/src/adapters/outbound/sqlite/public-collaboration/attachment-service";
 import { appendCollaborationAuditOutboxRow } from "@/src/adapters/outbound/sqlite/public-collaboration/audit-event-outbox";
 import type {
@@ -425,15 +426,21 @@ function readiness(database: DatabaseSync, projectId: string): { ready: boolean;
   const project = database
     .prepare("SELECT workspace_path AS workspacePath FROM projects WHERE id = ?")
     .get(projectId) as { workspacePath: string | null };
-  if (!project.workspacePath) missing.push("workspace");
   const memberCount = (
     database
       .prepare("SELECT COUNT(*) AS count FROM project_memberships WHERE project_id = ?")
       .get(projectId) as { count: number }
   ).count;
-  if (memberCount < 2) missing.push("members");
-  if (!database.prepare("SELECT 1 FROM missions WHERE project_id = ?").get(projectId)) {
-    missing.push("mission");
+  if (memberCount < 1) missing.push("members");
+  else if (!isDirectChatProject(database, projectId) && memberCount < 2) {
+    missing.push("members");
+  }
+  // 个人对话不要求工作区与使命；绑定工作区的项目保持多 Agent 口径。
+  if (!isDirectChatProject(database, projectId)) {
+    if (!project.workspacePath) missing.push("workspace");
+    if (!database.prepare("SELECT 1 FROM missions WHERE project_id = ?").get(projectId)) {
+      missing.push("mission");
+    }
   }
   const unavailableProvider = database
     .prepare(

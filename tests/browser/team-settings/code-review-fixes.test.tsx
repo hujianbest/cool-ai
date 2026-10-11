@@ -38,7 +38,7 @@ describe("code review fixes", () => {
 
     projects.resolve(Response.json({ projects: [] }));
     expect(
-      await screen.findByText("先配置一个 Agent，即可开始个人对话。"),
+      await screen.findByText("配置模型 Provider 后即可开始。"),
     ).toBeInTheDocument();
   });
 
@@ -64,7 +64,7 @@ describe("code review fixes", () => {
 
     expect(fetchMock).toHaveBeenCalledTimes(3);
     expect(
-      await screen.findByText("先配置一个 Agent，即可开始个人对话。"),
+      await screen.findByText("配置模型 Provider 后即可开始。"),
     ).toBeInTheDocument();
   });
 

@@ -189,7 +189,12 @@ export function ContextPreview({ projectId }: { projectId: string }) {
           >
             <h3>{snapshot.shared.project.name}</h3>
             <p>
-              工作区：<code>{snapshot.shared.project.workspacePath}</code>
+              工作区：
+              {snapshot.shared.project.workspacePath ? (
+                <code>{snapshot.shared.project.workspacePath}</code>
+              ) : (
+                <span className="muted">未绑定工作区</span>
+              )}
             </p>
             <section className="stack">
               <h4>平等名册</h4>
@@ -205,8 +210,14 @@ export function ContextPreview({ projectId }: { projectId: string }) {
             </section>
             <section className="stack">
               <h4>使命</h4>
-              <p>{snapshot.shared.mission.title}</p>
-              <p>{snapshot.shared.mission.goal}</p>
+              {snapshot.shared.mission ? (
+                <>
+                  <p>{snapshot.shared.mission.title}</p>
+                  <p>{snapshot.shared.mission.goal}</p>
+                </>
+              ) : (
+                <p className="muted">尚未创建使命。</p>
+              )}
             </section>
             <section className="stack">
               <h4>任务</h4>

@@ -53,10 +53,10 @@ describe("home direct chat", () => {
 
     render(<ProjectPanel />);
 
-    expect(await screen.findByText("先配置一个 Agent，即可开始个人对话。")).toBeInTheDocument();
-    expect(screen.getByRole("link", { name: "配置 Agent" })).toHaveAttribute(
+    expect(await screen.findByText("配置模型 Provider 后即可开始。")).toBeInTheDocument();
+    expect(screen.getByRole("link", { name: "配置 Provider" })).toHaveAttribute(
       "href",
-      "/team?section=agents&returnTo=/",
+      "/team?section=providers&returnTo=/",
     );
     expect(screen.queryByText("请先创建或选择项目，再运行任务。")).not.toBeInTheDocument();
   });
@@ -174,7 +174,7 @@ describe("home direct chat", () => {
       "无法加载个人对话，请稍后重试。",
     );
     await user.click(screen.getByRole("button", { name: "重试加载对话" }));
-    expect(await screen.findByText("先配置一个 Agent，即可开始个人对话。")).toBeInTheDocument();
+    expect(await screen.findByText("配置模型 Provider 后即可开始。")).toBeInTheDocument();
     expect(homeAttempts).toBe(2);
   });
 
