@@ -134,7 +134,7 @@ function imageBlock(style, filePath) {
     : { type: "image_url", image_url: { url: `data:image/png;base64,${data}` } };
 }
 
-function buildUserContent(ucdExcerpt, referenceViews_, actualScreenshotPath, style) {
+function buildUserContent(ucdExcerpt, referenceViews_, actualScreenshotPath, style, viewNote) {
   const content = [
     {
       type: "text",
@@ -146,6 +146,9 @@ function buildUserContent(ucdExcerpt, referenceViews_, actualScreenshotPath, sty
   for (const view of referenceViews_) {
     content.push({ type: "text", text: `参考原型视图：${view}` });
     content.push(imageBlock(style, join(referenceDirectory, `ucd-${view}.png`)));
+  }
+  if (viewNote) {
+    content.push({ type: "text", text: `评审口径注记：${viewNote}` });
   }
   content.push({ type: "text", text: "实现截图（真实应用状态）：" });
   content.push(imageBlock(style, actualScreenshotPath));
@@ -168,7 +171,17 @@ async function reviewScreenshot(fileName, ucdExcerpt) {
           "content-type": "application/json",
           authorization: `Bearer ${providerApiKey}`,
         };
-  const userContent = buildUserContent(ucdExcerpt, referenceViews, screenshotPath, apiStyle);
+  // 窄屏截图按 UCD §7 响应式规范评审：参考原型是桌面骨架，不得以 240px 侧栏/
+  // 48px header/居中三区作为窄屏结构性要求；仍裁空白主表面、缺 Composer/空态
+  // 引导、错位/重叠/溢出与视觉方向偏离。
+  const viewNote = /narrow/i.test(fileName)
+    ? "本次实现截图为 390px 窄屏视口。按 UCD §7 响应式规范：会话侧栏收起为抽屉" +
+      "（默认收起、不占位）、图标轨 52px 常驻、聊天流 100% 宽度、顶部为移动工具栏" +
+      "（图标按钮）。不要以桌面 240px 会话侧栏、48px header 或居中三区骨架作为窄屏" +
+      "结构性要求；应裁真实缺陷：主表面空白或未渲染、缺少 Composer 或空态引导、" +
+      "错位/重叠/溢出、暖米+暖金视觉方向偏离。"
+    : "";
+  const userContent = buildUserContent(ucdExcerpt, referenceViews, screenshotPath, apiStyle, viewNote);
   const requestBody =
     apiStyle === "anthropic"
       ? {

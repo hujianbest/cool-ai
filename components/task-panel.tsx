@@ -102,10 +102,10 @@ type TaskPanelProps = {
 };
 
 const GOVERNANCE_TITLES: Record<GovernanceView, string> = {
-  mission: "任务看板",
-  memory: "共享记忆",
+  mission: "使命与任务看板",
+  memory: "共享记忆与知识库",
   approvals: "审批中心",
-  audit: "审计中心",
+  audit: "统一审计中心",
 };
 
 export function TaskPanel({
@@ -135,6 +135,7 @@ export function TaskPanel({
   const [events, setEvents] = useState<TaskEvent[]>([]);
   const [goalFactsVersion, setGoalFactsVersion] = useState(0);
   const [missionCreateIntent, setMissionCreateIntent] = useState(0);
+  const [workItemCreateIntent, setWorkItemCreateIntent] = useState(0);
   const [goal, setGoal] = useState("");
   const [error, setError] = useState<string | null>(null);
   const [isLoading, setIsLoading] = useState(false);
@@ -493,7 +494,6 @@ export function TaskPanel({
         }
         data-open={editorOpen || Boolean(onboarding) || Boolean(governance)}
         data-testid="editor-surface"
-        hidden={narrow && !editorOpen && !onboarding && !governance}
         id="task-editor-surface"
         ref={editorSurfaceRef}
         role={narrow && editorOpen && !nestedModalOpen ? "dialog" : undefined}
@@ -530,6 +530,16 @@ export function TaskPanel({
                     ? `${GOVERNANCE_TITLES[governance.view]} · ${currentProjectName}`
                     : GOVERNANCE_TITLES[governance.view]}
               </h2>
+              {governance.view === "mission" && governance.projectId ? (
+                // UCD §9.2.1 顶栏工具条：右侧「＋ 新建任务」主按钮（意图驱动，数据就绪后消费）。
+                <button
+                  className="button-primary gov-view-action"
+                  onClick={() => setWorkItemCreateIntent((current) => current + 1)}
+                  type="button"
+                >
+                  ＋ 新建任务
+                </button>
+              ) : null}
             </div>
             {governance.projectId ? (
               governance.view === "mission" ? (
@@ -537,6 +547,7 @@ export function TaskPanel({
                   <MissionBoard
                     onReviewWorkspaceChange={setReviewWorkspace}
                     openMissionIntent={missionCreateIntent}
+                    openWorkItemIntent={workItemCreateIntent}
                     projectId={governance.projectId}
                   />
                   <ExecutionPanel projectId={governance.projectId} />

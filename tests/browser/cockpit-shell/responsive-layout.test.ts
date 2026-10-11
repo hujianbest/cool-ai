@@ -63,8 +63,16 @@ describe("narrow cockpit layout guard", () => {
     expect(tokens).toMatch(
       /@media\s*\(max-width:\s*56\.25rem\)[\s\S]*\.mobile-toolbar\s*\{[^}]*padding:[^;]*var\(--safe-area-top\)[^;]*var\(--safe-area-right\)[^;]*var\(--safe-area-left\)/,
     );
+    // UCD §7：窄屏下侧栏/上下文仍是关闭即藏的 fixed 抽屉；聊天流（.cockpit-flow）
+    // 是 100% 宽度常驻的静态主表面，仅在编辑器/治理打开时经 data-open 全屏接管。
     expect(tokens).toMatch(
-      /\.cockpit-sidebar,\s*\.cockpit-flow,\s*\.cockpit-context\s*\{[^}]*position:\s*fixed[^}]*block-size:\s*var\(--viewport-height\)[^}]*padding-block:\s*var\(--safe-area-top\)\s+var\(--safe-area-bottom\)[^}]*padding-inline:\s*var\(--safe-area-left\)\s+var\(--safe-area-right\)/s,
+      /\.cockpit-sidebar,\s*\.cockpit-context\s*\{[^}]*position:\s*fixed[^}]*block-size:\s*var\(--viewport-height\)[^}]*padding-block:\s*var\(--safe-area-top\)\s+var\(--safe-area-bottom\)[^}]*padding-inline:\s*var\(--safe-area-left\)\s+var\(--safe-area-right\)/s,
+    );
+    expect(tokens).toMatch(
+      /@media\s*\(max-width:\s*56\.25rem\)[\s\S]*\.cockpit-flow\s*\{[^}]*position:\s*static[^}]*grid-column:\s*2[^}]*grid-row:\s*2[^}]*width:\s*var\(--full-width\)/s,
+    );
+    expect(tokens).toMatch(
+      /\.cockpit-flow\[data-open="true"\]\s*\{[^}]*position:\s*fixed[^}]*block-size:\s*var\(--viewport-height\)[^}]*padding-block:\s*var\(--safe-area-top\)\s+var\(--safe-area-bottom\)[^}]*padding-inline:\s*var\(--safe-area-left\)\s+var\(--safe-area-right\)/s,
     );
   });
 

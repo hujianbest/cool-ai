@@ -48,6 +48,8 @@ type ThreadPolicyPanelProps = {
   modalBackgroundRef?: RefObject<HTMLElement | null>;
   onModalChange?: (open: boolean) => void;
   projectId: string;
+  // 会话面只挂「策略需要修复」的失败关闭入口（UCD §9.1.4）；修复完成后本面板随之卸载。
+  repairOnly?: boolean;
   threadId: string;
 };
 
@@ -197,6 +199,7 @@ export function ThreadPolicyPanel({
   modalBackgroundRef,
   onModalChange,
   projectId,
+  repairOnly = false,
   threadId,
 }: ThreadPolicyPanelProps) {
   const [thread, setThread] = useState<ThreadDetail | null>(null);
@@ -448,6 +451,12 @@ export function ThreadPolicyPanel({
       : submitting
         ? "策略更新请求处理中，表单暂不可用。"
         : "";
+
+  // repairOnly：策略就绪即整体卸载；但加载失败必须保持可见（错误态 + 重试），
+  // 失败关闭不允许静默消失。
+  if (repairOnly && !loadError && thread?.policy.availability !== "repair_required") {
+    return null;
+  }
 
   return (
     <section

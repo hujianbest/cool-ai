@@ -18,10 +18,13 @@ import { DatabaseSync } from "node:sqlite";
 import AxeBuilder from "@axe-core/playwright";
 import { chromium } from "playwright";
 
+import { createStepGate } from "./smoke-steps.mjs";
+
 const host = "127.0.0.1";
 const seed = randomBytes(4).readUInt32BE();
-const appPort = 14_000 + (seed % 8_000);
-const providerPort = 24_000 + (seed % 8_000);
+// COCKPIT_SMOKE_*_PORT：smoke-suite.mjs 并行 lane 用固定端口隔离；独立运行保持原随机段不变。
+const appPort = Number(process.env.COCKPIT_SMOKE_PORT ?? 14_000 + (seed % 8_000));
+const providerPort = Number(process.env.COCKPIT_SMOKE_PROVIDER_PORT ?? 24_000 + (seed % 8_000));
 const baseUrl = `http://${host}:${appPort}`;
 const providerBaseUrl = `http://${host}:${providerPort}/v1`;
 const temporaryDirectory = mkdtempSync(join(tmpdir(), "cool-ai-structured-smoke-"));
@@ -180,8 +183,7 @@ function startApp() {
     process.execPath,
     [
       resolve("node_modules", "next", "dist", "bin", "next"),
-      "dev",
-      "--webpack",
+      "start",
       "--hostname",
       host,
       "--port",
@@ -195,7 +197,6 @@ function startApp() {
         COCKPIT_MASTER_KEY: masterKey,
         COCKPIT_ALLOW_SCRIPTED_PICKER: "1",
         COCKPIT_SCRIPTED_DIRECTORY: workspaceDirectory,
-        NEXT_DIST_DIR: `.next-structured-smoke-${process.pid}`,
       },
       stdio: ["ignore", "pipe", "pipe"],
       windowsHide: true,
@@ -488,6 +489,12 @@ function runFixture(mode, tuple = {}) {
   );
   return child.stdout.trim();
 }
+
+// 步骤控制（tests/browser/smoke-steps.mjs）：--list-steps 查看步骤表。
+// 本脚本的逐步包裹（gate.run）随该脚本的下一次修复批次接入；当前切片请求会被
+// 显式拒绝（wired:false），避免误以为已切片。最终 DoD 必须不带参全量跑。
+const gate = createStepGate("structured-messages-browser-smoke", ["empty-state", "first-turn-blocks", "decisions-replay", "sources-frozen", "light-dark-axe", "restart-reopen", "narrow-keyboard", "invalid-persisted", "security-scan"], process.argv.slice(2), { wired: false });
+if (gate.listOnly) process.exit(0);
 
 try {
   await listen(provider, providerPort);

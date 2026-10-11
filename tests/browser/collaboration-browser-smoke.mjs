@@ -17,9 +17,12 @@ import { DatabaseSync } from "node:sqlite";
 
 import { chromium } from "playwright";
 
+import { createStepGate } from "./smoke-steps.mjs";
+
 const host = "127.0.0.1";
-const appPort = 5600 + (process.pid % 200);
-const providerPort = 5800 + (process.pid % 200);
+// COCKPIT_SMOKE_*_PORT：smoke-suite.mjs 并行 lane 用固定端口隔离；独立运行保持原 pid 派生段不变。
+const appPort = Number(process.env.COCKPIT_SMOKE_PORT ?? 5600 + (process.pid % 200));
+const providerPort = Number(process.env.COCKPIT_SMOKE_PROVIDER_PORT ?? 5800 + (process.pid % 200));
 const baseUrl = `http://${host}:${appPort}`;
 const providerBaseUrl = `http://${host}:${providerPort}/v1`;
 const temporaryDirectory = mkdtempSync(
@@ -575,6 +578,12 @@ function countOccurrences(text, needle) {
 
 let browser;
 let evidenceFacingData = "";
+// 步骤控制（tests/browser/smoke-steps.mjs）：--list-steps 查看步骤表。
+// 本脚本的逐步包裹（gate.run）随该脚本的下一次修复批次接入；当前切片请求会被
+// 显式拒绝（wired:false），避免误以为已切片。最终 DoD 必须不带参全量跑。
+const gate = createStepGate("collaboration-browser-smoke", ["provider-team", "project-thread", "first-run-decision", "continue-message", "decision-answer", "reload-restart-recovery", "desktop-screenshot", "narrow-chat-surface", "outbound-allowlist-security", "dom-evidence-scan"], process.argv.slice(2), { wired: false });
+if (gate.listOnly) process.exit(0);
+
 try {
   await listen(provider, providerPort);
   startAppServer();
@@ -667,8 +676,11 @@ try {
   const restartHref = `${new URL(page.url()).pathname}${new URL(page.url()).search}`;
   await restartAppServer();
   await navigateAfterRestart(page, restartHref);
+  // S-60 后使命标题只在治理视图（任务看板）出现，原「使命标题 heading」断言依赖
+  // 已移除的项目上下文右栏；恢复验收以会话面的消息事实、运行状态与 API 三重作证。
   await page
-    .getByRole("heading", { name: "Collaboration Smoke Mission" })
+    .getByText("Start the two-agent collaboration plan.", { exact: true })
+    .first()
     .waitFor();
   await page.getByText("运行状态：planned", { exact: true }).waitFor();
   const recovered = await readCollaboration(page, projectId, threadId);
@@ -687,13 +699,14 @@ try {
   await page.keyboard.press("Enter");
   const editor = page.getByRole("dialog", { name: "任务编辑" });
   await editor.waitFor();
-  const chatTab = editor.getByRole("tab", { name: "对话" });
-  await chatTab.focus();
-  await page.keyboard.press("End");
-  const runTab = editor.getByRole("tab", { name: "运行详情" });
-  assert.equal(await runTab.getAttribute("aria-selected"), "true");
-  const runSurface = editor.getByRole("tabpanel", { name: "运行详情" });
-  const narrowLayout = await runSurface.evaluate((surface) => {
+  // P1 IA + S-60：窄屏任务编辑直接承载会话流，既无「运行详情」tab 也无任何 tablist；
+  // 运行生命周期（状态/控制/用量）内联在会话流内（T-A1）。
+  assert.equal(await editor.getByRole("tab").count(), 0);
+  assert.equal(await editor.getByRole("tablist").count(), 0);
+  const narrowComposer = editor.getByLabel("发送给项目对话");
+  await narrowComposer.focus();
+  const chatSurface = editor;
+  const narrowLayout = await chatSurface.evaluate((surface) => {
     const viewportWidth = document.documentElement.clientWidth;
     const inspect = (element) => {
       const bounds = element.getBoundingClientRect();
@@ -761,9 +774,9 @@ try {
     );
   }
   assert.equal(
-    await runTab.evaluate((element) => document.activeElement === element),
+    await narrowComposer.evaluate((element) => document.activeElement === element),
     true,
-    "the keyboard-selected run-detail tab must retain focus",
+    "the focused chat composer must retain focus while the run lifecycle renders inline",
   );
   await editor.getByText("运行状态：planned", { exact: true }).waitFor();
   await page.screenshot({ fullPage: true, path: narrowScreenshot });
@@ -879,13 +892,15 @@ try {
       workItems: counts.work_items,
     },
     {
-      agents: 2,
+      // S-60 起：打开文件夹项目会自动创建 3 名系统自带 Agent（planner/builder/reviewer），
+      // 首页同时确保 1 个个人对话项目及其单一成员——计数含这两项固定开销。
+      agents: 5,
       attempts: 3,
       decisions: 1,
-      memberships: 2,
+      memberships: 6,
       missions: 1,
       modelCalls: 4,
-      projects: 1,
+      projects: 2,
       providers: 1,
       runs: 1,
       skills: 2,

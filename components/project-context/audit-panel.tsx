@@ -482,6 +482,20 @@ function parseAuditEvent(value: unknown): AuditEventListItemDto {
   };
 }
 
+// U-14（UCD §9.2.6）：事件时间本地化为 zh-CN 短时；ISO 原文保留在 <time dateTime>。
+const LOCAL_TIME_FORMAT = new Intl.DateTimeFormat("zh-CN", {
+  day: "2-digit",
+  hour: "2-digit",
+  minute: "2-digit",
+  month: "2-digit",
+  year: "numeric",
+});
+
+function localEventTime(occurredAt: string): string {
+  const parsed = new Date(occurredAt);
+  return Number.isNaN(parsed.getTime()) ? occurredAt : LOCAL_TIME_FORMAT.format(parsed);
+}
+
 function parseFreshness(value: unknown): AuditProjectionFreshness {
   if (
     !isRecord(value)
@@ -946,7 +960,7 @@ export function AuditPanel({ projectId }: { projectId: string }) {
                     {" "}
                     {actorCopy(event.actorType)}
                     {" · "}
-                    <time dateTime={event.occurredAt}>{event.occurredAt}</time>
+                    <time dateTime={event.occurredAt}>{localEventTime(event.occurredAt)}</time>
                   </p>
                   {excerpt ? (
                     <p className="audit-event-excerpt">{excerpt}</p>
@@ -1053,7 +1067,7 @@ export function AuditPanel({ projectId }: { projectId: string }) {
                       {" "}
                       {actorCopy(event.actorType)}
                       {" · "}
-                      <time dateTime={event.occurredAt}>{event.occurredAt}</time>
+                      <time dateTime={event.occurredAt}>{localEventTime(event.occurredAt)}</time>
                     </p>
                     {excerpt ? (
                       <p className="audit-event-excerpt">{excerpt}</p>
@@ -1175,7 +1189,7 @@ export function AuditPanel({ projectId }: { projectId: string }) {
               {replayItems.map((item) => (
                 <li className="task-summary stack" key={item.id}>
                   <h3>{auditEventTypeCopy(item.eventType)}</h3>
-                  <time dateTime={item.occurredAt}>{item.occurredAt}</time>
+                  <time dateTime={item.occurredAt}>{localEventTime(item.occurredAt)}</time>
                   {item.sourceMissing ? (
                     <p className="muted">来源缺失</p>
                   ) : (

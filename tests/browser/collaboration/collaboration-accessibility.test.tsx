@@ -223,11 +223,16 @@ describe("narrow collaboration cockpit accessibility", () => {
     render(<ProjectPanel />);
     expect(await screen.findByRole("heading", { name: "项目对话" })).toHaveClass("sr-only");
     expect(screen.queryByRole("heading", { name: "使命看板" })).toBeNull();
-    expect(screen.queryByRole("region", { name: "运行控制" })).toBeNull();
+    // T-A1（UCD §9.1.3）：会话面承载当前运行（此处经 ?run= 深链选择）；
+    // 看板与视图切换 tab 仍不出现在会话面。运行状态异步于线程标题解析，
+    // 用有界 findBy 等待而非同步断言（全量并行负载下时序余量）。
+    expect(
+      await screen.findByRole("region", { name: "运行控制" }, { timeout: 3000 }),
+    ).toBeVisible();
     expect(screen.queryByRole("tablist", { name: "协作视图" })).toBeNull();
   });
 
-  it("keeps the chat composer reachable from the narrow editor without run chrome", async () => {
+  it("keeps the chat composer reachable from the narrow editor alongside the current-run controls", async () => {
     stubViewport(true);
     installFetch("waiting_owner");
     const user = userEvent.setup();
@@ -242,7 +247,12 @@ describe("narrow collaboration cockpit accessibility", () => {
     expect(composer).not.toHaveAttribute("aria-expanded");
     composer.focus();
     expect(composer).toHaveFocus();
-    expect(within(editor).queryByRole("button", { name: "停止" })).toBeNull();
+    // T-A1（UCD §9.1.3 运行生命周期区）：会话面内联呈现当前运行的控制，不再要求
+    // 独立运行表面；运行控制存在但不得以嵌套模态抢占编辑器。
+    const controls = within(editor).getByRole("region", { name: "运行控制" });
+    expect(within(controls).getByRole("button", { name: "停止" })).toBeVisible();
+    expect(screen.queryByRole("dialog", { name: "确认停止协作" })).toBeNull();
+    expect(document.querySelectorAll('[aria-modal="true"]')).toHaveLength(1);
   });
 
   it("keeps the editor as the sole modal without a nested run confirmation surface", async () => {

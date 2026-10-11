@@ -94,6 +94,42 @@ function page(items: ApprovalCenterItemDto[]) {
   return Response.json({ approvals: items });
 }
 
+describe("approval center status filter", () => {
+  it("filters the merged list by status with counts and restores with 全部", async () => {
+    const ApprovalCenterPanel = await approvalCenterPanel();
+    const pending = item({ approvalId: "approval-pending" });
+    const expired = item({
+      approvalId: "approval-expired",
+      decisionHint: "expired",
+      status: "expired",
+      title: "deploy release",
+    });
+    vi.stubGlobal("fetch", vi.fn(() => Promise.resolve(page([pending, expired]))));
+    const user = userEvent.setup();
+    render(<ApprovalCenterPanel projectId="project-1" />);
+
+    const statusSelect = await screen.findByLabelText("状态");
+    // 默认「全部」：失效可辨识项可见（救援流程依赖），计数如实。
+    expect(statusSelect).toHaveValue("all");
+    expect(within(statusSelect).getByRole("option", { name: "全部 (2)" })).toBeInTheDocument();
+    expect(within(statusSelect).getByRole("option", { name: "待裁决 (1)" })).toBeInTheDocument();
+    expect(within(statusSelect).getByRole("option", { name: "已过期 (1)" })).toBeInTheDocument();
+    expect(screen.getByText("deploy release")).toBeInTheDocument();
+
+    // 切到待裁决：只剩 pending 卡片；切到已过期：只剩 expired 卡片。
+    await user.selectOptions(statusSelect, "pending");
+    expect(screen.getByText("node -v")).toBeInTheDocument();
+    expect(screen.queryByText("deploy release")).toBeNull();
+    await user.selectOptions(statusSelect, "expired");
+    expect(screen.getByText("deploy release")).toBeInTheDocument();
+    expect(screen.queryByText("node -v")).toBeNull();
+
+    await user.selectOptions(statusSelect, "all");
+    expect(screen.getByText("node -v")).toBeInTheDocument();
+    expect(screen.getByText("deploy release")).toBeInTheDocument();
+  });
+});
+
 afterEach(() => {
   document.body.innerHTML = "";
   vi.unstubAllGlobals();
@@ -176,9 +212,12 @@ describe("Approval center panel", () => {
       .toBeInTheDocument();
     expect(within(commandRow!).getByText("Run the build")).toBeInTheDocument();
     expect(within(commandRow!).getByText("命令")).toBeInTheDocument();
-    expect(
-      within(commandRow!).getByText("2026-08-10T04:00:00.005Z").tagName,
-    ).toBe("TIME");
+    // U-14：可见时间为本地化短时；ISO 原文保留在 <time dateTime>。
+    const commandTime = commandRow!.querySelector(
+      'time[datetime="2026-08-10T04:00:00.005Z"]',
+    );
+    expect(commandTime).not.toBeNull();
+    expect(commandTime!.textContent).not.toBe("2026-08-10T04:00:00.005Z");
     expect(within(commandRow!).getByText("待裁决")).toBeInTheDocument();
 
     const proposalBadge = within(proposalRow!).getByText("内联决策");

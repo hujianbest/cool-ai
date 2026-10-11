@@ -20,10 +20,13 @@ import { join } from "node:path";
 import { DatabaseSync } from "node:sqlite";
 
 import { chromium } from "playwright";
+
+import { createStepGate } from "./smoke-steps.mjs";
 import AxeBuilder from "@axe-core/playwright";
 
 const host = "127.0.0.1";
-const port = 6100 + (process.pid % 300);
+// COCKPIT_SMOKE_PORT：smoke-suite.mjs 并行 lane 用固定端口隔离；独立运行保持原 pid 派生段不变。
+const port = Number(process.env.COCKPIT_SMOKE_PORT ?? 6100 + (process.pid % 300));
 const baseUrl = `http://${host}:${port}`;
 const temporaryDirectory = mkdtempSync(join(tmpdir(), "cool-ai-onboarding-"));
 const databasePath = join(temporaryDirectory, "onboarding.sqlite");
@@ -553,6 +556,12 @@ function seedReadyResources() {
     database.close();
   }
 }
+
+// 步骤控制（tests/browser/smoke-steps.mjs）：--list-steps 查看步骤表。
+// 本脚本的逐步包裹（gate.run）随该脚本的下一次修复批次接入；当前切片请求会被
+// 显式拒绝（wired:false），避免误以为已切片。最终 DoD 必须不带参全量跑。
+const gate = createStepGate("onboarding-browser-smoke", ["provider-failure", "guide-controls", "project-select-empty", "seed-matrix", "provider-to-agent", "agent-narrow", "home-ready", "workspace-guide", "workspace-errors", "theme-preferences", "members-guide", "goal-malformed", "mission-handoff", "uncertain-patch", "thread-run-uncertain", "owner-message-uncertain", "facts-completed", "drift-repair", "deleted-project", "final-scan"], process.argv.slice(2), { wired: false });
+if (gate.listOnly) process.exit(0);
 
 try {
   const providerPort = await listenRandom(compatibleProvider);

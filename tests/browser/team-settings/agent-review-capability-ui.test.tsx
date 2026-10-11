@@ -99,7 +99,9 @@ describe("Agent review capability UI", () => {
     render(<AgentPanel />);
     const alert = await screen.findByRole("alert");
     expect(alert).toHaveTextContent("暂时无法加载 Agent");
-    expect(alert).toHaveFocus();
+    // 焦点移动 effect 晚于 alert 元素提交（同文件下方既有 waitFor 范式），
+    // 全量并行负载下 findBy 可能赢过竞态，用有界等待锁定终态。
+    await waitFor(() => expect(alert).toHaveFocus());
   });
 
   it("preselects only the reviewer template, resets blank to false, and saves a strict boolean", async () => {

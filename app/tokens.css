@@ -87,6 +87,8 @@
   --rounded-sm: 8px;
   --rounded-md: 12px;
   --rounded-lg: 16px;
+  --overlay-bar-max-width: 52.5rem;
+  --filter-control-min-width: 12rem;
   --rounded-pill: 9999px;
   --rounded-full: 9999px;
 
@@ -352,7 +354,6 @@
   }
 
   .cockpit-sidebar,
-  .cockpit-flow,
   .cockpit-context {
     display: none;
     position: fixed;
@@ -363,6 +364,20 @@
     padding-block: var(--safe-area-top) var(--safe-area-bottom);
     padding-inline: var(--safe-area-left) var(--safe-area-right);
     overflow-y: auto;
+  }
+
+  /* UCD §7：窄屏聊天流 100% 宽度常驻——主流程列是静态主表面，不是抽屉；
+     编辑器/治理打开时经 data-open 全屏接管（见下方 data-open 规则）。 */
+  .cockpit-flow {
+    display: flex;
+    position: static;
+    grid-column: 2;
+    grid-row: 2;
+    width: var(--full-width);
+    block-size: auto;
+    min-width: 0;
+    padding: var(--space-4);
+    overflow-y: visible;
   }
 
   .collaboration-cockpit > .cockpit-flow[role="tabpanel"] {
@@ -394,16 +409,30 @@
   }
 
   .cockpit-flow[data-open="true"] {
+    position: fixed;
+    z-index: 4;
     inset: 0;
     width: var(--full-width);
+    block-size: var(--viewport-height);
+    max-width: 100%;
+    padding-block: var(--safe-area-top) var(--safe-area-bottom);
+    padding-inline: var(--safe-area-left) var(--safe-area-right);
+    overflow-y: auto;
   }
 
   .mission-board-grid {
     grid-template-columns: minmax(0, 1fr);
   }
 
-  .drawer-close,
-  .drawer-close.icon-button {
+  /* 关闭钮只属于抽屉/全屏接管/modal 表面；关闭态的聊天流不显示编辑器关闭钮。 */
+  .cockpit-sidebar .drawer-close,
+  .cockpit-sidebar .drawer-close.icon-button,
+  .cockpit-context .drawer-close,
+  .cockpit-context .drawer-close.icon-button,
+  .cockpit-flow[data-open="true"] .drawer-close,
+  .cockpit-flow[data-open="true"] .drawer-close.icon-button,
+  .modal-surface .drawer-close,
+  .modal-surface .drawer-close.icon-button {
     display: grid;
   }
 

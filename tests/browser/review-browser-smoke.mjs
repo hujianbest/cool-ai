@@ -14,9 +14,12 @@ import { join, resolve } from "node:path";
 
 import { chromium } from "playwright";
 
+import { createStepGate } from "./smoke-steps.mjs";
+
 const host = "127.0.0.1";
 const portSeed = randomBytes(4).readUInt32BE();
-const appPort = 10_000 + (portSeed % 20_000);
+// COCKPIT_SMOKE_PORT：smoke-suite.mjs 并行 lane 用固定端口隔离；独立运行保持原随机段不变。
+const appPort = Number(process.env.COCKPIT_SMOKE_PORT ?? 10_000 + (portSeed % 20_000));
 const providerPort = appPort + 1;
 const baseUrl = `http://${host}:${appPort}`;
 const providerBaseUrl = `http://${host}:${providerPort}/v1`;
@@ -694,6 +697,12 @@ async function readWorkspace(page, workItemId) {
 }
 
 let browser;
+// 步骤控制（tests/browser/smoke-steps.mjs）：--list-steps 查看步骤表。
+// 本脚本的逐步包裹（gate.run）随该脚本的下一次修复批次接入；当前切片请求会被
+// 显式拒绝（wired:false），避免误以为已切片。最终 DoD 必须不带参全量跑。
+const gate = createStepGate("review-browser-smoke", ["team-setup", "project-plan", "execute-merge", "reject-rework", "escalate-answer", "review-pass", "memory-delivery", "restart-recovery", "narrow"], process.argv.slice(2), { wired: false });
+if (gate.listOnly) process.exit(0);
+
 try {
   assert.match(reviewRoute("work"), /^\/api\/work-items\/work\/reviews$/u);
   assert.match(

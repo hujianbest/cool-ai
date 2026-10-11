@@ -29,6 +29,8 @@
 
 ## 1. persistent-threads-browser-smoke.mjs（【现已红】）
 
+> 状态（2026-10-11 批次收口）：S1-S25 全部按表处置；脚本已越过 885 断点重跑（见 §1.5 备注）。
+
 **已证实的红灯**：`features/014-persistent-project-threads/evidence/persistent-threads-failure.txt` 显示 847 行 `locator.selectOption: Timeout 60000ms`（`getByRole("combobox", { name: "选择对话运行" })`）。847 行即终止 → 其后 500+ 断言与 39 个 axe 状态全部无效。
 
 ### 1.1 run 表面残留（改断言，随 T-A1 重挂 chat 口径）
@@ -70,6 +72,48 @@
 - L4200 dialog「永久删除线程」→「永久删除对话」（`project-thread-navigation.tsx:3387`）
 - L4300 按钮「恢复线程」→「恢复对话」（`collaboration-panel.tsx:3427`）
 
+### 1.5 批次内执行时新发现（考古未及：旧断点把后续段落长期遮蔽）
+
+> 状态（2026-10-11 批次收口）：S23-S25、C-4～C-6 均已按表内处置修复；另 T-A1/T-A2 的实现与测试见 §7.1 与 A-484/A-485。
+
+| # | 位置 | 陈旧内容 | 判定 | 处置 |
+|---|---|---|---|---|
+| S23 | 885（策略修复段，旧断点在 847 使其从未跑达） | `修复对话成员策略`/`需要修复`/陈旧冲突对话框整段依赖 `ThreadPolicyPanel` —— S-60 收轨后该面板**无生产挂载** | **改产品（T-A2）** | 会话面以 `repairOnly` 模式挂载修复入口（UCD §9.1.4 + A-485）；冒烟段改为「外部 PATCH 保持 repair_required → 陈旧回执 → 修复成功 → 入口卸载 + API `availability=ready`」 |
+| S24 | 2439 | `运行状态：${activeRun.status}` 用快照状态（stop 前的 waiting_owner）对照 UI 实况 stopped | 改断言 | 固定 `运行状态：stopped` |
+| S25 | 2531 起（审计段） | `ControlOrMeta+5` 治理视图范式 + `已追平` 保留；`.cockpit-context` 右栏 tab 与窄屏「当前任务上下文」抽屉全部删除 | 改断言 | 已重写（见 §1.2） |
+
+### 1.7 深审（1170-4800，S-60 后从未真实执行段落；2026-10-11）
+
+| # | 行号 | 陈旧内容 | 判定 | 处置 |
+|---|---|---|---|---|
+| S26 | 1186-1202 | 窄屏全量控件 ≥44px 扫描把 `.composer-tool`（min-height:auto，≈25px）与消息动作文案钮算入 | 改断言 | 紧凑文本工具按 ≥24 高度、其余仍 44 |
+| S27 | 1470-1487 | 窄屏输入历史 entry（同为 composer-tool）要求 ≥44 高 | 改断言 | 同口径（宽松高度 + 44 宽度） |
+| S28 | 2711-2714/2768/2799/2813 | 搜索输入默认 `sr-only`，仅 Cmd/Ctrl+K 揭示；直接 click/type 打不进（1×1 盒） | 改断言/流程 | 每次交互前 `ControlOrMeta+k` + 等 `dialog 会话搜索` |
+| S29 | 2846-2903 | 窄屏抽屉搜索同上 + Escape 分层（清查询→关揭示层→关抽屉）需三次 | 改断言 | 揭示前置 + 三段 Escape 断言 |
+| S30 | 3116/3159 及全段 | 标签筛选 chips 只在「标签」视图渲染；脚本从未切到该视图 | 改断言 | 统一先点「标签」tab（reload/重启后亦然）；收藏→chips 的真实路径为切「标签」视图（`selectTagFilter` 回落标签视图，非「全部」） |
+| S31 | 3268-3270 | 「整理对话」只在「全部」视图提供，此时视图已被 chip 点击切走 | 改断言 | 批量前先点回「全部」 |
+| S32 | 3030-3037/3773-3781 | 管理标签关闭钮 24px（`.manage-dialog-close` 用 --space-6，特异性压过全局 button 底线） | **改产品** | `app/cockpit.css` 改 `--control-min`（44px 底线不做小尺寸例外） |
+| S33 | 3981-3986 | 条目「更多」钮 32px（`.thread-item-actions .icon-button` 用 --space-xl；星标有 `.project-list` 兜底、「更多」漏了） | **改产品** | 兜底规则扩到 `.project-list .thread-item-actions .icon-button` |
+| S34 | 4098-4099 | 回收站入口是 tablist 外普通按钮，暴露 `aria-pressed` 而非 `aria-selected` | 改断言 | 改 `aria-pressed` |
+| S35 | 2529-2531 | 窄屏 Ctrl+1 后直接要求 Composer 可见——任务面板默认隐藏，需经「打开编辑」 | 改断言 | 断言 opener 可达并开门后再验 Composer |
+| S36 | 2313-2346 | 审计库内计数用全局表 vs API 项目页（S-60 起首页个人对话也写 outbox） | 改断言 | 四条 SQL 加 `project_id='legacy-project'`；checkpoint=maxSeq 保持全局（序号本身全局） |
+| S37 | 1893-1903 | 正向 15 次 Tab 找「添加附件」（DOM 序在输入框之前，长 transcript 下不稳） | 改断言 | 改 `Shift+Tab` 有界回溯（8 次） |
+| S38 | 4493 | 夹具标题「队列验收线程」 | 改断言 | 「队列验收对话」（词汇表统一） |
+
+> 状态（2026-10-11 批次收口）：S26～S38 全部按表处置；S32/S33 为产品 CSS 修复（`--control-min` 兜底），其余为断言/流程现代化。另追加执行期修复：导航/编辑器 opener 的水合竞态（有界重试助手 `clickUntil`）、dev 模式 `networkidle` 永不静止（全脚本改 `domcontentloaded` + 显式等待）、`createAgent` 等模板选项就绪等待、审计库内计数项目作用域、引用高亮清除的确定性等待（1.6s 计时器改显式归零等待）、清理重试纳入 ENOTEMPTY。
+
+**执行期追加（见 A-486/A-487）**：水合竞态有界重试（`clickUntil`）、`domcontentloaded` 化（dev 轮询使 networkidle 永不静止）、窄屏抽屉列表异步加载 → 选对话走规范深链。
+
+**已验证成立（深审确认）**：输入历史主体、附件全链（拒绝/上传/渲染/重启/404 tuple）、收藏全链、搜索 API/即时结果/键盘定位/明暗、标签 CRUD/批量幂等/跨项目隔离、回收站全链、队列 API 契约（enqueue `{content,expectedVersion,operationId}`→`threadVersion`；reorder 1 基 position；cancel/steer `{expectedVersion,operationId}`）、终局安全扫描。
+
+### 1.6 collaboration 批次内新发现
+
+| # | 位置 | 陈旧内容 | 判定 | 处置 |
+|---|---|---|---|---|
+| C-4 | 678-680 | `heading Collaboration Smoke Mission`——使命标题只在治理视图出现，右栏语境列已移除 | 改断言 | 换为会话面消息事实 + 运行状态 + API 三重作证 |
+| C-5 | 685-715（窄屏段） | `tab 运行详情`/`tab 对话`/`tabpanel`——`task-panel` 现渲染**零 tab**（collaborationSurface 残留死代码） | 改断言 | 改为「无 tablist/tab + Composer 聚焦保持 + 区域适配」，运行控制/用量断言落在会话面 |
+| C-6 | 878-900（DB 计数） | agents 2/memberships 2/projects 1——S-60 起打开文件夹自动创建 3 名自带 Agent（planner/builder/reviewer），首页确保 1 个个人对话项目及其成员 | 改断言 | 更新为 5/6/2 并注释组成 |
+
 ### 1.4 与 U-15/U-16 耦合
 
 - L3259-3268：`organizeButton.click()` 后断言筛选胶囊 `count()===0` —— U-15 浮动条落地时重审（浮动条与筛选栏并存与否），并同步 region 名。
@@ -85,6 +129,8 @@
 | C-1 | 639-648 | 决策答复：radio「Proceed with the verified path」+ `回答后交给成员` + `提交回答` | **改产品（T-A1）**：DecisionPanel 在会话面渲染；保留现有选择器（它们是 chat 面元素） |
 | C-2 | 661/673/768 | `getByText("运行状态：planned", {exact:true})` | **改产品（T-A1）**：运行状态安静行进会话面；语句可保留 |
 | C-3 | 685-771 | 窄屏任务编辑「运行详情」tab + 运行控制/用量断言 | **改断言**：`task-panel.tsx:439` 现仅「对话」一个 tab。改断言 tablist 恰 1 个 tab + 无横向溢出；运行控制/用量断言移至会话面（T-A1 后同页可达） |
+
+> 状态（2026-10-11 批次收口）：C-1～C-3 与 §1.6 的 C-4～C-6 全部修复；冒烟跑到终局安全扫描并通过（RECOVERY / OUTBOUND ALLOWLIST / PRIVATE SEPARATION 三段实名 PASS；窄屏段已改为无 tab 的会话面 + Composer 聚焦保持）。
 
 其余（L617-637 首轮/继续发送文案、L443-469 建对话、L866-905 DB 计数）**保留**。
 
@@ -148,12 +194,14 @@
 
 ## 6. 基建改造（最先做，受益全程）
 
-> 落地状态（2026-10-11）：`tests/browser/smoke-steps.mjs`（步骤控制）、`tests/browser/smoke-preflight.mjs`（预检，`npm run smoke:preflight`）、`tests/browser/runner-process.mjs`（posix 端口清扫）已入库；`browser-smoke.mjs` 已接入步骤控制并验证默认路径输出与改造前逐字节一致（端口归一后 diff 为空）；其余脚本在各自修复批次接入（每批完成后更新本节状态）。
+> 落地状态（2026-10-11）：`tests/browser/smoke-steps.mjs`（步骤控制）、`tests/browser/smoke-preflight.mjs`（预检，`npm run smoke:preflight`）、`tests/browser/runner-process.mjs`（posix 端口清扫）已入库；10 个冒烟脚本均已接入机制（`--list-steps` 可用；默认输出不变；切片请求在未包裹的脚本上显式拒绝 `wired:false`，杜绝「假装已切片」）。
+>
+> **生产模式统一 + 并行编排（2026-10-11，A-492）**：全部 10 个冒烟脚本与 `ui-audit-runner.mjs` 统一为生产模式 `next start`（原 5 个 dev 脚本——browser-smoke/team/context/persistent-threads/structured——按需编译是整轮 20-35 分钟的主因）；端口经 `COCKPIT_SMOKE_PORT/_PROVIDER_PORT/_REDIRECT_PORT` 可覆盖（独立运行回退原 pid/随机段）；新增 `tests/browser/smoke-suite.mjs`（`npm run smoke:all`：预检 → 一次 `next build --webpack` → 6 lane 并行、lane 内串行，端口用 44xxx 段）。**首跑实测：整轮 96s（目标 ≤300s），10/10 绿，像素基线 0 px**。dev 模式的 tsconfig/next-env.d.ts 噪声类（§6.7）随生产模式统一而消除；`SMOKE_SUITE_SKIP_BUILD=1` 供迭代复用构建。
 
 1. **步骤控制**：给 10 个冒烟脚本加 `--from-step/--only-step/--list-steps`。已有名称键可直接用（structured `pass(name)` 19 处、settings `recordStep(name)` 16 处）；其余 8 个按 §各脚本「结构报告」的分区表引入统一步骤包装（范式复用 `ui-audit-runner.mjs:174-209`：PASS/FAIL 记账 + 失败自动截图 + URL/console 诊断）。**不带参默认全跑、不改任何断言**；脚本头注明「最终 DoD 验证必须全跑」。
 2. **posix 进程/端口清扫**：所有 spawn 了 server 的脚本在 `stopAppServer` 补「按端口反查 kill」兜底（现仅 win32 有）；重启前断言端口释放（避免旧进程假绿）。
-3. **统一 dev 隔离范式**：`NEXT_DIST_DIR=.next-<name>-<pid>` + 生成文件快照/还原（测试期间**绝不回滚** tsconfig.json/next-env.d.ts，全部运行结束后统一 `git checkout` 一次）+ 退出 `rmSync` + dev overlay 隐藏。待补：collaboration / onboarding / settings（next start，改 dev 或至少快照还原纪律）、context（共享 `.next` + PID 模端口）、team（共享 `.next`）。
-4. **端口策略**：execution `appPort+1`、context `pid%200` 改「探测空闲端口」。
+3. **【已被生产模式统一取代】**：原「统一 dev 隔离范式」不再需要——全部脚本/审计运行器已切 `next start`（见上落地状态），dev 按需编译、dev overlay、逐运行 distDir 均不存在；tsconfig/next-env.d.ts 在测试期间不再被写入（`.next` 的 include 原本就在），统一 checkout 纪律保留为兜底。
+4. **【已被端口覆盖取代】**：原「探测空闲端口」改为 `COCKPIT_SMOKE_*_PORT` 环境变量覆盖（编排器分配互不重叠的 44xxx 固定段）；独立运行保持原 pid/随机段。`execution providerPort = appPort + 1`、`review providerPort = appPort + 1` 随 app 端口自动错开。
 5. **预检脚本**：任何冒烟前执行——kill 残留 `next dev`/`next-server`（按 cwd 归属仓库 + 端口占用者）、确认无 `.next` 锁、清理陈旧 `.next-*-smoke-*`（>15 分钟）与孤儿产物目录。落盘 `tests/browser/smoke-preflight.mjs`。
 6. **提交纪律**：提交前确认 `tsconfig.json`/`next-env.d.ts` 未在暂存区。
 7. **生成文件机制**（本轮查明）：dev server 每次运行会把当次 distDir 的**字面路径**追加进 `tsconfig.json` include，并把 `next-env.d.ts` 的 import 指向当次 distDir（如 `./.next-smoke-<pid>/dev/types/routes.d.ts`）。这正是此前「运行中回滚互相打架」的根因（回滚把别的运行刚写入的条目抹掉）。纪律定案：运行期间绝不回滚这两个文件；批次/会话全部运行结束后统一 `git checkout -- tsconfig.json next-env.d.ts` 一次；`ui-audit-runner.mjs` 与 `browser-smoke.mjs` 的逐运行还原已按此移除。
@@ -163,6 +211,8 @@
 ## 7. 专题
 
 ### 7.1 T-A1：运行生命周期可达性（批次 A 第一票，硬阻塞）
+
+**落地状态（2026-10-11）**：UCD §9.1.3 已增「运行生命周期区（会话流内联）」；`collaboration-panel.tsx` 已实现（决策答复/运行状态与控制/用量挂会话面、运行选择不再有控件、返回活动对话链接挂会话面、队列不进会话面）；`readOnboardingThread` 会话面 focusRun（显式选择 → 本对话活动运行 → 最近运行）与运行时间线拉取；新增 `tests/browser/threads/thread-chat-run-lifecycle.test.tsx`（4 用例，对旧实现 RED 4/4 → 实现后 GREEN）；既有 `thread-run-select-ui.test.tsx`（运行表面严格选择语义）与 `collaboration-accessibility.test.tsx`（窄屏会话面 + 运行控制并存）同步到新契约。冒烟侧：persistent-threads 的 S1-S5 与 collaboration 的 C-3 已按此口径改写。
 
 **裁决：重挂 chat 面（不恢复独立 run 表面）**。依据：U-10 已裁决「无需勾选历史运行即可发送新一轮」；A-477/A-479 已登记「run 表面段落整体改挂会话面」；生产仅传 `surface="chat"`，独立 run 表面无挂载点（`project-context-panel.tsx` 已死）。
 

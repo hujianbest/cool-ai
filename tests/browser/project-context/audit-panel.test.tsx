@@ -319,8 +319,11 @@ describe("Audit panel", () => {
     expect(within(rows[0]!).getByRole("heading", { name: "执行已创建" }))
       .toBeInTheDocument();
     expect(within(rows[0]!).getByText(/Agent/)).toBeInTheDocument();
-    expect(within(rows[0]!).getByText("2026-08-10T01:02:03.000Z").tagName)
-      .toBe("TIME");
+    // U-14（UCD §9.2.6）：时间轴事件时间为本地短时（zh-CN），机器可读 ISO 保留在 dateTime。
+    const eventTime = within(rows[0]!).getByRole("time");
+    expect(eventTime).toHaveAttribute("dateTime", "2026-08-10T01:02:03.000Z");
+    expect(eventTime.textContent).toMatch(/^2026\/08\/10/);
+    expect(eventTime.textContent).not.toContain("T01:02:03");
     expect(
       within(rows[0]!).getByRole("button", { name: "定位来源执行" }),
     ).toBeInTheDocument();
@@ -337,6 +340,42 @@ describe("Audit panel", () => {
     expect(within(list).queryByRole("button", { name: /编辑|删除|修改/ }))
       .toBeNull();
     expect(screen.queryByText(/work-1/)).toBeNull();
+  });
+
+  it("localizes timeline event times to zh-CN short format while keeping ISO in dateTime", async () => {
+    const AuditPanel = await auditPanel();
+    vi.stubGlobal(
+      "fetch",
+      vi.fn(() =>
+        Promise.resolve(
+          Response.json(
+            page([
+              auditEvent({
+                eventType: "run_planned",
+                id: "event-tz",
+                occurredAt: "2026-08-10T01:02:03.000Z",
+                outboxSeq: 21,
+              }),
+            ]),
+          ),
+        ),
+      ),
+    );
+    render(<AuditPanel projectId="project-1" />);
+
+    const list = await screen.findByRole("list", { name: "审计事件" });
+    const time = within(list).getByRole("time");
+    expect(time).toHaveAttribute("dateTime", "2026-08-10T01:02:03.000Z");
+    expect(time.textContent).toBe(
+      new Intl.DateTimeFormat("zh-CN", {
+        day: "2-digit",
+        hour: "2-digit",
+        minute: "2-digit",
+        month: "2-digit",
+        year: "numeric",
+      }).format(new Date("2026-08-10T01:02:03.000Z")),
+    );
+    expect(time.textContent).not.toMatch(/T\d{2}:\d{2}:\d{2}/);
   });
 
   it.each([
@@ -1870,8 +1909,9 @@ describe("Audit panel timeline view", () => {
     expect(rows).toHaveLength(2);
     expect(within(rows[0]!).getByRole("heading", { name: "尝试已开始" }))
       .toBeInTheDocument();
-    expect(within(rows[0]!).getByText("2026-08-15T01:00:00.000Z").tagName)
-      .toBe("TIME");
+    const firstTimelineTime = within(rows[0]!).getByRole("time");
+    expect(firstTimelineTime).toHaveAttribute("dateTime", "2026-08-15T01:00:00.000Z");
+    expect(firstTimelineTime.textContent).toMatch(/^2026\/08\/15/);
     expect(within(rows[1]!).getByRole("heading", { name: "执行已创建" }))
       .toBeInTheDocument();
     expect(screen.queryByRole("list", { name: "审计事件" })).toBeNull();

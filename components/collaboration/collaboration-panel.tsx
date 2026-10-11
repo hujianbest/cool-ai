@@ -27,6 +27,7 @@ import {
   uploadThreadAttachment,
 } from "@/components/collaboration/attachment-upload";
 import { InputHistoryPanel } from "@/components/collaboration/input-history-panel";
+import { ThreadPolicyPanel } from "@/components/collaboration/thread-policy-panel";
 import { SpokenMessageContent } from "@/components/collaboration/spoken-message-content";
 import { StructuredMessageBlock } from "@/components/collaboration/structured-message-block";
 import { useTargetRequestGuard } from "@/components/collaboration/use-target-request-guard";
@@ -611,18 +612,54 @@ async function readOnboardingThread(
   selectedRunId: string | null,
   signal: AbortSignal,
   allFacts = false,
-): Promise<{ envelope: OnboardingThreadEnvelope; state: CollaborationReadResponse }> {
+  focusLatestRun = false,
+): Promise<{
+  envelope: OnboardingThreadEnvelope;
+  policyRepairRequired: boolean;
+  state: CollaborationReadResponse;
+}> {
   const base = `/api/projects/${projectId}/threads/${threadId}`;
   const detailUrl = selectedRunId
     ? `${base}?run=${encodeURIComponent(selectedRunId)}`
     : base;
-  const [detail, messagesPage, factsPage, tupleTimelinePage] = await Promise.all([
-    fetch(detailUrl, { signal }).then((response) =>
-      readApiResponse<Record<string, unknown>>(
-        response,
-        "无法加载协作对话，请稍后重试。",
-      )
-    ),
+  const detail = await fetch(detailUrl, { signal }).then((response) =>
+    readApiResponse<Record<string, unknown>>(
+      response,
+      "无法加载协作对话，请稍后重试。",
+    )
+  );
+  // 会话面把运行生命周期挂在本对话的「当前运行」上：显式选择优先，其次本对话
+  // 持有的项目活动运行，最后回退到最近一次运行。运行表面（surface="all"/"run"）
+  // 保持「未选择即无运行」的严格语义——focusLatestRun 只由会话面打开。
+  const declaredRuns = Array.isArray((detail as { runs?: unknown }).runs)
+    ? (detail as { runs: ThreadRunDto[] }).runs
+    : [];
+  const declaredSelectedRun =
+    ((detail as { selectedRun?: ThreadRunDto | null }).selectedRun) ?? null;
+  const declaredActiveRun = (() => {
+    const candidate = (detail as { activeRun?: unknown }).activeRun;
+    if (typeof candidate !== "object" || candidate === null) return null;
+    const { runId, threadId: activeThreadId } = candidate as {
+      runId?: unknown;
+      threadId?: unknown;
+    };
+    return typeof runId === "string" && typeof activeThreadId === "string"
+      ? { runId, threadId: activeThreadId }
+      : null;
+  })();
+  function pickFocusRun(): ThreadRunDto | null {
+    if (declaredSelectedRun) return declaredSelectedRun;
+    if (!focusLatestRun) return null;
+    if (declaredActiveRun && declaredActiveRun.threadId === threadId) {
+      const active = declaredRuns.find(
+        (candidate) => candidate.id === declaredActiveRun.runId,
+      );
+      if (active) return active;
+    }
+    return declaredRuns[0] ?? null;
+  }
+  const focusRun = pickFocusRun();
+  const [messagesPage, factsPage, tupleTimelinePage] = await Promise.all([
     readAllThreadPages<ThreadMessageDto>(
       `${base}/messages`,
       "无法加载协作消息，请稍后重试。",
@@ -642,9 +679,9 @@ async function readOnboardingThread(
             )
           )
           .then((page) => parseFactPage(page, projectId, threadId)),
-    selectedRunId
+    focusRun
       ? readAllThreadPages<TimelineEvent>(
-          `${base}/runs/${encodeURIComponent(selectedRunId)}/timeline`,
+          `${base}/runs/${encodeURIComponent(focusRun.id)}/timeline`,
           "无法加载运行事件，请稍后重试。",
           signal,
         )
@@ -655,16 +692,21 @@ async function readOnboardingThread(
     factsPage,
     messagesPage,
   } as OnboardingThreadEnvelope;
-  const selectedRun = envelope.selectedRun;
-  const selectedMessages = messagesPage.items.filter(
-    (message) => message.runId === null || message.runId === selectedRun?.id,
+  // 会话面据此决定是否挂载「修复对话成员策略」失败关闭入口（UCD §9.1.4）。
+  const policyRepairRequired = (
+    (detail as {
+      thread?: { policy?: { availability?: unknown } };
+    }).thread?.policy?.availability === "repair_required"
   );
-  const firstOwnerMessage = selectedMessages.find(
+  const tupleMessages = messagesPage.items.filter(
+    (message) => message.runId === null || message.runId === focusRun?.id,
+  );
+  const firstOwnerMessage = tupleMessages.find(
     (message) =>
-      message.runId === selectedRun?.id && message.authorType === "owner",
+      message.runId === focusRun?.id && message.authorType === "owner",
   );
   const events = factsPage.items.flatMap((fact): TimelineEvent[] => {
-    if (fact.runId !== selectedRun?.id) return [];
+    if (fact.runId !== focusRun?.id) return [];
     if (
       (fact.type === "owner_message" || fact.type === "agent_message") &&
       fact.message
@@ -701,7 +743,7 @@ async function readOnboardingThread(
         createdAt: fact.createdAt,
         id: fact.id,
         payload: {
-          currentAgentId: selectedRun!.currentAgentId,
+          currentAgentId: focusRun!.currentAgentId,
           messageId: firstOwnerMessage?.id ?? fact.id,
           messageSequence: firstOwnerMessage?.sequence ?? 1,
         },
@@ -785,14 +827,15 @@ async function readOnboardingThread(
   }
   return {
     envelope,
+    policyRepairRequired,
     state: {
       pendingDecision,
-      projectMessagesPage: { items: selectedMessages, nextAfter: null },
+      projectMessagesPage: { items: tupleMessages, nextAfter: null },
       readiness: {
         missing: [],
         ready: envelope.readiness !== null,
       },
-      run: selectedRun,
+      run: focusRun,
       timelinePage: { items: events, nextAfter: null },
       usage: {
         byAgent: Array.from(usageByAgent.values()),
@@ -1333,6 +1376,8 @@ export function CollaborationPanel({
   const [queueError, setQueueError] = useState<string | null>(null);
   const [queueThreadVersion, setQueueThreadVersion] = useState<number | null>(null);
   const [queuePendingKey, setQueuePendingKey] = useState<string | null>(null);
+  // 仅在策略需要修复时挂载修复面板（避免就绪线程多做一次读取；失败关闭入口不变）。
+  const [policyRepairRequired, setPolicyRepairRequired] = useState(false);
   const [runSelection, setRunSelection] = useState<Pick<
     OnboardingThreadEnvelope,
     "activeRun" | "runs" | "selectedRun"
@@ -1467,6 +1512,9 @@ export function CollaborationPanel({
           threadId,
           onboardingSelectedRunIdRef.current,
           request.signal,
+          false,
+          // 会话面把「当前运行」带回会话流；运行表面保持严格选择语义。
+          surface === "chat",
         );
         const parsed = parseCollaborationGuideEnvelope(
           result.envelope,
@@ -1483,6 +1531,7 @@ export function CollaborationPanel({
           setThreadDeletedPlaceholder(false);
           setThreadDeletedError(null);
           applyRead(result.state, true);
+          setPolicyRepairRequired(result.policyRepairRequired);
           setRunSelection({
             activeRun: result.envelope.activeRun,
             runs: result.envelope.runs,
@@ -1583,6 +1632,7 @@ export function CollaborationPanel({
     targetKey,
     threadId,
     selectedRunId,
+    surface,
     targetGuard,
   ]);
 
@@ -3357,38 +3407,6 @@ export function CollaborationPanel({
                   <p>
                     {runChoiceLabel(runSelection.selectedRun)}
                   </p>
-                  {terminalRunStatuses.has(runSelection.selectedRun.status) ? (
-                    <p className="muted">
-                      本轮已结束。发送新目标将开始新一轮，不会改变历史运行。
-                    </p>
-                  ) : (
-                    <p className="muted">本轮仍可继续，不会自动开始新一轮。</p>
-                  )}
-                </div>
-              ) : null}
-              {activeRunInOtherThread && runSelection.activeRun ? (
-                <div className="state-message">
-                  <p>
-                    项目活动运行属于另一对话；切换只查看该运行，不会暂停、停止或修改它。
-                  </p>
-                  <a
-                    aria-label={`返回活动对话 ${runSelection.activeRun.runId}`}
-                    href={canonicalRunHref(
-                      projectId,
-                      runSelection.activeRun.threadId,
-                      runSelection.activeRun.runId,
-                      Boolean(directAgentName),
-                    )}
-                    onClick={(event) => {
-                      event.preventDefault();
-                      navigateToRun(
-                        runSelection.activeRun!.threadId,
-                        runSelection.activeRun!.runId,
-                      );
-                    }}
-                  >
-                    返回活动对话
-                  </a>
                 </div>
               ) : null}
             </>
@@ -3446,7 +3464,7 @@ export function CollaborationPanel({
         </div>
       ) : (
         <>
-          {showRun && state?.pendingDecision ? (
+          {state?.pendingDecision ? (
             <DecisionPanel
               key={`${targetKey}|decision|${state.pendingDecision.id}`}
               decision={state.pendingDecision}
@@ -3469,7 +3487,7 @@ export function CollaborationPanel({
               threadId={threadId!}
             />
           ) : null}
-          {showRun && decisionSuccess ? (
+          {decisionSuccess ? (
             <p
               className="state-message"
               ref={decisionSuccessRef}
@@ -3478,11 +3496,18 @@ export function CollaborationPanel({
               回答已提交，协作将继续。
             </p>
           ) : null}
-          {showRun && state?.run ? (
+          {state?.run ? (
             <div className="run-details">
               <p className="state-message" role="status">
                 运行状态：{state.run.status}
               </p>
+              {terminalRunStatuses.has(state.run.status) ? (
+                <p className="muted">
+                  本轮已结束。发送新目标将开始新一轮，不会改变历史运行。
+                </p>
+              ) : (
+                <p className="muted">本轮仍可继续，不会自动开始新一轮。</p>
+              )}
               <RunControls
                 key={`${targetKey}|controls`}
                 modalBackgroundRef={modalBackgroundRef}
@@ -3519,6 +3544,39 @@ export function CollaborationPanel({
                 请先明确选择此对话的一次运行；不会自动使用项目最新运行。
               </p>
             </section>
+          ) : null}
+          {showChat && activeRunInOtherThread && runSelection?.activeRun ? (
+            <div className="state-message">
+              <p>
+                项目活动运行属于另一对话；切换只查看该运行，不会暂停、停止或修改它。
+              </p>
+              <a
+                aria-label={`返回活动对话 ${runSelection.activeRun.runId}`}
+                href={canonicalRunHref(
+                  projectId,
+                  runSelection.activeRun.threadId,
+                  runSelection.activeRun.runId,
+                  Boolean(directAgentName),
+                )}
+                onClick={(event) => {
+                  event.preventDefault();
+                  navigateToRun(
+                    runSelection.activeRun!.threadId,
+                    runSelection.activeRun!.runId,
+                  );
+                }}
+              >
+                返回活动对话
+              </a>
+            </div>
+          ) : null}
+          {showChat && !threadDeletedPlaceholder && threadId && policyRepairRequired ? (
+            // 对话成员策略需要修复时的失败关闭入口（UCD §9.1.4）；策略就绪即不挂载。
+            <ThreadPolicyPanel
+              projectId={projectId}
+              repairOnly
+              threadId={threadId}
+            />
           ) : null}
           {showChat && surface !== "chat" && state ? (
             <section aria-label="待处理消息队列" className="run-detail" role="region">

@@ -19,12 +19,12 @@ import { createStepGate } from "./smoke-steps.mjs";
 import { stopServerTree } from "./runner-process.mjs";
 
 const host = "127.0.0.1";
-const port = 4100 + (process.pid % 500);
+// COCKPIT_SMOKE_PORT：smoke-suite.mjs 并行 lane 用固定端口隔离；独立运行保持原 pid 派生段不变。
+const port = Number(process.env.COCKPIT_SMOKE_PORT ?? 4100 + (process.pid % 500));
 const baseUrl = `http://${host}:${port}`;
 const temporaryDirectory = mkdtempSync(join(tmpdir(), "cool-ai-smoke-"));
 const databasePath = join(temporaryDirectory, "smoke.sqlite");
 const workspaceDirectory = join(temporaryDirectory, "real-workspace");
-const smokeDistDirectory = `.next-smoke-${process.pid}`;
 const evidenceDirectory = resolve("features", "001-walking-skeleton", "evidence");
 const smokeScreenshot = join(evidenceDirectory, "smoke-desktop.png");
 const narrowScreenshot = join(evidenceDirectory, "smoke-workbench-narrow.png");
@@ -69,21 +69,19 @@ mkdirSync(evidenceDirectory, { recursive: true });
 mkdirSync(currentEvidenceDirectory, { recursive: true });
 mkdirSync(workspaceDirectory);
 
-const serverCommand =
-  process.platform === "win32"
-    ? {
-        command: "cmd.exe",
-        args: [
-          "/d",
-          "/s",
-          "/c",
-          `npm run dev -- --hostname ${host} --port ${port}`,
-        ],
-      }
-    : {
-        command: "npm",
-        args: ["run", "dev", "--", "--hostname", host, "--port", String(port)],
-      };
+// 与其余冒烟脚本一致：生产模式 next start（需要先有 .next 构建；smoke-suite.mjs 或 npm run build 先行）。
+// 不再走 next dev：按需编译是整轮冒烟 20-35 分钟的主要耗时来源。
+const serverCommand = {
+  command: process.execPath,
+  args: [
+    join("node_modules", "next", "dist", "bin", "next"),
+    "start",
+    "--hostname",
+    host,
+    "--port",
+    String(port),
+  ],
+};
 
 const server = spawn(serverCommand.command, serverCommand.args, {
   cwd: process.cwd(),
@@ -92,7 +90,6 @@ const server = spawn(serverCommand.command, serverCommand.args, {
     COCKPIT_DB_PATH: databasePath,
     COCKPIT_ALLOW_SCRIPTED_PICKER: "1",
     COCKPIT_SCRIPTED_DIRECTORY: workspaceDirectory,
-    NEXT_DIST_DIR: smokeDistDirectory,
   },
   stdio: ["ignore", "pipe", "pipe"],
   windowsHide: true,
@@ -115,7 +112,7 @@ async function waitForServer() {
   const deadline = Date.now() + 120_000;
   while (Date.now() < deadline) {
     if (server.exitCode !== null) {
-      throw new Error(`Development server exited early.\n${serverOutput}`);
+      throw new Error(`Smoke app server exited early.\n${serverOutput}`);
     }
     try {
       const response = await fetch(baseUrl);
@@ -125,7 +122,7 @@ async function waitForServer() {
     }
     await new Promise((resolveDelay) => setTimeout(resolveDelay, 500));
   }
-  throw new Error(`Development server did not become ready.\n${serverOutput}`);
+  throw new Error(`Smoke app server did not become ready.\n${serverOutput}`);
 }
 
 async function assertAxeCriticalFree(page, routeLabel) {
@@ -228,6 +225,10 @@ try {
     await page.setViewportSize({ width: 390, height: 844 });
     await page.reload({ waitUntil: "networkidle" });
     await page.getByRole("button", { name: "打开编辑" }).waitFor({ state: "attached" });
+    // 与 desktop 步骤的「暂无对话」等待对齐：空项目窄屏的主表面是 chat-empty-hero；
+    // 生产模式下 reload 后 threads 请求异步返回，必须等到主表面落地再截图，
+    // 否则会把空白主区冻进像素基线（网络静止早于自动选中链完成）。
+    await page.getByText("开启项目协作", { exact: true }).waitFor();
 
     const overflow = await page.evaluate(() => ({
       clientWidth: document.documentElement.clientWidth,
@@ -342,6 +343,5 @@ try {
 } finally {
   await browser?.close();
   stopServer();
-  rmSync(resolve(smokeDistDirectory), { force: true, recursive: true });
   rmSync(temporaryDirectory, { force: true, recursive: true });
 }

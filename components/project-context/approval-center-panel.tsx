@@ -31,6 +31,14 @@ const DOMAIN_VARIANT: Record<ApprovalCenterDomain, string> = {
   knowledge: "status-queued",
 };
 
+// 顶栏状态筛选的展示顺序（与 UCD §9.2.5 一致：待裁决在前）。
+const STATUS_FILTER_ORDER: ApprovalCenterItemStatus[] = [
+  "pending",
+  "expired",
+  "replaced",
+  "revoked",
+];
+
 const KIND_COPY: Record<ApprovalCenterItemKind, string> = {
   command: "命令",
   memory_publish: "知识发布",
@@ -71,6 +79,20 @@ type DecideAction = "approve" | "reject";
 
 function isRecord(value: unknown): value is Record<string, unknown> {
   return typeof value === "object" && value !== null && !Array.isArray(value);
+}
+
+// U-14 同族：审批条目的创建时间同样本地化为 zh-CN 短时，ISO 保留在 dateTime。
+const LOCAL_TIME_FORMAT = new Intl.DateTimeFormat("zh-CN", {
+  day: "2-digit",
+  hour: "2-digit",
+  minute: "2-digit",
+  month: "2-digit",
+  year: "numeric",
+});
+
+function localTime(timestamp: string): string {
+  const parsed = new Date(timestamp);
+  return Number.isNaN(parsed.getTime()) ? timestamp : LOCAL_TIME_FORMAT.format(parsed);
 }
 
 function parsePage(payload: unknown): ApprovalCenterItemDto[] {
@@ -138,6 +160,11 @@ function sourceThreadHref(projectId: string, sourceRef: ApprovalCenterSourceRef)
 
 export function ApprovalCenterPanel({ projectId }: { projectId: string }) {
   const [items, setItems] = useState<ApprovalCenterItemDto[]>([]);
+  // UCD §9.2.5 顶栏状态筛选：默认「全部」（含失效可辨识项，救援流程依赖其可见）；
+  // 已落定请求（已批准/已驳回）按契约语义不入列，历史归档见统一审计中心。
+  const [statusFilter, setStatusFilter] = useState<
+    ApprovalCenterItemStatus | "all"
+  >("all");
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [decidingId, setDecidingId] = useState<string | null>(null);
@@ -277,6 +304,14 @@ export function ApprovalCenterPanel({ projectId }: { projectId: string }) {
     );
   }
 
+  const statusCounts = items.reduce<Record<string, number>>((acc, item) => {
+    acc[item.status] = (acc[item.status] ?? 0) + 1;
+    return acc;
+  }, {});
+  const visibleItems = statusFilter === "all"
+    ? items
+    : items.filter((item) => item.status === statusFilter);
+
   return (
     <section
       aria-labelledby={`approval-center-title-${projectId}`}
@@ -303,19 +338,40 @@ export function ApprovalCenterPanel({ projectId }: { projectId: string }) {
         </div>
       ) : (
         <>
-          <div>
+          <div className="approval-center-toolbar">
             <button className="button-secondary" onClick={refresh} type="button">
               刷新列表
             </button>
+            <div className="form-field approval-status-filter">
+              <label htmlFor={`approval-status-${projectId}`}>状态</label>
+              <select
+                id={`approval-status-${projectId}`}
+                onChange={(event) =>
+                  setStatusFilter(event.target.value as ApprovalCenterItemStatus | "all")
+                }
+                value={statusFilter}
+              >
+                <option value="all">{`全部 (${items.length})`}</option>
+                {STATUS_FILTER_ORDER.map((status) => (
+                  <option key={status} value={status}>
+                    {`${STATUS_COPY[status]} (${statusCounts[status] ?? 0})`}
+                  </option>
+                ))}
+              </select>
+            </div>
           </div>
-          {items.length === 0 ? (
-            <p className="state-message">没有待裁决的请求。</p>
+          {visibleItems.length === 0 ? (
+            <p className="state-message">
+              {statusFilter === "pending" || statusFilter === "all"
+                ? "没有待裁决的请求。"
+                : `没有${STATUS_COPY[statusFilter]}的请求。`}
+            </p>
           ) : (
             <ol
               aria-label="待裁决请求"
               className="stack approval-center-list"
             >
-              {items.map((item) => {
+              {visibleItems.map((item) => {
                 const displayTitle = item.title ?? KIND_COPY[item.kind];
                 const decisionError = decisionErrors[item.approvalId];
                 return (
@@ -333,7 +389,7 @@ export function ApprovalCenterPanel({ projectId }: { projectId: string }) {
                     <p>
                       <span>{KIND_COPY[item.kind]}</span>
                       {" · "}
-                      <time dateTime={item.createdAt}>{item.createdAt}</time>
+                      <time dateTime={item.createdAt}>{localTime(item.createdAt)}</time>
                     </p>
                     {item.impactSummary ? <p>{item.impactSummary}</p> : null}
                     {item.decisionHint !== null ? (

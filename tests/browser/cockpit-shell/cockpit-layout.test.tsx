@@ -262,8 +262,15 @@ describe("desktop collaboration cockpit", () => {
     expect(back).toHaveClass("btn-back-chat");
     expect(within(cockpit).queryByText("治理视图")).toBeNull();
     expect(
-      within(cockpit).getByRole("heading", { name: "任务看板 · Launch plan" }),
+      within(cockpit).getByRole("heading", {
+        name: "使命与任务看板 · Launch plan",
+      }),
     ).toBeVisible();
+    // UCD §9.2.1 顶栏工具条：右侧「＋ 新建任务」主按钮；单一看板表面无视图切换。
+    expect(
+      within(cockpit).getByRole("button", { name: "＋ 新建任务" }),
+    ).toBeVisible();
+    expect(within(cockpit).queryByRole("button", { name: /列表/ })).toBeNull();
     expect(within(cockpit).getByRole("heading", { name: "使命看板" })).toHaveClass(
       "sr-only",
     );

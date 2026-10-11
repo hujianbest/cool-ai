@@ -18,9 +18,12 @@ import { DatabaseSync } from "node:sqlite";
 import AxeBuilder from "@axe-core/playwright";
 import { chromium } from "playwright";
 
+import { createStepGate } from "./smoke-steps.mjs";
+
 const host = "127.0.0.1";
 const portSeed = randomBytes(4).readUInt32BE();
-const appPort = 10_000 + (portSeed % 20_000);
+// COCKPIT_SMOKE_PORT：smoke-suite.mjs 并行 lane 用固定端口隔离；独立运行保持原随机段不变。
+const appPort = Number(process.env.COCKPIT_SMOKE_PORT ?? 10_000 + (portSeed % 20_000));
 const providerPort = appPort + 1;
 const baseUrl = `http://${host}:${appPort}`;
 const providerBaseUrl = `http://${host}:${providerPort}/v1`;
@@ -996,6 +999,12 @@ const AUDIT_EVENT_TYPE_COPY = {
   tool_succeeded: "工具调用成功",
   usage_recorded: "用量已记录",
 };
+// 步骤控制（tests/browser/smoke-steps.mjs）：--list-steps 查看步骤表。
+// 本脚本的逐步包裹（gate.run）随该脚本的下一次修复批次接入；当前切片请求会被
+// 显式拒绝（wired:false），避免误以为已切片。最终 DoD 必须不带参全量跑。
+const gate = createStepGate("execution-browser-smoke", ["setup", "public-start-isolation", "operation-replay", "approval-center", "merge", "stale", "conflict", "manual-recovery", "execution-cards", "lapsed", "rescue", "center-lapsed", "audit-api", "governance-audit", "runtime-audit", "run-timeline", "terminal-preview", "narrow", "security-scan"], process.argv.slice(2), { wired: false });
+if (gate.listOnly) process.exit(0);
+
 try {
   await listen(provider, providerPort);
   assert.ok(

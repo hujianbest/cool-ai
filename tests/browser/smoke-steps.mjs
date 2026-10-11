@@ -27,7 +27,8 @@ function parseStepArgs(rawArgs) {
   return args;
 }
 
-export function createStepGate(label, declaredSteps, rawArgs = process.argv.slice(2)) {
+export function createStepGate(label, declaredSteps, rawArgs = process.argv.slice(2), options = {}) {
+  const { wired = true } = options;
   const args = parseStepArgs(rawArgs);
   const declared = [...declaredSteps];
   const slicing = Boolean(args.fromStep || args.onlyStep);
@@ -38,7 +39,7 @@ export function createStepGate(label, declaredSteps, rawArgs = process.argv.slic
   let targetSeen = false;
 
   if (args.list) {
-    console.log(`STEPS [${label}] ${declared.join(", ")}`);
+    console.log(`STEPS [${label}] ${declared.join(", ")}${wired ? "" : "（切片尚未接入，仅登记）"}`);
     return {
       args,
       listOnly: true,
@@ -47,6 +48,13 @@ export function createStepGate(label, declaredSteps, rawArgs = process.argv.slic
       assertResolved: () => {},
       summary: () => ({ label, listOnly: true, steps: [...declared] }),
     };
+  }
+
+  if (!wired && slicing) {
+    // 未接入切片的脚本：拒绝静默全量执行，避免把「切片」误当已生效。
+    throw new Error(
+      `${label}: 切片尚未接入本脚本（步骤仅登记）；请不带参全量运行，或先为该脚本接入 gate.run()。`,
+    );
   }
 
   const target = args.onlyStep ?? args.fromStep;
@@ -82,12 +90,16 @@ export function createStepGate(label, declaredSteps, rawArgs = process.argv.slic
   }
 
   function assertResolved() {
-    const missing = declared.filter((id) => !seen.has(id));
-    if (missing.length > 0) {
-      throw new Error(`${label}: 步骤表与代码不一致，未到达：${missing.join(", ")}`);
-    }
     if (target && !targetSeen) {
       throw new Error(`${label}: 目标步骤 "${target}" 未执行`);
+    }
+    const missing = declared.filter((id) => !seen.has(id));
+    if (missing.length > 0) {
+      // 全量运行是硬约束：步骤表与代码不一致说明漏接/错接。
+      if (!slicing) {
+        throw new Error(`${label}: 步骤表与代码不一致，未到达：${missing.join(", ")}`);
+      }
+      console.log(`${label}: 提示——声明但未包裹的步骤：${missing.join(", ")}`);
     }
     return ran;
   }

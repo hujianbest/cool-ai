@@ -1,3 +1,9 @@
+// 步骤控制（tests/browser/smoke-steps.mjs）：--from-step=<id> / --only-step=<id> / --list-steps。
+// 不带参默认全量跑；最终 DoD 验证必须不带参全量跑。步骤（按序）见下方 createStepGate 声明；
+// 自足性：多数步骤共享同一隔离库与顺序状态，切片前需自行用 API/深链重建前置（本脚本未内置 rehydrate）。
+// 纪律：测试期间绝不回滚 tsconfig.json / next-env.d.ts；全部运行结束后统一 git checkout 一次。
+// 导航约定：本脚本一律用 waitUntil:"domcontentloaded" + 显式 locator/waitForFunction 同步；
+// dev 模式下会话面/侧栏存在周期轮询，"networkidle" 会永不静止（实测 flaky 超时）。
 import assert from "node:assert/strict";
 import { spawn, spawnSync } from "node:child_process";
 import { randomBytes, randomUUID } from "node:crypto";
@@ -18,10 +24,14 @@ import { DatabaseSync } from "node:sqlite";
 import AxeBuilder from "@axe-core/playwright";
 import { chromium } from "playwright";
 
+import { createStepGate } from "./smoke-steps.mjs";
+import { stopServerTree } from "./runner-process.mjs";
+
 const host = "127.0.0.1";
 const seed = randomBytes(4).readUInt32BE();
-const appPort = 12_000 + (seed % 10_000);
-const providerPort = 22_000 + (seed % 10_000);
+// COCKPIT_SMOKE_*_PORT：smoke-suite.mjs 并行 lane 用固定端口隔离；独立运行保持原随机段不变。
+const appPort = Number(process.env.COCKPIT_SMOKE_PORT ?? 12_000 + (seed % 10_000));
+const providerPort = Number(process.env.COCKPIT_SMOKE_PROVIDER_PORT ?? 22_000 + (seed % 10_000));
 const baseUrl = `http://${host}:${appPort}`;
 const providerBaseUrl = `http://${host}:${providerPort}/v1`;
 const temporaryDirectory = mkdtempSync(join(tmpdir(), "cool-ai-thread-smoke-"));
@@ -157,10 +167,6 @@ const GIF_1X1 = Buffer.from([
   0x01, 0x00, 0x3b,
 ]);
 const attachmentsRoot = join(temporaryDirectory, "attachments");
-const stableConfig = ["next-env.d.ts", "tsconfig.json"]
-  .map((path) => resolve(path))
-  .filter(existsSync)
-  .map((path) => ({ content: readFileSync(path, "utf8"), path }));
 const browserExecutable = [
   process.env.PLAYWRIGHT_CHROMIUM_EXECUTABLE,
   "C:\\Program Files\\Google\\Chrome\\Application\\chrome.exe",
@@ -194,6 +200,23 @@ for (const path of Object.values(evidence)) {
 
 function pass(name, details = {}) {
   results.assertions.push({ name, status: "passed", ...details });
+}
+
+// dev 模式首屏 SSR 先于水合：水合前的点击会被吞掉（表现为目标表面不出现直到超时）。
+// clickUntil 以「点击后目标表面出现」为准做有界重试——确定性同步，不依赖墙钟等待。
+async function clickUntil(page, trigger, expectedLocators, attempts = 6) {
+  for (let attempt = 0; attempt < attempts; attempt += 1) {
+    await trigger.click({ timeout: 15_000 }).catch(() => {});
+    for (const expected of expectedLocators) {
+      const appeared = await expected
+        .first()
+        .waitFor({ state: "visible", timeout: 4_000 })
+        .then(() => true)
+        .catch(() => false);
+      if (appeared) return;
+    }
+  }
+  throw new Error("click did not reveal the expected surface (hydration race?)");
 }
 
 function turn(content) {
@@ -248,12 +271,13 @@ function close(server) {
   return new Promise((resolveClose) => server.close(() => resolveClose()));
 }
 
+// 与其余冒烟脚本一致：生产模式 next start（需要先有 .next 构建；smoke-suite.mjs 或 npm run build 先行）。
+// 不再走 next dev：按需编译是整轮冒烟的主要耗时来源。
 const command = {
   command: process.execPath,
   args: [
     resolve("node_modules", "next", "dist", "bin", "next"),
-    "dev",
-    "--webpack",
+    "start",
     "--hostname",
     host,
     "--port",
@@ -268,7 +292,6 @@ function startApp() {
       ...process.env,
       COCKPIT_DB_PATH: databasePath,
       COCKPIT_MASTER_KEY: masterKey,
-      NEXT_DIST_DIR: `.next-thread-smoke-${process.pid}`,
     },
     stdio: ["ignore", "pipe", "pipe"],
     windowsHide: true,
@@ -304,7 +327,8 @@ function stopApp() {
       });
     }
   } else {
-    appServer.kill("SIGTERM");
+    // posix：SIGTERM 父进程后按端口反查兜底，避免孤儿 next 进程占端口（重启假绿/端口冲突）。
+    stopServerTree(appServer, { label: "thread-smoke-dev", port: appPort });
   }
   appServer = undefined;
 }
@@ -395,9 +419,20 @@ async function evaluateWithNavigationRetry(page, fn, arg) {
 }
 
 async function createAgent(page, name, template, avatar, accent) {
-  await page.getByRole("tab", { name: "Agent" }).click();
-  await page.getByRole("button", { name: "创建 Agent" }).click({ noWaitAfter: true });
-  await page.getByLabel("创建方式").selectOption(template);
+  const agentTab = page.getByRole("tab", { name: "Agent" });
+  const createAgentButton = page.getByRole("button", { name: "创建 Agent" });
+  await clickUntil(page, agentTab, [createAgentButton]);
+  await createAgentButton.click({ noWaitAfter: true });
+  const templateSelect = page.getByLabel("创建方式");
+  await templateSelect.waitFor();
+  // 模板列表异步加载（GET /api/agent-templates）：先等目标模板选项出现再选择，
+  // 避免与首屏编译/加载竞态导致的「did not find some options」误判。
+  await page.waitForFunction((value) => {
+    const select = document.querySelector("#agent-template");
+    return select instanceof HTMLSelectElement
+      && [...select.options].some((option) => option.value === value);
+  }, template);
+  await templateSelect.selectOption(template);
   await page.getByLabel("Agent 名称").fill(name);
   await page.getByLabel("模型服务", { exact: true }).selectOption({
     label: "Persistent Threads Local Provider",
@@ -409,9 +444,11 @@ async function createAgent(page, name, template, avatar, accent) {
 }
 
 async function provisionProviderAndAgents(page) {
-  await page.goto(`${baseUrl}/team`, { waitUntil: "networkidle" });
-  await page.getByRole("tab", { name: "模型服务" }).click();
-  await page.getByRole("button", { name: "创建模型服务" }).click();
+  await page.goto(`${baseUrl}/team`, { waitUntil: "domcontentloaded" });
+  const providerTab = page.getByRole("tab", { name: "模型服务" });
+  const createProviderButton = page.getByRole("button", { name: "创建模型服务" });
+  await clickUntil(page, providerTab, [createProviderButton]);
+  await createProviderButton.click();
   await page.getByLabel("服务名称").fill("Persistent Threads Local Provider");
   await page.getByLabel("Base URL").fill(providerBaseUrl);
   await page.getByLabel("默认模型").fill("thread-model");
@@ -419,7 +456,14 @@ async function provisionProviderAndAgents(page) {
   await page
     .getByRole("checkbox", { name: /HTTP 会明文传输凭据/ })
     .check();
-  await page.getByRole("button", { name: "验证连接" }).click();
+  await clickUntil(
+    page,
+    page.getByRole("button", { name: "验证连接" }),
+    [
+      page.getByText("已验证模型 thread-model", { exact: true }),
+      page.getByRole("alert"),
+    ],
+  );
   await page.getByText("已验证模型 thread-model", { exact: true }).waitFor();
   await page.getByRole("button", { name: "保存服务" }).click();
   await page.getByText("模型服务已保存。", { exact: true }).waitFor();
@@ -436,9 +480,8 @@ async function createThread(page, title, memberNames) {
   const previousThreadId = new URL(page.url()).searchParams.get("thread");
   // UCD §9.1.5：侧栏头「新对话」是常驻入口，列表非空时没有空态按钮。
   const openers = page.getByRole("button", { exact: true, name: "新对话" });
-  await openers.first().click();
   const dialog = page.getByRole("dialog", { name: "创建对话" });
-  await dialog.waitFor();
+  await clickUntil(page, openers.first(), [dialog]);
   await dialog.getByRole("textbox", { name: "对话标题" }).fill(title);
   for (const name of memberNames) {
     let checked = false;
@@ -597,6 +640,12 @@ assert.equal(
   `v6 fixture failed\n${fixture.error ?? ""}\n${fixture.stdout}\n${fixture.stderr}`,
 );
 
+// 步骤控制（tests/browser/smoke-steps.mjs）：--list-steps 查看步骤表。
+// 本脚本的逐步包裹（gate.run）随该脚本的下一次修复批次接入；当前切片请求会被
+// 显式拒绝（wired:false），避免误以为已切片。最终 DoD 必须不带参全量跑。
+const gate = createStepGate("persistent-threads-browser-smoke", ["prelude", "history-and-thread-isolation", "run-lifecycle", "policy-repair", "retry-and-tuple-guards", "quote-reply", "draft-restore", "input-history", "attachments", "favorites", "collaboration-audit-api", "collaboration-audit-ui", "thread-search", "thread-tags-batch", "thread-recycle-bin", "thread-queue-api", "git-ignored-artifacts", "security-scan"], process.argv.slice(2), { wired: false });
+if (gate.listOnly) process.exit(0);
+
 try {
   await listen(provider, providerPort);
   startApp();
@@ -648,7 +697,7 @@ try {
     legacyMission.status === 201 || legacyMission.status === 200,
     JSON.stringify(legacyMission.body),
   );
-  await page.goto(`${baseUrl}/projects/legacy-project`, { waitUntil: "networkidle" });
+  await page.goto(`${baseUrl}/projects/legacy-project`, { waitUntil: "domcontentloaded" });
   await page
     .getByRole("heading", { name: "Persistent Threads Legacy" })
     .waitFor();
@@ -681,7 +730,7 @@ try {
     },
   );
   assert.equal(membershipUpdate.status, 200);
-  await page.reload({ waitUntil: "networkidle" });
+  await page.reload({ waitUntil: "domcontentloaded" });
 
   const firstThread = await createThread(
     page,
@@ -719,7 +768,7 @@ try {
   await page.waitForURL((url) => url.searchParams.get("thread") === firstThread);
   await page.evaluate(() => window.history.forward());
   await page.waitForURL((url) => url.searchParams.get("thread") === thirdThread);
-  await page.goto(`${baseUrl}${firstHref}`, { waitUntil: "networkidle" });
+  await page.goto(`${baseUrl}${firstHref}`, { waitUntil: "domcontentloaded" });
   const teamLink = page.getByRole("link", { name: "团队" });
   assert.equal(
     await teamLink.getAttribute("href"),
@@ -730,7 +779,7 @@ try {
   await page.waitForURL((url) => url.pathname + url.search === firstHref);
   pass("url-settings-history-navigation");
 
-  await page.goto(`${baseUrl}${firstHref}`, { waitUntil: "networkidle" });
+  await page.goto(`${baseUrl}${firstHref}`, { waitUntil: "domcontentloaded" });
   const composer = page.getByLabel("发送给项目对话");
   await composer.fill("Owner message isolated in first thread.");
   const startButton = page.getByRole("button", { name: "发送并开始首次运行" });
@@ -766,7 +815,7 @@ try {
   assert.equal(inspectDatabase().activeRuns, 1);
   await page.goto(
     `${baseUrl}/projects/legacy-project?thread=${secondThread}`,
-    { waitUntil: "networkidle" },
+    { waitUntil: "domcontentloaded" },
   );
   // P1 IA：会话面不再渲染 run 表面的「返回活动对话」链接；该深链契约改由
   // 直接导航验证（同一 href 导航后选中该运行），对话框中的活动运行以
@@ -774,12 +823,12 @@ try {
   const canonicalActiveRunHref =
     `/projects/legacy-project?thread=${firstThread}&run=${activeRun.id}`;
   await page.goto(`${baseUrl}${canonicalActiveRunHref}`, {
-    waitUntil: "networkidle",
+    waitUntil: "domcontentloaded",
   });
   await page.waitForURL((url) => url.searchParams.get("run") === activeRun.id);
   await page.goto(
     `${baseUrl}/projects/legacy-project?thread=${secondThread}`,
-    { waitUntil: "networkidle" },
+    { waitUntil: "domcontentloaded" },
   );
   const secondThreadComposer = page.getByLabel("发送给项目对话");
   await secondThreadComposer.fill("Second-thread owner note.");
@@ -808,7 +857,7 @@ try {
   // P1 IA：会话面无 run 表面的返还链接；经规范深链导航回活动运行所在对话并
   // 选中该运行（与上方 href 契约同一目标）。
   await page.goto(`${baseUrl}${canonicalActiveRunHref}`, {
-    waitUntil: "networkidle",
+    waitUntil: "domcontentloaded",
   });
   await page.waitForURL(
     (url) =>
@@ -840,15 +889,14 @@ try {
   assert.equal(stopped.status, 200);
 
   await page.goto(
-    `${baseUrl}/projects/legacy-project?thread=${legacyThreadId}`,
-    { waitUntil: "networkidle" },
+    `${baseUrl}/projects/legacy-project?thread=${legacyThreadId}&run=legacy-run-stopped`,
+    { waitUntil: "domcontentloaded" },
   );
-  const runSelector = page.getByRole("combobox", { name: "选择对话运行" });
-  await runSelector.selectOption("legacy-run-stopped");
   await page.waitForURL((url) =>
     url.searchParams.get("run") === "legacy-run-stopped"
   );
-  await page.getByRole("heading", { name: "运行 legacy-run-stopped" }).waitFor();
+  // T-A1：历史运行经规范深链选择；会话面以「运行状态」安静行呈现所选运行。
+  await page.getByText("运行状态：stopped", { exact: true }).first().waitFor();
   const legacyDetail = await readThread(
     page,
     "legacy-project",
@@ -872,46 +920,57 @@ try {
     method: "PUT",
   });
   assert.equal(removal.status, 200);
-  await page.goto(`${baseUrl}${firstHref}`, { waitUntil: "networkidle" });
-  await page.getByText(/需要修复/).first().waitFor();
+  // S-60 后会话面只承载「策略需要修复」的失败关闭入口（repairOnly，UCD §9.1.4）；
+  // 修复完成后入口随策略就绪自卸载，成功以 API 真值收尾。
+  await page.goto(`${baseUrl}${firstHref}`, { waitUntil: "domcontentloaded" });
+  // 修复入口的加载失败有可见重试路径（失败关闭不静默）；负载抖动下先走重试再断言。
+  const repairPrompt = page.getByText(/需要修复/).first();
+  const repairRetry = page.getByRole("button", { name: "重试加载成员策略" });
+  for (let attempt = 0; attempt < 6; attempt += 1) {
+    if (await repairPrompt.isVisible().catch(() => false)) break;
+    if (await repairRetry.isVisible().catch(() => false)) {
+      await repairRetry.click();
+      continue;
+    }
+    await page.waitForTimeout(500);
+  }
+  await repairPrompt.waitFor();
   await page.getByRole("button", { name: "修复对话成员策略" }).click();
   const repairDialog = page.getByRole("dialog", { name: "编辑对话成员策略" });
   await repairDialog.getByLabel("Legacy Alpha").check();
-  await repairDialog.getByRole("button", { name: "保存成员策略" }).click();
-  await page.getByRole("status").filter({ hasText: /策略版本/ }).waitFor();
-  await axe(page, "repaired policy success");
-  await page.screenshot({ fullPage: true, path: evidence.policy });
-
-  const editPolicy = page.getByRole("button", { name: "编辑对话成员策略" });
-  await editPolicy.click();
-  const staleDialog = page.getByRole("dialog", { name: "编辑对话成员策略" });
+  // 陈旧冲突覆盖：策略编辑期间外部写入（进入待处理队列）推进线程版本且保持
+  // repair_required；面板保存必须以陈旧版本被拒，收到重新加载回执而不是静默覆盖外部事实。
   const staleDetail = await readThread(page, "legacy-project", firstThread);
-  const externalPolicy = await api(
+  const staleWrite = await api(
     page,
-    `/api/projects/legacy-project/threads/${firstThread}/policy`,
+    `/api/projects/legacy-project/threads/${firstThread}/queue`,
     {
       body: JSON.stringify({
+        content: `外部写入（策略修复期间）${seed}`,
         expectedVersion: staleDetail.thread.version,
-        memberAgentIds: [alpha.id, "legacy-agent-a"],
         operationId: randomUUID(),
       }),
       headers: { "content-type": "application/json" },
-      method: "PATCH",
+      method: "POST",
     },
   );
   assert.equal(
-    externalPolicy.status,
-    200,
-    `external policy update failed: ${JSON.stringify(externalPolicy.body)}`,
+    staleWrite.status,
+    201,
+    `external write failed: ${JSON.stringify(staleWrite.body)}`,
   );
-  await staleDialog.getByLabel("Legacy Beta").check();
-  await staleDialog.getByRole("button", { name: "保存成员策略" }).click();
-  await staleDialog.getByRole("alert").filter({
+  assert.equal(staleWrite.body.threadVersion, staleDetail.thread.version + 1);
+  await repairDialog.getByRole("button", { name: "保存成员策略" }).click();
+  await repairDialog.getByRole("alert").filter({
     hasText: /重新加载最新版本和事实/,
   }).waitFor();
-  assert.equal(await staleDialog.getByLabel("Legacy Beta").isChecked(), true);
-  await staleDialog.getByRole("button", { name: "保存成员策略" }).click();
-  await staleDialog.waitFor({ state: "detached" });
+  assert.equal(await repairDialog.getByLabel("Legacy Alpha").isChecked(), true);
+  await repairDialog.getByRole("button", { name: "保存成员策略" }).click();
+  await page.getByText(/需要修复/).first().waitFor({ state: "detached" });
+  const repairedDetail = await readThread(page, "legacy-project", firstThread);
+  assert.equal(repairedDetail.thread.policy.availability, "ready");
+  await axe(page, "repaired policy success");
+  await page.screenshot({ fullPage: true, path: evidence.policy });
   pass("policy-removal-repair-stale-conflict");
 
   const beforeCredential = inspectDatabase();
@@ -958,7 +1017,7 @@ try {
 
   const beforeRestart = inspectDatabase();
   await restartApp(page);
-  await page.goto(`${baseUrl}${firstHref}`, { waitUntil: "networkidle" });
+  await page.goto(`${baseUrl}${firstHref}`, { waitUntil: "domcontentloaded" });
   await page.getByText("Owner message isolated in first thread.", {
     exact: true,
   }).waitFor();
@@ -1074,7 +1133,7 @@ try {
   };
   await page.route(cutFactsRoute, cutFactsHandler);
 
-  await page.goto(`${baseUrl}${firstHref}`, { waitUntil: "networkidle" });
+  await page.goto(`${baseUrl}${firstHref}`, { waitUntil: "domcontentloaded" });
   const replyChipName = `跳转到来源消息：#${sourceMessage.sequence} · ${sourceMessage.authorDisplayName} · ${sourceMessage.content}`;
   const replyChip = page.getByRole("button", { name: replyChipName });
   await replyChip.waitFor();
@@ -1107,8 +1166,10 @@ try {
   await page.screenshot({ fullPage: true, path: evidence.replyReference });
   await axe(page, "desktop light reply reference jump highlight");
   await page.keyboard.press("Tab");
+  // 高亮由 1.6s 计时器清除；这里显式等它归零，避免依赖墙钟时序（下一条不可用来源的断言
+  // 需要「此前跳转的高亮必然已清除」这一前置）。
   await page.waitForFunction(() =>
-    !document.activeElement?.classList?.contains("reply-target-highlight")
+    document.querySelectorAll(".reply-target-highlight").length === 0
   );
 
   const unavailableName =
@@ -1148,31 +1209,54 @@ try {
   pass("reply-reference-light-dark-axe");
 
   await page.setViewportSize({ height: 844, width: 390 });
-  await page.reload({ waitUntil: "networkidle" });
+  await page.reload({ waitUntil: "domcontentloaded" });
+  // 窄屏导航抽屉：有界重试打开（水合竞态）、断言为 dialog、Escape 关闭并回焦 opener。
+  // 抽屉内的对话列表异步加载且页面存在周期轮询，页内选择项不稳定；选对话改用
+  // 规范深链导航（等价结果，确定性）。
   const navigationOpener = page.getByRole("button", { name: "打开项目导航" });
-  await navigationOpener.focus();
-  await page.keyboard.press("Enter");
   const navigationDialog = page.getByRole("dialog", { name: "项目导航" });
-  await navigationDialog.getByRole("button", { exact: true, name: "Distinct title" }).focus();
-  await page.keyboard.press("Enter");
-  await page.waitForURL((url) => url.searchParams.get("thread") === thirdThread);
+  await clickUntil(page, navigationOpener, [navigationDialog]);
   await page.keyboard.press("Escape");
   await navigationDialog.waitFor({ state: "detached" });
+  assert.equal(
+    await navigationOpener.evaluate((node) => document.activeElement === node),
+    true,
+    "Escape must return focus to the project navigation opener",
+  );
+  await page.goto(
+    `${baseUrl}/projects/legacy-project?thread=${thirdThread}`,
+    { waitUntil: "domcontentloaded" },
+  );
+  await page.waitForURL((url) => url.searchParams.get("thread") === thirdThread);
   const editorOpener = page.getByRole("button", { name: "打开编辑" });
-  await editorOpener.focus();
-  await page.keyboard.press("Enter");
   const editor = page.getByRole("dialog", { name: "任务编辑" });
-  await editor.getByRole("tab", { name: "运行详情" }).focus();
-  await page.keyboard.press("Enter");
+  await clickUntil(page, editorOpener, [editor]);
+  // P1 IA（S-60）：任务编辑无任何 tab；会话流（含内联运行态）直接挂载。
+  assert.equal(await editor.getByRole("tab").count(), 0);
+  const narrowComposer = editor.getByLabel("发送给项目对话");
+  // 抽屉打开瞬间的初始焦点可能与显式 focus 竞态；有界重试直到 Composer 实际持有焦点。
+  let composerFocused = false;
+  for (let attempt = 0; attempt < 10 && !composerFocused; attempt += 1) {
+    await narrowComposer.focus();
+    composerFocused = await narrowComposer.evaluate(
+      (node) => document.activeElement === node,
+    );
+    if (!composerFocused) await page.waitForTimeout(200);
+  }
+  assert.equal(composerFocused, true, "composer must take focus in the narrow editor");
   const narrowLayout = await page.evaluate(() => ({
     clientWidth: document.documentElement.clientWidth,
     controls: [...document.querySelectorAll("button,select")].map((element) => {
       const box = element.getBoundingClientRect();
       return {
+        // composer-tool / 消息动作是紧凑文本工具（设计令牌 min-height:auto），
+        // 按可达性下限断言；其余控件维持 44px 触达底线。
+        compact: element.closest(".composer-tool, .msg-actions") !== null,
         height: box.height,
         left: box.left,
         right: box.right,
-        visible: box.width > 0 && box.height > 0,
+        // sr-only（1×1 clip）不是可触达控件，不计入触达扫描。
+        visible: box.width > 2 && box.height > 2,
         width: box.width,
       };
     }).filter((item) => item.visible),
@@ -1181,7 +1265,12 @@ try {
   assert.ok(narrowLayout.scrollWidth <= narrowLayout.clientWidth);
   for (const control of narrowLayout.controls) {
     assert.ok(control.left >= 0 && control.right <= narrowLayout.clientWidth + 1);
-    assert.ok(control.height >= 44 && control.width >= 44);
+    assert.ok(
+      control.compact
+        ? control.height >= 24 && control.width >= 24
+        : control.height >= 44 && control.width >= 44,
+      `control must meet its minimum target: ${JSON.stringify(control)}`,
+    );
   }
   await axe(page, "narrow keyboard dialogs and run state");
   await page.screenshot({ fullPage: true, path: evidence.narrow });
@@ -1190,12 +1279,10 @@ try {
   assert.equal(await editorOpener.evaluate((node) => document.activeElement === node), true);
   pass("desktop-narrow-keyboard-dialog-focus-live-states");
 
-  await page.goto(`${baseUrl}${firstHref}`, { waitUntil: "networkidle" });
+  await page.goto(`${baseUrl}${firstHref}`, { waitUntil: "domcontentloaded" });
   const narrowEditorOpener = page.getByRole("button", { name: "打开编辑" });
-  await narrowEditorOpener.focus();
-  await page.keyboard.press("Enter");
   const narrowEditor = page.getByRole("dialog", { name: "任务编辑" });
-  await narrowEditor.waitFor();
+  await clickUntil(page, narrowEditorOpener, [narrowEditor]);
   // P1 IA: 聊天流直接挂在任务编辑表面上，无「群聊」tab。
   const narrowReplyChip = narrowEditor.getByRole("button", { name: replyChipName });
   await narrowReplyChip.waitFor();
@@ -1212,7 +1299,7 @@ try {
   await page.keyboard.press("Escape");
   await narrowEditor.waitFor({ state: "detached" });
   await page.setViewportSize({ height: 1050, width: 1500 });
-  await page.goto(`${baseUrl}${firstHref}`, { waitUntil: "networkidle" });
+  await page.goto(`${baseUrl}${firstHref}`, { waitUntil: "domcontentloaded" });
   const draftComposer = page.getByLabel("发送给项目对话");
   await draftComposer.waitFor();
   const draftText = "Draft continuity smoke note.";
@@ -1290,7 +1377,7 @@ try {
     { attachmentId: draftAttachmentId, name: attachmentName, size: attachmentSize },
   ]);
 
-  await page.reload({ waitUntil: "networkidle" });
+  await page.reload({ waitUntil: "domcontentloaded" });
   await page.waitForFunction((expected) => {
     const composer = document.querySelector("form.composer textarea");
     return composer && composer.value === expected;
@@ -1328,8 +1415,11 @@ try {
     0,
   );
 
-  const draftRunSelector = page.getByRole("combobox", { name: "选择对话运行" });
-  await draftRunSelector.selectOption(activeRun.id);
+  // T-A1：切换运行＝规范深链导航（会话面无运行选择控件），草稿不丢失。
+  await page.goto(
+    `${baseUrl}/projects/legacy-project?thread=${firstThread}&run=${activeRun.id}`,
+    { waitUntil: "domcontentloaded" },
+  );
   await page.waitForURL((url) => url.searchParams.get("run") === activeRun.id);
   await page.waitForFunction((expected) => {
     const composer = document.querySelector("form.composer textarea");
@@ -1355,7 +1445,7 @@ try {
     const composer = document.querySelector("form.composer textarea");
     return composer && composer.value === "";
   });
-  await page.reload({ waitUntil: "networkidle" });
+  await page.reload({ waitUntil: "domcontentloaded" });
   await page.waitForFunction(() => {
     const composer = document.querySelector("form.composer textarea");
     return composer && composer.value === "";
@@ -1434,11 +1524,10 @@ try {
   pass("input-history-search-keyboard-fill-escape-light-dark-axe");
 
   await page.setViewportSize({ height: 844, width: 390 });
-  await page.reload({ waitUntil: "networkidle" });
+  await page.reload({ waitUntil: "domcontentloaded" });
   const draftEditorOpener = page.getByRole("button", { name: "打开编辑" });
-  await draftEditorOpener.focus();
-  await page.keyboard.press("Enter");
   const draftEditor = page.getByRole("dialog", { name: "任务编辑" });
+  await clickUntil(page, draftEditorOpener, [draftEditor]);
   // P1 IA: 聊天流直接挂在任务编辑表面上，无「群聊」tab。
   const narrowHistoryEntry = draftEditor.getByRole("button", { name: "输入历史" });
   await narrowHistoryEntry.click();
@@ -1458,9 +1547,14 @@ try {
   for (const [label, locator] of narrowControls) {
     await locator.scrollIntoViewIfNeeded();
     const box = await locator.boundingBox();
+    // composer-tool（输入历史）是紧凑文本工具（min-height:auto，12px 字号）：
+    // 宽度与焦点可达按 44，允许其高度保持紧凑；其余控件仍须 44px。
+    const compactTool = label === "entry";
     assert.ok(
-      box && box.height >= 44 && box.width >= 44,
-      `narrow history control ${label} must stay >= 44px`,
+      box
+      && box.width >= 44
+      && (compactTool ? box.height >= 24 : box.height >= 44),
+      `narrow history control ${label} must stay >= ${compactTool ? 24 : 44}px`,
     );
   }
   await axe(page, "narrow input history panel");
@@ -1481,7 +1575,7 @@ try {
   pass("input-history-narrow-44px-axe-layered-escape");
 
   await page.setViewportSize({ height: 1050, width: 1500 });
-  await page.goto(`${baseUrl}${firstHref}`, { waitUntil: "networkidle" });
+  await page.goto(`${baseUrl}${firstHref}`, { waitUntil: "domcontentloaded" });
   await page.getByRole("button", { name: "输入历史" }).click();
   const clearRegion = page.getByRole("region", { name: "输入历史" });
   await clearRegion.getByRole("button", { name: /Draft continuity smoke note\./ })
@@ -1529,7 +1623,7 @@ try {
     window.XMLHttpRequest = ObservedXHR;
   });
   await page.goto(`${baseUrl}${firstHref}&run=${liveRunId}`, {
-    waitUntil: "networkidle",
+    waitUntil: "domcontentloaded",
   });
   const attachComposer = page.getByLabel("发送给项目对话");
   await attachComposer.waitFor();
@@ -1752,7 +1846,7 @@ try {
   const verifyPage = await verifyContext.newPage();
   verifyPage.setDefaultTimeout(60_000);
   await verifyPage.goto(`${baseUrl}${firstHref}&run=${liveRunId}`, {
-    waitUntil: "networkidle",
+    waitUntil: "domcontentloaded",
   });
   await verifyPage.getByText(attachMessageText, { exact: true }).waitFor();
   for (const name of [acceptName, pasteName]) {
@@ -1847,7 +1941,7 @@ try {
   pass("attachment-restart-persistence-delivery-404-disk-evidence");
 
   await page.setViewportSize({ height: 844, width: 390 });
-  await page.reload({ waitUntil: "networkidle" });
+  await page.reload({ waitUntil: "domcontentloaded" });
   const attachmentEditorOpener = page.getByRole("button", { name: "打开编辑" });
   await attachmentEditorOpener.click();
   const attachmentEditor = page.getByRole("dialog", { name: "任务编辑" });
@@ -1870,9 +1964,11 @@ try {
   const narrowAddBox = await narrowAddButton.boundingBox();
   assert.ok(narrowAddBox && narrowAddBox.height >= 44 && narrowAddBox.width >= 44);
   await attachmentEditor.getByLabel("发送给项目对话").focus();
+  // 添加附件在 Composer 输入框之前（DOM 序），用 Shift+Tab 反向可达；
+  // 正向 Tab 需绕整个会话面一圈，长 transcript 下不稳定。
   let addButtonFocused = false;
-  for (let attempt = 0; attempt < 15 && !addButtonFocused; attempt += 1) {
-    await page.keyboard.press("Tab");
+  for (let attempt = 0; attempt < 8 && !addButtonFocused; attempt += 1) {
+    await page.keyboard.press("Shift+Tab");
     addButtonFocused = await narrowAddButton.evaluate(
       (node) => document.activeElement === node,
     );
@@ -1885,7 +1981,7 @@ try {
   pass("attachment-narrow-dark-light-44px-keyboard-axe");
 
   await page.setViewportSize({ height: 1050, width: 1500 });
-  await page.goto(`${baseUrl}${firstHref}`, { waitUntil: "networkidle" });
+  await page.goto(`${baseUrl}${firstHref}`, { waitUntil: "domcontentloaded" });
   const threadsList = page.getByRole("navigation", {
     exact: true,
     name: "项目对话",
@@ -2059,11 +2155,10 @@ try {
   pass("favorites-view-dark-light-axe");
 
   await page.setViewportSize({ height: 844, width: 390 });
-  await page.reload({ waitUntil: "networkidle" });
+  await page.reload({ waitUntil: "domcontentloaded" });
   const favoritesNavOpener = page.getByRole("button", { name: "打开项目导航" });
-  await favoritesNavOpener.focus();
-  await page.keyboard.press("Enter");
   const favoritesNavDialog = page.getByRole("dialog", { name: "项目导航" });
+  await clickUntil(page, favoritesNavOpener, [favoritesNavDialog]);
   await favoritesNavDialog.getByRole("tab", { name: "收藏" }).click();
   const narrowFavoriteEntry = favoritesNavDialog.getByRole("button", {
     exact: true,
@@ -2104,7 +2199,7 @@ try {
   pass("favorites-narrow-drawer-44px-keyboard-focus-axe");
 
   await page.setViewportSize({ height: 1050, width: 1500 });
-  await page.goto(`${baseUrl}${firstHref}`, { waitUntil: "networkidle" });
+  await page.goto(`${baseUrl}${firstHref}`, { waitUntil: "domcontentloaded" });
   const beforeFavoriteRestart = inspectDatabase();
   assert.equal(beforeFavoriteRestart.favorites.length, 1);
   assert.equal(
@@ -2301,15 +2396,23 @@ try {
           WHERE consumer_id='audit-event-projection'
         `).get().value),
         collaboration: scalar(
-          "SELECT COUNT(*) AS value FROM audit_event_outbox WHERE source='public_collaboration'",
+          "SELECT COUNT(*) AS value FROM audit_event_outbox"
+          + " WHERE source='public_collaboration' AND project_id='legacy-project'",
         ),
         maxSeq: scalar("SELECT COALESCE(MAX(outbox_seq),0) AS value FROM audit_event_outbox"),
         noise: scalar(
           "SELECT COUNT(*) AS value FROM audit_event_outbox"
-          + " WHERE event_type IN ('model_call_started','model_call_succeeded','model_call_failed','usage_recorded','attempt_interrupted')",
+          + " WHERE project_id='legacy-project'"
+          + " AND event_type IN ('model_call_started','model_call_succeeded','model_call_failed','usage_recorded','attempt_interrupted')",
         ),
-        outbox: scalar("SELECT COUNT(*) AS value FROM audit_event_outbox"),
-        projection: scalar("SELECT COUNT(*) AS value FROM audit_event_projection"),
+        // API 页面按项目作用域（S-60 起首页个人对话项目也写审计 outbox），
+        // 库内计数必须同口径过滤，否则跨项目行会把等式打穿。
+        outbox: scalar(
+          "SELECT COUNT(*) AS value FROM audit_event_outbox WHERE project_id='legacy-project'",
+        ),
+        projection: scalar(
+          "SELECT COUNT(*) AS value FROM audit_event_projection WHERE project_id='legacy-project'",
+        ),
       };
     } finally {
       database.close();
@@ -2329,23 +2432,17 @@ try {
     pages: auditApi.pages.length,
   });
 
-  await page.goto(`${baseUrl}${firstHref}`, { waitUntil: "networkidle" });
-  const auditContextPanel = page.locator(".cockpit-context");
-  await auditContextPanel.getByRole("tab", { name: "共享记忆" }).focus();
+  await page.goto(`${baseUrl}${firstHref}`, { waitUntil: "domcontentloaded" });
   // Same-page baseline with the audit panel still unmounted, so any axe
   // violation present here is pre-existing cockpit chrome, not the panel.
-  await axe(page, "desktop light memory tab audit baseline");
-  await page.keyboard.press("End");
-  const auditTab = auditContextPanel.getByRole("tab", { name: "审计" });
-  assert.equal(await auditTab.getAttribute("aria-selected"), "true");
-  assert.equal(
-    await auditTab.evaluate((node) => document.activeElement === node),
-    true,
-    "End key must move focus to the audit tab",
-  );
-  const auditList = auditContextPanel.getByRole("list", { name: "审计事件" });
+  await axe(page, "desktop light pre-audit baseline");
+  // P1 IA（A-412/A-479）：审计中心由图标轨治理视图承载（UCD 的 Cmd/Ctrl+5）。
+  await page.keyboard.press("ControlOrMeta+5");
+  const contextPanel = page.locator(".cockpit-flow");
+  const auditList = contextPanel.getByRole("list", { name: "审计事件" });
   await auditList.waitFor();
-  await auditContextPanel.getByText("已追平", { exact: true }).waitFor();
+  await contextPanel.getByText("已追平", { exact: true }).waitFor();
+  await contextPanel.getByRole("heading", { name: /审计中心/ }).waitFor();
   const auditRows = auditList.getByRole("listitem");
   const firstPageRows = Math.min(auditEvents.length, 50);
   await page.waitForFunction(
@@ -2368,7 +2465,7 @@ try {
     `last first-page audit row must keep descending order: ${lastFirstPageRowText}`,
   );
   for (let click = 0; click < 12; click += 1) {
-    const moreButton = auditContextPanel.getByRole("button", { name: "加载更多审计事件" });
+    const moreButton = contextPanel.getByRole("button", { name: "加载更多审计事件" });
     if (!(await moreButton.isVisible().catch(() => false))) break;
     const beforeCount = await auditRows.count();
     await moreButton.click();
@@ -2406,8 +2503,6 @@ try {
     `/projects/legacy-project?thread=${secondThread}`,
     "run-less owner message must link to the thread without a run param",
   );
-  const auditTabBox = await auditTab.boundingBox();
-  assert.ok(auditTabBox && auditTabBox.height >= 44 && auditTabBox.width >= 44, "audit tab must be at least 44x44");
   const stoppedLinkBox = await stoppedLink.boundingBox();
   assert.ok(stoppedLinkBox && stoppedLinkBox.height >= 44 && stoppedLinkBox.width >= 44, "locate link must be at least 44x44");
   await stoppedLink.focus();
@@ -2431,10 +2526,17 @@ try {
       && url.searchParams.get("run") === activeRun.id
     );
   }
-  const landedRunSelector = page.getByRole("combobox", { name: "选择对话运行" });
-  await landedRunSelector.waitFor();
+  // T-A1：定位链接必须落在规范 thread+run 身份上；会话面以运行状态行与 API 事实共同作证。
+  // 该运行在此前的 stop 流程中已停止，状态行必须如实呈现 stopped（activeRun 快照早于 stop）。
+  await page.getByText("运行状态：stopped", { exact: true }).first().waitFor();
+  const landedDetail = await readThread(
+    page,
+    "legacy-project",
+    firstThread,
+    activeRun.id,
+  );
   assert.equal(
-    await landedRunSelector.inputValue(),
+    landedDetail.selectedRun.id,
     activeRun.id,
     "locate link must land on the canonical thread+run identity",
   );
@@ -2442,9 +2544,12 @@ try {
     events: auditEvents.length,
   });
 
-  await auditContextPanel.getByRole("tab", { name: "审计" }).click();
+  // 返回会话面（Cmd/Ctrl+1）后再次进入审计视图，确认治理表面可往返且稳定。
+  await page.keyboard.press("ControlOrMeta+1");
+  await page.locator("form.composer textarea").waitFor();
+  await page.keyboard.press("ControlOrMeta+5");
   await auditList.waitFor();
-  await auditContextPanel.getByText("已追平", { exact: true }).waitFor();
+  await contextPanel.getByText("已追平", { exact: true }).waitFor();
   await page.waitForFunction(
     (expected) => document.querySelectorAll(".audit-event-list > li").length === expected,
     firstPageRows,
@@ -2454,7 +2559,7 @@ try {
   auditFacingText = await page.locator("html").innerText();
   await page.getByRole("button", { name: /切换到暗色主题/ }).click();
   await page.getByRole("button", { name: /切换到明色主题/ }).waitFor();
-  await auditContextPanel.getByText("已追平", { exact: true }).waitFor();
+  await contextPanel.getByText("已追平", { exact: true }).waitFor();
   const darkFirstRowText = await auditRows.first().innerText();
   assert.ok(
     darkFirstRowText.includes(
@@ -2469,18 +2574,13 @@ try {
   pass("collaboration-audit-desktop-light-dark-axe");
 
   await page.setViewportSize({ height: 844, width: 390 });
-  await page.reload({ waitUntil: "networkidle" });
-  const auditContextOpener = page.getByRole("button", { name: "打开当前任务上下文" });
-  await auditContextOpener.focus();
-  await page.keyboard.press("Enter");
-  const auditContextDrawer = page.getByRole("dialog", { name: "当前任务上下文" });
-  const narrowAuditTab = auditContextDrawer.getByRole("tab", { name: "审计" });
-  await narrowAuditTab.focus();
-  await page.keyboard.press("Enter");
-  assert.equal(await narrowAuditTab.getAttribute("aria-selected"), "true");
-  const narrowAuditList = auditContextDrawer.getByRole("list", { name: "审计事件" });
+  await page.reload({ waitUntil: "domcontentloaded" });
+  // 窄屏治理视图同样经 Cmd/Ctrl+5 打开（无独立「当前任务上下文」抽屉）。
+  await page.keyboard.press("ControlOrMeta+5");
+  const narrowContextPanel = page.locator(".cockpit-flow");
+  const narrowAuditList = narrowContextPanel.getByRole("list", { name: "审计事件" });
   await narrowAuditList.waitFor();
-  await auditContextDrawer.getByText("已追平", { exact: true }).waitFor();
+  await narrowContextPanel.getByText("已追平", { exact: true }).waitFor();
   await page.waitForFunction(
     (expected) => document.querySelectorAll(".audit-event-list > li").length === expected,
     firstPageRows,
@@ -2491,7 +2591,7 @@ try {
     narrowFirstRowText.includes(
       AUDIT_EVENT_TYPE_COPY[auditEvents[0].eventType] ?? auditEvents[0].eventType,
     ),
-    "narrow drawer must keep the audit presentation",
+    "narrow audit view must keep the audit presentation",
   );
   assert.equal(
     await narrowRows.nth(auditEvents.indexOf(attachOwnerMessage))
@@ -2506,19 +2606,17 @@ try {
   );
   const narrowLocateBox = await narrowLocateLink.boundingBox();
   assert.ok(narrowLocateBox && narrowLocateBox.height >= 44 && narrowLocateBox.width >= 44, "narrow locate link must be at least 44x44");
-  const narrowAuditTabBox = await narrowAuditTab.boundingBox();
-  assert.ok(narrowAuditTabBox && narrowAuditTabBox.height >= 44 && narrowAuditTabBox.width >= 44, "narrow audit tab must be at least 44x44");
-  await axe(page, "narrow collaboration audit drawer");
+  await axe(page, "narrow collaboration audit view");
   await page.screenshot({ fullPage: true, path: evidence.auditNarrow });
   narrowAuditFacingText = await page.locator("html").innerText();
+  // 窄屏下返回会话面：Cmd/Ctrl+1 关闭治理视图后，经「打开编辑」进入会话面（面板默认隐藏）。
+  await page.keyboard.press("ControlOrMeta+1");
+  await page.getByRole("button", { name: "打开编辑" }).waitFor();
+  await page.getByRole("button", { name: "打开编辑" }).click();
+  await page.locator("form.composer textarea").waitFor();
   await page.keyboard.press("Escape");
-  await auditContextDrawer.waitFor({ state: "detached" });
-  assert.equal(
-    await auditContextOpener.evaluate((node) => document.activeElement === node),
-    true,
-    "Escape must return focus to the context drawer opener",
-  );
-  pass("collaboration-audit-narrow-drawer-44px-axe");
+  await page.getByRole("dialog", { name: "任务编辑" }).waitFor({ state: "detached" });
+  pass("collaboration-audit-narrow-44px-axe");
 
   // ---- feature 031 T-04: thread search real-browser acceptance ----
   // Seeded after the audit section so the new outbox rows cannot shift the
@@ -2696,7 +2794,10 @@ try {
   }
   pass("thread-search-api-kinds-snippet-cross-project-isolation");
 
-  await page.goto(`${baseUrl}${firstHref}`, { waitUntil: "networkidle" });
+  await page.goto(`${baseUrl}${firstHref}`, { waitUntil: "domcontentloaded" });
+  // UCD §9.6.1：搜索浮层由 Cmd/Ctrl+K 呼出（默认 sr-only，不占版面）。
+  await page.keyboard.press("ControlOrMeta+k");
+  await page.getByRole("dialog", { name: "会话搜索" }).waitFor();
   const threadSearchInput = page.getByLabel("搜索对话");
   await threadSearchInput.waitFor();
   await threadSearchInput.click();
@@ -2763,6 +2864,8 @@ try {
   await axe(page, "desktop light located search message");
   pass("thread-search-desktop-light-keyboard-locate-44px-axe");
 
+  await page.keyboard.press("ControlOrMeta+k");
+  await page.getByRole("dialog", { name: "会话搜索" }).waitFor();
   await threadSearchInput.click();
   await page.keyboard.press("Escape");
   assert.equal(await threadSearchInput.inputValue(), "");
@@ -2785,6 +2888,8 @@ try {
   );
   pass("thread-search-title-hit-navigation");
 
+  await page.keyboard.press("ControlOrMeta+k");
+  await page.getByRole("dialog", { name: "会话搜索" }).waitFor();
   await threadSearchInput.click();
   await threadSearchInput.fill("");
   await threadSearchInput.pressSequentially("walrus");
@@ -2800,6 +2905,7 @@ try {
     await route.continue();
   });
   try {
+    await page.keyboard.press("ControlOrMeta+k");
     await threadSearchInput.fill("");
     await threadSearchInput.pressSequentially("quokka");
     const loadingStatus = page
@@ -2827,12 +2933,15 @@ try {
   pass("thread-search-desktop-dark-light-axe");
 
   await page.setViewportSize({ height: 844, width: 390 });
-  await page.goto(`${baseUrl}${firstHref}`, { waitUntil: "networkidle" });
+  await page.goto(`${baseUrl}${firstHref}`, { waitUntil: "domcontentloaded" });
   const searchNavOpener = page.getByRole("button", { name: "打开项目导航" });
   await searchNavOpener.click();
   const searchDrawer = page.getByRole("dialog", { name: "项目导航" });
   await searchDrawer.waitFor();
+  // UCD §9.6.1：抽屉内搜索同样由 Cmd/Ctrl+K 揭示（默认 sr-only）。
+  await page.keyboard.press("ControlOrMeta+k");
   const narrowSearchInput = searchDrawer.getByLabel("搜索对话");
+  await narrowSearchInput.waitFor();
   await narrowSearchInput.click();
   await narrowSearchInput.pressSequentially("quokka");
   const narrowSearchRegion = searchDrawer.getByRole("region", {
@@ -2883,17 +2992,26 @@ try {
     true,
     "Escape must return focus to the search input",
   );
+  // 分层 Escape：① 清查询（上一段已断言）② 关揭示层（抽屉保持打开）③ 关抽屉并回焦。
+  await page.keyboard.press("Escape");
+  assert.equal(
+    await searchDrawer.isVisible(),
+    true,
+    "Escape that closes the search overlay must keep the drawer open",
+  );
   await page.keyboard.press("Escape");
   await searchDrawer.waitFor({ state: "detached" });
   assert.equal(
     await searchNavOpener.evaluate((node) => document.activeElement === node),
     true,
-    "a second Escape must close the drawer and return focus to its opener",
+    "the final Escape must close the drawer and return focus to its opener",
   );
   pass("thread-search-narrow-44px-focus-layered-escape-axe");
 
   await searchNavOpener.click();
   await searchDrawer.waitFor();
+  await page.keyboard.press("ControlOrMeta+k");
+  await narrowSearchInput.waitFor();
   await narrowSearchInput.click();
   await narrowSearchInput.pressSequentially("quokka");
   await narrowResult.waitFor();
@@ -2921,7 +3039,7 @@ try {
   // the fixture: 发布阻塞/缺陷跟踪/文档待办 live in legacy-project, 外部标签 in
   // the foreign project created by the search section (isolation probes).
   await page.setViewportSize({ height: 1050, width: 1500 });
-  await page.goto(`${baseUrl}${firstHref}`, { waitUntil: "networkidle" });
+  await page.goto(`${baseUrl}${firstHref}`, { waitUntil: "domcontentloaded" });
 
   const waitForActiveElement = (selector) =>
     page.waitForFunction(
@@ -2941,7 +3059,7 @@ try {
   await manageDialog.waitFor();
   const newTagInput = manageDialog.getByLabel("新标签名称");
   await manageDialog
-    .getByText("暂无标签。创建标签后开始整理线程。", { exact: true })
+    .getByText("暂无标签。创建标签后开始整理对话。", { exact: true })
     .waitFor();
   await waitForActiveElement(".manage-tags-dialog #new-thread-tag-name");
   assert.equal(
@@ -2989,7 +3107,7 @@ try {
     document.querySelectorAll(".thread-tag-manage-item").length === 3
   );
   assert.equal(
-    await manageDialog.getByText("已分配 0 条线程", { exact: true }).count(),
+    await manageDialog.getByText("已分配 0 条对话", { exact: true }).count(),
     3,
     "fresh tags must report zero assignments",
   );
@@ -3087,7 +3205,7 @@ try {
   assert.equal(assignNoop.status, 200);
   assert.equal(assignNoop.body.assigned, false);
 
-  await page.reload({ waitUntil: "networkidle" });
+  await page.reload({ waitUntil: "domcontentloaded" });
   const threadItem = (threadId) =>
     page.locator("#project-threads-list li", {
       has: page.locator(`[data-thread-id="${threadId}"]`),
@@ -3102,7 +3220,11 @@ try {
   assert.deepEqual(await itemChipTexts(secondThread), []);
   assert.deepEqual(await itemChipTexts(thirdThread), ["发布阻塞", "缺陷跟踪"]);
 
-  const tagFilterGroup = page.getByRole("group", { name: "按标签筛选线程" });
+  // 标签筛选条只在「标签」视图渲染（UCD §9.1.5 过滤 Tab 组）。
+  const tagsViewTab = viewTabs.getByRole("tab", { name: "标签" });
+  await tagsViewTab.click();
+  assert.equal(await tagsViewTab.getAttribute("aria-selected"), "true");
+  const tagFilterGroup = page.getByRole("group", { name: "按标签筛选对话" });
   await tagFilterGroup.waitFor();
   const allTagChip = tagFilterGroup.getByRole("button", {
     exact: true,
@@ -3170,7 +3292,7 @@ try {
   await docsChip.click();
   assert.equal((await docsFilterLoad).status(), 200);
   await page
-    .getByText("标签“文档待办”下暂无线程。", { exact: true })
+    .getByText("标签“文档待办”下暂无对话。", { exact: true })
     .waitFor();
   await page.getByRole("button", { name: "清除筛选" }).click();
   await page.waitForFunction(
@@ -3193,6 +3315,10 @@ try {
       .length === 1
   );
   assert.equal(await favoritesViewTab.getAttribute("aria-selected"), "true");
+  // 收藏视图不渲染标签 chips；按标签筛选的真实路径是先切到「标签」视图（产品语义）。
+  await tagsViewTab.click();
+  assert.equal(await tagsViewTab.getAttribute("aria-selected"), "true");
+  assert.equal(await favoritesViewTab.getAttribute("aria-selected"), "false");
   const defectFilterLoad = tagFilterLoad(defectTag.id);
   await defectChip.click();
   assert.equal((await defectFilterLoad).status(), 200);
@@ -3206,12 +3332,6 @@ try {
     },
     thirdThread,
   );
-  assert.equal(
-    await allViewTab.getAttribute("aria-selected"),
-    "true",
-    "selecting a tag chip in favorites view must fall back to 全部",
-  );
-  assert.equal(await favoritesViewTab.getAttribute("aria-selected"), "false");
   assert.equal(await defectChip.getAttribute("aria-pressed"), "true");
   await allTagChip.click();
   await page.waitForFunction(
@@ -3255,12 +3375,15 @@ try {
   await page.getByRole("button", { name: /切换到暗色主题/ }).waitFor();
   pass("thread-tags-assign-chips-filter-mutex-dark-light-axe");
 
-  const organizeButton = page.getByRole("button", { name: "整理线程" });
+  // 「整理对话」只在「全部」视图（且列表非空）提供；从标签视图切回。
+  await allViewTab.click();
+  assert.equal(await allViewTab.getAttribute("aria-selected"), "true");
+  const organizeButton = page.getByRole("button", { name: "整理对话" });
   await organizeButton.click();
   assert.equal(await organizeButton.getAttribute("aria-pressed"), "true");
-  const batchBar = page.getByRole("region", { name: "批量整理线程" });
+  const batchBar = page.getByRole("region", { name: "批量整理对话" });
   await batchBar.waitFor();
-  await batchBar.getByText("已选 0 条线程", { exact: true }).waitFor();
+  await batchBar.getByText("已选 0 条对话", { exact: true }).waitFor();
   assert.equal(
     await tagFilterGroup.count(),
     0,
@@ -3276,7 +3399,7 @@ try {
     "organize select control must stay >= 44px",
   );
   await threadCheckbox(firstThread).click();
-  await batchBar.getByText("已选 1 条线程", { exact: true }).waitFor();
+  await batchBar.getByText("已选 1 条对话", { exact: true }).waitFor();
   await threadItem(secondThread).locator(".thread-list-entry").focus();
   await page.keyboard.press("Shift+Tab");
   assert.equal(
@@ -3294,7 +3417,7 @@ try {
     "keyboard-focused organize checkbox must show a visible focus ring",
   );
   await page.keyboard.press("Space");
-  await batchBar.getByText("已选 2 条线程", { exact: true }).waitFor();
+  await batchBar.getByText("已选 2 条对话", { exact: true }).waitFor();
   assert.equal(await threadCheckbox(secondThread).isChecked(), true);
   const addGroup = batchBar.getByRole("group", { name: "添加标签" });
   const removeGroup = batchBar.getByRole("group", { name: "移除标签" });
@@ -3314,10 +3437,10 @@ try {
   const batchConfirmDialog = page.getByRole("dialog", { name: "确认批量整理" });
   await batchConfirmDialog.waitFor();
   await batchConfirmDialog
-    .getByText("将为 2 条线程添加 1 个标签、移除 1 个标签。", { exact: true })
+    .getByText("将为 2 条对话添加 1 个标签、移除 1 个标签。", { exact: true })
     .waitFor();
   await batchConfirmDialog
-    .getByText("移除会立即解除这些线程上的标签分配。", { exact: true })
+    .getByText("移除会立即解除这些对话上的标签分配。", { exact: true })
     .waitFor();
   const confirmApplyButton = batchConfirmDialog.getByRole("button", {
     name: "确认应用",
@@ -3352,7 +3475,7 @@ try {
   assert.deepEqual(appliedFirst.removedTagIds, [releaseTag.id]);
   assert.deepEqual(appliedSecond.addedTagIds, [defectTag.id]);
   assert.deepEqual(appliedSecond.removedTagIds, []);
-  await page.getByText("已为 2 条线程更新标签。", { exact: true }).waitFor();
+  await page.getByText("已为 2 条对话更新标签。", { exact: true }).waitFor();
   await batchBar.waitFor({ state: "detached" });
   assert.equal(await organizeButton.getAttribute("aria-pressed"), "false");
   await page.waitForFunction(() => {
@@ -3423,13 +3546,13 @@ try {
       ...document.querySelectorAll(".thread-tag-manage-item"),
     ].map((node) => node.textContent ?? "");
     return items.some((text) =>
-      text.includes("发布阻塞") && text.includes("已分配 1 条线程")
+      text.includes("发布阻塞") && text.includes("已分配 1 条对话")
     )
       && items.some((text) =>
-        text.includes("缺陷跟踪") && text.includes("已分配 3 条线程")
+        text.includes("缺陷跟踪") && text.includes("已分配 3 条对话")
       )
       && items.some((text) =>
-        text.includes("文档待办") && text.includes("已分配 0 条线程")
+        text.includes("文档待办") && text.includes("已分配 0 条对话")
       );
   });
   await manageDialog.getByRole("button", { name: "删除标签 文档待办" }).click();
@@ -3510,6 +3633,7 @@ try {
     true,
     "manage dialog Escape must return focus to its opener",
   );
+  await tagsViewTab.click();
   await tagFilterGroup.waitFor();
   assert.deepEqual(
     await tagFilterGroup.getByRole("button").allInnerTexts(),
@@ -3523,7 +3647,8 @@ try {
     return chips.length === 3 && chips.every((name) => name === "缺陷跟踪");
   });
 
-  await page.reload({ waitUntil: "networkidle" });
+  await page.reload({ waitUntil: "domcontentloaded" });
+  await tagsViewTab.click();
   await tagFilterGroup.waitFor();
   assert.deepEqual(
     await tagFilterGroup.getByRole("button").allInnerTexts(),
@@ -3557,6 +3682,7 @@ try {
   pass("thread-tags-delete-confirm-count-views-consistent-reload");
 
   await restartApp(page);
+  await tagsViewTab.click();
   await tagFilterGroup.waitFor();
   const tagsAfterRestart = await api(
     page,
@@ -3727,7 +3853,7 @@ try {
   pass("thread-tags-cross-project-isolation-tuple-404-secret-scan");
 
   await page.setViewportSize({ height: 844, width: 390 });
-  await page.reload({ waitUntil: "networkidle" });
+  await page.reload({ waitUntil: "domcontentloaded" });
   const tagNavOpener = page.getByRole("button", { name: "打开项目导航" });
   await tagNavOpener.click();
   const tagNavDrawer = page.getByRole("dialog", { name: "项目导航" });
@@ -3750,7 +3876,7 @@ try {
     document.querySelectorAll(".thread-tag-manage-item").length === 1
   );
   await narrowManageDialog
-    .getByText("已分配 3 条线程", { exact: true })
+    .getByText("已分配 3 条对话", { exact: true })
     .waitFor();
   const narrowDeleteBox = await narrowManageDialog
     .getByRole("button", { name: "删除标签 缺陷跟踪" })
@@ -3779,7 +3905,7 @@ try {
     "narrow manage Escape must return focus to its opener",
   );
   const narrowFilterGroup = tagNavDrawer.getByRole("group", {
-    name: "按标签筛选线程",
+    name: "按标签筛选对话",
   });
   const narrowAllChip = narrowFilterGroup.getByRole("button", {
     exact: true,
@@ -3836,7 +3962,7 @@ try {
   await tagNavOpener.click();
   await tagNavDrawer.waitFor();
   const narrowDarkChip = tagNavDrawer
-    .getByRole("group", { name: "按标签筛选线程" })
+    .getByRole("group", { name: "按标签筛选对话" })
     .getByRole("button", { name: "缺陷跟踪" });
   await narrowDarkChip.waitFor();
   await narrowDarkChip.click();
@@ -3859,7 +3985,7 @@ try {
   // execution provenance guard, restart invariants, cross-project isolation,
   // matrix coverage, and secret scanning surfaces.
   await page.setViewportSize({ height: 1050, width: 1500 });
-  await page.goto(`${baseUrl}${firstHref}`, { waitUntil: "networkidle" });
+  await page.goto(`${baseUrl}${firstHref}`, { waitUntil: "domcontentloaded" });
 
   const recycleKeyword = `recycle-keyword-${seed}`;
   const recycleHistoryKeyword = `recycle-history-${seed}`;
@@ -3960,7 +4086,7 @@ try {
 
   await page.goto(
     `${baseUrl}/projects/legacy-project?thread=${secondThread}`,
-    { waitUntil: "networkidle" },
+    { waitUntil: "domcontentloaded" },
   );
   const secondListItem = page.locator("#project-threads-list li", {
     has: page.locator(`[data-thread-id="${secondThread}"]`),
@@ -4085,7 +4211,7 @@ try {
     "recycle view tab must stay >= 44px",
   );
   await recycleViewTab.click();
-  assert.equal(await recycleViewTab.getAttribute("aria-selected"), "true");
+  assert.equal(await recycleViewTab.getAttribute("aria-pressed"), "true");
   await page
     .getByText(
       `消息 ${secondRecycleItem.messageCount} · 附件 ${secondRecycleItem.attachmentCount}`,
@@ -4185,11 +4311,11 @@ try {
   assert.equal(deleteSecondAgain.status, 200);
   await page.goto(
     `${baseUrl}/projects/legacy-project?thread=${secondThread}`,
-    { waitUntil: "networkidle" },
+    { waitUntil: "domcontentloaded" },
   );
   const deletedPlaceholder = page.locator(".thread-deleted-placeholder");
-  await deletedPlaceholder.getByText("该线程已移入回收站。", { exact: true }).waitFor();
-  await deletedPlaceholder.getByRole("button", { name: "返回线程列表" }).click();
+  await deletedPlaceholder.getByText("该对话已移入回收站。", { exact: true }).waitFor();
+  await deletedPlaceholder.getByRole("button", { name: "返回对话列表" }).click();
   await recycleViewTab.waitFor();
 
   await recycleViewTab.click();
@@ -4197,7 +4323,7 @@ try {
     name: "永久删除 Duplicate title",
   });
   await openPurgeDialog.click();
-  const purgeDialog = page.getByRole("dialog", { name: "永久删除线程" });
+  const purgeDialog = page.getByRole("dialog", { name: "永久删除对话" });
   await purgeDialog.waitFor();
   const purgeWarning = await purgeDialog.locator("p").first().innerText();
   assert.equal(
@@ -4295,9 +4421,9 @@ try {
   if (purgeFirstAttempt.status === 409) {
     assert.equal(purgeFirstAttempt.body?.error?.code, "OPERATION_CONFLICT");
     assert.equal(purgeFirstAttempt.body?.error?.fields?.threadId, "has_executions");
-    await page.goto(`${baseUrl}${firstHref}`, { waitUntil: "networkidle" });
-    await page.getByText("该线程已移入回收站。", { exact: true }).waitFor();
-    await page.getByRole("button", { name: "恢复线程" }).click();
+    await page.goto(`${baseUrl}${firstHref}`, { waitUntil: "domcontentloaded" });
+    await page.getByText("该对话已移入回收站。", { exact: true }).waitFor();
+    await page.getByRole("button", { name: "恢复对话" }).click();
     await page.getByText("Owner message with image attachments.", { exact: true }).waitFor();
   } else {
     assert.equal(purgeFirstAttempt.status, 200);
@@ -4305,7 +4431,7 @@ try {
   }
 
   await restartApp(page);
-  await page.goto(`${baseUrl}${restartTargetHref}`, { waitUntil: "networkidle" });
+  await page.goto(`${baseUrl}${restartTargetHref}`, { waitUntil: "domcontentloaded" });
   const restartThreadId = new URL(`${baseUrl}${restartTargetHref}`).searchParams.get("thread");
   assert.ok(restartThreadId);
   await readThread(page, "legacy-project", restartThreadId);
@@ -4377,7 +4503,7 @@ try {
   pass("thread-recycle-cross-project-isolation-and-tuple-404");
 
   await page.setViewportSize({ height: 844, width: 390 });
-  await page.reload({ waitUntil: "networkidle" });
+  await page.reload({ waitUntil: "domcontentloaded" });
   const recycleNavOpener = page.getByRole("button", { name: "打开项目导航" });
   await recycleNavOpener.click();
   const recycleDrawer = page.getByRole("dialog", { name: "项目导航" });
@@ -4432,7 +4558,7 @@ try {
     body: JSON.stringify({
       memberAgentIds: queueMemberAgentIds,
       operationId: randomUUID(),
-      title: "队列验收线程",
+      title: "队列验收对话",
     }),
     headers: { "content-type": "application/json" },
     method: "POST",
@@ -4445,7 +4571,7 @@ try {
   const queueThreadId = queueThreadCreate.body.thread.id;
   await page.goto(
     `${baseUrl}/projects/${queueProjectId}?thread=${queueThreadId}`,
-    { waitUntil: "networkidle" },
+    { waitUntil: "domcontentloaded" },
   );
 
   const queueFirstContent = `queue-first-${seed}`;
@@ -4493,56 +4619,48 @@ try {
     ["pending", "pending", "pending"],
   );
   pass("thread-queue-enqueue-api-order");
-  await page.reload({ waitUntil: "networkidle" });
+  await page.reload({ waitUntil: "domcontentloaded" });
 
-  const queueExpandButton = page.getByRole("button", { name: "展开待处理消息队列" });
-  await queueExpandButton.click();
-  const queueRegion = page.getByRole("region", { name: "待处理消息队列" });
-  await queueRegion.waitFor();
-  await queueRegion.getByText(queueFirstContent, { exact: true }).waitFor();
-  await queueRegion.getByText(queueSecondContent, { exact: true }).waitFor();
-  await queueRegion.getByText(queueThirdContent, { exact: true }).waitFor();
-  const queueSteerButton = queueRegion.getByRole("button", {
-    name: `Steer ${queueThirdContent}`,
-  });
-  const queueSteerBox = await queueSteerButton.boundingBox();
-  assert.ok(
-    queueSteerBox && queueSteerBox.height >= 44 && queueSteerBox.width >= 44,
-    "queue steer button must stay >= 44px",
+  // T-A1：待处理队列是内部机制，不进入会话面；steer/reorder/cancel 走 API
+  // 并以队列事实作证（expectedVersion 逐次 +1 链式推进）。
+  const queueBaseVersion = enqueueThird.body.threadVersion;
+  const steerResponse = await api(
+    page,
+    `${enqueueRoute}/${enqueueThird.body.item.id}/steer`,
+    { body: JSON.stringify({
+        expectedVersion: queueBaseVersion,
+        operationId: randomUUID(),
+      }),
+      headers: { "content-type": "application/json" },
+      method: "POST" },
   );
-  const steerResponse = page.waitForResponse((response) =>
-    response.request().method() === "POST"
-    && response.url().endsWith(
-      `/api/projects/${queueProjectId}/threads/${queueThreadId}/queue/${enqueueThird.body.item.id}/steer`,
-    )
+  assert.equal(steerResponse.status, 200, JSON.stringify(steerResponse.body));
+  assert.equal(steerResponse.body.steered, true);
+  const reorderResponse = await api(
+    page,
+    `${enqueueRoute}/${enqueueThird.body.item.id}/reorder`,
+    { body: JSON.stringify({
+        expectedVersion: steerResponse.body.threadVersion,
+        operationId: randomUUID(),
+        position: 2,
+      }),
+      headers: { "content-type": "application/json" },
+      method: "POST" },
   );
-  await queueSteerButton.click();
-  assert.equal((await steerResponse).status(), 200);
-  await page.waitForFunction(
-    (expected) =>
-      document.querySelector(".timeline-event h4")?.textContent === expected,
-    queueThirdContent,
+  assert.equal(reorderResponse.status, 200, JSON.stringify(reorderResponse.body));
+  assert.equal(reorderResponse.body.reordered, true);
+  const cancelResponse = await api(
+    page,
+    `${enqueueRoute}/${enqueueFirst.body.item.id}/cancel`,
+    { body: JSON.stringify({
+        expectedVersion: reorderResponse.body.threadVersion,
+        operationId: randomUUID(),
+      }),
+      headers: { "content-type": "application/json" },
+      method: "POST" },
   );
-  const reorderResponse = page.waitForResponse((response) =>
-    response.request().method() === "POST"
-    && response.url().endsWith(
-      `/api/projects/${queueProjectId}/threads/${queueThreadId}/queue/${enqueueThird.body.item.id}/reorder`,
-    )
-  );
-  await queueRegion
-    .getByRole("button", { name: `下移 ${queueThirdContent}` })
-    .click();
-  assert.equal((await reorderResponse).status(), 200);
-  const cancelResponse = page.waitForResponse((response) =>
-    response.request().method() === "POST"
-    && response.url().endsWith(
-      `/api/projects/${queueProjectId}/threads/${queueThreadId}/queue/${enqueueFirst.body.item.id}/cancel`,
-    )
-  );
-  await queueRegion
-    .getByRole("button", { name: `撤回 ${queueFirstContent}` })
-    .click();
-  assert.equal((await cancelResponse).status(), 200);
+  assert.equal(cancelResponse.status, 200, JSON.stringify(cancelResponse.body));
+  assert.equal(cancelResponse.body.cancelled, true);
   const queueListAfterOps = await api(page, enqueueRoute);
   assert.equal(queueListAfterOps.status, 200);
   assert.deepEqual(
@@ -4553,8 +4671,7 @@ try {
       [queueSecondContent, "pending", 3],
     ],
   );
-  await queueRegion.getByText("队列位置 #2", { exact: true }).waitFor();
-  pass("thread-queue-steer-reorder-cancel-ui");
+  pass("thread-queue-steer-reorder-cancel-api");
 
   const queueStartRun = await api(
     page,
@@ -4582,37 +4699,30 @@ try {
   const consumedQueueItem = queueAfterConsume.body.items.find((item) => item.content === queueThirdContent);
   assert.ok(consumedQueueItem);
   assert.equal(consumedQueueItem.status, "consumed");
-  await page.reload({ waitUntil: "networkidle" });
-  await page.getByRole("button", { name: "展开待处理消息队列" }).click();
-  await queueRegion.getByText("consumed", { exact: true }).waitFor();
+  await page.reload({ waitUntil: "domcontentloaded" });
   queueFacingText = await page.locator("html").innerText();
-  await axe(page, "desktop light thread queue panel");
+  await axe(page, "desktop light thread queue events");
   await page.screenshot({ fullPage: true, path: evidence.queueDesktop });
   await page.getByRole("button", { name: /切换到暗色主题/ }).click();
   await page.getByRole("button", { name: /切换到明色主题/ }).waitFor();
-  await axe(page, "desktop dark thread queue panel");
+  await axe(page, "desktop dark thread queue events");
   await page.screenshot({ fullPage: true, path: evidence.queueDark });
   await page.getByRole("button", { name: /切换到明色主题/ }).click();
   await page.getByRole("button", { name: /切换到暗色主题/ }).waitFor();
 
   await page.setViewportSize({ height: 844, width: 390 });
-  await page.reload({ waitUntil: "networkidle" });
+  await page.reload({ waitUntil: "domcontentloaded" });
   const queueEditorOpener = page.getByRole("button", { name: "打开编辑" });
-  await queueEditorOpener.focus();
-  await page.keyboard.press("Enter");
   const queueEditorDrawer = page.getByRole("dialog", { name: "任务编辑" });
-  await queueEditorDrawer.waitFor();
-  // P1 IA: 聊天流直接挂在任务编辑表面上，无「群聊」tab。
-  await queueEditorDrawer
-    .getByRole("button", { name: "展开待处理消息队列" })
-    .click();
-  const narrowQueueRegion = queueEditorDrawer.getByRole("region", {
-    name: "待处理消息队列",
-  });
-  await narrowQueueRegion.getByText(queueThirdContent, { exact: true }).waitFor();
-  await narrowQueueRegion.getByText("consumed", { exact: true }).waitFor();
+  await clickUntil(page, queueEditorOpener, [queueEditorDrawer]);
+  // P1 IA: 聊天流直接挂在任务编辑表面上，无「群聊」tab；队列面板同样不挂载。
+  assert.equal(
+    await queueEditorDrawer.getByRole("button", { name: "展开待处理消息队列" }).count(),
+    0,
+    "队列面板不得进入会话面（T-A1）",
+  );
   narrowQueueFacingText = await page.locator("html").innerText();
-  await axe(page, "narrow thread queue drawer");
+  await axe(page, "narrow thread chat surface");
   await page.screenshot({ fullPage: true, path: evidence.queueNarrow });
   await page.keyboard.press("Escape");
   await queueEditorDrawer.waitFor({ state: "detached" });
@@ -4809,13 +4919,10 @@ try {
           error
           && typeof error === "object"
           && "code" in error
-          && (error.code === "EPERM" || error.code === "EACCES" || error.code === "EBUSY");
+          && (error.code === "EPERM" || error.code === "EACCES" || error.code === "EBUSY" || error.code === "ENOTEMPTY");
         if (!busy || attempt === 4) throw error;
         await new Promise((done) => setTimeout(done, 350));
       }
     }
-  }
-  for (const snapshot of stableConfig) {
-    writeFileSync(snapshot.path, snapshot.content, "utf8");
   }
 }

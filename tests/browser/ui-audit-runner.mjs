@@ -29,7 +29,6 @@ const mockProviderUrl = `http://127.0.0.1:${mockProviderPort}/v1`;
 const temporaryDirectory = mkdtempSync(join(tmpdir(), "cool-ai-ui-audit-"));
 const databasePath = join(temporaryDirectory, "audit.sqlite");
 const workspaceDirectory = join(temporaryDirectory, "audit-workspace");
-const auditDistDirectory = `.next-audit-${process.pid}`;
 const artifactDirectory = resolve("tests", "browser", "test-artifacts", "ui-audit");
 // 清掉上一轮失败截图，避免与本次证据并排误读。
 try {
@@ -123,7 +122,16 @@ const mockProvider = createServer((request, response) => {
   response.writeHead(404).end();
 });
 
-const server = spawn("npm", ["run", "dev", "--", "--hostname", host, "--port", String(port)], {
+// 生产模式 next start（需要先有 .next 构建；smoke-suite.mjs 或 npm run build 先行），
+// 与全部冒烟脚本一致；不再走 next dev 按需编译。
+const server = spawn(process.execPath, [
+  join("node_modules", "next", "dist", "bin", "next"),
+  "start",
+  "--hostname",
+  host,
+  "--port",
+  String(port),
+], {
   cwd: process.cwd(),
   env: {
     ...process.env,
@@ -131,7 +139,6 @@ const server = spawn("npm", ["run", "dev", "--", "--hostname", host, "--port", S
     COCKPIT_DB_PATH: databasePath,
     COCKPIT_MASTER_KEY: "MTIzNDU2Nzg5MDEyMzQ1Njc4OTAxMjM0NTY3ODkwMTI",
     COCKPIT_SCRIPTED_DIRECTORY: workspaceDirectory,
-    NEXT_DIST_DIR: auditDistDirectory,
   },
   stdio: ["ignore", "pipe", "pipe"],
 });
@@ -702,6 +709,5 @@ try {
   await browser?.close();
   stopServer();
   mockProvider.close();
-  rmSync(resolve(auditDistDirectory), { force: true, recursive: true });
   rmSync(temporaryDirectory, { force: true, recursive: true });
 }

@@ -73,11 +73,13 @@ const JSON_HEADERS = { "content-type": "application/json" };
 const STATUS_GROUPS: Array<{
   status: WorkItemStatus;
   label: string;
+  // UCD §9.2.1 泳道划分：待办（Todo）…；标题带英文后缀，aria/文案沿用中文短名。
+  displayLabel: string;
 }> = [
-  { status: "todo", label: "待办" },
-  { status: "in_progress", label: "进行中" },
-  { status: "blocked", label: "阻塞" },
-  { status: "done", label: "完成" },
+  { status: "todo", label: "待办", displayLabel: "待办 (Todo)" },
+  { status: "in_progress", label: "进行中", displayLabel: "进行中 (In Progress)" },
+  { status: "blocked", label: "阻塞", displayLabel: "阻塞 (Blocked)" },
+  { status: "done", label: "完成", displayLabel: "完成 (Done)" },
 ];
 const TRANSITIONS: Record<
   WorkItemStatus,
@@ -208,6 +210,7 @@ export function MissionBoard({
   onGoalFactChanged,
   onReviewWorkspaceChange,
   openMissionIntent = 0,
+  openWorkItemIntent = 0,
   projectId,
 }: {
   onGoalFactChanged?: () => void;
@@ -217,6 +220,8 @@ export function MissionBoard({
   // 递增意图：外部（引导/会话入口）请求打开使命创建表单或聚焦使命。
   // 在数据加载完成后消费，避免固定时长轮询竞态（U-02）。
   openMissionIntent?: number;
+  // 递增意图：治理视图顶栏「＋ 新建任务」请求打开任务创建表单（U-06）。
+  openWorkItemIntent?: number;
   projectId: string;
 }) {
   const errorId = `mission-board-error-${projectId}`;
@@ -383,6 +388,20 @@ export function MissionBoard({
     heading?.focus();
     setFocusWorkItemId(null);
   }, [focusWorkItemId, workItems]);
+
+  const consumedWorkItemIntentRef = useRef(0);
+  useEffect(() => {
+    if (
+      openWorkItemIntent <= 0
+      || consumedWorkItemIntentRef.current === openWorkItemIntent
+    ) {
+      return;
+    }
+    if (isLoading || error !== null || !mission) return;
+    consumedWorkItemIntentRef.current = openWorkItemIntent;
+    setWorkItemDialogOpen(true);
+    queueMicrotask(() => workItemTitleRef.current?.focus());
+  }, [error, isLoading, mission, openWorkItemIntent]);
 
   function locateWorkItem(workItemId: string) {
     setFocusWorkItemId(workItemId);
@@ -679,6 +698,24 @@ export function MissionBoard({
       return next;
     });
   }
+
+  const doneWorkItemCount = workItems.filter((item) => item.status === "done").length;
+  // UCD §9.2.1：派发租约倒计时指示（仅活动租约需要计时）。
+  const hasLiveLease = workItems.some(
+    (item) => item.status === "in_progress" && item.lease && !item.lease.expired,
+  );
+  const [leaseNow, setLeaseNow] = useState(() => Date.now());
+  useEffect(() => {
+    if (!hasLiveLease) return;
+    const timer = window.setInterval(() => setLeaseNow(Date.now()), 1_000);
+    return () => window.clearInterval(timer);
+  }, [hasLiveLease]);
+  const leaseSecondsLeft = (lease: { expiresAt: string }) =>
+    Math.max(0, Math.ceil((Date.parse(lease.expiresAt) - leaseNow) / 1_000));
+  // UCD §9.2.1：卡片编号按使命内创建顺序（服务端 created_at ASC,id ASC）。
+  const missionOrdinalById = new Map(
+    workItems.map((item, index) => [item.id, index + 1]),
+  );
 
   function visibleSuggestions(workItemId: string) {
     return (insight?.suggestions ?? []).filter(
@@ -1023,6 +1060,24 @@ export function MissionBoard({
               {mission.title}
             </h3>
             <p>{mission.goal}</p>
+            {/* UCD §9.2.1 使命卡片：核心目标 + 完成门槛 + 整体完成百分比进度条。 */}
+            <div className="mission-gate-row">
+              <span className="status-label">
+                {`完成门槛: ${workItems.length}项全部通过`}
+              </span>
+              <div className="mission-progress">
+                <progress
+                  aria-label="整体完成度"
+                  max={Math.max(workItems.length, 1)}
+                  value={doneWorkItemCount}
+                />
+                <span className="muted">
+                  {workItems.length > 0
+                    ? `完成 ${doneWorkItemCount}/${workItems.length} · ${Math.round((doneWorkItemCount / workItems.length) * 100)}%`
+                    : "完成 0/0 · 0%"}
+                </span>
+              </div>
+            </div>
             <button
               aria-label="编辑使命"
               className="button-ghost icon-button"
@@ -1066,7 +1121,7 @@ export function MissionBoard({
             className="mission-board-grid"
             role="region"
           >
-            {STATUS_GROUPS.map(({ status, label }) => (
+            {STATUS_GROUPS.map(({ status, label, displayLabel }) => (
               <section
                 aria-labelledby={`status-${status}-${projectId}`}
                 className={`mission-status status-${status}`}
@@ -1074,7 +1129,7 @@ export function MissionBoard({
                 role="region"
               >
                 <h3 id={`status-${status}-${projectId}`}>
-                  {label}
+                  {displayLabel}
                   <span aria-hidden="true" className="kanban-col-count">
                     {workItems.filter((item) => item.status === status).length}
                   </span>
@@ -1092,10 +1147,28 @@ export function MissionBoard({
                           }}
                           tabIndex={-1}
                         >
-                          {item.title}
+                          {/* UCD §9.2.1 卡片编号：视觉前缀；可访问名保持纯标题。 */}
+                          <span aria-hidden="true" className="task-card-ordinal">
+                            {`#${missionOrdinalById.get(item.id) ?? "?"}`}
+                          </span>
+                          {` ${item.title}`}
                         </h4>
                         <p>{item.description || "暂无说明。"}</p>
-                        <p>负责人：{memberName(members, item.assigneeAgentId)}</p>
+                        <p className="task-card-meta muted">
+                          负责人：{memberName(members, item.assigneeAgentId)}
+                        </p>
+                        {item.dependencyIds.length > 0 ? (
+                          <p className="task-card-meta muted">
+                            {`依赖：${item.dependencyIds
+                              .map((id) => `#${missionOrdinalById.get(id) ?? "?"}`)
+                              .join("、")}`}
+                          </p>
+                        ) : null}
+                        {item.status === "in_progress" && item.lease ? (
+                          <p className="task-card-meta muted">
+                            {`租约: ${leaseSecondsLeft(item.lease)}s`}
+                          </p>
+                        ) : null}
                         {item.status === "todo" &&
                         !item.assigneeAgentId &&
                         visibleSuggestions(item.id).length > 0 ? (
@@ -1294,7 +1367,7 @@ export function MissionBoard({
                       </li>
                     ))}
                   {workItems.every((item) => item.status !== status) ? (
-                    <li className="muted">暂无{label}任务。</li>
+                    <li className="sr-only">暂无{label}任务。</li>
                   ) : null}
                 </ul>
               </section>

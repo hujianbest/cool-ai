@@ -436,8 +436,59 @@ describe("Shared Memory panel", () => {
       screen.getByRole("button", { name: "重试加载共享记忆" }),
     );
     expect(await screen.findByText("尚无共享记忆。")).toBeInTheDocument();
-    expect(screen.getByRole("button", { name: "沉淀新记忆" })).toBeEnabled();
+    expect(screen.getByRole("button", { name: "＋ 沉淀新记忆" })).toBeEnabled();
   }, 15_000);
+
+  it("leads the memory view with search, type chips, then the card list (U-08)", async () => {
+    const MemoryPanel = await memoryPanel();
+    const decisionMemory: MemoryEntry = {
+      ...activeGoal,
+      id: "memory-decision",
+      type: "decision",
+      content: "Adopt durable retries",
+      supersedesId: null,
+    };
+    const fetchMock = vi.fn(async (input: RequestInfo | URL) => {
+      const url = String(input);
+      const curation = emptyCurationResponse(input);
+      if (curation) return curation;
+      if (url.includes("/memory-index/health")) return memoryIndexHealthResponse();
+      if (url.includes("/memory-collections")) return Response.json({ collections: [] });
+      if (url.includes("/knowledge-graph")) return Response.json({ edges: [], nodes: [] });
+      return Response.json({ memories: [activeGoal, decisionMemory] });
+    });
+    vi.stubGlobal("fetch", fetchMock);
+    const user = userEvent.setup();
+    render(<MemoryPanel projectId="project-1" />);
+    await screen.findByRole("heading", { name: "Current goal" });
+
+    // IA：索引健康条 → 搜索行 → 卡片列表 → 提炼候选（附加区块在后）。
+    const search = screen.getByLabelText("搜索记忆");
+    const list = screen.getByRole("list", { name: "Active 共享记忆" });
+    const indexBar = screen.getByLabelText("记忆索引健康");
+    const curation = screen.getByLabelText("提炼候选");
+    expect(
+      indexBar.compareDocumentPosition(search) & Node.DOCUMENT_POSITION_FOLLOWING,
+    ).toBeTruthy();
+    expect(
+      search.compareDocumentPosition(list) & Node.DOCUMENT_POSITION_FOLLOWING,
+    ).toBeTruthy();
+    expect(
+      list.compareDocumentPosition(curation) & Node.DOCUMENT_POSITION_FOLLOWING,
+    ).toBeTruthy();
+
+    // 类型胶囊：切到决策只剩决策卡片，回全部恢复。
+    await user.click(screen.getByRole("button", { name: "决策" }));
+    expect(within(list).getByText("Adopt durable retries")).toBeInTheDocument();
+    expect(within(list).queryByText("Current goal")).toBeNull();
+    await user.click(screen.getByRole("button", { name: "全部" }));
+    expect(within(list).getByText("Current goal")).toBeInTheDocument();
+
+    // 关键字过滤命中正文。
+    await user.type(screen.getByLabelText("搜索记忆"), "durable");
+    expect(within(list).queryByText("Current goal")).toBeNull();
+    expect(within(list).getByText("Adopt durable retries")).toBeInTheDocument();
+  });
 
   it("creates sourced memory, labels artifact references, supersedes active entries and displays history", async () => {
     const MemoryPanel = await memoryPanel();
@@ -473,7 +524,7 @@ describe("Shared Memory panel", () => {
     render(<MemoryPanel projectId="project-1" />);
     await screen.findByRole("heading", { name: "Current goal" });
 
-    await user.click(screen.getByRole("button", { name: "沉淀新记忆" }));
+    await user.click(screen.getByRole("button", { name: "＋ 沉淀新记忆" }));
     await user.click(screen.getByRole("button", { name: "保存记忆" }));
     expect(screen.getByRole("alert")).toHaveTextContent("请输入记忆正文");
     expect(screen.getByLabelText("记忆正文")).toHaveFocus();

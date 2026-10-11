@@ -25,7 +25,8 @@ type ProcessResult = {
 
 function runFullChain(): Promise<ProcessResult> {
   return new Promise((resolveRun, rejectRun) => {
-    const child = spawn("npm run smoke:review -- --full", {
+    // 默认（不带参）即全量；`--full` 从未被脚本解析（历史死参数），步骤闸门会正确拒绝未知参数。
+    const child = spawn("npm run smoke:review", {
       cwd: process.cwd(),
       env: process.env,
       shell: true,

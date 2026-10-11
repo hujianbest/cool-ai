@@ -168,6 +168,9 @@ export function MemoryPanel({ projectId }: { projectId: string }) {
   const headingRefs = useRef(new Map<string, HTMLHeadingElement>());
   const [focusMemoryId, setFocusMemoryId] = useState<string | null>(null);
   const [searchQuery, setSearchQuery] = useState("");
+  // U-08（UCD §9.2.4）：记忆卡片列表的顶部搜索与类型过滤。
+  const [listQuery, setListQuery] = useState("");
+  const [listType, setListType] = useState<MemoryType | "all">("all");
   const [searchType, setSearchType] = useState("");
   const [searchSourceType, setSearchSourceType] = useState("");
   const [searchVersion, setSearchVersion] = useState("");
@@ -584,6 +587,14 @@ export function MemoryPanel({ projectId }: { projectId: string }) {
         || left.id.localeCompare(right.id)
       : left.createdAt.localeCompare(right.createdAt) || left.id.localeCompare(right.id)
   );
+  const visibleMemories = displayedMemories.filter((memory) => {
+    if (listType !== "all" && memoryType(memory) !== listType) return false;
+    const query = listQuery.trim().toLowerCase();
+    if (query === "") return true;
+    const memorySourceValue = source(memory);
+    return [memory.content, memorySourceValue.id, memorySourceValue.type]
+      .some((value) => value.toLowerCase().includes(query));
+  });
   const successorById = new Map(
     memories
       .filter((memory) => memory.supersedesId !== null)
@@ -600,20 +611,16 @@ export function MemoryPanel({ projectId }: { projectId: string }) {
         <h2 className="sr-only" id={`memory-title-${projectId}`}>
           共享记忆
         </h2>
-        <IconButton
+        <button
           className="button-primary"
-          icon={<Plus size={20} weight="regular" />}
-          label="沉淀新记忆"
           onClick={() => {
             setWriteOpen(true);
             queueMicrotask(() => contentRef.current?.focus());
           }}
-        />
-        <IconButton
-          icon={<MagnifyingGlass size={20} weight="regular" />}
-          label="打开记忆检索"
-          onClick={() => setSearchOpen(true)}
-        />
+          type="button"
+        >
+          ＋ 沉淀新记忆
+        </button>
         <HelpTip label="共享记忆说明">
           只收录带来源的目标、决策、事实与产物；原始聊天不会自动变成记忆。
         </HelpTip>
@@ -660,6 +667,233 @@ export function MemoryPanel({ projectId }: { projectId: string }) {
       ) : (
         <p aria-busy="true" className="state-message">正在检查记忆索引…</p>
       )}
+
+      {/* UCD §9.2.4：索引健康条之后为顶部搜索框 + 类型过滤胶囊，记忆卡片列表为主内容。 */}
+      <div aria-label="记忆搜索" className="stack memory-search-row" role="group">
+        <div className="form-field">
+          <label htmlFor={`memory-list-search-${projectId}`}>搜索记忆</label>
+          <input
+            id={`memory-list-search-${projectId}`}
+            onChange={(event) => setListQuery(event.target.value)}
+            placeholder="搜索记忆关键字、标签或来源…"
+            type="search"
+            value={listQuery}
+          />
+        </div>
+        <div className="form-row memory-type-chips">
+          <button
+            aria-pressed={listType === "all"}
+            onClick={() => setListType("all")}
+            type="button"
+          >
+            全部
+          </button>
+          {MEMORY_TYPES.map((type) => (
+            <button
+              aria-pressed={listType === type.value}
+              key={type.value}
+              onClick={() => setListType(type.value)}
+              type="button"
+            >
+              {type.label}
+            </button>
+          ))}
+          <button
+            className="button-secondary memory-search-open"
+            onClick={() => setSearchOpen(true)}
+            type="button"
+          >
+            打开记忆检索
+          </button>
+        </div>
+      </div>
+      <section
+        aria-labelledby={`memory-cards-${projectId}`}
+        className="stack memory-form"
+      >
+        <h3 id={`memory-cards-${projectId}`}>记忆卡片</h3>
+        <ActionDialog
+          closeLabel="关闭记忆检索"
+          onClose={() => setSearchOpen(false)}
+          open={searchOpen}
+          title="记忆检索"
+          titleId={`memory-search-title-${projectId}`}
+        >
+        <form className="stack" onSubmit={submitSearch}>
+          <div className="form-field">
+            <label htmlFor={`memory-search-${projectId}`}>检索记忆</label>
+            <input
+              id={`memory-search-${projectId}`}
+              onChange={(event) => setSearchQuery(event.target.value)}
+              placeholder="例如：当前目标"
+              value={searchQuery}
+            />
+          </div>
+          <div className="form-row">
+            <div className="form-field">
+              <label htmlFor={`memory-search-type-${projectId}`}>检索类型</label>
+              <select
+                id={`memory-search-type-${projectId}`}
+                onChange={(event) => setSearchType(event.target.value)}
+                value={searchType}
+              >
+                <option value="">全部类型</option>
+                {MEMORY_TYPES.map((type) => (
+                  <option key={type.value} value={type.value}>
+                    {type.label}
+                  </option>
+                ))}
+              </select>
+            </div>
+            <div className="form-field">
+              <label htmlFor={`memory-search-source-${projectId}`}>检索来源</label>
+              <select
+                id={`memory-search-source-${projectId}`}
+                onChange={(event) => setSearchSourceType(event.target.value)}
+                value={searchSourceType}
+              >
+                <option value="">全部来源</option>
+                {Object.entries(SOURCE_LABELS).map(([value, label]) => (
+                  <option key={value} value={value}>
+                    {label}
+                  </option>
+                ))}
+              </select>
+            </div>
+            <div className="form-field">
+              <label htmlFor={`memory-search-version-${projectId}`}>检索版本</label>
+              <input
+                id={`memory-search-version-${projectId}`}
+                inputMode="numeric"
+                onChange={(event) => setSearchVersion(event.target.value)}
+                placeholder="例如：2"
+                value={searchVersion}
+              />
+            </div>
+          </div>
+          <button disabled={isSearching || !searchQuery.trim()} type="submit">
+            {isSearching ? "正在检索…" : "检索"}
+          </button>
+        </form>
+        </ActionDialog>
+        {isSearching ? (
+          <p aria-busy="true" className="state-message">
+            正在检索记忆…
+          </p>
+        ) : null}
+        {searchError ? (
+          <p
+            className="error-text"
+            id={`memory-search-error-${projectId}`}
+            role="alert"
+          >
+            {searchError}
+          </p>
+        ) : null}
+        {!isSearching && searchHits && searchHits.length === 0 && !searchError ? (
+          <p className="state-message">没有匹配的记忆。</p>
+        ) : null}
+        {searchHits && searchHits.length > 0 ? (
+          <ul aria-label="记忆检索结果" className="stack">
+            {searchHits.map((hit) => (
+              <li key={hit.memory.id}>
+                <button
+                  aria-label={`定位记忆 ${hit.memory.content}`}
+                  className="button-ghost"
+                  onClick={() => locateMemory(hit.memory.id)}
+                  type="button"
+                >
+                  {hit.snippet}
+                </button>
+              </li>
+            ))}
+          </ul>
+        ) : null}
+      </section>
+      <button
+        className="button-secondary"
+        disabled={isLoading}
+        onClick={() => setIncludeHistory((current) => !current)}
+        type="button"
+      >
+        {includeHistory ? "只看 active 记忆" : "查看历史记忆"}
+      </button>
+      {isLoading ? (
+        <p aria-busy="true" className="state-message">
+          正在加载共享记忆…
+        </p>
+      ) : memories.length === 0 && !error ? (
+        <p className="state-message">尚无共享记忆。</p>
+      ) : memories.length > 0 ? (
+        <ul
+          aria-label={includeHistory ? "共享记忆历史" : "Active 共享记忆"}
+          className="stack memory-list"
+        >
+          {visibleMemories.map((memory) => {
+            const memorySource = source(memory);
+            const successor = successorById.get(memory.id);
+            const predecessor = memory.supersedesId
+              ? memories.find((candidate) => candidate.id === memory.supersedesId)
+              : undefined;
+            return (
+            <li
+              aria-label={`memory ${memory.id}`}
+              className="task-summary stack"
+              id={`memory-${memory.id}`}
+              key={memory.id}
+            >
+              <h3
+                ref={(element) => {
+                  if (element) headingRefs.current.set(memory.id, element);
+                  else headingRefs.current.delete(memory.id);
+                }}
+                tabIndex={-1}
+              >
+                {memory.content}
+              </h3>
+              <p>{MEMORY_TYPES.find((type) => type.value === memoryType(memory))?.label}</p>
+              <p>{actorCopy(memory)}</p>
+              {memorySource.href && memorySource.version ? (
+                <a
+                  aria-label={`${memorySource.type} · ${memorySource.id} · version ${memorySource.version}`}
+                  href={memorySource.href}
+                >
+                  {SOURCE_LABELS[memorySource.type]} · <code>{memorySource.id}</code>
+                  {" · version "}<code>{memorySource.version}</code>
+                </a>
+              ) : (
+                <p>
+                  {SOURCE_LABELS[memorySource.type]} · <code>{memorySource.id}</code>
+                  {" · "}<span>原有来源（无版本）</span>
+                </p>
+              )}
+              <p>chain <code>{chainId(memory)}</code> · v{version(memory)}</p>
+              {memory.active ? (
+                <p>Active · 当前版本</p>
+              ) : (
+                <>
+                  <p>已失效</p>
+                  <p>{successor ? `已被 v${version(successor)} 取代` : "已取代"}</p>
+                </>
+              )}
+              {predecessor ? (
+                <a href={`#memory-${predecessor.id}`}>
+                  取代 memory {predecessor.id} · v{version(predecessor)}
+                </a>
+              ) : null}
+              {successor ? (
+                <a href={`#memory-${successor.id}`}>
+                  后继 memory {successor.id} · v{version(successor)}
+                </a>
+              ) : null}
+              {memorySource.type === "artifact_path" ? (
+                <p className="muted">仅引用，尚未读取</p>
+              ) : null}
+            </li>
+            );
+          })}
+        </ul>
+      ) : null}
       <section
         aria-label="提炼候选"
         className="stack task-summary memory-curation"
@@ -1104,193 +1338,6 @@ export function MemoryPanel({ projectId }: { projectId: string }) {
         <p aria-live="polite" aria-label="保存结果" role="status">
           {success}
         </p>
-      ) : null}
-      <section
-        aria-labelledby={`knowledge-feed-${projectId}`}
-        className="stack memory-form"
-      >
-        <h3 id={`knowledge-feed-${projectId}`}>知识动态</h3>
-        <ActionDialog
-          closeLabel="关闭记忆检索"
-          onClose={() => setSearchOpen(false)}
-          open={searchOpen}
-          title="记忆检索"
-          titleId={`memory-search-title-${projectId}`}
-        >
-        <form className="stack" onSubmit={submitSearch}>
-          <div className="form-field">
-            <label htmlFor={`memory-search-${projectId}`}>检索记忆</label>
-            <input
-              id={`memory-search-${projectId}`}
-              onChange={(event) => setSearchQuery(event.target.value)}
-              placeholder="例如：当前目标"
-              value={searchQuery}
-            />
-          </div>
-          <div className="form-row">
-            <div className="form-field">
-              <label htmlFor={`memory-search-type-${projectId}`}>检索类型</label>
-              <select
-                id={`memory-search-type-${projectId}`}
-                onChange={(event) => setSearchType(event.target.value)}
-                value={searchType}
-              >
-                <option value="">全部类型</option>
-                {MEMORY_TYPES.map((type) => (
-                  <option key={type.value} value={type.value}>
-                    {type.label}
-                  </option>
-                ))}
-              </select>
-            </div>
-            <div className="form-field">
-              <label htmlFor={`memory-search-source-${projectId}`}>检索来源</label>
-              <select
-                id={`memory-search-source-${projectId}`}
-                onChange={(event) => setSearchSourceType(event.target.value)}
-                value={searchSourceType}
-              >
-                <option value="">全部来源</option>
-                {Object.entries(SOURCE_LABELS).map(([value, label]) => (
-                  <option key={value} value={value}>
-                    {label}
-                  </option>
-                ))}
-              </select>
-            </div>
-            <div className="form-field">
-              <label htmlFor={`memory-search-version-${projectId}`}>检索版本</label>
-              <input
-                id={`memory-search-version-${projectId}`}
-                inputMode="numeric"
-                onChange={(event) => setSearchVersion(event.target.value)}
-                placeholder="例如：2"
-                value={searchVersion}
-              />
-            </div>
-          </div>
-          <button disabled={isSearching || !searchQuery.trim()} type="submit">
-            {isSearching ? "正在检索…" : "检索"}
-          </button>
-        </form>
-        </ActionDialog>
-        {isSearching ? (
-          <p aria-busy="true" className="state-message">
-            正在检索记忆…
-          </p>
-        ) : null}
-        {searchError ? (
-          <p
-            className="error-text"
-            id={`memory-search-error-${projectId}`}
-            role="alert"
-          >
-            {searchError}
-          </p>
-        ) : null}
-        {!isSearching && searchHits && searchHits.length === 0 && !searchError ? (
-          <p className="state-message">没有匹配的记忆。</p>
-        ) : null}
-        {searchHits && searchHits.length > 0 ? (
-          <ul aria-label="记忆检索结果" className="stack">
-            {searchHits.map((hit) => (
-              <li key={hit.memory.id}>
-                <button
-                  aria-label={`定位记忆 ${hit.memory.content}`}
-                  className="button-ghost"
-                  onClick={() => locateMemory(hit.memory.id)}
-                  type="button"
-                >
-                  {hit.snippet}
-                </button>
-              </li>
-            ))}
-          </ul>
-        ) : null}
-      </section>
-      <button
-        className="button-secondary"
-        disabled={isLoading}
-        onClick={() => setIncludeHistory((current) => !current)}
-        type="button"
-      >
-        {includeHistory ? "只看 active 记忆" : "查看历史记忆"}
-      </button>
-      {isLoading ? (
-        <p aria-busy="true" className="state-message">
-          正在加载共享记忆…
-        </p>
-      ) : memories.length === 0 && !error ? (
-        <p className="state-message">尚无共享记忆。</p>
-      ) : memories.length > 0 ? (
-        <ul
-          aria-label={includeHistory ? "共享记忆历史" : "Active 共享记忆"}
-          className="stack memory-list"
-        >
-          {displayedMemories.map((memory) => {
-            const memorySource = source(memory);
-            const successor = successorById.get(memory.id);
-            const predecessor = memory.supersedesId
-              ? memories.find((candidate) => candidate.id === memory.supersedesId)
-              : undefined;
-            return (
-            <li
-              aria-label={`memory ${memory.id}`}
-              className="task-summary stack"
-              id={`memory-${memory.id}`}
-              key={memory.id}
-            >
-              <h3
-                ref={(element) => {
-                  if (element) headingRefs.current.set(memory.id, element);
-                  else headingRefs.current.delete(memory.id);
-                }}
-                tabIndex={-1}
-              >
-                {memory.content}
-              </h3>
-              <p>{MEMORY_TYPES.find((type) => type.value === memoryType(memory))?.label}</p>
-              <p>{actorCopy(memory)}</p>
-              {memorySource.href && memorySource.version ? (
-                <a
-                  aria-label={`${memorySource.type} · ${memorySource.id} · version ${memorySource.version}`}
-                  href={memorySource.href}
-                >
-                  {SOURCE_LABELS[memorySource.type]} · <code>{memorySource.id}</code>
-                  {" · version "}<code>{memorySource.version}</code>
-                </a>
-              ) : (
-                <p>
-                  {SOURCE_LABELS[memorySource.type]} · <code>{memorySource.id}</code>
-                  {" · "}<span>原有来源（无版本）</span>
-                </p>
-              )}
-              <p>chain <code>{chainId(memory)}</code> · v{version(memory)}</p>
-              {memory.active ? (
-                <p>Active · 当前版本</p>
-              ) : (
-                <>
-                  <p>已失效</p>
-                  <p>{successor ? `已被 v${version(successor)} 取代` : "已取代"}</p>
-                </>
-              )}
-              {predecessor ? (
-                <a href={`#memory-${predecessor.id}`}>
-                  取代 memory {predecessor.id} · v{version(predecessor)}
-                </a>
-              ) : null}
-              {successor ? (
-                <a href={`#memory-${successor.id}`}>
-                  后继 memory {successor.id} · v{version(successor)}
-                </a>
-              ) : null}
-              {memorySource.type === "artifact_path" ? (
-                <p className="muted">仅引用，尚未读取</p>
-              ) : null}
-            </li>
-            );
-          })}
-        </ul>
       ) : null}
     </section>
   );

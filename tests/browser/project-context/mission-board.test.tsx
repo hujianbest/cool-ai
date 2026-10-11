@@ -16,6 +16,7 @@ import type {
 type MissionBoardModule = {
   MissionBoard: ComponentType<{
     openMissionIntent?: number;
+    openWorkItemIntent?: number;
     projectId: string;
   }>;
 };
@@ -424,7 +425,12 @@ describe("Mission Board", () => {
     const boardRegion = await screen.findByRole("region", {
       name: "使命任务看板",
     });
-    for (const label of ["待办", "进行中", "阻塞", "完成"]) {
+    for (const label of [
+      "待办 (Todo)",
+      "进行中 (In Progress)",
+      "阻塞 (Blocked)",
+      "完成 (Done)",
+    ]) {
       expect(
         within(boardRegion).getByRole("region", { name: label }),
       ).toBeInTheDocument();
@@ -656,6 +662,65 @@ function boardFetch(
     throw new Error(`Unexpected request: ${url}`);
   });
 }
+
+describe("mission board UCD alignment", () => {
+  it("renders the mission banner with gate and progress", async () => {
+    const MissionBoard = await board();
+    vi.stubGlobal("fetch", boardFetch([items[0]!, items[1]!, items[2]!, items[3]!]));
+    render(<MissionBoard projectId="project-1" />);
+    await screen.findByRole("region", { name: "使命任务看板" });
+
+    // U-05：核心目标 + 完成门槛 + 整体完成百分比进度条。
+    expect(screen.getByText("Deliver deterministic collaboration")).toBeInTheDocument();
+    expect(screen.getByText("完成门槛: 4项全部通过")).toBeInTheDocument();
+    const progress = screen.getByRole("progressbar", { name: "整体完成度" });
+    expect(progress).toHaveAttribute("value", "1");
+    expect(progress).toHaveAttribute("max", "4");
+    expect(screen.getByText("完成 1/4 · 25%")).toBeInTheDocument();
+  });
+
+  it("numbers cards by mission order and shows dependency and lease metadata", async () => {
+    const MissionBoard = await board();
+    vi.stubGlobal(
+      "fetch",
+      boardFetch([items[0]!, leasedItem(false), items[2]!, items[3]!]),
+    );
+    render(<MissionBoard projectId="project-1" />);
+    const boardRegion = await screen.findByRole("region", { name: "使命任务看板" });
+
+    // U-07：`#N` 编号按使命内创建顺序（视觉徽标，可访问名保持标题）；依赖与租约按数据出现。
+    expect(within(boardRegion).getByText("#1", { exact: true })).toBeInTheDocument();
+    expect(within(boardRegion).getByText("#2", { exact: true })).toBeInTheDocument();
+    expect(within(boardRegion).getByText("#4", { exact: true })).toBeInTheDocument();
+    expect(
+      within(boardRegion).getByRole("heading", { name: "Build" }),
+    ).toBeInTheDocument();
+    expect(within(boardRegion).getByText("依赖：#1")).toBeInTheDocument();
+    expect(within(boardRegion).getByText(/^租约: \d+s$/u)).toBeInTheDocument();
+  });
+
+  it("opens the work item create form from the header intent and focuses the title", async () => {
+    const MissionBoard = await board();
+    vi.stubGlobal("fetch", boardFetch([items[0]!]));
+    render(<MissionBoard openWorkItemIntent={1} projectId="project-1" />);
+
+    // U-06：意图在数据就绪后消费——打开任务创建表单并聚焦标题输入。
+    const workTitle = await screen.findByLabelText("任务标题");
+    await waitFor(() => expect(workTitle).toHaveFocus());
+  });
+
+  it("keeps empty lane copy sr-only when a lane has no items", async () => {
+    const MissionBoard = await board();
+    vi.stubGlobal("fetch", boardFetch([items[0]!, items[3]!]));
+    render(<MissionBoard projectId="project-1" />);
+    await screen.findByRole("region", { name: "使命任务看板" });
+
+    // U-13：空泳道无可视文案，保留 sr-only 可访问性文本。
+    const emptyCopy = screen.getByText("暂无进行中任务。");
+    expect(emptyCopy).toHaveClass("sr-only");
+    expect(screen.getByText("暂无阻塞任务。")).toHaveClass("sr-only");
+  });
+});
 
 describe("mission board work-item lease", () => {
   it("shows holder, expiry, and disables reclaim until the lease expires", async () => {

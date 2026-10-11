@@ -18,9 +18,12 @@ import { DatabaseSync } from "node:sqlite";
 import AxeBuilder from "@axe-core/playwright";
 import { chromium } from "playwright";
 
+import { createStepGate } from "./smoke-steps.mjs";
+
 const host = "127.0.0.1";
-const appPort = 5200 + (process.pid % 200);
-const providerPort = 5400 + (process.pid % 200);
+// COCKPIT_SMOKE_*_PORT：smoke-suite.mjs 并行 lane 用固定端口隔离；独立运行保持原 pid 派生段不变。
+const appPort = Number(process.env.COCKPIT_SMOKE_PORT ?? 5200 + (process.pid % 200));
+const providerPort = Number(process.env.COCKPIT_SMOKE_PROVIDER_PORT ?? 5400 + (process.pid % 200));
 const baseUrl = `http://${host}:${appPort}`;
 const providerBaseUrl = `http://${host}:${providerPort}/v1`;
 const temporaryDirectory = mkdtempSync(
@@ -191,29 +194,18 @@ function close(server) {
   return new Promise((resolveClose) => server.close(() => resolveClose()));
 }
 
-const serverCommand =
-  process.platform === "win32"
-    ? {
-        command: "cmd.exe",
-        args: [
-          "/d",
-          "/s",
-          "/c",
-          `npm run dev -- --hostname ${host} --port ${appPort}`,
-        ],
-      }
-    : {
-        command: "npm",
-        args: [
-          "run",
-          "dev",
-          "--",
-          "--hostname",
-          host,
-          "--port",
-          String(appPort),
-        ],
-      };
+// 与其余冒烟脚本一致：生产模式 next start（需要先有 .next 构建；smoke-suite.mjs 或 npm run build 先行）。
+const serverCommand = {
+  command: process.execPath,
+  args: [
+    join("node_modules", "next", "dist", "bin", "next"),
+    "start",
+    "--hostname",
+    host,
+    "--port",
+    String(appPort),
+  ],
+};
 
 let appServer;
 let serverOutput = "";
@@ -542,6 +534,12 @@ let browser;
 let validationToken = "";
 const projectResponseBodies = [];
 const errorResponseBodies = [];
+// 步骤控制（tests/browser/smoke-steps.mjs）：--list-steps 查看步骤表。
+// 本脚本的逐步包裹（gate.run）随该脚本的下一次修复批次接入；当前切片请求会被
+// 显式拒绝（wired:false），避免误以为已切片。最终 DoD 必须不带参全量跑。
+const gate = createStepGate("context-browser-smoke", ["team", "project", "browse-desktop", "members", "mission-seed", "deps", "second-project", "memory", "snapshots", "persist", "rebind", "browse-narrow", "editor-narrow", "audit-mission", "audit-project", "security-scan"], process.argv.slice(2), { wired: false });
+if (gate.listOnly) process.exit(0);
+
 try {
   await listen(provider, providerPort);
   appServer = spawn(serverCommand.command, serverCommand.args, {

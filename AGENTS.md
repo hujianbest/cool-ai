@@ -68,6 +68,7 @@ Cool AI 是一个本地优先、单 owner 的多 Agent 协作驾驶舱。
 ```powershell
 npm test
 npm run build
+npm run smoke:all
 npm run smoke
 npm run smoke:team
 npm run smoke:context
@@ -81,6 +82,8 @@ npm run review:visual
 ```
 
 聚焦测试：`npm test -- tests/<target>.test.ts`
+
+浏览器冒烟说明：全部冒烟脚本与审计运行器跑生产模式 `next start`（先 `npm run build`，或直接 `npm run smoke:all`——它自带预检、一次构建与 6 lane 并行编排，整轮约 1.5 分钟）；单脚本独立运行端口回退各自的 pid/随机段，`COCKPIT_SMOKE_PORT` / `COCKPIT_SMOKE_PROVIDER_PORT` / `COCKPIT_SMOKE_REDIRECT_PORT` 可覆盖；`--from-step` / `--only-step` 仅限迭代，最终 DoD 必须不带参全量跑。
 
 ### 代码与契约标准
 

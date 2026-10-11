@@ -1613,6 +1613,8 @@ ol {
   background: var(--interactive-primary);
 }
 
+/* 条目操作按钮（星标与更多）统一按 --control-min 触达，32px 图标盒不再例外。 */
+.project-list .thread-item-actions .icon-button,
 .project-list .thread-favorite-toggle {
   display: inline-flex;
   min-width: var(--control-min);
@@ -1805,6 +1807,22 @@ ol {
   padding: var(--space-2) var(--space-3);
   background: var(--color-surface-pearl);
   box-shadow: var(--shadow-panel);
+  /* UCD §9.6.2：批量整理为底部弹出浮动操作条（DOM 仍在侧栏内，视觉浮于视口底部）。 */
+  position: fixed;
+  bottom: var(--space-4);
+  left: 50%;
+  transform: translateX(-50%);
+  width: min(var(--overlay-bar-max-width), calc(100vw - var(--space-6)));
+  max-height: 60vh;
+  overflow-y: auto;
+  z-index: 40;
+}
+
+@media (max-width: 720px) {
+  .thread-batch-bar {
+    bottom: var(--space-2);
+    width: calc(100vw - var(--space-4));
+  }
 }
 
 .thread-batch-header {
@@ -4256,12 +4274,67 @@ legend {
   color: var(--text-muted);
 }
 
+/* UCD §9.2.1 顶栏主按钮：与标题同行右侧对齐。 */
+/* UCD §9.2.4：记忆视图顶部搜索行与类型过滤胶囊。 */
+/* UCD §9.2.5：审批中心顶栏状态筛选（刷新 + 状态选择同行）。 */
+.approval-center-toolbar {
+  align-items: flex-end;
+  display: flex;
+  gap: var(--space-3);
+  justify-content: space-between;
+  flex-wrap: wrap;
+}
+
+.approval-status-filter {
+  min-width: var(--filter-control-min-width);
+}
+
+.memory-search-row {
+  gap: var(--space-2);
+}
+
+.memory-type-chips {
+  flex-wrap: wrap;
+  gap: var(--space-1);
+}
+
+.memory-type-chips button {
+  border: var(--border-width) solid var(--color-divider-soft);
+  border-radius: var(--rounded-pill);
+  background: var(--color-surface-pearl);
+  color: var(--text-secondary);
+  padding: var(--space-1) var(--space-3);
+  min-height: var(--control-min);
+}
+
+.memory-type-chips button[aria-pressed="true"] {
+  background: var(--interactive-soft-hover);
+  color: var(--interactive-primary);
+  border-color: var(--interactive-primary);
+}
+
+.memory-search-open {
+  margin-left: auto;
+}
+
+.task-card-ordinal {
+  margin-right: var(--space-1);
+  color: var(--text-secondary);
+  font-variant-numeric: tabular-nums;
+}
+
+.gov-view-action {
+  margin-left: auto;
+  flex-shrink: 0;
+}
+
 .manage-dialog-close {
   display: inline-flex;
   align-items: center;
   justify-content: center;
-  min-width: var(--space-6);
-  min-height: var(--space-6);
+  /* 触达目标底线：与 --control-min 一致，不做小尺寸例外。 */
+  min-width: var(--control-min);
+  min-height: var(--control-min);
   padding: var(--space-1);
   border: none;
   border-radius: var(--rounded-sm);

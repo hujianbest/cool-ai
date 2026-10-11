@@ -1,5 +1,5 @@
 // @vitest-environment jsdom
-import { render, screen, within } from "@testing-library/react";
+import { render, screen, waitFor, within } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { renderToStaticMarkup } from "react-dom/server";
 import { afterEach, describe, expect, it, vi } from "vitest";
@@ -115,8 +115,17 @@ describe("narrow-screen and keyboard accessibility", () => {
     expect(screen.getByRole("button", { name: "打开项目导航" })).toHaveFocus();
     await user.tab();
     expect(screen.getByRole("button", { name: "打开编辑" })).toHaveFocus();
+    // UCD §7：窄屏聊天流是常驻主表面——流内容进入键盘序；
+    // 关闭的抽屉（侧栏/上下文）仍不得出现在键盘序中。
+    await waitFor(() => {
+      expect(
+        screen.getByTestId("editor-surface").querySelector("button, textarea, input, a[href]"),
+      ).not.toBeNull();
+    });
     await user.tab();
-    expect(document.body).toHaveFocus();
+    expect(
+      screen.getByTestId("editor-surface").contains(document.activeElement),
+    ).toBe(true);
   });
 
   it("keeps restored task status off the chat-first main path", async () => {
