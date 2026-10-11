@@ -247,7 +247,6 @@ describe("Mission Board", () => {
         throw new Error(`Unexpected request: ${url}`);
       }),
     );
-    const user = userEvent.setup();
     render(<MissionBoard openMissionIntent={1} projectId="project-1" />);
 
     // 意图在数据仍在加载时不消费、不抢焦点。
@@ -260,7 +259,6 @@ describe("Mission Board", () => {
     // 加载完成后消费意图：直接打开创建表单并聚焦标题输入。
     const titleInput = await screen.findByLabelText("使命标题");
     await waitFor(() => expect(titleInput).toHaveFocus());
-    void user;
   });
 
   it("creates and edits a mission with field focus and polite success", async () => {

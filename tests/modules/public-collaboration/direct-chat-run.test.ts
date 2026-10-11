@@ -15,6 +15,7 @@ import {
 } from "@/src/adapters/outbound/sqlite/public-collaboration/turn-orchestrator";
 import type { StructuredTurnResult } from "@/src/modules/public-collaboration";
 import { createCredentialVault } from "@/src/modules/identity-capability/internal/credential-vault";
+import { createMission } from "@/src/composition/mission-commands";
 import { memoryDatabasePath } from "@/tests/fixtures/sqlite/memory-database";
 
 const NOW = "2026-08-08T08:00:00.000Z";
@@ -192,7 +193,6 @@ describe("direct chat run path", () => {
       },
       dependencies,
     );
-    console.log("FINALIZED", JSON.stringify(finalized).slice(0, 400));
     expect(finalized).toMatchObject({ status: 200 });
 
     const database = openDatabase(databasePath);
@@ -244,6 +244,122 @@ describe("direct chat run path", () => {
     } finally {
       reopened.close();
     }
+  });
+
+  it("rejects a reply turn inside a collaboration project run", () => {
+    const database = openDatabase(databasePath);
+    try {
+      database
+        .prepare(
+          `INSERT INTO projects(id,name,created_at,workspace_path,workspace_key,version)
+           VALUES ('project-workspace','Workspace Project',?,'/tmp/ws','/tmp/ws',1)`,
+        )
+        .run(NOW);
+      const encrypted = createCredentialVault().encrypt("provider-ws", "ws-key");
+      database
+        .prepare(
+          `INSERT INTO providers(
+             id,name,base_url,default_model,api_key_cipher,api_key_iv,api_key_tag,
+             credential_version,credential_generation,key_id,api_key_mask,verified_at,
+             version,created_at,updated_at
+           ) VALUES ('provider-ws','Workspace Provider','http://127.0.0.1:1/v1','model',?,?,?,?,1,?,?,?,1,?,?)`,
+        )
+        .run(
+          encrypted.apiKeyCipher,
+          encrypted.apiKeyIv,
+          encrypted.apiKeyTag,
+          encrypted.credentialVersion,
+          encrypted.keyId,
+          encrypted.apiKeyMask,
+          NOW,
+          NOW,
+          NOW,
+        );
+      database
+        .prepare(
+          `INSERT INTO agents(
+             id,name,role,system_prompt,provider_id,model,avatar_text,accent_token,
+             can_read,can_write,can_execute,max_tokens,max_handoffs,version,created_at,
+             updated_at,review_capable
+           ) VALUES ('agent-ws-b','Workspace Beta','Peer','Prompt','provider-ws','model','B','clay',
+                   1,0,0,1000,3,1,?,?,0)`,
+        )
+        .run(NOW, NOW);
+      database
+        .prepare(
+          "INSERT INTO project_memberships(project_id,agent_id,joined_at) VALUES ('project-workspace',?,?)",
+        )
+        .run(AGENT_ID, NOW);
+      database
+        .prepare(
+          "INSERT INTO project_memberships(project_id,agent_id,joined_at) VALUES ('project-workspace','agent-ws-b',?)",
+        )
+        .run(NOW);
+    } finally {
+      database.close();
+    }
+    createMission(databasePath, "project-workspace", {
+      expectedVersion: 0,
+      goal: "Goal",
+      operationId: operationId(),
+      title: "Mission",
+    });
+    const threadId = createThread(databasePath, "project-workspace", {
+      memberAgentIds: [AGENT_ID, "agent-ws-b"],
+      operationId: operationId(),
+      title: "项目对话",
+    }).body.thread.id;
+    const started = startThreadRun(databasePath, "project-workspace", threadId, {
+      message: "开始协作",
+      operationId: operationId(),
+    });
+    const dependencies = { clock: () => new Date(), randomUUID };
+    const acquired = acquireAdvance(
+      databasePath,
+      { projectId: "project-workspace", runId: started.body.run.id, threadId },
+      { operationId: operationId() },
+      dependencies,
+    );
+    expect(acquired.kind).toBe("acquired");
+    if (acquired.kind !== "acquired") throw new Error("Expected acquired advance.");
+
+    const usage = { completionTokens: 1, promptTokens: 1, totalTokens: 2 };
+    const turnJson = JSON.stringify({
+      claim: null,
+      disposition: { summary: "直聊收束", type: "reply" },
+      message: "不应被协作运行接受。",
+      tasks: [],
+    });
+    const finalized = finalizeAdvance(
+      databasePath,
+      { projectId: "project-workspace", runId: started.body.run.id, threadId },
+      {
+        attemptId: acquired.attempt.id,
+        leaseToken: acquired.attempt.leaseToken,
+        result: {
+          calls: [{
+            kind: "primary",
+            result: {
+              content: turnJson,
+              error: null,
+              httpStatus: 200,
+              status: "succeeded",
+              usage,
+              usageReported: true,
+            },
+          }],
+          pauseCategory: null,
+          status: "completed",
+          turn: JSON.parse(turnJson) as never,
+          usage: [{ kind: "primary", usage, usageReported: true }],
+        },
+      },
+      dependencies,
+    );
+    expect(finalized.status).toBe(400);
+    expect(finalized.body).toMatchObject({
+      error: { code: "ACTION_INVALID" },
+    });
   });
 
   it("keeps project threads without a mission failing closed", () => {

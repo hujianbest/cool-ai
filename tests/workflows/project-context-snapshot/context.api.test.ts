@@ -134,6 +134,9 @@ describe("project context API", () => {
       },
     });
 
+    // 未绑定工作区且恰一成员属个人对话范围（A-481），不再是失败关闭；
+    // 绑定工作区后恢复多 Agent 项目口径，稳定返回 members/mission 缺失。
+    bindWorkspace(project.id);
     const notReady = await contextRoute.GET(
       new Request(`${base}?agentId=agent-one`),
       context,
@@ -143,7 +146,7 @@ describe("project context API", () => {
       error: {
         code: "CONTEXT_NOT_READY",
         message: "Project context is not ready.",
-        missing: ["workspace", "members", "mission"],
+        missing: ["members", "mission"],
       },
     });
 

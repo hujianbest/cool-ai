@@ -124,9 +124,9 @@ async function run() {
   await step("TC-02: 导航至团队/设置配置页", async () => {
     const configBtn = page.locator('a:has-text("配置 Provider")');
     await configBtn.click();
-    await page.waitForURL(/.*section=agents.*/, { timeout: 5000 });
+    await page.waitForURL(/.*section=providers.*/, { timeout: 5000 });
     await page.waitForTimeout(600);
-    await page.screenshot({ path: join(screenshotDir, "tc02-team-agents-empty.png") });
+    await page.screenshot({ path: join(screenshotDir, "tc02-team-providers-empty.png") });
   });
 
   // TC-03: 模型服务 (Provider) 表单交互与验证保存

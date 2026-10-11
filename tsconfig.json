@@ -37,7 +37,9 @@
     ".next-thread-smoke-*/types/**/*.ts",
     ".next-thread-smoke-*/dev/types/**/*.ts",
     ".next-attach-repro-*/types/**/*.ts",
-    ".next-attach-repro-*/dev/types/**/*.ts"
+    ".next-attach-repro-*/dev/types/**/*.ts",
+    ".next-audit-*/types/**/*.ts",
+    ".next-audit-*/dev/types/**/*.ts"
   ],
   "exclude": [
     "node_modules"

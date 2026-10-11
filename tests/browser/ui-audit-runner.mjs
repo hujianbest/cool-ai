@@ -7,7 +7,14 @@
 import assert from "node:assert/strict";
 import { spawn, spawnSync } from "node:child_process";
 import { createServer } from "node:http";
-import { mkdirSync, mkdtempSync, readFileSync, rmSync, writeFileSync } from "node:fs";
+import {
+  mkdirSync,
+  mkdtempSync,
+  readFileSync,
+  readdirSync,
+  rmSync,
+  writeFileSync,
+} from "node:fs";
 import { tmpdir } from "node:os";
 import { join, resolve } from "node:path";
 
@@ -23,6 +30,14 @@ const databasePath = join(temporaryDirectory, "audit.sqlite");
 const workspaceDirectory = join(temporaryDirectory, "audit-workspace");
 const auditDistDirectory = `.next-audit-${process.pid}`;
 const artifactDirectory = resolve("tests", "browser", "test-artifacts", "ui-audit");
+// 清掉上一轮失败截图，避免与本次证据并排误读。
+try {
+  for (const entry of readdirSync(artifactDirectory)) {
+    if (entry.endsWith("-failure.png")) rmSync(join(artifactDirectory, entry), { force: true });
+  }
+} catch {
+  // 目录首次创建时不存在。
+}
 // dev server 会重写受版本管理的生成文件；运行前后按原字节还原，避免污染工作树。
 const generatedFiles = ["next-env.d.ts", "tsconfig.json"].map((file) => ({
   content: readFileSync(file, "utf8"),
@@ -339,6 +354,11 @@ try {
     await send.click();
     await page.getByText("完成拆解", { exact: false }).first().waitFor({ timeout: 60_000 });
     await page.waitForTimeout(800);
+    await page.evaluate(() => {
+      const body = document.querySelector(".chat-body");
+      if (body) body.scrollTop = body.scrollHeight;
+    });
+    await page.waitForTimeout(400);
     await shot("11b-chat-reply");
   });
 
@@ -396,6 +416,11 @@ try {
     await page.waitForTimeout(2500);
     const termHintCount = await page.getByText("请先选择历史运行", { exact: false }).count();
     if (termHintCount !== 0) throw new Error("Composer 仍出现历史运行内部术语提示");
+    await page.evaluate(() => {
+      const body = document.querySelector(".chat-body");
+      if (body) body.scrollTop = body.scrollHeight;
+    });
+    await page.waitForTimeout(400);
     await shot("11e-new-round-direct-send");
   });
 
@@ -494,6 +519,11 @@ try {
     await page.locator('button.composer-send, button[aria-label*="发送"]').first().click();
     await page.getByText("完成拆解", { exact: false }).first().waitFor({ timeout: 60_000 });
     await page.waitForTimeout(1200);
+    await page.evaluate(() => {
+      const body = document.querySelector(".chat-body");
+      if (body) body.scrollTop = body.scrollHeight;
+    });
+    await page.waitForTimeout(400);
     await shot("16c-project-chat-reply");
   });
 

@@ -1218,9 +1218,6 @@ export function finalizeAdvance(
     } catch (error) {
       if (!failureContext.attempt) throw error;
       const attempt = failureContext.attempt;
-      if (!(error instanceof CollaborationError)) {
-        console.log("FINALIZE_DEBUG", String(error), String((error as Error)?.stack).split("\n").slice(1, 5).join(" | "));
-      }
       const durableError =
         error instanceof CollaborationError
           ? error

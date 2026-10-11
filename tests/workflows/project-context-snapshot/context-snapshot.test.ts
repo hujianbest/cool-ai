@@ -180,14 +180,16 @@ describe("deterministic project context snapshot", () => {
     seedAgents();
     addMember(project.id, "agent-alpha", "2026-07-29T00:00:00.000Z");
 
-    expect(() =>
-      contexts.createContextSnapshot(databasePath, project.id, "agent-alpha"),
-    ).toThrowError(
-      expect.objectContaining({
-        code: "CONTEXT_NOT_READY",
-        missing: ["workspace", "members", "mission"],
-      }),
+    // 未绑定工作区且恰一成员属个人对话范围（A-481）：豁免 workspace/mission，
+    // 快照如实返回空使命与空工作区，而不是失败关闭。
+    const directSnapshot = contexts.createContextSnapshot(
+      databasePath,
+      project.id,
+      "agent-alpha",
     );
+    expect(directSnapshot.shared.project.workspacePath).toBeNull();
+    expect(directSnapshot.shared.mission).toBeNull();
+    expect(directSnapshot.shared.workItems).toEqual([]);
 
     bindWorkspace(project.id);
     expect(() =>

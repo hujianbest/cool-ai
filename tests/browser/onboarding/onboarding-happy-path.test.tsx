@@ -409,7 +409,7 @@ describe("progressive onboarding T-1", () => {
     );
     render(<ProjectPanel />);
 
-    const entry = await screen.findByRole("link", { name: "首次使用引导" });
+    const entry = await screen.findByRole("link", { name: "查看引导" });
     expect(entry).toHaveAttribute(
       "href",
       "/team?section=providers&guide=provider&returnTo=/",

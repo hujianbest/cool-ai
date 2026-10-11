@@ -408,6 +408,8 @@ export function commitAgentTaskActionsTx(
   input: CommitAgentTaskActionsInput,
 ): CommitAgentTaskActionsResult {
   const context = commitContext(database, input.runId, input.agentId, input.attemptId);
+  // 直聊范围只接受 reply 收束；协作范围拒绝 reply（互斥在提交前失败关闭）。
+  validateDirectChatTurn(context, input);
   const ownerRace = reconcilePendingOwnerMessages(database, context);
   const handoffTargetAgentId =
     input.turn.disposition.type === "handoff"
