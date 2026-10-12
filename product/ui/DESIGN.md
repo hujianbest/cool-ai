@@ -21,7 +21,7 @@ confirmed: 2026-08-15
 1. **会话优先**：主路径只有对话。治理（使命 / 记忆 / 审批 / 审计）收进 52px 图标轨，按需打开为视图，不占主界面。
 2. **安静工作台**：高留白、弱边框、极少阴影、无装饰动画；层次靠色彩明度与字重，不靠浮层堆叠。
 3. **令牌驱动**：所有颜色/间距/圆角/字号来自本契约与 tokens.css；禁止组件内硬编码。
-4. **无障碍底线**：正文对比 ≥4.5:1（亮/暗各自独立验证）；控件 ≥44px；图标按钮有可访问名称与 tooltip；焦点可见。
+4. **无障碍底线**：正文对比 ≥4.5:1（亮/暗各自独立验证）；交互热区 ≥44×44px（视觉高度可分 32/36/40 档，热区由物理外延或 `::after` 补足，见 §6 `control-height`）；图标按钮有可访问名称与 tooltip；焦点可见。
 5. **窄屏可退让**：桌面三区（轨/侧栏/主区）在窄屏退化为抽屉模型，图标轨常驻。
 
 ## 2. 全局信息架构
@@ -94,15 +94,47 @@ confirmed: 2026-08-15
 ## 4. 字体
 
 - 家族：`Inter, -apple-system, "PingFang SC", "Noto Sans SC", "Segoe UI Variable", "Microsoft YaHei UI", system-ui, sans-serif`。
-- 字号：基础 16px；标题 20/18px；辅助 14px；元信息 12px。
+- 字号（闭合集，px / 行高）：正文 16/23.5；标题 20/26、18/24；辅助 14/20；紧凑 13/20（`--text-compact`）；元信息 11/16（`--text-label`）；说明小字 12/16（`--text-fine-print`）；全大写微标签 10/13（`--text-micro-legal`）。展示级 21/24/28/34/40/56 仅保留给空态与预览目录，产品界面正文不越档。
+- 元信息统一档：时间、计数、token 用量、来源 id、键位提示等密集元信息一律 `--text-label`（11/16）；密集列表正文与次要标签用 `--text-compact`（13/20）。
 - 行高：正文 1.5，标题 1.3，紧凑列表 1.35。
 - 字重：正文 400，标题/强调 600，状态徽标 600。
 
 ## 5. 间距 / 圆角 / 阴影
 
-- 间距节奏 4/8px：`--space-xxs: 4px`、`--space-xs: 8px`、`--space-sm: 12px`、`--space-md: 16px`、`--space-lg: 24px`、`--space-xl: 32px`。
-- 圆角：小控件 8px（`--rounded-sm`）、输入/卡片 12px（`--rounded-md`）、浮层/对话 16px（`--rounded-lg`）、胶囊 9999px。
-- 阴影：极轻。卡片 `0 1px 2px rgba(34,30,28,0.05)`；浮起 composer `0 8px 24px rgba(34,30,28,0.10)`；抽屉 scrim 不变。
+### 5.1 间距（单一声明面）
+
+- 主档 4 / 8 / 12 / 16 / 24 / 32：`--space-xxs: 4px`、`--space-xs: 8px`、`--space-sm: 12px`、`--space-md: 16px`、`--space-lg: 24px`、`--space-xl: 32px`；页面级大留白 `--space-xxl: 48px`、`--space-section: 80px`。
+- 所有内边距 / 间距值必须是 4 的倍数；17px、20px 等非主档数值不得出现在内边距（历史 17px 漂移已按 16px 定案，见 A-513）。
+- 历史双轨（`--space-1..8`）已删除，全量引用收敛到本档。
+
+### 5.2 圆角（语义固定）
+
+| 语义 | 令牌 | 值 |
+|---|---|---|
+| 徽章 / 状态胶囊 | `--rounded-pill` | 9999px |
+| 控件（按钮 / 输入 / 列表项） | `--rounded-sm` | 8px |
+| 卡片 | `--rounded-md` | 12px |
+| 容器 / 模态 / 浮层 | `--rounded-lg` | 16px |
+| 微缩芯片（密集标签） | `--rounded-xs` | 5px |
+
+历史 `--radius-sm/md/lg` 与 `--rounded-full` 已删除，全量引用收敛到本阶梯。
+
+### 5.3 阴影（三级 elevation）
+
+| 级别 | 令牌 | 用途 | 亮色 |
+|---|---|---|---|
+| 1 | `--shadow-elevation-1` | 列表卡 / 卡片（配合 1px 细边） | `0 1px 2px rgba(34,30,28,0.05)` |
+| 2 | `--shadow-elevation-2` | 浮起元素：菜单 / 下拉 / tooltip / 浮起 composer | `0 4px 12px rgba(34,30,28,0.10)` |
+| 3 | `--shadow-elevation-3` | overlay：模态 / 抽屉 / 遮罩面（无边框） | `0 12px 32px rgba(34,30,28,0.16)` |
+
+- 暗色三级一律带克制的顶部内高光（`inset 0 1px 0`，暖白 alpha 0.06–0.10），使暗底盒子仍有层次。
+- 规则：**卡片 = 1px 细边 + elevation-1；overlay = 无边框 + elevation-3**；禁止重边框 + 重阴影叠加，禁止全面加阴影（守 §1.2「层次靠明度与字重，不靠浮层堆叠」）。
+- 历史 `--shadow-1/2/panel/product` 已删除，全量引用收敛到三级 elevation。
+
+### 5.4 表面层级（语义别名）
+
+- 调色板事实源为 §3 的 `--color-*`；组件一律使用四档语义别名：`--surface-sunken`（壳体底）、`--surface-panel`（侧栏 / 面板）、`--surface-main`（主区画布）、`--surface-card`（卡片 / 浮起表面）。
+- `--color-surface-tile-1/2/3` 仅作为预览目录（`public/preview.html`）的调色板别名保留，产品组件不得引用。
 
 ## 6. 组件规范
 
@@ -113,8 +145,9 @@ confirmed: 2026-08-15
 - **composer**：圆角 12px、1px `--color-hairline`、背景 `--color-surface-pearl`；聚焦 ring 暖金；占位符 `--color-ink-muted-48`；左附加按钮 44px，右主按钮 44px。
 - **empty-state**：居中，图标（Phosphor 线性 48px，`--color-ink-muted-48`）+ 标题（18px 600）+ 引导（14px muted）+ 主按钮。
 - **dialog**：16px 圆角、`--color-surface-pearl`、scrim `rgba(20,16,10,0.4)`、标题 18px 600。
-- **button**：主按钮 = 暖金 600 底 + 白字（hover 700）；次级 = parchment 底 + 边框；ghost = 无底。高度 ≥44px。
-- **badge / status-label**：12px 600，pill，语义 surface 底 + 语义色字，对比 ≥4.5:1。
+- **button**：主按钮 = 暖金 600 底 + 白字（hover 700）；次级 = parchment 底 + 边框；ghost = 无底。视觉高度分档 `--control-h-compact: 32px` / `--control-h-base: 36px` / `--control-h-comfortable: 40px`；交互热区一律 ≥44×44（见下条）。存量 44px 构件（侧栏项 / header 动作 / composer 按钮）保持 44px 不动。
+- **control-height / hit-area**：视觉高度可用 32/36/40 档，但热区必须 ≥44×44——由物理外延（`min-height` 撑开或独立 wrapper）或伪元素（`.hit-area::after` 垂直外延至 `--control-min`）补足；密集列表内的小控件不得用外延热区互相遮挡（改为整行可点）。
+- **badge / status-label**：tinted pill——同色系底（语义 surface）+ 深色字（语义色）+ `--rounded-pill`，`--text-label`（11/16）600；对比 ≥4.5:1。计数变体在标签右侧以同色系数字呈现（同尺寸，不单独着色）。存量 12px 徽章随 W1 收敛到 11px 档。
 - **agent avatar**：36px 圆，名字首字 14px 600，暖金家族色对（fg/bg），聚焦可见。
 
 ## 7. 壳层交付步骤

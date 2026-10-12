@@ -309,15 +309,19 @@ describe("narrow collaboration cockpit accessibility", () => {
     expect(cockpit).not.toMatch(/\.collaboration-mobile-tabs[^}]*#[0-9A-Fa-f]{3,8}/);
   });
 
-  it("floats the composer on overlay shadows and keeps chat chrome on tokens", () => {
+  it("floats the composer on elevation-2 and keeps chat chrome on tokens", () => {
     const tokens = readFileSync("app/tokens.css", "utf8");
     const cockpit = readFileSync("app/cockpit.css", "utf8");
 
-    expect(tokens).toContain("--accent: var(--color-primary)");
-    expect(tokens).toContain("--surface: var(--color-on-primary)");
+    // A-513：单一声明面——别名收口为语义令牌，legacy 简写名不再存在。
+    expect(tokens).toContain("--text-primary: var(--color-ink)");
+    expect(tokens).toContain("--surface-card: var(--color-surface-pearl)");
     expect(tokens).toContain("--text-muted: var(--text-subtle)");
+    for (const legacy of ["--accent:", "--surface: var(", "--shadow-1:", "--shadow-2:"]) {
+      expect(tokens).not.toContain(legacy);
+    }
     expect(cockpit).toMatch(
-      /\.composer\s*\{[^}]*background:\s*var\(--color-surface-pearl\)[^}]*border-radius:\s*var\(--rounded-md\)[^}]*box-shadow:\s*var\(--shadow-product\)/s,
+      /\.composer\s*\{[^}]*background:\s*var\(--color-surface-pearl\)[^}]*border-radius:\s*var\(--rounded-md\)[^}]*box-shadow:\s*var\(--shadow-elevation-2\)/s,
     );
     expect(cockpit).toMatch(
       /\.cockpit-flow \.panel-heading\s*\{[^}]*background:\s*var\(--surface-panel\)[^}]*border-bottom:[^;]*var\(--border-subtle\)/s,

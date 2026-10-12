@@ -158,7 +158,10 @@ describe("approval center status filter", () => {
       />,
     );
     await screen.findByText("node -v");
-    expect(summaries.at(-1)).toEqual({ counts: { pending: 1, expired: 1 }, total: 2 });
+    // 上报 effect 与列表提交同批但次序不保证；全量负载下有界等待最后一次上报。
+    await waitFor(() => {
+      expect(summaries.at(-1)).toEqual({ counts: { pending: 1, expired: 1 }, total: 2 });
+    });
 
     // 顶栏筛选组件的选项计数来自上报值（全部/待裁决/已过期…）。
     rerender(
@@ -645,10 +648,11 @@ describe("Approval center panel", () => {
 });
 
 describe("approval center chrome", () => {
-  it("elevates approval cards with overlay shadows", () => {
+  it("renders approval cards as elevation-1 list cards with a hairline border", () => {
     const css = readFileSync("app/cockpit.css", "utf8");
+    // A-513：卡片 = 1px 细边 + elevation-1（禁止重边框 + 重阴影叠加）。
     expect(css).toMatch(
-      /\.approval-center-list \.task-summary\s*\{[^}]*background:\s*var\(--color-card-strong\)[^}]*border-radius:\s*var\(--rounded-lg\)[^}]*box-shadow:\s*var\(--shadow-1\),\s*var\(--shadow-2\)/s,
+      /\.approval-center-list \.task-summary\s*\{[^}]*background:\s*var\(--color-card-strong\)[^}]*border:\s*var\(--border-width\) solid var\(--border-subtle\)[^}]*border-radius:\s*var\(--rounded-md\)[^}]*box-shadow:\s*var\(--shadow-elevation-1\)/s,
     );
   });
 });

@@ -543,11 +543,12 @@ describe("desktop warm-terracotta shell grid", () => {
     expect(cockpit).toMatch(
       /\.cockpit-flow \.composer\s*\{[^}]*flex-shrink:\s*0/s,
     );
+    // A-513：header 高度收敛到令牌（--header-height: 3rem = 48px）。
     expect(cockpit).toMatch(
-      /\.cockpit-header\s*\{[^}]*height:\s*48px/s,
+      /\.cockpit-header\s*\{[^}]*height:\s*var\(--header-height\)/s,
     );
     expect(cockpit).toMatch(
-      /\.cockpit-flow \.composer\s*\{[^}]*background:\s*var\(--color-surface-pearl\)[^}]*border-radius:\s*var\(--rounded-md\)[^}]*box-shadow:\s*var\(--shadow-product\)/s,
+      /\.cockpit-flow \.composer\s*\{[^}]*background:\s*var\(--color-surface-pearl\)[^}]*border-radius:\s*var\(--rounded-md\)[^}]*box-shadow:\s*var\(--shadow-elevation-2\)/s,
     );
     expect(cockpit).toMatch(
       /\.composer-input-row textarea\s*\{[^}]*min-height:\s*var\(--control-min\)[^}]*max-height:\s*180px[^}]*resize:\s*none/s,
@@ -595,7 +596,7 @@ describe("warm-gold 240px sidebar does not crush CJK chrome", () => {
       /\.activity-bar \.activity-bar-item\s*\{[^}]*padding:\s*0/s,
     );
     expect(cockpit).not.toMatch(
-      /\.cockpit-flow \.panel-heading\s*\{[^}]*margin:\s*calc\(var\(--space-8\)\s*\*\s*-1\)/s,
+      /\.cockpit-flow \.panel-heading\s*\{[^}]*margin:\s*calc\(var\(--space-xl\)\s*\*\s*-1\)/s,
     );
     expect(cockpit).toMatch(
       /\.mission-summary,\s*\.mission-board \.task-summary\s*\{[^}]*align-items:\s*start/s,

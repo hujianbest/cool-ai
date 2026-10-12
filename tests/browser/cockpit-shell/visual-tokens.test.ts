@@ -72,8 +72,9 @@ const roundedTokens = [
 ] as const;
 
 const shadowTokens = [
-  "shadow-product",
-  "shadow-panel",
+  "shadow-elevation-1",
+  "shadow-elevation-2",
+  "shadow-elevation-3",
 ] as const;
 
 const requiredDesignTokens = [
@@ -300,7 +301,6 @@ describe("light and dark theme tokens", () => {
       "surface-panel",
       "surface-main",
       "surface-card",
-      "surface-muted",
       "text-primary",
       "text-secondary",
       "text-subtle",
@@ -317,9 +317,9 @@ describe("light and dark theme tokens", () => {
       "status-danger-surface",
       "agent-warm",
       "focus-ring-color",
-      "shadow-panel",
-      "shadow-1",
-      "shadow-2",
+      "shadow-elevation-1",
+      "shadow-elevation-2",
+      "shadow-elevation-3",
       "focus-ring",
     ] as const;
 

@@ -56,9 +56,15 @@ describe("DESIGN.md visual token discipline", () => {
     expect(tokens).toContain("--text-display-lg: 40px");
     expect(tokens).toContain("--text-display-md: 34px");
     expect(tokens).toContain("--text-lead: 28px");
-    expect(tokens).toContain("--text-body: 17px");
+    // 17px 漂移定案：正文档与文档基准（DESIGN.md §4 基础 16px）对齐（A-513）。
+    expect(tokens).toContain("--text-body: 16px");
     expect(tokens).toContain("--text-caption: 14px");
     expect(tokens).toContain("--text-fine-print: 12px");
+    // 密集档（A-513）：元信息 11/16、紧凑 13/20。
+    expect(tokens).toContain("--text-label: 11px");
+    expect(tokens).toContain("--leading-label: 16px");
+    expect(tokens).toContain("--text-compact: 13px");
+    expect(tokens).toContain("--leading-compact: 20px");
 
     // Line heights
     expect(tokens).toContain("--leading-body: 1.47");
@@ -76,7 +82,7 @@ describe("DESIGN.md visual token discipline", () => {
       "--space-xxs: 4px",
       "--space-xs: 8px",
       "--space-sm: 12px",
-      "--space-md: 17px",
+      "--space-md: 16px",
       "--space-lg: 24px",
       "--space-xl: 32px",
       "--space-xxl: 48px",
@@ -104,8 +110,13 @@ describe("DESIGN.md visual token discipline", () => {
   it("defines DESIGN.md shadow tokens", () => {
     const tokens = readFileSync(tokenPath, "utf8");
 
-    expect(tokens).toContain("--shadow-product: rgba(34, 30, 28, 0.10) 0 8px 24px");
-    expect(tokens).toContain("--shadow-panel:");
+    // 三级 elevation（A-513）：卡片 1 / 浮起 2 / overlay 3；旧 --shadow-1/2/panel/product 已删除。
+    expect(tokens).toContain("--shadow-elevation-1: rgba(34, 30, 28, 0.05) 0 1px 2px 0");
+    expect(tokens).toContain("--shadow-elevation-2: rgba(34, 30, 28, 0.10) 0 4px 12px 0");
+    expect(tokens).toContain("--shadow-elevation-3: rgba(34, 30, 28, 0.16) 0 12px 32px 0");
+    for (const legacy of ["--shadow-1:", "--shadow-2:", "--shadow-panel:", "--shadow-product:"]) {
+      expect(tokens).not.toContain(legacy);
+    }
   });
 });
 
@@ -120,7 +131,6 @@ describe("legacy cockpit token compatibility", () => {
       "--surface-panel: var(--color-canvas-parchment)",
       "--surface-main: var(--color-canvas)",
       "--surface-card: var(--color-surface-pearl)",
-      "--surface-muted: var(--color-canvas-parchment)",
       "--text-primary: var(--color-ink)",
       "--text-secondary: var(--color-ink-muted-80)",
       // AA: DESIGN.md faint (#9C9182 / #786E60) fails 4.5:1 on canvas/panel
@@ -145,16 +155,37 @@ describe("legacy cockpit token compatibility", () => {
     expect(tokens).toContain("--warning:");
     expect(tokens).toContain("--danger:");
 
-    // Legacy spacing
-    expect(tokens).toContain("--space-4: 1rem");
-    expect(tokens).toContain("--space-8: 2rem");
+    // 单一声明面（A-513）：legacy 双轨 name 已删除，tokens.css 与 cockpit.css 任何残留都会
+    // 让 var() 解析失败关闭（未定义令牌使整条声明静默丢弃）。
+    const cockpitCss = readFileSync(cockpitPath, "utf8");
+    const legacyNames = [
+      "--space-1:", "--space-2:", "--space-3:", "--space-4:",
+      "--space-5:", "--space-6:", "--space-8:",
+      "--radius-sm:", "--radius-md:", "--radius-lg:",
+      "--rounded-full:",
+      "--shadow-1:", "--shadow-2:", "--shadow-panel:", "--shadow-product:",
+      "--text-xs:", "--text-sm:", "--text-md:", "--text-lg:", "--text-xl:",
+    ];
+    for (const legacy of legacyNames) {
+      expect(tokens).not.toContain(legacy);
+    }
+    for (const legacy of [
+      "--space-1\\b", "--space-2\\b", "--space-3\\b", "--space-4\\b",
+      "--space-5\\b", "--space-6\\b", "--space-8\\b",
+      "--radius-sm\\b", "--radius-md\\b", "--radius-lg\\b", "--rounded-full\\b",
+      "--shadow-1\\b", "--shadow-2\\b", "--shadow-panel\\b", "--shadow-product\\b",
+      "--text-xs\\b", "--text-sm\\b", "--text-md\\b", "--text-lg\\b", "--text-xl\\b",
+    ]) {
+      expect(cockpitCss, `cockpit.css must not reference ${legacy}`).not.toMatch(
+        new RegExp(legacy),
+      );
+    }
 
-    // Legacy rounded
-    expect(tokens).toContain("--radius-md: 0.75rem");
-
-    // Legacy shadows
-    expect(tokens).toContain("--shadow-1:");
-    expect(tokens).toContain("--shadow-2:");
+    // 控制高度分档（A-513）：热区下限不变，视觉高度分档可选。
+    expect(tokens).toContain("--control-min: 2.75rem");
+    expect(tokens).toContain("--control-h-compact: 2rem");
+    expect(tokens).toContain("--control-h-base: 2.25rem");
+    expect(tokens).toContain("--control-h-comfortable: 2.5rem");
 
     // Legacy focus ring
     expect(tokens).toContain("--focus-ring-color:");
@@ -194,7 +225,7 @@ describe("visual token discipline", () => {
       /\.mission-status\s*\{[^}]*background:\s*var\(--color-canvas-parchment\)/,
     );
     expect(css).toMatch(
-      /\.modal-surface\s*\{[^}]*background:\s*var\(--surface-card\)[^}]*box-shadow:\s*var\(--shadow-2\)/s,
+      /\.modal-surface\s*\{[^}]*background:\s*var\(--surface-card\)[^}]*box-shadow:\s*var\(--shadow-elevation-3\)/s,
     );
   });
 

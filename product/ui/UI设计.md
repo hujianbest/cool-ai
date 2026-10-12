@@ -1147,6 +1147,7 @@ Cool AI 专为追求极致生产力、拥有全栈实现能力的独立创造者
 
 ### 11.2 触控与点击目标（Touch Target ≥ 44×44px）
 - 即使视觉呈现为 20px 的小图标或 32px 的胶囊标签，其 CSS 物理外延或虚拟伪元素（`::after`）点击响应热区必须 **≥ 44×44px**。
+- 视觉高度分档（DESIGN.md §6）：`--control-h-compact: 32px` / `--control-h-base: 36px` / `--control-h-comfortable: 40px`；存量 44px 构件（侧栏项、header 动作、composer 按钮）保持 44px。视觉高度降档只对证据显示体量过重的构件应用，且必须同步补足热区。
 - 保证在触控屏或高分辨率触控板上均可轻松点击，避免误触。
 
 ### 11.3 语义树与 ARIA 规范
@@ -1187,9 +1188,10 @@ Cool AI 专为追求极致生产力、拥有全栈实现能力的独立创造者
 ```
 
 - **字体家族**：以 `-apple-system, "PingFang SC", "Noto Sans SC", "Segoe UI Variable", system-ui, sans-serif` 为基础，保证中文与西文在各桌面平台的原生高清晰度渲染。
-- **排版节奏**：主标题 18px / 20px (600)，正文 16px (400, 1.5 行高)，次级文字 14px，元数据 12px。
-- **间距标尺**：严格遵循 4/8px 节拍：`4px (xxs)`, `8px (xs)`, `12px (sm)`, `16px (md)`, `24px (lg)`, `32px (xl)`。
-- **圆角标尺**：小按钮/标签 `8px`，输入框/卡片 `12px`，模态对话框 `16px`。
+- **排版节奏**：主标题 18px / 20px (600)，正文 16px (400, 1.5 行高)，次级文字 14px，密集正文/次要标签 13px（`--text-compact`），元数据 11px（`--text-label`，时间/计数/token 用量/来源 id）。
+- **间距标尺**：严格遵循 4/8px 节拍（内边距一律 4 的倍数）：`4px (xxs)`, `8px (xs)`, `12px (sm)`, `16px (md)`, `24px (lg)`, `32px (xl)`，页面级 `48px (xxl)` / `80px (section)`。
+- **圆角标尺**：徽章/胶囊 `9999px`，控件（按钮/输入）`8px`，卡片 `12px`，容器/模态/浮层 `16px`。
+- **阴影标尺**：三级 elevation——列表卡 `elevation-1`（配 1px 细边）、浮起元素（菜单/下拉/tooltip/composer）`elevation-2`、overlay（模态/抽屉）`elevation-3`（无边框）；暗色三级带克制顶部内高光。
 
 ---
 

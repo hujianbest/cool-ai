@@ -128,7 +128,7 @@ describe("context navigation accessibility", () => {
 
     const css = readFileSync(join(process.cwd(), "app", "cockpit.css"), "utf8");
     expect(css).toMatch(
-      /\.project-context-tabs\s*\{[^}]*gap:\s*var\(--space-2\)/s,
+      /\.project-context-tabs\s*\{[^}]*gap:\s*var\(--space-xs\)/s,
     );
     expect(css).toMatch(
       /\.project-context-tabs button\[aria-selected="true"\]\s*\{[^}]*background:\s*var\(--interactive-accent-soft\)[^}]*color:\s*var\(--text-primary\)/s,

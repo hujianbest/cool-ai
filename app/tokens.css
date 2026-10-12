@@ -16,6 +16,7 @@
   --color-canvas: #F4EFE7;
   --color-canvas-parchment: #FAF6F1;
   --color-surface-pearl: #FEFBF8;
+  /* 调色板别名：仅供 preview.html 目录展示，产品组件用 --surface-* 四档语义别名。 */
   --color-surface-tile-1: #EAE4DA;
   --color-surface-tile-2: #F4EFE7;
   --color-surface-tile-3: #FAF6F1;
@@ -30,41 +31,50 @@
   --font-body: "SF Pro Text", system-ui, -apple-system, sans-serif;
   --font-sans: -apple-system, "PingFang SC", "Noto Sans SC", "Segoe UI Variable", "Microsoft YaHei UI", system-ui, sans-serif;
   --font-mono: "Cascadia Mono", "Consolas", monospace;
+  --font-bold: 700;
 
-  /* DESIGN.md Typography Scale */
+  /* DESIGN.md Typography Scale（闭合集：展示级仅空态/预览目录，正文级为产品界面唯一取值面） */
   --text-hero-display: 56px;
   --text-display-lg: 40px;
   --text-display-md: 34px;
   --text-lead: 28px;
   --text-lead-airy: 24px;
   --text-tagline: 21px;
-  --text-body-strong: 17px;
-  --text-body: 17px;
-  --text-dense-link: 17px;
+  --text-title: 20px;
+  --text-subtitle: 18px;
+  --text-body-strong: 16px;
+  --text-body: 16px;
+  --text-dense-link: 16px;
   --text-caption: 14px;
   --text-caption-strong: 14px;
+  --text-compact: 13px;
+  --text-fine-print: 12px;
+  --text-nav-link: 12px;
+  --text-label: 11px;
+  --text-micro-legal: 10px;
   --text-button-large: 18px;
   --text-button-utility: 14px;
-  --text-fine-print: 12px;
-  --text-micro-legal: 10px;
-  --text-nav-link: 12px;
 
-  /* DESIGN.md Line Heights */
+  /* DESIGN.md Line Heights（label/compact/fine-print/micro 为元信息与密集档的精确像素行高） */
   --leading-hero-display: 1.07;
   --leading-display-lg: 1.1;
   --leading-display-md: 1.47;
-  --leading-lead: 1.14;
+  --leading-lead: 36px;
   --leading-lead-airy: 1.5;
   --leading-tagline: 1.19;
+  --leading-title: 28px;
+  --leading-subtitle: 24px;
   --leading-body-strong: 1.24;
   --leading-body: 1.47;
   --leading-dense-link: 2.41;
   --leading-caption: 1.43;
   --leading-caption-strong: 1.29;
+  --leading-compact: 20px;
+  --leading-fine-print: 16px;
+  --leading-label: 16px;
+  --leading-micro-legal: 13px;
   --leading-button-large: 1.0;
   --leading-button-utility: 1.29;
-  --leading-fine-print: 1.0;
-  --leading-micro-legal: 1.3;
   --leading-nav-link: 1.0;
 
   /* DESIGN.md Letter Spacing */
@@ -80,35 +90,35 @@
   --tracking-fine-print: -0.12px;
   --tracking-micro-legal: -0.08px;
   --tracking-nav-link: -0.12px;
+  --tracking-wide: 0.08em;
 
-  /* DESIGN.md Rounded Scale */
+  /* DESIGN.md Rounded Scale（语义：徽章=pill、控件=8、卡片=12、容器/浮层=16、微缩芯片=5） */
   --rounded-none: 0px;
   --rounded-xs: 5px;
   --rounded-sm: 8px;
   --rounded-md: 12px;
   --rounded-lg: 16px;
+  --rounded-pill: 9999px;
   --overlay-bar-max-width: 52.5rem;
   --filter-control-min-width: 12rem;
-  --rounded-pill: 9999px;
-  --rounded-full: 9999px;
 
-  /* DESIGN.md Spacing Scale */
+  /* DESIGN.md Spacing Scale（主档 4/8/12/16/24/32，页面级 48/80；内边距一律 4 的倍数） */
   --space-xxs: 4px;
   --space-xs: 8px;
   --space-sm: 12px;
-  --space-md: 17px;
+  --space-md: 16px;
   --space-lg: 24px;
   --space-xl: 32px;
   --space-xxl: 48px;
   --space-section: 80px;
 
-  /* DESIGN.md Shadow */
-  --shadow-product: rgba(34, 30, 28, 0.10) 0 8px 24px 0;
-  --shadow-panel: rgba(34, 30, 28, 0.05) 0 1px 2px 0;
+  /* DESIGN.md Shadow（三级 elevation；卡片配 1px 细边，overlay 无边框） */
+  --shadow-elevation-1: rgba(34, 30, 28, 0.05) 0 1px 2px 0;
+  --shadow-elevation-2: rgba(34, 30, 28, 0.10) 0 4px 12px 0;
+  --shadow-elevation-3: rgba(34, 30, 28, 0.16) 0 12px 32px 0;
 
   /* Product Extension Tokens */
   --sr-only-size: 1px;
-  --space-hairline: 2px;
   --menu-min-width: 10rem;
   --menu-width: max-content;
   --avatar-size: 36px;
@@ -144,81 +154,69 @@
   --agent-olive-fg: #5A622A;
   --agent-olive-bg: #EEF0D8;
 
-  /* Semantic Surface Mapping */
+  /* Semantic Surface Mapping（四档语义别名；调色板事实源见上方 --color-*） */
   --surface-sunken: var(--color-canvas-parchment);
   --surface-panel: var(--color-canvas-parchment);
   --surface-main: var(--color-canvas);
   --surface-card: var(--color-surface-pearl);
-  --surface-muted: var(--color-canvas-parchment);
   --text-primary: var(--color-ink);
   --text-secondary: var(--color-ink-muted-80);
   /* DESIGN.md faint (#9C9182) fails WCAG AA 4.5:1 on parchment/canvas as UI
      labels; map subtle text to muted-80 without changing surfaces. */
   --text-subtle: var(--color-ink-muted-80);
+  --text-muted: var(--text-subtle);
   --border: var(--color-hairline);
   --border-subtle: var(--color-divider-soft);
   --border-strong: var(--color-ink-muted-80);
+  --border-width: 1px;
+  --border-width-thick: 2px;
   --interactive-primary: var(--color-primary);
   --interactive-primary-hover: var(--color-primary-focus);
   --interactive-soft: var(--color-canvas-parchment);
   --interactive-soft-hover: #F4EFE7;
   --interactive-accent-soft: color-mix(in srgb, var(--color-primary) 13%, var(--color-canvas-parchment));
 
-  /* Legacy Aliases */
-  --accent: var(--color-primary);
-  --surface: var(--color-on-primary);
-  --text-muted: var(--text-subtle);
+  /* Status Aliases */
   --success: var(--status-success-color);
   --warning: var(--status-queued-color);
   --danger: var(--status-danger-color);
 
-  /* Legacy Text Scale */
-  --text-xs: 0.75rem/1rem;
-  --text-sm: 0.875rem/1.25rem;
-  --text-md: 1rem/1.5rem;
-  --text-lg: 1.25rem/1.75rem;
-  --text-xl: 1.75rem/2.25rem;
-
-  /* Legacy Spacing */
-  --space-1: 0.25rem;
-  --space-2: 0.5rem;
-  --space-3: 0.75rem;
-  --space-4: 1rem;
-  --space-5: 1.25rem;
-  --space-6: 1.5rem;
-  --space-8: 2rem;
-
-  /* Legacy Rounded */
-  --radius-sm: 0.5rem;
-  --radius-md: 0.75rem;
-  --radius-lg: 1rem;
-  --border-width: 0.0625rem;
-
-  /* Legacy Shadows */
-  --shadow-1: 0 0.25rem 0.75rem rgba(0, 0, 0, 0.08);
-  --shadow-2: 0 0.625rem 1.875rem rgba(0, 0, 0, 0.14);
+  /* Motion */
+  --duration-fast: 120ms;
+  --duration-base: 200ms;
+  --ease-out-standard: cubic-bezier(0.2, 0, 0, 1);
 
   /* Focus Ring */
   --focus-ring-color: var(--color-primary-focus);
-  --focus-ring: 0 0 0 2px var(--color-primary-focus);
+  --focus-ring-width: 2px;
+  --focus-ring-offset: 2px;
+  --focus-ring: 0 0 0 var(--focus-ring-width) var(--color-primary-focus);
 
   /* Layout Tokens */
   --activity-bar-width: 3.25rem;
+  --header-height: 3rem;
   --rail-indicator-width: 3px;
   --rail-indicator-radius: 2px;
   --sidebar-width: 15rem;
   --context-width: 19rem;
   --chat-flow-max-width: 52.5rem;
   --content-min: 30rem;
+  --modal-width-wide: 44rem;
+  /* 交互热区下限（UCD §11.2）；视觉高度分档见下 */
   --control-min: 2.75rem;
+  --control-h-compact: 2rem;
+  --control-h-base: 2.25rem;
+  --control-h-comfortable: 2.5rem;
+  --pill-height: 1.25rem;
   --breakpoint-cockpit: 56.25rem;
   --full-width: 100%;
+  --full-height: 100%;
   --viewport-height: 100dvh;
-  --safe-area-top: max(var(--space-2), env(safe-area-inset-top));
-  --safe-area-right: max(var(--space-4), env(safe-area-inset-right));
-  --safe-area-bottom: max(var(--space-4), env(safe-area-inset-bottom));
-  --safe-area-left: max(var(--space-4), env(safe-area-inset-left));
-  --timeline-gap: var(--space-3);
+  --safe-area-top: max(var(--space-xs), env(safe-area-inset-top));
+  --safe-area-right: max(var(--space-md), env(safe-area-inset-right));
+  --safe-area-bottom: max(var(--space-md), env(safe-area-inset-bottom));
+  --safe-area-left: max(var(--space-md), env(safe-area-inset-left));
+  --timeline-gap: var(--space-sm);
 }
 
 :root[data-theme="dark"] {
@@ -282,10 +280,10 @@
   --surface-panel: var(--color-canvas-parchment);
   --surface-main: var(--color-canvas);
   --surface-card: var(--color-surface-pearl);
-  --surface-muted: var(--color-canvas-parchment);
   --text-primary: var(--color-ink);
   --text-secondary: var(--color-ink-muted-80);
   --text-subtle: var(--color-ink-muted-80);
+  --text-muted: var(--text-subtle);
   --border: var(--color-hairline);
   --border-subtle: var(--color-divider-soft);
   --border-strong: var(--color-ink-muted-80);
@@ -295,19 +293,19 @@
   --interactive-soft-hover: #2E2923;
   --interactive-accent-soft: color-mix(in srgb, var(--color-primary) 18%, var(--color-canvas-parchment));
 
-  /* Dark Theme Legacy Aliases */
+  /* Dark Theme Status Aliases */
   --success: var(--status-success-color);
   --warning: var(--status-queued-color);
   --danger: var(--status-danger-color);
 
-  /* Dark Theme Shadows */
-  --shadow-1: 0 0.25rem 0.75rem rgba(0, 0, 0, 0.28);
-  --shadow-2: 0 0.625rem 1.875rem rgba(0, 0, 0, 0.42);
-  --shadow-panel: rgba(255, 255, 255, 0.08) 0px 1px 0px;
+  /* Dark Theme Shadows（三级均带克制顶部内高光 alpha 0.06–0.10） */
+  --shadow-elevation-1: rgba(0, 0, 0, 0.30) 0 1px 2px 0, rgba(255, 255, 255, 0.06) 0 1px 0 0 inset;
+  --shadow-elevation-2: rgba(0, 0, 0, 0.40) 0 4px 12px 0, rgba(255, 255, 255, 0.08) 0 1px 0 0 inset;
+  --shadow-elevation-3: rgba(0, 0, 0, 0.50) 0 12px 32px 0, rgba(255, 255, 255, 0.10) 0 1px 0 0 inset;
 
   /* Dark Theme Focus Ring */
   --focus-ring-color: #F4CD99;
-  --focus-ring: 0 0 0 2px var(--color-primary-focus);
+  --focus-ring: 0 0 0 var(--focus-ring-width) var(--color-primary-focus);
 }
 
 /* responsive-cockpit */
@@ -334,15 +332,15 @@
     grid-column: 2;
     grid-row: 1;
     justify-content: space-between;
-    gap: var(--space-2);
-    padding: var(--safe-area-top) var(--safe-area-right) var(--space-2) var(--safe-area-left);
+    gap: var(--space-xs);
+    padding: var(--safe-area-top) var(--safe-area-right) var(--space-xs) var(--safe-area-left);
     background: var(--surface-card);
-    box-shadow: var(--shadow-2);
+    box-shadow: var(--shadow-elevation-1);
   }
 
   .cockpit-flow {
     min-width: 0;
-    padding: var(--space-4);
+    padding: var(--space-md);
   }
 
   .narrow-project-load-error {
@@ -350,7 +348,7 @@
     align-self: start;
     grid-column: 2;
     grid-row: 2;
-    margin: var(--space-4);
+    margin: var(--space-md);
   }
 
   .cockpit-sidebar,
@@ -378,7 +376,7 @@
     width: var(--full-width);
     block-size: auto;
     min-width: 0;
-    padding: var(--space-4);
+    padding: var(--space-md);
     overflow-y: visible;
   }
 
@@ -390,7 +388,7 @@
     grid-column: 2;
     grid-row: 2;
     width: var(--full-width);
-    padding: var(--space-4);
+    padding: var(--space-md);
     overflow-y: visible;
   }
 

@@ -373,16 +373,16 @@ describe("workspace file preview", () => {
   it("keeps the preview styling on design tokens with monospace content", () => {
     const css = readFileSync(join(process.cwd(), "app", "cockpit.css"), "utf8");
     expect(css).toMatch(
-      /\.workspace-preview-content\s*\{[^}]*font:\s*var\(--text-sm\)\s*var\(--font-mono\)/s,
+      /\.workspace-preview-content\s*\{[^}]*font:\s*var\(--text-caption\)\/var\(--leading-caption\)\s*var\(--font-mono\)/s,
     );
     expect(css).toMatch(
-      /\.workspace-preview-content\s*\{[^}]*background:\s*var\(--surface-muted\)/s,
+      /\.workspace-preview-content\s*\{[^}]*background:\s*var\(--surface-sunken\)/s,
     );
     expect(css).toMatch(
       /\.workspace-preview-truncated\s*\{[^}]*background:\s*var\(--interactive-soft\)/s,
     );
     expect(css).toMatch(
-      /\.workspace-preview-path\s*\{[^}]*font:\s*var\(--text-sm\)\s*var\(--font-sans\)/s,
+      /\.workspace-preview-path\s*\{[^}]*font:\s*var\(--text-caption\)\/var\(--leading-caption\)\s*var\(--font-sans\)/s,
     );
   });
 });

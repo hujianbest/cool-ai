@@ -3941,7 +3941,9 @@ export function CollaborationPanel({
             </>
           ) : showChat ? (
             surface === "chat" ? (
-              <div className="chat-welcome">
+              // 带 Composer 的欢迎态：引导卡在剩余空间居中、Composer 贴底
+              // （UCD §9.1.1，见 .chat-welcome--with-composer 的 min-height 覆盖）。
+              <div className="chat-welcome chat-welcome--with-composer">
                 <p className="empty-guide-title">欢迎使用 Cool AI</p>
                 {directAgentName ? (
                   <>

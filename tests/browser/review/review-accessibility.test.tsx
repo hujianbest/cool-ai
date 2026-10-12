@@ -225,7 +225,7 @@ describe("review accessibility and responsive single surface", () => {
       /\.review-access-surface[\s\S]*?min-height:\s*var\(--control-min\)/,
     );
     expect(cockpit).toMatch(
-      /\.review-access-state[\s\S]*?color:\s*var\(--text(?:-muted)?\)/,
+      /\.review-access-state[\s\S]*?color:\s*var\(--text-subtle\)/,
     );
     expect(component).not.toMatch(/#[0-9a-f]{3,8}|style=\{\{[^}]*\d/iu);
 
