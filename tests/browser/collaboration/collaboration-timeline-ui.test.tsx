@@ -1,5 +1,5 @@
 // @vitest-environment jsdom
-import { act, fireEvent, render, screen, waitFor } from "@testing-library/react";
+import { act, fireEvent, render, screen, waitFor, within } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { createElement } from "react";
 import { afterEach, describe, expect, it, vi } from "vitest";
@@ -277,6 +277,42 @@ describe("collaboration timeline and auto-loop", () => {
     expect(screen.getByText("正在调用模型").closest("li")).not.toHaveTextContent(
       "A real agent message",
     );
+  });
+
+  it("maps run-event actor ids to member display names and never echoes raw ids", async () => {
+    const rawActor = "c0e87e8c-d3d9-4dc6-a1b5-1c0f2011daea";
+    const events: TimelineEvent[] = [
+      event({ actorId: "agent-a" }),
+      event({
+        actorId: rawActor,
+        id: "event-2",
+        sequence: 2,
+        type: "model_call_succeeded",
+      }),
+    ];
+    vi.stubGlobal(
+      "fetch",
+      vi.fn((input: RequestInfo | URL) =>
+        String(input).endsWith("/members")
+          ? Promise.resolve(response(members))
+          : Promise.resolve(
+              strictThreadResponse(String(input), read("paused", events)),
+            ),
+      ),
+    );
+
+    render(createElement(CollaborationPanel, {
+      projectId: "project-1",
+      selectedRunId: "run-1",
+      threadId: TEST_THREAD_ID,
+    }));
+
+    const log = await screen.findByRole("log", { name: "协作时间线" });
+    // 成员 agentId → 显示名；未知 UUID → 「Agent」兜底；原始标识符不得出现在界面文案。
+    expect(within(log).getAllByText("Alpha").length).toBeGreaterThan(0);
+    expect(within(log).queryByText("agent-a")).toBeNull();
+    expect(within(log).queryByText(rawActor)).toBeNull();
+    expect(within(log).getAllByText("Agent").length).toBeGreaterThan(0);
   });
 
   it("polls updates, preserves an above-bottom position, and announces a new-event affordance", async () => {

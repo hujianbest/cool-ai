@@ -901,6 +901,19 @@ function memberRoleLabel(
   return members?.find((item) => item.name === actorLabel)?.role ?? null;
 }
 
+// 运行事件（run_event）的 actorLabel 是 actorId：优先映射为成员显示名；
+// 无法映射的原始标识符（UUID）一律不回显到界面文案（UCD §9.1.3 安静系统行）。
+const RAW_ACTOR_ID_PATTERN = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
+
+function resolveSystemActorLabel(
+  actorLabel: string,
+  members: ProjectMember[] | null,
+): string {
+  const member = members?.find((item) => item.agentId === actorLabel);
+  if (member) return member.name;
+  return RAW_ACTOR_ID_PATTERN.test(actorLabel) ? "Agent" : actorLabel;
+}
+
 function canonicalRunHref(
   projectId: string,
   threadId: string,
@@ -3770,7 +3783,9 @@ export function CollaborationPanel({
                       ) : null}
                     </div>
                     {spokenMessage ? null : (
-                      <p className="muted">{entry.actorLabel}</p>
+                      <p className="muted">
+                        {resolveSystemActorLabel(entry.actorLabel, members)}
+                      </p>
                     )}
                     {entry.mention ? (
                       <span className="mention-chip">

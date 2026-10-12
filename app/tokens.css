@@ -367,10 +367,12 @@
   }
 
   /* UCD §7：窄屏聊天流 100% 宽度常驻——主流程列是静态主表面，不是抽屉；
-     编辑器/治理打开时经 data-open 全屏接管（见下方 data-open 规则）。 */
+     编辑器/治理打开时经 data-open 全屏接管（见下方 data-open 规则）。
+     position: relative 而非 static：静态流仍须建立包含块，否则内部绝对定位
+     元素（sr-only 等）逃逸到文档层撑高页面（U-25 族）。 */
   .cockpit-flow {
     display: flex;
-    position: static;
+    position: relative;
     grid-column: 2;
     grid-row: 2;
     width: var(--full-width);
@@ -382,7 +384,7 @@
 
   .collaboration-cockpit > .cockpit-flow[role="tabpanel"] {
     display: flex;
-    position: static;
+    position: relative;
     block-size: auto;
     z-index: auto;
     grid-column: 2;

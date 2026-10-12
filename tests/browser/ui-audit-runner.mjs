@@ -172,12 +172,24 @@ async function shot(name) {
   console.log(`SHOT ${name}`);
 }
 
+// 聊天截图前把时间线滚到底：浮起 Composer 遮挡末端内容是截图中段状态，
+// 滚到末端（含 scroll-padding 让位）后再截图才反映用户看到的稳定形态。
+async function scrollChatToBottom() {
+  await page.evaluate(() => {
+    const log = document.querySelector('[aria-label="协作时间线"]');
+    if (log) log.scrollTop = log.scrollHeight;
+  });
+  await page.waitForTimeout(400);
+}
+
 async function step(id, title, fn) {
   pageDiagnostics.length = 0;
+  const startedAt = Date.now();
+  const elapsed = () => `${Math.round((Date.now() - startedAt) / 1000)}s`;
   try {
     await fn();
-    steps.push({ id, title, status: "PASS" });
-    console.log(`[PASS] ${id} ${title}`);
+    steps.push({ id, title, status: "PASS", seconds: Math.round((Date.now() - startedAt) / 1000) });
+    console.log(`[PASS] ${id} ${title} (${elapsed()})`);
   } catch (error) {
     let failureShot = null;
     try {
@@ -201,7 +213,7 @@ async function step(id, title, fn) {
       url,
       diagnostics: [...pageDiagnostics].slice(-8),
     });
-    console.log(`[FAIL] ${id} ${title}: ${String(error?.message ?? error).slice(0, 200)}`);
+    console.log(`[FAIL] ${id} ${title} (${elapsed()}): ${String(error?.message ?? error).slice(0, 200)}`);
     for (const line of pageDiagnostics.slice(-5)) console.log(`  diag ${line}`);
   }
 }
@@ -350,6 +362,7 @@ try {
     const send = page.locator('button.composer-send, button[aria-label*="发送"]').first();
     await send.click();
     await page.waitForTimeout(2500);
+    await scrollChatToBottom();
     await shot("11c-mention-send-result");
     await composer.fill("请拆解登录模块的改造方案。");
     await send.click();
@@ -360,6 +373,7 @@ try {
       if (body) body.scrollTop = body.scrollHeight;
     });
     await page.waitForTimeout(400);
+    await scrollChatToBottom();
     await shot("11b-chat-reply");
   });
 
@@ -422,6 +436,7 @@ try {
       if (body) body.scrollTop = body.scrollHeight;
     });
     await page.waitForTimeout(400);
+    await scrollChatToBottom();
     await shot("11e-new-round-direct-send");
   });
 
@@ -525,6 +540,7 @@ try {
       if (body) body.scrollTop = body.scrollHeight;
     });
     await page.waitForTimeout(400);
+    await scrollChatToBottom();
     await shot("16c-project-chat-reply");
   });
 
@@ -631,6 +647,7 @@ try {
     await page.waitForTimeout(300);
     if (!/\/projects\//.test(page.url())) await page.keyboard.press("Control+1");
     await page.waitForTimeout(800);
+    await scrollChatToBottom();
     await shot("22-back-to-chat");
     const recycle = page.locator('button:has-text("回收站"), .thread-recycle-entry').first();
     if (await recycle.isVisible().catch(() => false)) {
@@ -696,6 +713,123 @@ try {
     } else {
       throw new Error("项目未打开");
     }
+  });
+
+  // ---------- S28-S33：逐按钮点击后的页面补齐（任务编辑/记忆弹层/筛选态/团队编辑/会话筛选） ----------
+  await step("S28", "任务编辑对话框（打开编辑 → 对话表面 → 关闭钮）", async () => {
+    if (!projectUrl) throw new Error("项目未打开");
+    // 「打开编辑」是窄屏移动工具栏的铅笔按钮（UCD §7 移动工具栏）；桌面三区无此控件。
+    await page.goto(projectUrl, { waitUntil: "networkidle" });
+    await page.waitForTimeout(1200);
+    await page.setViewportSize({ width: 390, height: 844 });
+    await page.waitForTimeout(600);
+    await page.getByRole("button", { name: "打开编辑" }).first().click();
+    const editor = page.getByRole("dialog", { name: "任务编辑" });
+    await editor.waitFor({ timeout: 20_000 });
+    await page.waitForTimeout(800);
+    await shot("28-narrow-task-editor-dialog");
+    await editor.getByRole("button", { name: "关闭任务编辑" }).first().click();
+    await editor.waitFor({ state: "detached", timeout: 10_000 }).catch(() => {});
+    await page.setViewportSize({ width: 1440, height: 1000 });
+    await page.waitForTimeout(600);
+  });
+
+  await step("S29", "记忆沉淀/检索对话框与类型胶囊", async () => {
+    await page.locator(".activity-bar").getByRole("button", { name: "记忆" }).first().click();
+    await page.waitForTimeout(1200);
+    await page.getByRole("button", { name: "沉淀新记忆" }).first().click();
+    const createDialog = page.getByRole("dialog").first();
+    await createDialog.waitFor({ timeout: 10_000 });
+    await page.waitForTimeout(700);
+    await shot("29-memory-create-dialog");
+    await page.keyboard.press("Escape");
+    await page.waitForTimeout(500);
+    await page.getByRole("button", { name: "打开记忆检索" }).first().click();
+    const searchDialog = page.getByRole("dialog").first();
+    await searchDialog.waitFor({ timeout: 10_000 });
+    await page.waitForTimeout(700);
+    await shot("29b-memory-search-dialog");
+    await page.keyboard.press("Escape");
+    await page.waitForTimeout(500);
+    const chip = page.locator(".memory-type-chips button").filter({ hasText: "决策" }).first();
+    if (await chip.isVisible().catch(() => false)) {
+      await chip.click();
+      await page.waitForTimeout(800);
+      await shot("29c-memory-type-filter");
+      await chip.click().catch(() => {});
+      await page.waitForTimeout(300);
+    }
+  });
+
+  await step("S30", "审批中心状态筛选（下拉切换与回位）", async () => {
+    await page.locator(".activity-bar").getByRole("button", { name: "审批" }).first().click();
+    await page.waitForTimeout(1200);
+    const select = page.locator(".approval-status-filter select").first();
+    await select.waitFor({ timeout: 10_000 });
+    const optionCount = await select.locator("option").count();
+    await select.selectOption({ index: Math.min(1, optionCount - 1) });
+    await page.waitForTimeout(800);
+    await shot("30-approval-status-filter");
+    await select.selectOption({ index: 0 });
+    await page.waitForTimeout(400);
+  });
+
+  await step("S31", "审计中心域筛选（切换与回位）", async () => {
+    await page.locator(".activity-bar").getByRole("button", { name: "审计" }).first().click();
+    await page.waitForTimeout(1200);
+    const chips = page.locator(".audit-domain-filters button");
+    await chips.first().waitFor({ timeout: 10_000 });
+    if ((await chips.count()) > 1) {
+      await chips.nth(1).click();
+      await page.waitForTimeout(800);
+      await shot("31-audit-domain-filter");
+      await chips.nth(0).click();
+      await page.waitForTimeout(400);
+    } else {
+      throw new Error("审计域筛选按钮不足（期望 ≥2）");
+    }
+  });
+
+  await step("S32", "团队页编辑对话框（模型服务与 Agent）", async () => {
+    await page.goto(`${baseUrl}/team`, { waitUntil: "networkidle" });
+    await page.waitForTimeout(1500);
+    // 编辑钮的 accessible name 为「编辑 <名称>」（aria-label 覆盖内部文本）。
+    const editButtons = page.locator('button[aria-label^="编辑 "]');
+    const count = await editButtons.count();
+    if (count === 0) throw new Error("团队页无任何编辑按钮（aria-label^=编辑）");
+    await editButtons.nth(0).click();
+    const dialog = page.getByRole("dialog").first();
+    await dialog.waitFor({ timeout: 10_000 });
+    await page.waitForTimeout(700);
+    await shot("32-team-edit-dialog-1");
+    await page.getByRole("button", { name: /^关闭.*编辑器$/ }).first().click();
+    await dialog.waitFor({ state: "detached", timeout: 10_000 }).catch(() => {});
+    await page.waitForTimeout(500);
+    if (count > 1) {
+      await editButtons.nth(1).click();
+      const dialog2 = page.getByRole("dialog").first();
+      await dialog2.waitFor({ timeout: 10_000 });
+      await page.waitForTimeout(700);
+      await shot("32b-team-edit-dialog-2");
+      await page.getByRole("button", { name: /^关闭.*编辑器$/ }).first().click();
+      await dialog2.waitFor({ state: "detached", timeout: 10_000 }).catch(() => {});
+      await page.waitForTimeout(500);
+    }
+  });
+
+  await step("S33", "会话筛选 Tab（收藏与标签视图）", async () => {
+    if (!projectUrl) throw new Error("项目未打开");
+    await page.goto(projectUrl, { waitUntil: "networkidle" });
+    await page.waitForTimeout(1500);
+    const tablist = page.getByRole("tablist", { name: "对话视图" });
+    await tablist.getByRole("tab", { name: "收藏" }).click();
+    await page.waitForTimeout(1000);
+    await shot("33-thread-favorites-view");
+    await tablist.getByRole("tab", { name: "标签" }).click();
+    await page.waitForTimeout(1000);
+    await shot("33b-thread-tags-view");
+    await tablist.getByRole("tab", { name: "全部" }).click();
+    await page.waitForTimeout(500);
   });
 
   writeFileSync(

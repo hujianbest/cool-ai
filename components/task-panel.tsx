@@ -11,6 +11,7 @@ import {
 } from "react";
 import {
   ArrowLeft,
+  ArrowUp,
   CheckCircle,
   Lightning,
   Plus,
@@ -21,6 +22,12 @@ import {
 import { CollaborationPanel } from "@/components/collaboration/collaboration-panel";
 import type { GovernanceView } from "@/components/activity-bar";
 import { ApprovalCenterPanel } from "@/components/project-context/approval-center-panel";
+import {
+  ApprovalStatusFilterSelect,
+  EMPTY_APPROVAL_STATUS_SUMMARY,
+  type ApprovalStatusFilterValue,
+  type ApprovalStatusSummary,
+} from "@/components/project-context/approval-status-filter";
 import { AuditPanel } from "@/components/project-context/audit-panel";
 import { MemoryPanel } from "@/components/project-context/memory-panel";
 import { ExecutionPanel } from "@/components/execution/execution-panel";
@@ -104,7 +111,7 @@ type TaskPanelProps = {
 const GOVERNANCE_TITLES: Record<GovernanceView, string> = {
   mission: "使命与任务看板",
   memory: "共享记忆与知识库",
-  approvals: "审批中心",
+  approvals: "统一审批中心",
   audit: "统一审计中心",
 };
 
@@ -136,6 +143,14 @@ export function TaskPanel({
   const [goalFactsVersion, setGoalFactsVersion] = useState(0);
   const [missionCreateIntent, setMissionCreateIntent] = useState(0);
   const [workItemCreateIntent, setWorkItemCreateIntent] = useState(0);
+  const [memoryWriteIntent, setMemoryWriteIntent] = useState(0);
+  // UCD §9.2.5：状态筛选与刷新属于统一审批中心顶栏（与标题同一行）；
+  // 列表实况计数由面板上报，筛选值经受控 prop 下发。
+  const [approvalStatusFilter, setApprovalStatusFilter] =
+    useState<ApprovalStatusFilterValue>("all");
+  const [approvalStatusSummary, setApprovalStatusSummary] =
+    useState<ApprovalStatusSummary>(EMPTY_APPROVAL_STATUS_SUMMARY);
+  const [approvalRefreshIntent, setApprovalRefreshIntent] = useState(0);
   const [goal, setGoal] = useState("");
   const [error, setError] = useState<string | null>(null);
   const [isLoading, setIsLoading] = useState(false);
@@ -540,6 +555,33 @@ export function TaskPanel({
                   ＋ 新建任务
                 </button>
               ) : null}
+              {governance.view === "memory" && governance.projectId ? (
+                // UCD §9.2.4 顶栏：右侧「＋ 沉淀新记忆」主按钮（意图驱动，面板消费）。
+                <button
+                  className="button-primary gov-view-action"
+                  onClick={() => setMemoryWriteIntent((current) => current + 1)}
+                  type="button"
+                >
+                  ＋ 沉淀新记忆
+                </button>
+              ) : null}
+              {governance.view === "approvals" && governance.projectId ? (                // UCD §9.2.5 顶栏：状态筛选 `[全部 (N) ▼]` 与列表刷新位于标题同一行右侧。
+                <div className="gov-view-tools">
+                  <button
+                    className="button-ghost"
+                    onClick={() => setApprovalRefreshIntent((current) => current + 1)}
+                    type="button"
+                  >
+                    刷新列表
+                  </button>
+                  <ApprovalStatusFilterSelect
+                    id={`approval-status-${governance.projectId}`}
+                    onChange={setApprovalStatusFilter}
+                    summary={approvalStatusSummary}
+                    value={approvalStatusFilter}
+                  />
+                </div>
+              ) : null}
             </div>
             {governance.projectId ? (
               governance.view === "mission" ? (
@@ -553,9 +595,14 @@ export function TaskPanel({
                   <ExecutionPanel projectId={governance.projectId} />
                 </>
               ) : governance.view === "memory" ? (
-                <MemoryPanel projectId={governance.projectId} />
+                <MemoryPanel projectId={governance.projectId} writeIntent={memoryWriteIntent} />
               ) : governance.view === "approvals" ? (
-                <ApprovalCenterPanel projectId={governance.projectId} />
+                <ApprovalCenterPanel
+                  onStatusSummary={setApprovalStatusSummary}
+                  projectId={governance.projectId}
+                  refreshIntent={approvalRefreshIntent}
+                  statusFilter={approvalStatusFilter}
+                />
               ) : (
                 <AuditPanel projectId={governance.projectId} />
               )
@@ -635,27 +682,71 @@ export function TaskPanel({
               </button>
             </div>
           ) : homeState?.kind === "needs_agent" ? (
-            <div className="chat-welcome chat-empty-hero">
-              <div aria-hidden="true" className="chat-empty-hero-icon">
-                <Sparkle size={28} weight="fill" />
+            <>
+              <div className="chat-welcome chat-empty-hero chat-welcome--with-composer">
+                <div aria-hidden="true" className="chat-empty-hero-icon">
+                  <Sparkle size={28} weight="fill" />
+                </div>
+                <p className="chat-empty-hero-title">欢迎使用 Cool AI</p>
+                <p className="chat-empty-hero-desc">配置模型 Provider 后即可开始。</p>
+                <div className="chat-welcome-actions">
+                  <Link
+                    className="button-primary"
+                    href="/team?section=providers&returnTo=/"
+                  >
+                    配置 Provider
+                  </Link>
+                  <Link
+                    className="button-secondary"
+                    href="/team?section=providers&guide=provider&returnTo=/"
+                  >
+                    查看引导
+                  </Link>
+                </div>
               </div>
-              <p className="chat-empty-hero-title">欢迎使用 Cool AI</p>
-              <p className="chat-empty-hero-desc">配置模型 Provider 后即可开始。</p>
-              <div className="chat-welcome-actions">
-                <Link
-                  className="button-primary"
-                  href="/team?section=providers&returnTo=/"
-                >
-                  配置 Provider
-                </Link>
-                <Link
-                  className="button-secondary"
-                  href="/team?section=providers&guide=provider&returnTo=/"
-                >
-                  查看引导
-                </Link>
-              </div>
-            </div>
+              {/* UCD §9.1.1 线框 + §10：欢迎态保留浮起 Composer（标准引导 Placeholder）；
+                  未配置 Provider 时按 Disabled 态呈现（禁用输入、50% 不透明度），
+                  不暴露会失败的假发送入口（§13）。 */}
+              <form
+                aria-label="消息输入"
+                className="composer"
+                data-disabled="true"
+                onSubmit={(event) => event.preventDefault()}
+              >
+                <label className="sr-only" htmlFor="home-welcome-message">
+                  发送给助手
+                </label>
+                <div className="composer-input-row">
+                  <button
+                    aria-label="添加附件"
+                    className="composer-icon-btn"
+                    disabled
+                    type="button"
+                  >
+                    <Plus aria-hidden="true" size={20} weight="bold" />
+                  </button>
+                  <textarea
+                    disabled
+                    id="home-welcome-message"
+                    placeholder="输入消息，与助手直接对话…"
+                    rows={1}
+                  />
+                  <button
+                    aria-label="发送消息"
+                    className="composer-send"
+                    disabled
+                    type="submit"
+                  >
+                    <ArrowUp aria-hidden="true" size={18} weight="bold" />
+                  </button>
+                </div>
+                <div className="composer-footer">
+                  <span className="muted">
+                    配置模型 Provider 后即可发送消息。
+                  </span>
+                </div>
+              </form>
+            </>
           ) : homeState?.kind === "ready" ? (
             <CollaborationPanel
               directAgentName={homeState.agent.name}

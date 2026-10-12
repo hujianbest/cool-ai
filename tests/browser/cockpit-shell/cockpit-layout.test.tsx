@@ -279,6 +279,67 @@ describe("desktop collaboration cockpit", () => {
     );
   });
 
+  it("opens the memory governance view with the UCD top-bar create action", async () => {
+    const user = userEvent.setup();
+    pathnameValue = "/projects/project-1";
+    vi.stubGlobal(
+      "fetch",
+      vi.fn((input: RequestInfo | URL) => {
+        const url = String(input);
+        if (url === "/api/projects") {
+          return Promise.resolve(Response.json({
+            projects: [
+              {
+                id: "project-1",
+                name: "Launch plan",
+                createdAt: "2026-07-29T00:00:00.000Z",
+              },
+            ],
+          }));
+        }
+        if (url.includes("/memory-index/health")) {
+          return Promise.resolve(Response.json({
+            coverage: { active: 0, valid: 0 },
+            freshness: { pending: 0, status: "caught_up" },
+            lastErrorCode: null,
+            status: "caught_up",
+            version: 1,
+          }));
+        }
+        if (url.includes("/knowledge-graph")) {
+          return Promise.resolve(Response.json({ edges: [], nodes: [] }));
+        }
+        if (url.includes("/memory-curation-candidates")) {
+          return Promise.resolve(Response.json({ candidates: [] }));
+        }
+        if (url.includes("/memory-collections")) {
+          return Promise.resolve(Response.json({ collections: [] }));
+        }
+        if (url.includes("/memories")) {
+          return Promise.resolve(Response.json({ memories: [] }));
+        }
+        return Promise.resolve(Response.json({ tasks: [], events: [] }));
+      }),
+    );
+    render(<ProjectPanel />);
+    const cockpit = await screen.findByTestId("collaboration-cockpit");
+    const activityBar = within(cockpit).getByRole("navigation", {
+      name: "主导航",
+    });
+    await user.click(within(activityBar).getByRole("button", { name: "记忆" }));
+    expect(
+      await within(cockpit).findByRole("heading", {
+        name: "共享记忆与知识库 · Launch plan",
+      }),
+    ).toBeVisible();
+    // UCD §9.2.4 顶栏：右侧「＋ 沉淀新记忆」主按钮；点击经意图打开沉淀表单。
+    const create = within(cockpit).getByRole("button", { name: "＋ 沉淀新记忆" });
+    expect(create).toBeVisible();
+    await user.click(create);
+    // 沉淀表单经 ActionDialog portal 渲染到 document.body，用屏幕级查询。
+    expect(await screen.findByLabelText("记忆正文")).toBeInTheDocument();
+  });
+
   it("opens the system folder picker with Cmd/Ctrl+O", async () => {
     const user = userEvent.setup();
     pathnameValue = "/projects/project-1";

@@ -3,6 +3,7 @@
 import {
   Folder,
   PencilSimple,
+  Plus,
   Sparkle,
   X,
 } from "@phosphor-icons/react";
@@ -855,6 +856,58 @@ export function ProjectPanel({
             onStateChange={setThreadListState}
             projectId={homeState.project.id}
           />
+        ) : pathname === "/" && homeState?.kind === "needs_agent" ? (
+          // UCD §7.1 区域 B + 场景 1：首次打开（无 Provider）时侧栏以就绪结构呈现——
+          // 标题/新建/筛选 Tab/空态提示/回收站齐备，但控件一律禁用而非假入口（§13）。
+          <div className="thread-sidebar" data-testid="home-threads-placeholder">
+            <section
+              aria-labelledby="home-threads-title"
+              className="stack thread-sidebar-main"
+            >
+              <div className="section-heading-row">
+                <h2 className="surface-heading" id="home-threads-title">
+                  对话
+                </h2>
+                <div className="section-heading-actions">
+                  <button
+                    aria-disabled="true"
+                    className="icon-button"
+                    disabled
+                    title="配置模型 Provider 后可新建对话"
+                    type="button"
+                  >
+                    <Plus aria-hidden="true" size={20} weight="regular" />
+                    <span className="sr-only">新对话</span>
+                  </button>
+                </div>
+              </div>
+              <div aria-label="对话视图" className="thread-view-tabs" role="tablist">
+                {["全部", "收藏", "标签"].map((label) => (
+                  <button
+                    aria-disabled="true"
+                    aria-selected={label === "全部"}
+                    className="nav-item"
+                    disabled
+                    key={label}
+                    role="tab"
+                    tabIndex={-1}
+                    type="button"
+                  >
+                    {label}
+                  </button>
+                ))}
+              </div>
+              <p className="state-message">配置模型 Provider 后即可开始对话。</p>
+            </section>
+            <button
+              aria-disabled="true"
+              className="thread-recycle-entry nav-item"
+              disabled
+              type="button"
+            >
+              回收站
+            </button>
+          </div>
         ) : null}
         {currentProject &&
         (narrow ||

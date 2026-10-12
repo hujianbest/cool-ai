@@ -83,7 +83,9 @@ npm run review:visual
 
 聚焦测试：`npm test -- tests/<target>.test.ts`
 
-浏览器冒烟说明：全部冒烟脚本与审计运行器跑生产模式 `next start`（先 `npm run build`，或直接 `npm run smoke:all`——它自带预检、一次构建与 6 lane 并行编排，整轮约 1.5 分钟）；单脚本独立运行端口回退各自的 pid/随机段，`COCKPIT_SMOKE_PORT` / `COCKPIT_SMOKE_PROVIDER_PORT` / `COCKPIT_SMOKE_REDIRECT_PORT` 可覆盖；`--from-step` / `--only-step` 仅限迭代，最终 DoD 必须不带参全量跑。
+浏览器冒烟说明：全部冒烟脚本与审计运行器跑生产模式 `next start`（先 `npm run build`，或直接 `npm run smoke:all`——它自带预检、一次构建与 6 lane 并行编排，整轮约 1.5 分钟，构建落在独立 dist `.next-smoke-suite`，与 vitest 内 next start 测试互不干扰）；单脚本独立运行端口回退各自的 pid/随机段，`COCKPIT_SMOKE_PORT` / `COCKPIT_SMOKE_PROVIDER_PORT` / `COCKPIT_SMOKE_REDIRECT_PORT` 可覆盖；`--from-step` / `--only-step` 仅限迭代，最终 DoD 必须不带参全量跑。
+
+视觉模型评审（`npm run review:visual`）说明：对照 `product/ui/preview-ucd.html` 原型与 `UI设计.md` 分节评审真实截图；审计运行器（`node tests/browser/ui-audit-runner.mjs`，34 步/约 60 张按钮后置状态截图，产物在 gitignored 的 `tests/browser/test-artifacts/ui-audit/`）产出截图后，`node tests/browser/visual-review.mjs --dir tests/browser/test-artifacts/ui-audit` 按其 per-capture 映射逐张评审（`--only`/`--report` 供分片迭代，分片报告可合并；最终结论必须不带 `--only` 全量跑）。**评审运行期间不要并行跑冒烟/审计**：实测并发会让 next start 响应被拖慢数十倍并触发连锁超时（provider 验证 TTL 5 分钟会被拖过期）。瞬时 provider 错误有一次有界重试；仍失败按 error 记入结论（fail-closed）。
 
 ### 代码与契约标准
 

@@ -709,16 +709,19 @@ describe("mission board UCD alignment", () => {
     await waitFor(() => expect(workTitle).toHaveFocus());
   });
 
-  it("keeps empty lane copy sr-only when a lane has no items", async () => {
+  it("shows a visible 当前无任务 placeholder in lanes without items", async () => {
     const MissionBoard = await board();
     vi.stubGlobal("fetch", boardFetch([items[0]!, items[3]!]));
     render(<MissionBoard projectId="project-1" />);
     await screen.findByRole("region", { name: "使命任务看板" });
 
-    // U-13：空泳道无可视文案，保留 sr-only 可访问性文本。
-    const emptyCopy = screen.getByText("暂无进行中任务。");
-    expect(emptyCopy).toHaveClass("sr-only");
-    expect(screen.getByText("暂无阻塞任务。")).toHaveClass("sr-only");
+    // UCD §10（任务看板泳道 Empty）：空泳道显示「当前无任务」，空看板仍可辨识四泳道结构。
+    const emptyCopies = screen.getAllByText("当前无任务");
+    expect(emptyCopies).toHaveLength(2);
+    for (const copy of emptyCopies) {
+      expect(copy).toBeVisible();
+      expect(copy).toHaveClass("muted");
+    }
   });
 });
 

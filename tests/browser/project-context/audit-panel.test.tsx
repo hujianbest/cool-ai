@@ -1915,7 +1915,10 @@ describe("Audit panel timeline view", () => {
     expect(within(rows[1]!).getByRole("heading", { name: "执行已创建" }))
       .toBeInTheDocument();
     expect(screen.queryByRole("list", { name: "审计事件" })).toBeNull();
-    expect(screen.queryByRole("group", { name: "按域筛选审计事件" })).toBeNull();
+    // UCD §9.2.6：领域筛选行位于时间轴与事件流之上，时间轴模式同样保留。
+    expect(
+      screen.getByRole("group", { name: "按域筛选审计事件" }),
+    ).toBeInTheDocument();
     expect(requests).toEqual([
       "/api/projects/project-1/audit-events",
       "/api/projects/project-1/timeline",

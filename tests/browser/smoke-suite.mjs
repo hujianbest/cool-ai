@@ -15,6 +15,10 @@ import { join } from "node:path";
 const root = process.cwd();
 const nextBin = join(root, "node_modules", "next", "dist", "bin", "next");
 const logDirectory = join(root, "tests", "browser", "test-artifacts", "smoke-suite");
+// 套件使用独立 dist 目录（next.config 读取 NEXT_DIST_DIR）：本轮构建不再触碰默认
+// `.next`，与 vitest 内基于 next start 的测试（review 全链 / 主题水合）可安全并行，
+// 也避免「套件重建 .next 期间别的 next start 拿不到构建」的调度冲突。
+const suiteDistDirectory = ".next-smoke-suite";
 
 // lane 权重按实测单脚本耗时排布（初次按脚本体量/等待密度估计，实测后可重排）。
 // 端口统一使用 44xxx 段：仓库内没有任何脚本或服务使用该段，与独立运行的 pid/随机段不冲突。
@@ -77,14 +81,15 @@ if (preflight.status !== 0) {
 
 const skipBuild = process.env.SMOKE_SUITE_SKIP_BUILD === "1";
 const buildLogPath = join(logDirectory, "build.log");
-if (skipBuild && existsSync(join(root, ".next", "BUILD_ID"))) {
-  log("BUILD: skipped (SMOKE_SUITE_SKIP_BUILD=1，复用现有 .next 构建)");
+if (skipBuild && existsSync(join(root, suiteDistDirectory, "BUILD_ID"))) {
+  log(`BUILD: skipped (SMOKE_SUITE_SKIP_BUILD=1，复用现有 ${suiteDistDirectory} 构建)`);
 } else {
   const buildStartedAt = Date.now();
   log("BUILD: next build --webpack 开始（生产构建供全部 lane 复用）");
   const build = spawnSync(process.execPath, [nextBin, "build", "--webpack"], {
     cwd: root,
     encoding: "utf8",
+    env: { ...process.env, NEXT_DIST_DIR: suiteDistDirectory },
   });
   writeFileSync(buildLogPath, `${build.stdout ?? ""}\n${build.stderr ?? ""}`);
   if (build.status !== 0) {
@@ -105,7 +110,7 @@ process.on("SIGINT", () => {
 
 async function runScript(lane, spec) {
   const scriptLogPath = join(logDirectory, `${spec.name}.log`);
-  const env = { ...process.env };
+  const env = { ...process.env, NEXT_DIST_DIR: suiteDistDirectory };
   if (spec.port) env.COCKPIT_SMOKE_PORT = String(spec.port);
   if (spec.providerPort) env.COCKPIT_SMOKE_PROVIDER_PORT = String(spec.providerPort);
   if (spec.redirectPort) env.COCKPIT_SMOKE_REDIRECT_PORT = String(spec.redirectPort);

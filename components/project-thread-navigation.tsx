@@ -2025,15 +2025,15 @@ export function ProjectThreadNavigation({
                 title="整理对话"
               />
             ) : null}
-            {view !== "recycle_bin" ? (
-              <IconButton
-                icon={<Plus size={20} weight="regular" />}
-                label="新对话"
-                onClick={openDialog}
-                ref={createButtonRef}
-                title="新对话"
-              />
-            ) : null}
+            {/* UCD §7.1 区域 B：标题「对话」+「+ 新对话」是侧栏常驻结构，
+                回收站浏览态同样保留（仅批量整理按 §9.6.2 属于主列表）。 */}
+            <IconButton
+              icon={<Plus size={20} weight="regular" />}
+              label="新对话"
+              onClick={openDialog}
+              ref={createButtonRef}
+              title="新对话"
+            />
           </div>
         </div>
         {view !== "tags" ? (

@@ -265,6 +265,12 @@
       z-index: 10;
     }
 
+    /* /team 采用统一设置导航（S-9）：会话侧栏替换为设置导航列。 */
+    .settings-sidebar { display: none; }
+    body[data-view="team"] .session-sidebar { display: none; }
+    body[data-view="team"] .settings-sidebar { display: flex; }
+    body[data-view="team"] .header { display: none; }
+
     .sidebar-header {
       padding: 14px 16px;
       display: flex;
@@ -1228,7 +1234,7 @@
     </aside>
 
     <!-- 2. Conversation Sidebar (240px) -->
-    <aside class="sidebar">
+    <aside class="sidebar session-sidebar">
       <div class="sidebar-header">
         <span class="sidebar-title">对话</span>
         <button class="btn-icon-sm" title="新建对话 (Cmd+N)" onclick="newChat()">
@@ -1292,6 +1298,52 @@
           <i class="ph-bold ph-trash"></i>
           <span>回收站 (2)</span>
         </button>
+      </div>
+    </aside>
+
+    <!-- 2b. Settings Navigation Sidebar（/team 页，S-9 统一设置导航；默认隐藏） -->
+    <aside class="sidebar settings-sidebar">
+      <div style="padding: 12px 14px; display: flex; flex-direction: column; gap: 10px;">
+        <button class="btn-block-secondary" style="padding: 8px 12px; font-size: 13px;" onclick="switchView('chat')">
+          <i class="ph-bold ph-arrow-left"></i>
+          <span>返回原位置</span>
+        </button>
+        <div>
+          <div style="font-size: 13px; font-weight: 600; margin-bottom: 6px;">搜索设置分区</div>
+          <div style="padding: 8px 10px; border: 1px solid var(--color-hairline); border-radius: 8px; font-size: 12.5px; color: var(--color-ink-muted-80); background: var(--color-surface-pearl);">按名称、用途或关键词</div>
+        </div>
+        <div class="session-item active" style="cursor: default;">
+          <div class="session-item-top"><span class="session-item-title">技能</span></div>
+          <div class="session-item-meta"><span>管理可复用技能</span></div>
+        </div>
+        <div class="session-item" style="cursor: default;">
+          <div class="session-item-top"><span class="session-item-title">模型服务</span></div>
+          <div class="session-item-meta"><span>管理模型服务连接</span></div>
+        </div>
+        <div class="session-item" style="cursor: default;">
+          <div class="session-item-top"><span class="session-item-title">Agent</span></div>
+          <div class="session-item-meta"><span>管理 Agent 成员与职责</span></div>
+        </div>
+        <div class="session-item" style="cursor: default;">
+          <div class="session-item-top"><span class="session-item-title">固定 技能</span></div>
+        </div>
+        <div class="session-item" style="cursor: default;">
+          <div class="session-item-top"><span class="session-item-title">固定 模型服务</span></div>
+        </div>
+        <div class="session-item" style="cursor: default;">
+          <div class="session-item-top"><span class="session-item-title">固定 Agent</span></div>
+        </div>
+        <div style="font-size: 12.5px; font-weight: 600; color: var(--color-ink-muted-80); margin-top: 4px;">固定历史</div>
+        <div style="font-size: 12px; color: var(--color-ink-muted-80);">固定分区后，变更记录会显示在这里。</div>
+        <div style="font-size: 12.5px; font-weight: 600; color: var(--color-ink-muted-80); margin-top: 4px;">服务健康</div>
+        <div class="memory-card" style="padding: 10px 12px;">
+          <div style="font-size: 12.5px; font-weight: 600;">应用</div>
+          <div style="font-size: 12px; color: var(--color-ink-muted-80);">已就绪</div>
+        </div>
+        <div class="memory-card" style="padding: 10px 12px;">
+          <div style="font-size: 12.5px; font-weight: 600;">模型服务</div>
+          <div style="font-size: 12px; color: var(--color-ink-muted-80);">已连接</div>
+        </div>
       </div>
     </aside>
 
@@ -1652,18 +1704,13 @@
       <!-- VIEW F: Team / Provider Settings View -->
       <div class="view-content" id="view-team">
         <div class="gov-view-header">
-          <button class="btn-back-chat" onclick="switchView('chat')">
-            <i class="ph-bold ph-arrow-left"></i>
-            <span>返回对话</span>
-          </button>
-          <span class="gov-view-title">
-            <i class="ph-bold ph-users"></i>
-            <span>团队编排与 Provider 设置 (/team)</span>
+          <span class="gov-view-title" style="margin-inline: 0;">
+            <span>团队资源</span>
           </span>
-          <div></div>
         </div>
         <div class="gov-view-body">
           <div style="max-width: 800px; margin: 0 auto; display: flex; flex-direction: column; gap: 20px;">
+            <div style="font-size: 15px; font-weight: 600;">Agent</div>
             <div class="memory-card">
               <h3 style="font-size: 15px; font-weight: 600;">🤖 规划 Agent (Planner)</h3>
               <p style="font-size: 13px; color: var(--color-ink-muted-80);">职责：任务拆解、架构方案提案、协作路由编排。</p>
@@ -1752,6 +1799,7 @@
     function switchView(viewId) {
       document.querySelectorAll('.view-content').forEach(el => el.classList.remove('active'));
       document.querySelectorAll('.activity-btn').forEach(el => el.classList.remove('active'));
+      document.body.dataset.view = viewId;
       
       const targetView = document.getElementById('view-' + viewId);
       if (targetView) targetView.classList.add('active');

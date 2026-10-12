@@ -154,7 +154,13 @@ function memoryError(payload: MemoryPayload): string {
   }
 }
 
-export function MemoryPanel({ projectId }: { projectId: string }) {
+export function MemoryPanel({
+  projectId,
+  writeIntent = 0,
+}: {
+  projectId: string;
+  writeIntent?: number;
+}) {
   const [memories, setMemories] = useState<MemoryEntry[]>([]);
   const [draft, setDraft] = useState<MemoryDraft>(EMPTY_DRAFT);
   const [includeHistory, setIncludeHistory] = useState(false);
@@ -477,6 +483,38 @@ export function MemoryPanel({ projectId }: { projectId: string }) {
     }
   }
 
+  // UCD §9.2.4 顶栏「＋ 沉淀新记忆」：task-panel 顶栏发出的意图在此消费——
+  // 打开沉淀表单并聚焦正文（与任务看板共建新任务同范式）。
+  useEffect(() => {
+    if (writeIntent <= 0) return;
+    setDraft(EMPTY_DRAFT);
+    setWriteOpen(true);
+    queueMicrotask(() => contentRef.current?.focus());
+  }, [writeIntent]);
+
+  // UCD §9.2.4：卡片「修订（Supersede）」复用沉淀表单——预填正文/类型与取代目标，
+  // 来源沿用原记忆的冻结来源元组（修订不改变事实来源）。V6 来源域比沉淀表单更宽
+  // （artifact/task/result/review/validation），修订表单只接受 owner 可写的三种来源，
+  // 其余按产物路径归档（保留 sourceRef 原文，不伪造新来源）。
+  function openRevise(
+    memory: MemoryEntry,
+    memorySource: ReturnType<typeof source>,
+  ) {
+    const draftSourceType: MemoryDraft["sourceType"] =
+      memorySource.type in OWNER_SOURCE_LABELS
+        ? (memorySource.type as MemoryDraft["sourceType"])
+        : "artifact_path";
+    setDraft({
+      content: memory.content,
+      sourceRef: memorySource.id,
+      sourceType: draftSourceType,
+      supersedesId: memory.id,
+      type: memoryType(memory),
+    });
+    setWriteOpen(true);
+    queueMicrotask(() => contentRef.current?.focus());
+  }
+
   async function decideCurationCandidate(
     candidate: CurationCandidateListItemDto,
     action: "publish" | "reject",
@@ -607,24 +645,9 @@ export function MemoryPanel({ projectId }: { projectId: string }) {
 
   return (
     <section aria-labelledby={`memory-title-${projectId}`} className="stack">
-      <header className="panel-heading">
-        <h2 className="sr-only" id={`memory-title-${projectId}`}>
-          共享记忆
-        </h2>
-        <button
-          className="button-primary"
-          onClick={() => {
-            setWriteOpen(true);
-            queueMicrotask(() => contentRef.current?.focus());
-          }}
-          type="button"
-        >
-          ＋ 沉淀新记忆
-        </button>
-        <HelpTip label="共享记忆说明">
-          只收录带来源的目标、决策、事实与产物；原始聊天不会自动变成记忆。
-        </HelpTip>
-      </header>
+      <h2 className="sr-only" id={`memory-title-${projectId}`}>
+        共享记忆
+      </h2>
       {indexHealth ? (
         <section
           aria-label="记忆索引健康"
@@ -711,7 +734,12 @@ export function MemoryPanel({ projectId }: { projectId: string }) {
         aria-labelledby={`memory-cards-${projectId}`}
         className="stack memory-form"
       >
-        <h3 id={`memory-cards-${projectId}`}>记忆卡片</h3>
+        <div className="panel-heading">
+          <h3 id={`memory-cards-${projectId}`}>记忆卡片</h3>
+          <HelpTip label="共享记忆说明">
+            只收录带来源的目标、决策、事实与产物；原始聊天不会自动变成记忆。
+          </HelpTip>
+        </div>
         <ActionDialog
           closeLabel="关闭记忆检索"
           onClose={() => setSearchOpen(false)}
@@ -851,7 +879,12 @@ export function MemoryPanel({ projectId }: { projectId: string }) {
               >
                 {memory.content}
               </h3>
-              <p>{MEMORY_TYPES.find((type) => type.value === memoryType(memory))?.label}</p>
+              <p>
+                {/* UCD §9.2.4 记忆卡片：类型徽标（胶囊标签）。 */}
+                <span className="status-label">
+                  {MEMORY_TYPES.find((type) => type.value === memoryType(memory))?.label}
+                </span>
+              </p>
               <p>{actorCopy(memory)}</p>
               {memorySource.href && memorySource.version ? (
                 <a
@@ -867,7 +900,8 @@ export function MemoryPanel({ projectId }: { projectId: string }) {
                   {" · "}<span>原有来源（无版本）</span>
                 </p>
               )}
-              <p>chain <code>{chainId(memory)}</code> · v{version(memory)}</p>
+              {/* 版本号面向用户；内部 chain id 仅保留在 title 供追溯，不回显原始标识符。 */}
+              <p title={chainId(memory)}>版本 v{version(memory)}</p>
               {memory.active ? (
                 <p>Active · 当前版本</p>
               ) : (
@@ -878,17 +912,36 @@ export function MemoryPanel({ projectId }: { projectId: string }) {
               )}
               {predecessor ? (
                 <a href={`#memory-${predecessor.id}`}>
-                  取代 memory {predecessor.id} · v{version(predecessor)}
+                  取代 v{version(predecessor)}
                 </a>
               ) : null}
               {successor ? (
                 <a href={`#memory-${successor.id}`}>
-                  后继 memory {successor.id} · v{version(successor)}
+                  后继 v{version(successor)}
                 </a>
               ) : null}
               {memorySource.type === "artifact_path" ? (
                 <p className="muted">仅引用，尚未读取</p>
               ) : null}
+              {/* UCD §9.2.4 记忆卡片操作区：「查看来源」与「修订（Supersede）」；
+                  修订复用沉淀表单并预填取代目标与正文。 */}
+              <div className="memory-card-actions">
+                {memorySource.href ? (
+                  <a className="button-ghost" href={memorySource.href}>
+                    查看来源
+                  </a>
+                ) : null}
+                {memory.active ? (
+                  <button
+                    aria-label={`修订记忆 ${memory.content}`}
+                    className="button-secondary"
+                    onClick={() => openRevise(memory, memorySource)}
+                    type="button"
+                  >
+                    修订
+                  </button>
+                ) : null}
+              </div>
             </li>
             );
           })}

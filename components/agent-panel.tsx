@@ -913,16 +913,21 @@ export function AgentPanel({
                     </h3>
                   </div>
                   <p>{agent.role}</p>
-                  <p className="muted">{agent.model}</p>
-                  <p>
-                    {agent.skillIds
-                      .map((id) => skills.find((skill) => skill.id === id)?.name)
-                      .filter(Boolean)
-                      .join(" · ") || "无技能"}
-                  </p>
-                  <p className="muted">{permissionText(agent.permissions)}</p>
-                  <p className="muted">
-                    {agent.reviewCapable ? "可独立复核" : "未开启独立复核"}
+                  {/* UCD §9.3.2 能力画像卡：模型/技能/权限以胶囊徽标呈现（原型同）。 */}
+                  <p className="agent-capability-chips">
+                    <span className="status-label">{agent.model}</span>
+                    <span className="status-label">
+                      {agent.skillIds
+                        .map((id) => skills.find((skill) => skill.id === id)?.name)
+                        .filter(Boolean)
+                        .join(" · ") || "无技能"}
+                    </span>
+                    <span className="status-label">
+                      {permissionText(agent.permissions)}
+                    </span>
+                    <span className="status-label">
+                      {agent.reviewCapable ? "可独立复核" : "未开启独立复核"}
+                    </span>
                   </p>
                   <button
                     aria-label={`编辑 ${agent.name}`}

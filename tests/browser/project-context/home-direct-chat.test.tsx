@@ -59,6 +59,24 @@ describe("home direct chat", () => {
       "/team?section=providers&returnTo=/",
     );
     expect(screen.queryByText("请先创建或选择项目，再运行任务。")).not.toBeInTheDocument();
+
+    // UCD §7.1 区域 B + 场景 1：侧栏以就绪结构呈现（标题/新建/筛选 Tab/空态提示/回收站），
+    // 控件禁用而非假入口（§13）。
+    const sidebar = await screen.findByTestId("home-threads-placeholder");
+    expect(sidebar).toHaveTextContent("对话");
+    expect(sidebar).toHaveTextContent("配置模型 Provider 后即可开始对话。");
+    expect(screen.getByRole("button", { name: "新对话" })).toBeDisabled();
+    expect(screen.getByRole("tablist", { name: "对话视图" })).toBeInTheDocument();
+    expect(screen.getByRole("tab", { name: "全部" })).toBeDisabled();
+    expect(screen.getByRole("button", { name: "回收站" })).toBeDisabled();
+
+    // UCD §9.1.1 线框 + §10：欢迎态保留浮起 Composer（标准引导 Placeholder，Disabled 态）。
+    const composer = screen.getByRole("form", { name: "消息输入" });
+    expect(composer).toHaveAttribute("data-disabled", "true");
+    const input = screen.getByPlaceholderText("输入消息，与助手直接对话…");
+    expect(input).toBeDisabled();
+    expect(screen.getByRole("button", { name: "发送消息" })).toBeDisabled();
+    expect(composer).toHaveTextContent("配置模型 Provider 后即可发送消息。");
   });
 
   it("renders the selected Agent chat without project-only surfaces", async () => {

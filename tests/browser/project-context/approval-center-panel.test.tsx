@@ -8,7 +8,17 @@ import type { ComponentType } from "react";
 import type { ApprovalCenterItemDto } from "@/src/shared/approval-center-contracts";
 
 type ApprovalCenterModule = {
-  ApprovalCenterPanel: ComponentType<{ projectId: string }>;
+  ApprovalCenterPanel: ComponentType<{
+    onStatusSummary?: (summary: ApprovalStatusSummaryLike) => void;
+    projectId: string;
+    refreshIntent?: number;
+    statusFilter?: "all" | "pending" | "expired" | "replaced" | "revoked";
+  }>;
+};
+
+type ApprovalStatusSummaryLike = {
+  counts: Record<string, number>;
+  total: number;
 };
 
 const modules = import.meta.glob<ApprovalCenterModule>(
@@ -95,7 +105,7 @@ function page(items: ApprovalCenterItemDto[]) {
 }
 
 describe("approval center status filter", () => {
-  it("filters the merged list by status with counts and restores with 全部", async () => {
+  it("filters the merged list by the header-controlled status value", async () => {
     const ApprovalCenterPanel = await approvalCenterPanel();
     const pending = item({ approvalId: "approval-pending" });
     const expired = item({
@@ -105,28 +115,65 @@ describe("approval center status filter", () => {
       title: "deploy release",
     });
     vi.stubGlobal("fetch", vi.fn(() => Promise.resolve(page([pending, expired]))));
-    const user = userEvent.setup();
-    render(<ApprovalCenterPanel projectId="project-1" />);
 
-    const statusSelect = await screen.findByLabelText("状态");
-    // 默认「全部」：失效可辨识项可见（救援流程依赖），计数如实。
-    expect(statusSelect).toHaveValue("all");
-    expect(within(statusSelect).getByRole("option", { name: "全部 (2)" })).toBeInTheDocument();
-    expect(within(statusSelect).getByRole("option", { name: "待裁决 (1)" })).toBeInTheDocument();
-    expect(within(statusSelect).getByRole("option", { name: "已过期 (1)" })).toBeInTheDocument();
+    // UCD §9.2.5 顶栏筛选：默认「全部」——失效可辨识项可见（救援流程依赖），
+    // 面板按受控值过滤（select 本体在 task-panel 顶栏，见下条组件测试）。
+    const { rerender } = render(
+      <ApprovalCenterPanel projectId="project-1" statusFilter="all" />,
+    );
+    expect(await screen.findByText("node -v")).toBeInTheDocument();
     expect(screen.getByText("deploy release")).toBeInTheDocument();
 
-    // 切到待裁决：只剩 pending 卡片；切到已过期：只剩 expired 卡片。
-    await user.selectOptions(statusSelect, "pending");
+    rerender(<ApprovalCenterPanel projectId="project-1" statusFilter="pending" />);
     expect(screen.getByText("node -v")).toBeInTheDocument();
     expect(screen.queryByText("deploy release")).toBeNull();
-    await user.selectOptions(statusSelect, "expired");
+
+    rerender(<ApprovalCenterPanel projectId="project-1" statusFilter="expired" />);
     expect(screen.getByText("deploy release")).toBeInTheDocument();
     expect(screen.queryByText("node -v")).toBeNull();
 
-    await user.selectOptions(statusSelect, "all");
+    rerender(<ApprovalCenterPanel projectId="project-1" statusFilter="all" />);
     expect(screen.getByText("node -v")).toBeInTheDocument();
     expect(screen.getByText("deploy release")).toBeInTheDocument();
+  });
+
+  it("reports live list counts to the header filter and renders counts in options", async () => {
+    const ApprovalStatusFilterModule = await import(
+      "@/components/project-context/approval-status-filter"
+    );
+    const ApprovalCenterPanel = await approvalCenterPanel();
+    const pending = item({ approvalId: "approval-pending" });
+    const expired = item({
+      approvalId: "approval-expired",
+      decisionHint: "expired",
+      status: "expired",
+      title: "deploy release",
+    });
+    vi.stubGlobal("fetch", vi.fn(() => Promise.resolve(page([pending, expired]))));
+    const summaries: ApprovalStatusSummaryLike[] = [];
+    const { rerender } = render(
+      <ApprovalCenterPanel
+        onStatusSummary={(summary) => summaries.push(summary)}
+        projectId="project-1"
+      />,
+    );
+    await screen.findByText("node -v");
+    expect(summaries.at(-1)).toEqual({ counts: { pending: 1, expired: 1 }, total: 2 });
+
+    // 顶栏筛选组件的选项计数来自上报值（全部/待裁决/已过期…）。
+    rerender(
+      <ApprovalStatusFilterModule.ApprovalStatusFilterSelect
+        id="approval-status-project-1"
+        onChange={() => {}}
+        summary={{ counts: { pending: 1, expired: 1 }, total: 2 }}
+        value="all"
+      />,
+    );
+    const select = screen.getByLabelText("状态");
+    expect(select).toHaveValue("all");
+    expect(within(select).getByRole("option", { name: "全部 (2)" })).toBeInTheDocument();
+    expect(within(select).getByRole("option", { name: "待裁决 (1)" })).toBeInTheDocument();
+    expect(within(select).getByRole("option", { name: "已过期 (1)" })).toBeInTheDocument();
   });
 });
 
@@ -547,7 +594,7 @@ describe("Approval center panel", () => {
     ).toBeNull();
   });
 
-  it("refreshes the list manually through the refresh button", async () => {
+  it("refreshes the list when the header refresh intent advances", async () => {
     const ApprovalCenterPanel = await approvalCenterPanel();
     let listCalls = 0;
     vi.stubGlobal(
@@ -557,11 +604,13 @@ describe("Approval center panel", () => {
         return Promise.resolve(page(listCalls === 1 ? [item({})] : []));
       }),
     );
-    const user = userEvent.setup();
-    render(<ApprovalCenterPanel projectId="project-1" />);
+    // UCD §9.2.5：刷新与状态筛选位于顶栏（task-panel 渲染），面板经 refreshIntent 受控。
+    const { rerender } = render(
+      <ApprovalCenterPanel projectId="project-1" refreshIntent={0} />,
+    );
 
     await screen.findByRole("list", { name: "待裁决请求" });
-    await user.click(screen.getByRole("button", { name: "刷新列表" }));
+    rerender(<ApprovalCenterPanel projectId="project-1" refreshIntent={1} />);
     expect(await screen.findByText("没有待裁决的请求。")).toBeInTheDocument();
     expect(listCalls).toBe(2);
   });

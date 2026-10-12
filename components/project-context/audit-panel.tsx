@@ -852,6 +852,11 @@ export function AuditPanel({ projectId }: { projectId: string }) {
     ? shownFreshness !== null && !isTimelineLoading && timelineError === null
     : shownFreshness !== null && !isLoading && error === null;
 
+  // UCD §9.2.6：领域筛选行对时间轴与事件流同样生效。
+  const visibleTimelineItems = activeDomain === "all"
+    ? timelineItems
+    : timelineItems.filter((event) => eventDomain(event) === activeDomain);
+
   return (
     <section
       aria-labelledby={`audit-title-${projectId}`}
@@ -927,14 +932,41 @@ export function AuditPanel({ projectId }: { projectId: string }) {
               重试加载时间轴
             </button>
           </div>
-        ) : timelineItems.length === 0 ? (
-          <p className="state-message">尚无运行轨迹。</p>
         ) : (
-          <ol
-            aria-label="运行轨迹"
-            className="stack audit-event-list"
-          >
-            {timelineItems.map((event) => {
+          <>
+            <div
+              aria-label="按域筛选审计事件"
+              className="audit-domain-filters"
+              role="group"
+            >
+              {DOMAIN_FILTERS.map((filter) => (
+                <button
+                  aria-pressed={activeDomain === filter.value}
+                  className={
+                    activeDomain === filter.value
+                      ? "status-label audit-domain-filter active"
+                      : "status-label audit-domain-filter"
+                  }
+                  key={filter.value}
+                  onClick={() => setActiveDomain(filter.value)}
+                  type="button"
+                >
+                  {filter.label}
+                </button>
+              ))}
+            </div>
+            {visibleTimelineItems.length === 0 ? (
+              <p className="state-message">
+                {activeDomain === "all"
+                  ? "尚无运行轨迹。"
+                  : "该筛选下尚无时间轴事件。"}
+              </p>
+            ) : (
+            <ol
+              aria-label="运行轨迹"
+              className="stack audit-event-list"
+            >
+            {visibleTimelineItems.map((event) => {
               const domain = eventDomain(event);
               const excerpt = domain === "mission"
                 ? missionWorkExcerpt(event)
@@ -990,6 +1022,8 @@ export function AuditPanel({ projectId }: { projectId: string }) {
               );
             })}
           </ol>
+            )}
+          </>
         )
       ) : isLoading ? (
         <p aria-busy="true" className="state-message">

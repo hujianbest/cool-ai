@@ -184,6 +184,9 @@ ol {
 .cockpit-sidebar {
   grid-column: 2;
   grid-row: 1 / span 2;
+  /* 侧栏内容可滚动：建立包含块，避免内部绝对定位元素（sr-only 等）逃逸到
+     文档层撑高页面（/team 设置导航实测可滚出 2534px 空白区）。 */
+  position: relative;
 }
 
 .cockpit-sidebar[data-collapsed="true"] {
@@ -244,6 +247,23 @@ ol {
   grid-column: 3;
   grid-row: 2;
   min-height: 0;
+  /* 与侧栏同因（U-19 族）：建立包含块，避免内部绝对定位元素（sr-only、
+     浮层等）逃逸到文档层撑高页面，导致 fullPage 出现大片空白。 */
+  position: relative;
+}
+
+/* /team 主区（治理 tabpanel）：内容按 840px 居中列呈现（与聊天流同语言；原型同）。 */
+.cockpit-flow[role="tabpanel"] > * {
+  max-width: var(--chat-flow-max-width);
+  width: var(--full-width);
+  margin-inline: auto;
+}
+
+/* UCD §9.3.2：Agent 卡片的模型/技能/权限胶囊徽标排列。 */
+.agent-capability-chips {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--space-2);
 }
 
 .cockpit-context {
@@ -464,6 +484,16 @@ ol {
   gap: var(--space-3);
   padding: var(--space-8);
   text-align: center;
+}
+
+/* 欢迎态带浮起 Composer（UCD §9.1.1）：引导卡在剩余空间居中，Composer 贴底。 */
+.chat-welcome--with-composer {
+  min-height: 0;
+}
+
+/* §10 全态矩阵 Composer Disabled：整体 50% 不透明度、禁用输入。 */
+.composer[data-disabled="true"] {
+  opacity: 0.5;
 }
 
 .chat-welcome-actions {
@@ -1807,9 +1837,10 @@ ol {
   padding: var(--space-2) var(--space-3);
   background: var(--color-surface-pearl);
   box-shadow: var(--shadow-panel);
-  /* UCD §9.6.2：批量整理为底部弹出浮动操作条（DOM 仍在侧栏内，视觉浮于视口底部）。 */
+  /* UCD §9.6.2：批量整理为底部弹出浮动操作条（DOM 仍在侧栏内，视觉浮于视口底部）；
+     抬高到 Composer 之上，避免与浮起输入台重叠遮挡。 */
   position: fixed;
-  bottom: var(--space-4);
+  bottom: calc(var(--control-min) + var(--space-4));
   left: 50%;
   transform: translateX(-50%);
   width: min(var(--overlay-bar-max-width), calc(100vw - var(--space-6)));
@@ -2342,6 +2373,13 @@ ol {
 .execution-progress progress {
   width: var(--full-width);
   accent-color: var(--accent);
+}
+
+/* 原生表单控件（复选框/单选/进度）用暖金主色，杜绝系统蓝泄漏进暖米基调。 */
+input[type="checkbox"],
+input[type="radio"],
+progress {
+  accent-color: var(--interactive-primary);
 }
 
 .execution-card-controls {
@@ -3419,6 +3457,7 @@ button.source-tag:hover:not(:disabled) {
 
 .memory-index-health {
   display: flex;
+  flex-direction: row;
   align-items: center;
   justify-content: space-between;
   gap: var(--space-3);
@@ -4317,6 +4356,14 @@ legend {
   margin-left: auto;
 }
 
+/* UCD §9.2.4 记忆卡片操作区：查看来源 / 修订。 */
+.memory-card-actions {
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+  flex-wrap: wrap;
+}
+
 .task-card-ordinal {
   margin-right: var(--space-1);
   color: var(--text-secondary);
@@ -4325,6 +4372,25 @@ legend {
 
 .gov-view-action {
   margin-left: auto;
+  flex-shrink: 0;
+}
+
+/* UCD §9.2.5 顶栏工具条：状态筛选与刷新贴标题行右侧（与「＋ 新建任务」同槽位）。 */
+.gov-view-tools {
+  display: flex;
+  align-items: center;
+  gap: var(--space-3);
+  margin-left: auto;
+  flex-shrink: 0;
+}
+
+.gov-view-tools .approval-status-filter {
+  flex-direction: row;
+  align-items: center;
+  gap: var(--space-2);
+}
+
+.gov-view-tools .approval-status-filter label {
   flex-shrink: 0;
 }
 

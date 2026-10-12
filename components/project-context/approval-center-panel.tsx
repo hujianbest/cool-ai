@@ -19,6 +19,12 @@ import {
 } from "@/src/shared/approval-center-contracts";
 import type { ApiError } from "@/src/shared/contracts";
 
+import {
+  APPROVAL_STATUS_COPY as STATUS_COPY,
+  type ApprovalStatusFilterValue,
+  type ApprovalStatusSummary,
+} from "@/components/project-context/approval-status-filter";
+
 const DOMAIN_COPY: Record<ApprovalCenterDomain, string> = {
   execution: "执行",
   inline_decision: "内联决策",
@@ -31,26 +37,11 @@ const DOMAIN_VARIANT: Record<ApprovalCenterDomain, string> = {
   knowledge: "status-queued",
 };
 
-// 顶栏状态筛选的展示顺序（与 UCD §9.2.5 一致：待裁决在前）。
-const STATUS_FILTER_ORDER: ApprovalCenterItemStatus[] = [
-  "pending",
-  "expired",
-  "replaced",
-  "revoked",
-];
-
 const KIND_COPY: Record<ApprovalCenterItemKind, string> = {
   command: "命令",
   memory_publish: "知识发布",
   proposal: "Proposal",
   staged_merge: "Staged 合入",
-};
-
-const STATUS_COPY: Record<ApprovalCenterItemStatus, string> = {
-  expired: "已过期",
-  pending: "待裁决",
-  replaced: "已被取代",
-  revoked: "已撤销",
 };
 
 const STATUS_VARIANT: Record<ApprovalCenterItemStatus, string> = {
@@ -158,13 +149,18 @@ function sourceThreadHref(projectId: string, sourceRef: ApprovalCenterSourceRef)
   return `/projects/${encodeURIComponent(projectId)}?${query.toString()}`;
 }
 
-export function ApprovalCenterPanel({ projectId }: { projectId: string }) {
+export function ApprovalCenterPanel({
+  onStatusSummary,
+  projectId,
+  refreshIntent = 0,
+  statusFilter = "all",
+}: {
+  onStatusSummary?: (summary: ApprovalStatusSummary) => void;
+  projectId: string;
+  refreshIntent?: number;
+  statusFilter?: ApprovalStatusFilterValue;
+}) {
   const [items, setItems] = useState<ApprovalCenterItemDto[]>([]);
-  // UCD §9.2.5 顶栏状态筛选：默认「全部」（含失效可辨识项，救援流程依赖其可见）；
-  // 已落定请求（已批准/已驳回）按契约语义不入列，历史归档见统一审计中心。
-  const [statusFilter, setStatusFilter] = useState<
-    ApprovalCenterItemStatus | "all"
-  >("all");
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [decidingId, setDecidingId] = useState<string | null>(null);
@@ -210,7 +206,22 @@ export function ApprovalCenterPanel({ projectId }: { projectId: string }) {
         if (epochRef.current === epoch) setIsLoading(false);
       });
     return () => controller.abort();
-  }, [projectId, reloadKey]);
+  }, [projectId, reloadKey, refreshIntent]);
+
+  // 顶栏（task-panel）所有状态筛选与计数：列表实况上报，计数随每次加载同步。
+  const statusSummary: ApprovalStatusSummary = items.reduce<ApprovalStatusSummary>(
+    (acc, item) => {
+      acc.counts[item.status] = (acc.counts[item.status] ?? 0) + 1;
+      acc.total += 1;
+      return acc;
+    },
+    { counts: {}, total: 0 },
+  );
+  useEffect(() => {
+    onStatusSummary?.(statusSummary);
+    // statusSummary 每次 items 变化重建；以 items 为依赖避免对象身份抖动重跑。
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [items, onStatusSummary]);
 
   function refresh() {
     silentRefreshRef.current = true;
@@ -304,10 +315,7 @@ export function ApprovalCenterPanel({ projectId }: { projectId: string }) {
     );
   }
 
-  const statusCounts = items.reduce<Record<string, number>>((acc, item) => {
-    acc[item.status] = (acc[item.status] ?? 0) + 1;
-    return acc;
-  }, {});
+  const statusCounts = statusSummary.counts;
   const visibleItems = statusFilter === "all"
     ? items
     : items.filter((item) => item.status === statusFilter);
@@ -338,28 +346,6 @@ export function ApprovalCenterPanel({ projectId }: { projectId: string }) {
         </div>
       ) : (
         <>
-          <div className="approval-center-toolbar">
-            <button className="button-secondary" onClick={refresh} type="button">
-              刷新列表
-            </button>
-            <div className="form-field approval-status-filter">
-              <label htmlFor={`approval-status-${projectId}`}>状态</label>
-              <select
-                id={`approval-status-${projectId}`}
-                onChange={(event) =>
-                  setStatusFilter(event.target.value as ApprovalCenterItemStatus | "all")
-                }
-                value={statusFilter}
-              >
-                <option value="all">{`全部 (${items.length})`}</option>
-                {STATUS_FILTER_ORDER.map((status) => (
-                  <option key={status} value={status}>
-                    {`${STATUS_COPY[status]} (${statusCounts[status] ?? 0})`}
-                  </option>
-                ))}
-              </select>
-            </div>
-          </div>
           {visibleItems.length === 0 ? (
             <p className="state-message">
               {statusFilter === "pending" || statusFilter === "all"
@@ -398,15 +384,7 @@ export function ApprovalCenterPanel({ projectId }: { projectId: string }) {
                       </p>
                     ) : (
                       <div className="approval-center-actions">
-                        <button
-                          aria-label={`批准执行 ${displayTitle}`}
-                          className="button-primary"
-                          disabled={decidingId === item.approvalId}
-                          onClick={() => void decide(item, "approve")}
-                          type="button"
-                        >
-                          批准执行
-                        </button>
+                        {/* UCD §9.2.5 裁决操作组：驳回（次级）在左，批准执行（暖金主按钮）在右。 */}
                         <button
                           aria-label={`驳回 ${displayTitle}`}
                           className="button-secondary"
@@ -415,6 +393,15 @@ export function ApprovalCenterPanel({ projectId }: { projectId: string }) {
                           type="button"
                         >
                           驳回
+                        </button>
+                        <button
+                          aria-label={`批准执行 ${displayTitle}`}
+                          className="button-primary"
+                          disabled={decidingId === item.approvalId}
+                          onClick={() => void decide(item, "approve")}
+                          type="button"
+                        >
+                          批准执行
                         </button>
                       </div>
                     )}

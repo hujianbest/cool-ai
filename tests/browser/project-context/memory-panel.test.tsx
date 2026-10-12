@@ -10,7 +10,7 @@ import type { MemoryEntryV6 } from "@/src/shared/memory-contracts";
 import type { MemoryEntry } from "@/src/shared/project-context-contracts";
 
 type MemoryPanelModule = {
-  MemoryPanel: ComponentType<{ projectId: string }>;
+  MemoryPanel: ComponentType<{ projectId: string; writeIntent?: number }>;
 };
 
 const modules =
@@ -414,7 +414,7 @@ describe("Shared Memory panel", () => {
           : Promise.resolve(Response.json({ memories: [] }));
       }),
     );
-    render(<MemoryPanel projectId="project-1" />);
+    const view = render(<MemoryPanel projectId="project-1" />);
 
     expect(screen.getByText("正在加载共享记忆…")).toHaveAttribute(
       "aria-busy",
@@ -436,7 +436,9 @@ describe("Shared Memory panel", () => {
       screen.getByRole("button", { name: "重试加载共享记忆" }),
     );
     expect(await screen.findByText("尚无共享记忆。")).toBeInTheDocument();
-    expect(screen.getByRole("button", { name: "＋ 沉淀新记忆" })).toBeEnabled();
+    // UCD §9.2.4：顶栏「＋ 沉淀新记忆」由 task-panel 渲染；面板经 writeIntent 打开沉淀表单。
+    view.rerender(<MemoryPanel projectId="project-1" writeIntent={1} />);
+    expect(await screen.findByLabelText("记忆正文")).toBeInTheDocument();
   }, 15_000);
 
   it("leads the memory view with search, type chips, then the card list (U-08)", async () => {
@@ -521,10 +523,11 @@ describe("Shared Memory panel", () => {
     );
     vi.stubGlobal("fetch", fetchMock);
     const user = userEvent.setup();
-    render(<MemoryPanel projectId="project-1" />);
+    const view = render(<MemoryPanel projectId="project-1" />);
     await screen.findByRole("heading", { name: "Current goal" });
 
-    await user.click(screen.getByRole("button", { name: "＋ 沉淀新记忆" }));
+    // UCD §9.2.4：顶栏「＋ 沉淀新记忆」由 task-panel 渲染；面板经 writeIntent 意图打开沉淀表单。
+    view.rerender(<MemoryPanel projectId="project-1" writeIntent={1} />);
     await user.click(screen.getByRole("button", { name: "保存记忆" }));
     expect(screen.getByRole("alert")).toHaveTextContent("请输入记忆正文");
     expect(screen.getByLabelText("记忆正文")).toHaveFocus();
@@ -571,6 +574,64 @@ describe("Shared Memory panel", () => {
     const history = await screen.findByRole("list", { name: "共享记忆历史" });
     expect(within(history).getByText("Old goal")).toBeInTheDocument();
     expect(within(history).getByText("已失效")).toBeInTheDocument();
+  });
+
+  it("opens the card revise action prefilled and posts a supersede revision", async () => {
+    const MemoryPanel = await memoryPanel();
+    const created: MemoryEntry = {
+      ...activeGoal,
+      id: "memory-revised",
+      content: "Current goal revised",
+      createdAt: "2026-07-29T00:03:00.000Z",
+    };
+    const fetchMock = vi.fn(
+      async (input: RequestInfo | URL, init?: RequestInit) => {
+        const url = String(input);
+        const curation = emptyCurationResponse(input);
+        if (curation) return curation;
+        if (url.includes("/memory-index/health")) return memoryIndexHealthResponse();
+        if (url.includes("/memory-collections")) {
+          return Response.json({ collections: [] });
+        }
+        if (url.includes("/knowledge-graph")) {
+          return Response.json({ edges: [], nodes: [] });
+        }
+        if (init?.method === "POST") {
+          return Response.json({ memory: created }, { status: 201 });
+        }
+        return Response.json({ memories: [activeGoal] });
+      },
+    );
+    vi.stubGlobal("fetch", fetchMock);
+    const user = userEvent.setup();
+    render(<MemoryPanel projectId="project-1" />);
+    await screen.findByRole("heading", { name: "Current goal" });
+
+    // UCD §9.2.4：卡片操作区「修订（Supersede）」——预填正文/来源与取代目标。
+    await user.click(
+      screen.getByRole("button", { name: "修订记忆 Current goal" }),
+    );
+    expect(screen.getByLabelText("记忆正文")).toHaveValue("Current goal");
+    expect(screen.getByLabelText("来源引用")).toHaveValue("Owner");
+    expect(screen.getByLabelText("取代旧记忆")).toHaveValue(activeGoal.id);
+
+    await user.click(screen.getByRole("button", { name: "保存记忆" }));
+    expect(fetchMock).toHaveBeenCalledWith(
+      "/api/projects/project-1/memories",
+      expect.objectContaining({
+        body: JSON.stringify({
+          type: "goal",
+          content: "Current goal",
+          sourceType: "owner_input",
+          sourceRef: "Owner",
+          supersedesId: activeGoal.id,
+        }),
+        method: "POST",
+      }),
+    );
+    expect(
+      await screen.findByRole("status", { name: "保存结果" }),
+    ).toHaveTextContent("共享记忆已保存。");
   });
 });
 

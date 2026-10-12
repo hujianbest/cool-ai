@@ -1096,7 +1096,8 @@ export function MissionBoard({
               <span className="sr-only">编辑使命</span>
             </button>
           </header>
-          {insightPanel}
+          {/* UCD §9.2.1 线框顺序：使命卡片 → 任务区 → 四泳道看板。能力画像
+              （§9.3.2）在此窗格内不占据折叠线上方，置于看板之后。 */}
 
           <section
             aria-labelledby={`new-work-item-${projectId}`}
@@ -1367,12 +1368,15 @@ export function MissionBoard({
                       </li>
                     ))}
                   {workItems.every((item) => item.status !== status) ? (
-                    <li className="sr-only">暂无{label}任务。</li>
+                    // UCD §10 全态矩阵（任务看板泳道 Empty）：泳道内显示「当前无任务」，
+                    // 让空看板仍可辨识为四泳道结构（§9.2.1 已同步修订）。
+                    <li className="muted">当前无任务</li>
                   ) : null}
                 </ul>
               </section>
             ))}
           </div>
+          {insightPanel}
           <SopStatePanel
             onLocateWorkItem={locateWorkItem}
             projectId={projectId}

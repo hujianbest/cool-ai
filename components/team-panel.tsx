@@ -228,6 +228,7 @@ export function TeamPanel({
               {searchResults.map((candidate) => (
                 <li key={candidate.id}>
                   <button
+                    aria-current={candidate.id === section ? "true" : undefined}
                     aria-label={
                       candidate.id === "agents"
                         ? "打开 Agent 设置"

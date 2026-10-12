@@ -213,10 +213,11 @@ describe("review memory UI", () => {
       "memory fact-current",
     ]);
     expect(within(items[0]).getByText("已被 v2 取代")).toBeInTheDocument();
-    expect(within(items[0]).getByRole("link", { name: "后继 memory fact-current · v2" }))
+    // UCD §9.2.4：卡片链上导航面向版本号，不回显原始记忆标识符。
+    expect(within(items[0]).getByRole("link", { name: "后继 v2" }))
       .toHaveAttribute("href", "#memory-fact-current");
     expect(within(items[1]).getByText("Active · 当前版本")).toBeInTheDocument();
-    expect(within(items[1]).getByRole("link", { name: "取代 memory fact-old · v1" }))
+    expect(within(items[1]).getByRole("link", { name: "取代 v1" }))
       .toHaveAttribute("href", "#memory-fact-old");
   });
 
@@ -272,13 +273,14 @@ describe("review memory UI", () => {
     vi.stubGlobal("fetch", fetchMock);
     const user = userEvent.setup();
 
-    render(<MemoryPanel projectId="project-1" />);
+    const view = render(<MemoryPanel projectId="project-1" />);
     expect(screen.getByText("正在加载共享记忆…")).toHaveAttribute("aria-busy", "true");
     expect(screen.queryByRole("button", { name: "保存记忆" })).toBeNull();
     await act(async () => resolveLoad(Response.json({ memories: [] })));
     expect(await screen.findByText("尚无共享记忆。")).toBeInTheDocument();
 
-    await user.click(screen.getByRole("button", { name: "＋ 沉淀新记忆" }));
+    // UCD §9.2.4：顶栏按钮由 task-panel 渲染；面板经 writeIntent 意图打开沉淀表单。
+    view.rerender(<MemoryPanel projectId="project-1" writeIntent={1} />);
     expect(screen.getByRole("radio", { name: "目标" })).toBeInTheDocument();
     expect(screen.queryByRole("radio", { name: /Agent|review confirmation/i })).toBeNull();
     await user.click(screen.getByRole("radio", { name: "经验" }));
@@ -320,11 +322,12 @@ describe("review memory UI", () => {
     vi.stubGlobal("fetch", fetchMock);
     const user = userEvent.setup();
 
-    render(<MemoryPanel projectId="project-1" />);
+    const view = render(<MemoryPanel projectId="project-1" />);
     expect(await screen.findByRole("alert")).toHaveTextContent("无法加载共享记忆");
     await user.click(screen.getByRole("button", { name: "重试加载共享记忆" }));
     await screen.findByText("尚无共享记忆。");
-    await user.click(screen.getByRole("button", { name: "＋ 沉淀新记忆" }));
+    // UCD §9.2.4：顶栏按钮由 task-panel 渲染；面板经 writeIntent 意图打开沉淀表单。
+    view.rerender(<MemoryPanel projectId="project-1" writeIntent={1} />);
     const content = screen.getByLabelText("记忆正文");
     content.focus();
     await user.type(content, "Draft survives", { skipClick: true });

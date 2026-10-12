@@ -1375,7 +1375,8 @@ try {
   approvalCenterAcceptance.matrix.push("desktop-light");
   await page.screenshot({ fullPage: true, path: approvalCenterDesktopScreenshot });
 
-  // 键盘裁决（批准）：刷新列表 → 批准执行 → Enter。
+  // 键盘裁决（批准）：刷新列表 → 顶栏状态筛选 → 驳回 → 批准执行 → Enter。
+  // UCD §9.2.5：状态筛选与刷新同处顶栏；裁决按钮组顺序为「驳回到前、批准执行在后」。
   const acRefresh = acPanel.getByRole("button", { name: "刷新列表" });
   await acRefresh.focus();
   acOk(
@@ -1383,10 +1384,22 @@ try {
     "the approval center's first focusable control must accept focus",
   );
   await page.keyboard.press("Tab");
+  const acStatusFilter = acPanel.getByLabel("状态");
+  acOk(
+    await acStatusFilter.evaluate((element) => document.activeElement === element),
+    "the second Tab must reach the header status filter",
+  );
+  await page.keyboard.press("Tab");
+  const acRejectExec = acExecutionItem.getByRole("button", { name: /^驳回 .+--help$/u });
+  acOk(
+    await acRejectExec.evaluate((element) => document.activeElement === element),
+    "the third Tab must reach the reject-first decision group",
+  );
+  await page.keyboard.press("Tab");
   const acApprove = acExecutionItem.getByRole("button", { name: /^批准执行 .+--help$/u });
   acOk(
     await acApprove.evaluate((element) => document.activeElement === element),
-    "the second Tab must reach the execution approve button",
+    "the fourth Tab must reach the execution approve button",
   );
   acOk(
     await acApprove.evaluate(
@@ -1409,7 +1422,8 @@ try {
     "the approved item must not render anymore",
   );
 
-  // 键盘裁决（驳回）：刷新列表 → 批准执行 → 驳回 → Enter。
+  // 键盘裁决（驳回）：刷新列表 → 顶栏状态筛选 → 驳回 → Enter。
+  // 批准后列表只剩提案卡；其裁决组首按钮即「驳回」。
   await acRefresh.focus();
   await page.keyboard.press("Tab");
   await page.keyboard.press("Tab");
