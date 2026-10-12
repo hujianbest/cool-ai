@@ -172,6 +172,20 @@ async function shot(name) {
   console.log(`SHOT ${name}`);
 }
 
+// 对话框截图前把弹层滚到顶部：抽屉/模态内部滚动位置会让头部与首批字段被裁切，
+// 截到「滚动中段」状态会产生假缺陷读数。
+async function scrollDialogToTop() {
+  await page.evaluate(() => {
+    const dialog = document.querySelector('[role="dialog"], .modal-surface, .action-dialog');
+    if (!dialog) return;
+    dialog.scrollTop = 0;
+    for (const node of dialog.querySelectorAll("*")) {
+      if (node.scrollHeight > node.clientHeight) node.scrollTop = 0;
+    }
+  });
+  await page.waitForTimeout(250);
+}
+
 // 聊天截图前把时间线滚到底：浮起 Composer 遮挡末端内容是截图中段状态，
 // 滚到末端（含 scroll-padding 让位）后再截图才反映用户看到的稳定形态。
 async function scrollChatToBottom() {
@@ -274,6 +288,7 @@ try {
     await page.fill("#provider-api-key", "sk-mock-audit-key");
     const insecure = page.locator('input[type="checkbox"]').first();
     if (await insecure.isVisible().catch(() => false)) await insecure.check();
+    await scrollDialogToTop();
     await shot("03-provider-dialog");
   });
 
@@ -294,6 +309,7 @@ try {
     await page.fill("#skill-name", "TDD 开发规范");
     await page.fill("#skill-description", "遵循红绿重构循环进行高质量交付");
     await page.fill("#skill-instructions", "编写功能前先编写失败测试，逐步实现并重构。");
+    await scrollDialogToTop();
     await shot("05-skill-dialog");
     await page.locator('#skill-resource-panel button[type="submit"], button:has-text("创建技能"), button:has-text("保存技能")').first().click();
     await page.waitForTimeout(1000);
@@ -310,6 +326,7 @@ try {
     await page.fill("#agent-system-prompt", "你是一名资深的系统架构师与规划搭档。");
     await page.locator("#agent-provider").selectOption({ index: 1 });
     await page.fill("#agent-avatar", "规");
+    await scrollDialogToTop();
     await shot("06-agent-dialog");
     await page.locator('#agent-resource-panel button[type="submit"], button:has-text("保存 Agent")').first().click();
     await page.waitForTimeout(1200);
@@ -727,6 +744,7 @@ try {
     const editor = page.getByRole("dialog", { name: "任务编辑" });
     await editor.waitFor({ timeout: 20_000 });
     await page.waitForTimeout(800);
+    await scrollDialogToTop();
     await shot("28-narrow-task-editor-dialog");
     await editor.getByRole("button", { name: "关闭任务编辑" }).first().click();
     await editor.waitFor({ state: "detached", timeout: 10_000 }).catch(() => {});
@@ -741,6 +759,7 @@ try {
     const createDialog = page.getByRole("dialog").first();
     await createDialog.waitFor({ timeout: 10_000 });
     await page.waitForTimeout(700);
+    await scrollDialogToTop();
     await shot("29-memory-create-dialog");
     await page.keyboard.press("Escape");
     await page.waitForTimeout(500);
@@ -748,6 +767,7 @@ try {
     const searchDialog = page.getByRole("dialog").first();
     await searchDialog.waitFor({ timeout: 10_000 });
     await page.waitForTimeout(700);
+    await scrollDialogToTop();
     await shot("29b-memory-search-dialog");
     await page.keyboard.press("Escape");
     await page.waitForTimeout(500);
@@ -801,6 +821,7 @@ try {
     const dialog = page.getByRole("dialog").first();
     await dialog.waitFor({ timeout: 10_000 });
     await page.waitForTimeout(700);
+    await scrollDialogToTop();
     await shot("32-team-edit-dialog-1");
     await page.getByRole("button", { name: /^关闭.*编辑器$/ }).first().click();
     await dialog.waitFor({ state: "detached", timeout: 10_000 }).catch(() => {});
@@ -810,7 +831,8 @@ try {
       const dialog2 = page.getByRole("dialog").first();
       await dialog2.waitFor({ timeout: 10_000 });
       await page.waitForTimeout(700);
-      await shot("32b-team-edit-dialog-2");
+      await scrollDialogToTop();
+    await shot("32b-team-edit-dialog-2");
       await page.getByRole("button", { name: /^关闭.*编辑器$/ }).first().click();
       await dialog2.waitFor({ state: "detached", timeout: 10_000 }).catch(() => {});
       await page.waitForTimeout(500);
