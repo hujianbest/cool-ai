@@ -163,7 +163,20 @@ async function waitForServer() {
 }
 
 const steps = [];
+const skippedSteps = [];
 const pageDiagnostics = [];
+
+// 定向重采（--only-step S11,S16）：只跑指定步骤，其余按 SKIP 记账；
+// 步骤间依赖（如 projectUrl 来自 S15）由调用方在列表里一并给出。
+const onlySteps = new Set(
+  process.argv
+    .flatMap((argument, index) =>
+      argument === "--only-step" ? [process.argv[index + 1] ?? ""] : [],
+    )
+    .flatMap((value) => value.split(","))
+    .map((value) => value.trim().toUpperCase())
+    .filter(Boolean),
+);
 let activePage;
 let page;
 
@@ -197,6 +210,11 @@ async function scrollChatToBottom() {
 }
 
 async function step(id, title, fn) {
+  if (onlySteps.size > 0 && !onlySteps.has(id.toUpperCase())) {
+    skippedSteps.push(id);
+    console.log(`[SKIP] ${id} ${title}`);
+    return;
+  }
   pageDiagnostics.length = 0;
   const startedAt = Date.now();
   const elapsed = () => `${Math.round((Date.now() - startedAt) / 1000)}s`;
@@ -691,6 +709,12 @@ try {
       await batch.click();
       await page.waitForTimeout(800);
       await shot("23b-batch-bar");
+      // 采集后退出批量整理模式：浮层属于本步证据，不应污染后续主题/窄屏采集（U-29）。
+      const cancelOrganize = page.getByRole("button", { name: "取消整理" }).first();
+      if (await cancelOrganize.isVisible().catch(() => false)) {
+        await cancelOrganize.click();
+        await page.waitForTimeout(600);
+      }
     }
   });
 
@@ -860,6 +884,9 @@ try {
   );
   const failed = steps.filter((entry) => entry.status === "FAIL");
   console.log(`\nAUDIT CAPTURE DONE: ${steps.length - failed.length}/${steps.length} steps, screenshots in ${artifactDirectory}`);
+  if (skippedSteps.length > 0) {
+    console.log(`  跳过 ${skippedSteps.length} 步：${skippedSteps.join(", ")}`);
+  }
   for (const entry of failed) console.log(`  FAIL ${entry.id}: ${entry.error}`);
 } finally {
   await browser?.close();

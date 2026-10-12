@@ -349,7 +349,16 @@ export function WorkspaceSetup({
               role="status"
               tabIndex={-1}
             >
-              已绑定：<code>{workspace.path}</code>
+              已绑定：
+              <code>
+                {workspace.path.split("/").map((segment, index) => (
+                  <span key={`${index}-${segment}`}>
+                    {index > 0 ? "/" : ""}
+                    {index > 0 ? <wbr /> : null}
+                    {segment}
+                  </span>
+                ))}
+              </code>
             </p>
           ) : (
             <p className="muted">尚未绑定本地工作区。</p>

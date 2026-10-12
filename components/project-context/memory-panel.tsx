@@ -1255,113 +1255,119 @@ export function MemoryPanel({
         titleId={`memory-write-title-${projectId}`}
       >
       <form className="stack memory-form" onSubmit={saveMemory}>
-        <fieldset>
-          <legend>记忆类型</legend>
-          <div className="memory-type-options">
-            {MEMORY_TYPES.map((type) => (
-              <label className="check-row" key={type.value}>
-                <input
-                  checked={draft.type === type.value}
-                  name={`memory-type-${projectId}`}
-                  onChange={() =>
-                    setDraft((current) => ({
-                      ...current,
-                      type: type.value,
-                      supersedesId: "",
-                    }))
-                  }
-                  type="radio"
-                  value={type.value}
-                />
-                <span>{type.label}</span>
-              </label>
-            ))}
+        <div className="stack memory-form-body">
+          <fieldset>
+            <legend>记忆类型</legend>
+            <div className="memory-type-options">
+              {MEMORY_TYPES.map((type) => (
+                <label className="check-row" key={type.value}>
+                  <input
+                    checked={draft.type === type.value}
+                    name={`memory-type-${projectId}`}
+                    onChange={() =>
+                      setDraft((current) => ({
+                        ...current,
+                        type: type.value,
+                        supersedesId: "",
+                      }))
+                    }
+                    type="radio"
+                    value={type.value}
+                  />
+                  <span>{type.label}</span>
+                </label>
+              ))}
+            </div>
+          </fieldset>
+          <div className="form-field">
+            <label htmlFor={`memory-content-${projectId}`}>记忆正文</label>
+            <textarea
+              aria-describedby={error ? `memory-error-${projectId}` : undefined}
+              id={`memory-content-${projectId}`}
+              onChange={(event) =>
+                setDraft((current) => ({
+                  ...current,
+                  content: event.target.value,
+                }))
+              }
+              ref={contentRef}
+              value={draft.content}
+            />
           </div>
-        </fieldset>
-        <div className="form-field">
-          <label htmlFor={`memory-content-${projectId}`}>记忆正文</label>
-          <textarea
-            aria-describedby={error ? `memory-error-${projectId}` : undefined}
-            id={`memory-content-${projectId}`}
-            onChange={(event) =>
-              setDraft((current) => ({
-                ...current,
-                content: event.target.value,
-              }))
-            }
-            ref={contentRef}
-            value={draft.content}
-          />
+          <div className="form-field">
+            <label htmlFor={`memory-source-type-${projectId}`}>来源类型</label>
+            <select
+              id={`memory-source-type-${projectId}`}
+              onChange={(event) =>
+                setDraft((current) => ({
+                  ...current,
+                  sourceType: event.target
+                    .value as MemoryDraft["sourceType"],
+                }))
+              }
+              value={draft.sourceType}
+            >
+              {Object.entries(OWNER_SOURCE_LABELS).map(([value, label]) => (
+                <option key={value} value={value}>
+                  {label}
+                </option>
+              ))}
+            </select>
+          </div>
+          {draft.sourceType === "artifact_path" ? (
+            <p className="muted">仅引用，尚未读取</p>
+          ) : null}
+          <div className="form-field">
+            <label htmlFor={`memory-source-ref-${projectId}`}>来源引用</label>
+            <input
+              aria-describedby={error ? `memory-error-${projectId}` : undefined}
+              id={`memory-source-ref-${projectId}`}
+              onChange={(event) =>
+                setDraft((current) => ({
+                  ...current,
+                  sourceRef: event.target.value,
+                }))
+              }
+              placeholder="例如：docs/architecture.md"
+              ref={sourceRef}
+              value={draft.sourceRef}
+            />
+          </div>
+          <div className="form-field">
+            <label htmlFor={`memory-supersede-${projectId}`}>取代旧记忆</label>
+            <select
+              id={`memory-supersede-${projectId}`}
+              onChange={(event) =>
+                setDraft((current) => ({
+                  ...current,
+                  supersedesId: event.target.value,
+                }))
+              }
+              value={draft.supersedesId}
+            >
+              <option value="">不取代</option>
+              {supersedeOptions.map((memory) => (
+                <option key={memory.id} value={memory.id}>
+                  {memory.content}
+                </option>
+              ))}
+            </select>
+          </div>
+          {error && writeOpen ? (
+            <p
+              className="error-text"
+              id={`memory-error-${projectId}`}
+              role="alert"
+            >
+              {error}
+            </p>
+          ) : null}
         </div>
-        <div className="form-field">
-          <label htmlFor={`memory-source-type-${projectId}`}>来源类型</label>
-          <select
-            id={`memory-source-type-${projectId}`}
-            onChange={(event) =>
-              setDraft((current) => ({
-                ...current,
-                sourceType: event.target
-                  .value as MemoryDraft["sourceType"],
-              }))
-            }
-            value={draft.sourceType}
-          >
-            {Object.entries(OWNER_SOURCE_LABELS).map(([value, label]) => (
-              <option key={value} value={value}>
-                {label}
-              </option>
-            ))}
-          </select>
-        </div>
-        {draft.sourceType === "artifact_path" ? (
-          <p className="muted">仅引用，尚未读取</p>
-        ) : null}
-        <div className="form-field">
-          <label htmlFor={`memory-source-ref-${projectId}`}>来源引用</label>
-          <input
-            aria-describedby={error ? `memory-error-${projectId}` : undefined}
-            id={`memory-source-ref-${projectId}`}
-            onChange={(event) =>
-              setDraft((current) => ({
-                ...current,
-                sourceRef: event.target.value,
-              }))
-            }
-            placeholder="例如：docs/architecture.md"
-            ref={sourceRef}
-            value={draft.sourceRef}
-          />
-        </div>
-        <div className="form-field">
-          <label htmlFor={`memory-supersede-${projectId}`}>取代旧记忆</label>
-          <select
-            id={`memory-supersede-${projectId}`}
-            onChange={(event) =>
-              setDraft((current) => ({
-                ...current,
-                supersedesId: event.target.value,
-              }))
-            }
-            value={draft.supersedesId}
-          >
-            <option value="">不取代</option>
-            {supersedeOptions.map((memory) => (
-              <option key={memory.id} value={memory.id}>
-                {memory.content}
-              </option>
-            ))}
-          </select>
-        </div>
-        {error && writeOpen ? (
-          <p
-            className="error-text"
-            id={`memory-error-${projectId}`}
-            role="alert"
-          >
-            {error}
-          </p>
-        ) : null}
-        <button disabled={isLoading || isSaving} type="submit">
+        <button
+          className="button-primary"
+          disabled={isLoading || isSaving}
+          type="submit"
+        >
           {isSaving ? "正在保存记忆…" : "保存记忆"}
         </button>
       </form>

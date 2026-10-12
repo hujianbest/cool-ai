@@ -309,7 +309,10 @@ describe("collaboration timeline and auto-loop", () => {
 
     const log = await screen.findByRole("log", { name: "协作时间线" });
     // 成员 agentId → 显示名；未知 UUID → 「Agent」兜底；原始标识符不得出现在界面文案。
-    expect(within(log).getAllByText("Alpha").length).toBeGreaterThan(0);
+    // 成员名映射依赖 /members 异步应答（早于响应时先显示兜底），按有界等待断言最终文案。
+    await waitFor(() => {
+      expect(within(log).getAllByText("Alpha").length).toBeGreaterThan(0);
+    });
     expect(within(log).queryByText("agent-a")).toBeNull();
     expect(within(log).queryByText(rawActor)).toBeNull();
     expect(within(log).getAllByText("Agent").length).toBeGreaterThan(0);

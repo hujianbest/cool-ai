@@ -664,6 +664,12 @@ ol {
   box-shadow: 0 0 0 2px var(--interactive-accent-soft), var(--shadow-product);
 }
 
+/* 尾部提示（启动回执/失败关闭告警）接替 Composer 成为主区最后一个元素时，
+   继承同一 24px 贴底偏移，避免卡片紧贴窗口下沿（U-28 闸门发现）。 */
+.cockpit-flow .chat-surface > :last-child {
+  margin-bottom: var(--space-6);
+}
+
 .composer-chips,
 .composer-input-row,
 .composer-footer,
@@ -1207,6 +1213,18 @@ ol {
   background: var(--surface-muted);
 }
 
+/* 记忆表单高于对话框折叠高度时由字段区滚动，提交按钮留在表单底部常驻
+   （U-30 闸门发现：整表滚动把「保存记忆」推出视口；贴底 sticky 会压住字段）。 */
+.memory-form {
+  min-height: 0;
+}
+
+.memory-form-body {
+  flex: 1;
+  min-height: 0;
+  overflow-y: auto;
+}
+
 .structured-snapshot {
   max-width: 100%;
   overflow: auto;
@@ -1700,6 +1718,15 @@ ol {
   width: min(100%, var(--content-min));
 }
 
+/* UCD §9.6.1 居中搜索浮层：结果列表与输入面板同层成组（同一浮层容器语言），
+   避免结果卡片散落压叠在聊天流上（闸门 12b 发现）。 */
+.thread-search-overlay [aria-label="对话搜索结果"] {
+  border-radius: var(--rounded-lg);
+  padding: var(--space-2);
+  background: var(--surface-card);
+  box-shadow: var(--shadow-2);
+}
+
 .thread-search input {
   flex: 1;
   border-radius: var(--rounded-pill);
@@ -1837,23 +1864,16 @@ ol {
   padding: var(--space-2) var(--space-3);
   background: var(--color-surface-pearl);
   box-shadow: var(--shadow-panel);
-  /* UCD §9.6.2：批量整理为底部弹出浮动操作条（DOM 仍在侧栏内，视觉浮于视口底部）；
-     抬高到 Composer 之上，避免与浮起输入台重叠遮挡。 */
-  position: fixed;
-  bottom: calc(var(--control-min) + var(--space-4));
-  left: 50%;
-  transform: translateX(-50%);
-  width: min(var(--overlay-bar-max-width), calc(100vw - var(--space-6)));
+  /* UCD §9.6.2：批量整理是侧栏自身的模式；卡片在侧栏列内贴底展开（sticky），
+     列表滚动时仍常驻可见，不再以视口居中悬浮遮挡主区 Composer 与聊天流（U-29）。 */
+  position: sticky;
+  bottom: 0;
+  margin-top: auto;
+  z-index: 5;
+  flex-shrink: 0;
+  width: var(--full-width);
   max-height: 60vh;
   overflow-y: auto;
-  z-index: 40;
-}
-
-@media (max-width: 720px) {
-  .thread-batch-bar {
-    bottom: var(--space-2);
-    width: calc(100vw - var(--space-4));
-  }
 }
 
 .thread-batch-header {

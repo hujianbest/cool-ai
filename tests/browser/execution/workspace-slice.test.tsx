@@ -124,11 +124,14 @@ describe("workspace binding vertical slice", () => {
     await user.type(screen.getByLabelText("本地工作区路径"), workspacePath);
     await user.click(screen.getByRole("button", { name: "绑定工作区" }));
 
-    expect(await screen.findByText(canonicalPath)).toBeInTheDocument();
+    // 路径按「/」切段渲染（窄屏断行机会，<wbr/> 无文本），断言 <code> 的完整文本相等。
+    const boundStatus = await screen.findByLabelText("工作区绑定状态");
+    expect(boundStatus.querySelector("code")?.textContent).toBe(canonicalPath);
     firstRender.unmount();
 
     render(<ProjectSetupPanel projectId={project.id} />);
     await screen.findByRole("heading", { name: "项目设置" });
-    expect(await screen.findByText(canonicalPath)).toBeInTheDocument();
+    const reloadedStatus = await screen.findByLabelText("工作区绑定状态");
+    expect(reloadedStatus.querySelector("code")?.textContent).toBe(canonicalPath);
   });
 });

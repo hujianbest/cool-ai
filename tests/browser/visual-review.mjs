@@ -1,5 +1,5 @@
 import assert from "node:assert/strict";
-import { existsSync, mkdirSync, readFileSync, readdirSync, writeFileSync } from "node:fs";
+import { existsSync, mkdirSync, readFileSync, readdirSync, statSync, writeFileSync } from "node:fs";
 
 import { PNG } from "pngjs";
 import { join, resolve } from "node:path";
@@ -211,7 +211,12 @@ const DOWNSCALE_WIDTH = 900;
 
 function downscaledPath(filePath) {
   const withSuffix = `${filePath.replace(/\.png$/i, "")}.w${DOWNSCALE_WIDTH}.png`;
-  if (existsSync(withSuffix)) return withSuffix;
+  // 缓存仅在比源图新时可用：重采后源图字节已换，沿用旧降载会把过期证据送进评审。
+  if (existsSync(withSuffix)) {
+    const cache = statSync(withSuffix);
+    const source = statSync(filePath);
+    if (cache.mtimeMs >= source.mtimeMs) return withSuffix;
+  }
   const source = PNG.sync.read(readFileSync(filePath));
   if (source.width <= DOWNSCALE_WIDTH) return filePath;
   const ratio = source.width / DOWNSCALE_WIDTH;

@@ -49,8 +49,10 @@ describe("narrow cockpit layout guard", () => {
     expect(tokens).toMatch(
       /\.cockpit-sidebar\[data-open="true"\][\s\S]*\.cockpit-context\[data-open="true"\]/,
     );
+    // position: relative（非 static）：静态主表面仍须建立包含块，否则 sr-only 等
+    // 绝对定位元素逃逸到文档层撑高页面（U-25 族，见 tokens.css 同处注释）。
     expect(tokens).toMatch(
-      /\.collaboration-cockpit\s*>\s*\.cockpit-flow\[role="tabpanel"\]\s*\{[^}]*display:\s*flex[^}]*position:\s*static[^}]*block-size:\s*auto/s,
+      /\.collaboration-cockpit\s*>\s*\.cockpit-flow\[role="tabpanel"\]\s*\{[^}]*display:\s*flex[^}]*position:\s*relative[^}]*block-size:\s*auto/s,
     );
   });
 
@@ -68,8 +70,9 @@ describe("narrow cockpit layout guard", () => {
     expect(tokens).toMatch(
       /\.cockpit-sidebar,\s*\.cockpit-context\s*\{[^}]*position:\s*fixed[^}]*block-size:\s*var\(--viewport-height\)[^}]*padding-block:\s*var\(--safe-area-top\)\s+var\(--safe-area-bottom\)[^}]*padding-inline:\s*var\(--safe-area-left\)\s+var\(--safe-area-right\)/s,
     );
+    // position: relative（非 static，U-25 族包含块要求）。
     expect(tokens).toMatch(
-      /@media\s*\(max-width:\s*56\.25rem\)[\s\S]*\.cockpit-flow\s*\{[^}]*position:\s*static[^}]*grid-column:\s*2[^}]*grid-row:\s*2[^}]*width:\s*var\(--full-width\)/s,
+      /@media\s*\(max-width:\s*56\.25rem\)[\s\S]*\.cockpit-flow\s*\{[^}]*position:\s*relative[^}]*grid-column:\s*2[^}]*grid-row:\s*2[^}]*width:\s*var\(--full-width\)/s,
     );
     expect(tokens).toMatch(
       /\.cockpit-flow\[data-open="true"\]\s*\{[^}]*position:\s*fixed[^}]*block-size:\s*var\(--viewport-height\)[^}]*padding-block:\s*var\(--safe-area-top\)\s+var\(--safe-area-bottom\)[^}]*padding-inline:\s*var\(--safe-area-left\)\s+var\(--safe-area-right\)/s,

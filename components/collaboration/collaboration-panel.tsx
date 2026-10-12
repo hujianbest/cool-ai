@@ -4007,6 +4007,16 @@ export function CollaborationPanel({
       </div>
       {showChat && !threadDeletedPlaceholder ? (
         <>
+          {/* UCD §9.6.5：输入历史是呼出式面板；置于 Composer 之上，
+              Composer 保持贴底浮动（闸门 13 发现：面板占底会把 Composer 顶到流中）。 */}
+          {showChat && historyOpen ? (
+            <InputHistoryPanel
+              disabled={sending}
+              onFill={handleInputHistoryFill}
+              onRequestClose={() => closeInputHistory(true)}
+              projectId={projectId}
+            />
+          ) : null}
           <form className="composer" onSubmit={handleSubmit}>
             <label
               className="sr-only"
@@ -4281,14 +4291,6 @@ export function CollaborationPanel({
               </p>
             ) : null}
           </form>
-          {showChat && historyOpen ? (
-            <InputHistoryPanel
-              disabled={sending}
-              onFill={handleInputHistoryFill}
-              onRequestClose={() => closeInputHistory(true)}
-              projectId={projectId}
-            />
-          ) : null}
           {showChat && startNotice ? (
             <p className="onboarding-guide-success" role="status">
               {startNotice}
