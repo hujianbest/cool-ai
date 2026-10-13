@@ -703,6 +703,14 @@ ol {
   box-shadow: none;
 }
 
+/* 窄屏占位符会折到第二行：输入行留出两行高度，避免第二行被底部工具行裁切
+   （A-521；评审 25-narrow-main 命中）。 */
+@media (max-width: 56.25rem) {
+  .composer-input-row textarea {
+    min-height: calc(var(--control-min) + var(--space-md));
+  }
+}
+
 .composer-input-row textarea:disabled {
   background: transparent;
 }

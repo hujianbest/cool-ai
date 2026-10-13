@@ -336,3 +336,11 @@
   - `07-team-scroll-2` 另判「主区标题未与内容左边界对齐（标题 560px vs 内容 280px）」——与截图实测不符：该视图中「团队资源」眉标、分区标题与卡片左边界同列（约 445px，A-505① 的 840px 居中列），模型给坐标不自洽，判定为误读。
   - `12-search-overlay` 三条：「图标轨为深色」= 搜索遮罩（`color-mix(--color-surface-black 46%)`）覆盖全视口所致，轨道本身仍为 `--color-rail`；「Composer 下方额外状态条」= §9.1.4 明文的启动回执（落在 Composer 下方）；「强调色偏绿」= 回执的 success 语义色（`--status-success-color`）。三者均为既定契约/既有裁决项，非缺陷。
   - `10b-thread-created` / `16a-project-chat-needs-mission`：provider 瞬时错误（`terminated`）按 error 记入（fail-closed，不折算通过）。
+
+### U-47 窄屏 Composer 占位符被底部工具行裁切（已修复）
+- **依据**: §9.1.4（浮起 Composer 与富上下文输入台；占位符为引导文案）。
+- **现状**: 390px 视口下输入行最小高度 44px 只容一行，占位符折行后的第二行被底部工具行覆盖（评审第 11 轮 `25-narrow-main` 判 FAIL，与截图一致）。
+- **处置**: 已修复（A-521）——窄屏媒体查询内输入行最小高度提到两行（44 + 16）；桌面不变；`--only-step` 重采 S02-S11/S15/S16/S23-S25/S29 共 16 步后重评。
+- **证据**: `ui-audit/25-narrow-main.png`（修复后两行完整可见）。
+
+- 2026-10-13 第 11 轮评审续跑：provider 恢复后由 34/62 推进到 58/62；本轮捕获将 `25-narrow-main` 判 FAIL（真实缺陷，已按 A-521 修复并重采）。**采集保真**：重采令 33 张截图字节变化，对应结论按 mtime 剪除后重评（禁止旧结论配新证据）；06b/07 的「无内容方块」与 12 的三条仍为同批复现误读（像素反证见上），error 项为 provider 瞬时失败按 fail-closed 记入。
