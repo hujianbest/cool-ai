@@ -1329,39 +1329,48 @@ export function MissionBoard({
                           </form>
                         ) : (
                           <>
-                            <button
-                              onClick={() => beginEdit(item)}
-                              type="button"
-                            >
-                              {`编辑任务 ${item.title}`}
-                            </button>
-                            <button
-                              onClick={() => setReviewWorkItemId(item.id)}
-                              style={{ minHeight: "var(--control-min)" }}
-                              type="button"
-                            >
-                              {`打开复核 ${item.title}`}
-                            </button>
-                            <div
-                              aria-label={`${item.title} 状态操作`}
-                              className="form-row"
-                              role="group"
-                            >
-                              {TRANSITIONS[item.status].map((transition) => (
-                                <button
-                                  disabled={isSaving}
-                                  key={transition.status}
-                                  onClick={() =>
-                                    void transitionWorkItem(
-                                      item,
-                                      transition.status,
-                                    )
-                                  }
-                                  type="button"
-                                >
-                                  {`${transition.label}任务 ${item.title}`}
-                                </button>
-                              ))}
+                            {/* 卡片操作槽位（DESIGN.md §6.1 ⑤）：可见文案保持短标签，
+                                完整动作名（含任务标题）保留在 aria-label，避免长按钮撑爆卡片。 */}
+                            <div className="card-actions">
+                              <button
+                                aria-label={`编辑任务 ${item.title}`}
+                                className="button-secondary button-compact"
+                                onClick={() => beginEdit(item)}
+                                type="button"
+                              >
+                                编辑
+                              </button>
+                              <button
+                                aria-label={`打开复核 ${item.title}`}
+                                className="button-secondary button-compact"
+                                onClick={() => setReviewWorkItemId(item.id)}
+                                type="button"
+                              >
+                                打开复核
+                              </button>
+                              <div
+                                aria-label={`${item.title} 状态操作`}
+                                className="form-row"
+                                role="group"
+                              >
+                                {TRANSITIONS[item.status].map((transition) => (
+                                  <button
+                                    aria-label={`${transition.label}任务 ${item.title}`}
+                                    className="button-compact"
+                                    disabled={isSaving}
+                                    key={transition.status}
+                                    onClick={() =>
+                                      void transitionWorkItem(
+                                        item,
+                                        transition.status,
+                                      )
+                                    }
+                                    type="button"
+                                  >
+                                    {transition.label}
+                                  </button>
+                                ))}
+                              </div>
                             </div>
                           </>
                         )}

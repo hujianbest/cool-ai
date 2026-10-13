@@ -36,6 +36,7 @@ function proposal(stateVersion = 1): TranscriptKnownBlock {
     },
     position: 0,
     source,
+    sourceDisplayLabel: "消息 message-1",
     sourceLabel: "message · message-1",
     state: { stateVersion, status: "pending" },
     stateVersion,
@@ -63,6 +64,7 @@ function checklist(): TranscriptKnownBlock {
     },
     position: 0,
     source,
+    sourceDisplayLabel: "消息 message-1",
     sourceLabel: "message · message-1",
     state: {
       items: [{ checked: false, id: "item-1" }],
@@ -96,6 +98,7 @@ function checklistWith(
     },
     position: 0,
     source,
+    sourceDisplayLabel: "消息 message-1",
     sourceLabel: "message · message-1",
     state: {
       items: items.map(({ checked, id }) => ({ checked, id })),
@@ -184,9 +187,10 @@ describe("Proposal and Checklist fact-only UI public surface", () => {
     const region = screen.getByRole("region", { name: "Proposal" });
     expect(region.querySelector(".block-card-tag")).toHaveTextContent("PROPOSAL");
     expect(region.querySelector(".block-provenance")).toHaveClass("sr-only");
-    expect(region.querySelector(".source-tag")).toHaveTextContent(
-      "冻结来源: message · message-1",
-    );
+    // 面向用户显示中文来源类型；原始三元组只在 title 悬浮追溯（A-513/U-26 口径）。
+    const sourceTag = region.querySelector(".source-tag");
+    expect(sourceTag).toHaveTextContent("冻结来源: 消息 message-1");
+    expect(sourceTag?.getAttribute("title")).toBe("message · message-1");
     expect(screen.getByRole("button", { name: "接受 Proposal" })).toHaveTextContent(
       "批准方案",
     );

@@ -117,7 +117,7 @@ async function runScript(lane, spec) {
   const startedAt = Date.now();
   log(`▶ ${lane.name} ${spec.name} (port ${spec.port})`);
   try {
-    await new Promise((resolveRun) => {
+    const { code, output } = await new Promise((resolveRun) => {
       const child = spawn(process.execPath, [join(root, "tests", "browser", spec.file)], {
         cwd: root,
         env,
@@ -132,14 +132,16 @@ async function runScript(lane, spec) {
       child.stderr.on("data", (chunk) => {
         output += chunk.toString();
       });
-      child.on("close", (code) => {
+      child.on("close", (childCode) => {
         activeChildren.delete(child);
         appendFileSync(scriptLogPath, output);
-        resolveRun({ code, output });
+        resolveRun({ code: childCode, output });
       });
     });
+    // 状态必须由子进程 exit code 决定：此前无条件记 PASS，令「全绿」失去意义
+    // （lane 内断言失败时用户只看到 PASS，只能翻日志才能发现）。
     const seconds = Math.round((Date.now() - startedAt) / 1000);
-    return { ...spec, seconds, status: "PASS" };
+    return { ...spec, output, seconds, status: code === 0 ? "PASS" : "FAIL" };
   } catch (error) {
     appendFileSync(scriptLogPath, `\nORCHESTRATOR ERROR: ${error?.stack ?? error}\n`);
     return { ...spec, seconds: Math.round((Date.now() - startedAt) / 1000), status: "ERROR" };

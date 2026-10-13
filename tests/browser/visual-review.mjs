@@ -457,7 +457,8 @@ for (const fileName of selectedScreenshots) {
     ? composeUcdExcerpt(ucdSections, rule.ucd)
     : fallbackExcerpt;
   console.log(
-    `VISUAL REVIEW: reviewing ${fileName} against ucd references [${viewsForCapture.join(", ")}] ...`,
+    `VISUAL REVIEW: reviewing ${fileName} against ucd references [${viewsForCapture.join(", ")}] ` +
+      `(UCD 节选 ${Math.round(excerptForCapture.length / 1024)}KB) ...`,
   );
   // 瞬时 provider 错误（429/5xx/超时/解析失败）有界重试一次；仍失败按 error 记入
   // 结论（fail-closed，不把传输失败当通过）。

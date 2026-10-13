@@ -150,6 +150,19 @@ confirmed: 2026-08-15
 - **badge / status-label**：tinted pill——同色系底（语义 surface）+ 深色字（语义色）+ `--rounded-pill`，`--text-label`（11/16）600；对比 ≥4.5:1。计数变体在标签右侧以同色系数字呈现（同尺寸，不单独着色）。存量 12px 徽章随 W1 收敛到 11px 档。
 - **agent avatar**：36px 圆，名字首字 14px 600，暖金家族色对（fg/bg），聚焦可见。
 
+### 6.1 原子构件（surface 落地统一模板）
+
+七个面板表面（对话、任务看板、使命区、记忆、审批、审计、团队/设置）一律由下列五个原子构件拼装，不再各写各的卡片/徽章/meta/空态：
+
+1. **status-pill（tinted 状态胶囊）**：`display: inline-flex; min-height: var(--pill-height); padding: 0 var(--space-xs); border-radius: var(--rounded-pill)`；同色系底（语义 surface）+ 深色字（语义色）+ 细环 `color-mix(in srgb, currentColor 32%, transparent)`；字 11/16 500。**计数变体** `.status-pill-count`：同色系数字，`font-variant-numeric: tabular-nums`，不加底色。默认（无语义色）用 `--surface-card` + `--text-secondary`。
+2. **meta-row（元信息行）**：`display: flex; align-items: baseline; justify-content: space-between; gap: var(--space-xs)`；左标签 `--text-subtle`、右值/时间 `--text-label` 11/16 + `tabular-nums`；整行弱化（不加卡片铬），用于时间、计数、token 用量、来源 id 等密集元信息。
+3. **panel-empty（面板内空态紧凑卡）**：细边框小卡（1px `--border-subtle` + `--surface-sunken` 底 + `--rounded-md`），内边距 `var(--space-sm) var(--space-md)`，`align-self: start`，**不得占满容器高度/宽度**；文案 13/20 `--text-compact` 弱化。页面级空态继续用 `empty-state`（§6）原样，不受本构件影响。
+4. **section-header（分区头行）**：`display: flex; align-items: center; justify-content: space-between; gap: var(--space-sm)`；左标题（16px 600，`--text-body-strong`）+ 可选计数 capsule；右侧操作槽位只放一个主操作（`button-secondary` 或图标按钮），与标题同行、垂直居中；`margin-bottom: var(--space-sm)`。
+5. **card（标准卡模板）**：固定槽位顺序 = 状态点/图标 → 标题 → 徽章 → meta 行 → 操作区；`1px --border-subtle` + `--rounded-md` + `--shadow-elevation-1` + `padding: var(--space-sm) var(--space-md)`。
+   **卡中卡禁令**：容器层（列、面板、列表外壳、对话框字段区）与条目层（卡片）只能有一层有边框/阴影——容器有边框则条目只用分隔线，容器无边框则条目用细边 + elevation-1；双层边框一律视为缺陷。
+
+补充规则：`--rounded-xs`（5px）只用于容器内部的微缩芯片（如标签 hash、菜单项）；徽章一律 pill，不再用 5px 方角徽章。
+
 ## 7. 壳层交付步骤
 
 1. **图标轨**：52px、纯图标 + tooltip、治理入口（任务/记忆/审批/审计）接线到按需视图。

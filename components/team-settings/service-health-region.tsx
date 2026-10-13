@@ -12,6 +12,14 @@ const STATUS_LABEL: Record<ServiceHealthStatus, string> = {
   unknown: "未知",
 };
 
+/* 服务健康状态 → 状态胶囊语义（DESIGN.md §6.1 ①：tinted pill）。 */
+const STATUS_PILL_CLASS: Record<ServiceHealthStatus, string> = {
+  degraded: "status-queued",
+  failed: "status-failed",
+  ok: "status-completed",
+  unknown: "",
+};
+
 type ServiceHealthRegionProps = {
   returnTo?: string;
 };
@@ -101,13 +109,18 @@ function HealthCard({
 }) {
   const disabled = actionHref === null;
   return (
+    // 标准卡模板（DESIGN.md §6.1 ⑤）：标题 → 状态胶囊 → 说明 → 紧凑操作槽位。
     <article className="task-summary stack" data-status={status}>
       <h3>{title}</h3>
-      <p>{STATUS_LABEL[status]}</p>
+      <p>
+        <span className={`status-label ${STATUS_PILL_CLASS[status]}`.trim()}>
+          {STATUS_LABEL[status]}
+        </span>
+      </p>
       {detail ? <p className="muted">{detail}</p> : null}
       <a
         aria-disabled={disabled ? "true" : undefined}
-        className="button-secondary"
+        className="button-secondary button-compact"
         href={actionHref ?? "#"}
         onClick={disabled ? (event) => event.preventDefault() : undefined}
         tabIndex={disabled ? -1 : undefined}

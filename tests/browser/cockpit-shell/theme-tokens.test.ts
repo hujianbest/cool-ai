@@ -222,10 +222,26 @@ describe("visual token discipline", () => {
       /\.mission-summary,[\s\S]*?\.work-item-form\s*\{[^}]*background:\s*var\(--surface-card\)[^}]*border[^;]*var\(--border-subtle\)/,
     );
     expect(css).toMatch(
-      /\.mission-status\s*\{[^}]*background:\s*var\(--color-canvas-parchment\)/,
+      /\.mission-status\s*\{[^}]*background:\s*var\(--surface-sunken\)/,
     );
     expect(css).toMatch(
       /\.modal-surface\s*\{[^}]*background:\s*var\(--surface-card\)[^}]*box-shadow:\s*var\(--shadow-elevation-3\)/s,
+    );
+    // 原子构件（DESIGN.md §6.1）：卡片模板、tinted 胶囊、紧凑空态卡、section 头行、meta 行。
+    expect(css).toMatch(
+      /\.task-summary\s*\{[^}]*border:\s*var\(--border-width\) solid var\(--border-subtle\)[^}]*box-shadow:\s*var\(--shadow-elevation-1\)/s,
+    );
+    expect(css).toMatch(
+      /\.status-label\s*\{[^}]*border-radius:\s*var\(--rounded-pill\)/s,
+    );
+    expect(css).toMatch(
+      /\.state-message\s*\{[^}]*width:\s*fit-content[^}]*border:\s*var\(--border-width\) solid var\(--border-subtle\)/s,
+    );
+    expect(css).toMatch(
+      /\.section-header\s*\{[^}]*display:\s*flex[^}]*justify-content:\s*space-between/s,
+    );
+    expect(css).toMatch(
+      /\.meta-row\s*\{[^}]*justify-content:\s*space-between[^}]*font:\s*var\(--text-label\)\/var\(--leading-label\)/s,
     );
   });
 

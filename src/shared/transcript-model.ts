@@ -23,6 +23,9 @@ type TranscriptBlockBase = {
   id: string;
   position: number;
   source: TranscriptSource;
+  /* sourceDisplayLabel 面向界面（中文来源类型 + 版本），sourceLabel 保留原始
+     三元组供 title 悬浮追溯（U-26/A-497 口径：不回显原始标识符）。 */
+  sourceDisplayLabel: string;
   sourceLabel: string;
   stateVersion: number;
 };
@@ -119,6 +122,25 @@ function sourceLabel(value: TranscriptSource): string {
   return [value.kind, value.id, value.entityVersion].filter(Boolean).join(" · ");
 }
 
+/* 界面用来源类型文案（产品词汇表口径）；未知 kind 原样回显，不臆造中文。 */
+const SOURCE_KIND_LABELS: Record<string, string> = {
+  artifact: "产物",
+  decision: "决策",
+  execution: "执行",
+  message: "消息",
+  run: "运行",
+  review: "复核",
+  session: "会话",
+  thread: "对话",
+  validation: "验证",
+  work_item: "任务",
+};
+
+function sourceDisplayLabel(value: TranscriptSource): string {
+  const kind = SOURCE_KIND_LABELS[value.kind] ?? value.kind;
+  return value.entityVersion ? `${kind} ${value.entityVersion}` : kind;
+}
+
 function knownBlock(
   value: Record<string, unknown>,
   message: Record<string, unknown>,
@@ -151,6 +173,7 @@ function knownBlock(
     payload,
     position: value.position,
     source: blockSource,
+    sourceDisplayLabel: sourceDisplayLabel(blockSource),
     sourceLabel: sourceLabel(blockSource),
     state,
     stateVersion: state.stateVersion,
@@ -229,6 +252,7 @@ function unknownBlock(
     kind: "unknown",
     position: value.position,
     source: blockSource,
+    sourceDisplayLabel: sourceDisplayLabel(blockSource),
     sourceLabel: sourceLabel(blockSource),
     stateVersion,
   };

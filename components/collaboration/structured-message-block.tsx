@@ -548,9 +548,11 @@ export function StructuredMessageBlock({
       </p>
       {displayBlock.body ? <p>{displayBlock.body}</p> : null}
       {displayBlock.kind === "proposal" ? (
-        <p className="source-tag">
+        // 冻结来源面向用户显示中文来源类型 + 版本；原始三元组仅在 title 悬浮追溯
+        // （U-26/A-497 口径，不回显原始标识符）。
+        <p className="source-tag" title={displayBlock.sourceLabel}>
           <GitCommit aria-hidden="true" size={12} weight="bold" />
-          <span>冻结来源: {displayBlock.sourceLabel}</span>
+          <span>冻结来源: {displayBlock.sourceDisplayLabel}</span>
         </p>
       ) : null}
       {block.kind === "diff_preview"

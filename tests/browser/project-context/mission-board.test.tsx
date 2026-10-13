@@ -785,22 +785,29 @@ describe("mission board work-item lease", () => {
 });
 
 describe("mission board chrome", () => {
-  it("renders task cards on pearl surfaces with case radius", () => {
+  it("renders task cards as elevation-1 cards on a de-chromed lane container", () => {
     const css = readFileSync(join(process.cwd(), "app", "cockpit.css"), "utf8");
+    // A-513 卡中卡禁令（DESIGN.md §6.1）：容器层只留填充与圆角，卡片独占细边 + elevation-1。
     expect(css).toMatch(
       /\.mission-board \.task-summary\s*\{[^}]*background:\s*var\(--color-surface-pearl\)/s,
     );
     expect(css).toMatch(
-      /\.mission-board \.task-summary\s*\{[^}]*border-radius:\s*var\(--rounded-sm\)/s,
+      /\.mission-board \.task-summary\s*\{[^}]*border-radius:\s*var\(--rounded-md\)/s,
     );
     expect(css).toMatch(
-      /\.mission-board \.task-summary\s*\{[^}]*border:\s*var\(--border-width\) solid var\(--color-hairline\)/s,
+      /\.mission-board \.task-summary\s*\{[^}]*border:\s*var\(--border-width\) solid var\(--border-subtle\)/s,
     );
     expect(css).toMatch(
-      /\.mission-status\s*\{[^}]*background:\s*var\(--color-canvas-parchment\)/s,
+      /\.mission-board \.task-summary\s*\{[^}]*box-shadow:\s*var\(--shadow-elevation-1\)/s,
+    );
+    expect(css).toMatch(
+      /\.mission-status\s*\{[^}]*background:\s*var\(--surface-sunken\)/s,
     );
     expect(css).toMatch(
       /\.mission-status\s*\{[^}]*border-radius:\s*var\(--rounded-md\)/s,
+    );
+    expect(css).toMatch(
+      /\.mission-status\s*\{[^}]*border:\s*var\(--border-width\) solid transparent/s,
     );
   });
 });
@@ -1031,7 +1038,9 @@ describe("mission board independent review entry", () => {
       const openReview = screen.getByRole("button", {
         name: `打开复核 ${title}`,
       });
-      expect(openReview).toHaveStyle({ minHeight: "var(--control-min)" });
+      // 紧凑档（A-513）：视觉高度 36px，热区由 .button-compact::after 外延回 44px。
+      expect(openReview).toHaveClass("button-compact");
+      expect(openReview).toHaveTextContent("打开复核");
     }
     expect(
       screen.queryByRole("heading", { name: "独立复核工作台 · Plan" }),

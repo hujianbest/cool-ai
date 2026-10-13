@@ -770,7 +770,12 @@ try {
   await page.getByText("来源已核对，以下显示安全投影。", { exact: true }).waitFor();
   pass("source-pending-busy-live-status-cleared-on-success");
   await page.getByRole("button", { name: "打开 File Reference 安全来源" }).click();
-  await page.getByText("safe-report.txt", { exact: true }).waitFor();
+  // 安全投影区与按钮标签同名：断言限定在投影容器内（原全页 exact 文本在
+  // DOM 同时含按钮标签与投影 <p> 时触发 strict mode violation，A-519）。
+  await page
+    .locator(".structured-source-projection")
+    .getByText("safe-report.txt", { exact: true })
+    .waitFor();
   await page.getByRole("button", { name: "加载 Handoff Card 安全来源" }).click();
   const handoffCard = page.locator('section[aria-label="Handoff Card：Frozen Handoff Card"]');
   await handoffCard.getByText(/Hand off the structured smoke verification/).waitFor();
@@ -858,12 +863,18 @@ try {
   await editor.getByText("safe-report.txt", { exact: true }).first().waitFor();
   const layout = await editor.evaluate((surface) => ({
     controls: [...surface.querySelectorAll("button,a")].filter((element) => {
+      // sr-only 的加载态占位钮不是触控目标（视觉隐藏、1x1 裁剪），触达扫描豁免。
+      if (element.closest(".sr-only")) return false;
       const box = element.getBoundingClientRect();
       return box.width > 0 && box.height > 0;
     }).map((element) => {
       const box = element.getBoundingClientRect();
+      const after = getComputedStyle(element, "::after");
+      const expandHeight = Number.parseFloat(after.minHeight) || 0;
       return {
+        expandHeight,
         height: box.height,
+        label: (element.getAttribute("aria-label") || element.textContent || element.tagName).trim().slice(0, 40),
         outlineStyle: getComputedStyle(element).outlineStyle,
         width: box.width,
       };
@@ -873,7 +884,12 @@ try {
   }));
   assert.ok(layout.scrollWidth <= layout.documentWidth);
   for (const control of layout.controls) {
-    assert.ok(control.height >= 44 && control.width >= 44);
+    // 热区契约（DESIGN.md §6/A-514）：视觉高度可分档，热区由自身盒或 ::after 外延补足。
+    const effectiveHeight = Math.max(control.height, control.expandHeight);
+    assert.ok(
+      effectiveHeight >= 44 && control.width >= 44,
+      `${control.label} 热区 ${Math.round(control.width)}x${Math.round(effectiveHeight)} 小于 44x44`,
+    );
   }
   await axe(page, "narrow dark structured drawer");
   await page.screenshot({ fullPage: true, path: evidence.narrow });

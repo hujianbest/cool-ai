@@ -250,7 +250,7 @@ export function SkillPanel() {
                   </div>
                   <button
                     aria-label={`编辑 ${skill.name}`}
-                    className="button-secondary"
+                    className="button-secondary button-compact"
                     onClick={(event) => startEdit(skill, event.currentTarget)}
                     type="button"
                   >

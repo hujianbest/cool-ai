@@ -798,18 +798,28 @@ export function ExecutionPanel({
       className="stack execution-panel"
       ref={panelRef}
     >
-      <div className="panel-heading">
+      <div className="section-header">
         <div>
           <p className="eyebrow">项目执行</p>
           <h3 id={`executions-title-${projectId}`}>运行详情</h3>
         </div>
-        <button
-          onClick={() => setReloadKey((value) => value + 1)}
-          style={{ minHeight: "var(--control-min)" }}
-          type="button"
-        >
-          刷新执行
-        </button>
+        <div>
+          <button
+            aria-expanded={policyOpen}
+            className="button-secondary"
+            onClick={() => setPolicyOpen((open) => !open)}
+            type="button"
+          >
+            {policyOpen ? "关闭验证政策" : "管理验证政策"}
+          </button>
+          <button
+            className="button-secondary"
+            onClick={() => setReloadKey((value) => value + 1)}
+            type="button"
+          >
+            刷新执行
+          </button>
+        </div>
       </div>
       {!loading && !error ? (
       <section aria-labelledby={`execution-picker-${projectId}`} className="stack">
@@ -819,7 +829,7 @@ export function ExecutionPanel({
         ) : pickerError ? (
           <p className="error-text">{pickerError}</p>
         ) : eligibleTasks.length === 0 ? (
-          <p>没有符合条件的进行中任务。</p>
+          <p className="state-message">没有符合条件的进行中任务。</p>
         ) : (
           <>
             <div className="stack">
@@ -875,14 +885,6 @@ export function ExecutionPanel({
         ) : null}
       </section>
       ) : null}
-      <button
-        aria-expanded={policyOpen}
-        onClick={() => setPolicyOpen((open) => !open)}
-        style={{ minHeight: "var(--control-min)" }}
-        type="button"
-      >
-        {policyOpen ? "关闭验证政策" : "管理验证政策"}
-      </button>
       {policyOpen ? <ValidationPolicyPanel projectId={projectId} /> : null}
       {loading ? (
         <p aria-busy="true" className="state-message">

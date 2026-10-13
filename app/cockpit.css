@@ -266,6 +266,7 @@ ol {
   gap: var(--space-xs);
 }
 
+
 .cockpit-context {
   grid-column: 3;
   grid-row: 1 / span 2;
@@ -827,10 +828,16 @@ ol {
   min-height: 0;
   margin-inline: 0;
   flex-direction: column;
+  /* 治理视图整列滚动（A-513）：此前每个区块各占一半高度并各自内滚，
+     看板卡片会被区块边界拦腰截断（18d 假缺陷读数来源）。 */
+  overflow-y: auto;
 }
 
 .gov-view-header {
   display: flex;
+  position: sticky;
+  top: 0;
+  z-index: 2;
   flex-shrink: 0;
   align-items: center;
   justify-content: flex-start;
@@ -868,9 +875,9 @@ ol {
 }
 
 .governance-view > :not(.gov-view-header) {
-  flex: 1;
+  flex: 0 0 auto;
   min-height: 0;
-  overflow-y: auto;
+  overflow: visible;
   padding: var(--space-lg);
 }
 
@@ -974,15 +981,17 @@ ol {
   border: var(--border-width) solid var(--border-subtle);
 }
 
+/* 看板泳道：容器层只做填充与圆角（卡中卡禁令，DESIGN.md §6.1）——
+   条目层（.task-summary）独占细边 + elevation-1；列头用分隔线与条目区隔开。 */
 .mission-status {
   display: flex;
   min-width: 0;
   flex-direction: column;
   gap: var(--space-sm);
   padding: var(--space-sm);
-  border: var(--border-width) solid var(--color-divider-soft);
+  border: var(--border-width) solid transparent;
   border-radius: var(--rounded-md);
-  background: var(--color-canvas-parchment);
+  background: var(--surface-sunken);
 }
 
 .mission-status h3 {
@@ -997,11 +1006,16 @@ ol {
 }
 
 .kanban-col-count {
-  padding: var(--space-xxs) var(--space-xs);
+  display: inline-flex;
+  align-items: center;
+  min-height: var(--pill-height);
+  padding: 0 var(--space-xs);
   border-radius: var(--rounded-pill);
   background: var(--color-canvas);
-  font-size: var(--text-label);
+  color: var(--text-secondary);
+  font: var(--text-label)/var(--leading-label) var(--font-sans);
   font-weight: 600;
+  font-variant-numeric: tabular-nums;
 }
 
 .mission-summary,
@@ -1010,9 +1024,9 @@ ol {
 }
 
 .mission-board .task-summary {
-  padding: var(--space-sm);
-  border: var(--border-width) solid var(--color-hairline);
-  border-radius: var(--rounded-sm);
+  padding: var(--space-sm) var(--space-md);
+  border: var(--border-width) solid var(--border-subtle);
+  border-radius: var(--rounded-md);
   background: var(--color-surface-pearl);
   box-shadow: var(--shadow-elevation-1);
 }
@@ -1171,6 +1185,13 @@ ol {
 .settings-search input,
 .settings-search-result {
   width: var(--full-width);
+}
+
+/* 窄栏内长占位符不硬裁：省略号收尾，完整文案留在 title/aria 语义里。 */
+.settings-search input::placeholder {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
 }
 
 .settings-search-result {
@@ -1701,6 +1722,8 @@ ol {
   z-index: 6;
   flex-direction: column;
   align-items: center;
+  /* UCD §9.6.1：Cmd/Ctrl + K 居中搜索浮层——面板在遮罩内垂直居中（原为顶部对齐）。 */
+  justify-content: center;
   gap: var(--space-sm);
   padding: var(--space-xl) var(--space-md);
   background: color-mix(in srgb, var(--color-surface-black) 46%, transparent);
@@ -2276,13 +2299,95 @@ ol {
   color: var(--interactive-primary);
 }
 
+/* ③ 面板内空态紧凑卡（DESIGN.md §6.1）：细边框小卡、按内容收窄、不占满容器；
+   页面级空态仍走 .empty-state / .chat-empty-hero。 */
+.state-message {
+  align-self: start;
+  width: fit-content;
+  max-width: var(--full-width);
+  border-radius: var(--rounded-md);
+  padding: var(--space-sm) var(--space-md);
+  background: var(--surface-sunken);
+  border: var(--border-width) solid var(--border-subtle);
+  color: var(--text-secondary);
+  font-size: var(--text-compact);
+  line-height: var(--leading-compact);
+}
+
+/* ④ 分区头行（DESIGN.md §6.1）：左标题（16/600）+ 可选计数，右侧单一操作槽位。 */
+.section-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--space-sm);
+  margin-bottom: var(--space-sm);
+}
+
+.section-header h2,
+.section-header h3,
+.section-header h4 {
+  margin: 0;
+  font-size: var(--text-body-strong);
+  font-weight: 600;
+  color: var(--text-primary);
+}
+
+.section-header > :last-child:not(:first-child) {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--space-xs);
+  flex-shrink: 0;
+}
+
+/* ② 元信息行（DESIGN.md §6.1）：左标签 + 右值/时间，密集档 11/16，整行弱化。 */
+.meta-row {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: var(--space-xs);
+  color: var(--text-subtle);
+  font: var(--text-label)/var(--leading-label) var(--font-sans);
+}
+
+.meta-row > :last-child {
+  color: var(--text-secondary);
+  font-variant-numeric: tabular-nums;
+}
+
+/* ⑤ 标准卡模板（DESIGN.md §6.1）：细边 + elevation-1 + 12/16 内边距；
+   槽位顺序 = 状态点/图标 → 标题 → 徽章 → meta 行 → 操作区。 */
+.task-summary {
+  padding: var(--space-sm) var(--space-md);
+  border-radius: var(--rounded-md);
+  border: var(--border-width) solid var(--border-subtle);
+  box-shadow: var(--shadow-elevation-1);
+}
+
+/* 卡片操作槽位（DESIGN.md §6.1 ⑤）：操作按内容宽度靠左排一行，不拉伸成整行巨按钮。 */
+.card-actions {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: var(--space-xs);
+}
+
+.card-actions > .form-row {
+  display: inline-flex;
+  flex-wrap: wrap;
+  gap: var(--space-xs);
+}
+
+.task-summary > button,
+.task-summary > a.button-secondary,
+.task-summary > a.button-primary {
+  align-self: start;
+  width: auto;
+}
+
 .composer,
 .decision-panel,
 .run-detail,
-.timeline,
-.task-summary,
-.context-body,
-.state-message {
+.context-body {
   border-radius: var(--rounded-md);
   padding: var(--space-md);
   background: var(--surface-card);
@@ -2978,18 +3083,17 @@ progress {
   box-shadow: var(--focus-ring);
 }
 
+/* 列表行包装层只做排布，不承载第二层铬（卡中卡禁令，DESIGN.md §6.1）：
+   容器的填充/内边距由列表容器负责，条目卡片的细边 + elevation-1 由 > article 负责。 */
 .timeline-item {
   display: flex;
   align-items: start;
   gap: var(--space-sm);
-  border-radius: var(--rounded-sm);
-  padding: var(--space-sm);
-  background: var(--surface-sunken);
 }
 
 .timeline-item > article {
-  width: 100%;
-  padding: var(--space-md);
+  width: var(--full-width);
+  padding: var(--space-sm) var(--space-md);
   background: var(--color-card-strong);
   border: var(--border-width) solid var(--border-subtle);
   border-radius: var(--rounded-md);
@@ -3236,12 +3340,33 @@ progress {
 .message-row .msg-reply {
   align-self: flex-start;
   min-height: auto;
+  /* 热区横向下限：视觉仍为紧凑芯片，宽度补足到 44px（UCD §11.2）。 */
+  min-width: var(--control-min);
   padding: var(--space-xxs) var(--space-xs);
   border: none;
   background: transparent;
   color: var(--text-secondary);
   font-size: var(--text-compact);
   opacity: 0;
+}
+
+/* 密集行内的消息操作芯片与 Composer 工具芯片（DESIGN.md §6 / A-514）：
+   视觉高度可低于 44px，热区由 ::after 垂直外延回 --control-min。 */
+.composer-tool,
+.message-row .msg-copy,
+.message-row .msg-reply {
+  position: relative;
+}
+
+.composer-tool::after,
+.message-row .msg-copy::after,
+.message-row .msg-reply::after {
+  content: "";
+  position: absolute;
+  inset-inline: 0;
+  inset-block-start: 50%;
+  transform: translateY(-50%);
+  min-height: var(--control-min);
 }
 
 .message-row:hover .msg-copy,
@@ -3322,14 +3447,18 @@ progress {
 }
 
 .block-card-tag {
+  display: inline-flex;
+  align-items: center;
   flex-shrink: 0;
-  padding: var(--space-xxs) var(--space-xs);
-  border-radius: var(--rounded-xs);
+  min-height: var(--pill-height);
+  padding: 0 var(--space-xs);
+  border: var(--border-width) solid color-mix(in srgb, currentColor 32%, transparent);
+  border-radius: var(--rounded-pill);
   background: var(--interactive-accent-soft);
   color: var(--color-primary-focus);
-  font-size: var(--text-label);
+  font: var(--text-label)/var(--leading-label) var(--font-sans);
   font-weight: 600;
-  letter-spacing: 0.04em;
+  letter-spacing: var(--tracking-wide);
 }
 
 .btn-block-primary,
@@ -3434,11 +3563,40 @@ button.source-tag:hover:not(:disabled) {
 }
 
 .status-label {
-  border: var(--border-width) solid currentColor;
-  border-radius: var(--rounded-sm);
-  padding: var(--space-xxs) var(--space-xs);
+  display: inline-flex;
+  align-items: center;
+  gap: var(--space-xxs);
+  min-height: var(--pill-height);
+  padding: 0 var(--space-xs);
+  border: var(--border-width) solid color-mix(in srgb, currentColor 32%, transparent);
+  border-radius: var(--rounded-pill);
   background: var(--surface-card);
+  color: var(--text-secondary);
   font: var(--text-label)/var(--leading-label) var(--font-sans);
+  font-weight: 500;
+  white-space: nowrap;
+}
+
+/* 紧凑档（A-513，DESIGN.md §6）：卡片/列表内次级操作的视觉高度降到 36px，
+   热区由 ::after 垂直外延回 44px（UCD §11.2）；密集行内不使用本档，避免热区互相遮挡。 */
+.button-compact {
+  position: relative;
+  min-height: var(--control-h-base);
+  padding: 0 var(--space-sm);
+}
+
+.button-compact::after {
+  content: "";
+  position: absolute;
+  inset-inline: 0;
+  inset-block-start: 50%;
+  transform: translateY(-50%);
+  min-height: var(--control-min);
+}
+
+/* ① 计数变体（DESIGN.md §6.1）：同色系数字，等宽数字对齐，不加底色。 */
+.status-label-count {
+  font-variant-numeric: tabular-nums;
 }
 
 .status-label.status-queued {

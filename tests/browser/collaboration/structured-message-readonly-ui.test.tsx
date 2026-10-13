@@ -39,6 +39,7 @@ function readonlyBlock(
       runId: "run-1",
       threadId: "thread-1",
     },
+    sourceDisplayLabel: `${kind}-source`,
     sourceLabel: `${sourceKind} · ${kind}-source · ${kind}-version`,
     state: { stateVersion: 1, status: "read_only" },
     stateVersion: 1,
@@ -293,6 +294,7 @@ describe("Diff/File/Handoff read-only public UI surface", () => {
       kind: "unknown",
       position: 0,
       source: readonlyBlock("diff_preview").source,
+      sourceDisplayLabel: "执行 v9",
       sourceLabel: "execution · opaque · v9",
       stateVersion: 3,
     };

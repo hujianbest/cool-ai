@@ -1,9 +1,9 @@
 # UI 一致性差异清单（应用 vs UCD）
 
-- 日期: 2026-10-11
-- 状态: 修复中（由主任务按批次执行）；本清单为追踪台账，逐条原位更新状态与证据
-- 基准: `product/ui/UI设计.md`（UCD，唯一基准）+ `product/ui/preview-ucd.html`（高保真原型）
-- 方法: 自包含审计运行器驱动真实应用（独立 dev server + 临时库 + 脚本化选夹 + mock OpenAI 兼容 Provider + 结构化回合回复），覆盖 27 个屏/交互状态与全部按钮点击后的界面；截图与逐步状态见 `tests/browser/test-artifacts/ui-audit/`（gitignored），原型参考图见 `tests/browser/test-artifacts/ucd-references/`（7 视图）。重跑：`node tests/browser/test-artifacts/ui-audit-runner.mjs`
+- 日期: 2026-10-13
+- 状态: 修复中（由主任务按批次执行）；本清单为追踪台账，逐条原位更新状态与证据。2026-10-12 终轮闸门 58/58 PASS 后，2026-10-13 进入「UI 框体系轮」（U-35～U-46，契约演进：token 单一声明面 + 三级 elevation + 原子构件五件套）
+- 基准: `product/ui/UI设计.md`（UCD，唯一基准）+ `product/ui/preview-ucd.html`（高保真原型）+ `product/ui/DESIGN.md`（令牌与壳层组件契约）
+- 方法: 自包含审计运行器驱动真实应用（独立生产服务 + 临时库 + 脚本化选夹 + mock OpenAI 兼容 Provider + 结构化回合回复），覆盖 34 步全部按钮点击后的界面；截图与逐步状态见 `tests/browser/test-artifacts/ui-audit/`（gitignored），原型参考图见 `tests/browser/test-artifacts/ucd-references/`（7 视图）。重跑：`node tests/browser/ui-audit-runner.mjs`
 - 严重级别: **P0** 阻断主路径 / **P1** 与 UCD 明确不符 / **P2** 文案与细节
 
 ## P0 — 阻断主路径
@@ -216,6 +216,71 @@
 - **证据**: `ui-audit/12b-search-results.png`。
 - **处置**: 已修复——结果列表在浮层内补成组容器（同层卡片语言）；重评 PASS。
 
+## UI 框体系轮（2026-10-13，U-35～U-46）
+
+本轮定位为 **UCD/DESIGN 契约演进**（非缺陷修复）：先更新 `DESIGN.md` §1.4/§4/§5/§6.1 与 `UI设计.md` §11.2/§12，再改 `app/tokens.css`/`app/cockpit.css` 与组件。参照 `clowder-ai` 只取结构数值（elevation 分档、字号层级、pill 形态、控件节奏），不复制配色与技术栈。
+
+### U-35 令牌双轨并行（已修复）
+- **依据**: DESIGN.md §1.3「令牌驱动：所有颜色/间距/圆角/字号来自本契约与 tokens.css」。
+- **现状**: legacy 轨（`--space-1..8` 421 处、`--radius-sm/md` 49 处、`--shadow-1/2/panel/product` 30 处、`--text-xs/sm/md/lg/xl` 简写）与 canonical 轨同时在场且都在引用 → 圆角 8/12、内边距 12/16/17/20/24 在各面板漂移；3 处 `border-radius !important` 补丁。
+- **处置**: 已修复（A-513）——全量收敛到单一声明面并删除 legacy 名；`theme-tokens.test.ts` 增加「两文件均不得再出现 legacy 名」反回归断言；`!important` 补丁清零。
+- **证据**: `app/tokens.css`、`app/cockpit.css`；提交 6208954。
+
+### U-36 未定义令牌静默失败（已修复）
+- **现状**: 20 个 `var(--x)` 引用的令牌从未定义（`--text-base*`、`--text-xs-strong`、`--focus-ring-width`、`--duration-fast`、`--full-height`、`--modal-width-wide`、`--danger-surface` 等）→ 整条声明静默丢弃，字号/动效/尺寸静默回退。
+- **处置**: 已修复（A-513）——补齐为 canonical 令牌或用语义令牌替换；修复后 `--full-height` 由未定义变为 100% 暴露欢迎态高度塌陷（欢迎态撑满容器把 Composer 推出视口），已补 `.chat-welcome--with-composer` 双类覆盖并在协作面板补挂修饰类。
+- **证据**: 令牌审计 undefined=0；真实浏览器实测 Composer 回到底部（bottom 696 ≤ 720，文档高=视口）。
+
+### U-37 字号缺 11/13 密集档 + 正文 17px 漂移（已修复）
+- **现状**: 17/14 之下直接跳 12/10，时间/计数/token 用量/来源 id 借用 12px；`--text-body` 17px 与 DESIGN.md §4「基础 16px」漂移；`--space-md` 17px 与文档 16px 漂移（且有测试断言 17px）。
+- **处置**: 已修复（A-513）——新增 `--text-label`（11/16）与 `--text-compact`（13/20）；元信息统一 11px、密集芯片按钮与回复芯片 13px；正文与 `--space-md` 按文档定案为 16px，文档与测试同步（漂移不静默改）。
+- **证据**: `DESIGN.md` §4、`UI设计.md` §11/§12；`theme-tokens.test.ts` 新增两档断言。
+
+### U-38 控件全域 44px（已修复）
+- **依据**: `UI设计.md` §11.2（视觉可小、热区 ≥44×44）。
+- **现状**: 所有控件一律 44px 高，卡片/列表内次级操作体量过重（技能卡「编辑」、看板卡「编辑任务…/打开复核…/开始任务…」长按钮撑爆卡片）。
+- **处置**: 已修复（A-514）——新增 `--control-h-compact/base/comfortable`（32/36/40）与 `.button-compact`（视觉 36px + `::after` 热区外延回 44px）；存量 44px 构件不动；看板卡操作改短标签（完整动作名入 `aria-label`）。
+- **证据**: 26-team-overview / 18d 重采截图；`mission-board.test.tsx`、`execution-slice.test.tsx` 断言同步。
+
+### U-39 阴影两级、暗色缺层次（已修复）
+- **现状**: 仅 `--shadow-1/2` + `--shadow-panel/product`；暗色仅 panel 有顶部高光，其余纯黑投影；卡片与 overlay 同档，存在「重边框 + 重阴影」叠加（审批卡 `--shadow-1, --shadow-2`）。
+- **处置**: 已修复（A-515）——三级 `--shadow-elevation-1/2/3`（卡片 / 浮起元素 / overlay），暗色三级均带克制顶部内高光（inset alpha 0.06–0.10）；29 处引用按语义重映射；定死「卡片 = 1px 细边 + elevation-1、overlay = 无边框 + elevation-3」。
+- **证据**: `DESIGN.md` §5.3；`visual-tokens.test.ts` / `approval-center-panel.test.tsx` 断言同步；暗色重采截图。
+
+### U-40 卡中卡双层铬（已修复）
+- **现状**: 技能卡三层铬（`.timeline` 容器卡 + `.timeline-item` 下沉底 + `article` 卡片）；看板泳道容器硬边框再叠卡片细边。
+- **处置**: 已修复（A-516）——DESIGN.md §6.1 立「卡中卡禁令」：容器层与条目层只能一层有铬；`.timeline`/`.timeline-item` 去铬、泳道容器改填充 + 圆角（透明边框保布局）、条目卡独占细边 + elevation-1。
+- **证据**: 26-team-overview 重采（技能卡单层卡）；`atomic-surfaces.test.ts` 反回归。
+
+### U-41 面板内空态占满容器（已修复）
+- **现状**: `.state-message` 通栏卡片，「尚无执行。」等短文案被拉成全宽大卡（18d）。
+- **处置**: 已修复（A-516）——`.state-message` 改紧凑卡：`width: fit-content` + `align-self: start` + 下沉底 + 细边 + 13/20 文案；页面级空态不动。
+- **证据**: 18d 重采截图。
+
+### U-42 卡片操作全宽巨按钮（已修复）
+- **现状**: 卡片/面板内操作被拉伸成整行（「管理验证政策」占满主区宽）。
+- **处置**: 已修复（A-516/A-514）——新增 `.section-header`（标题 + 右侧单一操作槽位）与 `.card-actions`；执行面板两组操作进 section 头行槽位；卡片操作用短标签 + 紧凑档。
+- **证据**: 18d 重采截图；`execution-slice.test.tsx` 断言同步。
+
+### U-43 治理视图区块平分高度致看板卡片拦腰截断（已修复）
+- **现状**: `.governance-view > :not(.gov-view-header)` 每区块 `flex: 1` 平分高度并各自内滚 → 看板区块仅 426px，卡片被区块边界拦腰截断（18d「待办列卡片被裁」读数来源）。
+- **处置**: 已修复（A-517）——治理视图改整列滚动，区块 `flex: 0 0 auto` 按内容排布，`.gov-view-header` sticky；实测卡片完整（346px）并在列内自然滚动。
+- **证据**: 真实浏览器探针（viewScrollH 1989 > clientH 952，无裁切）。
+
+### U-44 PROPOSAL 方角徽章与冻结来源回显原始标识符（已修复）
+- **依据**: §9.1.3 结构化卡片；U-26/A-497 既决口径。
+- **现状**: PROPOSAL 为 5px 方角芯片 + 硬编码 `letter-spacing: 0.04em`；提案卡「冻结来源: message · <uuid>」回显原始三元组。
+- **处置**: 已修复（A-516/A-518）——徽章统一 tinted pill（同色系底 + 细环 + `--tracking-wide`）；transcript model 新增 `sourceDisplayLabel`（中文来源类型 + 版本），原始三元组仅留 `title`。
+- **证据**: `structured-message-decision-ui.test.tsx`（显示「消息 message-1」+ title 断言）；16c 重采截图。
+
+### U-45 服务健康卡中卡与全宽操作（已修复）
+- **处置**: 已修复（A-516）——状态改 tinted 状态胶囊（ok/degraded/failed → completed/queued/failed），操作改紧凑档靠左。
+- **证据**: 26-team-overview 重采截图（侧栏与主区）。
+
+### U-46 窄栏长占位符硬裁（已修复）
+- **处置**: 已修复——`.settings-search input::placeholder` 加省略号收尾。
+- **证据**: 26-team-overview 重采截图。
+
 ### U-18 /team 服务健康疑似裁切（需视口复核）
 - **UCD 依据**: §9.3.6 四张卡片并排（应用/模型服务/记忆索引/执行），每卡一条脱敏说明与恢复按钮。
 - **现状**: 全页截图中「服务健康」出现在左列窄栏内（应用/模型服务可见），下方内容截断，页面下部大面积空白；疑似 fullPage 截图与固定高度容器叠加的伪影，需在视口中确认是否为真实布局问题。
@@ -258,3 +323,11 @@
 - 审批中心「待裁决卡片（TTL/Diff/批准驳回）」带数据状态、执行/交付回放详情未逐屏核验。
 - `/team` 各 region 仅部分核验（Provider/技能/Agent 创建与保存流程正常）；§9.3.6~9.3.9 看板仅覆盖健康组与滚动位。
 - 本清单只记录本次捕获范围内可证的差异；未覆盖不等于无问题。
+
+## 收尾闸门记录（2026-10-13）
+
+- 审计运行器全量 **34/34 步**（生产构建，1440x1000 + 窄屏 390x844）。
+- 像素基线：本轮视觉变更后以 `UPDATE_VISUAL_BASELINES=1` 由运行器重建三张 darwin 基线，复跑 `VISUAL DIFF PASS`（三张 0 px）。
+- `npm run smoke:all`：**9/10 绿，整轮 94s**（目标 ≤300s）。**编排器缺陷修复**：lane 状态此前不看子进程 exit code，恒记 PASS —— 修复后暴露两处被掩盖的 lane 失败（A-520）：structured 的 strict-mode 歧义定位已修（现 PASS）；threads 的「输入历史缺 draft 条目」经 `git stash` 对照实验确认**早于本轮改动即失败**（存量缺陷，独立处理，不在本轮盲改产品行为）。
+- 全量 vitest：**338 文件通过 / 4 跳过，2928 用例通过 / 52 跳过，exit 0**（首轮 8 文件失败均为并行负载下的时序红，隔离复跑全绿后串行复跑全绿；本轮同时修掉 2 处断言同步，均为契约演进而非弱化）。
+- 全量 `review:visual`：见下条（provider 长尾延迟）。

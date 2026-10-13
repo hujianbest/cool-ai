@@ -376,7 +376,10 @@ describe("execution T-2 vertical slice", () => {
     expect(screen.getByText("排队中")).toBeInTheDocument();
     expect(screen.getByText("正在准备隔离区")).toBeInTheDocument();
     const retryButton = screen.getByRole("button", { name: "刷新执行" });
-    expect(retryButton).toHaveStyle({ minHeight: "var(--control-min)" });
+    // 44px 热区由基础控件规则（min-height: var(--control-min)）承担；此处断言形态契约
+    // ——section 头行右侧操作槽位的次级按钮（A-513）。
+    expect(retryButton).toHaveClass("button-secondary");
+    expect(retryButton.closest(".section-header")).not.toBeNull();
     firstQueuedView.unmount();
 
     render(createElement(Panel, { projectId: PROJECT_ID, sourceTuple }));
