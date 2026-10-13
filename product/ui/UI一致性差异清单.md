@@ -331,3 +331,8 @@
 - `npm run smoke:all`：**9/10 绿，整轮 94s**（目标 ≤300s）。**编排器缺陷修复**：lane 状态此前不看子进程 exit code，恒记 PASS —— 修复后暴露两处被掩盖的 lane 失败（A-520）：structured 的 strict-mode 歧义定位已修（现 PASS）；threads 的「输入历史缺 draft 条目」经 `git stash` 对照实验确认**早于本轮改动即失败**（存量缺陷，独立处理，不在本轮盲改产品行为）。
 - 全量 vitest：**338 文件通过 / 4 跳过，2928 用例通过 / 52 跳过，exit 0**（首轮 8 文件失败均为并行负载下的时序红，隔离复跑全绿后串行复跑全绿；本轮同时修掉 2 处断言同步，均为契约演进而非弱化）。
 - 全量 `review:visual`：见下条（provider 长尾延迟）。
+- 2026-10-13 全量 `review:visual`（第 11 轮采集，62 张）：部分结论已完成，**非通过项逐条像素/几何核实**如下（不伪造通过）：
+  - `06b-agent-created` / `07-team-scroll-2` 判定「主区右上角无内容橙色/深色实心方块、图标未渲染」——**像素反证不成立**：06b 采样按钮区（1238-1290 × 22-62）检出 183 个白色像素（"+" 笔画，占该区 9.7%），即图标已渲染；900px 降采样令细笔画读感变弱。同位置在 `26-team-overview` 亦为同一「＋ 新建」主按钮（UCD §9.3 顶栏右侧槽位）。
+  - `07-team-scroll-2` 另判「主区标题未与内容左边界对齐（标题 560px vs 内容 280px）」——与截图实测不符：该视图中「团队资源」眉标、分区标题与卡片左边界同列（约 445px，A-505① 的 840px 居中列），模型给坐标不自洽，判定为误读。
+  - `12-search-overlay` 三条：「图标轨为深色」= 搜索遮罩（`color-mix(--color-surface-black 46%)`）覆盖全视口所致，轨道本身仍为 `--color-rail`；「Composer 下方额外状态条」= §9.1.4 明文的启动回执（落在 Composer 下方）；「强调色偏绿」= 回执的 success 语义色（`--status-success-color`）。三者均为既定契约/既有裁决项，非缺陷。
+  - `10b-thread-created` / `16a-project-chat-needs-mission`：provider 瞬时错误（`terminated`）按 error 记入（fail-closed，不折算通过）。
